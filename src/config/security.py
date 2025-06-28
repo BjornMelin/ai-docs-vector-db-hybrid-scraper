@@ -78,7 +78,9 @@ class SecurityConfig(BaseSecurityConfig):
 
     # Rate limiting configuration
     rate_limit_enabled: bool = Field(default=True, description="Enable rate limiting")
-    default_rate_limit: int = Field(default=100, description="Default requests per minute")
+    default_rate_limit: int = Field(
+        default=100, description="Default requests per minute"
+    )
     rate_limit_window: int = Field(
         default=60, gt=0, description="Rate limit window in seconds"
     )
@@ -87,7 +89,9 @@ class SecurityConfig(BaseSecurityConfig):
     )
 
     # API Key authentication
-    api_key_required: bool = Field(default=False, description="Require API key authentication")
+    api_key_required: bool = Field(
+        default=False, description="Require API key authentication"
+    )
     api_keys: list[str] = Field(default_factory=list, description="Valid API keys")
 
     # Security headers
@@ -112,12 +116,16 @@ class SecurityConfig(BaseSecurityConfig):
     # CORS configuration
     allowed_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:3000", "http://localhost:8000"],
-        description="Allowed CORS origins"
+        description="Allowed CORS origins",
     )
 
     # Security monitoring
-    security_logging_enabled: bool = Field(default=True, description="Enable security logging")
-    failed_attempts_threshold: int = Field(default=5, description="Failed attempts before blocking")
+    security_logging_enabled: bool = Field(
+        default=True, description="Enable security logging"
+    )
+    failed_attempts_threshold: int = Field(
+        default=5, description="Failed attempts before blocking"
+    )
 
     # Configuration encryption settings
     enable_config_encryption: bool = Field(

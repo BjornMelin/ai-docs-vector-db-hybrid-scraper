@@ -16,9 +16,12 @@ from qdrant_client import AsyncQdrantClient
 
 from src.config import Config
 from src.infrastructure.shared import CircuitBreaker, ClientHealth, ClientState
-from src.services.migration.library_migration import LibraryMigrationManager, MigrationMode
 from src.services.errors import APIError
 from src.services.hyde.engine import HyDEQueryEngine
+from src.services.migration.library_migration import (
+    LibraryMigrationManager,
+    MigrationMode,
+)
 
 
 # Optional imports for configuration functions to avoid circular imports
@@ -764,31 +767,40 @@ class ClientManager:
             if auto_detected_redis:
                 redis_url = auto_detected_redis.connection_string
             else:
-                redis_url = getattr(self.config.cache, 'dragonfly_url', 'redis://localhost:6379')
-            
+                redis_url = getattr(
+                    self.config.cache, "dragonfly_url", "redis://localhost:6379"
+                )
+
             # Determine migration mode from config
             migration_mode = MigrationMode.GRADUAL
-            if hasattr(self.config, 'migration') and hasattr(self.config.migration, 'mode'):
+            if hasattr(self.config, "migration") and hasattr(
+                self.config.migration, "mode"
+            ):
                 migration_mode = MigrationMode(self.config.migration.mode)
-            
+
             # Create and initialize migration manager
-            from src.services.migration.library_migration import create_migration_manager
+            from src.services.migration.library_migration import (
+                create_migration_manager,
+            )
+
             self._migration_manager = create_migration_manager(
                 config=self.config,
                 mode=migration_mode,
                 redis_url=redis_url,
             )
             await self._migration_manager.initialize()
-            
-            logger.info(f"Migration manager initialized with mode: {migration_mode.value}")
-            
+
+            logger.info(
+                f"Migration manager initialized with mode: {migration_mode.value}"
+            )
+
         except Exception as e:
             logger.warning(f"Failed to initialize migration manager: {e}")
             # Continue without migration manager - will use legacy implementations
 
     async def get_migration_manager(self) -> LibraryMigrationManager | None:
         """Get the migration manager instance.
-        
+
         Returns:
             LibraryMigrationManager instance or None if not available
         """
@@ -796,10 +808,10 @@ class ClientManager:
 
     async def get_modern_circuit_breaker(self, service_name: str = "default"):
         """Get modern circuit breaker through migration manager.
-        
+
         Args:
             service_name: Name of the service
-            
+
         Returns:
             Circuit breaker instance (modern or legacy based on migration state)
         """
@@ -813,7 +825,7 @@ class ClientManager:
 
     async def get_modern_cache_manager(self):
         """Get modern cache manager through migration manager.
-        
+
         Returns:
             Cache manager instance (modern or legacy based on migration state)
         """

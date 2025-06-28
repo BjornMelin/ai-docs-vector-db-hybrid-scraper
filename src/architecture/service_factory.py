@@ -10,6 +10,7 @@ from typing import Any, Dict, Protocol, Type, TypeVar
 
 from .modes import ApplicationMode, get_current_mode, get_mode_config
 
+
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
@@ -17,15 +18,15 @@ T = TypeVar("T")
 
 class ServiceProtocol(Protocol):
     """Protocol defining the interface for mode-aware services."""
-    
+
     async def initialize(self) -> None:
         """Initialize the service."""
         ...
-    
+
     async def cleanup(self) -> None:
         """Clean up service resources."""
         ...
-    
+
     def get_service_name(self) -> str:
         """Get the service name."""
         ...
@@ -33,25 +34,28 @@ class ServiceProtocol(Protocol):
 
 class ServiceNotEnabledError(Exception):
     """Raised when trying to access a service not enabled in current mode."""
+
     pass
 
 
 class ServiceNotFoundError(Exception):
     """Raised when trying to access a service that hasn't been registered."""
+
     pass
 
 
 class ServiceInitializationError(Exception):
     """Raised when service initialization fails."""
+
     pass
 
 
 class ModeAwareServiceFactory:
     """Factory for creating mode-aware services with different implementations."""
-    
+
     def __init__(self, mode: ApplicationMode | None = None):
         """Initialize the service factory.
-        
+
         Args:
             mode: Application mode to use. If None, detects from environment.
         """
@@ -60,15 +64,15 @@ class ModeAwareServiceFactory:
         self._service_registry: Dict[str, Dict[str, Type[ServiceProtocol]]] = {}
         self._service_instances: Dict[str, ServiceProtocol] = {}
         self._initialization_status: Dict[str, bool] = {}
-    
+
     def register_service(
-        self, 
-        name: str, 
+        self,
+        name: str,
         simple_impl: Type[ServiceProtocol] | None = None,
-        enterprise_impl: Type[ServiceProtocol] | None = None
+        enterprise_impl: Type[ServiceProtocol] | None = None,
     ) -> None:
         """Register different implementations for different modes.
-        
+
         Args:
             name: Service name
             simple_impl: Implementation for simple mode
@@ -76,36 +80,34 @@ class ModeAwareServiceFactory:
         """
         if name not in self._service_registry:
             self._service_registry[name] = {}
-        
+
         if simple_impl:
             self._service_registry[name]["simple"] = simple_impl
         if enterprise_impl:
             self._service_registry[name]["enterprise"] = enterprise_impl
-        
+
         logger.debug(f"Registered service '{name}' with mode implementations")
-    
+
     def register_universal_service(
-        self, 
-        name: str, 
-        implementation: Type[ServiceProtocol]
+        self, name: str, implementation: Type[ServiceProtocol]
     ) -> None:
         """Register a service that works in both modes.
-        
+
         Args:
             name: Service name
             implementation: Service implementation for both modes
         """
         self.register_service(name, implementation, implementation)
-    
+
     async def get_service(self, name: str) -> ServiceProtocol:
         """Get a service instance for the current mode.
-        
+
         Args:
             name: Service name
-            
+
         Returns:
             Initialized service instance
-            
+
         Raises:
             ServiceNotEnabledError: If service not enabled in current mode
             ServiceNotFoundError: If service not registered
@@ -116,40 +118,40 @@ class ModeAwareServiceFactory:
             raise ServiceNotEnabledError(
                 f"Service '{name}' not enabled in {self.mode.value} mode"
             )
-        
+
         # Return cached instance if available
         if name in self._service_instances:
             return self._service_instances[name]
-        
+
         # Get service class for current mode
         service_class = self._get_service_class(name)
-        
+
         # Create and initialize service instance
         try:
             service = service_class()
             await service.initialize()
-            
+
             # Cache the initialized service
             self._service_instances[name] = service
             self._initialization_status[name] = True
-            
+
             logger.info(f"Initialized service '{name}' in {self.mode.value} mode")
             return service
-            
+
         except Exception as e:
             self._initialization_status[name] = False
             raise ServiceInitializationError(
                 f"Failed to initialize service '{name}': {e}"
             ) from e
-    
+
     def _get_service_class(self, name: str) -> Type[ServiceProtocol]:
         """Get the service class for the current mode."""
         if name not in self._service_registry:
             raise ServiceNotFoundError(f"Service '{name}' not registered")
-        
+
         mode_implementations = self._service_registry[name]
         mode_key = self.mode.value
-        
+
         if mode_key not in mode_implementations:
             # Try to fallback to the other mode's implementation
             fallback_key = "simple" if mode_key == "enterprise" else "enterprise"
@@ -159,34 +161,38 @@ class ModeAwareServiceFactory:
                     f"falling back to {fallback_key} implementation"
                 )
                 return mode_implementations[fallback_key]
-            
+
             raise ServiceNotFoundError(
                 f"Service '{name}' has no implementation for {mode_key} mode"
             )
-        
+
         return mode_implementations[mode_key]
-    
+
     async def get_service_optional(self, name: str) -> ServiceProtocol | None:
         """Get a service instance, returning None if not available.
-        
+
         Args:
             name: Service name
-            
+
         Returns:
             Service instance or None if not available
         """
         try:
             return await self.get_service(name)
-        except (ServiceNotEnabledError, ServiceNotFoundError, ServiceInitializationError) as e:
+        except (
+            ServiceNotEnabledError,
+            ServiceNotFoundError,
+            ServiceInitializationError,
+        ) as e:
             logger.debug(f"Service '{name}' not available: {e}")
             return None
-    
+
     def is_service_available(self, name: str) -> bool:
         """Check if a service is available in the current mode.
-        
+
         Args:
             name: Service name
-            
+
         Returns:
             True if service is available and can be instantiated
         """
@@ -194,17 +200,17 @@ class ModeAwareServiceFactory:
             # Check if enabled in current mode
             if name not in self.mode_config.enabled_services:
                 return False
-            
+
             # Check if implementation exists
             self._get_service_class(name)
             return True
-            
+
         except (ServiceNotFoundError, ServiceNotEnabledError):
             return False
-    
+
     def get_available_services(self) -> list[str]:
         """Get list of services available in the current mode.
-        
+
         Returns:
             List of service names available in current mode
         """
@@ -213,13 +219,13 @@ class ModeAwareServiceFactory:
             if self.is_service_available(service_name):
                 available.append(service_name)
         return available
-    
+
     def get_service_status(self, name: str) -> dict[str, Any]:
         """Get status information for a service.
-        
+
         Args:
             name: Service name
-            
+
         Returns:
             Dictionary with service status information
         """
@@ -230,7 +236,7 @@ class ModeAwareServiceFactory:
             "initialized": self._initialization_status.get(name, False),
             "mode": self.mode.value,
         }
-    
+
     async def cleanup_all_services(self) -> None:
         """Clean up all initialized services."""
         for name, service in self._service_instances.items():
@@ -238,14 +244,14 @@ class ModeAwareServiceFactory:
                 await service.cleanup()
                 logger.debug(f"Cleaned up service '{name}'")
             except Exception as e:
-                logger.error(f"Error cleaning up service '{name}': {e}")
-        
+                logger.exception(f"Error cleaning up service '{name}': {e}")
+
         self._service_instances.clear()
         self._initialization_status.clear()
-    
+
     def get_mode_info(self) -> dict[str, Any]:
         """Get information about the current mode and configuration.
-        
+
         Returns:
             Dictionary with mode information
         """
@@ -262,34 +268,34 @@ class ModeAwareServiceFactory:
 
 class BaseService(ABC):
     """Abstract base class for mode-aware services."""
-    
+
     def __init__(self):
         self._initialized = False
         self._cleanup_called = False
-    
+
     @abstractmethod
     async def initialize(self) -> None:
         """Initialize the service."""
         pass
-    
+
     @abstractmethod
     async def cleanup(self) -> None:
         """Clean up service resources."""
         pass
-    
+
     @abstractmethod
     def get_service_name(self) -> str:
         """Get the service name."""
         pass
-    
+
     def is_initialized(self) -> bool:
         """Check if service is initialized."""
         return self._initialized
-    
+
     def _mark_initialized(self) -> None:
         """Mark service as initialized."""
         self._initialized = True
-    
+
     def _mark_cleanup(self) -> None:
         """Mark service as cleaned up."""
         self._cleanup_called = True
@@ -342,7 +348,9 @@ def register_service(
     factory.register_service(name, simple_impl, enterprise_impl)
 
 
-def register_universal_service(name: str, implementation: Type[ServiceProtocol]) -> None:
+def register_universal_service(
+    name: str, implementation: Type[ServiceProtocol]
+) -> None:
     """Register a universal service with the global service factory."""
     factory = get_service_factory()
     factory.register_universal_service(name, implementation)

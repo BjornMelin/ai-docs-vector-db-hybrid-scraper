@@ -22,17 +22,17 @@ logger = logging.getLogger(__name__)
 
 class MigrationMode(Enum):
     """Migration modes for library transition."""
-    
-    LEGACY_ONLY = "legacy_only"          # Use only legacy implementations
-    MODERN_ONLY = "modern_only"          # Use only modern implementations
-    PARALLEL = "parallel"                # Run both for comparison
-    GRADUAL = "gradual"                  # Gradual migration with feature flags
+
+    LEGACY_ONLY = "legacy_only"  # Use only legacy implementations
+    MODERN_ONLY = "modern_only"  # Use only modern implementations
+    PARALLEL = "parallel"  # Run both for comparison
+    GRADUAL = "gradual"  # Gradual migration with feature flags
 
 
 @dataclass
 class MigrationConfig:
     """Configuration for library migration."""
-    
+
     mode: MigrationMode = MigrationMode.GRADUAL
     circuit_breaker_enabled: bool = True
     cache_enabled: bool = True
@@ -43,7 +43,7 @@ class MigrationConfig:
 
 class LibraryMigrationManager:
     """Manager for migrating from custom to modern library implementations.
-    
+
     Handles gradual migration with feature flags, performance monitoring,
     and automatic rollback on issues.
     """
@@ -51,11 +51,11 @@ class LibraryMigrationManager:
     def __init__(
         self,
         config: Config,
-        migration_config: Optional[MigrationConfig] = None,
+        migration_config: MigrationConfig | None = None,
         redis_url: str = "redis://localhost:6379",
     ):
         """Initialize library migration manager.
-        
+
         Args:
             config: Application configuration
             migration_config: Migration-specific configuration
@@ -64,27 +64,27 @@ class LibraryMigrationManager:
         self.config = config
         self.migration_config = migration_config or MigrationConfig()
         self.redis_url = redis_url
-        
+
         # Performance tracking
         self.performance_metrics: Dict[str, Any] = {
             "circuit_breaker": {"legacy": {}, "modern": {}},
             "cache": {"legacy": {}, "modern": {}},
             "rate_limiting": {"legacy": {}, "modern": {}},
         }
-        
+
         # Migration state
         self.migration_state: Dict[str, bool] = {
             "circuit_breaker_migrated": False,
             "cache_migrated": False,
             "rate_limiting_migrated": False,
         }
-        
+
         # Service instances
-        self._modern_circuit_breaker: Optional[ModernCircuitBreakerManager] = None
-        self._modern_cache: Optional[ModernCacheManager] = None
-        self._modern_rate_limiter: Optional[ModernRateLimiter] = None
+        self._modern_circuit_breaker: ModernCircuitBreakerManager | None = None
+        self._modern_cache: ModernCacheManager | None = None
+        self._modern_rate_limiter: ModernRateLimiter | None = None
         self._legacy_services: Dict[str, Any] = {}
-        
+
         logger.info(
             f"LibraryMigrationManager initialized with mode: {self.migration_config.mode.value}"
         )
@@ -114,18 +114,18 @@ class LibraryMigrationManager:
 
             # Rate limiter initialization will be handled in FastAPI app setup
             logger.info("Modern services initialized successfully")
-            
+
         except Exception as e:
-            logger.error(f"Failed to initialize modern services: {e}")
+            logger.exception(f"Failed to initialize modern services: {e}")
             raise
 
     async def _initialize_legacy_services(self) -> None:
         """Initialize legacy service implementations for fallback."""
         try:
             # Import legacy services
-            from src.services.functional.circuit_breaker import CircuitBreaker
             from src.services.cache.manager import CacheManager
-            
+            from src.services.functional.circuit_breaker import CircuitBreaker
+
             # Create legacy instances
             if self.migration_config.circuit_breaker_enabled:
                 legacy_config = {
@@ -133,7 +133,9 @@ class LibraryMigrationManager:
                     "recovery_timeout": 60.0,
                     "half_open_requests": 1,
                 }
-                self._legacy_services["circuit_breaker"] = CircuitBreaker(**legacy_config)
+                self._legacy_services["circuit_breaker"] = CircuitBreaker(
+                    **legacy_config
+                )
                 logger.info("Initialized legacy circuit breaker")
 
             if self.migration_config.cache_enabled:
@@ -145,7 +147,7 @@ class LibraryMigrationManager:
                 logger.info("Initialized legacy cache")
 
             logger.info("Legacy services initialized successfully")
-            
+
         except Exception as e:
             logger.warning(f"Failed to initialize legacy services: {e}")
             # Continue without legacy services if they fail
@@ -159,72 +161,75 @@ class LibraryMigrationManager:
 
     async def get_circuit_breaker(self, service_name: str = "default") -> Any:
         """Get circuit breaker implementation based on migration mode.
-        
+
         Args:
             service_name: Name of the service
-            
+
         Returns:
             Circuit breaker instance (modern or legacy)
         """
         mode = self.migration_config.mode
-        
-        if mode == MigrationMode.MODERN_ONLY or self.migration_state["circuit_breaker_migrated"]:
+
+        if (
+            mode == MigrationMode.MODERN_ONLY
+            or self.migration_state["circuit_breaker_migrated"]
+        ):
             if self._modern_circuit_breaker:
                 return await self._modern_circuit_breaker.get_breaker(service_name)
-            
+
         elif mode == MigrationMode.LEGACY_ONLY:
             return self._legacy_services.get("circuit_breaker")
-        
+
         elif mode == MigrationMode.PARALLEL:
             # Return modern but track both
             await self._track_parallel_performance("circuit_breaker", service_name)
             if self._modern_circuit_breaker:
                 return await self._modern_circuit_breaker.get_breaker(service_name)
-        
+
         elif mode == MigrationMode.GRADUAL:
             # Gradual migration with feature flags
             use_modern = await self._should_use_modern("circuit_breaker")
             if use_modern and self._modern_circuit_breaker:
                 self.migration_state["circuit_breaker_migrated"] = True
                 return await self._modern_circuit_breaker.get_breaker(service_name)
-        
+
         # Fallback to legacy
         return self._legacy_services.get("circuit_breaker")
 
     async def get_cache_manager(self) -> Any:
         """Get cache manager implementation based on migration mode.
-        
+
         Returns:
             Cache manager instance (modern or legacy)
         """
         mode = self.migration_config.mode
-        
+
         if mode == MigrationMode.MODERN_ONLY or self.migration_state["cache_migrated"]:
             return self._modern_cache
-            
+
         elif mode == MigrationMode.LEGACY_ONLY:
             return self._legacy_services.get("cache")
-        
+
         elif mode == MigrationMode.PARALLEL:
             # Return modern but track both
             await self._track_parallel_performance("cache", "default")
             return self._modern_cache
-        
+
         elif mode == MigrationMode.GRADUAL:
             # Gradual migration with feature flags
             use_modern = await self._should_use_modern("cache")
             if use_modern and self._modern_cache:
                 self.migration_state["cache_migrated"] = True
                 return self._modern_cache
-        
+
         # Fallback to legacy
         return self._legacy_services.get("cache")
 
-    def get_rate_limiter(self) -> Optional[ModernRateLimiter]:
+    def get_rate_limiter(self) -> ModernRateLimiter | None:
         """Get rate limiter implementation.
-        
+
         Note: Rate limiting is only available in modern implementation.
-        
+
         Returns:
             ModernRateLimiter instance or None
         """
@@ -234,35 +239,35 @@ class LibraryMigrationManager:
 
     async def _should_use_modern(self, service: str) -> bool:
         """Determine if modern implementation should be used for a service.
-        
+
         Args:
             service: Service name
-            
+
         Returns:
             True if modern implementation should be used
         """
         # Check error rates and performance metrics
         modern_metrics = self.performance_metrics[service]["modern"]
         legacy_metrics = self.performance_metrics[service]["legacy"]
-        
+
         # Use modern if error rate is acceptable
         modern_error_rate = modern_metrics.get("error_rate", 0)
         if modern_error_rate > self.migration_config.rollback_threshold:
             logger.warning(f"High error rate for modern {service}: {modern_error_rate}")
             return False
-        
+
         # Use modern if performance is comparable or better
-        modern_latency = modern_metrics.get("avg_latency", float('inf'))
-        legacy_latency = legacy_metrics.get("avg_latency", float('inf'))
-        
+        modern_latency = modern_metrics.get("avg_latency", float("inf"))
+        legacy_latency = legacy_metrics.get("avg_latency", float("inf"))
+
         if modern_latency <= legacy_latency * 1.2:  # Allow 20% performance degradation
             return True
-        
+
         return False
 
     async def _track_parallel_performance(self, service: str, operation: str) -> None:
         """Track performance for parallel mode operation.
-        
+
         Args:
             service: Service name
             operation: Operation being performed
@@ -279,7 +284,7 @@ class LibraryMigrationManager:
                 await self._collect_metrics()
                 await self._check_rollback_conditions()
             except Exception as e:
-                logger.error(f"Error in monitoring loop: {e}")
+                logger.exception(f"Error in monitoring loop: {e}")
 
     async def _collect_metrics(self) -> None:
         """Collect performance metrics from services."""
@@ -288,30 +293,32 @@ class LibraryMigrationManager:
             if self._modern_circuit_breaker:
                 cb_status = await self._modern_circuit_breaker.get_all_statuses()
                 self.performance_metrics["circuit_breaker"]["modern"].update(cb_status)
-            
+
             # Collect cache metrics
             if self._modern_cache:
                 cache_stats = await self._modern_cache.get_stats()
                 self.performance_metrics["cache"]["modern"].update(cache_stats)
-            
+
             logger.debug("Performance metrics collected")
-            
+
         except Exception as e:
-            logger.error(f"Error collecting metrics: {e}")
+            logger.exception(f"Error collecting metrics: {e}")
 
     async def _check_rollback_conditions(self) -> None:
         """Check if rollback conditions are met."""
         for service in ["circuit_breaker", "cache"]:
             modern_metrics = self.performance_metrics[service]["modern"]
             error_rate = modern_metrics.get("error_rate", 0)
-            
+
             if error_rate > self.migration_config.rollback_threshold:
-                logger.warning(f"Triggering rollback for {service} due to high error rate")
+                logger.warning(
+                    f"Triggering rollback for {service} due to high error rate"
+                )
                 self.migration_state[f"{service}_migrated"] = False
 
     async def get_migration_status(self) -> Dict[str, Any]:
         """Get current migration status and metrics.
-        
+
         Returns:
             Dictionary with migration status and performance metrics
         """
@@ -324,29 +331,31 @@ class LibraryMigrationManager:
                 "modern_cache": self._modern_cache is not None,
                 "modern_rate_limiter": self._modern_rate_limiter is not None,
                 "legacy_services": list(self._legacy_services.keys()),
-            }
+            },
         }
 
     async def force_migration(self, service: str, to_modern: bool = True) -> bool:
         """Force migration of a specific service.
-        
+
         Args:
             service: Service to migrate
             to_modern: True to migrate to modern, False to rollback to legacy
-            
+
         Returns:
             True if migration was successful
         """
         try:
             if service in self.migration_state:
                 self.migration_state[f"{service}_migrated"] = to_modern
-                logger.info(f"Forced migration of {service} to {'modern' if to_modern else 'legacy'}")
+                logger.info(
+                    f"Forced migration of {service} to {'modern' if to_modern else 'legacy'}"
+                )
                 return True
             else:
                 logger.error(f"Unknown service for migration: {service}")
                 return False
         except Exception as e:
-            logger.error(f"Error forcing migration of {service}: {e}")
+            logger.exception(f"Error forcing migration of {service}: {e}")
             return False
 
     async def cleanup(self) -> None:
@@ -354,14 +363,14 @@ class LibraryMigrationManager:
         try:
             if self._modern_circuit_breaker:
                 await self._modern_circuit_breaker.close()
-            
+
             if self._modern_cache:
                 await self._modern_cache.close()
-            
+
             logger.info("LibraryMigrationManager cleaned up successfully")
-            
+
         except Exception as e:
-            logger.error(f"Error cleaning up LibraryMigrationManager: {e}")
+            logger.exception(f"Error cleaning up LibraryMigrationManager: {e}")
 
 
 # Convenience function for creating migration manager
@@ -371,12 +380,12 @@ def create_migration_manager(
     redis_url: str = "redis://localhost:6379",
 ) -> LibraryMigrationManager:
     """Create a library migration manager instance.
-    
+
     Args:
         config: Application configuration
         mode: Migration mode
         redis_url: Redis URL for modern implementations
-        
+
     Returns:
         LibraryMigrationManager instance
     """

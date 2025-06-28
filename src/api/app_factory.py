@@ -10,28 +10,29 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.architecture.modes import ApplicationMode, get_mode_config, get_current_mode
+from src.architecture.modes import ApplicationMode, get_current_mode, get_mode_config
 from src.architecture.service_factory import ModeAwareServiceFactory
 from src.config import get_config
+
 
 logger = logging.getLogger(__name__)
 
 
 def create_app(mode: ApplicationMode | None = None) -> FastAPI:
     """Create FastAPI app configured for specific mode.
-    
+
     Args:
         mode: Application mode to use. If None, detects from environment.
-        
+
     Returns:
         Configured FastAPI application instance
     """
     if mode is None:
         mode = get_current_mode()
-    
+
     mode_config = get_mode_config(mode)
     config = get_config()
-    
+
     # Create app with mode-specific configuration
     app = FastAPI(
         title=f"AI Docs Vector DB ({mode.value.title()} Mode)",
@@ -39,35 +40,39 @@ def create_app(mode: ApplicationMode | None = None) -> FastAPI:
         version="0.1.0",
         docs_url="/docs" if mode == ApplicationMode.ENTERPRISE else "/docs",
         redoc_url="/redoc" if mode == ApplicationMode.ENTERPRISE else None,
-        openapi_url="/openapi.json" if mode == ApplicationMode.ENTERPRISE else "/openapi.json",
+        openapi_url="/openapi.json"
+        if mode == ApplicationMode.ENTERPRISE
+        else "/openapi.json",
     )
-    
+
     # Store mode information in app state
     app.state.mode = mode
     app.state.mode_config = mode_config
     app.state.service_factory = ModeAwareServiceFactory(mode)
-    
+
     # Configure CORS based on mode
     _configure_cors(app, mode)
-    
+
     # Apply mode-specific middleware stack
     _apply_middleware_stack(app, mode_config.middleware_stack)
-    
+
     # Add mode-specific routes
     _configure_routes(app, mode)
-    
+
     # Add startup and shutdown events
     _configure_lifecycle_events(app)
-    
+
     logger.info(f"Created FastAPI app in {mode.value} mode")
-    
+
     return app
 
 
 def _get_app_description(mode: ApplicationMode) -> str:
     """Get mode-specific application description."""
-    base_description = "Hybrid AI documentation scraping system with vector database integration"
-    
+    base_description = (
+        "Hybrid AI documentation scraping system with vector database integration"
+    )
+
     if mode == ApplicationMode.SIMPLE:
         return f"{base_description} - Optimized for solo developers with minimal complexity"
     elif mode == ApplicationMode.ENTERPRISE:
@@ -101,7 +106,7 @@ def _configure_cors(app: FastAPI, mode: ApplicationMode) -> None:
 def _apply_middleware_stack(app: FastAPI, middleware_stack: list[str]) -> None:
     """Apply mode-specific middleware stack."""
     from src.services.fastapi.middleware import manager as middleware_manager
-    
+
     for middleware_name in middleware_stack:
         try:
             middleware_manager.apply_middleware(app, middleware_name)
@@ -113,16 +118,16 @@ def _apply_middleware_stack(app: FastAPI, middleware_stack: list[str]) -> None:
 def _configure_routes(app: FastAPI, mode: ApplicationMode) -> None:
     """Configure routes based on application mode."""
     from .routers import config_router
-    
+
     # Always include basic config router
     app.include_router(config_router, prefix="/api/v1")
-    
+
     # Add mode-specific routes
     if mode == ApplicationMode.SIMPLE:
         _configure_simple_routes(app)
     elif mode == ApplicationMode.ENTERPRISE:
         _configure_enterprise_routes(app)
-    
+
     # Add common routes
     _configure_common_routes(app)
 
@@ -131,12 +136,16 @@ def _configure_simple_routes(app: FastAPI) -> None:
     """Configure routes for simple mode."""
     # Import simple mode routers
     try:
-        from .routers.simple import search as simple_search
-        from .routers.simple import documents as simple_documents
-        
+        from .routers.simple import (
+            documents as simple_documents,
+            search as simple_search,
+        )
+
         app.include_router(simple_search.router, prefix="/api/v1", tags=["search"])
-        app.include_router(simple_documents.router, prefix="/api/v1", tags=["documents"])
-        
+        app.include_router(
+            simple_documents.router, prefix="/api/v1", tags=["documents"]
+        )
+
         logger.debug("Configured simple mode routes")
     except ImportError:
         logger.warning("Simple mode routers not available")
@@ -146,16 +155,24 @@ def _configure_enterprise_routes(app: FastAPI) -> None:
     """Configure routes for enterprise mode."""
     # Import enterprise mode routers
     try:
-        from .routers.enterprise import search as enterprise_search
-        from .routers.enterprise import documents as enterprise_documents
-        from .routers.enterprise import analytics as enterprise_analytics
-        from .routers.enterprise import deployment as enterprise_deployment
-        
+        from .routers.enterprise import (
+            analytics as enterprise_analytics,
+            deployment as enterprise_deployment,
+            documents as enterprise_documents,
+            search as enterprise_search,
+        )
+
         app.include_router(enterprise_search.router, prefix="/api/v1", tags=["search"])
-        app.include_router(enterprise_documents.router, prefix="/api/v1", tags=["documents"])
-        app.include_router(enterprise_analytics.router, prefix="/api/v1", tags=["analytics"])
-        app.include_router(enterprise_deployment.router, prefix="/api/v1", tags=["deployment"])
-        
+        app.include_router(
+            enterprise_documents.router, prefix="/api/v1", tags=["documents"]
+        )
+        app.include_router(
+            enterprise_analytics.router, prefix="/api/v1", tags=["analytics"]
+        )
+        app.include_router(
+            enterprise_deployment.router, prefix="/api/v1", tags=["deployment"]
+        )
+
         logger.debug("Configured enterprise mode routes")
     except ImportError:
         logger.warning("Enterprise mode routers not available")
@@ -163,7 +180,7 @@ def _configure_enterprise_routes(app: FastAPI) -> None:
 
 def _configure_common_routes(app: FastAPI) -> None:
     """Configure common routes available in both modes."""
-    
+
     @app.get("/")
     async def root():
         """Root endpoint with mode information."""
@@ -175,29 +192,29 @@ def _configure_common_routes(app: FastAPI) -> None:
             "mode": mode.value,
             "features": _get_mode_features(mode),
         }
-    
+
     @app.get("/health")
     async def health_check():
         """Health check endpoint."""
         mode = app.state.mode
         service_factory: ModeAwareServiceFactory = app.state.service_factory
-        
+
         # Get available services for health check
         available_services = service_factory.get_available_services()
-        
+
         return {
             "status": "healthy",
             "mode": mode.value,
             "available_services": available_services,
             "timestamp": "2025-06-28T00:00:00Z",
         }
-    
+
     @app.get("/info")
     async def info():
         """Information about the API and current mode."""
         mode = app.state.mode
         mode_config = app.state.mode_config
-        
+
         return {
             "name": f"AI Docs Vector DB Hybrid Scraper ({mode.value.title()} Mode)",
             "version": "0.1.0",
@@ -211,20 +228,20 @@ def _configure_common_routes(app: FastAPI) -> None:
                 "features": _get_mode_features(mode),
             },
         }
-    
+
     @app.get("/mode")
     async def mode_info():
         """Detailed mode configuration information."""
         mode = app.state.mode
         service_factory: ModeAwareServiceFactory = app.state.service_factory
-        
+
         return service_factory.get_mode_info()
 
 
 def _get_mode_features(mode: ApplicationMode) -> dict[str, Any]:
     """Get feature summary for the current mode."""
     mode_config = get_mode_config(mode)
-    
+
     if mode == ApplicationMode.SIMPLE:
         return {
             "advanced_monitoring": False,
@@ -249,67 +266,70 @@ def _get_mode_features(mode: ApplicationMode) -> dict[str, Any]:
 
 def _configure_lifecycle_events(app: FastAPI) -> None:
     """Configure startup and shutdown events."""
-    
+
     @app.on_event("startup")
     async def startup_event():
         """Initialize services on startup."""
         mode = app.state.mode
         service_factory: ModeAwareServiceFactory = app.state.service_factory
-        
+
         logger.info(f"Starting application in {mode.value} mode")
-        
+
         # Register mode-specific services
         _register_mode_services(service_factory, mode)
-        
+
         # Initialize critical services
         await _initialize_critical_services(service_factory)
-        
+
         logger.info(f"Application startup complete in {mode.value} mode")
-    
+
     @app.on_event("shutdown")
     async def shutdown_event():
         """Clean up services on shutdown."""
         service_factory: ModeAwareServiceFactory = app.state.service_factory
-        
+
         logger.info("Shutting down application")
         await service_factory.cleanup_all_services()
         logger.info("Application shutdown complete")
 
 
-def _register_mode_services(factory: ModeAwareServiceFactory, mode: ApplicationMode) -> None:
+def _register_mode_services(
+    factory: ModeAwareServiceFactory, mode: ApplicationMode
+) -> None:
     """Register services for the specified mode."""
     # Import service implementations
     try:
-        from src.services.simple import search as simple_search
-        from src.services.simple import cache as simple_cache
-        from src.services.enterprise import search as enterprise_search
-        from src.services.enterprise import cache as enterprise_cache
-        
+        from src.services.enterprise import (
+            cache as enterprise_cache,
+            search as enterprise_search,
+        )
+        from src.services.simple import cache as simple_cache, search as simple_search
+
         # Register search services
         factory.register_service(
             "search_service",
             simple_search.SimpleSearchService,
             enterprise_search.EnterpriseSearchService,
         )
-        
+
         # Register cache services
         factory.register_service(
             "cache_service",
             simple_cache.SimpleCacheService,
             enterprise_cache.EnterpriseCacheService,
         )
-        
+
     except ImportError as e:
         logger.warning(f"Some service implementations not available: {e}")
-    
+
     # Register universal services (work in both modes)
     try:
         from src.services.embeddings.manager import EmbeddingManager
         from src.services.vector_db.service import VectorDBService
-        
+
         factory.register_universal_service("embedding_service", EmbeddingManager)
         factory.register_universal_service("vector_db_service", VectorDBService)
-        
+
     except ImportError as e:
         logger.warning(f"Universal services not available: {e}")
 
@@ -322,7 +342,7 @@ async def _initialize_critical_services(factory: ModeAwareServiceFactory) -> Non
         "search_service",
         "cache_service",
     ]
-    
+
     for service_name in critical_services:
         try:
             service = await factory.get_service_optional(service_name)
@@ -331,7 +351,7 @@ async def _initialize_critical_services(factory: ModeAwareServiceFactory) -> Non
             else:
                 logger.warning(f"Critical service not available: {service_name}")
         except Exception as e:
-            logger.error(f"Failed to initialize critical service {service_name}: {e}")
+            logger.exception(f"Failed to initialize critical service {service_name}: {e}")
 
 
 def get_app_mode(app: FastAPI) -> ApplicationMode:

@@ -5,8 +5,8 @@ for enterprise deployments and portfolio demonstrations.
 """
 
 __all__ = [
-    "EnterpriseSearchService",
+    "EnterpriseAnalyticsService",
     "EnterpriseCacheService",
-    "EnterpriseAnalyticsService", 
     "EnterpriseDeploymentService",
+    "EnterpriseSearchService",
 ]

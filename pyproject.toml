@@ -555,6 +555,7 @@ dev = [
     "mutmut>=2.5.1",
     "locust>=2.37.10",
     "pyjwt>=2.10.1",
+    "mypy>=1.16.1",
 ]
 
 # ===== Mypy Type Checking Configuration =====

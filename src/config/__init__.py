@@ -1,6 +1,6 @@
 """Modern configuration system for AI Documentation Vector DB.
 
-MIGRATION IN PROGRESS: Replacing 18-file configuration system (8,599 lines) 
+MIGRATION IN PROGRESS: Replacing 18-file configuration system (8,599 lines)
 with modern Pydantic Settings 2.0 (2-3 files, ~500 lines) - 94% reduction.
 
 NEW: Use src.config.modern for the new configuration system
@@ -11,38 +11,11 @@ import os
 import warnings
 from typing import Union
 
-# NEW MODERN CONFIGURATION SYSTEM
-from .modern import (
-    Config as ModernConfig,
-    ApplicationMode,
-    Environment,
-    LogLevel,
-    EmbeddingProvider,
-    CrawlProvider,
-    ChunkingStrategy,
-    SearchStrategy,
-    CacheConfig as ModernCacheConfig,
-    PerformanceConfig as ModernPerformanceConfig,
-    OpenAIConfig as ModernOpenAIConfig,
-    QdrantConfig as ModernQdrantConfig,
-    FirecrawlConfig as ModernFirecrawlConfig,
-    SecurityConfig as ModernSecurityConfig,
-    ChunkingConfig as ModernChunkingConfig,
-    HyDEConfig as ModernHyDEConfig,
-    ReRankingConfig,
-    get_config as get_modern_config,
-    set_config as set_modern_config,
-    reset_config as reset_modern_config,
-    create_simple_config,
-    create_enterprise_config,
-    get_config_with_auto_detection as get_modern_config_with_auto_detection,
-)
-
-# MIGRATION UTILITIES
-from .migration import (
-    ConfigMigrator,
-    migrate_legacy_config,
-    create_migration_compatibility_wrapper,
+from .config_manager import (
+    ConfigManager,
+    create_and_load_config_async,
+    get_config_manager,
+    set_config_manager,
 )
 
 # LEGACY CONFIGURATION SYSTEM (for backward compatibility)
@@ -75,25 +48,56 @@ from .core import (
     set_config as set_legacy_config,
 )
 
-from .config_manager import (
-    ConfigManager,
-    create_and_load_config_async,
-    get_config_manager,
-    set_config_manager,
+# MIGRATION UTILITIES
+from .migration import (
+    ConfigMigrator,
+    create_migration_compatibility_wrapper,
+    migrate_legacy_config,
 )
 
+# NEW MODERN CONFIGURATION SYSTEM
+from .modern import (
+    ApplicationMode,
+    CacheConfig as ModernCacheConfig,
+    ChunkingConfig as ModernChunkingConfig,
+    ChunkingStrategy,
+    Config as ModernConfig,
+    CrawlProvider,
+    EmbeddingProvider,
+    Environment,
+    FirecrawlConfig as ModernFirecrawlConfig,
+    HyDEConfig as ModernHyDEConfig,
+    LogLevel,
+    OpenAIConfig as ModernOpenAIConfig,
+    PerformanceConfig as ModernPerformanceConfig,
+    QdrantConfig as ModernQdrantConfig,
+    ReRankingConfig,
+    SearchStrategy,
+    SecurityConfig as ModernSecurityConfig,
+    create_enterprise_config,
+    create_simple_config,
+    get_config as get_modern_config,
+    get_config_with_auto_detection as get_modern_config_with_auto_detection,
+    reset_config as reset_modern_config,
+    set_config as set_modern_config,
+)
+
+
 # MIGRATION ENVIRONMENT VARIABLE
-_USE_MODERN_CONFIG = os.environ.get("AI_DOCS__USE_MODERN_CONFIG", "true").lower() == "true"
+_USE_MODERN_CONFIG = (
+    os.environ.get("AI_DOCS__USE_MODERN_CONFIG", "true").lower() == "true"
+)
 
 # UNIFIED CONFIGURATION INTERFACE
 # These functions provide a unified interface that switches between legacy and modern config
 # based on the AI_DOCS__USE_MODERN_CONFIG environment variable
 
+
 def get_config() -> Union[ModernConfig, LegacyConfig]:
     """Get configuration instance.
-    
+
     Returns modern config by default, or legacy config if AI_DOCS__USE_MODERN_CONFIG=false.
-    
+
     Returns:
         Configuration instance (modern or legacy based on environment variable).
     """
@@ -104,14 +108,14 @@ def get_config() -> Union[ModernConfig, LegacyConfig]:
             "Using legacy configuration system. Consider migrating to modern config. "
             "Set AI_DOCS__USE_MODERN_CONFIG=true to use the new system.",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         return get_legacy_config()
 
 
 def set_config(config: Union[ModernConfig, LegacyConfig]) -> None:
     """Set configuration instance.
-    
+
     Args:
         config: Configuration instance to set.
     """
@@ -131,7 +135,7 @@ def reset_config() -> None:
 
 def get_config_with_auto_detection() -> Union[ModernConfig, LegacyConfig]:
     """Get configuration with auto-detection.
-    
+
     Returns:
         Configuration instance with auto-detection applied.
     """
@@ -143,22 +147,23 @@ def get_config_with_auto_detection() -> Union[ModernConfig, LegacyConfig]:
 
 # MIGRATION HELPER FUNCTIONS
 
+
 def migrate_to_modern_config() -> ModernConfig:
     """Migrate current configuration to modern system.
-    
+
     Returns:
         Modern configuration instance migrated from current legacy config.
     """
     if _USE_MODERN_CONFIG:
         return get_modern_config()
-    
+
     legacy_config = get_legacy_config()
     return migrate_legacy_config(legacy_config)
 
 
 def is_using_modern_config() -> bool:
     """Check if using modern configuration system.
-    
+
     Returns:
         True if using modern config, False if using legacy config.
     """
@@ -167,12 +172,12 @@ def is_using_modern_config() -> bool:
 
 def get_migration_status() -> dict:
     """Get configuration migration status.
-    
+
     Returns:
         Dictionary with migration status information.
     """
     config_type = "modern" if _USE_MODERN_CONFIG else "legacy"
-    
+
     try:
         if _USE_MODERN_CONFIG:
             config = get_modern_config()
@@ -180,12 +185,14 @@ def get_migration_status() -> dict:
             provider_count = 2  # embedding + crawl providers
         else:
             config = get_legacy_config()
-            mode = getattr(config, 'mode', 'unknown')
-            provider_count = len([
-                getattr(config, 'embedding_provider', None),
-                getattr(config, 'crawl_provider', None)
-            ])
-        
+            mode = getattr(config, "mode", "unknown")
+            provider_count = len(
+                [
+                    getattr(config, "embedding_provider", None),
+                    getattr(config, "crawl_provider", None),
+                ]
+            )
+
         return {
             "config_type": config_type,
             "mode": mode,
@@ -290,117 +297,109 @@ from .error_handling import (
 UnifiedConfig = Config
 
 __all__: list[str] = [
-    # Modern Configuration System
-    "ModernConfig",
-    "ApplicationMode",
-    "Environment",
-    "LogLevel",
-    "EmbeddingProvider", 
-    "CrawlProvider",
-    "ChunkingStrategy",
-    "SearchStrategy",
-    "ModernCacheConfig",
-    "ModernPerformanceConfig",
-    "ModernOpenAIConfig",
-    "ModernQdrantConfig",
-    "ModernFirecrawlConfig",
-    "ModernSecurityConfig",
-    "ModernChunkingConfig",
-    "ModernHyDEConfig",
-    "ReRankingConfig",
-    "create_simple_config",
-    "create_enterprise_config",
-    
-    # Migration Utilities
-    "ConfigMigrator",
-    "migrate_legacy_config",
-    "create_migration_compatibility_wrapper",
-    "migrate_to_modern_config",
-    "is_using_modern_config",
-    "get_migration_status",
-    
-    # Unified Interface (switches between modern/legacy)
-    "Config",
-    "CacheConfig",
-    "PerformanceConfig",
-    "OpenAIConfig",
-    "QdrantConfig",
-    "FirecrawlConfig",
-    "SecurityConfig",
-    "ChunkingConfig",
-    "HyDEConfig",
-    "get_config",
-    "set_config",
-    "reset_config",
-    "get_config_with_auto_detection",
-    
-    # Legacy Configuration System (for backward compatibility)
-    "LegacyConfig",
-    "LegacyCacheConfig",
-    "LegacyPerformanceConfig",
-    "LegacyOpenAIConfig",
-    "LegacyQdrantConfig",
-    "LegacyFirecrawlConfig",
-    "LegacySecurityConfig",
-    "LegacyChunkingConfig",
-    "LegacyHyDEConfig",
-    "BrowserUseConfig",
-    "CircuitBreakerConfig",
-    "Crawl4AIConfig",
-    "DeploymentConfig",
-    "DocumentationSite",
-    "EmbeddingConfig",
-    "FastEmbedConfig",
-    "MonitoringConfig",
-    "ObservabilityConfig",
-    "PlaywrightConfig",
-    "RAGConfig",
-    "SQLAlchemyConfig",
-    "TaskQueueConfig",
-    
-    # Configuration Management
-    "ConfigManager",
-    "create_and_load_config_async",
-    "get_config_manager",
-    "set_config_manager",
-    
-    # Deployment Tiers
-    "DeploymentTier",
-    "TierCapability", 
-    "TierConfiguration",
-    "TierManager",
-    "default_tier_manager",
-    "get_current_tier_config",
-    "is_feature_enabled",
-    
     # Enums (from legacy system)
     "ABTestVariant",
+    "ApplicationMode",
+    "BrowserUseConfig",
+    "CacheConfig",
     "CacheType",
-    "DocumentStatus",
-    "EmbeddingModel",
-    "FusionAlgorithm",
-    "ModelType",
-    "OptimizationStrategy",
-    "QueryComplexity",
-    "QueryType",
-    "SearchAccuracy",
-    "VectorType",
-    
+    "ChunkingConfig",
+    "ChunkingStrategy",
+    "CircuitBreakerConfig",
+    # Unified Interface (switches between modern/legacy)
+    "Config",
     # Error Handling
     "ConfigError",
     "ConfigFileWatchError",
     "ConfigLoadError",
+    # Configuration Management
+    "ConfigManager",
+    # Migration Utilities
+    "ConfigMigrator",
     "ConfigReloadError",
     "ConfigValidationError",
+    "Crawl4AIConfig",
+    "CrawlProvider",
+    "DeploymentConfig",
+    # Deployment Tiers
+    "DeploymentTier",
+    "DocumentStatus",
+    "DocumentationSite",
+    "EmbeddingConfig",
+    "EmbeddingModel",
+    "EmbeddingProvider",
+    "Environment",
     "ErrorContext",
+    "FastEmbedConfig",
+    "FirecrawlConfig",
+    "FusionAlgorithm",
     "GracefulDegradationHandler",
+    "HyDEConfig",
+    "LegacyCacheConfig",
+    "LegacyChunkingConfig",
+    # Legacy Configuration System (for backward compatibility)
+    "LegacyConfig",
+    "LegacyFirecrawlConfig",
+    "LegacyHyDEConfig",
+    "LegacyOpenAIConfig",
+    "LegacyPerformanceConfig",
+    "LegacyQdrantConfig",
+    "LegacySecurityConfig",
+    "LogLevel",
+    "ModelType",
+    "ModernCacheConfig",
+    "ModernChunkingConfig",
+    # Modern Configuration System
+    "ModernConfig",
+    "ModernFirecrawlConfig",
+    "ModernHyDEConfig",
+    "ModernOpenAIConfig",
+    "ModernPerformanceConfig",
+    "ModernQdrantConfig",
+    "ModernSecurityConfig",
+    "MonitoringConfig",
+    "ObservabilityConfig",
+    "OpenAIConfig",
+    "OptimizationStrategy",
+    "PerformanceConfig",
+    "PlaywrightConfig",
+    "QdrantConfig",
+    "QueryComplexity",
+    "QueryType",
+    "RAGConfig",
+    "ReRankingConfig",
     "RetryableConfigOperation",
+    "SQLAlchemyConfig",
     "SafeConfigLoader",
-    "async_error_context",
-    "get_degradation_handler",
-    "handle_validation_error",
-    "retry_config_operation",
-    
+    "SearchAccuracy",
+    "SearchStrategy",
+    "SecurityConfig",
+    "TaskQueueConfig",
+    "TierCapability",
+    "TierConfiguration",
+    "TierManager",
     # Legacy aliases
     "UnifiedConfig",
+    "VectorType",
+    "async_error_context",
+    "create_and_load_config_async",
+    "create_enterprise_config",
+    "create_migration_compatibility_wrapper",
+    "create_simple_config",
+    "default_tier_manager",
+    "get_config",
+    "get_config_manager",
+    "get_config_with_auto_detection",
+    "get_current_tier_config",
+    "get_degradation_handler",
+    "get_migration_status",
+    "handle_validation_error",
+    "is_feature_enabled",
+    "is_using_modern_config",
+    "migrate_legacy_config",
+    "migrate_to_modern_config",
+    "reset_config",
+    "retry_config_operation",
+    "set_config",
+    "set_config_manager",
 ]

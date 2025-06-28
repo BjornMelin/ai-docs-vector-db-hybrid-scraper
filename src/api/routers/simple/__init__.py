@@ -3,4 +3,4 @@
 Simplified API endpoints optimized for solo developers with minimal complexity.
 """
 
-__all__ = ["search", "documents"]
+__all__ = ["documents", "search"]

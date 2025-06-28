@@ -14,6 +14,7 @@ from typing import Any, Dict, List
 
 import psutil
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -67,7 +68,9 @@ class RealTimePerformanceMonitor:
 
                 # Keep only recent snapshots
                 cutoff_time = datetime.now() - timedelta(seconds=self.window_size * 10)
-                self.snapshots = [s for s in self.snapshots if s.timestamp > cutoff_time]
+                self.snapshots = [
+                    s for s in self.snapshots if s.timestamp > cutoff_time
+                ]
 
                 # Trigger optimization if needed
                 await self._check_optimization_triggers(snapshot)
@@ -77,7 +80,7 @@ class RealTimePerformanceMonitor:
         except asyncio.CancelledError:
             logger.info("Performance monitoring cancelled")
         except Exception as e:
-            logger.error(f"Performance monitoring error: {e}")
+            logger.exception(f"Performance monitoring error: {e}")
         finally:
             self.monitoring_active = False
 
@@ -100,8 +103,7 @@ class RealTimePerformanceMonitor:
         # Application metrics
         current_time = time.time()
         recent_requests = [
-            t for t in self.request_times 
-            if current_time - t < self.window_size
+            t for t in self.request_times if current_time - t < self.window_size
         ]
 
         request_rate = len(recent_requests) / self.window_size
@@ -109,8 +111,9 @@ class RealTimePerformanceMonitor:
         # Response time metrics
         recent_response_times = recent_requests[-100:]  # Last 100 requests
         avg_response_time = (
-            sum(recent_response_times) / len(recent_response_times) 
-            if recent_response_times else 0
+            sum(recent_response_times) / len(recent_response_times)
+            if recent_response_times
+            else 0
         )
         p95_response_time = self._calculate_percentile(recent_response_times, 95)
 
@@ -156,9 +159,7 @@ class RealTimePerformanceMonitor:
             )
 
         if snapshot.cache_hit_rate < 0.8:  # Cache hit rate below 80%
-            logger.warning(
-                f"Low cache hit rate: {snapshot.cache_hit_rate:.1%}"
-            )
+            logger.warning(f"Low cache hit rate: {snapshot.cache_hit_rate:.1%}")
 
     async def _optimize_memory(self) -> None:
         """Trigger memory optimization when usage is high."""
@@ -167,7 +168,7 @@ class RealTimePerformanceMonitor:
         # Only run GC every 30 seconds to avoid performance impact
         if current_time - self.last_gc_time > 30:
             logger.info("Triggering garbage collection due to high memory usage")
-            
+
             # Force garbage collection
             gc.collect()
             self.last_gc_time = current_time
@@ -351,10 +352,12 @@ class RealTimePerformanceMonitor:
             return "stable"
 
         # Simple trend calculation using first and last values
-        first_half = sum(values[:len(values)//2]) / (len(values)//2)
-        second_half = sum(values[len(values)//2:]) / (len(values) - len(values)//2)
+        first_half = sum(values[: len(values) // 2]) / (len(values) // 2)
+        second_half = sum(values[len(values) // 2 :]) / (len(values) - len(values) // 2)
 
-        diff_percent = ((second_half - first_half) / first_half) * 100 if first_half > 0 else 0
+        diff_percent = (
+            ((second_half - first_half) / first_half) * 100 if first_half > 0 else 0
+        )
 
         if diff_percent > 10:
             return "increasing"
@@ -404,7 +407,7 @@ class RealTimePerformanceMonitor:
         # This is a rough estimation - in production you'd want more precise tracking
         current_stats = self._get_gc_stats()
         total_collections = sum(current_stats) - sum(self.gc_stats_start)
-        
+
         # Rough estimate: 1ms per collection (highly variable in reality)
         return total_collections * 1.0
 

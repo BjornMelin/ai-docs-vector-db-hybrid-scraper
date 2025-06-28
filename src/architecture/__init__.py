@@ -7,17 +7,18 @@ This module implements the Enterprise Paradox solution by providing:
 - Service factory pattern for mode-specific implementations
 """
 
-from .modes import ApplicationMode, ModeConfig, get_mode_config
 from .features import FeatureFlag, conditional_feature, enterprise_only
+from .modes import ApplicationMode, ModeConfig, get_mode_config
 from .service_factory import ModeAwareServiceFactory, ServiceProtocol
+
 
 __all__ = [
     "ApplicationMode",
-    "ModeConfig", 
-    "get_mode_config",
     "FeatureFlag",
+    "ModeAwareServiceFactory",
+    "ModeConfig",
+    "ServiceProtocol",
     "conditional_feature",
     "enterprise_only",
-    "ModeAwareServiceFactory",
-    "ServiceProtocol",
+    "get_mode_config",
 ]

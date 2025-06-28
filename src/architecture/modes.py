@@ -13,20 +13,24 @@ from pydantic import BaseModel, Field
 
 class ApplicationMode(Enum):
     """Application modes supporting different complexity levels."""
-    
+
     SIMPLE = "simple"
     ENTERPRISE = "enterprise"
 
 
 class ModeConfig(BaseModel):
     """Configuration for a specific application mode."""
-    
-    enabled_services: list[str] = Field(..., description="Services enabled in this mode")
+
+    enabled_services: list[str] = Field(
+        ..., description="Services enabled in this mode"
+    )
     max_complexity_features: dict[str, Any] = Field(
         ..., description="Maximum complexity feature settings"
     )
     resource_limits: dict[str, int] = Field(..., description="Resource usage limits")
-    middleware_stack: list[str] = Field(..., description="Middleware components to load")
+    middleware_stack: list[str] = Field(
+        ..., description="Middleware components to load"
+    )
     enable_advanced_monitoring: bool = Field(
         default=False, description="Enable comprehensive monitoring"
     )
@@ -171,12 +175,12 @@ ENTERPRISE_MODE_CONFIG = ModeConfig(
 def detect_mode_from_environment() -> ApplicationMode:
     """Detect application mode from environment variables."""
     mode_env = os.getenv("AI_DOCS_MODE", "simple").lower()
-    
+
     # Legacy environment variable support
     if not mode_env:
         deployment_tier = os.getenv("AI_DOCS_DEPLOYMENT__TIER", "simple").lower()
         mode_env = "enterprise" if deployment_tier == "enterprise" else "simple"
-    
+
     try:
         return ApplicationMode(mode_env)
     except ValueError:
@@ -186,16 +190,16 @@ def detect_mode_from_environment() -> ApplicationMode:
 
 def get_mode_config(mode: ApplicationMode | None = None) -> ModeConfig:
     """Get configuration for the specified mode.
-    
+
     Args:
         mode: Application mode to get config for. If None, detects from environment.
-        
+
     Returns:
         ModeConfig instance for the specified mode.
     """
     if mode is None:
         mode = detect_mode_from_environment()
-    
+
     if mode == ApplicationMode.SIMPLE:
         return SIMPLE_MODE_CONFIG
     elif mode == ApplicationMode.ENTERPRISE:

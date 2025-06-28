@@ -10,19 +10,20 @@ This module provides automated systems for:
 
 from .config_automation import AutoConfigManager, ConfigDriftHealer
 from .dependency_automation import DependencyUpdateAgent, SecurityUpdateManager
-from .infrastructure_automation import SelfHealingManager, AutoScalingManager
+from .infrastructure_automation import AutoScalingManager, SelfHealingManager
 from .monitoring_automation import AdaptiveAlertManager, PredictiveMaintenanceSystem
-from .test_automation import SelfMaintainingTestSuite, AutomatedQualityGate
+from .test_automation import AutomatedQualityGate, SelfMaintainingTestSuite
+
 
 __all__ = [
+    "AdaptiveAlertManager",
     "AutoConfigManager",
-    "ConfigDriftHealer", 
+    "AutoScalingManager",
+    "AutomatedQualityGate",
+    "ConfigDriftHealer",
     "DependencyUpdateAgent",
+    "PredictiveMaintenanceSystem",
     "SecurityUpdateManager",
     "SelfHealingManager",
-    "AutoScalingManager",
-    "AdaptiveAlertManager",
-    "PredictiveMaintenanceSystem",
     "SelfMaintainingTestSuite",
-    "AutomatedQualityGate",
 ]

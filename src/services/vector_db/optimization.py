@@ -19,6 +19,7 @@ from qdrant_client.models import (
     VectorParams,
 )
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -122,7 +123,7 @@ class QdrantOptimizer:
             return True
 
         except Exception as e:
-            logger.error(f"Failed to create optimized collection: {e}")
+            logger.exception(f"Failed to create optimized collection: {e}")
             return False
 
     async def benchmark_search_performance(
@@ -198,9 +199,7 @@ class QdrantOptimizer:
 
             # Generate test vectors for benchmarking
             vector_size = collection_info.config.params.vectors.size
-            test_vectors = [
-                np.random.random(vector_size).tolist() for _ in range(50)
-            ]
+            test_vectors = [np.random.random(vector_size).tolist() for _ in range(50)]
 
             # Benchmark current performance
             current_performance = await self.benchmark_search_performance(
@@ -211,7 +210,9 @@ class QdrantOptimizer:
             optimal_ef = self._find_optimal_ef(current_performance, target_p95_ms)
 
             # Check if quantization is enabled
-            has_quantization = collection_info.config.params.vectors.quantization_config is not None
+            has_quantization = (
+                collection_info.config.params.vectors.quantization_config is not None
+            )
 
             recommendations = {
                 "current_performance": current_performance,
@@ -225,7 +226,7 @@ class QdrantOptimizer:
             return recommendations
 
         except Exception as e:
-            logger.error(f"Failed to optimize collection '{collection_name}': {e}")
+            logger.exception(f"Failed to optimize collection '{collection_name}': {e}")
             return {"error": str(e)}
 
     def _find_optimal_ef(
@@ -248,7 +249,9 @@ class QdrantOptimizer:
             p95_latency = metrics["p95_latency"]
 
             if p95_latency <= target_p95_ms:
-                optimal_ef = max(optimal_ef, ef_value)  # Prefer higher quality if possible
+                optimal_ef = max(
+                    optimal_ef, ef_value
+                )  # Prefer higher quality if possible
 
         return optimal_ef
 
@@ -272,9 +275,7 @@ class QdrantOptimizer:
         recommendations = []
 
         # Check if target is being met
-        best_p95 = min(
-            metrics["p95_latency"] for metrics in performance_data.values()
-        )
+        best_p95 = min(metrics["p95_latency"] for metrics in performance_data.values())
 
         if best_p95 > target_p95_ms:
             recommendations.append(
@@ -335,7 +336,7 @@ class QdrantOptimizer:
             return {"status": "success", "quantization_enabled": True}
 
         except Exception as e:
-            logger.error(f"Failed to enable quantization: {e}")
+            logger.exception(f"Failed to enable quantization: {e}")
             return {"status": "error", "error": str(e)}
 
     async def get_optimization_metrics(self, collection_name: str) -> Dict[str, Any]:
@@ -358,15 +359,20 @@ class QdrantOptimizer:
                 "indexed_vectors": collection_info.indexed_vectors_count,
                 "optimization_status": collection_info.optimizer_status,
                 "hnsw_config": {
-                    "m": config.params.vectors.hnsw_config.m if config.params.vectors.hnsw_config else None,
-                    "ef_construct": config.params.vectors.hnsw_config.ef_construct if config.params.vectors.hnsw_config else None,
+                    "m": config.params.vectors.hnsw_config.m
+                    if config.params.vectors.hnsw_config
+                    else None,
+                    "ef_construct": config.params.vectors.hnsw_config.ef_construct
+                    if config.params.vectors.hnsw_config
+                    else None,
                 },
-                "quantization_enabled": config.params.vectors.quantization_config is not None,
+                "quantization_enabled": config.params.vectors.quantization_config
+                is not None,
                 "distance_metric": config.params.vectors.distance.value,
             }
 
             return metrics
 
         except Exception as e:
-            logger.error(f"Failed to get optimization metrics: {e}")
+            logger.exception(f"Failed to get optimization metrics: {e}")
             return {"error": str(e)}

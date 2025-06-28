@@ -5,8 +5,8 @@ reducing complexity while maintaining core functionality.
 """
 
 __all__ = [
-    "SimpleSearchService",
-    "SimpleCacheService", 
-    "SimpleEmbeddingService",
+    "SimpleCacheService",
     "SimpleCrawlingService",
+    "SimpleEmbeddingService",
+    "SimpleSearchService",
 ]

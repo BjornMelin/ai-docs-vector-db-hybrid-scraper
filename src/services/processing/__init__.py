@@ -2,4 +2,5 @@
 
 from .batch_optimizer import BatchConfig, BatchProcessor
 
+
 __all__ = ["BatchConfig", "BatchProcessor"]

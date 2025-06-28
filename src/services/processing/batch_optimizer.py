@@ -7,8 +7,10 @@ intelligent timing, and optimized resource utilization for maximum performance.
 import asyncio
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Generic, List, TypeVar
+from typing import Any, Generic, List, TypeVar
+
 
 logger = logging.getLogger(__name__)
 
@@ -93,14 +95,14 @@ class BatchProcessor(Generic[T, R]):
 
         # Use adaptive batch size if enabled
         target_size = (
-            self.optimal_batch_size if self.config.adaptive_sizing 
+            self.optimal_batch_size
+            if self.config.adaptive_sizing
             else self.config.max_batch_size
         )
 
-        return (
-            current_size >= target_size or
-            (current_size >= self.config.min_batch_size and
-             time_since_last > self.config.max_wait_time)
+        return current_size >= target_size or (
+            current_size >= self.config.min_batch_size
+            and time_since_last > self.config.max_wait_time
         )
 
     async def _process_batch(self) -> None:
@@ -135,7 +137,7 @@ class BatchProcessor(Generic[T, R]):
             self._update_performance_metrics(batch_size, processing_time)
 
             # Return results to waiting coroutines
-            for future, result in zip(futures, results):
+            for future, result in zip(futures, results, strict=False):
                 if not future.done():
                     future.set_result(result)
 
@@ -144,13 +146,15 @@ class BatchProcessor(Generic[T, R]):
             )
 
         except Exception as e:
-            logger.error(f"Batch processing failed: {e}")
+            logger.exception(f"Batch processing failed: {e}")
             # Propagate error to all waiting coroutines
             for future in futures:
                 if not future.done():
                     future.set_exception(e)
 
-    def _update_performance_metrics(self, batch_size: int, processing_time: float) -> None:
+    def _update_performance_metrics(
+        self, batch_size: int, processing_time: float
+    ) -> None:
         """Update performance metrics and adjust optimal batch size.
 
         Args:
@@ -180,14 +184,14 @@ class BatchProcessor(Generic[T, R]):
         for batch_size, processing_time in self.batch_performance_history:
             if batch_size not in size_performance:
                 size_performance[batch_size] = []
-            
+
             # Calculate processing time per item
             time_per_item = processing_time / batch_size
             size_performance[batch_size].append(time_per_item)
 
         # Find the batch size with the best average time per item
         best_size = self.config.max_batch_size
-        best_avg_time = float('inf')
+        best_avg_time = float("inf")
 
         for size, times in size_performance.items():
             if len(times) >= 2:  # Need at least 2 samples
@@ -198,8 +202,7 @@ class BatchProcessor(Generic[T, R]):
 
         # Update optimal batch size within bounds
         self.optimal_batch_size = max(
-            self.config.min_batch_size,
-            min(best_size, self.config.max_batch_size)
+            self.config.min_batch_size, min(best_size, self.config.max_batch_size)
         )
 
         logger.debug(f"Updated optimal batch size to {self.optimal_batch_size}")
@@ -209,8 +212,10 @@ class BatchProcessor(Generic[T, R]):
         await asyncio.sleep(self.config.max_wait_time)
 
         async with self.processing_lock:
-            if (self.pending_items and 
-                time.time() - self.last_batch_time >= self.config.max_wait_time):
+            if (
+                self.pending_items
+                and time.time() - self.last_batch_time >= self.config.max_wait_time
+            ):
                 await self._process_batch()
 
     def get_performance_stats(self) -> dict[str, Any]:
@@ -293,10 +298,10 @@ class OptimizedEmbeddingService:
         """
         # This would be replaced with actual embedding service calls
         # For example, using OpenAI batch API or FastEmbed batch processing
-        
+
         # Simulate processing time
         await asyncio.sleep(0.01 * len(texts))
-        
+
         # Return mock embeddings
         return [[0.1] * 384 for _ in texts]
 

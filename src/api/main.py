@@ -5,7 +5,9 @@ that supports both simple mode (25K lines) and enterprise mode (70K lines).
 """
 
 from src.architecture.modes import get_current_mode
+
 from .app_factory import create_app
+
 
 # Detect current mode and create appropriate app
 current_mode = get_current_mode()
