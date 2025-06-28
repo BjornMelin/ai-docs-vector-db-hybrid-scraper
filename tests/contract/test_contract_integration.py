@@ -4,12 +4,13 @@ This module tests the integration of all contract testing components
 and provides end-to-end contract validation scenarios.
 """
 
+import asyncio
+import time
+
 import pytest
 
 from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
-import time
-import asyncio
 
 
 class TestContractIntegration:

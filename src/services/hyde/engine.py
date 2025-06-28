@@ -1,6 +1,7 @@
 """HyDE Query Engine with Query API integration."""
 
 import asyncio
+import hashlib
 import logging
 import time
 from typing import Any
@@ -14,7 +15,6 @@ from ..vector_db.service import QdrantService
 from .cache import HyDECache
 from .config import HyDEConfig, HyDEMetricsConfig, HyDEPromptConfig
 from .generator import HypotheticalDocumentGenerator
-import hashlib
 
 
 logger = logging.getLogger(__name__)

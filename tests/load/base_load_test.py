@@ -14,7 +14,6 @@ from typing import Any
 
 from locust import HttpUser, TaskSet, between, events, task
 from locust.env import Environment
-from locust.env import Environment
 from locust.log import setup_logging
 
 

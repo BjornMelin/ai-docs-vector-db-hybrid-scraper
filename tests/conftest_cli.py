@@ -5,14 +5,14 @@ for comprehensive CLI testing with Rich console integration.
 """
 
 import os
+import re
 import sys
+import time
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
-import time
 from click.testing import CliRunner
-import re
-from unittest.mock import patch
 
 
 # Add src to Python path for testing

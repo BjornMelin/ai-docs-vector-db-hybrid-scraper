@@ -6,16 +6,16 @@ Rich console integration, questionary flows, and real user interaction scenarios
 
 import json
 import os
+import queue
+import threading
+import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import questionary
 from click.testing import CliRunner
 
 from src.cli.main import main
-import questionary
-import time
-import queue
-import threading
 
 
 class TestCLIEndToEndWorkflows:

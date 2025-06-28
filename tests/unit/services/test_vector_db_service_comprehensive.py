@@ -6,6 +6,7 @@ assertions, and modern test patterns.
 """
 
 import asyncio
+import time
 from contextlib import contextmanager
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -13,10 +14,9 @@ import pytest
 
 from src.config.core import Config
 from src.config.enums import Environment, LogLevel
+from src.services.base import BaseService
 from src.services.errors import QdrantServiceError
 from src.services.vector_db.service import QdrantService
-from src.services.base import BaseService
-import time
 
 
 @contextmanager

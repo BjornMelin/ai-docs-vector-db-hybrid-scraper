@@ -5,12 +5,12 @@ system command interfaces and subprocess calls.
 """
 
 import os
+import time
 from unittest.mock import patch
 
 import pytest
 
 from src.security import SecurityError, SecurityValidator
-import time
 
 
 @pytest.mark.security

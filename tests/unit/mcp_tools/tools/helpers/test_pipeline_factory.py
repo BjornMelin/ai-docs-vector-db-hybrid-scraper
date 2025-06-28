@@ -7,13 +7,13 @@ Following TEST_SUITE_MODERNISATION_v1 principles:
 - Modern pytest patterns
 """
 
+import inspect
 from unittest.mock import AsyncMock, Mock
 
 import pytest
 
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tools.helpers.pipeline_factory import QueryProcessingPipelineFactory
-import inspect
 
 
 class MockContext:

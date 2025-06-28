@@ -5,8 +5,9 @@ compliance for color accessibility, including automated validation and
 color-blind friendly design verification.
 """
 
-import pytest
 import re
+
+import pytest
 
 
 @pytest.mark.accessibility

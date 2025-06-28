@@ -10,7 +10,6 @@ from typing import Any
 import pytest
 
 from src.security import SecurityError
-import time
 
 
 @pytest.mark.security

@@ -4,6 +4,7 @@ This module provides comprehensive testing for the interactive configuration wiz
 with focus on Rich CLI components, questionary interactions, and user experience flows.
 """
 
+import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 
@@ -12,7 +13,6 @@ import pytest
 from rich.console import Console
 
 from src.cli.commands.setup import ConfigurationWizard, setup
-import tempfile
 
 
 @pytest.fixture

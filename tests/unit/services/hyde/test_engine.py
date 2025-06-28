@@ -5,13 +5,12 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.services.embeddings.manager import EmbeddingManager
-from src.services.errors import EmbeddingServiceError, QdrantServiceError
+from src.services.errors import APIError, EmbeddingServiceError, QdrantServiceError
 from src.services.hyde.cache import HyDECache
 from src.services.hyde.config import HyDEConfig, HyDEMetricsConfig, HyDEPromptConfig
 from src.services.hyde.engine import HyDEQueryEngine
 from src.services.hyde.generator import GenerationResult, HypotheticalDocumentGenerator
 from src.services.vector_db.service import QdrantService
-from src.services.errors import APIError
 
 
 class TestError(Exception):

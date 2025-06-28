@@ -4,12 +4,13 @@ Demonstrates proper boundary mocking for HTTP services using respx
 instead of implementation detail mocking.
 """
 
+import asyncio
+
 import httpx
 import pytest
 import respx
 
 from src.config import Config
-import asyncio
 
 
 class MockLightweightScraper:

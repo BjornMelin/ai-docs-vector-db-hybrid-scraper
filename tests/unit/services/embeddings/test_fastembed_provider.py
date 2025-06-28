@@ -1,4 +1,5 @@
 import asyncio
+
 from src.services.embeddings.base import EmbeddingProvider
 
 

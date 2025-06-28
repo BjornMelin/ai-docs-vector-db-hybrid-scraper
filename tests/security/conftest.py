@@ -6,13 +6,13 @@ and compliance validation.
 """
 
 import hashlib
+import re
 import secrets
 import time
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-import re
 
 
 @pytest.fixture(scope="session")

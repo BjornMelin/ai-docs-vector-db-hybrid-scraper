@@ -7,6 +7,7 @@ time-based content relevance analysis.
 
 import logging
 import math
+import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -14,7 +15,6 @@ from pydantic import BaseModel, Field, field_validator
 from qdrant_client import models
 
 from .base import BaseFilter, FilterError, FilterResult
-import re
 
 
 logger = logging.getLogger(__name__)

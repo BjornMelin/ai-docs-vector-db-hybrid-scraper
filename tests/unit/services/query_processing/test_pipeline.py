@@ -1,6 +1,7 @@
 import asyncio
-from src.services.errors import APIError
 import time
+
+from src.services.errors import APIError
 
 
 class TestError(Exception):
@@ -11,8 +12,6 @@ class TestError(Exception):
 
 """Tests for query processing pipeline."""
 
-import asyncio
-import time
 from unittest.mock import AsyncMock, Mock
 
 import pytest

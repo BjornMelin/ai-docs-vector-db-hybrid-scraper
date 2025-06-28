@@ -1,10 +1,11 @@
 """Tests for HyDE configuration models."""
 
+from unittest.mock import Mock
+
 import pytest
 from pydantic import ValidationError
 
 from src.services.hyde.config import HyDEConfig, HyDEMetricsConfig, HyDEPromptConfig
-from unittest.mock import Mock
 
 
 class TestHyDEConfig:

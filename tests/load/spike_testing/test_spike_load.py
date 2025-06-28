@@ -6,6 +6,7 @@ under sudden traffic spikes and auto-scaling scenarios.
 
 import asyncio
 import logging
+import random
 import time
 from typing import Dict
 
@@ -14,8 +15,6 @@ import pytest
 from ..base_load_test import create_load_test_runner
 from ..conftest import LoadTestConfig, LoadTestType
 from ..load_profiles import DoubleSpike, SpikeLoadProfile
-import asyncio
-import random
 
 
 class TestError(Exception):

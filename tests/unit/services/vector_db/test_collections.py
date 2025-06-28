@@ -1,17 +1,15 @@
 """Tests for QdrantCollections service."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http.exceptions import ResponseHandlingException
 
 from src.config import Config
-from src.services.errors import QdrantServiceError
-from src.services.vector_db.collections import QdrantCollections
-from unittest.mock import PropertyMock
 from src.services.base import BaseService
-from src.services.errors import APIError
+from src.services.errors import APIError, QdrantServiceError
+from src.services.vector_db.collections import QdrantCollections
 
 
 class TestQdrantCollections:

@@ -7,6 +7,7 @@ analysis with recovery time measurement.
 
 import asyncio
 import logging
+import random
 import statistics
 import time
 from dataclasses import dataclass, field
@@ -16,7 +17,6 @@ import pytest
 from ..base_load_test import create_load_test_runner
 from ..conftest import LoadTestConfig, LoadTestType
 from ..load_profiles import SpikeLoadProfile
-import random
 
 
 class TestError(Exception):

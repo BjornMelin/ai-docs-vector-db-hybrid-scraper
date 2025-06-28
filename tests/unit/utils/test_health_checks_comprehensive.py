@@ -6,11 +6,12 @@ class and all its health check methods.
 
 from unittest.mock import Mock, patch
 
+import redis
+from qdrant_client.http.exceptions import UnexpectedResponse
+
 from src.config import Config
 from src.config.enums import CrawlProvider, EmbeddingProvider
 from src.utils.health_checks import ServiceHealthChecker
-from qdrant_client.http.exceptions import UnexpectedResponse
-import redis
 
 
 class TestQdrantHealthCheck:

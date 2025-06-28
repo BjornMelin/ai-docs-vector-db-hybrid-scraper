@@ -4,14 +4,13 @@ This module tests batch processing operations including file processing,
 progress tracking, confirmations, and Rich console output.
 """
 
+from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from src.cli.commands.batch import batch, complete_collection_name
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from src.cli.commands.batch import batch
+
 from src.cli.commands.batch import batch, complete_collection_name
-from dataclasses import dataclass
 
 
 # Mock data for testing

@@ -6,6 +6,7 @@ service architecture while following OpenTelemetry best practices.
 
 import logging
 from typing import TYPE_CHECKING, Any
+
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader

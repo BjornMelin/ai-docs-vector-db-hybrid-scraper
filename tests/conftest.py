@@ -475,7 +475,7 @@ def _check_browser_availability() -> bool:
     """
     try:
         # Try to check if Playwright browsers are installed
-        result = subprocess.run(
+        result = subprocess.run(  # noqa: S603  # Using sys.executable is safe
             [
                 sys.executable,
                 "-c",

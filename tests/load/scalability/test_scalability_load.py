@@ -7,6 +7,7 @@ vertical scaling, and auto-scaling capabilities of the system.
 import asyncio
 import logging
 import math
+import random
 import time
 from typing import Dict
 
@@ -15,7 +16,6 @@ import pytest
 from ..base_load_test import create_load_test_runner
 from ..conftest import LoadTestConfig, LoadTestType
 from ..load_profiles import LoadStage, StepLoadProfile
-import random
 
 
 logger = logging.getLogger(__name__)

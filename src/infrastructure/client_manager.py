@@ -20,6 +20,7 @@ from src.infrastructure.shared import CircuitBreaker, ClientHealth, ClientState
 from src.services.errors import APIError
 from src.services.hyde.engine import HyDEQueryEngine
 
+
 # Optional imports for configuration functions to avoid circular imports
 try:
     from src.config import get_config, get_config_with_auto_detection
@@ -416,9 +417,8 @@ class ClientManager:
 
             async with self._service_locks["cache_manager"]:
                 if self._cache_manager is None:
-                    from src.services.cache.manager import (
-                        CacheManager,
-                    )
+                    if CacheManager is None:
+                        raise ImportError("CacheManager not available")
 
                     # Check for auto-detected Redis service
                     auto_detected_redis = self._get_auto_detected_service("redis")
@@ -544,9 +544,8 @@ class ClientManager:
 
             async with self._service_locks["browser_automation_router"]:
                 if self._browser_automation_router is None:
-                    from src.services.browser.browser_router import (
-                        EnhancedAutomationRouter,
-                    )
+                    if EnhancedAutomationRouter is None:
+                        raise ImportError("EnhancedAutomationRouter not available")
 
                     self._browser_automation_router = EnhancedAutomationRouter(
                         config=self.config,
@@ -566,9 +565,8 @@ class ClientManager:
 
             async with self._service_locks["task_queue_manager"]:
                 if self._task_queue_manager is None:
-                    from src.services.task_queue.manager import (
-                        TaskQueueManager,
-                    )
+                    if TaskQueueManager is None:
+                        raise ImportError("TaskQueueManager not available")
 
                     # Check for auto-detected Redis service
                     auto_detected_redis = self._get_auto_detected_service("redis")
@@ -601,9 +599,8 @@ class ClientManager:
 
             async with self._service_locks["content_intelligence_service"]:
                 if self._content_intelligence_service is None:
-                    from src.services.content_intelligence.service import (
-                        ContentIntelligenceService,
-                    )
+                    if ContentIntelligenceService is None:
+                        raise ImportError("ContentIntelligenceService not available")
 
                     # Get dependencies
                     embedding_manager = await self.get_embedding_manager()
@@ -627,7 +624,8 @@ class ClientManager:
 
             async with self._service_locks["rag_generator"]:
                 if self._rag_generator is None:
-                    from src.services.rag import RAGGenerator
+                    if RAGGenerator is None:
+                        raise ImportError("RAGGenerator not available")
 
                     self._rag_generator = RAGGenerator(
                         config=self.config.rag,
@@ -734,9 +732,8 @@ class ClientManager:
 
             async with self._service_locks["ab_testing_manager"]:
                 if self._ab_testing_manager is None:
-                    from src.services.deployment.ab_testing import (
-                        ABTestingManager,
-                    )
+                    if ABTestingManager is None:
+                        raise ImportError("ABTestingManager not available")
 
                     # Get dependencies
                     qdrant_service = await self.get_qdrant_service()

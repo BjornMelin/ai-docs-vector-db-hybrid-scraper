@@ -1,8 +1,9 @@
 """Property-based testing fixtures and configuration."""
 
+import os
+
 import pytest
 from hypothesis import Verbosity, settings
-import os
 
 
 # Configure Hypothesis settings for property-based tests

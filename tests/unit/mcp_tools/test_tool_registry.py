@@ -9,13 +9,13 @@ This test module demonstrates:
 """
 
 import logging
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
 from src.mcp_tools import tools
 from src.mcp_tools.tool_registry import register_all_tools
-from typing import TYPE_CHECKING
 
 
 class TestRegisterAllTools:

@@ -18,6 +18,7 @@ from ..base import BaseService
 from ..errors import CrawlServiceError
 from .monitoring import BrowserAutomationMonitor
 
+
 # Optional imports that may not be available in all configurations
 try:
     from ...infrastructure.client_manager import ClientManager

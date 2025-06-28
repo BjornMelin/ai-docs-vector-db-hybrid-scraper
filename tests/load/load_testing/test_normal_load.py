@@ -4,16 +4,19 @@ This module implements load tests for normal operating conditions,
 validating system performance under expected user loads.
 """
 
+import asyncio
 import logging
+import random
 from typing import Dict
 
 import pytest
 
 from ..base_load_test import create_load_test_runner
-from ..load_profiles import RampUpLoadProfile, SteadyLoadProfile
-from ..load_profiles import create_custom_step_profile
-import random
-import asyncio
+from ..load_profiles import (
+    RampUpLoadProfile,
+    SteadyLoadProfile,
+    create_custom_step_profile,
+)
 
 
 logger = logging.getLogger(__name__)

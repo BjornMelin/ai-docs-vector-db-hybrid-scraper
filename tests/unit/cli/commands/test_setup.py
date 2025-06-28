@@ -4,6 +4,7 @@ This module tests the interactive configuration wizard including all setup flows
 user interactions, file operations, and Rich console output.
 """
 
+import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 
@@ -12,9 +13,6 @@ import pytest
 from rich.console import Console
 
 from src.cli.commands.setup import ConfigurationWizard, setup
-import tempfile
-from src.cli.commands.setup import ConfigurationWizard
-from src.cli.commands.setup import setup
 
 
 class TestConfigurationWizard:

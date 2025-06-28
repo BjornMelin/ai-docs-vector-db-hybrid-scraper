@@ -10,9 +10,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 
 from tests.deployment.conftest import DeploymentEnvironment
-import yaml
 
 
 class TestInfrastructureAsCode:

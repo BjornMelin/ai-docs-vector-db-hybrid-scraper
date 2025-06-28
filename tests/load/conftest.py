@@ -6,6 +6,7 @@ volume testing, and scalability testing.
 """
 
 import asyncio
+import random
 import statistics
 import time
 from collections.abc import Callable
@@ -14,7 +15,6 @@ from enum import Enum
 from typing import Any
 
 import pytest
-import random
 
 
 class CustomError(Exception):

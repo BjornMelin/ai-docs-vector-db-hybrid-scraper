@@ -3,10 +3,10 @@
 from unittest.mock import Mock, patch
 
 import pytest
+from qdrant_client.http.exceptions import UnexpectedResponse
 
 from src.config import Config
 from src.utils.health_checks import ServiceHealthChecker
-from qdrant_client.http.exceptions import UnexpectedResponse
 
 
 @pytest.fixture

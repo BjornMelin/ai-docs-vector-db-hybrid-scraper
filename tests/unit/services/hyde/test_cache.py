@@ -6,11 +6,10 @@ from unittest.mock import AsyncMock, MagicMock
 import numpy as np
 import pytest
 
-from src.services.errors import EmbeddingServiceError
+from src.services.errors import APIError, EmbeddingServiceError
 from src.services.hyde.cache import HyDECache
 from src.services.hyde.config import HyDEConfig
 from src.services.hyde.generator import GenerationResult
-from src.services.errors import APIError
 
 
 class TestHyDECache:

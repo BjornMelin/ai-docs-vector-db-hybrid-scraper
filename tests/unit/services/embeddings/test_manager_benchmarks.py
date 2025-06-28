@@ -6,8 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.config import Config
-from src.services.embeddings.manager import EmbeddingManager
-from src.services.embeddings.manager import TextAnalysis
+from src.services.embeddings.manager import EmbeddingManager, TextAnalysis
 
 
 class TestEmbeddingManagerBenchmarks:

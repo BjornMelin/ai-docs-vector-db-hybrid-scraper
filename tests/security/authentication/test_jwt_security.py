@@ -4,13 +4,13 @@ This module tests JWT token validation, manipulation resistance,
 and authentication bypass prevention.
 """
 
+import base64
+import json
 import time
 from unittest.mock import MagicMock
 
 import jwt
 import pytest
-import base64
-import json
 
 
 @pytest.mark.security

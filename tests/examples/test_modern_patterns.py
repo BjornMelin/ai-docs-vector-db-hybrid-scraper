@@ -5,6 +5,7 @@ and modern pytest patterns following 2025 standards.
 """
 
 import asyncio
+import copy
 import logging
 from unittest.mock import AsyncMock, MagicMock
 
@@ -13,10 +14,9 @@ import pytest_asyncio
 from hypothesis import given, settings, strategies as st
 
 from src.config import Config, TaskQueueConfig
-from src.services.task_queue.worker import WorkerSettings
 from src.config.core import ChunkingConfig
-import copy
 from src.config.enums import EmbeddingProvider
+from src.services.task_queue.worker import WorkerSettings
 
 
 class TestModernAsyncPatterns:

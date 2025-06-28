@@ -4,6 +4,9 @@ This module tests the main CLI interface with focus on Rich console integration,
 command routing, error handling, and user experience.
 """
 
+import queue
+import threading
+import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -11,9 +14,6 @@ import click
 from rich.console import Console
 
 from src.cli.main import RichCLI, main
-import time
-import queue
-import threading
 
 
 class TestRichCLI:

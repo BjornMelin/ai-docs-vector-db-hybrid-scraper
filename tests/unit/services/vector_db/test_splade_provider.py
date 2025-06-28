@@ -4,6 +4,7 @@ This module contains comprehensive tests for the SPLADEProvider
 including sparse vector generation, tokenization, and caching.
 """
 
+import math
 from unittest.mock import MagicMock
 
 import pytest
@@ -11,7 +12,6 @@ import pytest
 from src.config import Config
 from src.models.vector_search import SPLADEConfig
 from src.services.vector_db.splade_provider import SPLADEProvider
-import math
 
 
 class TestSPLADEProvider:

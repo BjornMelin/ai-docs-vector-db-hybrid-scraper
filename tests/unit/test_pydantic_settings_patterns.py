@@ -4,19 +4,18 @@ Tests for the modernized configuration system using pydantic-settings
 instead of custom configuration management.
 """
 
+import asyncio
 import os
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from pydantic import Field, ValidationError
+from pydantic import Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.config import Config
-from datetime import datetime
-from pydantic import field_validator
-import asyncio
 
 
 class TestPydanticSettingsPatterns:

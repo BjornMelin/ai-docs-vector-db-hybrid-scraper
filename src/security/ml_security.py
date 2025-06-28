@@ -195,7 +195,7 @@ class MLSecurityValidator:
                     f"pip-audit found in unexpected location: {pip_audit_path}"
                 )
 
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603  # Validated executable path
                 [pip_audit_path, "--format", "json"],
                 capture_output=True,
                 text=True,
@@ -296,7 +296,7 @@ class MLSecurityValidator:
                 self.checks_performed.append(result)
                 return result
 
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603  # Validated executable path
                 [
                     trivy_path,
                     "image",

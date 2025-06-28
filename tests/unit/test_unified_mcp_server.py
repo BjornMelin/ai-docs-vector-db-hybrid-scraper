@@ -5,11 +5,11 @@ import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import sys
+from fastmcp import FastMCP
+
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tool_registry import register_all_tools
 from src.services.logging_config import configure_logging
-from fastmcp import FastMCP
 
 
 # Mock problematic imports before importing the module

@@ -6,10 +6,9 @@ auto-completion, async operations, and Rich console output.
 
 from unittest.mock import MagicMock
 
-from src.cli.commands.database import complete_collection_name, database
-from src.cli.commands.database import complete_collection_name
-from src.cli.commands.database import complete_collection_name, database
 from rich.progress import Progress, SpinnerColumn, TextColumn
+
+from src.cli.commands.database import complete_collection_name, database
 
 
 class TestDatabaseCommandGroup:

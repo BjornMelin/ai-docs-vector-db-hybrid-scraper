@@ -1,12 +1,12 @@
 """Tests for crawling base module."""
 
+import inspect
 from abc import ABC
 from typing import Any
 
 import pytest
 
 from src.services.crawling.base import CrawlProvider
-import inspect
 
 
 class TestCrawlProvider:

@@ -2,7 +2,9 @@
 
 import logging
 from typing import TYPE_CHECKING
+
 from ....services.query_processing.orchestrator import QueryProcessingOrchestrator
+
 
 if TYPE_CHECKING:
     from fastmcp import Context

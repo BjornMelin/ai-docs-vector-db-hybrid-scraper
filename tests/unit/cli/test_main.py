@@ -9,8 +9,6 @@ from unittest.mock import MagicMock, patch
 from rich.console import Console
 
 from src.cli.main import RichCLI, main
-from src.cli.main import RichCLI
-from src.cli.main import main
 
 
 class TestRichCLI:
