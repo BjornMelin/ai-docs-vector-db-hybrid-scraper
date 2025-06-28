@@ -70,7 +70,7 @@ async def deploy_with_timeout_monitoring(deployment_config: dict) -> bool:
             _perform_deployment(deployment_config),
             timeout=timeout_config.timeout_seconds,
         )
-        return result
+        return result  # noqa: TRY300
     except TimeoutError:
         return False
     finally:

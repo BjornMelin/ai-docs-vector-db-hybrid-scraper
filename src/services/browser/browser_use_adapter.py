@@ -155,7 +155,7 @@ class BrowserUseAdapter(BaseService):
         self,
         url: str,
         task: str,
-        timeout: int | None = None,
+        timeout: int | None = None,  # noqa: ASYNC109
         instructions: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Scrape using AI-powered automation with natural language tasks.
@@ -256,7 +256,7 @@ class BrowserUseAdapter(BaseService):
         self,
         url: str,
         instructions: list[str],
-        timeout: int | None = None,
+        timeout: int | None = None,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Scrape with list of instructions (compatibility method).
 

@@ -1,14 +1,8 @@
-import src.services.observability.init as init_module
-
-
-class TestError(Exception):
-    """Custom exception for this module."""
-
-
 """Tests for OpenTelemetry initialization."""
 
 from unittest.mock import MagicMock, patch
 
+import src.services.observability.init as init_module
 from src.services.observability.config import ObservabilityConfig
 from src.services.observability.init import (
     _setup_auto_instrumentation,
@@ -176,7 +170,7 @@ class TestObservabilityInitialization:
             def side_effect(name, *args, **_kwargs):
                 if "opentelemetry" in name:
                     msg = "Initialization failed"
-                    raise TestError(msg)
+                    raise ImportError(msg)
                 return __import__(name, *args, **_kwargs)
 
             mock_import.side_effect = side_effect

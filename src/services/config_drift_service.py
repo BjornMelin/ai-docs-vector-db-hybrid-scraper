@@ -21,7 +21,7 @@ from src.services.observability.performance import get_performance_monitor
 
 
 if TYPE_CHECKING:
-    from src.services.task_queue.tasks import create_task
+    pass  # Remove unused import
 
 
 logger = logging.getLogger(__name__)
@@ -108,7 +108,7 @@ class ConfigDriftService:
 
         try:
             # Import here to avoid circular dependency
-            from src.services.task_queue.tasks import create_task
+            from src.services.task_queue.tasks import create_task  # noqa: PLC0415
 
             # Create task for taking configuration snapshots
             await create_task(
@@ -130,7 +130,7 @@ class ConfigDriftService:
 
         try:
             # Import here to avoid circular dependency
-            from src.services.task_queue.tasks import create_task
+            from src.services.task_queue.tasks import create_task  # noqa: PLC0415
 
             # Create task for comparing configurations
             await create_task(
@@ -346,7 +346,7 @@ class ConfigDriftService:
                 logger.info(f"Remediation suggestion: {event.remediation_suggestion}")
 
             # Import here to avoid circular dependency
-            from src.services.task_queue.tasks import create_task
+            from src.services.task_queue.tasks import create_task  # noqa: PLC0415
 
             # Create a task to track the remediation
             await create_task(

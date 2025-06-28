@@ -262,7 +262,7 @@ class DeploymentHealthChecker:
                 "timestamp": datetime.now(tz=UTC).isoformat(),
             }
 
-    async def check_all_health(self, timeout: int = 30) -> dict[str, dict[str, Any]]:
+    async def check_all_health(self, timeout: int = 30) -> dict[str, dict[str, Any]]:  # noqa: ASYNC109
         """Check health of all registered endpoints."""
         results = {}
         for endpoint in self.health_endpoints:
@@ -270,7 +270,10 @@ class DeploymentHealthChecker:
         return results
 
     async def wait_for_healthy(
-        self, endpoint: str, timeout: int = 60, interval: int = 5
+        self,
+        endpoint: str,
+        timeout: int = 60,
+        interval: int = 5,  # noqa: ASYNC109
     ) -> bool:
         """Wait for an endpoint to become healthy."""
         start_time = asyncio.get_event_loop().time()

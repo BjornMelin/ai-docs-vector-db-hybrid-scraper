@@ -305,7 +305,7 @@ class ServiceDiscovery:
         self,
         host: str,
         port: int,
-        timeout: float = 5.0,  # timeout used in asyncio.wait_for
+        timeout: float = 5.0,  # timeout used in asyncio.wait_for  # noqa: ASYNC109
     ) -> bool:
         """Test basic TCP connectivity to a service.
 

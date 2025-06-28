@@ -10,6 +10,7 @@ import time
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any
+from urllib.parse import urlparse
 
 import aiohttp
 import redis.asyncio as redis
@@ -18,6 +19,13 @@ from qdrant_client import AsyncQdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
 
 from .metrics import MetricsRegistry
+
+
+# Optional dependencies
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 
 logger = logging.getLogger(__name__)
@@ -296,8 +304,6 @@ class HTTPHealthCheck(HealthCheck):
 
         """
         if name is None:
-            from urllib.parse import urlparse
-
             parsed = urlparse(url)
             name = f"http_{parsed.netloc}"
 
@@ -397,7 +403,13 @@ class SystemResourceHealthCheck(HealthCheck):
 
         async def _check():
             try:
-                import psutil
+                if psutil is None:
+                    return HealthCheckResult(
+                        name=self.name,
+                        status=HealthStatus.DEGRADED,
+                        response_time_ms=0,
+                        details={"error": "psutil not available"},
+                    )
 
                 # Check CPU usage
                 cpu_percent = psutil.cpu_percent(interval=1)

@@ -109,7 +109,7 @@ async def _perform_ab_test_search(
     return search_results, ab_test_results
 
 
-def register_tools(mcp, client_manager: ClientManager):
+def register_tools(mcp, client_manager: ClientManager):  # noqa: C901
     """Register advanced search tools with the MCP server."""
 
     async def _search_documents_direct(

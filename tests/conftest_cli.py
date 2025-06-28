@@ -349,7 +349,7 @@ def cli_coverage_collector(request):
     """Collect CLI-specific coverage data."""
     if request.config.getoption("--cli-coverage"):
         # Setup CLI coverage collection
-        import coverage
+        import coverage  # noqa: PLC0415
 
         cov = coverage.Coverage(source=["src/cli"])
         cov.start()

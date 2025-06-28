@@ -142,16 +142,18 @@ def wcag_validator():
                     )
 
                 # Check for skipped heading levels
-                for i in range(1, len(heading_levels)):
-                    if heading_levels[i] > heading_levels[i - 1] + 1:
-                        issues.append(
-                            {
-                                "guideline": "1.3.1",
-                                "level": "A",
-                                "issue": f"Skipped heading level: h{heading_levels[i - 1]} to h{heading_levels[i]}",
-                                "severity": "warning",
-                            }
-                        )
+                issues.extend(
+                    [
+                        {
+                            "guideline": "1.3.1",
+                            "level": "A",
+                            "issue": f"Skipped heading level: h{heading_levels[i - 1]} to h{heading_levels[i]}",
+                            "severity": "warning",
+                        }
+                        for i in range(1, len(heading_levels))
+                        if heading_levels[i] > heading_levels[i - 1] + 1
+                    ]
+                )
 
             # Check for missing form labels
             input_pattern = r'<input(?![^>]*(?:type=["\'](?:hidden|submit|button)["\']|id=["\']([^"\']*)["\']))[^>]*>'

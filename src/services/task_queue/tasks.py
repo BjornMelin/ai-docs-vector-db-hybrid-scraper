@@ -172,7 +172,7 @@ async def config_drift_snapshot(_ctx: dict[str, Any]) -> dict[str, Any]:
 
     try:
         # Import here to avoid circular imports
-        from src.services.config_drift_service import get_drift_service
+        from src.services.config_drift_service import get_drift_service  # noqa: PLC0415
 
         service = get_drift_service()
         result = await service.take_configuration_snapshot()
@@ -216,7 +216,7 @@ async def config_drift_comparison(_ctx: dict[str, Any]) -> dict[str, Any]:
 
     try:
         # Import here to avoid circular imports
-        from src.services.config_drift_service import get_drift_service
+        from src.services.config_drift_service import get_drift_service  # noqa: PLC0415
 
         service = get_drift_service()
         result = await service.compare_configurations()

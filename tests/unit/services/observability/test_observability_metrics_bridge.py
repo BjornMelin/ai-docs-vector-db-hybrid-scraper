@@ -749,18 +749,20 @@ class TestMetricsBridgeEdgeCases:
         }
 
         # Should handle instrument exceptions gracefully
-        with patch("src.services.observability.metrics_bridge.logger") as mock_logger:
-            with patch(
+        with (
+            patch("src.services.observability.metrics_bridge.logger") as mock_logger,
+            patch(
                 "src.services.observability.metrics_bridge.isinstance"
-            ) as mock_isinstance:
-                # Make isinstance return True for our failing counter
-                mock_isinstance.side_effect = (
-                    lambda obj, type_class: obj is failing_counter
-                    and "Counter" in str(type_class)
-                )
+            ) as mock_isinstance,
+        ):
+            # Make isinstance return True for our failing counter
+            mock_isinstance.side_effect = (
+                lambda obj, type_class: obj is failing_counter
+                and "Counter" in str(type_class)
+            )
 
-                bridge.record_batch_metrics(metrics_batch)
-                mock_logger.warning.assert_called()
+            bridge.record_batch_metrics(metrics_batch)
+            mock_logger.warning.assert_called()
 
     @patch("src.services.observability.metrics_bridge.metrics")
     def test_create_custom_histogram_with_boundaries(self, mock_metrics):

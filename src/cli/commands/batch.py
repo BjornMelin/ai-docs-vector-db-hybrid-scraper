@@ -82,6 +82,7 @@ class OperationQueue:
     """Manages a queue of batch operations with Rich visualization."""
 
     def __init__(self):
+        """Initialize operation queue with Rich console for visualization."""
         self.operations: list[BatchOperation] = []
         self.console = Console()
 

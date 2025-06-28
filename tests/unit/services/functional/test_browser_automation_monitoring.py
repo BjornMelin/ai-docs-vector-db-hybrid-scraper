@@ -316,8 +316,8 @@ class TestBrowserAutomationMonitoring:
         lightweight_tier.max_sessions = 2
 
         # First two requests should succeed
-        asyncio.create_task(lightweight_tier.execute_request("test1"))
-        asyncio.create_task(lightweight_tier.execute_request("test2"))
+        _task1 = asyncio.create_task(lightweight_tier.execute_request("test1"))
+        _task2 = asyncio.create_task(lightweight_tier.execute_request("test2"))
 
         # Third request should fail due to capacity
         with pytest.raises(Exception, match="at capacity"):

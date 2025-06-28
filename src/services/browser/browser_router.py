@@ -116,7 +116,7 @@ class EnhancedAutomationRouter(AutomationRouter):
         interaction_required: bool = False,
         custom_actions: list[dict] | None = None,
         force_tool: str | None = None,
-        timeout: int = 30000,
+        timeout: int = 30000,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Enhanced scraping with performance tracking and intelligent routing."""
         if not self._initialized:
@@ -377,7 +377,7 @@ class EnhancedAutomationRouter(AutomationRouter):
         domain: str,
         failed_tier: str,
         custom_actions: list[dict] | None,
-        timeout: int,
+        timeout: int,  # noqa: ASYNC109
         error_message: str,
     ) -> dict[str, Any]:
         """Intelligent fallback with performance awareness."""
@@ -532,7 +532,7 @@ class EnhancedAutomationRouter(AutomationRouter):
         tier: str,
         url: str,
         custom_actions: list[dict] | None,
-        timeout: int,
+        timeout: int,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Execute scraping for a specific tier."""
         # Use parent class methods for actual execution

@@ -136,7 +136,7 @@ class PlaywrightAdapter(BaseService):
         url: str,
         actions: list[dict],
         *,
-        timeout: int = 30000,
+        timeout: int = 30000,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Scrape with direct Playwright control.
 
@@ -247,7 +247,7 @@ class PlaywrightAdapter(BaseService):
         url: str,
         actions: list[dict],
         *,
-        timeout: int,
+        timeout: int,  # noqa: ASYNC109
         site_profile: str,
     ) -> list[dict[str, Any]]:
         """Navigate to URL and execute all actions."""

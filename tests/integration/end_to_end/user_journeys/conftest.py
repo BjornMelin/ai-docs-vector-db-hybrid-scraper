@@ -268,7 +268,7 @@ def journey_executor():
             action: str,
             params: dict[str, Any],
             context: dict[str, Any],
-            timeout: float,
+            timeout: float,  # noqa: ASYNC109
         ) -> dict[str, Any]:
             """Perform the specified action."""
             # Replace context variables in params

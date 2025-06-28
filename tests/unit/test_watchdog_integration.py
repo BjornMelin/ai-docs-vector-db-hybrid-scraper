@@ -214,7 +214,7 @@ class TestWatchdogIntegration:
         mock_observer = MagicMock()
         mock_observer.is_alive.return_value = True
 
-        async def shutdown_watcher(observer, timeout=5.0):
+        async def shutdown_watcher(observer, timeout=5.0):  # noqa: ASYNC109
             """Gracefully shutdown file watcher."""
             observer.stop()
 
@@ -236,7 +236,7 @@ class TestWatchdogIntegration:
                     shutdown_event.set()
 
             # Simulate the observer stopping after a short time
-            task = asyncio.create_task(
+            _task = asyncio.create_task(
                 _simulate_observer_stop(observer, shutdown_event)
             )
             await shutdown_event.wait()

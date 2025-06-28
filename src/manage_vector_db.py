@@ -140,7 +140,7 @@ class VectorDBManager:
             console.print(
                 f"✅ Successfully created collection: {collection_name}", style="green"
             )
-            return True
+            return True  # noqa: TRY300
         except Exception as e:
             console.print(
                 f"❌ Error creating collection {collection_name}: {e}", style="red"
@@ -156,7 +156,7 @@ class VectorDBManager:
             console.print(
                 f"✅ Successfully deleted collection: {collection_name}", style="green"
             )
-            return True
+            return True  # noqa: TRY300
         except Exception as e:
             console.print(
                 f"❌ Error deleting collection {collection_name}: {e}", style="red"

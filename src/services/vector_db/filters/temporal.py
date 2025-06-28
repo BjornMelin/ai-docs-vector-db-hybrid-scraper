@@ -448,8 +448,6 @@ class TemporalFilter(BaseFilter):
 
         # Calculate freshness score based on decay function
         if decay_function == "exponential":
-            import math
-
             score = math.exp(-age_days / half_life_days)
         elif decay_function == "linear":
             max_age = half_life_days * 3  # Linear decay over 3x half-life

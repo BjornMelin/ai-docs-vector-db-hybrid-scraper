@@ -394,8 +394,6 @@ class ConfigurationWizard:
             # Step 5: Success Message
             self._show_success_message(config_path)
 
-            return config_path
-
         except KeyboardInterrupt:
             self.console.print("\n[yellow]Setup cancelled by user.[/yellow]")
             raise click.Abort() from None

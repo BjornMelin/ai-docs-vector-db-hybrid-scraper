@@ -528,7 +528,7 @@ async def assert_async_operation_completes(
     """
     try:
         result = await asyncio.wait_for(async_operation(), timeout=timeout_seconds)
-        return result
+        return result  # noqa: TRY300
     except TimeoutError as e:
         msg = f"{operation_name} timed out after {timeout_seconds}s"
         raise AssertionError(msg) from e

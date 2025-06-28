@@ -231,7 +231,7 @@ class AutomationRouter(BaseService):
         ]
         | None = None,
         *,
-        timeout: int = 30000,
+        timeout: int = 30000,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Route scraping to appropriate tool based on URL and requirements.
 
@@ -407,7 +407,7 @@ class AutomationRouter(BaseService):
         url: str,
         custom_actions: list[dict] | None = None,
         *,
-        timeout: int = 30000,
+        timeout: int = 30000,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Try scraping with Crawl4AI.
 
@@ -441,7 +441,7 @@ class AutomationRouter(BaseService):
         url: str,
         custom_actions: list[dict] | None = None,
         *,
-        timeout: int = 30000,
+        timeout: int = 30000,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Try scraping with browser-use AI.
 
@@ -473,7 +473,7 @@ class AutomationRouter(BaseService):
         url: str,
         custom_actions: list[dict] | None = None,
         *,
-        timeout: int = 30000,
+        timeout: int = 30000,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Try scraping with Playwright.
 
@@ -499,7 +499,7 @@ class AutomationRouter(BaseService):
         url: str,
         failed_tool: str,
         custom_actions: list[dict] | None,
-        timeout: int,
+        timeout: int,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Fallback to next tool in hierarchy.
 
@@ -769,7 +769,7 @@ class AutomationRouter(BaseService):
         self,
         url: str,
         *,
-        timeout: int = 30000,
+        timeout: int = 30000,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Try scraping with Lightweight HTTP tier.
 
@@ -815,7 +815,7 @@ class AutomationRouter(BaseService):
         url: str,
         custom_actions: list[dict] | None = None,
         *,
-        timeout: int = 30000,
+        timeout: int = 30000,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Try scraping with Crawl4AI Enhanced mode.
 

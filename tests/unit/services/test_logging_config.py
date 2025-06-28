@@ -462,7 +462,7 @@ class TestLogContext:
         try:
             with LogContext(service="TestService"):
                 msg = "Test exception"
-                raise ValueError(msg)
+                raise ValueError(msg)  # noqa: TRY301
         except ValueError:
             pass
 
@@ -728,7 +728,7 @@ class TestLoggingIntegration:
         ):
             try:
                 msg = "Something went wrong"
-                raise ValueError(msg)
+                raise ValueError(msg)  # noqa: TRY301
             except ValueError:
                 logger.exception("Operation failed")
 

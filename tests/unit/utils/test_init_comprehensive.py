@@ -67,7 +67,7 @@ class TestUtilsPackageFallback:
                 del sys.modules[module_name]
 
             # Re-import to trigger fallback behavior
-            import src.utils as utils_package
+            import src.utils as utils_package  # noqa: PLC0415
 
             # Test that fallback functions exist and raise ImportError
             assert hasattr(utils_package, "async_command")
@@ -87,7 +87,7 @@ class TestUtilsPackageFallback:
             if module_name in sys.modules:
                 del sys.modules[module_name]
 
-            import src.utils as utils_package
+            import src.utils as utils_package  # noqa: PLC0415
 
             # Test with positional arguments
             with pytest.raises(ImportError, match="async_command not available"):
@@ -167,7 +167,7 @@ class TestUtilsPackageImportLogic:
                 del sys.modules[module_name]
 
             # Import to trigger the logic
-            import src.utils
+            import src.utils  # noqa: F401,PLC0415
 
             # Verify the importlib functions were called
             mock_spec_func.assert_called()

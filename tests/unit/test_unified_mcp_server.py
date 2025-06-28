@@ -25,7 +25,7 @@ sys.modules["src.services"] = MagicMock()
 sys.modules["src.services.vector_db"] = MagicMock()
 sys.modules["src.services.vector_db.search"] = MagicMock()
 
-from src import unified_mcp_server
+from src import unified_mcp_server  # noqa: E402
 
 
 logger = logging.getLogger(__name__)
@@ -463,7 +463,7 @@ class TestLifespanContextManager:
             async with unified_mcp_server.lifespan():
                 # Simulate an exception during operation
                 msg = "Operation failed"
-                raise RuntimeError(msg)
+                raise RuntimeError(msg)  # noqa: TRY301
         except RuntimeError:
             pass
 

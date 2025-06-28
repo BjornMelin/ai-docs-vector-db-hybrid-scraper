@@ -54,7 +54,7 @@ class TierRateLimiter:
         # Lock for thread safety
         self.lock = asyncio.Lock()
 
-    async def acquire(self, tier: str, timeout: float | None = None) -> bool:
+    async def acquire(self, tier: str, timeout: float | None = None) -> bool:  # noqa: ASYNC109
         """Acquire permission to make a request for a tier.
 
         Args:

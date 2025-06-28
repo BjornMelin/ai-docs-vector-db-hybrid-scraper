@@ -153,7 +153,7 @@ class BackgroundTaskManager:
 
         logger.info(f"Background task manager started with {self.max_workers} workers")
 
-    async def stop(self, timeout: float = 30.0) -> None:
+    async def stop(self, timeout: float = 30.0) -> None:  # noqa: ASYNC109
         """Stop the background task manager gracefully.
 
         Args:
@@ -201,7 +201,7 @@ class BackgroundTaskManager:
         task_id: str | None = None,
         priority: TaskPriority = TaskPriority.NORMAL,
         max_retries: int = 3,
-        timeout: float | None = None,
+        timeout: float | None = None,  # noqa: ASYNC109
         **kwargs,
     ) -> str:
         """Submit a background task for execution.
@@ -278,7 +278,9 @@ class BackgroundTaskManager:
             return self._results.get(task_id)
 
     async def wait_for_task(
-        self, task_id: str, timeout: float | None = None
+        self,
+        task_id: str,
+        timeout: float | None = None,  # noqa: ASYNC109
     ) -> TaskResult:
         """Wait for a task to complete.
 

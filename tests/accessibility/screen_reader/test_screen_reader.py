@@ -180,11 +180,13 @@ class TestScreenReaderCompliance:
                 issues.append("Page should start with h1")
 
             # Check for skipped levels
-            for i in range(1, len(heading_levels)):
-                if heading_levels[i] > heading_levels[i - 1] + 1:
-                    issues.append(
-                        f"Skipped heading level: h{heading_levels[i - 1]} to h{heading_levels[i]}"
-                    )
+            issues.extend(
+                [
+                    f"Skipped heading level: h{heading_levels[i - 1]} to h{heading_levels[i]}"
+                    for i in range(1, len(heading_levels))
+                    if heading_levels[i] > heading_levels[i - 1] + 1
+                ]
+            )
 
             return {
                 "levels": heading_levels,

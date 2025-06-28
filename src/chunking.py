@@ -122,6 +122,12 @@ class DocumentChunker:
     ]
 
     def __init__(self, config: ChunkingConfig) -> None:
+        """Initialize document chunker with configuration.
+
+        Args:
+            config: Chunking configuration specifying strategy, sizes, and options.
+
+        """
         self.config = config
         self.parsers: dict[str, Any] = {}
         self.logger = logging.getLogger(__name__)

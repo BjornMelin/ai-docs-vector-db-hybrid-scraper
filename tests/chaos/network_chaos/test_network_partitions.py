@@ -592,7 +592,7 @@ class TestNetworkPartitions:
                 all_operations = {}
                 conflicts = []
 
-                for _node_id, operations in self.node_data.items():
+                for operations in self.node_data.values():
                     for op_id, op_data in operations.items():
                         if op_id in all_operations:
                             # Potential conflict
@@ -836,7 +836,7 @@ class TestNetworkPartitions:
                         key_read_history[key] = []
                     key_read_history[key].append(read_op)
 
-                for _key, reads in key_read_history.items():
+                for reads in key_read_history.values():
                     reads.sort(key=lambda r: r["timestamp"])
                     for i in range(1, len(reads)):
                         current_read = reads[i]

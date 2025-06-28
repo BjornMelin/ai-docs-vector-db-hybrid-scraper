@@ -705,6 +705,8 @@ class Config(BaseSettings):
             logger = logging.getLogger(__name__)
             logger.warning(f"Auto-detection failed, using manual configuration: {e}")
             return self
+        else:
+            return updated_config
 
     def get_auto_detected_services(self) -> AutoDetectedServices | None:
         """Get auto-detected services if available."""

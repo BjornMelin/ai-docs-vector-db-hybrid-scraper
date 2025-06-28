@@ -298,8 +298,6 @@ class FeatureFlagManager:
 
         try:
             # Simple implementation - in production, you'd add proper caching
-            import time
-
             cache_key = f"flags_{user_id or 'anonymous'}"
             current_time = time.time()
 
