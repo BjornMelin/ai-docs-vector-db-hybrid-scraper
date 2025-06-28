@@ -2,8 +2,18 @@
 
 from unittest.mock import Mock, patch
 
-from src.services.task_queue.worker import WorkerSettings
 from src.services.task_queue.worker import (
+    WorkerSettings,
+    cron_jobs,
+    functions,
+    job_timeout,
+    max_jobs,
+    on_job_end,
+    on_job_start,
+    on_shutdown,
+    on_startup,
+    redis_settings,
+)
 
 
 class TestWorkerSettings:
@@ -129,17 +139,6 @@ class TestWorkerSettings:
     def test_module_level_settings(self):
         """Test module-level settings for ARQ worker."""
         # These are imported and used by ARQ directly
-            cron_jobs,
-            functions,
-            job_timeout,
-            max_jobs,
-            on_job_end,
-            on_job_start,
-            on_shutdown,
-            on_startup,
-            redis_settings,
-        )
-
         # Verify they exist and have expected types
         assert redis_settings is not None
         assert isinstance(max_jobs, int)

@@ -14,11 +14,49 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
+# Optional OpenTelemetry imports - handled at runtime
+try:
+    from opentelemetry import metrics, trace
+except ImportError:
+    metrics = None
+    trace = None
+
+try:
+    from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
+        OTLPMetricExporter,
+    )
+except ImportError:
+    OTLPMetricExporter = None
+
+try:
+    from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+except ImportError:
+    ConsoleSpanExporter = None
+
+try:
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+except ImportError:
+    FastAPIInstrumentor = None
+
+try:
+    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+except ImportError:
+    HTTPXClientInstrumentor = None
+
+try:
+    from opentelemetry.instrumentation.redis import RedisInstrumentor
+except ImportError:
+    RedisInstrumentor = None
+
+try:
+    from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+except ImportError:
+    SQLAlchemyInstrumentor = None
 
 if TYPE_CHECKING:
     from .config import ObservabilityConfig
 
-# Optional imports for OpenTelemetry - handled at runtime
+# Optional imports for OpenTelemetry config - handled at runtime
 try:
     from .config import get_observability_config, get_resource_attributes
 except ImportError:
@@ -58,11 +96,10 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
         return False
 
     try:
-        # Import OpenTelemetry components - must be inside try/except for optional dependency
-        from opentelemetry import metrics, trace
-        from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
-            OTLPMetricExporter,
-        )
+        # Check for required OpenTelemetry components
+        if metrics is None or trace is None or OTLPMetricExporter is None:
+            logger.error("Required OpenTelemetry components not available")
+            return False
 
         logger.info("Initializing OpenTelemetry observability...")
 
@@ -95,12 +132,11 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
 
         # Add console exporter for development
         if config.console_exporter:
-            from opentelemetry.sdk.trace.export import (
-                ConsoleSpanExporter,
-            )
-
-            console_processor = BatchSpanProcessor(ConsoleSpanExporter())
-            _tracer_provider.add_span_processor(console_processor)
+            if ConsoleSpanExporter is None:
+                logger.warning("ConsoleSpanExporter not available")
+            else:
+                console_processor = BatchSpanProcessor(ConsoleSpanExporter())
+                _tracer_provider.add_span_processor(console_processor)
 
         # Set global tracer provider
         trace.set_tracer_provider(_tracer_provider)
@@ -152,51 +188,47 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
     try:
         # FastAPI instrumentation
         if config.instrument_fastapi:
-            try:
-                from opentelemetry.instrumentation.fastapi import (
-                    FastAPIInstrumentor,
-                )
-
-                FastAPIInstrumentor().instrument()
-                logger.info("FastAPI auto-instrumentation enabled")
-            except ImportError:
+            if FastAPIInstrumentor is None:
                 logger.warning("FastAPI instrumentation not available")
+            else:
+                try:
+                    FastAPIInstrumentor().instrument()
+                    logger.info("FastAPI auto-instrumentation enabled")
+                except Exception:
+                    logger.warning("Failed to enable FastAPI instrumentation")
 
         # HTTP client instrumentation
         if config.instrument_httpx:
-            try:
-                from opentelemetry.instrumentation.httpx import (
-                    HTTPXClientInstrumentor,
-                )
-
-                HTTPXClientInstrumentor().instrument()
-                logger.info("HTTPX client auto-instrumentation enabled")
-            except ImportError:
+            if HTTPXClientInstrumentor is None:
                 logger.warning("HTTPX instrumentation not available")
+            else:
+                try:
+                    HTTPXClientInstrumentor().instrument()
+                    logger.info("HTTPX client auto-instrumentation enabled")
+                except Exception:
+                    logger.warning("Failed to enable HTTPX instrumentation")
 
         # Redis instrumentation
         if config.instrument_redis:
-            try:
-                from opentelemetry.instrumentation.redis import (
-                    RedisInstrumentor,
-                )
-
-                RedisInstrumentor().instrument()
-                logger.info("Redis auto-instrumentation enabled")
-            except ImportError:
+            if RedisInstrumentor is None:
                 logger.warning("Redis instrumentation not available")
+            else:
+                try:
+                    RedisInstrumentor().instrument()
+                    logger.info("Redis auto-instrumentation enabled")
+                except Exception:
+                    logger.warning("Failed to enable Redis instrumentation")
 
         # SQLAlchemy instrumentation
         if config.instrument_sqlalchemy:
-            try:
-                from opentelemetry.instrumentation.sqlalchemy import (
-                    SQLAlchemyInstrumentor,
-                )
-
-                SQLAlchemyInstrumentor().instrument()
-                logger.info("SQLAlchemy auto-instrumentation enabled")
-            except ImportError:
+            if SQLAlchemyInstrumentor is None:
                 logger.warning("SQLAlchemy instrumentation not available")
+            else:
+                try:
+                    SQLAlchemyInstrumentor().instrument()
+                    logger.info("SQLAlchemy auto-instrumentation enabled")
+                except Exception:
+                    logger.warning("Failed to enable SQLAlchemy instrumentation")
 
     except Exception:
         logger.warning("Auto-instrumentation setup failed")

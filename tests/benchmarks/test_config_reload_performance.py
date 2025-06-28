@@ -406,7 +406,6 @@ class TestDriftDetectionPerformance:
     def test_drift_alert_performance(self, benchmark, drift_detector):
         """Benchmark drift alert generation performance."""
 
-
         # Create test drift event
         drift_event = DriftEvent(
             id="test_event_1",

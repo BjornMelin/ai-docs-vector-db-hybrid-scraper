@@ -557,7 +557,6 @@ class TestIntegrationWithFastAPI:
 
         app = FastAPI()
 
-
         @app.get("/test-config")
         async def test_config_endpoint(config: ConfigDep):
             return {"embedding_provider": config.embedding_provider.value}

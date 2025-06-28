@@ -73,6 +73,7 @@ def test_playwright_installation() -> bool:
         # Check if browsers are installed (use simple import test to avoid sync/async issues)
         try:
             from playwright.async_api import async_playwright
+
             print_status("Playwright browser modules available", "SUCCESS")
             return True
         except Exception:
@@ -137,7 +138,7 @@ async def test_basic_crawling() -> bool:
             extra_args.extend(["--no-sandbox", "--disable-dev-shm-usage"])
         if is_windows():
             extra_args.extend(["--disable-gpu", "--disable-dev-shm-usage"])
-        
+
         if extra_args:
             browser_config.extra_args = extra_args
 
@@ -171,16 +172,21 @@ def install_browsers_if_needed() -> bool:
     try:
         # Check if browsers are already installed by trying to find browser binary
         try:
-            check_cmd = [sys.executable, "-c", 
+            check_cmd = [
+                sys.executable,
+                "-c",
                 "from playwright.async_api import async_playwright; import asyncio; "
                 "async def check(): "
                 "  p = await async_playwright().start(); "
                 "  b = await p.chromium.launch(); "
                 "  await b.close(); "
                 "  await p.stop(); "
-                "asyncio.run(check())"]
-            
-            result = subprocess.run(check_cmd, capture_output=True, text=True, timeout=30)
+                "asyncio.run(check())",
+            ]
+
+            result = subprocess.run(
+                check_cmd, capture_output=True, text=True, timeout=30
+            )
             if result.returncode == 0:
                 print_status("Browsers already installed and working", "SUCCESS")
                 return True
@@ -194,16 +200,31 @@ def install_browsers_if_needed() -> bool:
             # CI environment: Platform-specific installation
             print_status("CI environment detected, attempting browser install...")
             if is_linux():
-                cmd = [sys.executable, "-m", "playwright", "install", "--with-deps", "chromium"]
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+                cmd = [
+                    sys.executable,
+                    "-m",
+                    "playwright",
+                    "install",
+                    "--with-deps",
+                    "chromium",
+                ]
+                result = subprocess.run(
+                    cmd, capture_output=True, text=True, timeout=300
+                )
                 if result.returncode != 0:
-                    print_status("System deps install failed, trying browser only...", "WARNING")
+                    print_status(
+                        "System deps install failed, trying browser only...", "WARNING"
+                    )
                     cmd = [sys.executable, "-m", "playwright", "install", "chromium"]
-                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+                    result = subprocess.run(
+                        cmd, capture_output=True, text=True, timeout=300
+                    )
             else:
                 # Windows/macOS: Browser-only installation in CI
                 cmd = [sys.executable, "-m", "playwright", "install", "chromium"]
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+                result = subprocess.run(
+                    cmd, capture_output=True, text=True, timeout=300
+                )
         else:
             # Local environment: Platform-specific strategy
             if is_windows():
@@ -215,14 +236,25 @@ def install_browsers_if_needed() -> bool:
             else:
                 print_status("Linux detected, trying browser-only first...")
                 cmd = [sys.executable, "-m", "playwright", "install", "chromium"]
-            
+
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-            
+
             # For Linux local dev, try with system deps if browser-only fails
             if result.returncode != 0 and is_linux():
-                print_status("Browser-only install failed, trying with system deps...", "WARNING")
-                cmd = [sys.executable, "-m", "playwright", "install", "--with-deps", "chromium"]
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+                print_status(
+                    "Browser-only install failed, trying with system deps...", "WARNING"
+                )
+                cmd = [
+                    sys.executable,
+                    "-m",
+                    "playwright",
+                    "install",
+                    "--with-deps",
+                    "chromium",
+                ]
+                result = subprocess.run(
+                    cmd, capture_output=True, text=True, timeout=300
+                )
 
         if result.returncode == 0:
             print_status("Browser installation completed", "SUCCESS")

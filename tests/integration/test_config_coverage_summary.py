@@ -6,7 +6,9 @@ test scenarios are properly covered.
 
 # Import all required test modules and classes
 try:
-    from tests.integration.test_concurrent_config import TestConcurrentConfigurationAccess
+    from tests.integration.test_concurrent_config import (
+        TestConcurrentConfigurationAccess,
+    )
     from tests.integration.test_concurrent_config import test_concurrent_config
 except ImportError:
     TestConcurrentConfigurationAccess = None
@@ -20,15 +22,21 @@ except ImportError:
     test_config_load_stress = None
 
 try:
-    from tests.integration.test_security_config_edge_cases import TestSecurityConfigurationEdgeCases
-    from tests.integration.test_security_config_edge_cases import test_security_config_edge_cases
+    from tests.integration.test_security_config_edge_cases import (
+        TestSecurityConfigurationEdgeCases,
+    )
+    from tests.integration.test_security_config_edge_cases import (
+        test_security_config_edge_cases,
+    )
 except ImportError:
     TestSecurityConfigurationEdgeCases = None
     test_security_config_edge_cases = None
 
 try:
     from tests.property.test_config_transitions import ConfigurationStateMachine
-    from tests.property.test_config_transitions import TestConfigurationTransitionProperties
+    from tests.property.test_config_transitions import (
+        TestConfigurationTransitionProperties,
+    )
     from tests.property import test_config_transitions
 except ImportError:
     ConfigurationStateMachine = None
@@ -121,7 +129,10 @@ class TestConfigurationCoverageSummary:
 
     def test_property_based_transitions_coverage(self):
         """Verify property-based transition tests exist."""
-        if ConfigurationStateMachine is None or TestConfigurationTransitionProperties is None:
+        if (
+            ConfigurationStateMachine is None
+            or TestConfigurationTransitionProperties is None
+        ):
             raise ImportError("Property-based transition classes not available")
 
         # Check state machine rules

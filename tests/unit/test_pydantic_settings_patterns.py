@@ -274,7 +274,9 @@ class TestPydanticSettingsPatterns:
             )  # Exclude from serialization
 
         settings = SerializableSettings(
-            app_name="my-app", version="2.0.0", secret_key="super-secret"  # noqa: S106  # Test data
+            app_name="my-app",
+            version="2.0.0",
+            secret_key="super-secret",  # noqa: S106  # Test data
         )
 
         # Test serialization
@@ -336,7 +338,8 @@ class TestPydanticSettingsPatterns:
 
         # Test valid configuration
         settings = CustomValidatedSettings(
-            email="USER@EXAMPLE.COM", password="SecurePass123"  # noqa: S106  # Test data
+            email="USER@EXAMPLE.COM",
+            password="SecurePass123",  # noqa: S106  # Test data
         )
         assert settings.email == "user@example.com"  # Lowercased
         assert settings.password == "SecurePass123"  # noqa: S105  # Test data

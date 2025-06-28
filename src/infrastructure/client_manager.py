@@ -95,9 +95,34 @@ except ImportError:
     QueryProcessor = None
 
 try:
-    from src.services.deployment.feature_flags import FeatureFlagManager
+    from src.services.deployment.feature_flags import (
+        FeatureFlagManager,
+        FeatureFlagConfig,
+    )
 except ImportError:
     FeatureFlagManager = None
+    FeatureFlagConfig = None
+
+try:
+    from .database.monitoring import LoadMonitor, QueryMonitor
+except ImportError:
+    LoadMonitor = None
+    QueryMonitor = None
+
+try:
+    from src.services.query_processing import AdvancedSearchOrchestrator
+except ImportError:
+    AdvancedSearchOrchestrator = None
+
+try:
+    from src.services.deployment.blue_green import BlueGreenDeployment
+except ImportError:
+    BlueGreenDeployment = None
+
+try:
+    from src.services.deployment.canary import CanaryDeployment
+except ImportError:
+    CanaryDeployment = None
 
 try:
     from src.services.deployment.ab_testing import ABTestingManager
@@ -486,7 +511,11 @@ class ClientManager:
 
             async with self._service_locks["hyde_engine"]:
                 if self._hyde_engine is None:
-                    if HyDEConfig is None or HyDEMetricsConfig is None or HyDEPromptConfig is None:
+                    if (
+                        HyDEConfig is None
+                        or HyDEMetricsConfig is None
+                        or HyDEPromptConfig is None
+                    ):
                         raise ImportError("HyDE configuration classes not available")
 
                     # Get dependencies
@@ -649,10 +678,10 @@ class ClientManager:
             async with self._service_locks["database_manager"]:
                 if self._database_manager is None:
                     # Create enterprise monitoring components
-                    from .database.monitoring import (
-                        LoadMonitor,
-                        QueryMonitor,
-                    )
+                    if LoadMonitor is None or QueryMonitor is None:
+                        raise ImportError(
+                            "Database monitoring components not available"
+                        )
 
                     load_monitor = LoadMonitor()
                     query_monitor = QueryMonitor()
@@ -685,9 +714,8 @@ class ClientManager:
 
             async with self._service_locks["search_orchestrator"]:
                 if self._search_orchestrator is None:
-                    from src.services.query_processing import (
-                        AdvancedSearchOrchestrator,
-                    )
+                    if AdvancedSearchOrchestrator is None:
+                        raise ImportError("AdvancedSearchOrchestrator not available")
 
                     self._search_orchestrator = AdvancedSearchOrchestrator(
                         enable_all_features=True, enable_performance_optimization=True
@@ -706,10 +734,8 @@ class ClientManager:
 
             async with self._service_locks["feature_flag_manager"]:
                 if self._feature_flag_manager is None:
-                    from src.services.deployment.feature_flags import (
-                        FeatureFlagConfig,
-                        FeatureFlagManager,
-                    )
+                    if FeatureFlagConfig is None or FeatureFlagManager is None:
+                        raise ImportError("Feature flag components not available")
 
                     # Create feature flag config from deployment config
                     flag_config = FeatureFlagConfig(
@@ -765,9 +791,8 @@ class ClientManager:
 
             async with self._service_locks["blue_green_deployment"]:
                 if self._blue_green_deployment is None:
-                    from src.services.deployment.blue_green import (
-                        BlueGreenDeployment,
-                    )
+                    if BlueGreenDeployment is None:
+                        raise ImportError("BlueGreenDeployment not available")
 
                     # Get dependencies
                     qdrant_service = await self.get_qdrant_service()
@@ -795,9 +820,8 @@ class ClientManager:
 
             async with self._service_locks["canary_deployment"]:
                 if self._canary_deployment is None:
-                    from src.services.deployment.canary import (
-                        CanaryDeployment,
-                    )
+                    if CanaryDeployment is None:
+                        raise ImportError("CanaryDeployment not available")
 
                     # Get dependencies
                     qdrant_service = await self.get_qdrant_service()

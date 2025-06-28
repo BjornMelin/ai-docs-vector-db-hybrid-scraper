@@ -11,12 +11,12 @@ from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings
 
 from src.config.config_manager import (
-from src.config.config_manager import (
     ConfigManager,
     create_and_load_config_async,
 )
 from src.config.error_handling import (
     ConfigError,
+    ConfigFileWatcher,
     ConfigLoadError,
     ConfigValidationError,
     ErrorContext,
@@ -503,9 +503,6 @@ class TestFileWatchingErrorHandling:
 
     def test_file_watch_error_callback(self, tmp_path):
         """Test file watch error callback."""
-            ConfigFileWatcher as EnhancedConfigFileWatcher,
-        )
-
         config_file = tmp_path / "config.json"
         error_calls = []
 
@@ -519,9 +516,7 @@ class TestFileWatchingErrorHandling:
             if len(reload_calls) > 2:
                 raise RuntimeError("Reload error")
 
-        watcher = EnhancedConfigFileWatcher(
-            config_file, reload_callback, error_callback
-        )
+        watcher = ConfigFileWatcher(config_file, reload_callback, error_callback)
 
         # Simulate file change events
         event = Mock()
