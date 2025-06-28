@@ -285,7 +285,7 @@ class QueryExpansionService:
 
         except Exception as e:
             processing_time_ms = (time.time() - start_time) * 1000
-            self._logger.error(f"Query expansion failed: {e}", exc_info=True)
+            self._logger.error(f"Query expansion failed: {e}", exc_info=True)  # TODO: Convert f-string to logging format
 
             # Return fallback result
             return QueryExpansionResult(

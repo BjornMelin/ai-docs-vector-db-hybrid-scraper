@@ -100,7 +100,7 @@ class AutomationRouter(BaseService):
                 with config_file.open() as f:
                     config = json.load(f)
                     routing_rules = config.get("routing_rules", {})
-                    logger.info(f"Loaded routing rules from {config_file}")
+                    logger.info(f"Loaded routing rules from {config_file}")  # TODO: Convert f-string to logging format
                     return routing_rules
             else:
                 logger.warning("Routing rules file not found")
@@ -209,7 +209,7 @@ class AutomationRouter(BaseService):
         for name, adapter in self._adapters.items():
             try:
                 await adapter.cleanup()
-                self.logger.info(f"Cleaned up {name} adapter")
+                self.logger.info(f"Cleaned up {name} adapter")  # TODO: Convert f-string to logging format
             except Exception:
                 self.logger.exception(f"Error cleaning up {name} adapter")
 
@@ -265,7 +265,7 @@ class AutomationRouter(BaseService):
         else:
             tool = await self._select_tool(url, interaction_required, custom_actions)
 
-        self.logger.info(f"Using {tool} for {url}")
+        self.logger.info(f"Using {tool} for {url}")  # TODO: Convert f-string to logging format
 
         # Execute with selected tool
         start_time = time.time()
@@ -528,7 +528,7 @@ class AutomationRouter(BaseService):
 
         for fallback_tool in fallback_tools:
             try:
-                self.logger.info(f"Falling back to {fallback_tool} for {url}")
+                self.logger.info(f"Falling back to {fallback_tool} for {url}")  # TODO: Convert f-string to logging format
 
                 start_time = time.time()
 

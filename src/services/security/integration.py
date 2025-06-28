@@ -15,7 +15,6 @@ system, bringing together all security components into a cohesive framework:
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,6 +26,9 @@ from src.services.security.middleware import SecurityMiddleware
 from src.services.security.monitoring import SecurityMonitor
 from src.services.security.rate_limiter import DistributedRateLimiter
 
+
+from typing import Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -168,7 +170,7 @@ class SecurityManager:
             ],
         )
 
-        logger.info(f"CORS configured with origins: {allowed_origins}")
+        logger.info(f"CORS configured with origins: {allowed_origins}")  # TODO: Convert f-string to logging format
 
     async def get_security_status(self) -> Dict[str, Any]:
         """Get comprehensive security status.

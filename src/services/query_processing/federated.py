@@ -713,7 +713,7 @@ class FederatedSearchService:
                 results.append(result)
 
             except TimeoutError:
-                self._logger.warning(f"Search timeout for collection {collection_name}")
+                self._logger.warning(f"Search timeout for collection {collection_name}")  # TODO: Convert f-string to logging format
                 results.append(
                     self._create_error_result("Collection timeout", collection_name)
                 )

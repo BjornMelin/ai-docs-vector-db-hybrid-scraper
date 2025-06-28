@@ -271,7 +271,7 @@ class CircuitBreaker:
             self.state = CircuitBreakerState.CLOSED
             self.failure_count = 0
             self.metrics.state_changes += 1
-            logger.info(f"Circuit breaker CLOSED: recovered from {old_state.value}")
+            logger.info(f"Circuit breaker CLOSED: recovered from {old_state.value}")  # TODO: Convert f-string to logging format
 
     async def _transition_to_half_open(self) -> None:
         """Transition to HALF_OPEN state."""

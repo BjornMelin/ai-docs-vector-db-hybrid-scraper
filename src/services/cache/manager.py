@@ -469,8 +469,8 @@ class CacheManager:
         Returns:
             Formatted cache key
         """
-        # Create content-based hash for consistent keys
-        key_hash = hashlib.md5(key.encode()).hexdigest()[:12]
+        # Create content-based hash for consistent keys (using SHA256 for security)
+        key_hash = hashlib.sha256(key.encode()).hexdigest()[:12]
         return f"{self.key_prefix}{cache_type.value}:{key_hash}"
 
     # Direct access methods for specialized caches

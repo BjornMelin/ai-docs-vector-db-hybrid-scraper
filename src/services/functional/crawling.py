@@ -156,7 +156,7 @@ async def get_crawl_metrics(
             return {}
 
         metrics = crawling_client.get_metrics()
-        logger.debug(f"Retrieved crawl metrics for {len(metrics)} tiers")
+        logger.debug(f"Retrieved crawl metrics for {len(metrics)} tiers")  # TODO: Convert f-string to logging format
 
     except Exception:
         logger.exception("Crawl metrics retrieval failed")
@@ -192,7 +192,7 @@ async def get_recommended_tool(
             _raise_url_required()
 
         recommendation = await crawling_client.get_recommended_tool(url)
-        logger.debug(f"Recommended tool for {url}: {recommendation}")
+        logger.debug(f"Recommended tool for {url}: {recommendation}")  # TODO: Convert f-string to logging format
 
     except HTTPException:
         raise
@@ -225,7 +225,7 @@ async def get_provider_info(
             return {}
 
         info = crawling_client.get_provider_info()
-        logger.debug(f"Retrieved provider info for {len(info)} tools")
+        logger.debug(f"Retrieved provider info for {len(info)} tools")  # TODO: Convert f-string to logging format
 
     except Exception:
         logger.exception("Provider info retrieval failed")
@@ -256,7 +256,7 @@ async def get_tier_metrics(
             return {}
 
         metrics = crawling_client.get_tier_metrics()
-        logger.debug(f"Retrieved tier metrics for {len(metrics)} tiers")
+        logger.debug(f"Retrieved tier metrics for {len(metrics)} tiers")  # TODO: Convert f-string to logging format
 
     except Exception:
         logger.exception("Tier metrics retrieval failed")
@@ -315,7 +315,7 @@ async def batch_crawl_urls(
         processed_results = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                logger.error(f"URL {urls[i]} failed: {result}")
+                logger.error(f"URL {urls[i]} failed: {result}")  # TODO: Convert f-string to logging format
                 processed_results.append(
                     {
                         "success": False,

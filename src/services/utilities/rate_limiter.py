@@ -91,7 +91,7 @@ class RateLimiter:
 
             # Consume tokens
             self.tokens -= tokens
-            logger.debug(f"Acquired {tokens} tokens. {self.tokens:.1f} remaining")
+            logger.debug(f"Acquired {tokens} tokens. {self.tokens:.1f} remaining")  # TODO: Convert f-string to logging format
 
 
 class RateLimitManager:

@@ -16,10 +16,9 @@ import json
 import logging
 import time
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from fastapi import Request
 
@@ -66,13 +65,13 @@ class SecurityEvent:
     user_agent: str
     endpoint: str
     method: str
-    event_data: Dict[str, Any]
+    event_data: dict[str, Any]
     request_id: str | None = None
     user_id: str | None = None
     session_id: str | None = None
-    threat_indicators: List[str] | None = None
+    threat_indicators: list[str] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         data = asdict(self)
         data["timestamp"] = self.timestamp.isoformat()
@@ -112,9 +111,9 @@ class SecurityMonitor:
         self._setup_security_logging()
 
         # Event correlation and detection
-        self.recent_events: List[SecurityEvent] = []
-        self.ip_event_counts: Dict[str, int] = {}
-        self.threat_patterns: Dict[str, int] = {}
+        self.recent_events: list[SecurityEvent] = []
+        self.ip_event_counts: dict[str, int] = {}
+        self.threat_patterns: dict[str, int] = {}
 
         # Metrics
         self.metrics = {
@@ -166,14 +165,14 @@ class SecurityMonitor:
         self,
         event_type: str,
         request: Request | None = None,
-        event_data: Dict[str, Any] | None = None,
+        event_data: dict[str, Any] | None = None,
         severity: str | None = None,
         user_id: str | None = None,
     ) -> None:
         """Log a security event with comprehensive context.
 
         Args:
-            event_type: Type of security event
+            event_type: type of security event
             request: HTTP request object (if available)
             event_data: Additional event data
             severity: Event severity level
@@ -246,7 +245,7 @@ class SecurityMonitor:
         """Determine severity based on event type.
 
         Args:
-            event_type: Type of security event
+            event_type: type of security event
 
         Returns:
             Appropriate severity level
@@ -288,14 +287,14 @@ class SecurityMonitor:
         # Fallback to direct client IP
         return getattr(request.client, "host", "unknown")
 
-    def _extract_threat_indicators(self, event_data: Dict[str, Any]) -> List[str]:
+    def _extract_threat_indicators(self, event_data: dict[str, Any]) -> list[str]:
         """Extract threat indicators from event data.
 
         Args:
             event_data: Event data to analyze
 
         Returns:
-            List of threat indicators
+            list of threat indicators
         """
         indicators = []
 
@@ -505,12 +504,12 @@ class SecurityMonitor:
         )
 
     def log_suspicious_activity(
-        self, activity_type: str, details: Dict[str, Any]
+        self, activity_type: str, details: dict[str, Any]
     ) -> None:
         """Log suspicious activity with details.
 
         Args:
-            activity_type: Type of suspicious activity
+            activity_type: type of suspicious activity
             details: Activity details
         """
         self.log_security_event(
@@ -539,7 +538,7 @@ class SecurityMonitor:
                 severity=SecuritySeverity.INFO.value,
             )
 
-    def get_security_metrics(self) -> Dict[str, Any]:
+    def get_security_metrics(self) -> dict[str, Any]:
         """Get current security metrics.
 
         Returns:
@@ -581,7 +580,7 @@ class SecurityMonitor:
             ),
         }
 
-    def get_threat_report(self, hours: int = 24) -> Dict[str, Any]:
+    def get_threat_report(self, hours: int = 24) -> dict[str, Any]:
         """Generate comprehensive threat report.
 
         Args:

@@ -188,7 +188,7 @@ class BrowserUseAdapter(BaseService):
 
         while retry_count < self.config.max_retries:
             try:
-                self.logger.info(f"Executing browser-use task: {task[:100]}...")
+                self.logger.info(f"Executing browser-use task: {task[:100]}...")  # TODO: Convert f-string to logging format
 
                 # Create enhanced task with context
                 full_task = f"""
@@ -229,7 +229,7 @@ class BrowserUseAdapter(BaseService):
             except TimeoutError:
                 retry_count += 1
                 error_msg = f"browser-use timeout after {timeout}ms"
-                self.logger.warning(f"{error_msg} (attempt {retry_count})")
+                self.logger.warning(f"{error_msg} (attempt {retry_count})")  # TODO: Convert f-string to logging format
 
                 if retry_count >= self.config.max_retries:
                     return self._build_error_result(url, start_time, error_msg, task)
@@ -240,7 +240,7 @@ class BrowserUseAdapter(BaseService):
             except Exception:
                 retry_count += 1
                 error_msg = "browser-use execution error"
-                self.logger.warning(f"{error_msg} (attempt {retry_count})")
+                self.logger.warning(f"{error_msg} (attempt {retry_count})")  # TODO: Convert f-string to logging format
 
                 if retry_count >= self.config.max_retries:
                     return self._build_error_result(url, start_time, error_msg, task)

@@ -14,11 +14,11 @@ Features:
 """
 
 import asyncio
-import json
 import logging
 import time
-from typing import Dict, Optional
 
+
+from typing import Dict
 
 try:
     import redis.asyncio as redis
@@ -28,7 +28,6 @@ except ImportError:
     REDIS_AVAILABLE = False
     redis = None
 
-from fastapi import HTTPException
 
 from src.config.security import SecurityConfig
 
@@ -77,7 +76,7 @@ class DistributedRateLimiter:
                     retry_on_timeout=True,
                     health_check_interval=30,
                 )
-                logger.info(f"Redis rate limiter initialized: {redis_url}")
+                logger.info(f"Redis rate limiter initialized: {redis_url}")  # TODO: Convert f-string to logging format
             except Exception as e:
                 logger.warning(
                     f"Failed to initialize Redis: {e}. Using local fallback only."
@@ -291,7 +290,7 @@ class DistributedRateLimiter:
                     "timestamp": current_time,
                 }
             except Exception as e:
-                logger.warning(f"Failed to get Redis rate limit status: {e}")
+                logger.warning(f"Failed to get Redis rate limit status: {e}")  # TODO: Convert f-string to logging format
 
         # Local fallback
         async with self._cache_lock:
@@ -328,13 +327,13 @@ class DistributedRateLimiter:
             if self.redis_client:
                 key = f"rate_limit:{identifier}:{window}"
                 await self.redis_client.delete(key)
-                logger.info(f"Reset Redis rate limit for {identifier}")
+                logger.info(f"Reset Redis rate limit for {identifier}")  # TODO: Convert f-string to logging format
 
             # Also reset local cache
             async with self._cache_lock:
                 if identifier in self.local_cache:
                     del self.local_cache[identifier]
-                    logger.info(f"Reset local rate limit for {identifier}")
+                    logger.info(f"Reset local rate limit for {identifier}")  # TODO: Convert f-string to logging format
 
             return True
         except Exception as e:
@@ -383,7 +382,7 @@ class DistributedRateLimiter:
                 del self.local_cache[identifier]
 
         if cleanup_count > 0:
-            logger.info(f"Cleaned up {cleanup_count} expired rate limit entries")
+            logger.info(f"Cleaned up {cleanup_count} expired rate limit entries")  # TODO: Convert f-string to logging format
 
         return cleanup_count
 
@@ -405,7 +404,7 @@ class DistributedRateLimiter:
                 await self.redis_client.ping()
                 status["redis_healthy"] = True
             except Exception as e:
-                logger.warning(f"Redis health check failed: {e}")
+                logger.warning(f"Redis health check failed: {e}")  # TODO: Convert f-string to logging format
                 status["redis_error"] = str(e)
 
         return status
@@ -417,4 +416,4 @@ class DistributedRateLimiter:
                 await self.redis_client.close()
                 logger.info("Redis connection closed")
             except Exception as e:
-                logger.warning(f"Error closing Redis connection: {e}")
+                logger.warning(f"Error closing Redis connection: {e}")  # TODO: Convert f-string to logging format

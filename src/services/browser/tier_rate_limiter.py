@@ -66,12 +66,12 @@ class TierRateLimiter:
 
         """
         if tier not in self.tier_configs:
-            logger.warning(f"Unknown tier {tier}, allowing request")
+            logger.warning(f"Unknown tier {tier}, allowing request")  # TODO: Convert f-string to logging format
             return True
 
         config = self.tier_configs[tier]
         if not config.enabled:
-            logger.warning(f"Tier {tier} is disabled")
+            logger.warning(f"Tier {tier} is disabled")  # TODO: Convert f-string to logging format
             return False
 
         # Check rate limit
@@ -249,7 +249,7 @@ class TierRateLimiter:
         """
         wait_time = self.get_wait_time(tier)
         if wait_time > 0:
-            logger.info(f"Rate limit reached for {tier}, waiting {wait_time:.1f}s")
+            logger.info(f"Rate limit reached for {tier}, waiting {wait_time:.1f}s")  # TODO: Convert f-string to logging format
             await asyncio.sleep(wait_time)
 
     def reset_tier(self, tier: str) -> None:
@@ -262,7 +262,7 @@ class TierRateLimiter:
         self.request_history[tier].clear()
         self.concurrent_requests[tier] = 0
         self.rate_limit_hits[tier] = 0
-        logger.info(f"Reset rate limiter for tier {tier}")
+        logger.info(f"Reset rate limiter for tier {tier}")  # TODO: Convert f-string to logging format
 
     def reset_all(self) -> None:
         """Reset all rate limit tracking."""

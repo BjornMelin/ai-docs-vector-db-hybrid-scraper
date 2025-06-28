@@ -5,9 +5,7 @@ Focuses on core vector search functionality without advanced features.
 """
 
 import logging
-from typing import Any, Dict, List
-
-from src.architecture.features import conditional_feature
+from typing import Any, from src.architecture.features import conditional_feature
 from src.architecture.service_factory import BaseService
 from src.models.vector_search import SearchRequest, SearchResponse
 
@@ -32,7 +30,7 @@ class SimpleSearchService(BaseService):
         self.enable_hybrid_search = False
         self.enable_query_expansion = False
         self.enable_personalization = False
-        self._cache: Dict[str, Any] = {}  # Simple in-memory cache
+        self._cache: dict[str, Any] = {}  # Simple in-memory cache
         self.cache_size_limit = 100  # Simple cache size limit
 
     async def initialize(self) -> None:
@@ -115,7 +113,7 @@ class SimpleSearchService(BaseService):
 
     async def _perform_vector_search(
         self, request: SearchRequest
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Perform basic vector search without advanced features."""
         # Generate embedding for query
         from src.services.embeddings.manager import EmbeddingManager
@@ -143,7 +141,7 @@ class SimpleSearchService(BaseService):
         self._cache[key] = response
 
     @conditional_feature("enable_hybrid_search", fallback_value=[])
-    async def hybrid_search(self, request: SearchRequest) -> List[Dict[str, Any]]:
+    async def hybrid_search(self, request: SearchRequest) -> list[dict[str, Any]]:
         """Hybrid search - disabled in simple mode."""
         return []
 
@@ -154,12 +152,12 @@ class SimpleSearchService(BaseService):
 
     @conditional_feature("enable_reranking", fallback_value=None)
     async def rerank_results(
-        self, results: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+        self, results: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Result reranking - disabled in simple mode."""
         return results
 
-    def get_search_stats(self) -> Dict[str, Any]:
+    def get_search_stats(self) -> dict[str, Any]:
         """Get simple search statistics."""
         return {
             "service_type": "simple",

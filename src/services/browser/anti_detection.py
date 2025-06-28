@@ -234,7 +234,7 @@ class SessionManager:
             with session_file.open("w") as f:
                 json.dump(session.model_dump(), f, indent=2)
         except Exception as e:
-            logger.debug(f"Failed to save session {session.session_id}: {e}")
+            logger.debug(f"Failed to save session {session.session_id}: {e}")  # TODO: Convert f-string to logging format
 
     def update_session_data(
         self,

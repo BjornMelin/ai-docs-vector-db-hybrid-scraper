@@ -132,7 +132,7 @@ class HNSWOptimizer(BaseService):
                 search_times.append(search_time_ms)
                 ef_values_tested.append(current_ef)
 
-                self.logger.debug(f"EF {current_ef}: {search_time_ms:.1f}ms")
+                self.logger.debug(f"EF {current_ef}: {search_time_ms:.1f}ms")  # TODO: Convert f-string to logging format
 
                 # Update best results
                 best_ef = current_ef
@@ -141,7 +141,7 @@ class HNSWOptimizer(BaseService):
                 # Check if we can continue within budget
                 if search_time_ms >= time_budget_ms * 0.8:
                     # Close to budget limit, stop here
-                    self.logger.debug(f"Stopping at EF {current_ef} due to time budget")
+                    self.logger.debug(f"Stopping at EF {current_ef} due to time budget")  # TODO: Convert f-string to logging format
                     break
                 if search_time_ms < time_budget_ms * 0.5:
                     # Well within budget, try higher ef
@@ -151,7 +151,7 @@ class HNSWOptimizer(BaseService):
                     current_ef = min(current_ef + (step_size // 2), max_ef)
 
             except Exception as e:
-                self.logger.warning(f"Search failed at EF {current_ef}: {e}")
+                self.logger.warning(f"Search failed at EF {current_ef}: {e}")  # TODO: Convert f-string to logging format
                 break
 
         final_search_time = search_times[-1] if search_times else 0
@@ -353,7 +353,7 @@ class HNSWOptimizer(BaseService):
                         ),
                     }
         except Exception as e:
-            self.logger.debug(f"Could not extract HNSW config: {e}")
+            self.logger.debug(f"Could not extract HNSW config: {e}")  # TODO: Convert f-string to logging format
 
         # Return defaults if extraction fails
         return {
@@ -472,7 +472,7 @@ class HNSWOptimizer(BaseService):
                 search_times.append(search_time_ms)
 
             except Exception as e:
-                self.logger.warning(f"Performance test query failed: {e}")
+                self.logger.warning(f"Performance test query failed: {e}")  # TODO: Convert f-string to logging format
                 continue
 
         if search_times:

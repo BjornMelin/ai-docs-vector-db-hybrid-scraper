@@ -4,7 +4,7 @@ import asyncio
 import importlib
 import logging
 import time
-from typing import Any
+from datetime import timedelta
 
 from arq import func
 
@@ -13,7 +13,50 @@ from src.infrastructure.client_manager import ClientManager
 from src.services.core.qdrant_alias_manager import QdrantAliasManager
 
 
+from typing import Any
+
 logger = logging.getLogger(__name__)
+
+
+# Security whitelist for dynamic imports to prevent arbitrary code execution
+ALLOWED_PERSIST_MODULES = {
+    "src.services.cache.manager",
+    "src.services.cache.dragonfly_cache", 
+    "src.services.cache.embedding_cache",
+    "src.services.cache.search_cache",
+    "src.services.core.persistence",
+}
+
+ALLOWED_PERSIST_FUNCTIONS = {
+    "persist_to_disk",
+    "persist_embeddings",
+    "persist_search_results", 
+    "persist_cache_data",
+    "save_to_storage",
+    "write_cache_backup",
+}
+
+
+def _validate_dynamic_import(module_name: str, function_name: str) -> bool:
+    """Validate that dynamic import parameters are from allowed whitelist.
+    
+    Args:
+        module_name: Module to import
+        function_name: Function to call
+        
+    Returns:
+        True if both module and function are whitelisted
+        
+    Raises:
+        ValueError: If module or function is not whitelisted
+    """
+    if module_name not in ALLOWED_PERSIST_MODULES:
+        raise ValueError(f"Module '{module_name}' not in security whitelist")
+    
+    if function_name not in ALLOWED_PERSIST_FUNCTIONS:
+        raise ValueError(f"Function '{function_name}' not in security whitelist")
+    
+    return True
 
 
 async def delete_collection(
@@ -68,7 +111,7 @@ async def delete_collection(
 
             # Delete the collection
             await qdrant_client.delete_collection(collection_name)
-            logger.info(f"Successfully deleted collection {collection_name}")
+            logger.info(f"Successfully deleted collection {collection_name}")  # TODO: Convert f-string to logging format
 
             return {
                 "status": "success",
@@ -80,7 +123,7 @@ async def delete_collection(
             await client_manager.cleanup()
 
     except asyncio.CancelledError:
-        logger.info(f"Deletion of {collection_name} was cancelled")
+        logger.info(f"Deletion of {collection_name} was cancelled")  # TODO: Convert f-string to logging format
         return {
             "status": "cancelled",
             "collection": collection_name,
@@ -121,14 +164,24 @@ async def persist_cache(
 
     """
     start_time = time.time()
-    logger.info(f"Starting delayed persistence for {key} (delay: {delay}s)")
+    logger.info(f"Starting delayed persistence for {key} (delay: {delay}s)")  # TODO: Convert f-string to logging format
 
     try:
         # Wait for delay
         await asyncio.sleep(delay)
 
-        # Import and call the persist function dynamically
-        # This allows different persist functions to be used
+        # Import and call the persist function dynamically with security validation
+        # Validate inputs against security whitelist to prevent arbitrary code execution
+        try:
+            _validate_dynamic_import(persist_func_module, persist_func_name)
+        except ValueError as ve:
+            logger.error(f"Security validation failed for dynamic import: {ve}")
+            return {
+                "status": "failed",
+                "key": key,
+                "error": f"Security validation failed: {ve}",
+                "duration": time.time() - start_time,
+            }
 
         module = importlib.import_module(persist_func_module)
         persist_func = getattr(module, persist_func_name)
@@ -139,7 +192,7 @@ async def persist_cache(
         else:
             persist_func(key, value)
 
-        logger.info(f"Successfully persisted data for {key}")
+        logger.info(f"Successfully persisted data for {key}")  # TODO: Convert f-string to logging format
 
         return {
             "status": "success",
@@ -171,8 +224,13 @@ async def config_drift_snapshot(_ctx: dict[str, Any]) -> dict[str, Any]:
     logger.info("Starting configuration drift snapshot task")
 
     try:
-        # Import here to avoid circular imports
-        from src.services.config_drift_service import get_drift_service  # noqa: PLC0415
+        # Use dynamic import to avoid circular dependency
+        import importlib
+
+        config_drift_module = importlib.import_module(
+            "src.services.config_drift_service"
+        )
+        get_drift_service = config_drift_module.get_drift_service
 
         service = get_drift_service()
         result = await service.take_configuration_snapshot()
@@ -215,8 +273,13 @@ async def config_drift_comparison(_ctx: dict[str, Any]) -> dict[str, Any]:
     logger.info("Starting configuration drift comparison task")
 
     try:
-        # Import here to avoid circular imports
-        from src.services.config_drift_service import get_drift_service  # noqa: PLC0415
+        # Use dynamic import to avoid circular dependency
+        import importlib
+
+        config_drift_module = importlib.import_module(
+            "src.services.config_drift_service"
+        )
+        get_drift_service = config_drift_module.get_drift_service
 
         service = get_drift_service()
         result = await service.compare_configurations()
@@ -267,7 +330,7 @@ async def config_drift_remediation(
 
     """
     start_time = time.time()
-    logger.info(f"Starting configuration drift remediation for event {event_id}")
+    logger.info(f"Starting configuration drift remediation for event {event_id}")  # TODO: Convert f-string to logging format
 
     try:
         # Log the remediation attempt (actual implementation would apply changes)
@@ -285,7 +348,7 @@ async def config_drift_remediation(
 
         await asyncio.sleep(0.1)  # Simulate remediation work
 
-        logger.info(f"Configuration drift remediation completed for event {event_id}")
+        logger.info(f"Configuration drift remediation completed for event {event_id}")  # TODO: Convert f-string to logging format
 
         return {
             "status": "success",
@@ -353,3 +416,51 @@ TASK_MAP = {
 
 # Legacy alias for backward compatibility
 TASK_REGISTRY = TASK_MAP
+
+
+async def create_task(
+    task_name: str,
+    task_data: dict[str, Any],
+    delay: timedelta | None = None,
+) -> str | None:
+    """Create and enqueue a task for background processing.
+
+    This is a helper function to provide a consistent interface for
+    enqueueing tasks from other services.
+
+    Args:
+        task_name: Name of the task to execute
+        task_data: Data to pass to the task
+        delay: Optional delay before execution
+
+    Returns:
+        Job ID if successful, None otherwise
+    """
+    try:
+        # Get task queue manager
+        config = get_config()
+        client_manager = ClientManager(config)
+        await client_manager.initialize()
+
+        try:
+            task_queue_manager = await client_manager.get_task_queue_manager()
+
+            # Convert timedelta to seconds for ARQ
+            delay_seconds = delay.total_seconds() if delay else None
+
+            # Enqueue the task
+            job_id = await task_queue_manager.enqueue(
+                task_name,
+                **task_data,
+                _delay=int(delay_seconds) if delay_seconds else None,
+            )
+
+            logger.info(f"Successfully created task {task_name} with job ID {job_id}")  # TODO: Convert f-string to logging format
+            return job_id
+
+        finally:
+            await client_manager.cleanup()
+
+    except Exception as e:
+        logger.exception(f"Failed to create task {task_name}: {e}")
+        return None

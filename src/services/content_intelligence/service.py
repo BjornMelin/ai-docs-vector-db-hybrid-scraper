@@ -421,7 +421,7 @@ class ContentIntelligenceService(BaseService):
                     )
                 )
             except Exception as e:
-                logger.warning(f"Content classification failed: {e}")
+                logger.warning(f"Content classification failed: {e}")  # TODO: Convert f-string to logging format
 
         # Perform quality assessment if enabled
         if request.enable_quality_assessment:
@@ -450,7 +450,7 @@ class ContentIntelligenceService(BaseService):
                 )
 
             except Exception as e:
-                logger.warning(f"Quality assessment failed: {e}")
+                logger.warning(f"Quality assessment failed: {e}")  # TODO: Convert f-string to logging format
 
         # Perform metadata extraction if enabled
         if request.enable_metadata_extraction:
@@ -461,7 +461,7 @@ class ContentIntelligenceService(BaseService):
                     raw_html=request.raw_html,
                 )
             except Exception as e:
-                logger.warning(f"Metadata extraction failed: {e}")
+                logger.warning(f"Metadata extraction failed: {e}")  # TODO: Convert f-string to logging format
 
         # Generate adaptation recommendations if enabled
         if request.enable_adaptations:
@@ -473,7 +473,7 @@ class ContentIntelligenceService(BaseService):
                     )
                 )
             except Exception as e:
-                logger.warning(f"Adaptation recommendations failed: {e}")
+                logger.warning(f"Adaptation recommendations failed: {e}")  # TODO: Convert f-string to logging format
 
         # Set processing metadata
         enriched_content.processing_time_ms = (time.time() - analysis_start) * 1000
@@ -629,7 +629,7 @@ class ContentIntelligenceService(BaseService):
             if cached_data:
                 return EnrichedContent.model_validate(cached_data)
         except Exception as e:
-            logger.warning(f"Cache retrieval failed: {e}")
+            logger.warning(f"Cache retrieval failed: {e}")  # TODO: Convert f-string to logging format
 
         return None
 
@@ -652,7 +652,7 @@ class ContentIntelligenceService(BaseService):
                 ttl=3600,
             )
         except Exception as e:
-            logger.warning(f"Cache storage failed: {e}")
+            logger.warning(f"Cache storage failed: {e}")  # TODO: Convert f-string to logging format
 
     def get_performance_metrics(self) -> dict[str, Any]:
         """Get performance metrics for the service.

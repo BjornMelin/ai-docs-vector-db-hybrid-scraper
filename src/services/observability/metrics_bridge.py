@@ -221,7 +221,7 @@ class OpenTelemetryMetricsBridge:
                     collection=collection, query_type=query_type
                 ).observe(duration_ms / 1000)  # Convert to seconds for Prometheus
             except Exception as e:
-                logger.warning(f"Failed to update Prometheus metrics: {e}")
+                logger.warning(f"Failed to update Prometheus metrics: {e}")  # TODO: Convert f-string to logging format
 
     def record_cache_operation(
         self,
@@ -395,7 +395,7 @@ class OpenTelemetryMetricsBridge:
                         instrument.set(value, labels)
 
             except Exception as e:
-                logger.warning(f"Failed to record metric {metric_name}: {e}")
+                logger.warning(f"Failed to record metric {metric_name}: {e}")  # TODO: Convert f-string to logging format
 
     def create_custom_counter(
         self, name: str, description: str, unit: str = ""

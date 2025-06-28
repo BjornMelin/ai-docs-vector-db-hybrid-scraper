@@ -112,7 +112,7 @@ class PerformanceMonitor:
             }
 
         except Exception as e:
-            logger.warning(f"Failed to get system metrics: {e}")
+            logger.warning(f"Failed to get system metrics: {e}")  # TODO: Convert f-string to logging format
             return {}
 
     @contextmanager
@@ -320,7 +320,7 @@ class PerformanceMonitor:
                 )
 
         except Exception as e:
-            logger.warning(f"Failed to record performance metrics: {e}")
+            logger.warning(f"Failed to record performance metrics: {e}")  # TODO: Convert f-string to logging format
 
     def _check_thresholds(self, metrics: PerformanceMetrics, span: trace.Span) -> None:
         """Check performance thresholds and create alerts.

@@ -326,7 +326,7 @@ class HypotheticalDocumentGenerator(BaseService):
                 if len(document.strip()) >= self.config.min_generation_length:
                     documents.append(document)
             except Exception as e:
-                logger.warning(f"Failed to generate document: {e}")
+                logger.warning(f"Failed to generate document: {e}")  # TODO: Convert f-string to logging format
                 continue
 
         return documents
@@ -351,7 +351,7 @@ class HypotheticalDocumentGenerator(BaseService):
             logger.warning("Document generation timed out")
             return ""
         except Exception as e:
-            logger.warning(f"Failed to generate document: {e}")
+            logger.warning(f"Failed to generate document: {e}")  # TODO: Convert f-string to logging format
             return ""
 
     def _post_process_documents(self, documents: list[str], _query: str) -> list[str]:

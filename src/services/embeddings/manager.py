@@ -197,7 +197,7 @@ class EmbeddingManager:
         for name, provider in self.providers.items():
             try:
                 await provider.cleanup()
-                logger.info(f"Cleaned up {name} provider")
+                logger.info(f"Cleaned up {name} provider")  # TODO: Convert f-string to logging format
             except Exception:
                 logger.exception(f"Error cleaning up {name} provider")
 
@@ -491,7 +491,7 @@ class EmbeddingManager:
         # Validate budget constraints
         self._validate_budget_constraints(estimated_cost)
 
-        logger.info(f"Using {provider.__class__.__name__} for {len(texts)} texts")
+        logger.info(f"Using {provider.__class__.__name__} for {len(texts)} texts")  # TODO: Convert f-string to logging format
 
         try:
             # Generate embeddings
@@ -505,7 +505,7 @@ class EmbeddingManager:
             if generate_sparse and hasattr(provider, "generate_sparse_embeddings"):
                 try:
                     sparse_embeddings = await provider.generate_sparse_embeddings(texts)
-                    logger.info(f"Generated {len(sparse_embeddings)} sparse embeddings")
+                    logger.info(f"Generated {len(sparse_embeddings)} sparse embeddings")  # TODO: Convert f-string to logging format
                 except Exception:
                     logger.warning("Failed to generate sparse embeddings")
                     # Continue with dense embeddings only
@@ -593,7 +593,7 @@ class EmbeddingManager:
             # Return original results on failure
             return results
         else:
-            logger.info(f"Reranked {len(results)} results using {self._reranker_model}")
+            logger.info(f"Reranked {len(results)} results using {self._reranker_model}")  # TODO: Convert f-string to logging format
             return reranked
 
     def load_custom_benchmarks(self, benchmark_file: Path | str) -> None:

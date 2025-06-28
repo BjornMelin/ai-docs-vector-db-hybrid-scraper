@@ -202,7 +202,7 @@ class QueryClassifier:
             )
 
         except Exception as e:
-            logger.error(f"Query classification failed: {e}", exc_info=True)
+            logger.error(f"Query classification failed: {e}", exc_info=True)  # TODO: Convert f-string to logging format
             # Return default classification
             return QueryClassification(
                 query_type=QueryType.CONCEPTUAL,

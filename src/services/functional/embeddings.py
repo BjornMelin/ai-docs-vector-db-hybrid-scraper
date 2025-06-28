@@ -108,7 +108,7 @@ async def rerank_results(
             return results
 
         reranked = await embedding_client.rerank_results(query, results)
-        logger.info(f"Reranked {len(results)} results")
+        logger.info(f"Reranked {len(results)} results")  # TODO: Convert f-string to logging format
 
     except Exception:
         logger.exception("Reranking failed")
@@ -184,7 +184,7 @@ async def estimate_embedding_cost(
 
     try:
         costs = embedding_client.estimate_cost(texts, provider_name)
-        logger.debug(f"Estimated costs for {len(texts)} texts")
+        logger.debug(f"Estimated costs for {len(texts)} texts")  # TODO: Convert f-string to logging format
 
     except Exception as e:
         logger.exception("Cost estimation failed")
@@ -217,7 +217,7 @@ async def get_provider_info(
             return {}
 
         info = embedding_client.get_provider_info()
-        logger.debug(f"Retrieved info for {len(info)} providers")
+        logger.debug(f"Retrieved info for {len(info)} providers")  # TODO: Convert f-string to logging format
 
     except Exception as e:
         logger.exception("Provider info retrieval failed")
@@ -364,7 +364,7 @@ async def batch_generate_embeddings(
         processed_results = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                logger.error(f"Batch {i} failed: {result}")
+                logger.error(f"Batch {i} failed: {result}")  # TODO: Convert f-string to logging format
                 processed_results.append(
                     {
                         "success": False,

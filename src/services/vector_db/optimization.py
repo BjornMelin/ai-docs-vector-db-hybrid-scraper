@@ -4,10 +4,9 @@ This module provides comprehensive performance optimization for Qdrant vector da
 including HNSW parameter tuning, quantization configuration, and real-time benchmarking.
 """
 
-import asyncio
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import numpy as np
 from qdrant_client import QdrantClient
@@ -36,11 +35,11 @@ class QdrantOptimizer:
         self.client = client
         self.optimal_configs = self._get_optimal_configs()
 
-    def _get_optimal_configs(self) -> Dict[str, Any]:
+    def _get_optimal_configs(self) -> dict[str, Any]:
         """Get research-backed optimal configurations for different scenarios.
 
         Returns:
-            Dict containing optimized configurations for various performance scenarios
+            dict containing optimized configurations for various performance scenarios
 
         """
         return {
@@ -129,18 +128,18 @@ class QdrantOptimizer:
     async def benchmark_search_performance(
         self,
         collection_name: str,
-        test_vectors: List[List[float]],
+        test_vectors: list[list[float]],
         num_iterations: int = 100,
-    ) -> Dict[str, Dict[str, float]]:
+    ) -> dict[str, dict[str, float]]:
         """Benchmark search performance with different ef parameters.
 
         Args:
             collection_name: Name of collection to benchmark
-            test_vectors: List of test vectors for search
+            test_vectors: list of test vectors for search
             num_iterations: Number of search iterations per configuration
 
         Returns:
-            Dict containing performance metrics for different ef values
+            dict containing performance metrics for different ef values
 
         """
         results = {}
@@ -182,7 +181,7 @@ class QdrantOptimizer:
 
     async def optimize_existing_collection(
         self, collection_name: str, target_p95_ms: float = 100.0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Optimize an existing collection to meet performance targets.
 
         Args:
@@ -190,7 +189,7 @@ class QdrantOptimizer:
             target_p95_ms: Target P95 latency in milliseconds
 
         Returns:
-            Dict containing optimization results and recommendations
+            dict containing optimization results and recommendations
 
         """
         try:
@@ -230,7 +229,7 @@ class QdrantOptimizer:
             return {"error": str(e)}
 
     def _find_optimal_ef(
-        self, performance_data: Dict[str, Dict[str, float]], target_p95_ms: float
+        self, performance_data: dict[str, dict[str, float]], target_p95_ms: float
     ) -> int:
         """Find the optimal ef parameter to meet P95 latency target.
 
@@ -257,10 +256,10 @@ class QdrantOptimizer:
 
     def _generate_optimization_recommendations(
         self,
-        performance_data: Dict[str, Dict[str, float]],
+        performance_data: dict[str, dict[str, float]],
         target_p95_ms: float,
         has_quantization: bool,
-    ) -> List[str]:
+    ) -> list[str]:
         """Generate optimization recommendations based on performance analysis.
 
         Args:
@@ -269,7 +268,7 @@ class QdrantOptimizer:
             has_quantization: Whether quantization is currently enabled
 
         Returns:
-            List of optimization recommendations
+            list of optimization recommendations
 
         """
         recommendations = []
@@ -306,14 +305,14 @@ class QdrantOptimizer:
 
     async def enable_collection_quantization(
         self, collection_name: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Enable quantization on an existing collection.
 
         Args:
             collection_name: Name of collection to optimize
 
         Returns:
-            Dict containing operation results
+            dict containing operation results
 
         """
         try:
@@ -339,14 +338,14 @@ class QdrantOptimizer:
             logger.exception(f"Failed to enable quantization: {e}")
             return {"status": "error", "error": str(e)}
 
-    async def get_optimization_metrics(self, collection_name: str) -> Dict[str, Any]:
+    async def get_optimization_metrics(self, collection_name: str) -> dict[str, Any]:
         """Get current optimization metrics for a collection.
 
         Args:
             collection_name: Name of collection to analyze
 
         Returns:
-            Dict containing current optimization status and metrics
+            dict containing current optimization status and metrics
 
         """
         try:

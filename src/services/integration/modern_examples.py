@@ -6,15 +6,10 @@ caching, and rate limiting implementations in your application code.
 
 import asyncio
 import logging
-from typing import Any, Dict, List
-
-from fastapi import Depends, FastAPI, Request
-
-from src.config import Config
+from typing import Any, from src.config import Config
 from src.services.cache.modern import ModernCacheManager
 from src.services.circuit_breaker.modern import ModernCircuitBreakerManager
 from src.services.middleware.rate_limiting import setup_rate_limiting
-from src.services.migration.library_migration import LibraryMigrationManager
 
 
 logger = logging.getLogger(__name__)
@@ -68,7 +63,7 @@ class EmbeddingServiceWithProtection:
     @cache_manager.cache_embeddings(ttl=86400)  # Cache for 24 hours
     async def generate_embedding(
         self, text: str, model: str = "default"
-    ) -> List[float]:
+    ) -> list[float]:
         """Generate embedding with caching and circuit breaker protection.
 
         Args:
@@ -86,7 +81,7 @@ class EmbeddingServiceWithProtection:
             model=model,
         )
 
-    async def _generate_embedding_impl(self, text: str, model: str) -> List[float]:
+    async def _generate_embedding_impl(self, text: str, model: str) -> list[float]:
         """Internal implementation of embedding generation."""
         # Simulate external API call
         await asyncio.sleep(0.1)
@@ -99,8 +94,8 @@ class EmbeddingServiceWithProtection:
         return [0.1] * 1536
 
     async def generate_batch_embeddings(
-        self, texts: List[str], model: str = "default"
-    ) -> List[List[float]]:
+        self, texts: list[str], model: str = "default"
+    ) -> list[list[float]]:
         """Generate embeddings for multiple texts with protection."""
         embeddings = []
 
@@ -127,9 +122,9 @@ class SearchServiceWithCaching:
     async def search_documents(
         self,
         query: str,
-        filters: Dict[str, Any] | None = None,
+        filters: dict[str, Any] | None = None,
         limit: int = 10,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Search documents with caching.
 
         Args:
@@ -145,9 +140,9 @@ class SearchServiceWithCaching:
     async def _search_documents_impl(
         self,
         query: str,
-        filters: Dict[str, Any],
+        filters: dict[str, Any],
         limit: int,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Internal implementation of document search."""
         # Simulate search operation
         await asyncio.sleep(0.2)
@@ -190,7 +185,7 @@ def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
     # Determine Redis URL
     redis_url = getattr(config.cache, "dragonfly_url", "redis://localhost:6379")
 
-    # Set up rate limiting
+    # set up rate limiting
     rate_limiter = setup_rate_limiting(app, redis_url, config)
 
     # Initialize services
@@ -304,7 +299,7 @@ async def example_usage_patterns():
 
     # Declarative caching with decorator
     @cache_manager.cache_embeddings(ttl=3600)
-    async def cached_function(text: str) -> List[float]:
+    async def cached_function(text: str) -> list[float]:
         # Expensive operation
         await asyncio.sleep(1)
         return [0.1] * 1536

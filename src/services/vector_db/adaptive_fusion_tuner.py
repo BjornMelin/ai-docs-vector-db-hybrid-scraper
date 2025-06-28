@@ -99,12 +99,12 @@ class AdaptiveFusionTuner:
 
             weights = {"dense": dense_weight, "sparse": sparse_weight}
 
-            logger.debug(f"Computed adaptive weights for {query_type}: {weights}")
+            logger.debug(f"Computed adaptive weights for {query_type}: {weights}")  # TODO: Convert f-string to logging format
 
             return weights
 
         except Exception as e:
-            logger.error(f"Failed to compute adaptive weights: {e}", exc_info=True)
+            logger.error(f"Failed to compute adaptive weights: {e}", exc_info=True)  # TODO: Convert f-string to logging format
             # Return default balanced weights on error
             return {"dense": 0.7, "sparse": 0.3}
 
@@ -141,7 +141,7 @@ class AdaptiveFusionTuner:
             return adjustment
 
         except Exception as e:
-            logger.debug(f"Failed to compute performance adjustment: {e}")
+            logger.debug(f"Failed to compute performance adjustment: {e}")  # TODO: Convert f-string to logging format
             return 0.0
 
     def _update_performance_history(
@@ -167,7 +167,7 @@ class AdaptiveFusionTuner:
             )
 
         except Exception as e:
-            logger.debug(f"Failed to update performance history: {e}")
+            logger.debug(f"Failed to update performance history: {e}")  # TODO: Convert f-string to logging format
 
     def get_performance_stats(self) -> dict[str, Any]:
         """Get performance statistics for monitoring and debugging."""
@@ -195,7 +195,7 @@ class AdaptiveFusionTuner:
                 "performance_history_size": len(self.performance_history),
             }
         except Exception as e:
-            logger.error(f"Failed to get performance stats: {e}", exc_info=True)
+            logger.error(f"Failed to get performance stats: {e}", exc_info=True)  # TODO: Convert f-string to logging format
             return {
                 "total_queries": self.total_queries,
                 "successful_optimizations": self.successful_optimizations,

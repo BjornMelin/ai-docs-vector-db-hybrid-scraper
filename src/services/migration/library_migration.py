@@ -9,13 +9,15 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, Optional
 
 from src.config import Config
 from src.services.cache.modern import ModernCacheManager
 from src.services.circuit_breaker.modern import ModernCircuitBreakerManager
 from src.services.middleware.rate_limiting import ModernRateLimiter
 
+
+from typing import Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +151,7 @@ class LibraryMigrationManager:
             logger.info("Legacy services initialized successfully")
 
         except Exception as e:
-            logger.warning(f"Failed to initialize legacy services: {e}")
+            logger.warning(f"Failed to initialize legacy services: {e}")  # TODO: Convert f-string to logging format
             # Continue without legacy services if they fail
 
     async def _setup_monitoring(self) -> None:
@@ -253,7 +255,7 @@ class LibraryMigrationManager:
         # Use modern if error rate is acceptable
         modern_error_rate = modern_metrics.get("error_rate", 0)
         if modern_error_rate > self.migration_config.rollback_threshold:
-            logger.warning(f"High error rate for modern {service}: {modern_error_rate}")
+            logger.warning(f"High error rate for modern {service}: {modern_error_rate}")  # TODO: Convert f-string to logging format
             return False
 
         # Use modern if performance is comparable or better
@@ -352,7 +354,7 @@ class LibraryMigrationManager:
                 )
                 return True
             else:
-                logger.error(f"Unknown service for migration: {service}")
+                logger.error(f"Unknown service for migration: {service}")  # TODO: Convert f-string to logging format
                 return False
         except Exception as e:
             logger.exception(f"Error forcing migration of {service}: {e}")

@@ -637,7 +637,7 @@ class MetricsRegistry:
         except Exception as e:
             # Log error but don't raise to avoid breaking monitoring
 
-            logging.getLogger(__name__).warning(f"Failed to update cache stats: {e}")
+            logging.getLogger(__name__).warning(f"Failed to update cache stats: {e}")  # TODO: Convert f-string to logging format
 
     def record_embedding_cost(self, provider: str, model: str, cost: float) -> None:
         """Record embedding generation cost.

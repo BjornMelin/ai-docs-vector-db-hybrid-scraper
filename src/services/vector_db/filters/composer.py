@@ -346,7 +346,7 @@ class FilterComposer(BaseFilter):
                         if criteria.fail_fast:
                             raise
                 else:
-                    self._logger.warning(f"Filter {name} timed out")
+                    self._logger.warning(f"Filter {name} timed out")  # TODO: Convert f-string to logging format
 
         except TimeoutError as e:
             self._logger.exception("Filter composition timed out")
@@ -725,7 +725,7 @@ class FilterComposer(BaseFilter):
         """Clear the execution cache to free memory."""
         cache_size = len(self.execution_cache)
         self.execution_cache.clear()
-        logger.info(f"Cleared execution cache ({cache_size} items)")
+        logger.info(f"Cleared execution cache ({cache_size} items)")  # TODO: Convert f-string to logging format
 
     def cleanup(self) -> None:
         """Cleanup resources and clear caches."""

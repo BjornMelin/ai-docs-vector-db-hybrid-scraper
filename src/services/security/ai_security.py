@@ -16,7 +16,7 @@ import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional, 
 
 from fastapi import HTTPException
 
@@ -261,14 +261,14 @@ class AISecurityValidator:
         logger.debug(f"Search query validated and sanitized: {sanitized_query[:100]}")
         return sanitized_query
 
-    def _detect_threats(self, text: str) -> List[SecurityThreat]:
+    def _detect_threats(self, text: str) -> list[SecurityThreat]:
         """Detect security threats in text content.
 
         Args:
             text: Text to analyze for threats
 
         Returns:
-            List of detected security threats
+            list of detected security threats
         """
         threats = []
         text_lower = text.lower()
@@ -373,7 +373,7 @@ class AISecurityValidator:
 
     def validate_document_content(
         self, content: str, filename: str | None = None
-    ) -> Tuple[bool, List[SecurityThreat]]:
+    ) -> tuple[bool, list[SecurityThreat]]:
         """Validate document content for security issues.
 
         Args:
@@ -381,7 +381,7 @@ class AISecurityValidator:
             filename: Optional filename for additional validation
 
         Returns:
-            Tuple of (is_valid, list_of_threats)
+            tuple of (is_valid, list_of_threats)
         """
         threats = []
 
@@ -421,14 +421,14 @@ class AISecurityValidator:
 
         return is_valid, threats
 
-    def _validate_filename_security(self, filename: str) -> List[SecurityThreat]:
+    def _validate_filename_security(self, filename: str) -> list[SecurityThreat]:
         """Validate filename for security issues.
 
         Args:
             filename: Filename to validate
 
         Returns:
-            List of security threats found in filename
+            list of security threats found in filename
         """
         threats = []
 
@@ -469,7 +469,7 @@ class AISecurityValidator:
 
         return threats
 
-    def sanitize_metadata(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+    def sanitize_metadata(self, metadata: dict[str, Any]) -> dict[str, Any]:
         """Sanitize document metadata for security.
 
         Args:
@@ -553,9 +553,7 @@ class AISecurityValidator:
             # Convert other types to string and sanitize
             return re.sub(r'[<>"\']', "", str(value))[:500]
 
-    def validate_embedding_query(
-        self, query: str, context: str | None = None
-    ) -> str:
+    def validate_embedding_query(self, query: str, context: str | None = None) -> str:
         """Validate query for embedding generation.
 
         Args:
@@ -591,11 +589,11 @@ class AISecurityValidator:
 
         return validated_query
 
-    def get_threat_summary(self, threats: List[SecurityThreat]) -> Dict[str, Any]:
+    def get_threat_summary(self, threats: list[SecurityThreat]) -> dict[str, Any]:
         """Generate a summary of detected threats.
 
         Args:
-            threats: List of security threats
+            threats: list of security threats
 
         Returns:
             Summary dictionary with threat statistics
@@ -634,14 +632,14 @@ class AISecurityValidator:
             "recommendations": self._get_threat_recommendations(threats),
         }
 
-    def _get_threat_recommendations(self, threats: List[SecurityThreat]) -> List[str]:
+    def _get_threat_recommendations(self, threats: list[SecurityThreat]) -> list[str]:
         """Get recommendations based on detected threats.
 
         Args:
-            threats: List of detected threats
+            threats: list of detected threats
 
         Returns:
-            List of recommended actions
+            list of recommended actions
         """
         recommendations = []
 

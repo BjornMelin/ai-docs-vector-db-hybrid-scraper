@@ -190,7 +190,7 @@ class SearchResultCache:
         """
         try:
             # Create hash pattern for query matching
-            pattern_hash = hashlib.md5(query_pattern.encode()).hexdigest()
+            pattern_hash = hashlib.sha256(query_pattern.encode()).hexdigest()
             pattern = f"search:*:{pattern_hash}*"
 
             keys = await self.cache.scan_keys(pattern)
@@ -351,7 +351,7 @@ class SearchResultCache:
 
         # Combine all parameters
         key_data = f"{normalized_query}|{collection_name}|{sorted_filters}|{limit}|{search_type}|{sorted_params}"
-        key_hash = hashlib.md5(key_data.encode()).hexdigest()
+        key_hash = hashlib.sha256(key_data.encode()).hexdigest()
 
         return f"search:{collection_name}:{key_hash}"
 
@@ -365,7 +365,7 @@ class SearchResultCache:
             Number of times query was accessed
         """
         try:
-            key = f"popular:{hashlib.md5(query.encode()).hexdigest()}"
+            key = f"popular:{hashlib.sha256(query.encode()).hexdigest()}"
             count = await self.cache.get(key)
             return int(count) if count else 0
 
@@ -380,7 +380,7 @@ class SearchResultCache:
             query: Query text
         """
         try:
-            key = f"popular:{hashlib.md5(query.encode()).hexdigest()}"
+            key = f"popular:{hashlib.sha256(query.encode()).hexdigest()}"
 
             # Use atomic increment
             client = await self.cache.client

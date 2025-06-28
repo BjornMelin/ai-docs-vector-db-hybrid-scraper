@@ -213,7 +213,7 @@ class CrawlManager:
             msg = "Manager not initialized"
             raise CrawlServiceError(msg)
 
-        logger.info(f"Starting site crawl of {url} with max {max_pages} pages")
+        logger.info(f"Starting site crawl of {url} with max {max_pages} pages")  # TODO: Convert f-string to logging format
 
         try:
             # Simple site crawling implementation using AutomationRouter

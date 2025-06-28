@@ -5,16 +5,16 @@ the battle-tested slowapi library for distributed rate limiting with Redis.
 """
 
 import logging
-from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, Request, Response
-from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 from src.config import Config
 
+
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -187,7 +187,7 @@ class ModernRateLimiter:
                 storage = self.limiter._storage
                 if hasattr(storage, "clear"):
                     await storage.clear(key)
-                    logger.info(f"Reset rate limits for key: {key}")
+                    logger.info(f"Reset rate limits for key: {key}")  # TODO: Convert f-string to logging format
                     return True
 
             logger.warning("Rate limit reset not supported")

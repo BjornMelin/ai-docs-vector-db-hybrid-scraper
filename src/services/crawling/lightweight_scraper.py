@@ -89,13 +89,13 @@ class LightweightScraper(CrawlProvider):
 
         # Check URL patterns first (fastest)
         if any(pattern.search(url) for pattern in self._simple_patterns):
-            logger.debug(f"URL {url} matches simple pattern")
+            logger.debug(f"URL {url} matches simple pattern")  # TODO: Convert f-string to logging format
             return True
 
         # Check known simple sites
         domain = urlparse(url).netloc
         if domain in self.config.known_simple_sites:
-            logger.debug(f"URL {url} is from known simple site")
+            logger.debug(f"URL {url} is from known simple site")  # TODO: Convert f-string to logging format
             return True
 
         # Perform HEAD request analysis if enabled
@@ -143,7 +143,7 @@ class LightweightScraper(CrawlProvider):
                 "x-angular",
             ]
             if any(header in response.headers for header in spa_headers):
-                logger.debug(f"SPA indicators found for {url}")
+                logger.debug(f"SPA indicators found for {url}")  # TODO: Convert f-string to logging format
                 return TierRecommendation.BROWSER_REQUIRED
 
             # Check response size
@@ -161,7 +161,7 @@ class LightweightScraper(CrawlProvider):
             return TierRecommendation.LIGHTWEIGHT_OK
 
         except httpx.TimeoutException:
-            logger.debug(f"HEAD request timeout for {url}")
+            logger.debug(f"HEAD request timeout for {url}")  # TODO: Convert f-string to logging format
             return TierRecommendation.BROWSER_REQUIRED
         except Exception:
             logger.debug("HEAD request failed for {url}")

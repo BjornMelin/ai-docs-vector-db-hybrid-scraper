@@ -17,16 +17,13 @@ import json
 import logging
 import time
 from collections.abc import Callable
-from typing import Any, Dict, List, Optional
-from urllib.parse import urlparse
+from typing import Any, Optional
 
 from fastapi import HTTPException, Request, Response
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from src.config.security import SecurityConfig
-from src.services.security.ai_security import AISecurityValidator, ThreatLevel
 from src.services.security.monitoring import SecurityMonitor
 from src.services.security.rate_limiter import DistributedRateLimiter
 
@@ -545,7 +542,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         """
         security_headers = {
             # Content type protection
-            "X-Content-Type-Options": self.config.x_content_type_options,
+            "X-Content-type-Options": self.config.x_content_type_options,
             # Frame options for clickjacking protection
             "X-Frame-Options": self.config.x_frame_options,
             # XSS protection
@@ -642,7 +639,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             return True
         return False
 
-    def get_security_status(self) -> Dict[str, Any]:
+    def get_security_status(self) -> dict[str, Any]:
         """Get current security middleware status.
 
         Returns:

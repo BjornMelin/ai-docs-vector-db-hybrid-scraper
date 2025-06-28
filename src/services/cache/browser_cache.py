@@ -125,9 +125,9 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         if tier:
             key_parts.append(f"tier:{tier}")
 
-        # Generate hash for consistent key length
+        # Generate hash for consistent key length (using SHA256 for security)
         key_string = "|".join(key_parts)
-        key_hash = hashlib.md5(key_string.encode()).hexdigest()[:16]
+        key_hash = hashlib.sha256(key_string.encode()).hexdigest()[:16]
 
         return f"browser:{key_hash}:{parsed.netloc}"
 

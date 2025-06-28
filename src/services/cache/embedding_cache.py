@@ -397,9 +397,9 @@ class EmbeddingCache:
         Returns:
             Cache key
         """
-        # Normalize text for consistent hashing
+        # Normalize text for consistent hashing (using SHA256 for security)
         normalized_text = text.lower().strip()
-        text_hash = hashlib.md5(normalized_text.encode()).hexdigest()
+        text_hash = hashlib.sha256(normalized_text.encode()).hexdigest()
 
         # Include dimensions in key if provided
         if dimensions is not None:

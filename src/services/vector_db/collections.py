@@ -1,14 +1,17 @@
 """Qdrant collection management service."""
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from qdrant_client import AsyncQdrantClient, models
 from qdrant_client.http.exceptions import ResponseHandlingException
 
-from src.config.core import Config
 from src.services.base import BaseService
 from src.services.errors import QdrantServiceError
+
+
+if TYPE_CHECKING:
+    from src.config.core import Config
 
 
 logger = logging.getLogger(__name__)
@@ -17,7 +20,7 @@ logger = logging.getLogger(__name__)
 class QdrantCollections(BaseService):
     """Focused service for Qdrant collection management operations."""
 
-    def __init__(self, config: Config, qdrant_client: AsyncQdrantClient):
+    def __init__(self, config: "Config", qdrant_client: AsyncQdrantClient):
         """Initialize collections service.
 
         Args:
@@ -80,7 +83,7 @@ class QdrantCollections(BaseService):
             # Check if collection exists
             collections = await self._client.get_collections()
             if any(col.name == collection_name for col in collections.collections):
-                logger.info(f"Collection {collection_name} already exists")
+                logger.info(f"Collection {collection_name} already exists")  # TODO: Convert f-string to logging format
                 return True
 
             # Get HNSW configuration for collection type
@@ -137,7 +140,7 @@ class QdrantCollections(BaseService):
                 quantization_config=quantization_config,
             )
 
-            logger.info(f"Created collection: {collection_name}")
+            logger.info(f"Created collection: {collection_name}")  # TODO: Convert f-string to logging format
 
             # Note: Payload indexes will be created by QdrantService after collection creation
 
@@ -150,7 +153,7 @@ class QdrantCollections(BaseService):
 
             error_msg = str(e).lower()
             if "already exists" in error_msg:
-                logger.info(f"Collection {collection_name} already exists, continuing")
+                logger.info(f"Collection {collection_name} already exists, continuing")  # TODO: Convert f-string to logging format
                 return True
             if "invalid distance" in error_msg:
                 msg = f"Invalid distance metric '{distance}'. Valid options: Cosine, Euclidean, Dot"
@@ -175,7 +178,7 @@ class QdrantCollections(BaseService):
 
         try:
             await self._client.delete_collection(collection_name)
-            logger.info(f"Deleted collection: {collection_name}")
+            logger.info(f"Deleted collection: {collection_name}")  # TODO: Convert f-string to logging format
             return True
         except Exception as e:
             msg = f"Failed to delete collection: {e}"
@@ -286,7 +289,7 @@ class QdrantCollections(BaseService):
             # This is a no-op that forces Qdrant to check optimization
             await self._client.update_collection_aliases(change_aliases_operations=[])
 
-            logger.info(f"Triggered optimization for collection: {collection_name}")
+            logger.info(f"Triggered optimization for collection: {collection_name}")  # TODO: Convert f-string to logging format
             return True
         except Exception as e:
             msg = f"Failed to optimize collection: {e}"
@@ -421,7 +424,7 @@ class QdrantCollections(BaseService):
             }
 
         except Exception as e:
-            logger.warning(f"Failed to validate HNSW configuration: {e}")
+            logger.warning(f"Failed to validate HNSW configuration: {e}")  # TODO: Convert f-string to logging format
             # Return default healthy status if HNSW validation fails
             return {
                 "health_score": 85.0,

@@ -206,7 +206,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                     if self.use_memory_dispatcher
                     else "with semaphore"
                 )
-                self.logger.info(f"Crawl4AI resources cleaned up {cleanup_info}")
+                self.logger.info(f"Crawl4AI resources cleaned up {cleanup_info}")  # TODO: Convert f-string to logging format
 
     def _create_extraction_strategy(self, extraction_type: str) -> object | None:
         """Create extraction strategy based on type.
@@ -716,7 +716,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                                 ):
                                     to_visit.append(link_url)
 
-                self.logger.info(f"Crawled {len(pages)}/{max_pages} pages from {url}")
+                self.logger.info(f"Crawled {len(pages)}/{max_pages} pages from {url}")  # TODO: Convert f-string to logging format
 
             return {
                 "success": True,

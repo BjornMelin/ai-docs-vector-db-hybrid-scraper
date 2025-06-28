@@ -59,12 +59,12 @@ class ProjectStorage:
             # Create storage file if it doesn't exist
             if not self.storage_path.exists():
                 await self._save_projects({})
-                logger.info(f"Created new project storage at {self.storage_path}")
+                logger.info(f"Created new project storage at {self.storage_path}")  # TODO: Convert f-string to logging format
 
             # Load existing projects
             await self.load_projects()
             self._initialized = True
-            logger.info(f"Loaded {len(self._projects_cache)} projects from storage")
+            logger.info(f"Loaded {len(self._projects_cache)} projects from storage")  # TODO: Convert f-string to logging format
 
         except Exception as e:
             msg = "Failed to initialize project storage"
@@ -93,7 +93,7 @@ class ProjectStorage:
                 backup_path = self.storage_path.with_suffix(".json.bak")
                 if self.storage_path.exists():
                     self.storage_path.rename(backup_path)
-                    logger.warning(f"Backed up corrupted file to {backup_path}")
+                    logger.warning(f"Backed up corrupted file to {backup_path}")  # TODO: Convert f-string to logging format
                 self._projects_cache = {}
                 return {}
 

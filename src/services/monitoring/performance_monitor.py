@@ -10,9 +10,7 @@ import logging
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List
-
-import psutil
+from typing import Any, import psutil
 
 
 logger = logging.getLogger(__name__)
@@ -46,8 +44,8 @@ class RealTimePerformanceMonitor:
 
         """
         self.window_size = window_size
-        self.snapshots: List[PerformanceSnapshot] = []
-        self.request_times: List[float] = []
+        self.snapshots: list[PerformanceSnapshot] = []
+        self.request_times: list[float] = []
         self.last_gc_time = time.time()
         self.monitoring_active = False
         self.gc_stats_start = self._get_gc_stats()
@@ -186,11 +184,11 @@ class RealTimePerformanceMonitor:
         """
         self.request_times.append(time.time())
 
-    def get_performance_summary(self) -> Dict[str, Any]:
+    def get_performance_summary(self) -> dict[str, Any]:
         """Get current performance summary.
 
         Returns:
-            Dict containing current performance metrics
+            dict containing current performance metrics
 
         """
         if not self.snapshots:
@@ -199,14 +197,14 @@ class RealTimePerformanceMonitor:
         latest = self.snapshots[-1]
         return asdict(latest)
 
-    def get_performance_trends(self, minutes: int = 5) -> Dict[str, Any]:
+    def get_performance_trends(self, minutes: int = 5) -> dict[str, Any]:
         """Get performance trends over specified time period.
 
         Args:
             minutes: Number of minutes to analyze
 
         Returns:
-            Dict containing performance trend analysis
+            dict containing performance trend analysis
 
         """
         if not self.snapshots:
@@ -260,11 +258,11 @@ class RealTimePerformanceMonitor:
             },
         }
 
-    def get_optimization_recommendations(self) -> List[str]:
+    def get_optimization_recommendations(self) -> list[str]:
         """Generate optimization recommendations based on performance data.
 
         Returns:
-            List of optimization recommendations
+            list of optimization recommendations
 
         """
         if not self.snapshots:
@@ -320,11 +318,11 @@ class RealTimePerformanceMonitor:
 
         return recommendations
 
-    def _calculate_percentile(self, values: List[float], percentile: int) -> float:
+    def _calculate_percentile(self, values: list[float], percentile: int) -> float:
         """Calculate percentile from list of values.
 
         Args:
-            values: List of values to analyze
+            values: list of values to analyze
             percentile: Percentile to calculate (0-100)
 
         Returns:
@@ -338,11 +336,11 @@ class RealTimePerformanceMonitor:
         index = int((percentile / 100) * len(sorted_values))
         return sorted_values[min(index, len(sorted_values) - 1)]
 
-    def _calculate_trend(self, values: List[float]) -> str:
+    def _calculate_trend(self, values: list[float]) -> str:
         """Calculate trend direction for a series of values.
 
         Args:
-            values: List of values to analyze
+            values: list of values to analyze
 
         Returns:
             Trend direction ('increasing', 'decreasing', 'stable')
@@ -392,7 +390,7 @@ class RealTimePerformanceMonitor:
         """Get garbage collection statistics.
 
         Returns:
-            Tuple of GC collection counts
+            tuple of GC collection counts
 
         """
         return tuple(gc.get_count())

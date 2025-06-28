@@ -47,7 +47,7 @@ class QdrantIndexing:
 
         """
         try:
-            logger.info(f"Creating payload indexes for collection: {collection_name}")
+            logger.info(f"Creating payload indexes for collection: {collection_name}")  # TODO: Convert f-string to logging format
 
             # Keyword indexes for exact matching (categorical data)
             keyword_fields = [
@@ -72,7 +72,7 @@ class QdrantIndexing:
                     field_schema=models.PayloadSchemaType.KEYWORD,
                     wait=True,
                 )
-                logger.debug(f"Created keyword index for field: {field}")
+                logger.debug(f"Created keyword index for field: {field}")  # TODO: Convert f-string to logging format
 
             # Text indexes for partial matching (full-text search)
             text_fields = [
@@ -87,7 +87,7 @@ class QdrantIndexing:
                     field_schema=models.PayloadSchemaType.TEXT,
                     wait=True,
                 )
-                logger.debug(f"Created text index for field: {field}")
+                logger.debug(f"Created text index for field: {field}")  # TODO: Convert f-string to logging format
 
             # Integer indexes for range queries
             integer_fields = [
@@ -113,7 +113,7 @@ class QdrantIndexing:
                     field_schema=models.PayloadSchemaType.INTEGER,
                     wait=True,
                 )
-                logger.debug(f"Created integer index for field: {field}")
+                logger.debug(f"Created integer index for field: {field}")  # TODO: Convert f-string to logging format
 
             logger.info(
                 f"Successfully created {len(keyword_fields) + len(text_fields) + len(integer_fields)} "
@@ -183,7 +183,7 @@ class QdrantIndexing:
             await self.client.delete_payload_index(
                 collection_name=collection_name, field_name=field_name, wait=True
             )
-            logger.info(f"Dropped payload index for field: {field_name}")
+            logger.info(f"Dropped payload index for field: {field_name}")  # TODO: Convert f-string to logging format
 
         except Exception as e:
             logger.error(
@@ -206,7 +206,7 @@ class QdrantIndexing:
 
         """
         try:
-            logger.info(f"Starting full reindex for collection: {collection_name}")
+            logger.info(f"Starting full reindex for collection: {collection_name}")  # TODO: Convert f-string to logging format
 
             # Get existing indexes
             existing_indexes = await self.list_payload_indexes(collection_name)
@@ -216,12 +216,12 @@ class QdrantIndexing:
                 try:
                     await self.drop_payload_index(collection_name, field_name)
                 except Exception as e:
-                    logger.warning(f"Failed to drop index for {field_name}: {e}")
+                    logger.warning(f"Failed to drop index for {field_name}: {e}")  # TODO: Convert f-string to logging format
 
             # Recreate all indexes
             await self.create_payload_indexes(collection_name)
 
-            logger.info(f"Successfully reindexed collection: {collection_name}")
+            logger.info(f"Successfully reindexed collection: {collection_name}")  # TODO: Convert f-string to logging format
 
         except Exception as e:
             logger.error(

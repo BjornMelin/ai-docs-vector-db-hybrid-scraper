@@ -136,7 +136,7 @@ async def stop_background_monitoring_tasks(tasks: list[asyncio.Task]) -> None:
     if not tasks:
         return
 
-    logger.info(f"Stopping {len(tasks)} background monitoring tasks...")
+    logger.info(f"Stopping {len(tasks)} background monitoring tasks...")  # TODO: Convert f-string to logging format
 
     for task in tasks:
         task.cancel()
@@ -347,7 +347,7 @@ def setup_fastmcp_monitoring(
                     status_code=503,
                 )
 
-            logger.info(f"Added health endpoints at {config.monitoring.health_path}")
+            logger.info(f"Added health endpoints at {config.monitoring.health_path}")  # TODO: Convert f-string to logging format
 
         else:
             logger.warning(
@@ -371,7 +371,7 @@ async def run_periodic_health_checks(
     if not health_manager:
         return
 
-    logger.info(f"Starting periodic health checks (interval: {interval_seconds}s)")
+    logger.info(f"Starting periodic health checks (interval: {interval_seconds}s)")  # TODO: Convert f-string to logging format
 
     while True:
         try:

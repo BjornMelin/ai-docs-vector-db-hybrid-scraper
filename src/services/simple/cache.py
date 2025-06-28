@@ -5,10 +5,12 @@ Optimized for solo developer use with in-memory LRU cache and minimal overhead.
 
 import logging
 import time
-from typing import Any, Dict, Optional
 
 from src.architecture.service_factory import BaseService
 
+
+from typing import Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +98,7 @@ class SimpleCacheService(BaseService):
         # Update access order
         self._update_access_order(key)
 
-        logger.debug(f"Cached value for key: {key}")
+        logger.debug(f"Cached value for key: {key}")  # TODO: Convert f-string to logging format
 
     async def delete(self, key: str) -> bool:
         """Delete value from cache.
@@ -158,7 +160,7 @@ class SimpleCacheService(BaseService):
         while len(self.cache) >= self.max_size and self._access_order:
             lru_key = self._access_order[0]
             await self.delete(lru_key)
-            logger.debug(f"Evicted LRU entry: {lru_key}")
+            logger.debug(f"Evicted LRU entry: {lru_key}")  # TODO: Convert f-string to logging format
 
     async def _cleanup_expired(self) -> None:
         """Clean up expired cache entries."""
@@ -173,7 +175,7 @@ class SimpleCacheService(BaseService):
             await self.delete(key)
 
         if expired_keys:
-            logger.debug(f"Cleaned up {len(expired_keys)} expired entries")
+            logger.debug(f"Cleaned up {len(expired_keys)} expired entries")  # TODO: Convert f-string to logging format
 
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""

@@ -163,7 +163,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
             return compressed_response
 
         except Exception as e:
-            logger.warning(f"Failed to compress response: {e}")
+            logger.warning(f"Failed to compress response: {e}")  # TODO: Convert f-string to logging format
             return response
 
 
@@ -315,7 +315,7 @@ class BrotliCompressionMiddleware(BaseHTTPMiddleware):
             return compressed_response
 
         except Exception as e:
-            logger.warning(f"Failed to compress response with Brotli: {e}")
+            logger.warning(f"Failed to compress response with Brotli: {e}")  # TODO: Convert f-string to logging format
             return response
 
 

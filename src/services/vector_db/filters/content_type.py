@@ -638,7 +638,7 @@ class ContentTypeFilter(BaseFilter):
             ContentTypeCriteria.model_validate(filter_criteria)
             return True
         except Exception as e:
-            self._logger.warning(f"Invalid content type criteria: {e}")
+            self._logger.warning(f"Invalid content type criteria: {e}")  # TODO: Convert f-string to logging format
             return False
 
     def get_supported_operators(self) -> list[str]:

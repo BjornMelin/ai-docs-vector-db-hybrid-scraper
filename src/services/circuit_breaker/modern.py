@@ -85,7 +85,7 @@ class ModernCircuitBreakerManager:
                     self._breakers[service_name] = await self.factory.get_breaker(
                         service_name, **kwargs
                     )
-                    logger.debug(f"Created circuit breaker for service: {service_name}")
+                    logger.debug(f"Created circuit breaker for service: {service_name}")  # TODO: Convert f-string to logging format
 
         return self._breakers[service_name]
 
@@ -182,7 +182,7 @@ class ModernCircuitBreakerManager:
             breaker = await self.get_breaker(service_name)
             if hasattr(breaker, "reset"):
                 await breaker.reset()
-                logger.info(f"Reset circuit breaker for service: {service_name}")
+                logger.info(f"Reset circuit breaker for service: {service_name}")  # TODO: Convert f-string to logging format
                 return True
             else:
                 logger.warning(

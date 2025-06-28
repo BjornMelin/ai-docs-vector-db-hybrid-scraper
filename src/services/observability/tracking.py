@@ -104,7 +104,7 @@ def _initialize_metrics() -> None:
         )
 
     except Exception as e:
-        logger.warning(f"Failed to initialize AI metrics: {e}")
+        logger.warning(f"Failed to initialize AI metrics: {e}")  # TODO: Convert f-string to logging format
 
 
 def instrument_function(
@@ -152,7 +152,7 @@ def instrument_function(
                                     f"function.kwarg.{key}", str(value)[:100]
                                 )
                     except Exception as e:
-                        logger.debug(f"Failed to record function arguments: {e}")
+                        logger.debug(f"Failed to record function arguments: {e}")  # TODO: Convert f-string to logging format
 
                 try:
                     result = await func(*args, **kwargs)
@@ -195,7 +195,7 @@ def instrument_function(
                                     f"function.kwarg.{key}", str(value)[:100]
                                 )
                     except Exception as e:
-                        logger.debug(f"Failed to record function arguments: {e}")
+                        logger.debug(f"Failed to record function arguments: {e}")  # TODO: Convert f-string to logging format
 
                 try:
                     result = func(*args, **kwargs)
@@ -279,7 +279,7 @@ def record_ai_operation(
                 _ai_token_counter.add(output_tokens, token_attrs)
 
     except Exception as e:
-        logger.warning(f"Failed to record AI operation metrics: {e}")
+        logger.warning(f"Failed to record AI operation metrics: {e}")  # TODO: Convert f-string to logging format
 
 
 def track_cost(
@@ -317,7 +317,7 @@ def track_cost(
             _ai_cost_counter.add(cost_usd, attrs)
 
     except Exception as e:
-        logger.warning(f"Failed to record AI cost: {e}")
+        logger.warning(f"Failed to record AI cost: {e}")  # TODO: Convert f-string to logging format
 
 
 # NoOp implementations for when OpenTelemetry is not available

@@ -209,7 +209,7 @@ class CachePatterns:
         # Generate cache key from function and arguments
         if not cache_key:
             key_data = f"{func.__name__}:{args}:{sorted(kwargs.items())}"
-            cache_key = f"compute:{hashlib.md5(key_data.encode()).hexdigest()}"
+            cache_key = f"compute:{hashlib.sha256(key_data.encode()).hexdigest()}"
 
         # Try cache first
         cached = await self.cache.get(cache_key)

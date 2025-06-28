@@ -147,12 +147,12 @@ class BaseFilter(ABC):
     def enable(self) -> None:
         """Enable this filter."""
         self.enabled = True
-        self._logger.info(f"Filter '{self.name}' enabled")
+        self._logger.info(f"Filter '{self.name}' enabled")  # TODO: Convert f-string to logging format
 
     def disable(self) -> None:
         """Disable this filter."""
         self.enabled = False
-        self._logger.info(f"Filter '{self.name}' disabled")
+        self._logger.info(f"Filter '{self.name}' disabled")  # TODO: Convert f-string to logging format
 
     def set_priority(self, priority: int) -> None:
         """Set the priority of this filter.

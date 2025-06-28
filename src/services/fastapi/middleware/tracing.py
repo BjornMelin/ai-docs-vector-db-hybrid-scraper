@@ -4,6 +4,7 @@ This middleware provides request correlation IDs, distributed tracing support,
 and comprehensive request/response logging for production monitoring.
 """
 
+import html
 import logging
 import time
 import uuid
@@ -24,6 +25,20 @@ except ImportError:
 
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_escape_for_logging(value: str | None) -> str | None:
+    """Safely escape user input for logging to prevent XSS in log viewers.
+    
+    Args:
+        value: String value that may contain user input
+        
+    Returns:
+        HTML-escaped string or None if input was None
+    """
+    if value is None:
+        return None
+    return html.escape(str(value))
 
 
 def get_correlation_id(request: Request) -> str:
@@ -157,9 +172,9 @@ class TracingMiddleware(BaseHTTPMiddleware):
             "correlation_id": correlation_id,
             "method": request.method,
             "path": request.url.path,
-            "query_params": str(request.query_params) if request.query_params else None,
+            "query_params": _safe_escape_for_logging(str(request.query_params)) if request.query_params else None,
             "client_ip": self._get_client_ip(request),
-            "user_agent": request.headers.get("user-agent"),
+            "user_agent": _safe_escape_for_logging(request.headers.get("user-agent")),
             "content_type": request.headers.get("content-type"),
             "content_length": request.headers.get("content-length"),
         }
@@ -169,9 +184,9 @@ class TracingMiddleware(BaseHTTPMiddleware):
             try:
                 body = await self._get_request_body(request)
                 if body:
-                    log_data["request_body"] = body
+                    log_data["request_body"] = _safe_escape_for_logging(body)
             except Exception as e:
-                log_data["request_body_error"] = str(e)
+                log_data["request_body_error"] = _safe_escape_for_logging(str(e))
 
         logger.info("Incoming request", extra=log_data)
 
@@ -206,9 +221,9 @@ class TracingMiddleware(BaseHTTPMiddleware):
             try:
                 body = self._get_response_body(response)
                 if body:
-                    log_data["response_body"] = body
+                    log_data["response_body"] = _safe_escape_for_logging(body)
             except Exception as e:
-                log_data["response_body_error"] = str(e)
+                log_data["response_body_error"] = _safe_escape_for_logging(str(e))
 
         # Choose log level based on status code
         if 200 <= response.status_code < 400:
