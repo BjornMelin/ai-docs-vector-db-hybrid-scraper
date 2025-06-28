@@ -489,6 +489,7 @@ def _check_browser_availability() -> bool:
             text=True,
             timeout=30,
             check=False,
+            shell=False,  # Explicitly disable shell
         )
 
     except Exception:

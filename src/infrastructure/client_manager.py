@@ -395,9 +395,8 @@ class ClientManager:
 
             async with self._service_locks["embedding_manager"]:
                 if self._embedding_manager is None:
-                    from src.services.embeddings.manager import (
-                        EmbeddingManager,
-                    )
+                    if EmbeddingManager is None:
+                        raise ImportError("EmbeddingManager not available")
 
                     # Pass ClientManager to EmbeddingManager
                     self._embedding_manager = EmbeddingManager(

@@ -191,7 +191,9 @@ class MLSecurityValidator:
 
             # Validate executable path for security
             if not pip_audit_path.startswith(("/usr/bin/", "/usr/local/bin/", "/opt/")):
-                logger.warning(f"pip-audit found in unexpected location: {pip_audit_path}")
+                logger.warning(
+                    f"pip-audit found in unexpected location: {pip_audit_path}"
+                )
 
             result = subprocess.run(
                 [pip_audit_path, "--format", "json"],
