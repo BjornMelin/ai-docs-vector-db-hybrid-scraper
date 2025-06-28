@@ -13,19 +13,18 @@ Requirements:
     pip install streamlit requests plotly pandas
 """
 
-import json
 import time
-from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 import requests
 import streamlit as st
 
 
 # Configuration
+from datetime import datetime
+
 API_BASE_URL = "http://localhost:8000"
 DEFAULT_TIMEOUT = 30
 

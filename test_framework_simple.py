@@ -3,7 +3,6 @@
 This test validates the key components without external dependencies.
 """
 
-import json
 import os
 import sys
 from pathlib import Path
