@@ -5,7 +5,7 @@ to the new modern Pydantic Settings system while maintaining backward compatibil
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from .modern import (
     ApplicationMode,

@@ -18,13 +18,15 @@ Endpoints:
 import asyncio
 import json
 import logging
-from datetime import datetime
-from typing import Dict, List, Optional
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
 from .automation import (
+from typing import Dict
+from typing import List
+
     ConfigDrift,
     ConfigObservabilityAutomation,
     ConfigValidationResult,
@@ -40,9 +42,7 @@ logger = logging.getLogger(__name__)
 class DriftCheckRequest(BaseModel):
     """Request model for drift checking."""
 
-    environment: str | None = Field(
-        None, description="Specific environment to check"
-    )
+    environment: str | None = Field(None, description="Specific environment to check")
     auto_fix: bool = Field(False, description="Apply automatic fixes")
 
 
@@ -190,7 +190,7 @@ class WebSocketManager:
                 await self.broadcast(
                     {
                         "type": "status_update",
-                        "timestamp": datetime.now().isoformat(),
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
                         "data": status,
                     }
                 )
@@ -236,7 +236,7 @@ async def health_check(
             automation_system="active",
             uptime_seconds=0.0,  # Would calculate actual uptime
             environments=status["environments"]["detected"],
-            last_check=datetime.now().isoformat(),
+            last_check=datetime.now(timezone.utc).isoformat(),
         )
     except Exception as e:
         logger.exception(f"Health check failed: {e}")
@@ -339,7 +339,7 @@ async def check_configuration_drift(
         await websocket_manager.broadcast(
             {
                 "type": "drift_check_completed",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "data": {
                     "drifts_detected": len(drifts),
                     "critical_drifts": critical_drifts,
@@ -412,7 +412,7 @@ async def validate_configurations(
         await websocket_manager.broadcast(
             {
                 "type": "validation_completed",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "data": {
                     "total_checks": len(validation_results),
                     "errors": errors,
@@ -460,9 +460,7 @@ async def generate_optimizations(
         )
 
         # Extract expected improvements
-        expected_improvements = list(
-            {r.expected_improvement for r in recommendations}
-        )
+        expected_improvements = list({r.expected_improvement for r in recommendations})
 
         # Convert to dict format
         rec_dicts = []
@@ -491,7 +489,7 @@ async def generate_optimizations(
         await websocket_manager.broadcast(
             {
                 "type": "optimization_completed",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "data": {
                     "recommendations_count": len(recommendations),
                     "high_confidence_count": high_confidence_count,
@@ -549,7 +547,7 @@ async def remediate_issues(
         await websocket_manager.broadcast(
             {
                 "type": "remediation_completed",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "data": {
                     "remediated_count": remediated_count,
                     "failed_count": failed_count,
@@ -578,7 +576,7 @@ async def get_detailed_report(
 
         # Add report metadata
         report["report_metadata"] = {
-            "generated_at": datetime.now().isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
             "format": format,
             "automation_version": "1.0.0",
         }
@@ -617,7 +615,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     await websocket.send_json(
                         {
                             "type": "status_response",
-                            "timestamp": datetime.now().isoformat(),
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
                             "data": status,
                         }
                     )
@@ -626,7 +624,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     await websocket.send_json(
                         {
                             "type": "pong",
-                            "timestamp": datetime.now().isoformat(),
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
                         }
                     )
 

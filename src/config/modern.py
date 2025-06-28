@@ -5,10 +5,8 @@ that achieves 94% code reduction while maintaining all functionality.
 Implements dual-mode architecture (simple/enterprise) for optimal user experience.
 """
 
-import os
 from enum import Enum
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -144,7 +142,7 @@ class SecurityConfig(BaseModel):
     max_query_length: int = Field(default=1000, gt=0)
     max_url_length: int = Field(default=2048, gt=0)
     rate_limit_requests_per_minute: int = Field(default=60, gt=0)
-    allowed_domains: List[str] = Field(default_factory=lambda: ["*"])
+    allowed_domains: list[str] = Field(default_factory=lambda: ["*"])
     require_api_keys: bool = Field(default=True)
     enable_rate_limiting: bool = Field(default=True)
 
@@ -328,7 +326,7 @@ def get_config() -> Config:
 
 
 def set_config(config: Config) -> None:
-    """Set the global configuration instance.
+    """set the global configuration instance.
 
     Args:
         config: The configuration instance to set.

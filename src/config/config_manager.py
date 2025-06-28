@@ -72,7 +72,7 @@ class ConfigFileSettingsSource(PydanticBaseSettingsSource):
                     self._config_data = tomli.load(f)
 
             else:
-                logger.warning(f"Unsupported config file format: {suffix}")
+                logger.warning(f"Unsupported config file format: {suffix}")  # TODO: Convert f-string to logging format
 
         except Exception:
             logger.exception(f"Failed to load config file {self.config_file}")
@@ -155,7 +155,7 @@ class ConfigFileWatcher(FileSystemEventHandler):
                 return
 
             self._last_modified = current_time
-            logger.info(f"Configuration file changed: {self.config_file}")
+            logger.info(f"Configuration file changed: {self.config_file}")  # TODO: Convert f-string to logging format
 
             try:
                 self.reload_callback()
@@ -314,7 +314,7 @@ class ConfigManager:
             self._observer.schedule(event_handler, str(watch_dir), recursive=False)
             self._observer.start()
 
-            logger.info(f"Started watching configuration file: {self.config_file}")
+            logger.info(f"Started watching configuration file: {self.config_file}")  # TODO: Convert f-string to logging format
 
         except Exception:
             logger.exception("Failed to start file watching")
@@ -399,7 +399,7 @@ class ConfigManager:
         """Update drift detection baseline to current configuration."""
         if self._config:
             self._baseline_hash = self._calculate_config_hash(self._config)
-            logger.info(f"Updated configuration baseline (hash: {self._baseline_hash})")
+            logger.info(f"Updated configuration baseline (hash: {self._baseline_hash})")  # TODO: Convert f-string to logging format
 
     def get_config_info(self) -> dict[str, Any]:
         """Get configuration information and statistics."""

@@ -16,19 +16,18 @@ Usage:
     streamlit run src/config/observability/dashboard.py
 """
 
-import asyncio
-import json
 import time
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from datetime import datetime, timezone, timedelta
 
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
-from plotly.subplots import make_subplots
 
 from .automation import (
+from typing import Dict
+from typing import List
+
     ConfigDriftSeverity,
     ConfigObservabilityAutomation,
     ConfigValidationStatus,
@@ -111,7 +110,7 @@ def get_historical_data():
         automation_system = get_automation_system()
 
         # Get recent data (last 24 hours)
-        current_time = datetime.now()
+        current_time = datetime.now(timezone.utc)
         cutoff_time = current_time - timedelta(hours=24)
 
         recent_drifts = [
@@ -411,7 +410,7 @@ def main():
         # System info
         st.subheader("📊 System Info")
         st.markdown("**Dashboard Version:** 1.0.0")
-        st.markdown(f"**Last Updated:** {datetime.now().strftime('%H:%M:%S')}")
+        st.markdown(f"**Last Updated:** {datetime.now(timezone.utc).strftime('%H:%M:%S')}")
 
         # Quick actions
         st.markdown("---")
@@ -822,7 +821,7 @@ def main():
                     "Validation Status": "Healthy"
                     if env != "testing"
                     else "Warnings",  # Mock data
-                    "Last Checked": datetime.now().strftime("%H:%M:%S"),
+                    "Last Checked": datetime.now(timezone.utc).strftime("%H:%M:%S"),
                 }
             )
 

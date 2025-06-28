@@ -16,9 +16,8 @@ Usage:
 import asyncio
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 import click
 import yaml
@@ -26,7 +25,6 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
-from rich.text import Text
 
 from .automation import (
     ConfigDriftSeverity,
@@ -510,7 +508,7 @@ def report(ctx, output, detailed, output_format):
 
                 # Add report metadata
                 report_data["report_metadata"] = {
-                    "generated_at": datetime.now().isoformat(),
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
                     "detailed": detailed,
                     "automation_version": "1.0.0",
                 }

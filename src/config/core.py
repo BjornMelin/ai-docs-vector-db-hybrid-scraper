@@ -16,9 +16,7 @@ import yaml
 from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Import services for auto-detection (used in async method)
-from src.services.auto_detection import EnvironmentDetector, ServiceDiscovery
-
+# Services imported at runtime to avoid circular imports
 from .auto_detect import AutoDetectedServices, AutoDetectionConfig
 from .enums import (
     ChunkingStrategy,
@@ -347,6 +345,36 @@ class TaskQueueConfig(BaseModel):
     default_queue_name: str = Field(default="default", description="Default queue name")
 
 
+class AgenticConfig(BaseModel):
+    """Agentic AI configuration for autonomous agents."""
+    
+    enable_agentic_mode: bool = Field(False, description="Enable autonomous agentic processing")
+    pydantic_ai_available: bool = Field(False, description="Whether Pydantic-AI is available")
+    
+    # Agent behavior configuration
+    orchestrator_model: str = Field("gpt-4", description="Model for query orchestrator")
+    specialist_model: str = Field("gpt-4", description="Model for specialist agents")
+    tool_selector_model: str = Field("gpt-3.5-turbo", description="Model for tool selection")
+    
+    # Performance and optimization
+    enable_adaptive_learning: bool = Field(True, description="Enable agent learning from interactions")
+    enable_intelligent_caching: bool = Field(True, description="Enable semantic caching")
+    enable_performance_optimization: bool = Field(True, description="Enable autonomous performance tuning")
+    
+    # Tool composition settings
+    max_tool_chain_length: int = Field(5, ge=1, le=10, description="Maximum tools in a chain")
+    tool_selection_confidence_threshold: float = Field(0.7, ge=0.0, le=1.0, description="Tool selection confidence threshold")
+    parallel_execution_enabled: bool = Field(True, description="Enable parallel tool execution where possible")
+    
+    # Agent coordination
+    max_agent_coordination_depth: int = Field(3, ge=1, le=10, description="Maximum agent delegation depth")
+    agent_communication_timeout_seconds: float = Field(10.0, gt=0.0, le=60.0, description="Agent communication timeout")
+    
+    # Fallback behavior
+    fallback_to_traditional_rag: bool = Field(True, description="Fallback to traditional RAG if agents fail")
+    agentic_mode_percentage: float = Field(0.1, ge=0.0, le=1.0, description="Percentage of requests using agentic mode (gradual rollout)")
+
+
 class RAGConfig(BaseModel):
     """RAG (Retrieval-Augmented Generation) configuration."""
 
@@ -389,6 +417,9 @@ class RAGConfig(BaseModel):
     parallel_processing: bool = Field(
         default=True, description="Enable parallel processing"
     )
+    
+    # Agentic RAG configuration
+    agentic: AgenticConfig = Field(default_factory=AgenticConfig, description="Agentic AI configuration")
 
 
 class DeploymentConfig(BaseModel):
@@ -677,6 +708,12 @@ class Config(BaseSettings):
             return self
 
         try:
+            # Import services at runtime to avoid circular imports
+            from src.services.auto_detection import (
+                EnvironmentDetector,
+                ServiceDiscovery,
+            )
+
             # Detect environment
             env_detector = EnvironmentDetector(self.auto_detection)
             detected_env = await env_detector.detect()
@@ -703,7 +740,7 @@ class Config(BaseSettings):
             # Log error but don't fail configuration loading
 
             logger = logging.getLogger(__name__)
-            logger.warning(f"Auto-detection failed, using manual configuration: {e}")
+            logger.warning(f"Auto-detection failed, using manual configuration: {e}")  # TODO: Convert f-string to logging format
             return self
         else:
             return updated_config

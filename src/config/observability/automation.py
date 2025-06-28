@@ -22,22 +22,16 @@ Features:
 """
 
 import asyncio
-import json
 import logging
 import os
-import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Optional, Union
 
-import yaml
-from pydantic import BaseModel, Field
-from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from .. import get_config, get_migration_status, is_using_modern_config
 from ..core import Config as LegacyConfig
 from ..modern import ApplicationMode, Config as ModernConfig, Environment
 
@@ -98,7 +92,7 @@ class ConfigValidationResult:
     message: str
     environment: str
     timestamp: datetime
-    suggestions: List[str] = field(default_factory=list)
+    suggestions: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -172,11 +166,11 @@ class ConfigObservabilityAutomation:
         self.performance_optimization_interval = performance_optimization_interval
 
         # State tracking
-        self.baseline_configurations: Dict[str, Dict[str, Any]] = {}
-        self.drift_history: List[ConfigDrift] = []
-        self.validation_history: List[ConfigValidationResult] = []
-        self.performance_metrics: List[PerformanceMetric] = []
-        self.optimization_recommendations: List[OptimizationRecommendation] = []
+        self.baseline_configurations: dict[str, dict[str, Any]] = {}
+        self.drift_history: list[ConfigDrift] = []
+        self.validation_history: list[ConfigValidationResult] = []
+        self.performance_metrics: list[PerformanceMetric] = []
+        self.optimization_recommendations: list[OptimizationRecommendation] = []
 
         # File system monitoring
         self.observer: Observer | None = None
@@ -187,7 +181,7 @@ class ConfigObservabilityAutomation:
         self.last_optimization_check = datetime.now()
 
         # Environment detection
-        self.detected_environments: Set[str] = set()
+        self.detected_environments: set[str] = set()
 
         logger.info("Configuration Observability Automation System initialized")
 
@@ -292,7 +286,7 @@ class ConfigObservabilityAutomation:
 
     async def load_configuration_for_environment(
         self, environment: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Load configuration for a specific environment."""
         # Temporarily set environment variables to load specific config
         original_env = {}
@@ -316,7 +310,7 @@ class ConfigObservabilityAutomation:
                 },
             }
 
-            # Set environment variables
+            # set environment variables
             if environment in env_mapping:
                 for key, value in env_mapping[environment].items():
                     original_env[key] = os.environ.get(key)
@@ -338,7 +332,7 @@ class ConfigObservabilityAutomation:
                 else:
                     os.environ[key] = value
 
-    async def detect_configuration_drift(self) -> List[ConfigDrift]:
+    async def detect_configuration_drift(self) -> list[ConfigDrift]:
         """Detect configuration drift across environments."""
         logger.info("Detecting configuration drift")
 
@@ -377,11 +371,11 @@ class ConfigObservabilityAutomation:
 
     async def _compare_configurations(
         self,
-        baseline: Dict[str, Any],
-        current: Dict[str, Any],
+        baseline: dict[str, Any],
+        current: dict[str, Any],
         environment: str,
         timestamp: datetime,
-    ) -> List[ConfigDrift]:
+    ) -> list[ConfigDrift]:
         """Compare baseline and current configurations."""
         drifts = []
 
@@ -437,7 +431,7 @@ class ConfigObservabilityAutomation:
 
         return drifts
 
-    async def validate_configuration_health(self) -> List[ConfigValidationResult]:
+    async def validate_configuration_health(self) -> list[ConfigValidationResult]:
         """Validate configuration health across all environments."""
         logger.info("Validating configuration health")
 
@@ -479,10 +473,10 @@ class ConfigObservabilityAutomation:
 
     async def _validate_environment_config(
         self,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         environment: str,
         timestamp: datetime,
-    ) -> List[ConfigValidationResult]:
+    ) -> list[ConfigValidationResult]:
         """Validate configuration for a specific environment."""
         results = []
 
@@ -507,8 +501,8 @@ class ConfigObservabilityAutomation:
         return results
 
     async def _validate_api_keys(
-        self, config: Dict[str, Any], environment: str, timestamp: datetime
-    ) -> List[ConfigValidationResult]:
+        self, config: dict[str, Any], environment: str, timestamp: datetime
+    ) -> list[ConfigValidationResult]:
         """Validate API key configuration."""
         results = []
 
@@ -524,7 +518,7 @@ class ConfigObservabilityAutomation:
                         environment=environment,
                         timestamp=timestamp,
                         suggestions=[
-                            "Set AI_DOCS__OPENAI_API_KEY environment variable"
+                            "set AI_DOCS__OPENAI_API_KEY environment variable"
                         ],
                     )
                 )
@@ -552,7 +546,7 @@ class ConfigObservabilityAutomation:
                         environment=environment,
                         timestamp=timestamp,
                         suggestions=[
-                            "Set AI_DOCS__FIRECRAWL_API_KEY environment variable"
+                            "set AI_DOCS__FIRECRAWL_API_KEY environment variable"
                         ],
                     )
                 )
@@ -560,8 +554,8 @@ class ConfigObservabilityAutomation:
         return results
 
     async def _validate_performance_settings(
-        self, config: Dict[str, Any], environment: str, timestamp: datetime
-    ) -> List[ConfigValidationResult]:
+        self, config: dict[str, Any], environment: str, timestamp: datetime
+    ) -> list[ConfigValidationResult]:
         """Validate performance configuration settings."""
         results = []
 
@@ -599,8 +593,8 @@ class ConfigObservabilityAutomation:
         return results
 
     async def _validate_cache_settings(
-        self, config: Dict[str, Any], environment: str, timestamp: datetime
-    ) -> List[ConfigValidationResult]:
+        self, config: dict[str, Any], environment: str, timestamp: datetime
+    ) -> list[ConfigValidationResult]:
         """Validate cache configuration settings."""
         results = []
 
@@ -631,15 +625,15 @@ class ConfigObservabilityAutomation:
                         message="Redis URL is required when Redis caching is enabled",
                         environment=environment,
                         timestamp=timestamp,
-                        suggestions=["Set AI_DOCS__REDIS_URL or disable Redis caching"],
+                        suggestions=["set AI_DOCS__REDIS_URL or disable Redis caching"],
                     )
                 )
 
         return results
 
     async def _validate_provider_compatibility(
-        self, config: Dict[str, Any], environment: str, timestamp: datetime
-    ) -> List[ConfigValidationResult]:
+        self, config: dict[str, Any], environment: str, timestamp: datetime
+    ) -> list[ConfigValidationResult]:
         """Validate provider compatibility."""
         results = []
 
@@ -664,8 +658,8 @@ class ConfigObservabilityAutomation:
         return results
 
     async def _validate_security_settings(
-        self, config: Dict[str, Any], environment: str, timestamp: datetime
-    ) -> List[ConfigValidationResult]:
+        self, config: dict[str, Any], environment: str, timestamp: datetime
+    ) -> list[ConfigValidationResult]:
         """Validate security configuration."""
         results = []
 
@@ -681,7 +675,7 @@ class ConfigObservabilityAutomation:
                         message="API key requirement should be enabled in production",
                         environment=environment,
                         timestamp=timestamp,
-                        suggestions=["Set AI_DOCS__SECURITY__REQUIRE_API_KEYS=true"],
+                        suggestions=["set AI_DOCS__SECURITY__REQUIRE_API_KEYS=true"],
                     )
                 )
 
@@ -694,7 +688,7 @@ class ConfigObservabilityAutomation:
                         environment=environment,
                         timestamp=timestamp,
                         suggestions=[
-                            "Set AI_DOCS__SECURITY__ENABLE_RATE_LIMITING=true"
+                            "set AI_DOCS__SECURITY__ENABLE_RATE_LIMITING=true"
                         ],
                     )
                 )
@@ -703,7 +697,7 @@ class ConfigObservabilityAutomation:
 
     async def generate_optimization_recommendations(
         self,
-    ) -> List[OptimizationRecommendation]:
+    ) -> list[OptimizationRecommendation]:
         """Generate configuration optimization recommendations based on performance metrics."""
         logger.info("Generating optimization recommendations")
 
@@ -718,14 +712,16 @@ class ConfigObservabilityAutomation:
                 recommendations.extend(env_recommendations)
 
             except Exception as e:
-                logger.exception(f"Error generating recommendations for {environment}: {e}")
+                logger.exception(
+                    f"Error generating recommendations for {environment}: {e}"
+                )
 
         self.optimization_recommendations = recommendations
         return recommendations
 
     async def _analyze_environment_performance(
-        self, config: Dict[str, Any], environment: str
-    ) -> List[OptimizationRecommendation]:
+        self, config: dict[str, Any], environment: str
+    ) -> list[OptimizationRecommendation]:
         """Analyze performance and generate recommendations for an environment."""
         recommendations = []
 
@@ -788,7 +784,7 @@ class ConfigObservabilityAutomation:
 
         return recommendations
 
-    async def auto_remediate_issues(self, drifts: List[ConfigDrift]) -> Dict[str, bool]:
+    async def auto_remediate_issues(self, drifts: list[ConfigDrift]) -> dict[str, bool]:
         """Automatically remediate configuration issues where safe to do so."""
         if not self.enable_auto_remediation:
             logger.info("Auto-remediation disabled")
@@ -830,7 +826,7 @@ class ConfigObservabilityAutomation:
         # Update baseline to reflect the fix
         if drift.environment in self.baseline_configurations:
             config = self.baseline_configurations[drift.environment]
-            # Set the parameter to expected value
+            # set the parameter to expected value
             keys = drift.parameter.split(".")
             current_dict = config
             for key in keys[:-1]:
@@ -913,7 +909,7 @@ class ConfigObservabilityAutomation:
             except Exception as e:
                 logger.exception(f"Error in periodic optimization: {e}")
 
-    def get_system_status(self) -> Dict[str, Any]:
+    def get_system_status(self) -> dict[str, Any]:
         """Get comprehensive system status."""
         current_time = datetime.now()
 
@@ -989,7 +985,7 @@ class ConfigObservabilityAutomation:
             },
         }
 
-    def get_detailed_report(self) -> Dict[str, Any]:
+    def get_detailed_report(self) -> dict[str, Any]:
         """Get detailed automation report."""
         status = self.get_system_status()
 
