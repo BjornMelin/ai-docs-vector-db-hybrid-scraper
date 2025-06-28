@@ -939,7 +939,7 @@ class TestCircuitBreakerCoordination:
             )
         except Exception as e:
             # Expected failure - testing degraded service behavior
-            logger.debug(f"Expected degraded service failure: {e}")
+            logger.debug(f"Expected degraded service failure: {e}")  # TODO: Convert f-string to logging format
 
         # Verify different circuit breaker configurations
         embedding_cb = monitor.circuit_breakers["embedding_service"]

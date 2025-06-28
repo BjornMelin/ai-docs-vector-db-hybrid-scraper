@@ -443,7 +443,7 @@ class TestCircuitBreakers:
             return await circuit_breaker.call(service.process_request, **_kwargs)
 
         for phase in phases:
-            logger.info(f"Running recovery phase: {phase['name']}")
+            logger.info(f"Running recovery phase: {phase['name']}")  # TODO: Convert f-string to logging format
 
             # Set service health
             service.set_health(phase["service_healthy"])
@@ -550,8 +550,8 @@ class TestCircuitBreakers:
         )
 
         logger.info("Circuit breaker recovery completed successfully")
-        logger.info(f"Total state changes: {_total_state_changes}")
-        logger.info(f"Final circuit breaker metrics: {circuit_breaker.metrics}")
+        logger.info(f"Total state changes: {_total_state_changes}")  # TODO: Convert f-string to logging format
+        logger.info(f"Final circuit breaker metrics: {circuit_breaker.metrics}")  # TODO: Convert f-string to logging format
 
 
 class TestRateLimiters:
@@ -605,7 +605,7 @@ class TestRateLimiters:
         pattern_results = []
 
         for pattern in load_patterns:
-            logger.info(f"Testing rate limiter with load pattern: {pattern['name']}")
+            logger.info(f"Testing rate limiter with load pattern: {pattern['name']}")  # TODO: Convert f-string to logging format
 
             # Reset rate limiter for clean test
             rate_limiter.request_times.clear()
@@ -789,7 +789,7 @@ class TestRateLimiters:
             )
 
         logger.info("Thundering herd protection successful:")
-        logger.info(f"  - {rejection_rate:.2f}% requests rejected")
+        logger.info(f"  - {rejection_rate:.2f}% requests rejected")  # TODO: Convert f-string to logging format
         logger.info(
             f"  - Max concurrent executions: {expensive_service.max_concurrent}"
         )

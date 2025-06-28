@@ -520,7 +520,7 @@ class TestLifespanContextManager:
                 pass
         except Exception as e:
             # Exception expected during lifespan test
-            logger.debug(f"Expected lifespan test exception: {e}")
+            logger.debug(f"Expected lifespan test exception: {e}")  # TODO: Convert f-string to logging format
 
         # Should not attempt to cleanup non-existent client manager
         # (No assertion needed as exception would be raised if cleanup was called incorrectly)

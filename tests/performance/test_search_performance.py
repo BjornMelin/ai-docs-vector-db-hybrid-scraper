@@ -7,12 +7,10 @@ following 2025 performance testing best practices.
 
 import asyncio
 import time
-from typing import Any, Dict, List
-from unittest.mock import AsyncMock, MagicMock
-
-import pytest
 
 from tests.utils.modern_ai_testing import (
+import pytest
+from unittest.mock import MagicMock
     ModernAITestingUtils,
     PerformanceTestingFramework,
     performance_critical_test,

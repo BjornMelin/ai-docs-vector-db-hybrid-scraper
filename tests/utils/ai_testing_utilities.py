@@ -6,11 +6,10 @@ embeddings, vector databases, RAG systems, and other AI components following
 """
 
 import asyncio
-import gc
 import math
 import time
 import tracemalloc
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, , , Optional, , Union
 from unittest.mock import AsyncMock, MagicMock
 
 import numpy as np
@@ -22,7 +21,7 @@ class EmbeddingTestUtils:
     """Utilities for testing embedding-related functionality."""
 
     @staticmethod
-    def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
+    def cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
         """Calculate cosine similarity between two vectors.
 
         Args:
@@ -53,7 +52,7 @@ class EmbeddingTestUtils:
         return float(np.dot(arr1, arr2) / (norm1 * norm2))
 
     @staticmethod
-    def euclidean_distance(vec1: List[float], vec2: List[float]) -> float:
+    def euclidean_distance(vec1: list[float], vec2: list[float]) -> float:
         """Calculate Euclidean distance between two vectors.
 
         Args:
@@ -73,7 +72,7 @@ class EmbeddingTestUtils:
     @staticmethod
     def generate_test_embeddings(
         count: int, dim: int = 1536, normalized: bool = True, seed: int | None = None
-    ) -> List[List[float]]:
+    ) -> list[list[float]]:
         """Generate test embeddings with consistent properties.
 
         Args:
@@ -83,7 +82,7 @@ class EmbeddingTestUtils:
             seed: Random seed for reproducibility
 
         Returns:
-            List of embedding vectors
+            list of embedding vectors
         """
         if seed is not None:
             np.random.seed(seed)
@@ -101,11 +100,11 @@ class EmbeddingTestUtils:
 
     @staticmethod
     def generate_similar_embeddings(
-        base_embedding: List[float],
+        base_embedding: list[float],
         count: int,
-        similarity_range: Tuple[float, float] = (0.8, 0.95),
+        similarity_range: tuple[float, float] = (0.8, 0.95),
         seed: int | None = None,
-    ) -> List[List[float]]:
+    ) -> list[list[float]]:
         """Generate embeddings similar to a base embedding.
 
         Args:
@@ -115,7 +114,7 @@ class EmbeddingTestUtils:
             seed: Random seed for reproducibility
 
         Returns:
-            List of similar embedding vectors
+            list of similar embedding vectors
         """
         if seed is not None:
             np.random.seed(seed)
@@ -150,7 +149,7 @@ class EmbeddingTestUtils:
         return similar_embeddings
 
     @staticmethod
-    def validate_embedding_properties(embedding: List[float]) -> Dict[str, bool]:
+    def validate_embedding_properties(embedding: list[float]) -> dict[str, bool]:
         """Validate embedding meets quality requirements.
 
         Args:
@@ -173,11 +172,11 @@ class EmbeddingTestUtils:
         return validations
 
     @staticmethod
-    def batch_validate_embeddings(embeddings: List[List[float]]) -> Dict[str, Any]:
+    def batch_validate_embeddings(embeddings: list[list[float]]) -> dict[str, Any]:
         """Validate a batch of embeddings for consistency.
 
         Args:
-            embeddings: List of embedding vectors
+            embeddings: list of embedding vectors
 
         Returns:
             Batch validation results
@@ -277,7 +276,7 @@ class VectorDatabaseTestUtils:
     @staticmethod
     def generate_test_points(
         count: int, vector_dim: int = 1536, collection_name: str = "test_collection"
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Generate test vector points for database operations.
 
         Args:
@@ -286,7 +285,7 @@ class VectorDatabaseTestUtils:
             collection_name: Collection name for points
 
         Returns:
-            List of point dictionaries
+            list of point dictionaries
         """
         embeddings = EmbeddingTestUtils.generate_test_embeddings(count, vector_dim)
 
@@ -310,13 +309,13 @@ class VectorDatabaseTestUtils:
 
     @staticmethod
     async def measure_search_performance(
-        search_func, query_vectors: List[List[float]], concurrent_requests: int = 10
-    ) -> Dict[str, float]:
+        search_func, query_vectors: list[list[float]], concurrent_requests: int = 10
+    ) -> dict[str, float]:
         """Measure vector search performance metrics.
 
         Args:
             search_func: Async search function to test
-            query_vectors: List of query vectors
+            query_vectors: list of query vectors
             concurrent_requests: Number of concurrent requests
 
         Returns:
@@ -356,15 +355,15 @@ class RAGTestUtils:
 
     @staticmethod
     def calculate_contextual_precision(
-        retrieved_contexts: List[str],
-        ground_truth_contexts: List[str],
+        retrieved_contexts: list[str],
+        ground_truth_contexts: list[str],
         relevance_threshold: float = 0.7,
     ) -> float:
         """Calculate contextual precision for RAG retrieval.
 
         Args:
-            retrieved_contexts: List of retrieved context strings
-            ground_truth_contexts: List of known relevant contexts
+            retrieved_contexts: list of retrieved context strings
+            ground_truth_contexts: list of known relevant contexts
             relevance_threshold: Similarity threshold for relevance
 
         Returns:
@@ -394,15 +393,15 @@ class RAGTestUtils:
 
     @staticmethod
     def calculate_contextual_recall(
-        retrieved_contexts: List[str],
-        ground_truth_contexts: List[str],
+        retrieved_contexts: list[str],
+        ground_truth_contexts: list[str],
         relevance_threshold: float = 0.7,
     ) -> float:
         """Calculate contextual recall for RAG retrieval.
 
         Args:
-            retrieved_contexts: List of retrieved context strings
-            ground_truth_contexts: List of known relevant contexts
+            retrieved_contexts: list of retrieved context strings
+            ground_truth_contexts: list of known relevant contexts
             relevance_threshold: Similarity threshold for relevance
 
         Returns:
@@ -431,8 +430,8 @@ class RAGTestUtils:
 
     @staticmethod
     def evaluate_rag_response_quality(
-        response: str, query: str, retrieved_contexts: List[str]
-    ) -> Dict[str, float]:
+        response: str, query: str, retrieved_contexts: list[str]
+    ) -> dict[str, float]:
         """Evaluate RAG response quality across multiple dimensions.
 
         Args:
@@ -504,7 +503,7 @@ class PerformanceTestUtils:
         self.start_time = time.time()
         self.monitoring_active = True
 
-    def stop_monitoring(self) -> Dict[str, Any]:
+    def stop_monitoring(self) -> dict[str, Any]:
         """Stop monitoring and return performance metrics.
 
         Returns:
@@ -546,7 +545,7 @@ class PerformanceTestUtils:
     @staticmethod
     async def measure_async_function_performance(
         func, *args, **kwargs
-    ) -> Tuple[Any, Dict[str, float]]:
+    ) -> tuple[Any, dict[str, float]]:
         """Measure performance of an async function.
 
         Args:
@@ -555,7 +554,7 @@ class PerformanceTestUtils:
             **kwargs: Function keyword arguments
 
         Returns:
-            Tuple of (function_result, performance_metrics)
+            tuple of (function_result, performance_metrics)
         """
         # Start monitoring
         tracemalloc.start()
@@ -583,13 +582,13 @@ class PerformanceTestUtils:
 
     @staticmethod
     def benchmark_function_calls(
-        func, test_cases: List[Tuple], iterations: int = 100
-    ) -> Dict[str, float]:
+        func, test_cases: list[tuple], iterations: int = 100
+    ) -> dict[str, float]:
         """Benchmark function calls with multiple test cases.
 
         Args:
             func: Function to benchmark
-            test_cases: List of (args, kwargs) tuples
+            test_cases: list of (args, kwargs) tuples
             iterations: Number of iterations per test case
 
         Returns:

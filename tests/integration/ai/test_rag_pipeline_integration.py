@@ -5,14 +5,15 @@ demonstrating modern testing patterns with realistic service mocking and
 end-to-end workflow validation.
 """
 
-from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock
 
-import httpx
 import pytest
 import respx
 
 from tests.utils.modern_ai_testing import (
+from typing import Dict
+from typing import Any
+
     IntegrationTestingPatterns,
     ModernAITestingUtils,
     integration_test,
@@ -149,7 +150,9 @@ class TestRAGPipelineIntegration:
 
         # Step 3: Prepare documents for vector database
         vector_points = []
-        for _i, (doc, embedding) in enumerate(zip(test_documents, embeddings, strict=False)):
+        for _i, (doc, embedding) in enumerate(
+            zip(test_documents, embeddings, strict=False)
+        ):
             point = {
                 "id": doc["id"],
                 "vector": embedding,

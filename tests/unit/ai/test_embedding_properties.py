@@ -4,7 +4,6 @@ This module demonstrates modern property-based testing for AI/ML systems using
 Hypothesis, focusing on embedding operations and vector similarity.
 """
 
-from typing import List
 
 import pytest
 from hypothesis import HealthCheck, assume, given, settings, strategies as st
@@ -21,7 +20,7 @@ class TestEmbeddingProperties:
 
     @given(PropertyBasedTestPatterns.embedding_strategy(min_dim=128, max_dim=1536))
     @ai_property_test
-    def test_embedding_dimension_consistency(self, embedding: List[float]):
+    def test_embedding_dimension_consistency(self, embedding: list[float]):
         """Embeddings should have consistent properties regardless of dimension."""
         # Property: Valid embedding structure
         assert len(embedding) > 0, "Embedding must not be empty"
@@ -45,7 +44,7 @@ class TestEmbeddingProperties:
         emb2=PropertyBasedTestPatterns.embedding_strategy(min_dim=384, max_dim=384),
     )
     @ai_property_test
-    def test_cosine_similarity_properties(self, emb1: List[float], emb2: List[float]):
+    def test_cosine_similarity_properties(self, emb1: list[float], emb2: list[float]):
         """Test mathematical properties of cosine similarity."""
         # Property: Similarity is symmetric
         sim1 = ModernAITestingUtils.calculate_cosine_similarity(emb1, emb2)
@@ -67,7 +66,7 @@ class TestEmbeddingProperties:
         )
     )
     @ai_property_test
-    def test_embedding_batch_properties(self, embeddings: List[List[float]]):
+    def test_embedding_batch_properties(self, embeddings: list[list[float]]):
         """Test properties of embedding batches."""
         assume(len(embeddings) >= 2)  # Ensure we have multiple embeddings
 
@@ -110,7 +109,7 @@ class TestEmbeddingProperties:
     )
     @ai_property_test
     def test_similarity_degradation_with_noise(
-        self, base_embedding: List[float], noise_scale: float
+        self, base_embedding: list[float], noise_scale: float
     ):
         """Test that adding noise decreases similarity predictably."""
         import numpy as np
@@ -176,7 +175,7 @@ class TestEmbeddingProperties:
         k=st.integers(min_value=1, max_value=5),
     )
     @ai_property_test
-    def test_similarity_ranking_properties(self, embeddings: List[List[float]], k: int):
+    def test_similarity_ranking_properties(self, embeddings: list[list[float]], k: int):
         """Test properties of similarity-based ranking."""
         assume(len(embeddings) > k)  # Ensure k is valid
 

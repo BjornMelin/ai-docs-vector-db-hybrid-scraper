@@ -226,7 +226,7 @@ class TestDatabasePerformance:
                                 query_count += 1
                         except Exception as e:
                             # Count failures but continue - expected during stress testing
-                            logger.debug(f"Query failed during stress test: {e}")
+                            logger.debug(f"Query failed during stress test: {e}")  # TODO: Convert f-string to logging format
 
                         # Small delay to prevent overwhelming
                         await asyncio.sleep(0.001)
@@ -282,7 +282,7 @@ class TestEnterpriseFeatures:
                         async with database_manager.session() as session:
                             await session.execute(text("SELECT 1"))  # Simplified query
                     except Exception as e:
-                        logger.debug(f"Query pattern failed: {e}")
+                        logger.debug(f"Query pattern failed: {e}")  # TODO: Convert f-string to logging format
 
                 # Get query performance summary
                 summary = await database_manager.query_monitor.get_performance_summary()

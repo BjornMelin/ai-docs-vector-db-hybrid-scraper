@@ -79,7 +79,7 @@ class LoadTestRunner:
         web_port: int = 8089,
     ) -> dict:
         """Run load test using Locust."""
-        logger.info(f"Starting Locust load test with config: {config}")
+        logger.info(f"Starting Locust load test with config: {config}")  # TODO: Convert f-string to logging format
 
         # Create environment
         env = create_load_test_environment(
@@ -91,7 +91,7 @@ class LoadTestRunner:
             load_profile = get_load_profile(profile)
             if load_profile:
                 env.shape_class = load_profile
-                logger.info(f"Applied load profile: {profile}")
+                logger.info(f"Applied load profile: {profile}")  # TODO: Convert f-string to logging format
 
         if headless:
             # Run headless test
@@ -124,12 +124,12 @@ class LoadTestRunner:
 
                 # Save report
                 report_file = self._save_report(report)
-                logger.info(f"Test report saved to: {report_file}")
+                logger.info(f"Test report saved to: {report_file}")  # TODO: Convert f-string to logging format
 
             return report
         # Run with web UI
-        logger.info(f"Starting Locust web UI on port {web_port}")
-        logger.info(f"Visit http://localhost:{web_port} to control the test")
+        logger.info(f"Starting Locust web UI on port {web_port}")  # TODO: Convert f-string to logging format
+        logger.info(f"Visit http://localhost:{web_port} to control the test")  # TODO: Convert f-string to logging format
 
         # Set up Locust arguments for web mode
         locust_args = [
@@ -159,7 +159,7 @@ class LoadTestRunner:
         self, test_type: str = "all", markers: list[str] | None = None
     ) -> dict:
         """Run load tests using pytest."""
-        logger.info(f"Running pytest load tests: {test_type}")
+        logger.info(f"Running pytest load tests: {test_type}")  # TODO: Convert f-string to logging format
 
         # Build pytest command
         cmd = ["uv", "run", "pytest", "tests/load/", "-v"]
@@ -220,7 +220,7 @@ class LoadTestRunner:
 
     def run_custom_scenario(self, scenario_file: str) -> dict:
         """Run a custom load test scenario from JSON file."""
-        logger.info(f"Running custom scenario: {scenario_file}")
+        logger.info(f"Running custom scenario: {scenario_file}")  # TODO: Convert f-string to logging format
 
         try:
             with Path(scenario_file).open() as f:
@@ -267,12 +267,12 @@ class LoadTestRunner:
 
     def benchmark_endpoints(self, endpoints: list[str], config: dict) -> dict:
         """Benchmark specific endpoints."""
-        logger.info(f"Benchmarking endpoints: {endpoints}")
+        logger.info(f"Benchmarking endpoints: {endpoints}")  # TODO: Convert f-string to logging format
 
         results = {}
 
         for endpoint in endpoints:
-            logger.info(f"Benchmarking endpoint: {endpoint}")
+            logger.info(f"Benchmarking endpoint: {endpoint}")  # TODO: Convert f-string to logging format
 
             # Create custom user class for this endpoint
             endpoint_config = config.copy()
@@ -287,7 +287,7 @@ class LoadTestRunner:
 
         # Save report
         report_file = self._save_report(comparative_report, "endpoint_benchmark")
-        logger.info(f"Endpoint benchmark report saved to: {report_file}")
+        logger.info(f"Endpoint benchmark report saved to: {report_file}")  # TODO: Convert f-string to logging format
 
         return comparative_report
 
@@ -314,7 +314,7 @@ class LoadTestRunner:
 
             # Save regression report
             report_file = self._save_report(regression_analysis, "regression_analysis")
-            logger.info(f"Regression analysis saved to: {report_file}")
+            logger.info(f"Regression analysis saved to: {report_file}")  # TODO: Convert f-string to logging format
 
         except Exception:
             logger.exception("Error in test execution")

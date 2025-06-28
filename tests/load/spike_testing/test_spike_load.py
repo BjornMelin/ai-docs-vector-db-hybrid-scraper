@@ -183,7 +183,7 @@ class TestSpikeLoad:
                 self.current_capacity = min(
                     self.current_capacity * 1.5, self.max_capacity
                 )
-                logger.info(f"Scaled up from {old_capacity} to {self.current_capacity}")
+                logger.info(f"Scaled up from {old_capacity} to {self.current_capacity}")  # TODO: Convert f-string to logging format
 
             def scale_down(self):
                 """Scale down capacity."""

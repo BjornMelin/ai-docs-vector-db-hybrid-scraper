@@ -181,7 +181,7 @@ class FailureInjector:
             "duration": duration,
         }
 
-        logger.warning(f"Injecting memory pressure: {pressure_mb}MB for {duration}s")
+        logger.warning(f"Injecting memory pressure: {pressure_mb}MB for {duration}s")  # TODO: Convert f-string to logging format
 
         # Allocate memory to create pressure
         memory_hogs = []
@@ -222,7 +222,7 @@ class FailureInjector:
             "duration": duration,
         }
 
-        logger.warning(f"Injecting CPU saturation: {cpu_load:.1%} load for {duration}s")
+        logger.warning(f"Injecting CPU saturation: {cpu_load:.1%} load for {duration}s")  # TODO: Convert f-string to logging format
 
         # CPU intensive work
         stop_cpu_work = threading.Event()
@@ -498,7 +498,7 @@ class StressTestOrchestrator:
                 logger.exception("Stress test phase {i + 1} failed")
 
             phase_results.append(phase_result)
-            logger.info(f"Completed stress test phase {i + 1}")
+            logger.info(f"Completed stress test phase {i + 1}")  # TODO: Convert f-string to logging format
 
         return phase_results
 
@@ -660,7 +660,7 @@ def stress_test_environment():
 
             mem_limit = resource.getrlimit(resource.RLIMIT_AS)
             if mem_limit[0] != resource.RLIM_INFINITY:
-                logger.info(f"Memory limit: {mem_limit[0] / (1024**3):.2f} GB")
+                logger.info(f"Memory limit: {mem_limit[0] / (1024**3):.2f} GB")  # TODO: Convert f-string to logging format
             else:
                 logger.info("Memory limit: unlimited")
         except Exception:

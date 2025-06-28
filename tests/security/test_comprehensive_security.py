@@ -10,21 +10,18 @@ This module provides extensive testing of the security framework including:
 """
 
 import asyncio
-import json
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
-from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
 from src.config.security import SecurityConfig
-from src.services.security.ai_security import AISecurityValidator, ThreatLevel
 from src.services.security.integration import setup_application_security
-from src.services.security.middleware import SecurityMiddleware
 from src.services.security.monitoring import SecurityMonitor
 from src.services.security.rate_limiter import DistributedRateLimiter
 
+
+import asyncio
+import pytest
+from fastapi import FastAPI
 
 @pytest.fixture
 def security_config():

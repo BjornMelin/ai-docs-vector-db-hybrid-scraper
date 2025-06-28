@@ -7,7 +7,7 @@ demonstrating modern testing patterns without external dependencies.
 import math
 import random
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, , , Optional, 
 from unittest.mock import MagicMock
 
 
@@ -17,7 +17,7 @@ class MinimalEmbeddingTestUtils:
     @staticmethod
     def generate_test_embeddings(
         count: int = 1, dim: int = 384, seed: int | None = None
-    ) -> List[List[float]]:
+    ) -> list[list[float]]:
         """Generate test embeddings using standard library random.
 
         Args:
@@ -26,7 +26,7 @@ class MinimalEmbeddingTestUtils:
             seed: Random seed for reproducibility
 
         Returns:
-            List of embedding vectors
+            list of embedding vectors
         """
         if seed is not None:
             random.seed(seed)
@@ -48,7 +48,7 @@ class MinimalEmbeddingTestUtils:
         return embeddings
 
     @staticmethod
-    def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
+    def cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
         """Calculate cosine similarity between two vectors.
 
         Args:
@@ -76,7 +76,7 @@ class MinimalEmbeddingTestUtils:
         return dot_product / (magnitude1 * magnitude2)
 
     @staticmethod
-    def validate_embedding_properties(embedding: List[float]) -> Dict[str, Any]:
+    def validate_embedding_properties(embedding: list[float]) -> dict[str, Any]:
         """Validate embedding properties.
 
         Args:
@@ -120,11 +120,11 @@ class MinimalEmbeddingTestUtils:
         }
 
     @staticmethod
-    def batch_validate_embeddings(embeddings: List[List[float]]) -> Dict[str, Any]:
+    def batch_validate_embeddings(embeddings: list[list[float]]) -> dict[str, Any]:
         """Validate a batch of embeddings.
 
         Args:
-            embeddings: List of embedding vectors
+            embeddings: list of embedding vectors
 
         Returns:
             Batch validation results
@@ -166,7 +166,7 @@ class MinimalVectorDatabaseTestUtils:
     @staticmethod
     def generate_test_points(
         count: int = 10, vector_dim: int = 384, seed: int | None = None
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Generate test vector points.
 
         Args:
@@ -175,7 +175,7 @@ class MinimalVectorDatabaseTestUtils:
             seed: Random seed
 
         Returns:
-            List of vector points with IDs, vectors, and payloads
+            list of vector points with IDs, vectors, and payloads
         """
         if seed is not None:
             random.seed(seed)
@@ -210,13 +210,13 @@ class MinimalVectorDatabaseTestUtils:
 
         # Mock search results
         class MockSearchResult:
-            def __init__(self, id: str, score: float, payload: Dict):
+            def __init__(self, id: str, score: float, payload: dict):
                 self.id = id
                 self.score = score
                 self.payload = payload
 
         async def mock_search(
-            collection_name: str, query_vector: List[float], limit: int = 10
+            collection_name: str, query_vector: list[float], limit: int = 10
         ):
             # Generate mock results with decreasing scores
             results = []
@@ -238,8 +238,8 @@ class MinimalRAGTestUtils:
 
     @staticmethod
     def evaluate_rag_response_quality(
-        response: str, query: str, retrieved_contexts: List[str]
-    ) -> Dict[str, float]:
+        response: str, query: str, retrieved_contexts: list[str]
+    ) -> dict[str, float]:
         """Evaluate RAG response quality using simple metrics.
 
         Args:
@@ -291,7 +291,7 @@ class MinimalRAGTestUtils:
 
     @staticmethod
     def calculate_contextual_precision(
-        retrieved: List[str], ground_truth: List[str]
+        retrieved: list[str], ground_truth: list[str]
     ) -> float:
         """Calculate precision for retrieved contexts.
 
@@ -321,7 +321,7 @@ class MinimalRAGTestUtils:
 
     @staticmethod
     def calculate_contextual_recall(
-        retrieved: List[str], ground_truth: List[str]
+        retrieved: list[str], ground_truth: list[str]
     ) -> float:
         """Calculate recall for retrieved contexts.
 
@@ -356,7 +356,7 @@ class MinimalPerformanceTestUtils:
     def __init__(self):
         """Initialize performance monitor."""
         self.start_time: float | None = None
-        self.memory_snapshots: List[Dict[str, Any]] = []
+        self.memory_snapshots: list[dict[str, Any]] = []
         self.is_monitoring = False
 
     def start_monitoring(self) -> None:
@@ -366,7 +366,7 @@ class MinimalPerformanceTestUtils:
         self.is_monitoring = True
         self.take_memory_snapshot("start")
 
-    def stop_monitoring(self) -> Dict[str, Any]:
+    def stop_monitoring(self) -> dict[str, Any]:
         """Stop monitoring and return metrics.
 
         Returns:
@@ -443,7 +443,7 @@ class MinimalTestStrategies:
     """Minimal test strategies for property-based testing concepts."""
 
     @staticmethod
-    def embeddings(min_dim: int = 100, max_dim: int = 1000) -> List[List[float]]:
+    def embeddings(min_dim: int = 100, max_dim: int = 1000) -> list[list[float]]:
         """Generate embedding strategy (returns single example).
 
         Args:
@@ -451,7 +451,7 @@ class MinimalTestStrategies:
             max_dim: Maximum dimension
 
         Returns:
-            List containing one embedding
+            list containing one embedding
         """
         dim = random.randint(min_dim, max_dim)
         return MinimalEmbeddingTestUtils.generate_test_embeddings(count=1, dim=dim)

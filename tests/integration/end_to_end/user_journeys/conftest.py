@@ -4,12 +4,14 @@ This module provides comprehensive fixtures for testing complete user workflows
 across the entire AI Documentation Vector DB Hybrid Scraper system.
 """
 
+from __future__ import annotations
+
 import asyncio
 import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Optional, Union
 
 import pytest
 
@@ -21,11 +23,11 @@ class JourneyStep:
     name: str
     action: str
     params: dict[str, Any]
-    expected_result: dict[str, Any] | None = None
-    validation_func: callable | None = None
+    expected_result: Optional[dict[str, Any]] = None
+    validation_func: Optional[Callable] = None
     timeout_seconds: float = 30.0
     retry_count: int = 0
-    dependencies: list[str] = None
+    dependencies: Optional[list[str]] = None
 
     def __post_init__(self):
         if self.dependencies is None:
@@ -39,9 +41,9 @@ class UserJourney:
     name: str
     description: str
     steps: list[JourneyStep]
-    setup_func: callable | None = None
-    teardown_func: callable | None = None
-    success_criteria: dict[str, Any] = None
+    setup_func: Optional[Callable] = None
+    teardown_func: Optional[Callable] = None
+    success_criteria: Optional[dict[str, Any]] = None
 
     def __post_init__(self):
         if self.success_criteria is None:
@@ -284,6 +286,7 @@ def journey_executor():
                 "create_project": self._action_create_project,
                 "add_to_collection": self._action_add_to_collection,
                 "validate_api_response": self._action_validate_api,
+                "validate_api": self._action_validate_api,  # Alias for backward compatibility
                 "check_system_health": self._action_check_health,
                 "wait_for_processing": self._action_wait_processing,
                 "browser_navigate": self._action_browser_navigate,
@@ -502,6 +505,7 @@ def journey_executor():
             # Common patterns for context updates
             updates = {}
 
+            # Project and collection management
             if "project_id" in result:
                 updates["current_project_id"] = result["project_id"]
             if "document_id" in result:
@@ -512,6 +516,28 @@ def journey_executor():
                 updates["latest_vector_ids"] = result["vector_ids"]
             if "results" in result:
                 updates["latest_search_results"] = result["results"]
+
+            # Document processing pipeline dependencies
+            if "content" in result:
+                updates["content"] = result["content"]
+            if "processed_content" in result:
+                updates["processed_content"] = result["processed_content"]
+            if "chunks" in result:
+                updates["chunks"] = result["chunks"]
+            if "chunk_count" in result:
+                updates["chunk_count"] = result["chunk_count"]
+            if "embeddings" in result:
+                updates["embeddings"] = result["embeddings"]
+            if "embedding_model" in result:
+                updates["embedding_model"] = result["embedding_model"]
+
+            # Storage and search results
+            if "stored_count" in result:
+                updates["stored_count"] = result["stored_count"]
+            if "_total_found" in result:
+                updates["total_found"] = result["_total_found"]
+            if "query" in result:
+                updates["latest_query"] = result["query"]
 
             return updates
 

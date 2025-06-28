@@ -255,7 +255,7 @@ class TestCacheIntegrationPatterns:
                     return cached_value
             except Exception as e:
                 # Gracefully handle cache failure
-                logger.debug(f"Cache read failure (graceful fallback): {e}")
+                logger.debug(f"Cache read failure (graceful fallback): {e}")  # TODO: Convert f-string to logging format
 
             # Fallback to direct computation
             computed_value = f"computed_value_for_{key}"
@@ -264,7 +264,7 @@ class TestCacheIntegrationPatterns:
                 await mock_cache.set(key, computed_value)
             except Exception as e:
                 # Cache set failure is non-fatal
-                logger.debug(f"Cache set failure (non-fatal): {e}")
+                logger.debug(f"Cache set failure (non-fatal): {e}")  # TODO: Convert f-string to logging format
 
             return computed_value
 

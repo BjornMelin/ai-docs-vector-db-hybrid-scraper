@@ -6,7 +6,6 @@ than the custom implementations they replace.
 """
 
 import asyncio
-import time
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest

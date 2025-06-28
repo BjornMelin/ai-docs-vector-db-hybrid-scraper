@@ -10,16 +10,13 @@ Comprehensive test suite for the configuration automation system including:
 """
 
 import asyncio
-import json
-import os
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import ValidationError
 
 from src.config.observability.api import router
 from src.config.observability.automation import (
@@ -192,7 +189,7 @@ class TestConfigObservabilityAutomation:
                     "name": "response_time_ms",
                     "value": 1500.0,  # High response time
                     "environment": "development",
-                    "timestamp": datetime.now(),
+                    "timestamp": datetime.now(timezone.utc),
                 },
             )(),
             type(
@@ -202,7 +199,7 @@ class TestConfigObservabilityAutomation:
                     "name": "cache_hit_rate",
                     "value": 0.6,  # Low cache hit rate
                     "environment": "development",
-                    "timestamp": datetime.now(),
+                    "timestamp": datetime.now(timezone.utc),
                 },
             )(),
         ]
@@ -246,7 +243,7 @@ class TestConfigObservabilityAutomation:
                 expected_value=10,
                 current_value=15,
                 environment="development",
-                timestamp=datetime.now(),
+                timestamp=datetime.now(timezone.utc),
                 auto_fix_available=True,
             ),
             ConfigDrift(
@@ -255,7 +252,7 @@ class TestConfigObservabilityAutomation:
                 expected_value=86400,
                 current_value=43200,
                 environment="development",
-                timestamp=datetime.now(),
+                timestamp=datetime.now(timezone.utc),
                 auto_fix_available=True,
             ),
         ]
@@ -276,7 +273,7 @@ class TestConfigObservabilityAutomation:
                 expected_value="test",
                 current_value="changed",
                 environment="development",
-                timestamp=datetime.now(),
+                timestamp=datetime.now(timezone.utc),
             )
         ]
 
@@ -286,7 +283,7 @@ class TestConfigObservabilityAutomation:
                 parameter="test_param",
                 message="Test error",
                 environment="development",
-                timestamp=datetime.now(),
+                timestamp=datetime.now(timezone.utc),
             )
         ]
 
@@ -314,7 +311,7 @@ class TestConfigObservabilityAutomation:
                 expected_value="test",
                 current_value="changed",
                 environment="development",
-                timestamp=datetime.now(),
+                timestamp=datetime.now(timezone.utc),
             )
         ]
 
@@ -461,7 +458,7 @@ class TestAPIEndpoints:
             expected_value="test",
             current_value="changed",
             environment="development",
-            timestamp=datetime.now(),
+            timestamp=datetime.now(timezone.utc),
         )
 
         mock_automation_system.detect_configuration_drift = AsyncMock(
@@ -497,7 +494,7 @@ class TestAPIEndpoints:
             parameter="test_param",
             message="Test warning",
             environment="development",
-            timestamp=datetime.now(),
+            timestamp=datetime.now(timezone.utc),
         )
 
         mock_automation_system.validate_configuration_health = AsyncMock(
@@ -643,14 +640,14 @@ class TestPerformanceAndScalability:
         system.baseline_configurations = {"test": large_config}
 
         # Test comparison performance
-        start_time = datetime.now()
+        start_time = datetime.now(timezone.utc)
         current_config = {f"param_{i}": f"changed_value_{i}" for i in range(1000)}
 
         drifts = await system._compare_configurations(
-            large_config, current_config, "test", datetime.now()
+            large_config, current_config, "test", datetime.now(timezone.utc)
         )
 
-        end_time = datetime.now()
+        end_time = datetime.now(timezone.utc)
         duration = (end_time - start_time).total_seconds()
 
         # Should handle 1000 parameter comparison in reasonable time
@@ -670,12 +667,12 @@ class TestPerformanceAndScalability:
                     expected_value="test",
                     current_value="changed",
                     environment="test",
-                    timestamp=datetime.now() - timedelta(hours=i),
+                    timestamp=datetime.now(timezone.utc) - timedelta(hours=i),
                 )
             )
 
         # Trigger cleanup (simulate 24-hour cleanup)
-        current_time = datetime.now()
+        current_time = datetime.now(timezone.utc)
         cutoff_time = current_time - timedelta(hours=24)
         system.drift_history = [
             drift for drift in system.drift_history if drift.timestamp > cutoff_time

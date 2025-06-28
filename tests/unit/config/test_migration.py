@@ -4,11 +4,10 @@ Tests the migration from the old 18-file configuration system
 to the new modern Pydantic Settings system.
 """
 
-from unittest.mock import MagicMock, Mock
 
-import pytest
 
 from src.config.migration import (
+from unittest.mock import Mock
     ConfigMigrator,
     create_migration_compatibility_wrapper,
     migrate_legacy_config,

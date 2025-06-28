@@ -392,7 +392,7 @@ class VectorDBUser(HttpUser):
     def on_stop(self):
         """Cleanup user session."""
         session_duration = time.time() - self.start_time
-        logger.info(f"User session completed. Duration: {session_duration:.2f}s")
+        logger.info(f"User session completed. Duration: {session_duration:.2f}s")  # TODO: Convert f-string to logging format
         logger.info("Search operations")
         logger.info("Embedding operations")
 
@@ -694,7 +694,7 @@ def save_load_test_report(summary: dict[str, Any], environment: Environment):
     try:
         with report_file.open("w") as f:
             json.dump(full_report, f, indent=2)
-        logger.info(f"Load test report saved to {report_file}")
+        logger.info(f"Load test report saved to {report_file}")  # TODO: Convert f-string to logging format
     except Exception:
         logger.exception("Failed to save load test report")
 
