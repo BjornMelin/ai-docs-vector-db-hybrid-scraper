@@ -635,6 +635,128 @@ def mock_high_performance_service():
     return service
 
 
+# Additional fixtures for performance optimization testing
+
+@pytest.fixture
+def mock_search_manager():
+    """Mock search manager for performance testing."""
+    search_manager = AsyncMock()
+    
+    async def mock_search(query: str):
+        """Mock search implementation with realistic timing."""
+        import random
+        
+        # Simulate realistic search latency (20-80ms)
+        await asyncio.sleep(random.uniform(0.02, 0.08))
+        
+        return {
+            "query": query,
+            "results": [
+                {"id": f"doc_{i}", "score": 0.9 - i * 0.1, "content": f"Result {i} for {query}"}
+                for i in range(5)
+            ],
+            "total_time": random.uniform(0.02, 0.08),
+        }
+    
+    search_manager.search = mock_search
+    return search_manager
+
+
+@pytest.fixture
+def mock_qdrant_client():
+    """Mock Qdrant client for performance testing."""
+    from unittest.mock import MagicMock
+    client = AsyncMock()
+    
+    # Mock collection creation
+    async def mock_create_collection(*args, **kwargs):
+        await asyncio.sleep(0.01)  # Simulate creation time
+        return True
+    
+    # Mock search operations
+    async def mock_search(*args, **kwargs):
+        import random
+        await asyncio.sleep(random.uniform(0.01, 0.05))  # Simulate search time
+        return [
+            {"id": f"point_{i}", "score": 0.9 - i * 0.1, "payload": {"content": f"content_{i}"}}
+            for i in range(10)
+        ]
+    
+    # Mock collection info
+    async def mock_get_collection(collection_name):
+        return MagicMock(
+            config=MagicMock(
+                params=MagicMock(
+                    vectors=MagicMock(
+                        size=384,
+                        distance=MagicMock(value="Cosine"),
+                        quantization_config=MagicMock(),  # Simulates quantization enabled
+                        hnsw_config=MagicMock(m=32, ef_construct=200)
+                    )
+                )
+            ),
+            vectors_count=1000,
+            indexed_vectors_count=1000,
+            optimizer_status=MagicMock(status="green")
+        )
+    
+    # Mock collections list
+    async def mock_get_collections():
+        return MagicMock(collections=[
+            MagicMock(name="test_collection")
+        ])
+    
+    client.create_collection = mock_create_collection
+    client.search = mock_search
+    client.get_collection = mock_get_collection
+    client.get_collections = mock_get_collections
+    
+    return client
+
+
+@pytest.fixture
+def redis_url():
+    """Redis URL for testing (uses fakeredis if Redis not available)."""
+    import os
+    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    
+    # Check if Redis is available, otherwise use fakeredis
+    try:
+        import redis
+        client = redis.from_url(redis_url)
+        client.ping()
+        return redis_url
+    except Exception:
+        # Fall back to fakeredis for testing
+        return "redis://fake:6379/0"
+
+
+@pytest.fixture
+def performance_test_vectors():
+    """Generate test vectors for performance testing."""
+    import numpy as np
+    
+    # Generate 100 test vectors of dimension 384
+    return [np.random.random(384).tolist() for _ in range(100)]
+
+
+@pytest.fixture
+def sample_search_queries():
+    """Sample search queries for performance testing."""
+    return [
+        "python async programming",
+        "machine learning algorithms",
+        "web scraping techniques",
+        "database optimization",
+        "API design patterns",
+        "cloud computing architecture",
+        "data structures and algorithms",
+        "software engineering best practices",
+        "performance optimization techniques",
+        "security vulnerability assessment",
+    ]
+
+
 # Pytest markers for performance test categorization
 def pytest_configure(config):
     """Configure performance testing markers."""
@@ -649,3 +771,4 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "throughput: mark test as throughput test")
     config.addinivalue_line("markers", "load: mark test as load test")
     config.addinivalue_line("markers", "stress: mark test as stress test")
+    config.addinivalue_line("markers", "benchmark: mark test as benchmark test")

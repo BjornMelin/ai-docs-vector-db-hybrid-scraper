@@ -71,7 +71,7 @@ dependencies = [
     "cachetools>=5.3.0,<6.0.0", # For LRU cache implementation
     # Modern libraries for optimization
     "slowapi>=0.1.9,<0.2.0",                   # Rate limiting
-    "purgatory-circuitbreaker>=1.0.3,<2.0.0",  # Distributed circuit breaker
+    "purgatory-circuitbreaker>=0.7.2,<0.8.0",  # Distributed circuit breaker
     "aiocache>=0.12.0,<0.13.0",               # Modern async caching
     # CLI & user interface
     "click>=8.2.1,<9.0.0",
@@ -82,7 +82,7 @@ dependencies = [
     # Monitoring & observability
     "prometheus-client>=0.21.1,<0.23.0",
     "prometheus-fastapi-instrumentator>=7.0.0,<8.0.0",
-    "psutil>=7.0.0,<8.0.0", # Updated for browser-use 0.2.6+ compatibility
+    "psutil>=5.7.2,<7.0.0", # Compatible with taskipy and other dependencies
     # Database & ORM
     "sqlalchemy>=2.0.0,<3.0.0",
     # Utility libraries

@@ -1,0 +1,156 @@
+version: '3.8'
+
+services:
+  # Enterprise Mode API
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - AI_DOCS_MODE=enterprise
+      - AI_DOCS_ENVIRONMENT=production
+      - AI_DOCS_DEBUG=false
+      - AI_DOCS_QDRANT__URL=http://qdrant:6333
+      - AI_DOCS_CACHE__DRAGONFLY_URL=redis://redis:6379
+      - AI_DOCS_CACHE__ENABLE_DRAGONFLY_CACHE=true
+      - AI_DOCS_MONITORING__ENABLE_METRICS=true
+      - AI_DOCS_OBSERVABILITY__ENABLED=true
+      - AI_DOCS_OBSERVABILITY__OTLP_ENDPOINT=http://jaeger:4317
+      - AI_DOCS_TASK_QUEUE__REDIS_URL=redis://redis:6379
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./cache:/app/cache
+    depends_on:
+      - qdrant
+      - redis
+      - postgres
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Qdrant Vector Database (Enterprise Config)
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"  # gRPC port for enterprise
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      - QDRANT__LOG_LEVEL=INFO
+      - QDRANT__SERVICE__MAX_REQUEST_SIZE_MB=128
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis/Dragonfly for Caching and Task Queue
+  redis:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["dragonfly", "--logtostderr"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL for Enterprise Data
+  postgres:
+    image: postgres:15
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=ai_docs_enterprise
+      - POSTGRES_USER=ai_docs_user
+      - POSTGRES_PASSWORD=secure_password_change_me
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_docs_user -d ai_docs_enterprise"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Jaeger for Distributed Tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "14268:14268"  # HTTP collector
+      - "16686:16686"  # Web UI
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    restart: unless-stopped
+
+  # Prometheus for Metrics Collection
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+
+  # Grafana for Dashboards
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+      - ./config/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # Task Queue Worker
+  worker:
+    build: .
+    command: ["python", "-m", "src.services.task_queue.worker"]
+    environment:
+      - AI_DOCS_MODE=enterprise
+      - AI_DOCS_TASK_QUEUE__REDIS_URL=redis://redis:6379
+      - AI_DOCS_QDRANT__URL=http://qdrant:6333
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+      - qdrant
+    restart: unless-stopped
+
+volumes:
+  qdrant_data:
+  redis_data:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  default:
+    driver: bridge
