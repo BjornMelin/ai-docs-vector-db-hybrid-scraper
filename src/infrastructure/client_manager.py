@@ -16,6 +16,7 @@ from qdrant_client import AsyncQdrantClient
 
 from src.config import Config
 from src.infrastructure.shared import CircuitBreaker, ClientHealth, ClientState
+from src.services.migration.library_migration import LibraryMigrationManager, MigrationMode
 from src.services.errors import APIError
 from src.services.hyde.engine import HyDEQueryEngine
 
@@ -244,6 +245,9 @@ class ClientManager:
         # Auto-detection integration
         self._auto_detected_services = config.get_auto_detected_services()
 
+        # Modern library migration manager
+        self._migration_manager: LibraryMigrationManager | None = None
+
         # Service instances (lazy-initialized)
         self._qdrant_service: Any = None
         self._embedding_manager: Any = None
@@ -269,6 +273,9 @@ class ClientManager:
         if self._initialized:
             return
 
+        # Initialize migration manager for modern libraries
+        await self._initialize_migration_manager()
+
         self._initialized = True
         # Start background health check task
         self._health_check_task = asyncio.create_task(self._health_check_loop())
@@ -281,6 +288,15 @@ class ClientManager:
             self._health_check_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._health_check_task
+
+        # Clean up migration manager
+        if self._migration_manager:
+            try:
+                await self._migration_manager.cleanup()
+                logger.info("Cleaned up migration manager")
+            except Exception:
+                logger.exception("Error cleaning up migration manager")
+            self._migration_manager = None
 
         # Clean up service instances
         service_names = [
@@ -739,6 +755,73 @@ class ClientManager:
                     logger.info("Initialized AdvancedSearchOrchestrator")
 
         return self._search_orchestrator
+
+    async def _initialize_migration_manager(self) -> None:
+        """Initialize the migration manager for modern libraries."""
+        try:
+            # Determine Redis URL for modern implementations
+            auto_detected_redis = self._get_auto_detected_service("redis")
+            if auto_detected_redis:
+                redis_url = auto_detected_redis.connection_string
+            else:
+                redis_url = getattr(self.config.cache, 'dragonfly_url', 'redis://localhost:6379')
+            
+            # Determine migration mode from config
+            migration_mode = MigrationMode.GRADUAL
+            if hasattr(self.config, 'migration') and hasattr(self.config.migration, 'mode'):
+                migration_mode = MigrationMode(self.config.migration.mode)
+            
+            # Create and initialize migration manager
+            from src.services.migration.library_migration import create_migration_manager
+            self._migration_manager = create_migration_manager(
+                config=self.config,
+                mode=migration_mode,
+                redis_url=redis_url,
+            )
+            await self._migration_manager.initialize()
+            
+            logger.info(f"Migration manager initialized with mode: {migration_mode.value}")
+            
+        except Exception as e:
+            logger.warning(f"Failed to initialize migration manager: {e}")
+            # Continue without migration manager - will use legacy implementations
+
+    async def get_migration_manager(self) -> LibraryMigrationManager | None:
+        """Get the migration manager instance.
+        
+        Returns:
+            LibraryMigrationManager instance or None if not available
+        """
+        return self._migration_manager
+
+    async def get_modern_circuit_breaker(self, service_name: str = "default"):
+        """Get modern circuit breaker through migration manager.
+        
+        Args:
+            service_name: Name of the service
+            
+        Returns:
+            Circuit breaker instance (modern or legacy based on migration state)
+        """
+        if self._migration_manager:
+            return await self._migration_manager.get_circuit_breaker(service_name)
+        else:
+            # Fallback to legacy circuit breaker
+            if service_name not in self._circuit_breakers:
+                self._circuit_breakers[service_name] = CircuitBreaker()
+            return self._circuit_breakers[service_name]
+
+    async def get_modern_cache_manager(self):
+        """Get modern cache manager through migration manager.
+        
+        Returns:
+            Cache manager instance (modern or legacy based on migration state)
+        """
+        if self._migration_manager:
+            return await self._migration_manager.get_cache_manager()
+        else:
+            # Fallback to legacy cache manager
+            return await self.get_cache_manager()
 
     # Enterprise Deployment Services
 

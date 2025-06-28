@@ -69,6 +69,10 @@ dependencies = [
     "redis[hiredis]>=6.2.0,<7.0.0",
     "arq>=0.25.0,<0.27.0",
     "cachetools>=5.3.0,<6.0.0", # For LRU cache implementation
+    # Modern libraries for optimization
+    "slowapi>=0.1.9,<0.2.0",                   # Rate limiting
+    "purgatory-circuitbreaker>=1.0.3,<2.0.0",  # Distributed circuit breaker
+    "aiocache>=0.12.0,<0.13.0",               # Modern async caching
     # CLI & user interface
     "click>=8.2.1,<9.0.0",
     "rich>=14.0.0,<15.0.0",
@@ -90,6 +94,7 @@ dependencies = [
     "watchdog>=6.0.0",
     "tool>=0.8.0",
     "ruff>=0.12.0",
+    "taskipy>=1.14.0,<2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -366,43 +371,70 @@ section-order = [
 ]
 lines-after-imports = 2 # Standard spacing after imports
 
-# ===== Pytest Configuration =====
+# ===== Modern Pytest Configuration =====
 [tool.pytest.ini_options]
+# Modern asyncio configuration
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+
+# Test discovery and execution
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_functions = ["test_*"]
 python_classes = ["Test*", "*Tests", "*Test"]
-# Performance optimizations
+minversion = "8.4"
+
+# Performance and reliability optimizations
 considerfailures = true # Re-run failed tests first
 tb_native = true        # Use Python's native traceback
 
-# Clean output formatting with performance optimizations
+# Modern test execution configuration
 addopts = [
-    "--tb=short",                    # Shorter traceback format
     "--strict-markers",              # Treat unknown markers as errors
-    "--disable-warnings",            # Disable pytest warnings for cleaner output
-    "--no-header",                   # Remove pytest header
-    "-ra",                           # Show short test summary for all except passed
-    "--maxfail=5",                   # Stop after 5 failures
     "--strict-config",               # Error on unknown config keys
+    "--tb=short",                    # Shorter traceback format
+    "--verbose",                     # Verbose output for better debugging
+    "--cov=src",                     # Coverage collection
+    "--cov-report=term-missing",     # Show missing lines in terminal
+    "--cov-report=html:htmlcov",     # Generate HTML coverage report
+    "--cov-fail-under=80",           # Fail if coverage below 80%
+    "--durations=10",                # Show 10 slowest tests
+    "--maxfail=5",                   # Stop after 5 failures
     "--import-mode=importlib",       # Modern import mode
     "--showlocals",                  # Show local variables in tracebacks
     "--doctest-modules",             # Run doctests in modules
     "--doctest-continue-on-failure", # Continue after doctest failures
+    "--disable-warnings",            # Clean output
+    "-ra",                           # Show short test summary for all except passed
 ]
 
-# Test discovery
-minversion = "8.4"
+# Enhanced test markers for modern AI/ML testing
 markers = [
+    # Core test types
+    "fast: Fast unit tests (<100ms each)",
+    "integration: Integration tests (<5s each)", 
+    "e2e: End-to-end tests (full pipeline)",
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
-    "performance: marks tests as performance tests",
     "asyncio: marks tests as async tests",
-    "benchmark: marks tests as benchmark tests",
+    
+    # AI/ML specific markers
+    "ai: AI/ML specific tests",
+    "embedding: Embedding-related tests",
+    "vector_db: Vector database tests",
+    "rag: RAG system tests",
+    "property: Property-based tests using Hypothesis",
     "hypothesis: marks tests as property-based tests using Hypothesis",
+    
+    # Performance testing markers
+    "performance: Performance and benchmark tests",
+    "benchmark: marks tests as benchmark tests",
+    "memory_test: mark test as memory test",
+    "cpu_test: mark test as CPU test",
+    "throughput: mark test as throughput test",
+    "latency: mark test as latency test",
+    "scalability: mark test as scalability test",
+    
     # Security testing markers
     "security: mark test as security test",
     "vulnerability_scan: mark test as vulnerability scan test",
@@ -412,12 +444,7 @@ markers = [
     "authentication: mark test as authentication test",
     "authorization: mark test as authorization test",
     "compliance: mark test as compliance test",
-    # Performance testing markers
-    "memory_test: mark test as memory test",
-    "cpu_test: mark test as CPU test",
-    "throughput: mark test as throughput test",
-    "latency: mark test as latency test",
-    "scalability: mark test as scalability test",
+    
     # Accessibility testing markers
     "accessibility: mark test as accessibility test",
     "a11y: mark test as general accessibility test",
@@ -426,6 +453,7 @@ markers = [
     "keyboard_navigation: mark test as keyboard navigation test",
     "color_contrast: mark test as color contrast test",
     "aria: mark test as ARIA attributes test",
+    
     # Contract testing markers
     "contract: mark test as contract test",
     "api_contract: mark test as API contract test",
@@ -433,6 +461,7 @@ markers = [
     "pact: mark test as Pact contract test",
     "openapi: mark test as OpenAPI contract test",
     "consumer_driven: mark test as consumer-driven contract test",
+    
     # Chaos engineering markers
     "chaos: mark test as chaos engineering test",
     "fault_injection: mark test as fault injection test",
@@ -441,6 +470,7 @@ markers = [
     "network_chaos: mark test as network chaos test",
     "resource_exhaustion: mark test as resource exhaustion test",
     "dependency_failure: mark test as dependency failure test",
+    
     # Load testing markers
     "load: mark test as load test",
     "stress: mark test as stress test",
@@ -465,7 +495,7 @@ filterwarnings = [
 # Parallel execution settings
 addopts_parallel = ["--dist=worksteal", "--tx=auto", "-q"]
 
-# ===== Coverage Configuration =====
+# ===== Enhanced Coverage Configuration =====
 [tool.coverage.run]
 source = ["src"]
 branch = true
@@ -487,7 +517,7 @@ relative_files = true # Store relative paths for portability
 [tool.coverage.report]
 show_missing = true
 skip_covered = false
-fail_under = 38.0
+fail_under = 80.0  # Updated to match modern testing standards
 precision = 2
 sort = "Cover" # Sort by coverage percentage
 skip_empty = true # Skip files with no executable code
@@ -644,18 +674,58 @@ omit-covered-files = false
 
 # ===== Task runner configuration =====
 [tool.taskipy.tasks]
-# Define common development tasks
-lint = "ruff check . --fix && ruff format ."
-test = "pytest tests/ -v"
-test-fast = "pytest tests/unit -m 'not slow' -v"
-test-cov = "pytest --cov=src --cov-report=html --cov-report=term-missing"
-type-check = "mypy src/"
+# Core Development
+dev = "uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000"
+dev-simple = "AI_DOCS__MODE=simple uvicorn src.api.main:app --reload --port 8000"
+dev-enterprise = "AI_DOCS__MODE=enterprise uvicorn src.api.main:app --reload --port 8000"
+
+# Testing & Quality (Fast feedback loops)
+test = "python scripts/run_fast_tests.py --profile=fast"
+test-unit = "python scripts/run_fast_tests.py --profile=unit"
+test-integration = "python scripts/run_fast_tests.py --profile=integration"
+test-full = "python scripts/test_runner.py --comprehensive"
+test-ai = "pytest tests/unit/ai/ tests/integration/ai/ -v"
+test-performance = "python scripts/benchmark_query_api.py"
+coverage = "pytest --cov=src --cov-report=html --cov-report=term-missing"
+
+# Code Quality
+lint = "ruff check . --fix"
+format = "ruff format ."
+typecheck = "mypy src/ --config-file pyproject.toml"
+quality = "task format && task lint && task typecheck"
+
+# Specialized Scripts Integration
+fix-try = "python scripts/fix_try_violations.py"
+benchmark-crawl4ai = "python scripts/benchmark_crawl4ai_performance.py"
+docs-add-status = "python scripts/add_status_indicators.py"
+docs-update-links = "python scripts/update_doc_links.py"
+setup-complete = "uv run python -m src.cli.main setup && echo 'Setup complete! Run: source .env.local'"
+
+# Documentation
+docs-build = "task docs-add-status && task docs-update-links && mkdocs build"
+docs-serve = "mkdocs serve --host 0.0.0.0 --port 8001"
+docs-deploy = "mkdocs gh-deploy"
+
+# Database & Services
+services-start = "./scripts/start-services.sh"
+services-stop = "docker-compose down"
+db-migrate = "python scripts/database_migration.py"
+db-seed = "python scripts/seed_test_data.py"
+
+# Performance & Monitoring
+benchmark = "python scripts/run_benchmarks.py --profile=standard"
+monitor = "python scripts/health_check.py --continuous"
+profile = "python scripts/profile_performance.py"
+
+# Deployment
+deploy-staging = "python scripts/deploy.py --env=staging"
+deploy-prod = "python scripts/deploy.py --env=production"
+
+# Utilities
+clean = "find . -type d -name __pycache__ -exec rm -rf {} + && find . -type f -name '*.pyc' -delete"
 security = "bandit -r src/"
 deps-check = "uv pip compile pyproject.toml --universal --upgrade"
-clean = "find . -type d -name __pycache__ -exec rm -rf {} + && find . -type f -name '*.pyc' -delete"
-serve = "uvicorn src.api.main:app --reload"
-docs = "mkdocs serve"
-benchmark = "python scripts/benchmark_query_api.py"
+validate-config = "python scripts/validate_config.py"
 
 # ===== Versioning and release configuration =====
 [tool.commitizen]

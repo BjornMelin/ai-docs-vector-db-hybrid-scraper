@@ -1,18 +1,22 @@
 """Performance monitoring middleware for production metrics and observability.
 
 This middleware provides comprehensive performance monitoring including response times,
-memory usage tracking, and slow request identification for production environments.
+memory usage tracking, slow request identification, and advanced optimization features
+for maximum portfolio demonstration performance.
 """
 
+import asyncio
 import gc
 import logging
 import threading
 import time
 from collections import defaultdict, deque
 from collections.abc import Callable
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 
 import psutil
+import uvloop
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -403,5 +407,178 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
         return health
 
 
-# Export middleware class
-__all__ = ["EndpointStats", "PerformanceMiddleware", "RequestMetrics"]
+@asynccontextmanager
+async def optimized_lifespan(app):
+    """Optimized application lifespan with uvloop and service warming.
+    
+    This lifespan context manager implements performance optimizations:
+    - Install uvloop for better async performance
+    - Pre-warm critical services
+    - Configure optimal connection pooling
+    """
+    # Install uvloop for better async performance
+    try:
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+        logger.info("uvloop event loop policy installed for better performance")
+    except Exception as e:
+        logger.warning(f"Failed to install uvloop: {e}")
+
+    # Pre-warm critical services
+    await _warm_services()
+    
+    yield
+    
+    # Cleanup
+    await _cleanup_services()
+
+
+async def _warm_services():
+    """Warm up critical services for better first-request performance."""
+    try:
+        # Import here to avoid circular dependencies
+        from src.services.embeddings.manager import EmbeddingManager
+        from src.infrastructure.client_manager import ClientManager
+        from src.config import Config
+        
+        logger.info("Starting service warm-up...")
+        
+        # Warm embedding service with a test embedding
+        try:
+            config = Config()
+            client_manager = ClientManager(config)
+            await client_manager.initialize()
+            
+            embedding_manager = EmbeddingManager(config)
+            await embedding_manager.initialize()
+            await embedding_manager.generate_single("warmup query")
+            logger.info("Embedding service warmed up successfully")
+        except Exception as e:
+            logger.warning(f"Failed to warm embedding service: {e}")
+        
+        # Warm vector database connection
+        try:
+            qdrant_client = await client_manager.get_qdrant_client()
+            # Simple health check to warm the connection
+            await qdrant_client.get_collections()
+            logger.info("Vector database connection warmed up successfully")
+        except Exception as e:
+            logger.warning(f"Failed to warm vector database: {e}")
+            
+        logger.info("Service warm-up completed")
+        
+    except Exception as e:
+        logger.error(f"Service warm-up failed: {e}")
+
+
+async def _cleanup_services():
+    """Clean up services and connections."""
+    try:
+        # Import here to avoid circular dependencies
+        from src.infrastructure.client_manager import ClientManager
+        from src.config import Config
+        
+        config = Config()
+        client_manager = ClientManager(config)
+        await client_manager.cleanup()
+        logger.info("Service cleanup completed")
+        
+    except Exception as e:
+        logger.warning(f"Service cleanup failed: {e}")
+
+
+class AdvancedPerformanceMiddleware(PerformanceMiddleware):
+    """Enhanced performance middleware with advanced optimization features."""
+    
+    def __init__(self, app: Callable, config: PerformanceConfig):
+        """Initialize enhanced performance middleware.
+        
+        Args:
+            app: ASGI application
+            config: Performance configuration
+        """
+        super().__init__(app, config)
+        self.connection_pool_size = 100
+        self.request_timeout = 30.0
+        self._throughput_counter = 0
+        self._throughput_start_time = time.time()
+        
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """Enhanced request processing with throughput tracking."""
+        if not self.config.enabled:
+            return await call_next(request)
+            
+        # Increment throughput counter
+        self._throughput_counter += 1
+        
+        # Use high-resolution timer for better precision
+        start_time = time.perf_counter_ns()
+        
+        response = await super().dispatch(request, call_next)
+        
+        # Calculate precise timing
+        end_time = time.perf_counter_ns()
+        precise_time = (end_time - start_time) / 1_000_000  # Convert to milliseconds
+        
+        # Add enhanced performance headers
+        response.headers["X-Process-Time-Precise"] = f"{precise_time:.3f}"
+        response.headers["X-Request-ID"] = str(id(request))
+        response.headers["X-Throughput"] = str(self.get_current_throughput())
+        
+        return response
+    
+    def get_current_throughput(self) -> float:
+        """Calculate current requests per second throughput.
+        
+        Returns:
+            Current throughput in requests per second
+        """
+        current_time = time.time()
+        elapsed = current_time - self._throughput_start_time
+        
+        if elapsed > 0:
+            return self._throughput_counter / elapsed
+        return 0.0
+    
+    def get_enhanced_metrics(self) -> dict:
+        """Get enhanced performance metrics including throughput.
+        
+        Returns:
+            Dict containing enhanced performance metrics
+        """
+        base_metrics = self.get_metrics_summary()
+        
+        # Add throughput metrics
+        base_metrics["throughput"] = {
+            "current_rps": self.get_current_throughput(),
+            "total_requests": self._throughput_counter,
+            "uptime_seconds": time.time() - self._throughput_start_time,
+        }
+        
+        # Add P95 latency calculation
+        with self._stats_lock:
+            all_response_times = []
+            for stats in self._endpoint_stats.values():
+                for metric in stats.recent_requests:
+                    all_response_times.append(metric.response_time * 1000)  # Convert to ms
+            
+            if all_response_times:
+                all_response_times.sort()
+                p95_index = int(len(all_response_times) * 0.95)
+                p95_latency = all_response_times[p95_index] if p95_index < len(all_response_times) else 0
+                
+                base_metrics["latency"] = {
+                    "p95_ms": p95_latency,
+                    "total_samples": len(all_response_times),
+                }
+        
+        return base_metrics
+
+
+# Export enhanced classes
+__all__ = [
+    "EndpointStats", 
+    "PerformanceMiddleware", 
+    "AdvancedPerformanceMiddleware",
+    "RequestMetrics",
+    "optimized_lifespan",
+]

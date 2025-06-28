@@ -1,0 +1,242 @@
+"""Application mode definitions and configurations.
+
+This module defines the core dual-mode architecture that resolves the Enterprise Paradox
+by providing distinct simple and enterprise modes with different feature sets and complexity levels.
+"""
+
+import os
+from enum import Enum
+from typing import Any
+
+from pydantic import BaseModel, Field
+
+
+class ApplicationMode(Enum):
+    """Application modes supporting different complexity levels."""
+    
+    SIMPLE = "simple"
+    ENTERPRISE = "enterprise"
+
+
+class ModeConfig(BaseModel):
+    """Configuration for a specific application mode."""
+    
+    enabled_services: list[str] = Field(..., description="Services enabled in this mode")
+    max_complexity_features: dict[str, Any] = Field(
+        ..., description="Maximum complexity feature settings"
+    )
+    resource_limits: dict[str, int] = Field(..., description="Resource usage limits")
+    middleware_stack: list[str] = Field(..., description="Middleware components to load")
+    enable_advanced_monitoring: bool = Field(
+        default=False, description="Enable comprehensive monitoring"
+    )
+    enable_deployment_features: bool = Field(
+        default=False, description="Enable enterprise deployment features"
+    )
+    enable_a_b_testing: bool = Field(default=False, description="Enable A/B testing")
+    enable_comprehensive_observability: bool = Field(
+        default=False, description="Enable full observability stack"
+    )
+
+
+# Simple Mode Configuration - Optimized for solo developers
+SIMPLE_MODE_CONFIG = ModeConfig(
+    enabled_services=[
+        "qdrant_client",
+        "embedding_service",
+        "basic_search",
+        "simple_caching",
+        "health_checks",
+        "basic_crawling",
+        "content_processing",
+        "basic_api",
+    ],
+    max_complexity_features={
+        "max_concurrent_crawls": 5,
+        "enable_advanced_monitoring": False,
+        "enable_deployment_features": False,
+        "enable_a_b_testing": False,
+        "enable_comprehensive_observability": False,
+        "enable_advanced_analytics": False,
+        "enable_multi_tier_caching": False,
+        "enable_circuit_breakers": False,
+        "enable_blue_green_deployment": False,
+        "enable_canary_deployment": False,
+        "enable_feature_flags": False,
+        "enable_query_expansion": False,
+        "enable_hybrid_search": False,
+        "enable_advanced_chunking": False,
+        "enable_ml_quality_assessment": False,
+        "enable_content_intelligence": False,
+        "enable_task_queue": False,
+        "enable_batch_processing": False,
+    },
+    resource_limits={
+        "max_connections": 25,
+        "cache_size_mb": 50,
+        "max_embeddings_batch": 25,
+        "max_concurrent_requests": 5,
+        "max_memory_usage_mb": 500,
+        "max_vector_dimensions": 1536,
+    },
+    middleware_stack=[
+        "basic_auth",
+        "simple_rate_limiting",
+        "error_handling",
+        "basic_logging",
+        "cors",
+    ],
+    enable_advanced_monitoring=False,
+    enable_deployment_features=False,
+    enable_a_b_testing=False,
+    enable_comprehensive_observability=False,
+)
+
+# Enterprise Mode Configuration - Full feature set for portfolio demonstrations
+ENTERPRISE_MODE_CONFIG = ModeConfig(
+    enabled_services=[
+        "qdrant_client",
+        "embedding_service",
+        "advanced_search",
+        "multi_tier_caching",
+        "comprehensive_monitoring",
+        "deployment_services",
+        "a_b_testing",
+        "advanced_analytics",
+        "observability_stack",
+        "task_queue",
+        "batch_processing",
+        "content_intelligence",
+        "query_processing",
+        "rag_service",
+        "browser_automation",
+        "advanced_crawling",
+        "ml_quality_assessment",
+        "security_scanner",
+        "performance_profiler",
+        "drift_detection",
+        "auto_scaling",
+        "load_balancing",
+        "circuit_breakers",
+    ],
+    max_complexity_features={
+        "max_concurrent_crawls": 50,
+        "enable_advanced_monitoring": True,
+        "enable_deployment_features": True,
+        "enable_a_b_testing": True,
+        "enable_comprehensive_observability": True,
+        "enable_advanced_analytics": True,
+        "enable_multi_tier_caching": True,
+        "enable_circuit_breakers": True,
+        "enable_blue_green_deployment": True,
+        "enable_canary_deployment": True,
+        "enable_feature_flags": True,
+        "enable_query_expansion": True,
+        "enable_hybrid_search": True,
+        "enable_advanced_chunking": True,
+        "enable_ml_quality_assessment": True,
+        "enable_content_intelligence": True,
+        "enable_task_queue": True,
+        "enable_batch_processing": True,
+    },
+    resource_limits={
+        "max_connections": 500,
+        "cache_size_mb": 1000,
+        "max_embeddings_batch": 200,
+        "max_concurrent_requests": 100,
+        "max_memory_usage_mb": 4000,
+        "max_vector_dimensions": 3072,
+    },
+    middleware_stack=[
+        "advanced_auth",
+        "adaptive_rate_limiting",
+        "circuit_breakers",
+        "comprehensive_error_handling",
+        "structured_logging",
+        "metrics_collection",
+        "distributed_tracing",
+        "security_headers",
+        "compression",
+        "correlation_tracking",
+        "performance_monitoring",
+        "timeout_management",
+    ],
+    enable_advanced_monitoring=True,
+    enable_deployment_features=True,
+    enable_a_b_testing=True,
+    enable_comprehensive_observability=True,
+)
+
+
+def detect_mode_from_environment() -> ApplicationMode:
+    """Detect application mode from environment variables."""
+    mode_env = os.getenv("AI_DOCS_MODE", "simple").lower()
+    
+    # Legacy environment variable support
+    if not mode_env:
+        deployment_tier = os.getenv("AI_DOCS_DEPLOYMENT__TIER", "simple").lower()
+        mode_env = "enterprise" if deployment_tier == "enterprise" else "simple"
+    
+    try:
+        return ApplicationMode(mode_env)
+    except ValueError:
+        # Default to simple mode if invalid value
+        return ApplicationMode.SIMPLE
+
+
+def get_mode_config(mode: ApplicationMode | None = None) -> ModeConfig:
+    """Get configuration for the specified mode.
+    
+    Args:
+        mode: Application mode to get config for. If None, detects from environment.
+        
+    Returns:
+        ModeConfig instance for the specified mode.
+    """
+    if mode is None:
+        mode = detect_mode_from_environment()
+    
+    if mode == ApplicationMode.SIMPLE:
+        return SIMPLE_MODE_CONFIG
+    elif mode == ApplicationMode.ENTERPRISE:
+        return ENTERPRISE_MODE_CONFIG
+    else:
+        raise ValueError(f"Unknown application mode: {mode}")
+
+
+def get_current_mode() -> ApplicationMode:
+    """Get the current application mode from environment."""
+    return detect_mode_from_environment()
+
+
+def is_simple_mode() -> bool:
+    """Check if running in simple mode."""
+    return get_current_mode() == ApplicationMode.SIMPLE
+
+
+def is_enterprise_mode() -> bool:
+    """Check if running in enterprise mode."""
+    return get_current_mode() == ApplicationMode.ENTERPRISE
+
+
+def get_enabled_services() -> list[str]:
+    """Get list of services enabled in current mode."""
+    config = get_mode_config()
+    return config.enabled_services
+
+
+def is_service_enabled(service_name: str) -> bool:
+    """Check if a service is enabled in the current mode."""
+    return service_name in get_enabled_services()
+
+
+def get_feature_setting(feature_name: str, default: Any = False) -> Any:
+    """Get a feature setting value for the current mode."""
+    config = get_mode_config()
+    return config.max_complexity_features.get(feature_name, default)
+
+
+def get_resource_limit(resource_name: str, default: int = 0) -> int:
+    """Get a resource limit for the current mode."""
+    config = get_mode_config()
+    return config.resource_limits.get(resource_name, default)
