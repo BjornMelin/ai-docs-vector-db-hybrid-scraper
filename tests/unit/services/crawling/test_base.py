@@ -101,7 +101,7 @@ class TestCrawlProvider:
                 _max_pages: int = 50,
                 _formats: list[str] | None = None,
             ) -> dict[str, Any]:
-                return {"success": True, "pages": [], "total": 0}
+                return {"success": True, "pages": [], "_total": 0}
 
             async def initialize(self) -> None:
                 pass
@@ -147,7 +147,7 @@ class TestCrawlProvider:
                 return {
                     "success": True,
                     "pages": pages,
-                    "total": len(pages),
+                    "_total": len(pages),
                     "max_pages": max_pages,
                 }
 
@@ -177,7 +177,7 @@ class TestCrawlProvider:
         # Test crawl_site
         result = await provider.crawl_site("https://example.com", max_pages=2)
         assert result["success"] is True
-        assert result["total"] == 2
+        assert result["_total"] == 2
         assert len(result["pages"]) == 2
         assert result["max_pages"] == 2
 
@@ -299,7 +299,8 @@ class TestCrawlProvider:
                 self, url: str, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 if self.state != "initialized":
-                    raise RuntimeError("Provider not initialized")
+                    msg = "Provider not initialized"
+                    raise RuntimeError(msg)
                 self.operations.append(f"scrape_{url}")
                 return {"success": True, "url": url}
 
@@ -307,7 +308,8 @@ class TestCrawlProvider:
                 self, url: str, _max_pages: int = 50, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 if self.state != "initialized":
-                    raise RuntimeError("Provider not initialized")
+                    msg = "Provider not initialized"
+                    raise RuntimeError(msg)
                 self.operations.append(f"crawl_{url}")
                 return {"success": True, "pages": []}
 

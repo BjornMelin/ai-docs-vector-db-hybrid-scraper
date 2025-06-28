@@ -15,8 +15,7 @@ from src.config import (
     QueryComplexity,
     QueryType,
 )
-
-from ...models.vector_search import ModelSelectionStrategy, QueryClassification
+from src.models.vector_search import ModelSelectionStrategy, QueryClassification
 
 
 logger = logging.getLogger(__name__)
@@ -30,6 +29,7 @@ class ModelSelector:
 
         Args:
             config: Unified configuration
+
         """
         self.config = config
         self.model_registry = self._initialize_model_registry()
@@ -138,6 +138,7 @@ class ModelSelector:
 
         Returns:
             ModelSelectionStrategy with selected model and rationale
+
         """
         try:
             # Get candidate models based on query characteristics

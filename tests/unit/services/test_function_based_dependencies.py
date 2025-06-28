@@ -183,8 +183,8 @@ class TestEmbeddingFunctions:
 
         mock_embedding_manager.generate_embeddings.assert_called_once()
         call_args = mock_embedding_manager.generate_embeddings.call_args
-        assert call_args.kwargs["texts"] == request.texts
-        assert call_args.kwargs["auto_select"] == request.auto_select
+        assert call_args._kwargs["texts"] == request.texts
+        assert call_args._kwargs["auto_select"] == request.auto_select
 
     @pytest.mark.asyncio
     async def test_generate_embeddings_error(self, mock_embedding_manager):
@@ -311,7 +311,7 @@ class TestCrawlFunctions:
                 {"url": "https://example.com", "content": "Page 1"},
                 {"url": "https://example.com/page2", "content": "Page 2"},
             ],
-            "total_pages": 2,
+            "_total_pages": 2,
             "provider": "crawl4ai",
             "error": None,
         }
@@ -322,7 +322,7 @@ class TestCrawlFunctions:
 
         assert result["success"] is True
         assert len(result["pages"]) == 2
-        assert result["total_pages"] == 2
+        assert result["_total_pages"] == 2
 
         mock_crawl_manager.crawl_site.assert_called_once_with(
             url=request.url,
@@ -340,7 +340,7 @@ class TestTaskQueueFunctions:
         request = TaskRequest(
             task_name="test_task",
             args=["arg1", "arg2"],
-            kwargs={"key": "value"},
+            _kwargs={"key": "value"},
             delay=60,
         )
 
@@ -355,7 +355,7 @@ class TestTaskQueueFunctions:
             *request.args,
             _delay=request.delay,
             _queue_name=request.queue_name,
-            **request.kwargs,
+            **request._kwargs,
         )
 
     @pytest.mark.asyncio
@@ -490,18 +490,18 @@ class TestPydanticModels:
         request = TaskRequest(
             task_name="process_data",
             args=[1, 2, 3],
-            kwargs={"param": "value"},
+            _kwargs={"param": "value"},
             delay=120,
         )
         assert request.task_name == "process_data"
         assert request.args == [1, 2, 3]
-        assert request.kwargs == {"param": "value"}
+        assert request._kwargs == {"param": "value"}
         assert request.delay == 120
 
         # Test defaults
         minimal_request = TaskRequest(task_name="simple_task")
         assert minimal_request.args == []
-        assert minimal_request.kwargs == {}
+        assert minimal_request._kwargs == {}
         assert minimal_request.delay is None
 
 

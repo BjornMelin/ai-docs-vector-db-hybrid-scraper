@@ -48,7 +48,7 @@ class TestAPIEndpointContracts:
                                 "metadata": {"source": "test"},
                             }
                         ],
-                        "total_count": 1,
+                        "_total_count": 1,
                         "query_time_ms": 50.0,
                         "search_strategy": "hybrid",
                         "cache_hit": False,
@@ -254,9 +254,9 @@ class TestContractVersioning:
                             "type": "object",
                             "properties": {
                                 "results": {"type": "array"},
-                                "total": {"type": "integer"},
+                                "_total": {"type": "integer"},
                             },
-                            "required": ["results", "total"],
+                            "required": ["results", "_total"],
                         }
                     }
                 },
@@ -281,12 +281,12 @@ class TestContractVersioning:
                             "properties": {
                                 "success": {"type": "boolean"},  # New field
                                 "results": {"type": "array"},
-                                "total_count": {
+                                "_total_count": {
                                     "type": "integer"
-                                },  # Renamed from 'total'
+                                },  # Renamed from '_total'
                                 "search_strategy": {"type": "string"},  # New field
                             },
-                            "required": ["success", "results", "total_count"],
+                            "required": ["success", "results", "_total_count"],
                         }
                     }
                 },

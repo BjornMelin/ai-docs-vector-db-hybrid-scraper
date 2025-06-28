@@ -38,10 +38,12 @@ def get_tracer(name: str = "ai-docs-vector-db") -> Any:
 
     Returns:
         OpenTelemetry Tracer instance or NoOpTracer if not initialized
+
     """
     try:
         if trace is None:
-            raise ImportError("OpenTelemetry trace not available")
+            msg = "OpenTelemetry trace not available"
+            raise ImportError(msg)
         return trace.get_tracer(name)
     except ImportError:
         logger.warning("OpenTelemetry not available, returning NoOp tracer")
@@ -56,10 +58,12 @@ def get_meter(name: str = "ai-docs-vector-db") -> Any:
 
     Returns:
         OpenTelemetry Meter instance or NoOpMeter if not initialized
+
     """
     try:
         if metrics is None:
-            raise ImportError("OpenTelemetry metrics not available")
+            msg = "OpenTelemetry metrics not available"
+            raise ImportError(msg)
         return metrics.get_meter(name)
     except ImportError:
         logger.warning("OpenTelemetry not available, returning NoOp meter")
@@ -119,6 +123,7 @@ def instrument_function(
 
     Returns:
         Decorated function with tracing
+
     """
 
     def decorator(func: F) -> F:
@@ -235,6 +240,7 @@ def record_ai_operation(
         duration: Operation duration in seconds
         success: Whether operation succeeded
         **attributes: Additional attributes to record
+
     """
     # Initialize metrics if not done
     if _ai_operation_counter is None:
@@ -291,6 +297,7 @@ def track_cost(
         cost_usd: Cost in USD
         model: Model name if applicable
         **attributes: Additional attributes
+
     """
     if _ai_cost_counter is None:
         _initialize_metrics()

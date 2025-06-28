@@ -103,7 +103,7 @@ class TestModernAsyncPatterns:
         """Test async timeout handling patterns."""
 
         # Mock a slow operation
-        async def slow_search(*_args, **_kwargs):
+        async def slow_search(*_args, **__kwargs):
             await asyncio.sleep(2.0)
             return {"points": []}
 
@@ -221,22 +221,22 @@ class TestModernFixturePatterns:
         return pool
 
     @pytest.fixture
-    def caplog_with_level(self, caplog):
+    def _caplog_with_level(self, _caplog):
         """Fixture factory pattern for capturing logs at specific levels."""
 
-        def _caplog_with_level(level: int = logging.INFO):
-            caplog.set_level(level)
-            return caplog
+        def __caplog_with_level(level: int = logging.INFO):
+            _caplog.set_level(level)
+            return _caplog
 
-        return _caplog_with_level
+        return __caplog_with_level
 
     @pytest.mark.asyncio
     async def test_fixture_dependency_injection(
-        self, isolated_config: Config, mock_redis_pool, caplog_with_level
+        self, isolated_config: Config, mock_redis_pool, _caplog_with_level
     ):
         """Test modern dependency injection patterns."""
         # Use the factory fixture
-        caplog_with_level(logging.DEBUG)
+        _caplog_with_level(logging.DEBUG)
 
         # Test config isolation
         isolated_config.debug = False
@@ -314,7 +314,7 @@ class TestErrorHandlingPatterns:
 
 # Parametrized tests with modern patterns
 @pytest.mark.parametrize(
-    "provider,expected_model",
+    ("provider", "expected_model"),
     [
         ("openai", "text-embedding-3-small"),
         ("fastembed", "BAAI/bge-small-en-v1.5"),

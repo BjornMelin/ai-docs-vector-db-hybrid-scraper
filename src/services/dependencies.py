@@ -408,7 +408,8 @@ async def generate_embeddings(
 
     except Exception as e:
         logger.exception("Embedding generation failed")
-        raise EmbeddingServiceError(f"Failed to generate embeddings: {e}") from e
+        msg = f"Failed to generate embeddings: {e}"
+        raise EmbeddingServiceError(msg) from e
 
 
 # Cache Service Dependencies
@@ -571,7 +572,8 @@ async def scrape_url(
         return CrawlResponse(**result)
     except Exception as e:
         logger.exception(f"URL scraping failed for {request.url}")
-        raise CrawlServiceError(f"Failed to scrape URL: {e}") from e
+        msg = f"Failed to scrape URL: {e}"
+        raise CrawlServiceError(msg) from e
 
 
 async def crawl_site(
@@ -590,7 +592,8 @@ async def crawl_site(
         )
     except Exception as e:
         logger.exception(f"Site crawling failed for {request.url}")
-        raise CrawlServiceError(f"Failed to crawl site: {e}") from e
+        msg = f"Failed to crawl site: {e}"
+        raise CrawlServiceError(msg) from e
     else:
         return result
 
@@ -637,7 +640,8 @@ async def enqueue_task(
         )
     except Exception as e:
         logger.exception(f"Task enqueue failed for {request.task_name}")
-        raise TaskQueueServiceError(f"Failed to enqueue task: {e}") from e
+        msg = f"Failed to enqueue task: {e}"
+        raise TaskQueueServiceError(msg) from e
     else:
         return job_id
 
@@ -870,7 +874,8 @@ async def generate_rag_answer(
 
     except Exception as e:
         logger.exception("RAG answer generation failed")
-        raise EmbeddingServiceError(f"Failed to generate RAG answer: {e}") from e
+        msg = f"Failed to generate RAG answer: {e}"
+        raise EmbeddingServiceError(msg) from e
 
 
 async def get_rag_metrics(
@@ -995,6 +1000,7 @@ async def reset_circuit_breaker(service_name: str) -> dict[str, Any]:
 
     Returns:
         Reset operation result
+
     """
     try:
         breaker = CircuitBreakerRegistry.get(service_name)
@@ -1024,6 +1030,7 @@ async def reset_all_circuit_breakers() -> dict[str, Any]:
 
     Returns:
         Reset operation results for all circuits
+
     """
     try:
         services = CircuitBreakerRegistry.get_services()

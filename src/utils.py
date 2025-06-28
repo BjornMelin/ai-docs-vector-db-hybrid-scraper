@@ -19,6 +19,7 @@ def async_to_sync_click(cli_group: click.Group) -> None:
 
     Args:
         cli_group: The Click group containing commands to convert
+
     """
     # Avoid double-wrapping if already processed
     if hasattr(cli_group, "_commands_wrapped"):
@@ -53,6 +54,7 @@ def async_command(func: Callable[..., Any]) -> Callable[..., Any]:
 
     Returns:
         A sync version of the function that runs the async code
+
     """
 
     @wraps(func)

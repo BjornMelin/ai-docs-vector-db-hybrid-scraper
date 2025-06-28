@@ -18,31 +18,21 @@ import pytest
 class CircuitBreakerError(Exception):
     """Base exception for circuit breaker errors."""
 
-    pass
-
 
 class CircuitOpenError(CircuitBreakerError):
     """Raised when circuit breaker is open."""
-
-    pass
 
 
 class ServiceFailureError(CircuitBreakerError):
     """Raised when service fails."""
 
-    pass
-
 
 class ResourceExhaustedError(CircuitBreakerError):
     """Raised when resources are exhausted."""
 
-    pass
-
 
 class SystemOverloadError(CircuitBreakerError):
     """Raised when system is overloaded."""
-
-    pass
 
 
 class CircuitState(Enum):
@@ -76,7 +66,7 @@ class CircuitBreaker:
         self.last_attempt_time = 0
         self.call_count = 0
 
-    async def call(self, func: Callable, *args, **kwargs):
+    async def call(self, func: Callable, *args, **_kwargs):
         """Execute function with circuit breaker protection."""
         self.call_count += 1
         self.last_attempt_time = time.time()
@@ -91,10 +81,11 @@ class CircuitBreaker:
 
         # Fast-fail if circuit is open
         if self.state == CircuitState.OPEN:
-            raise CircuitOpenError("Circuit breaker is open")
+            msg = "Circuit breaker is open"
+            raise CircuitOpenError(msg)
 
         try:
-            result = await func(*args, **kwargs)
+            result = await func(*args, **_kwargs)
             await self._on_success()
         except self.config.expected_exception:
             await self._on_failure()
@@ -167,7 +158,8 @@ class TestCircuitBreakers:
             nonlocal call_count
             call_count += 1
             if call_count <= 3:  # First 3 calls fail
-                raise ServiceFailureError("Service failure")
+                msg = "Service failure"
+                raise ServiceFailureError(msg)
             return {"status": "success", "call": call_count}
 
         # Test CLOSED -> OPEN transition
@@ -213,7 +205,8 @@ class TestCircuitBreakers:
             call_count += 1
 
             if random.random() < failure_rate:
-                raise ServiceFailureError(f"Intermittent failure on call {call_count}")
+                msg = f"Intermittent failure on call {call_count}"
+                raise ServiceFailureError(msg)
 
             return {"status": "success", "call": call_count}
 
@@ -253,7 +246,8 @@ class TestCircuitBreakers:
 
         async def recovering_service():
             if not service_recovered:
-                raise ServiceFailureError("Service not yet recovered")
+                msg = "Service not yet recovered"
+                raise ServiceFailureError(msg)
             return {"status": "recovered"}
 
         # Trigger circuit breaker
@@ -315,19 +309,18 @@ class TestCircuitBreakers:
             call_count += 1
 
             if call_count == 1:
-                raise ValueError("Value error - should not trigger circuit breaker")
-            elif call_count == 2:
-                raise ConnectionError("Connection error - should count")
-            elif call_count == 3:
-                raise ConnectionError(
-                    "Another connection error - should trigger circuit breaker"
-                )
-            elif call_count == 4:
-                raise TimeoutError(
-                    "Timeout error - should not count when circuit is open"
-                )
-            else:
-                return {"status": "success"}
+                msg = "Value error - should not trigger circuit breaker"
+                raise ValueError(msg)
+            if call_count == 2:
+                msg = "Connection error - should count"
+                raise ConnectionError(msg)
+            if call_count == 3:
+                msg = "Another connection error - should trigger circuit breaker"
+                raise ConnectionError(msg)
+            if call_count == 4:
+                msg = "Timeout error - should not count when circuit is open"
+                raise TimeoutError(msg)
+            return {"status": "success"}
 
         # First call with ValueError - should not count toward circuit breaker
         with pytest.raises(ValueError):
@@ -359,7 +352,8 @@ class TestCircuitBreakers:
         # Service with predictable behavior
         async def monitored_service(should_fail: bool = False):
             if should_fail:
-                raise ServiceFailureError("Monitored failure")
+                msg = "Monitored failure"
+                raise ServiceFailureError(msg)
             return {"status": "success"}
 
         # Track initial stats
@@ -420,10 +414,12 @@ class TestCircuitBreakers:
 
         # Mock services
         async def database_service():
-            raise ConnectionError("Database connection failed")
+            msg = "Database connection failed"
+            raise ConnectionError(msg)
 
         async def api_service():
-            raise ServiceFailureError("API service failed")
+            msg = "API service failed"
+            raise ServiceFailureError(msg)
 
         async def cache_service():
             return {"cached": "data"}  # This one works
@@ -474,7 +470,8 @@ class TestCircuitBreakers:
 
             # Fail first 5 attempts, then succeed
             if call_attempts <= 5:
-                raise ServiceFailureError(f"Service failure attempt {call_attempts}")
+                msg = f"Service failure attempt {call_attempts}"
+                raise ServiceFailureError(msg)
 
             return {"status": "success", "attempts": call_attempts}
 
@@ -544,7 +541,8 @@ class TestCircuitBreakers:
         async def critical_operation():
             """Operation using critical resource pool."""
             if critical_pool["used"] >= critical_pool["available"]:
-                raise ResourceExhaustedError("Critical pool exhausted")
+                msg = "Critical pool exhausted"
+                raise ResourceExhaustedError(msg)
 
             critical_pool["used"] += 1
             try:
@@ -556,7 +554,8 @@ class TestCircuitBreakers:
         async def normal_operation():
             """Operation using normal resource pool."""
             if normal_pool["used"] >= normal_pool["available"]:
-                raise ResourceExhaustedError("Normal pool exhausted")
+                msg = "Normal pool exhausted"
+                raise ResourceExhaustedError(msg)
 
             normal_pool["used"] += 1
             try:
@@ -600,10 +599,10 @@ class TestCircuitBreakers:
                 """Adjust failure threshold based on system load."""
                 if self.system_load > 0.8:  # High load
                     return max(1, self.config.failure_threshold // 2)
-                elif self.system_load > 0.6:  # Medium load
+                if self.system_load > 0.6:  # Medium load
                     return max(2, int(self.config.failure_threshold * 0.75))
-                else:  # Low load
-                    return self.config.failure_threshold
+                # Low load
+                return self.config.failure_threshold
 
             async def _on_failure(self):
                 """Override to use adaptive threshold."""
@@ -623,7 +622,8 @@ class TestCircuitBreakers:
         )
 
         async def failing_service():
-            raise ServiceFailureError("Service failure")
+            msg = "Service failure"
+            raise ServiceFailureError(msg)
 
         # Test with low system load (normal threshold)
         adaptive_circuit.system_load = 0.3

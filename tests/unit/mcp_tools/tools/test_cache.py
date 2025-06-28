@@ -23,7 +23,7 @@ class TestCacheTools:
         mock_cache.get_stats.return_value = {
             "hit_rate": 0.92,
             "size": 1500,
-            "total_requests": 25000,
+            "_total_requests": 25000,
         }
         mock_manager.get_cache_manager = AsyncMock(return_value=mock_cache)
 
@@ -112,7 +112,7 @@ class TestCacheTools:
         assert isinstance(result, CacheStatsResponse)
         assert result.hit_rate == 0.92
         assert result.size == 1500
-        assert result.total_requests == 25000
+        assert result._total_requests == 25000
 
         # Verify context logging
         mock_context.info.assert_called()
@@ -194,11 +194,11 @@ class TestCacheTools:
 
     def test_cache_stats_response_validation(self):
         """Test cache stats response model validation."""
-        response = CacheStatsResponse(hit_rate=0.95, size=2000, total_requests=50000)
+        response = CacheStatsResponse(hit_rate=0.95, size=2000, _total_requests=50000)
 
         assert response.hit_rate == 0.95
         assert response.size == 2000
-        assert response.total_requests == 50000
+        assert response._total_requests == 50000
 
     @pytest.mark.asyncio
     async def test_context_logging_integration(self, mock_client_manager, mock_context):

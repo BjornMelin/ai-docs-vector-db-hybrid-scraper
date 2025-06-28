@@ -178,9 +178,11 @@ class SearchStrategySelector:
 
         Raises:
             RuntimeError: If selector not initialized
+
         """
         if not self._initialized:
-            raise RuntimeError("SearchStrategySelector not initialized")
+            msg = "SearchStrategySelector not initialized"
+            raise RuntimeError(msg)
 
         primary_intent = intent_classification.primary_intent
         complexity = intent_classification.complexity_level

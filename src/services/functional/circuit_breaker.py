@@ -118,6 +118,7 @@ class CircuitBreaker:
 
         Args:
             config: Circuit breaker configuration
+
         """
         self.config = config
         self.state = CircuitBreakerState.CLOSED
@@ -148,6 +149,7 @@ class CircuitBreaker:
         Raises:
             CircuitBreakerError: If circuit is open
             Original exception: If function fails and circuit allows
+
         """
         async with self._lock:
             # Check if circuit should be opened based on metrics
@@ -160,16 +162,20 @@ class CircuitBreaker:
                     await self._transition_to_half_open()
                 else:
                     self.metrics.blocked_requests += 1
-                    raise CircuitBreakerError(
+                    msg = (
                         f"Circuit breaker is OPEN. Retry after "
                         f"{self.config.recovery_timeout - (time.time() - self.last_failure_time):.0f}s"
                     )
+                    raise CircuitBreakerError(msg)
 
-            elif self.state == CircuitBreakerState.HALF_OPEN:
-                if time.time() - self.last_test_time > self.config.test_request_timeout:
-                    await self._open_circuit()
-                    self.metrics.blocked_requests += 1
-                    raise CircuitBreakerError("Circuit breaker test timeout")
+            elif (
+                self.state == CircuitBreakerState.HALF_OPEN
+                and time.time() - self.last_test_time > self.config.test_request_timeout
+            ):
+                await self._open_circuit()
+                self.metrics.blocked_requests += 1
+                msg = "Circuit breaker test timeout"
+                raise CircuitBreakerError(msg)
 
         # Execute function
         start_time = time.time()
@@ -279,6 +285,7 @@ class CircuitBreaker:
 
         Returns:
             Dictionary with current metrics
+
         """
         return {
             "state": self.state.value,
@@ -297,8 +304,6 @@ class CircuitBreaker:
 class CircuitBreakerError(Exception):
     """Circuit breaker specific exception."""
 
-    pass
-
 
 def circuit_breaker(config: CircuitBreakerConfig | None = None):
     """Decorator for circuit breaker functionality.
@@ -308,6 +313,7 @@ def circuit_breaker(config: CircuitBreakerConfig | None = None):
 
     Returns:
         Decorated function with circuit breaker protection
+
     """
     if config is None:
         config = CircuitBreakerConfig.simple_mode()
@@ -335,6 +341,7 @@ def create_circuit_breaker(mode: str = "simple", **kwargs: Any) -> CircuitBreake
 
     Returns:
         Configured CircuitBreaker instance
+
     """
     if mode == "simple":
         config = CircuitBreakerConfig.simple_mode()
@@ -360,6 +367,7 @@ class CircuitBreakerMiddleware(BaseHTTPMiddleware):
         Args:
             app: FastAPI application
             config: Circuit breaker configuration
+
         """
         super().__init__(app)
         self.config = config or CircuitBreakerConfig.simple_mode()
@@ -374,11 +382,12 @@ class CircuitBreakerMiddleware(BaseHTTPMiddleware):
 
         Returns:
             HTTP response
+
         """
         try:
             return await self.circuit_breaker.call(call_next, request)
         except CircuitBreakerError as e:
-            raise HTTPException(status_code=503, detail=str(e))
+            raise HTTPException(status_code=503, detail=str(e)) from e
 
 
 # Convenience function for middleware setup
@@ -389,6 +398,7 @@ def circuit_breaker_middleware(app, mode: str = "simple", **kwargs: Any) -> None
         app: FastAPI application
         mode: "simple" or "enterprise"
         **kwargs: Additional configuration overrides
+
     """
     if mode == "simple":
         config = CircuitBreakerConfig.simple_mode()

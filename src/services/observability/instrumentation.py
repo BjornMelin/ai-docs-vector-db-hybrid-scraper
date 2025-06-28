@@ -27,6 +27,7 @@ def get_tracer() -> trace.Tracer:
 
     Returns:
         OpenTelemetry tracer instance
+
     """
     return trace.get_tracer(__name__)
 
@@ -49,6 +50,7 @@ def instrument_function(
 
     Returns:
         Decorated function with OpenTelemetry instrumentation
+
     """
 
     def decorator(func: F) -> F:
@@ -169,6 +171,7 @@ def instrument_vector_search(
 
     Returns:
         Decorated function with vector search instrumentation
+
     """
 
     def decorator(func: F) -> F:
@@ -274,6 +277,7 @@ def instrument_embedding_generation(
 
     Returns:
         Decorated function with embedding instrumentation
+
     """
 
     def decorator(func: F) -> F:
@@ -381,6 +385,7 @@ def instrument_llm_call(
 
     Returns:
         Decorated function with LLM instrumentation
+
     """
 
     def decorator(func: F) -> F:
@@ -487,6 +492,7 @@ def trace_operation(operation_name: str, operation_type: str = "custom", **attri
 
     Yields:
         OpenTelemetry span instance
+
     """
     tracer = get_tracer()
 
@@ -520,6 +526,7 @@ async def trace_async_operation(
 
     Yields:
         OpenTelemetry span instance
+
     """
     tracer = get_tracer()
 
@@ -546,6 +553,7 @@ def add_span_attribute(key: str, value: Any) -> None:
     Args:
         key: Attribute key
         value: Attribute value
+
     """
     current_span = trace.get_current_span()
     if current_span and current_span.is_recording():
@@ -558,6 +566,7 @@ def add_span_event(name: str, attributes: dict[str, Any] | None = None) -> None:
     Args:
         name: Event name
         attributes: Optional event attributes
+
     """
     current_span = trace.get_current_span()
     if current_span and current_span.is_recording():
@@ -570,6 +579,7 @@ def set_user_context(user_id: str, session_id: str | None = None) -> None:
     Args:
         user_id: User identifier
         session_id: Optional session identifier
+
     """
     baggage.set_baggage("user.id", user_id)
     if session_id:
@@ -582,6 +592,7 @@ def set_business_context(query_type: str, operation_context: str | None = None) 
     Args:
         query_type: Type of query or operation
         operation_context: Additional operation context
+
     """
     baggage.set_baggage("business.query_type", query_type)
     if operation_context:
@@ -593,6 +604,7 @@ def get_current_trace_id() -> str | None:
 
     Returns:
         Trace ID as string or None
+
     """
     current_span = trace.get_current_span()
     if current_span and current_span.is_recording():
@@ -605,6 +617,7 @@ def get_current_span_id() -> str | None:
 
     Returns:
         Span ID as string or None
+
     """
     current_span = trace.get_current_span()
     if current_span and current_span.is_recording():

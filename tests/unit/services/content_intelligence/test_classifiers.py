@@ -14,9 +14,9 @@ def mock_embedding_manager():
     manager = AsyncMock()
 
     # Create a mock embeddings result with proper structure for classifier
-    def mock_generate_embeddings(*args, **kwargs):
+    def mock_generate_embeddings(*args, **_kwargs):
         # Return different embeddings for different text types
-        texts = kwargs.get("texts", args[0] if args else [])
+        texts = _kwargs.get("texts", args[0] if args else [])
         len(texts)
 
         # Generate mock embeddings based on content

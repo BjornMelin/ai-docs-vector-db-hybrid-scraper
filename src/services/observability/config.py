@@ -111,11 +111,13 @@ def get_observability_config() -> ObservabilityConfig:
 
     Returns:
         ObservabilityConfig instance with settings
+
     """
     try:
         # Try to get from main config if available
         if get_config is None:
-            raise ImportError("Config system not available")
+            msg = "Config system not available"
+            raise ImportError(msg)
 
         main_config = get_config()
 
@@ -154,6 +156,7 @@ def get_resource_attributes(config: ObservabilityConfig) -> dict[str, str]:
 
     Returns:
         Dictionary of resource attributes
+
     """
     return {
         "service.name": config.service_name,

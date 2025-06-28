@@ -218,7 +218,7 @@ class TestProfileManagerModern:
         assert result.exists()
         assert result == config_dir / "config.json"
 
-        # Verify copied content
+        # Verify _copied content
         config_data = json.loads(result.read_text())
         assert config_data == profile_config
 

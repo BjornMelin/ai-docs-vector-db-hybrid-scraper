@@ -202,8 +202,8 @@ class TestConcurrentConfigurationAccess:
         # Mock drift event creation
         original_create_event = detector._create_drift_event
 
-        async def track_drift_event(*args, **kwargs):
-            event = original_create_event(*args, **kwargs)
+        async def track_drift_event(*args, **_kwargs):
+            event = original_create_event(*args, **_kwargs)
             async with event_lock:
                 drift_events.append(event)
             return event
@@ -412,7 +412,7 @@ class TestConcurrentConfigurationAccess:
 
     @pytest.mark.asyncio
     async def test_concurrent_config_with_file_watching(
-        self, config_reloader, temp_config_dir
+        self, config_reloader, _temp_config_dir
     ):
         """Test concurrent operations with file watching enabled."""
         # Enable file watching

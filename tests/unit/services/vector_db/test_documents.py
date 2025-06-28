@@ -87,7 +87,7 @@ class TestQdrantDocuments:
         await documents_service.upsert_points("test_collection", points)
 
         call_args = mock_client.upsert.call_args
-        point_struct = call_args.kwargs["points"][0]
+        point_struct = call_args._kwargs["points"][0]
         assert isinstance(point_struct.vector, dict)
         assert "dense" in point_struct.vector
 
@@ -210,7 +210,7 @@ class TestQdrantDocuments:
         assert result is True
         mock_client.delete.assert_called_once()
         call_args = mock_client.delete.call_args
-        assert isinstance(call_args.kwargs["points_selector"], models.PointIdsList)
+        assert isinstance(call_args._kwargs["points_selector"], models.PointIdsList)
 
     async def test_delete_points_by_filter(self, documents_service, mock_client):
         """Test point deletion by filter."""
@@ -223,7 +223,7 @@ class TestQdrantDocuments:
         assert result is True
         mock_client.delete.assert_called_once()
         call_args = mock_client.delete.call_args
-        assert isinstance(call_args.kwargs["points_selector"], models.FilterSelector)
+        assert isinstance(call_args._kwargs["points_selector"], models.FilterSelector)
 
     async def test_delete_points_no_criteria(self, documents_service, _mock_client):
         """Test point deletion with no criteria provided."""
@@ -350,7 +350,7 @@ class TestQdrantDocuments:
         )
 
         call_args = mock_client.scroll.call_args
-        assert call_args.kwargs["scroll_filter"] is not None
+        assert call_args._kwargs["scroll_filter"] is not None
 
     async def test_scroll_points_with_vectors(self, documents_service, mock_client):
         """Test point scrolling with vectors."""
@@ -381,7 +381,7 @@ class TestQdrantDocuments:
         assert result is True
         mock_client.delete.assert_called_once()
         call_args = mock_client.delete.call_args
-        assert isinstance(call_args.kwargs["points_selector"], models.FilterSelector)
+        assert isinstance(call_args._kwargs["points_selector"], models.FilterSelector)
 
     async def test_clear_collection_error(self, documents_service, mock_client):
         """Test collection clearing error."""
@@ -434,7 +434,7 @@ class TestQdrantDocuments:
         await documents_service.upsert_points("test_collection", points)
 
         call_args = mock_client.upsert.call_args
-        point_structs = call_args.kwargs["points"]
+        point_structs = call_args._kwargs["points"]
 
         # First point: list should be converted to {"dense": [...]}
         assert isinstance(point_structs[0].vector, dict)

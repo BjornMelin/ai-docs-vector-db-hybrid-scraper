@@ -124,7 +124,7 @@ class TestMLSecurityValidator:
         assert result.severity == "warning"
 
     @pytest.mark.parametrize(
-        "pattern,data",
+        ("pattern", "data"),
         [
             ("<script", {"query": "<script>alert('xss')</script>"}),
             ("DROP TABLE", {"sql": "DROP TABLE users; --"}),
@@ -272,7 +272,7 @@ class TestMLSecurityValidator:
             mock_logger.info.assert_called_once()
 
     @pytest.mark.parametrize(
-        "severity,log_method",
+        ("severity", "log_method"),
         [
             ("critical", "error"),
             ("error", "warning"),
@@ -300,7 +300,7 @@ class TestMLSecurityValidator:
         """Test security summary with no checks."""
         summary = validator.get_security_summary()
 
-        assert summary["total_checks"] == 0
+        assert summary["_total_checks"] == 0
         assert summary["passed"] == 0
         assert summary["failed"] == 0
         assert summary["critical_issues"] == 0
@@ -326,7 +326,7 @@ class TestMLSecurityValidator:
 
         summary = validator.get_security_summary()
 
-        assert summary["total_checks"] == 3
+        assert summary["_total_checks"] == 3
         assert summary["passed"] == 1
         assert summary["failed"] == 2
         assert summary["critical_issues"] == 1
@@ -439,7 +439,7 @@ class TestIntegration:
         summary = validator.get_security_summary()
 
         # Note: checks are already tracked in checks_performed by the methods
-        assert summary["total_checks"] >= 2  # May have more from automatic tracking
+        assert summary["_total_checks"] >= 2  # May have more from automatic tracking
         assert summary["passed"] >= 2
         assert summary["failed"] == 0
 
@@ -471,6 +471,6 @@ class TestIntegration:
         summary = validator.get_security_summary()
 
         # The validator automatically tracks all checks, so we should have at least 2
-        assert summary["total_checks"] >= 2
+        assert summary["_total_checks"] >= 2
         assert summary["failed"] >= 2  # Both checks should have failed
         assert summary["passed"] == 0

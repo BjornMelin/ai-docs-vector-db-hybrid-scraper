@@ -75,7 +75,7 @@ class TestSmokeTests:
         assert smoke_results["overall_success"]
         assert (
             smoke_results["critical_endpoints_passed"]
-            == smoke_results["total_critical_endpoints"]
+            == smoke_results["_total_critical_endpoints"]
         )
 
         # Check individual endpoint results
@@ -385,11 +385,11 @@ class APISmokeTestRunner:
         """Run smoke tests on API endpoints."""
         endpoint_results = []
         critical_passed = 0
-        total_critical = 0
+        _total_critical = 0
 
         for endpoint in endpoints:
             if endpoint["critical"]:
-                total_critical += 1
+                _total_critical += 1
 
             # Simulate API call
             await asyncio.sleep(0.1)
@@ -410,10 +410,10 @@ class APISmokeTestRunner:
             endpoint_results.append(result)
 
         return {
-            "overall_success": critical_passed == total_critical,
+            "overall_success": critical_passed == _total_critical,
             "endpoint_results": endpoint_results,
             "critical_endpoints_passed": critical_passed,
-            "total_critical_endpoints": total_critical,
+            "_total_critical_endpoints": _total_critical,
         }
 
 

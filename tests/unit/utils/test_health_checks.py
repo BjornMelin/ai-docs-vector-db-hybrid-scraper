@@ -191,7 +191,7 @@ class TestServiceHealthChecker:
             result = ServiceHealthChecker.get_connection_summary(sample_config)
 
             assert result["overall_status"] == "healthy"
-            assert result["total_services"] == 3
+            assert result["_total_services"] == 3
             assert result["connected_count"] == 3
             assert result["failed_count"] == 0
             assert result["connected_services"] == ["qdrant", "dragonfly", "openai"]
@@ -211,7 +211,7 @@ class TestServiceHealthChecker:
             result = ServiceHealthChecker.get_connection_summary(sample_config)
 
             assert result["overall_status"] == "unhealthy"
-            assert result["total_services"] == 3
+            assert result["_total_services"] == 3
             assert result["connected_count"] == 2
             assert result["failed_count"] == 1
             assert result["connected_services"] == ["qdrant", "openai"]

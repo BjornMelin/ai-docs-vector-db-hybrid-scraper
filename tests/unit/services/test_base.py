@@ -298,7 +298,8 @@ class TestServiceIntegration:
         with pytest.raises(ValueError, match="test exception"):
             async with service.context():
                 assert service.init_called
-                raise ValueError("test exception")
+                msg = "test exception"
+                raise ValueError(msg)
 
         # Cleanup should still occur
         assert service.cleanup_called

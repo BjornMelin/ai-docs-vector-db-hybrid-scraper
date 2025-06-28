@@ -4,10 +4,9 @@ import logging
 from uuid import uuid4
 
 from src.config import SearchStrategy
-
-from ...infrastructure.client_manager import ClientManager
-from ..models.requests import SearchRequest
-from ..models.responses import SearchResult
+from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.models.requests import SearchRequest
+from src.mcp_tools.models.responses import SearchResult
 
 
 logger = logging.getLogger(__name__)
@@ -16,8 +15,7 @@ logger = logging.getLogger(__name__)
 async def search_documents_core(
     request: SearchRequest, client_manager: ClientManager, ctx=None
 ) -> list[SearchResult]:
-    """
-    Core search documents functionality without MCP dependencies.
+    """Core search documents functionality without MCP dependencies.
 
     Supports dense, sparse, and hybrid search strategies with optional
     BGE reranking for improved accuracy.
@@ -74,7 +72,8 @@ async def search_documents_core(
 
         # Use hybrid_search for all strategies
         if request.strategy == SearchStrategy.SPARSE and not sparse_vector:
-            raise ValueError("Sparse embeddings not available for sparse search")
+            msg = "Sparse embeddings not available for sparse search"
+            raise ValueError(msg)
 
         # For sparse-only search, pass empty dense vector
         query_vector = (
@@ -99,12 +98,10 @@ async def search_documents_core(
         )
 
         # Apply reranking if requested
-        if request.rerank and len(results) > 0:
-            if ctx:
-                await ctx.debug("Applying BGE reranking...")
+        if request.rerank and len(results) > 0 and ctx:
+            await ctx.debug("Applying BGE reranking...")
             # Note: rerank_results method would need to be implemented in QdrantService
             # For now, we'll skip reranking
-            pass
 
         # Convert to response format with content intelligence metadata
         search_results = []

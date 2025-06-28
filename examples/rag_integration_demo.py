@@ -177,8 +177,8 @@ async def demonstrate_rag_patterns():
                     print(f"• {question}")
                 print()
 
-        except Exception as e:
-            print(f"❌ RAG generation failed: {e}")
+        except (ValueError, RuntimeError, OSError) as e:
+            print("❌ RAG generation failed: %s", e)
             print("🔧 This might be due to missing OpenAI API key or network issues")
             print()
 

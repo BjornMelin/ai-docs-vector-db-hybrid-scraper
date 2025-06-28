@@ -57,7 +57,7 @@ def mock_index_stats():
             "word_count",
             "crawl_timestamp",
         ],
-        "total_points": 1000,
+        "_total_points": 1000,
     }
 
 
@@ -130,7 +130,7 @@ async def test_create_payload_indexes_success(
             "word_count",
             "crawl_timestamp",
         ]
-        assert result.total_points == 1000
+        assert result._total_points == 1000
         assert hasattr(result, "request_id")
 
         # Verify services were called correctly
@@ -230,7 +230,7 @@ async def test_list_payload_indexes_success(
             "word_count",
             "crawl_timestamp",
         ]
-        assert result.total_points == 1000
+        assert result._total_points == 1000
 
         # Verify service was called correctly
         mock_client_manager.qdrant_service.get_payload_index_stats.assert_called_once_with(
@@ -259,7 +259,7 @@ async def test_reindex_collection_success(
     stats_before = {
         "indexed_fields_count": 3,
         "indexed_fields": ["title", "url", "content"],
-        "total_points": 800,
+        "_total_points": 800,
     }
 
     stats_after = mock_index_stats  # More indexes after reindexing
@@ -300,7 +300,7 @@ async def test_reindex_collection_success(
             "word_count",
             "crawl_timestamp",
         ]
-        assert details["total_points"] == 1000
+        assert details["_total_points"] == 1000
         assert "request_id" in details
 
         # Verify services were called correctly
@@ -377,7 +377,7 @@ async def test_benchmark_filtered_search_success(mock_client_manager, mock_conte
         assert result.query == "test query"
         assert result.filters_applied == test_filters
         assert result.results_found == 2
-        assert result.total_points == 5000
+        assert result._total_points == 5000
         assert result.indexed_fields == ["site_name", "title", "category"]
         assert result.performance_estimate == "10-100x faster than unindexed"
         assert hasattr(result, "search_time_ms")

@@ -680,9 +680,7 @@ class TestConfigSingletonModern:
 
     def test_singleton_thread_safety_simulation(self):
         """Simulate thread safety testing."""
-        configs = []
-        for _ in range(10):
-            configs.append(get_config())
+        configs = [get_config() for _ in range(10)]
 
         # All should be the same instance
         first_config = configs[0]

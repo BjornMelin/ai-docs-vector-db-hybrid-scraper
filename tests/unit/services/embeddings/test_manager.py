@@ -100,8 +100,8 @@ class TestEmbeddingManagerInitialization:
 
             # Verify ClientManager was passed to OpenAI provider
             mock_openai_provider.assert_called_once()
-            call_kwargs = mock_openai_provider.call_args[1]
-            assert call_kwargs["client_manager"] == mock_client_manager
+            call__kwargs = mock_openai_provider.call_args[1]
+            assert call__kwargs["client_manager"] == mock_client_manager
 
     async def test_initialization_without_openai_key(
         self, mock_config, mock_client_manager
@@ -208,7 +208,7 @@ class TestEmbeddingManagerTextAnalysis:
 
         analysis = embedding_manager.analyze_text_characteristics(texts)
 
-        assert analysis.total_length == len(texts[0])
+        assert analysis._total_length == len(texts[0])
         assert analysis.avg_length == len(texts[0])
         assert analysis.text_type == "short"  # Under 100 chars threshold
         # Text is short and simple, so high quality should not be required
@@ -242,7 +242,7 @@ class TestEmbeddingManagerTextAnalysis:
         """Test text analysis for empty input."""
         analysis = embedding_manager.analyze_text_characteristics([])
 
-        assert analysis.total_length == 0
+        assert analysis._total_length == 0
         assert analysis.text_type == "empty"
         assert not analysis.requires_high_quality
 
@@ -252,7 +252,7 @@ class TestEmbeddingManagerTextAnalysis:
 
         analysis = embedding_manager.analyze_text_characteristics(texts)
 
-        assert analysis.total_length == len("valid text")
+        assert analysis._total_length == len("valid text")
         assert analysis.text_type == "short"
 
 
@@ -343,7 +343,7 @@ class TestEmbeddingManagerEmbeddingGeneration:
             ) as mock_select,
         ):
             mock_analyze.return_value = TextAnalysis(
-                total_length=10,
+                _total_length=10,
                 avg_length=10,
                 complexity_score=0.5,
                 estimated_tokens=3,
@@ -387,7 +387,7 @@ class TestEmbeddingManagerCostEstimation:
 
         assert "test" in result
         assert result["test"]["estimated_tokens"] > 0
-        assert result["test"]["total_cost"] > 0
+        assert result["test"]["_total_cost"] > 0
         assert result["test"]["cost_per_token"] == 0.0001
 
     async def test_estimate_cost_specific_provider(self, embedding_manager):
@@ -498,7 +498,7 @@ class TestEmbeddingManagerBudgetManagement:
 
         assert result["within_budget"]
         assert result["daily_usage"] == 5.0
-        assert result["estimated_total"] == 7.0
+        assert result["estimated__total"] == 7.0
         assert result["budget_limit"] == 10.0
 
     def test_check_budget_constraints_exceeds_budget(self, embedding_manager):
@@ -539,9 +539,9 @@ class TestEmbeddingManagerUsageStats:
         )
 
         stats = embedding_manager.usage_stats
-        assert stats.total_requests == 1
-        assert stats.total_tokens == 100
-        assert stats.total_cost == 0.01
+        assert stats._total_requests == 1
+        assert stats._total_tokens == 100
+        assert stats._total_cost == 0.01
         assert stats.daily_cost == 0.01
         assert stats.requests_by_tier["balanced"] == 1
         assert stats.requests_by_provider["openai"] == 1
@@ -554,9 +554,9 @@ class TestEmbeddingManagerUsageStats:
 
         report = embedding_manager.get_usage_report()
 
-        assert report["summary"]["total_requests"] == 2
-        assert report["summary"]["total_tokens"] == 150
-        assert report["summary"]["total_cost"] == 0.01
+        assert report["summary"]["_total_requests"] == 2
+        assert report["summary"]["_total_tokens"] == 150
+        assert report["summary"]["_total_cost"] == 0.01
         assert report["by_tier"]["balanced"] == 1
         assert report["by_tier"]["fast"] == 1
         assert report["by_provider"]["openai"] == 1

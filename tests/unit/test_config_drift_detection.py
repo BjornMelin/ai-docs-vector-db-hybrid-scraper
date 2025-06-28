@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import src.config.drift_detection
 from src.config.drift_detection import (
     ConfigDriftDetector,
     ConfigSnapshot,
@@ -631,7 +632,7 @@ class TestIntegrationWithTask20:
             call[0][0]
             for call in mock_metrics_bridge.create_custom_counter.call_args_list
         ]
-        assert "config_drift_events_total" in counter_calls
+        assert "config_drift_events__total" in counter_calls
 
         gauge_calls = [
             call[0][0]

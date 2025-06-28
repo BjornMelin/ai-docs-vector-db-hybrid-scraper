@@ -17,7 +17,8 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Import services for auto-detection (used in async method)
-from ..services.auto_detection import EnvironmentDetector, ServiceDiscovery
+from src.services.auto_detection import EnvironmentDetector, ServiceDiscovery
+
 from .auto_detect import AutoDetectedServices, AutoDetectionConfig
 from .enums import (
     ChunkingStrategy,
@@ -75,7 +76,8 @@ class OpenAIConfig(BaseModel):
     @classmethod
     def validate_api_key(cls, v: str | None) -> str | None:
         if v and not v.startswith("sk-"):
-            raise ValueError("OpenAI API key must start with 'sk-'")
+            msg = "OpenAI API key must start with 'sk-'"
+            raise ValueError(msg)
         return v
 
 
@@ -99,7 +101,8 @@ class FirecrawlConfig(BaseModel):
     @classmethod
     def validate_api_key(cls, v: str | None) -> str | None:
         if v and not v.startswith("fc-"):
-            raise ValueError("Firecrawl API key must start with 'fc-'")
+            msg = "Firecrawl API key must start with 'fc-'"
+            raise ValueError(msg)
         return v
 
 
@@ -133,11 +136,14 @@ class ChunkingConfig(BaseModel):
     @model_validator(mode="after")
     def validate_chunk_sizes(self) -> "ChunkingConfig":
         if self.chunk_overlap >= self.chunk_size:
-            raise ValueError("chunk_overlap must be less than chunk_size")
+            msg = "chunk_overlap must be less than chunk_size"
+            raise ValueError(msg)
         if self.min_chunk_size > self.chunk_size:
-            raise ValueError("min_chunk_size must be <= chunk_size")
+            msg = "min_chunk_size must be <= chunk_size"
+            raise ValueError(msg)
         if self.max_chunk_size < self.chunk_size:
-            raise ValueError("max_chunk_size must be >= chunk_size")
+            msg = "max_chunk_size must be >= chunk_size"
+            raise ValueError(msg)
         return self
 
 
@@ -428,14 +434,16 @@ class DeploymentConfig(BaseModel):
     def validate_tier(cls, v: str) -> str:
         valid_tiers = {"personal", "professional", "enterprise"}
         if v.lower() not in valid_tiers:
-            raise ValueError(f"Tier must be one of {valid_tiers}")
+            msg = f"Tier must be one of {valid_tiers}"
+            raise ValueError(msg)
         return v.lower()
 
     @field_validator("flagsmith_api_key")
     @classmethod
     def validate_flagsmith_key(cls, v: str | None) -> str | None:
-        if v and not (v.startswith("fs_") or v.startswith("env_")):
-            raise ValueError("Flagsmith API key must start with 'fs_' or 'env_'")
+        if v and not (v.startswith(("fs_", "env_"))):
+            msg = "Flagsmith API key must start with 'fs_' or 'env_'"
+            raise ValueError(msg)
         return v
 
 
@@ -581,14 +589,14 @@ class Config(BaseSettings):
             self.embedding_provider == EmbeddingProvider.OPENAI
             and not self.openai.api_key
         ):
-            raise ValueError(
-                "OpenAI API key required when using OpenAI embedding provider"
-            )
+            msg = "OpenAI API key required when using OpenAI embedding provider"
+            raise ValueError(msg)
         if (
             self.crawl_provider == CrawlProvider.FIRECRAWL
             and not self.firecrawl.api_key
         ):
-            raise ValueError("Firecrawl API key required when using Firecrawl provider")
+            msg = "Firecrawl API key required when using Firecrawl provider"
+            raise ValueError(msg)
         return self
 
     @model_validator(mode="after")
@@ -613,8 +621,8 @@ class Config(BaseSettings):
 
         Returns:
             Updated Config instance
-        """
 
+        """
         # Create a copy to avoid mutating the original
         updated_config = deepcopy(self)
 
@@ -663,6 +671,7 @@ class Config(BaseSettings):
 
         Returns:
             Updated Config instance with auto-detected services applied
+
         """
         if not self.auto_detection.enabled:
             return self
@@ -689,8 +698,6 @@ class Config(BaseSettings):
 
             # Store auto-detection results for inspection
             updated_config._auto_detected_services = auto_detected
-
-            return updated_config
 
         except Exception as e:
             # Log error but don't fail configuration loading
@@ -721,16 +728,16 @@ class Config(BaseSettings):
             with config_path.open() as f:
                 data = json.load(f)
             return cls(**data)
-        elif config_path.suffix in [".yaml", ".yml"]:
+        if config_path.suffix in [".yaml", ".yml"]:
             with config_path.open() as f:
                 data = yaml.safe_load(f)
             return cls(**data)
-        elif config_path.suffix == ".toml":
+        if config_path.suffix == ".toml":
             with config_path.open("rb") as f:
                 data = tomllib.load(f)
             return cls(**data)
-        else:
-            raise ValueError(f"Unsupported config file format: {config_path.suffix}")
+        msg = f"Unsupported config file format: {config_path.suffix}"
+        raise ValueError(msg)
 
 
 # Singleton pattern
@@ -753,6 +760,7 @@ async def get_config_with_auto_detection() -> Config:
 
     Returns:
         Config instance with auto-detected services applied
+
     """
     global _config
     if _config is None:
@@ -784,6 +792,7 @@ async def load_config_with_auto_detection(
 
     Returns:
         Loaded and potentially auto-detected configuration
+
     """
     config = Config.load_from_file(config_path) if config_path else Config()
 

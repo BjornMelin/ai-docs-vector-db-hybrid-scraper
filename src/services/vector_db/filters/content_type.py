@@ -172,7 +172,8 @@ class ContentTypeCriteria(BaseModel):
     def validate_word_counts(cls, v, info):
         """Validate word count ranges."""
         if v and v <= 0:
-            raise ValueError("Word count must be positive")
+            msg = "Word count must be positive"
+            raise ValueError(msg)
 
         # Check min <= max if both are provided
         if (
@@ -180,7 +181,8 @@ class ContentTypeCriteria(BaseModel):
             and info.data.get("min_word_count")
             and v < info.data["min_word_count"]
         ):
-            raise ValueError("max_word_count must be >= min_word_count")
+            msg = "max_word_count must be >= min_word_count"
+            raise ValueError(msg)
 
         return v
 
@@ -217,6 +219,7 @@ class ContentTypeFilter(BaseFilter):
             description: Filter description
             enabled: Whether filter is enabled
             priority: Filter priority (higher = earlier execution)
+
         """
         super().__init__(name, description, enabled, priority)
 
@@ -267,6 +270,7 @@ class ContentTypeFilter(BaseFilter):
 
         Raises:
             FilterError: If content type filter application fails
+
         """
         try:
             # Validate and parse criteria
@@ -605,13 +609,12 @@ class ContentTypeFilter(BaseFilter):
 
         if criteria.semantic_keywords:
             # Create text search conditions for semantic keywords
-            keyword_conditions = []
-            for keyword in criteria.semantic_keywords:
-                keyword_conditions.append(
-                    models.FieldCondition(
-                        key="content_preview", match=models.MatchText(text=keyword)
-                    )
+            keyword_conditions = [
+                models.FieldCondition(
+                    key="content_preview", match=models.MatchText(text=keyword)
                 )
+                for keyword in criteria.semantic_keywords
+            ]
 
             # Use OR logic for keywords (should match at least one)
             if keyword_conditions:
@@ -623,12 +626,11 @@ class ContentTypeFilter(BaseFilter):
         """Estimate performance impact based on filter complexity."""
         if condition_count == 0:
             return "none"
-        elif condition_count <= 3:
+        if condition_count <= 3:
             return "low"
-        elif condition_count <= 6:
+        if condition_count <= 6:
             return "medium"
-        else:
-            return "high"
+        return "high"
 
     async def validate_criteria(self, filter_criteria: dict[str, Any]) -> bool:
         """Validate content type filter criteria."""
@@ -675,6 +677,7 @@ class ContentTypeFilter(BaseFilter):
 
         Returns:
             ContentClassification with analysis results
+
         """
         # Basic classification based on content analysis
         # This is a simplified implementation - in production, you'd use
@@ -756,15 +759,15 @@ class ContentTypeFilter(BaseFilter):
             )
         ):
             return DocumentType.CODE
-        elif re.search(r"#+\s+|^\*\s+|\[.*\]\(.*\)", content, re.MULTILINE):
+        if re.search(r"#+\s+|^\*\s+|\[.*\]\(.*\)", content, re.MULTILINE):
             return DocumentType.MARKDOWN
-        elif re.search(r"<html>|<body>|<div>", content):
+        if re.search(r"<html>|<body>|<div>", content):
             return DocumentType.HTML
-        elif re.search(r"# getting started|# installation|# tutorial", content_lower):
+        if re.search(r"# getting started|# installation|# tutorial", content_lower):
             return DocumentType.TUTORIAL
-        elif re.search(r"# api|# reference|# documentation", content_lower):
+        if re.search(r"# api|# reference|# documentation", content_lower):
             return DocumentType.REFERENCE
-        elif re.search(r"readme|read me", content_lower):
+        if re.search(r"readme|read me", content_lower):
             return DocumentType.README
 
         return DocumentType.UNKNOWN
@@ -823,10 +826,9 @@ class ContentTypeFilter(BaseFilter):
             score = metadata["quality_score"]
             if score >= 0.7:
                 return QualityLevel.HIGH
-            elif score >= 0.4:
+            if score >= 0.4:
                 return QualityLevel.MEDIUM
-            else:
-                return QualityLevel.LOW
+            return QualityLevel.LOW
 
         # Simple heuristic-based quality assessment
         word_count = len(content.split())
@@ -845,10 +847,9 @@ class ContentTypeFilter(BaseFilter):
 
         if quality_score >= 2:
             return QualityLevel.HIGH
-        elif quality_score == 1:
+        if quality_score == 1:
             return QualityLevel.MEDIUM
-        else:
-            return QualityLevel.LOW
+        return QualityLevel.LOW
 
     def _detect_languages(self, content_lower: str) -> list[str]:
         """Detect programming languages in content."""

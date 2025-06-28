@@ -19,7 +19,6 @@ class BenchmarkReporter:
 
     def __init__(self):
         """Initialize benchmark reporter."""
-        pass
 
     async def generate_html_report(self, results: Any) -> str:
         """Generate comprehensive HTML report from benchmark results.
@@ -29,13 +28,13 @@ class BenchmarkReporter:
 
         Returns:
             HTML report string
+
         """
         html_content = self._build_html_template(results)
         return html_content
 
     def _build_html_template(self, results: Any) -> str:
         """Build HTML template with benchmark results."""
-
         # Extract key metrics for display
         latency_data = self._format_latency_metrics(results.latency_metrics)
         throughput_data = self._format_throughput_metrics(results.throughput_metrics)
@@ -387,13 +386,17 @@ class BenchmarkReporter:
                 "<div class='metric-item'><span>No latency data available</span></div>"
             )
 
+        # Latency thresholds for UI styling
+        latency_good_threshold = 100  # ms
+        latency_warning_threshold = 300  # ms
+
         items = []
         for metric, value in latency_metrics.items():
             css_class = (
                 "metric-good"
-                if value < 100
+                if value < latency_good_threshold
                 else "metric-warning"
-                if value < 300
+                if value < latency_warning_threshold
                 else "metric-error"
             )
             items.append(f"""
@@ -643,7 +646,6 @@ class BenchmarkReporter:
 
     def _generate_charts_javascript(self, results: Any) -> str:
         """Generate JavaScript for performance charts."""
-
         # Extract data for charts
         component_names = (
             list(results.component_results.keys()) if results.component_results else []
@@ -743,6 +745,7 @@ class BenchmarkReporter:
 
         Returns:
             JSON report string
+
         """
         if hasattr(results, "model_dump"):
             report_data = results.model_dump()
@@ -766,6 +769,7 @@ class BenchmarkReporter:
 
         Returns:
             CSV summary string
+
         """
         csv_lines = ["Metric,Value,Unit,Status"]
 
@@ -804,6 +808,7 @@ class BenchmarkReporter:
 
         Returns:
             Dictionary mapping format to file path
+
         """
         if formats is None:
             formats = ["html", "json"]

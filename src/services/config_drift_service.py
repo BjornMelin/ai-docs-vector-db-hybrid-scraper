@@ -8,17 +8,20 @@ import asyncio
 import contextlib
 import logging
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from ..config.core import get_config
-from ..config.drift_detection import (
+from src.config.core import get_config
+from src.config.drift_detection import (
     ConfigDriftDetector,
     DriftDetectionConfig as CoreDriftDetectionConfig,
     DriftSeverity,
     initialize_drift_detector,
 )
-from ..services.observability.performance import get_performance_monitor
-from ..services.task_queue.tasks import create_task
+from src.services.observability.performance import get_performance_monitor
+
+
+if TYPE_CHECKING:
+    from src.services.task_queue.tasks import create_task
 
 
 logger = logging.getLogger(__name__)
@@ -104,6 +107,9 @@ class ConfigDriftService:
             return
 
         try:
+            # Import here to avoid circular dependency
+            from src.services.task_queue.tasks import create_task
+
             # Create task for taking configuration snapshots
             await create_task(
                 "config_drift_snapshot",
@@ -123,6 +129,9 @@ class ConfigDriftService:
             return
 
         try:
+            # Import here to avoid circular dependency
+            from src.services.task_queue.tasks import create_task
+
             # Create task for comparing configurations
             await create_task(
                 "config_drift_comparison",
@@ -141,9 +150,11 @@ class ConfigDriftService:
 
         Returns:
             Dictionary with snapshot results
+
         """
         if self.drift_detector is None:
-            raise RuntimeError("Drift detector not initialized")
+            msg = "Drift detector not initialized"
+            raise RuntimeError(msg)
 
         performance_monitor = None
         with contextlib.suppress(Exception):
@@ -216,9 +227,11 @@ class ConfigDriftService:
 
         Returns:
             Dictionary with comparison results and drift events
+
         """
         if self.drift_detector is None:
-            raise RuntimeError("Drift detector not initialized")
+            msg = "Drift detector not initialized"
+            raise RuntimeError(msg)
 
         performance_monitor = None
         with contextlib.suppress(Exception):
@@ -321,6 +334,7 @@ class ConfigDriftService:
 
         Returns:
             True if remediation was successful
+
         """
         try:
             # Log remediation attempt
@@ -330,6 +344,9 @@ class ConfigDriftService:
             # In a full implementation, this would actually apply the changes
             if event.remediation_suggestion:
                 logger.info(f"Remediation suggestion: {event.remediation_suggestion}")
+
+            # Import here to avoid circular dependency
+            from src.services.task_queue.tasks import create_task
 
             # Create a task to track the remediation
             await create_task(
@@ -353,6 +370,7 @@ class ConfigDriftService:
 
         Returns:
             Dictionary with service status information
+
         """
         status = {
             "service_running": self.is_running,
@@ -381,9 +399,11 @@ class ConfigDriftService:
 
         Returns:
             Dictionary with detection results
+
         """
         if self.drift_detector is None:
-            raise RuntimeError("Drift detector not initialized")
+            msg = "Drift detector not initialized"
+            raise RuntimeError(msg)
 
         logger.info("Running manual configuration drift detection")
 
@@ -418,6 +438,7 @@ def get_drift_service() -> ConfigDriftService:
 
     Returns:
         Global drift service instance
+
     """
     global _drift_service
     if _drift_service is None:

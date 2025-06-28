@@ -32,8 +32,6 @@ from src.services.functional.dependencies import (
 class TestError(Exception):
     """Custom exception for this module."""
 
-    pass
-
 
 class TestDependencyLifecycle:
     """Test dependency lifecycle management patterns."""
@@ -78,10 +76,10 @@ class TestDependencyLifecycle:
 
             # Verify CacheManager was initialized with correct config
             MockCacheManager.assert_called_once()
-            call_kwargs = MockCacheManager.call_args.kwargs
-            assert call_kwargs["dragonfly_url"] == "redis://localhost:6379"
-            assert call_kwargs["enable_local_cache"] is True
-            assert call_kwargs["enable_distributed_cache"] is True
+            call__kwargs = MockCacheManager.call_args._kwargs
+            assert call__kwargs["dragonfly_url"] == "redis://localhost:6379"
+            assert call__kwargs["enable_local_cache"] is True
+            assert call__kwargs["enable_distributed_cache"] is True
 
             # Verify cleanup was called
             mock_instance.close.assert_called_once()
@@ -257,7 +255,8 @@ class TestCircuitBreakerIntegration:
             nonlocal failure_count
             failure_count += 1
             if failure_count <= 2:
-                raise ConnectionError("Service temporarily unavailable")
+                msg = "Service temporarily unavailable"
+                raise ConnectionError(msg)
             return {"status": "success", "data": "result"}
 
         # First two calls should fail
@@ -288,7 +287,8 @@ class TestCircuitBreakerIntegration:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                raise TestError("Initial failure")
+                msg = "Initial failure"
+                raise TestError(msg)
             return f"success_call_{call_count}"
 
         # Trigger circuit opening
@@ -578,7 +578,8 @@ class TestErrorHandlingPatterns:
             nonlocal call_count
             call_count += 1
             if call_count < 3:
-                raise ConnectionError("Temporary failure")
+                msg = "Temporary failure"
+                raise ConnectionError(msg)
             return "success"
 
         async def retry_with_backoff(func, max_retries=3, base_delay=0.01):

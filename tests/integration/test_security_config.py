@@ -261,7 +261,7 @@ class TestSecureConfigManager:
             "audit_enabled",
             "integrity_checks_enabled",
             "backup_enabled",
-            "total_configurations",
+            "_total_configurations",
             "recent_audit_events",
             "failed_operations",
             "integrity_failures",
@@ -276,9 +276,9 @@ class TestSecureConfigManager:
 
         # Verify status values
         assert isinstance(status["encryption_enabled"], bool)
-        assert isinstance(status["total_configurations"], int)
+        assert isinstance(status["_total_configurations"], int)
         assert isinstance(status["key_version"], int)
-        assert status["total_configurations"] >= 1
+        assert status["_total_configurations"] >= 1
 
     def test_failed_operations_logging(self, config_manager):
         """Test that failed operations are properly logged."""

@@ -1,5 +1,4 @@
-"""
-Configuration Validators
+"""Configuration Validators.
 
 This module provides comprehensive validation for configuration schemas
 and deployment environments, supporting the GitOps configuration management workflow.
@@ -9,7 +8,7 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 
 logger = logging.getLogger(__name__)
@@ -17,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ValidationError:
-    """Represents a configuration validation error"""
+    """Represents a configuration validation error."""
 
     path: str
     message: str
@@ -25,8 +24,7 @@ class ValidationError:
 
 
 class ConfigurationValidator:
-    """
-    Comprehensive configuration validator for GitOps deployments
+    """Comprehensive configuration validator for GitOps deployments.
 
     Validates configuration schemas, environment-specific requirements,
     security compliance, and deployment readiness.
@@ -39,8 +37,7 @@ class ConfigurationValidator:
     def validate_config_schema(
         self, config: dict[str, Any], environment: str = "development"
     ) -> bool:
-        """
-        Validate configuration schema and environment-specific requirements
+        """Validate configuration schema and environment-specific requirements.
 
         Args:
             config: Configuration dictionary to validate
@@ -48,6 +45,7 @@ class ConfigurationValidator:
 
         Returns:
             bool: True if validation passes, False otherwise
+
         """
         self.errors.clear()
         self.warnings.clear()
@@ -72,7 +70,7 @@ class ConfigurationValidator:
         return len(self.errors) == 0
 
     def _validate_required_sections(self, config: dict[str, Any]) -> None:
-        """Validate that all required configuration sections are present"""
+        """Validate that all required configuration sections are present."""
         required_sections = [
             "environment",
             "cache",
@@ -93,7 +91,7 @@ class ConfigurationValidator:
     def _validate_environment_config(
         self, config: dict[str, Any], environment: str
     ) -> None:
-        """Validate environment-specific configuration"""
+        """Validate environment-specific configuration."""
         config_env = config.get("environment")
 
         if config_env != environment:
@@ -123,7 +121,7 @@ class ConfigurationValidator:
             )
 
     def _validate_cache_config(self, cache_config: dict[str, Any]) -> None:
-        """Validate cache configuration"""
+        """Validate cache configuration."""
         if not cache_config:
             self.errors.append(
                 ValidationError(path="cache", message="Cache configuration is required")
@@ -181,7 +179,7 @@ class ConfigurationValidator:
             )
 
     def _validate_qdrant_config(self, qdrant_config: dict[str, Any]) -> None:
-        """Validate Qdrant configuration"""
+        """Validate Qdrant configuration."""
         if not qdrant_config:
             self.errors.append(
                 ValidationError(
@@ -199,7 +197,7 @@ class ConfigurationValidator:
                     message="Qdrant URL is required and must be a string",
                 )
             )
-        elif not (url.startswith("http://") or url.startswith("https://")):
+        elif not (url.startswith(("http://", "https://"))):
             self.warnings.append(
                 ValidationError(
                     path="qdrant.url",
@@ -229,7 +227,7 @@ class ConfigurationValidator:
                 )
 
     def _validate_openai_config(self, openai_config: dict[str, Any]) -> None:
-        """Validate OpenAI configuration"""
+        """Validate OpenAI configuration."""
         if not openai_config:
             self.warnings.append(
                 ValidationError(
@@ -308,7 +306,7 @@ class ConfigurationValidator:
             )
 
     def _validate_performance_config(self, performance_config: dict[str, Any]) -> None:
-        """Validate performance configuration"""
+        """Validate performance configuration."""
         if not performance_config:
             self.warnings.append(
                 ValidationError(
@@ -370,7 +368,7 @@ class ConfigurationValidator:
     def _validate_security_config(
         self, security_config: dict[str, Any], environment: str
     ) -> None:
-        """Validate security configuration"""
+        """Validate security configuration."""
         if not security_config:
             self.errors.append(
                 ValidationError(
@@ -423,7 +421,7 @@ class ConfigurationValidator:
                 )
 
     def _validate_crawl4ai_config(self, crawl4ai_config: dict[str, Any]) -> None:
-        """Validate Crawl4AI configuration"""
+        """Validate Crawl4AI configuration."""
         if not crawl4ai_config:
             return  # Optional configuration
 
@@ -463,7 +461,7 @@ class ConfigurationValidator:
             )
 
     def _validate_chunking_config(self, chunking_config: dict[str, Any]) -> None:
-        """Validate chunking configuration"""
+        """Validate chunking configuration."""
         if not chunking_config:
             return  # Optional configuration
 
@@ -513,7 +511,7 @@ class ConfigurationValidator:
                 )
 
     def _validate_production_requirements(self, config: dict[str, Any]) -> None:
-        """Validate production-specific requirements"""
+        """Validate production-specific requirements."""
         # Debug mode should be disabled
         if config.get("debug", False):
             self.errors.append(
@@ -556,7 +554,7 @@ class ConfigurationValidator:
             )
 
     def _validate_staging_requirements(self, config: dict[str, Any]) -> None:
-        """Validate staging-specific requirements"""
+        """Validate staging-specific requirements."""
         # Staging should have similar settings to production but allow some flexibility
 
         # Log level can be more verbose
@@ -571,7 +569,7 @@ class ConfigurationValidator:
             )
 
     def get_validation_summary(self) -> dict[str, Any]:
-        """Get a summary of validation results"""
+        """Get a summary of validation results."""
         return {
             "passed": len(self.errors) == 0,
             "error_count": len(self.errors),
@@ -585,8 +583,7 @@ class ConfigurationValidator:
 def validate_config_schema(
     config: dict[str, Any], environment: str = "development"
 ) -> bool:
-    """
-    Validate configuration schema
+    """Validate configuration schema.
 
     Args:
         config: Configuration dictionary to validate
@@ -594,20 +591,21 @@ def validate_config_schema(
 
     Returns:
         bool: True if validation passes, False otherwise
+
     """
     validator = ConfigurationValidator()
     return validator.validate_config_schema(config, environment)
 
 
-def validate_all_configs(config_dir: Union[str, Path]) -> bool:
-    """
-    Validate all configuration files in a directory
+def validate_all_configs(config_dir: str | Path) -> bool:
+    """Validate all configuration files in a directory.
 
     Args:
         config_dir: Path to configuration directory
 
     Returns:
         bool: True if all configurations are valid, False otherwise
+
     """
     config_dir = Path(config_dir)
 
@@ -653,10 +651,9 @@ def validate_all_configs(config_dir: Union[str, Path]) -> bool:
 
 
 def validate_deployment_readiness(
-    config_dir: Union[str, Path], environment: str
+    config_dir: str | Path, environment: str
 ) -> tuple[bool, dict[str, Any]]:
-    """
-    Validate deployment readiness for a specific environment
+    """Validate deployment readiness for a specific environment.
 
     Args:
         config_dir: Path to configuration directory
@@ -664,6 +661,7 @@ def validate_deployment_readiness(
 
     Returns:
         Tuple[bool, Dict]: (is_ready, validation_details)
+
     """
     config_dir = Path(config_dir)
     config_file = config_dir / "templates" / f"{environment}.json"

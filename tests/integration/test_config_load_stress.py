@@ -30,10 +30,10 @@ from src.config.reload import (
 class StressTestMetrics:
     """Metrics collected during stress testing."""
 
-    total_operations: int = 0
+    _total_operations: int = 0
     successful_operations: int = 0
     failed_operations: int = 0
-    total_duration_ms: float = 0.0
+    _total_duration_ms: float = 0.0
     peak_memory_mb: float = 0.0
     cpu_percent: float = 0.0
     thread_count: int = 0
@@ -143,7 +143,7 @@ class TestConfigurationLoadStress:
             reload_duration = (time.time() - reload_start) * 1000
 
             # Track metrics
-            metrics.total_operations += 1
+            metrics._total_operations += 1
             if result.success:
                 metrics.successful_operations += 1
                 reload_times.append(reload_duration)
@@ -160,8 +160,8 @@ class TestConfigurationLoadStress:
                     metrics.error_types.get(error_type, 0) + 1
                 )
 
-        total_duration = time.time() - start_time
-        metrics.total_duration_ms = total_duration * 1000
+        _total_duration = time.time() - start_time
+        metrics._total_duration_ms = _total_duration * 1000
 
         # Calculate statistics
         if reload_times:
@@ -186,21 +186,21 @@ class TestConfigurationLoadStress:
 
         # Log detailed metrics
         print("\nHigh Frequency Reload Metrics:")
-        print(f"  Total operations: {metrics.total_operations}")
+        print(f"  Total operations: {metrics._total_operations}")
         print(
-            f"  Success rate: {metrics.successful_operations / metrics.total_operations * 100:.1f}%"
+            f"  Success rate: {metrics.successful_operations / metrics._total_operations * 100:.1f}%"
         )
         print(f"  Average reload time: {metrics.avg_duration_ms:.2f}ms")
         print(
             f"  P50/P95/P99: {metrics.p50_duration_ms:.2f}/{metrics.p95_duration_ms:.2f}/{metrics.p99_duration_ms:.2f}ms"
         )
         print(
-            f"  Throughput: {metrics.total_operations / total_duration:.1f} reloads/sec"
+            f"  Throughput: {metrics._total_operations / _total_duration:.1f} reloads/sec"
         )
 
     @pytest.mark.asyncio
     async def test_large_config_reload_performance(
-        self, large_config_file, memory_monitor
+        self, large_config_file, _memory_monitor
     ):
         """Test reload performance with large configuration files."""
         reloader = ConfigReloader(
@@ -378,8 +378,7 @@ class TestConfigurationLoadStress:
         memory_hogs = []
         try:
             # Allocate ~200MB in 10MB chunks
-            for _ in range(20):
-                memory_hogs.append(bytearray(10 * 1024 * 1024))  # 10MB
+            memory_hogs.extend([bytearray(10 * 1024 * 1024) for _ in range(20)])  # 10MB
 
             # Track metrics under memory pressure
             metrics = []
@@ -545,7 +544,7 @@ class TestConfigurationLoadStress:
                     }
                 )
 
-        total_duration = time.time() - start_time
+        _total_duration = time.time() - start_time
 
         # Analyze switching performance
         assert len(switch_times) >= 95  # 95% success rate
@@ -570,7 +569,7 @@ class TestConfigurationLoadStress:
         assert max(durations) - min(durations) < 20  # Less than 20ms variance
 
         # Overall throughput
-        switches_per_second = len(switch_pattern) / total_duration
+        switches_per_second = len(switch_pattern) / _total_duration
         assert switches_per_second > 10  # Should handle >10 switches/second
 
     @given(
@@ -638,7 +637,7 @@ class TestConfigurationLoadStress:
 
         # Timing should be predictable
         if successful:
-            durations = [r.total_duration_ms for r in successful]
+            durations = [r._total_duration_ms for r in successful]
             avg_duration = sum(durations) / len(durations)
             expected_max = (num_listeners * 0.01 + 0.1) * 1000  # Rough estimate
             assert avg_duration < expected_max

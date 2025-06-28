@@ -8,7 +8,6 @@ from hypothesis import given, strategies as st
 from pydantic import ValidationError
 
 from src.config.core import (
-from src.config.enums import EmbeddingModel, EmbeddingProvider, SearchStrategy
     BrowserUseConfig,
     Crawl4AIConfig,
     EmbeddingConfig,
@@ -21,6 +20,11 @@ from src.config.enums import EmbeddingModel, EmbeddingProvider, SearchStrategy
     SQLAlchemyConfig,
     TaskQueueConfig,
 )
+from src.config.enums import EmbeddingModel, EmbeddingProvider, SearchStrategy
+
+
+# Test constants to avoid hardcoded sensitive values
+TEST_REDIS_PASSWORD = "test_redis_secret"
 
 
 # Hypothesis strategies
@@ -563,11 +567,11 @@ class TestTaskQueueConfig:
         """Test Redis configuration."""
         config = TaskQueueConfig(
             redis_url="redis://redis-cluster:6379",
-            redis_password="secret123",
+            redis_password=TEST_REDIS_PASSWORD,
             redis_database=5,
         )
         assert config.redis_url == "redis://redis-cluster:6379"
-        assert config.redis_password == "secret123"
+        assert config.redis_password == TEST_REDIS_PASSWORD
         assert config.redis_database == 5
 
     @given(

@@ -202,7 +202,7 @@ class TestCollectionSearchResult:
         result = CollectionSearchResult(
             collection_name="test_collection",
             results=[],
-            total_hits=0,
+            _total_hits=0,
             search_time_ms=100.0,
             confidence_score=0.8,
             coverage_score=0.9,
@@ -211,7 +211,7 @@ class TestCollectionSearchResult:
 
         assert result.collection_name == "test_collection"
         assert result.results == []
-        assert result.total_hits == 0
+        assert result._total_hits == 0
         assert result.search_time_ms == 100.0
         assert result.confidence_score == 0.8
         assert result.coverage_score == 0.9
@@ -231,7 +231,7 @@ class TestCollectionSearchResult:
         result = CollectionSearchResult(
             collection_name="docs",
             results=mock_results,
-            total_hits=25,
+            _total_hits=25,
             search_time_ms=250.5,
             confidence_score=0.92,
             coverage_score=0.85,
@@ -244,7 +244,7 @@ class TestCollectionSearchResult:
 
         assert result.collection_name == "docs"
         assert result.results == mock_results
-        assert result.total_hits == 25
+        assert result._total_hits == 25
         assert result.search_time_ms == 250.5
         assert result.confidence_score == 0.92
         assert result.coverage_score == 0.85
@@ -260,7 +260,7 @@ class TestCollectionSearchResult:
         CollectionSearchResult(
             collection_name="test",
             results=[],
-            total_hits=0,  # Min value
+            _total_hits=0,  # Min value
             search_time_ms=0.0,  # Min value
             confidence_score=0.0,  # Min value
             coverage_score=1.0,  # Max value
@@ -272,7 +272,7 @@ class TestCollectionSearchResult:
             CollectionSearchResult(
                 collection_name="test",
                 results=[],
-                total_hits=-1,  # Below minimum
+                _total_hits=-1,  # Below minimum
                 search_time_ms=100.0,
                 confidence_score=0.8,
                 coverage_score=0.9,
@@ -283,7 +283,7 @@ class TestCollectionSearchResult:
             CollectionSearchResult(
                 collection_name="test",
                 results=[],
-                total_hits=10,
+                _total_hits=10,
                 search_time_ms=-1.0,  # Below minimum
                 confidence_score=0.8,
                 coverage_score=0.9,
@@ -294,7 +294,7 @@ class TestCollectionSearchResult:
             CollectionSearchResult(
                 collection_name="test",
                 results=[],
-                total_hits=10,
+                _total_hits=10,
                 search_time_ms=100.0,
                 confidence_score=1.1,  # Above maximum
                 coverage_score=0.9,
@@ -466,7 +466,7 @@ class TestFederatedSearchResult:
             CollectionSearchResult(
                 collection_name="test",
                 results=[],
-                total_hits=0,
+                _total_hits=0,
                 search_time_ms=100.0,
                 confidence_score=0.8,
                 coverage_score=0.9,
@@ -476,13 +476,13 @@ class TestFederatedSearchResult:
 
         result = FederatedSearchResult(
             results=[],
-            total_results=0,
+            _total_results=0,
             collection_results=collection_results,
             collections_searched=["test"],
             search_strategy=CollectionSelectionStrategy.ALL,
             merging_strategy=ResultMergingStrategy.SCORE_BASED,
             search_mode=SearchMode.PARALLEL,
-            total_search_time_ms=200.0,
+            _total_search_time_ms=200.0,
             fastest_collection_ms=100.0,
             slowest_collection_ms=100.0,
             overall_confidence=0.8,
@@ -491,14 +491,14 @@ class TestFederatedSearchResult:
         )
 
         assert result.results == []
-        assert result.total_results == 0
+        assert result._total_results == 0
         assert result.collection_results == collection_results
         assert result.collections_searched == ["test"]
         assert result.collections_failed == []
         assert result.search_strategy == CollectionSelectionStrategy.ALL
         assert result.merging_strategy == ResultMergingStrategy.SCORE_BASED
         assert result.search_mode == SearchMode.PARALLEL
-        assert result.total_search_time_ms == 200.0
+        assert result._total_search_time_ms == 200.0
         assert result.fastest_collection_ms == 100.0
         assert result.slowest_collection_ms == 100.0
         assert result.overall_confidence == 0.8
@@ -516,7 +516,7 @@ class TestFederatedSearchResult:
             CollectionSearchResult(
                 collection_name="docs",
                 results=mock_results,
-                total_hits=5,
+                _total_hits=5,
                 search_time_ms=150.0,
                 confidence_score=0.85,
                 coverage_score=0.95,
@@ -525,18 +525,18 @@ class TestFederatedSearchResult:
         ]
         dedup_stats = {"original": 10, "deduplicated": 8}
         lb_stats = {"strategy": "round_robin"}
-        metadata = {"total_collections": 3}
+        metadata = {"_total_collections": 3}
 
         result = FederatedSearchResult(
             results=mock_results,
-            total_results=8,
+            _total_results=8,
             collection_results=collection_results,
             collections_searched=["docs", "api"],
             collections_failed=["tutorials"],
             search_strategy=CollectionSelectionStrategy.SMART_ROUTING,
             merging_strategy=ResultMergingStrategy.DIVERSITY_OPTIMIZED,
             search_mode=SearchMode.ADAPTIVE,
-            total_search_time_ms=500.0,
+            _total_search_time_ms=500.0,
             fastest_collection_ms=120.0,
             slowest_collection_ms=180.0,
             overall_confidence=0.82,
@@ -549,14 +549,14 @@ class TestFederatedSearchResult:
         )
 
         assert result.results == mock_results
-        assert result.total_results == 8
+        assert result._total_results == 8
         assert result.collection_results == collection_results
         assert result.collections_searched == ["docs", "api"]
         assert result.collections_failed == ["tutorials"]
         assert result.search_strategy == CollectionSelectionStrategy.SMART_ROUTING
         assert result.merging_strategy == ResultMergingStrategy.DIVERSITY_OPTIMIZED
         assert result.search_mode == SearchMode.ADAPTIVE
-        assert result.total_search_time_ms == 500.0
+        assert result._total_search_time_ms == 500.0
         assert result.fastest_collection_ms == 120.0
         assert result.slowest_collection_ms == 180.0
         assert result.overall_confidence == 0.82
@@ -638,8 +638,8 @@ class TestFederatedSearchService:
         assert service.federated_cache == {}
         assert service.cache_size == 100
         assert service.cache_stats == {"hits": 0, "misses": 0}
-        assert "total_searches" in service.performance_stats
-        assert service.performance_stats["total_searches"] == 0
+        assert "_total_searches" in service.performance_stats
+        assert service.performance_stats["_total_searches"] == 0
 
     def test_initialization_with_custom_settings(self):
         """Test service initialization with custom settings."""
@@ -672,7 +672,7 @@ class TestFederatedSearchService:
         assert "docs" in service.collection_load_scores
 
         perf_stats = service.collection_performance_stats["docs"]
-        assert perf_stats["total_searches"] == 0
+        assert perf_stats["_total_searches"] == 0
         assert perf_stats["avg_response_time"] == 0.0
         assert perf_stats["success_rate"] == 1.0
         assert isinstance(perf_stats["last_updated"], datetime)
@@ -743,7 +743,7 @@ class TestFederatedSearchService:
         result = await service.search(request)
 
         assert isinstance(result, FederatedSearchResult)
-        assert result.total_search_time_ms > 0
+        assert result._total_search_time_ms > 0
         # With ALL strategy, should search all registered collections
         assert len(result.collection_results) == len(sample_metadata)
         assert all(
@@ -791,7 +791,7 @@ class TestFederatedSearchService:
             # Note: The mock implementation may not preserve the exact search mode due to fallbacks
             # but it should be one of the valid modes
             assert result.search_mode in SearchMode
-            assert result.total_search_time_ms > 0
+            assert result._total_search_time_ms > 0
 
     @pytest.mark.asyncio
     async def test_collection_selection_strategies(self, service, sample_metadata):
@@ -933,7 +933,7 @@ class TestFederatedSearchService:
             mock_search.return_value = CollectionSearchResult(
                 collection_name="test",
                 results=[],
-                total_hits=0,
+                _total_hits=0,
                 search_time_ms=100.0,
                 confidence_score=0.8,
                 coverage_score=0.9,
@@ -963,7 +963,7 @@ class TestFederatedSearchService:
             mock_search.return_value = CollectionSearchResult(
                 collection_name="test",
                 results=[],
-                total_hits=0,
+                _total_hits=0,
                 search_time_ms=100.0,
                 confidence_score=0.8,
                 coverage_score=0.9,
@@ -993,7 +993,7 @@ class TestFederatedSearchService:
             mock_search.return_value = CollectionSearchResult(
                 collection_name="test",
                 results=[],
-                total_hits=0,
+                _total_hits=0,
                 search_time_ms=100.0,
                 confidence_score=0.8,
                 coverage_score=0.9,
@@ -1048,12 +1048,12 @@ class TestFederatedSearchService:
 
         with patch.object(service, "_search_single_collection") as mock_search:
             # Make search take longer than timeout
-            async def slow_search(*_args, **_kwargs):
+            async def slow_search(*_args, **__kwargs):
                 await asyncio.sleep(0.1)
                 return CollectionSearchResult(
                     collection_name="test",
                     results=[],
-                    total_hits=0,
+                    _total_hits=0,
                     search_time_ms=100.0,
                     confidence_score=0.8,
                     coverage_score=0.9,
@@ -1076,7 +1076,7 @@ class TestFederatedSearchService:
                     {"id": "1", "score": 0.9, "payload": {"content": "high score"}},
                     {"id": "2", "score": 0.7, "payload": {"content": "medium score"}},
                 ],
-                total_hits=2,
+                _total_hits=2,
                 search_time_ms=100.0,
                 confidence_score=0.8,
                 coverage_score=0.9,
@@ -1088,7 +1088,7 @@ class TestFederatedSearchService:
                     {"id": "3", "score": 0.95, "payload": {"content": "highest score"}},
                     {"id": "4", "score": 0.6, "payload": {"content": "low score"}},
                 ],
-                total_hits=2,
+                _total_hits=2,
                 search_time_ms=120.0,
                 confidence_score=0.85,
                 coverage_score=0.8,
@@ -1124,7 +1124,7 @@ class TestFederatedSearchService:
                     {"id": "docs_1", "score": 0.9},
                     {"id": "docs_2", "score": 0.8},
                 ],
-                total_hits=2,
+                _total_hits=2,
                 search_time_ms=100.0,
                 confidence_score=0.8,
                 coverage_score=0.9,
@@ -1136,7 +1136,7 @@ class TestFederatedSearchService:
                     {"id": "api_1", "score": 0.85},
                     {"id": "api_2", "score": 0.75},
                 ],
-                total_hits=2,
+                _total_hits=2,
                 search_time_ms=120.0,
                 confidence_score=0.85,
                 coverage_score=0.8,
@@ -1169,7 +1169,7 @@ class TestFederatedSearchService:
             CollectionSearchResult(
                 collection_name="tutorials",  # Priority 4
                 results=[{"id": "tut_1", "score": 0.8}],
-                total_hits=1,
+                _total_hits=1,
                 search_time_ms=100.0,
                 confidence_score=0.8,
                 coverage_score=0.9,
@@ -1178,7 +1178,7 @@ class TestFederatedSearchService:
             CollectionSearchResult(
                 collection_name="docs",  # Priority 8
                 results=[{"id": "docs_1", "score": 0.7}],
-                total_hits=1,
+                _total_hits=1,
                 search_time_ms=120.0,
                 confidence_score=0.85,
                 coverage_score=0.8,
@@ -1187,7 +1187,7 @@ class TestFederatedSearchService:
             CollectionSearchResult(
                 collection_name="api",  # Priority 6
                 results=[{"id": "api_1", "score": 0.9}],
-                total_hits=1,
+                _total_hits=1,
                 search_time_ms=90.0,
                 confidence_score=0.9,
                 coverage_score=0.95,
@@ -1225,7 +1225,7 @@ class TestFederatedSearchService:
                     {"id": "1", "score": 0.9, "payload": {"timestamp": test_time_1}},
                     {"id": "2", "score": 0.8, "payload": {"timestamp": test_time_3}},
                 ],
-                total_hits=2,
+                _total_hits=2,
                 search_time_ms=100.0,
                 confidence_score=0.8,
                 coverage_score=0.9,
@@ -1236,7 +1236,7 @@ class TestFederatedSearchService:
                 results=[
                     {"id": "3", "score": 0.85, "payload": {"timestamp": test_time_2}}
                 ],
-                total_hits=1,
+                _total_hits=1,
                 search_time_ms=120.0,
                 confidence_score=0.85,
                 coverage_score=0.8,
@@ -1268,7 +1268,7 @@ class TestFederatedSearchService:
                     {"id": "docs_2", "score": 0.8},
                     {"id": "docs_3", "score": 0.7},
                 ],
-                total_hits=3,
+                _total_hits=3,
                 search_time_ms=100.0,
                 confidence_score=0.8,
                 coverage_score=0.9,
@@ -1280,7 +1280,7 @@ class TestFederatedSearchService:
                     {"id": "api_1", "score": 0.85},
                     {"id": "api_2", "score": 0.75},
                 ],
-                total_hits=2,
+                _total_hits=2,
                 search_time_ms=120.0,
                 confidence_score=0.85,
                 coverage_score=0.8,
@@ -1345,7 +1345,7 @@ class TestFederatedSearchService:
             CollectionSearchResult(
                 collection_name="docs",
                 results=[{"id": "1"}, {"id": "2"}],
-                total_hits=2,
+                _total_hits=2,
                 search_time_ms=100.0,
                 confidence_score=0.9,
                 coverage_score=0.8,
@@ -1354,7 +1354,7 @@ class TestFederatedSearchService:
             CollectionSearchResult(
                 collection_name="api",
                 results=[{"id": "3"}],
-                total_hits=1,
+                _total_hits=1,
                 search_time_ms=120.0,
                 confidence_score=0.8,
                 coverage_score=0.9,
@@ -1422,13 +1422,13 @@ class TestFederatedSearchService:
     def test_performance_stats_tracking(self, service):
         """Test performance statistics tracking."""
         initial_stats = service.get_performance_stats()
-        assert initial_stats["total_searches"] == 0
+        assert initial_stats["_total_searches"] == 0
 
         # Simulate collection performance update
         service._update_collection_performance("test_collection", 150.0, True)
 
         stats = service.collection_performance_stats["test_collection"]
-        assert stats["total_searches"] == 1
+        assert stats["_total_searches"] == 1
         assert stats["avg_response_time"] == 150.0
         assert stats["success_rate"] == 1.0
 
@@ -1436,7 +1436,7 @@ class TestFederatedSearchService:
         service._update_collection_performance("test_collection", 200.0, False)
 
         stats = service.collection_performance_stats["test_collection"]
-        assert stats["total_searches"] == 2
+        assert stats["_total_searches"] == 2
         assert stats["avg_response_time"] == 175.0  # (150 + 200) / 2
         assert stats["success_rate"] == 0.5  # 1 success out of 2 attempts
 
@@ -1468,13 +1468,13 @@ class TestFederatedSearchService:
         # Create and cache a result
         result = FederatedSearchResult(
             results=[],
-            total_results=0,
+            _total_results=0,
             collection_results=[],
             collections_searched=[],
             search_strategy=CollectionSelectionStrategy.ALL,
             merging_strategy=ResultMergingStrategy.SCORE_BASED,
             search_mode=SearchMode.PARALLEL,
-            total_search_time_ms=100.0,
+            _total_search_time_ms=100.0,
             fastest_collection_ms=100.0,
             slowest_collection_ms=100.0,
             overall_confidence=0.8,
@@ -1525,13 +1525,13 @@ class TestFederatedSearchService:
             request = FederatedSearchRequest(query=f"query {i}")
             result = FederatedSearchResult(
                 results=[],
-                total_results=0,
+                _total_results=0,
                 collection_results=[],
                 collections_searched=[],
                 search_strategy=CollectionSelectionStrategy.ALL,
                 merging_strategy=ResultMergingStrategy.SCORE_BASED,
                 search_mode=SearchMode.PARALLEL,
-                total_search_time_ms=100.0,
+                _total_search_time_ms=100.0,
                 fastest_collection_ms=100.0,
                 slowest_collection_ms=100.0,
                 overall_confidence=0.8,
@@ -1549,13 +1549,13 @@ class TestFederatedSearchService:
         request = FederatedSearchRequest(query="test")
         result = FederatedSearchResult(
             results=[],
-            total_results=0,
+            _total_results=0,
             collection_results=[],
             collections_searched=[],
             search_strategy=CollectionSelectionStrategy.ALL,
             merging_strategy=ResultMergingStrategy.SCORE_BASED,
             search_mode=SearchMode.PARALLEL,
-            total_search_time_ms=100.0,
+            _total_search_time_ms=100.0,
             fastest_collection_ms=100.0,
             slowest_collection_ms=100.0,
             overall_confidence=0.8,
@@ -1604,7 +1604,7 @@ class TestFederatedSearchService:
 
         assert isinstance(result, FederatedSearchResult)
         assert result.results == []
-        assert result.total_results == 0
+        assert result._total_results == 0
         assert "error" in result.federated_metadata
 
     @pytest.mark.asyncio
@@ -1640,7 +1640,7 @@ class TestFederatedSearchService:
             mock_search.return_value = CollectionSearchResult(
                 collection_name="docs",
                 results=[],
-                total_hits=0,
+                _total_hits=0,
                 search_time_ms=100.0,
                 confidence_score=0.5,  # Below threshold
                 coverage_score=0.9,
@@ -1738,7 +1738,7 @@ class TestSearchModeIntegration:
                 return CollectionSearchResult(
                     collection_name=collection_name,
                     results=[],
-                    total_hits=0,
+                    _total_hits=0,
                     search_time_ms=10.0,
                     confidence_score=0.8,
                     coverage_score=0.9,
@@ -1778,12 +1778,12 @@ class TestSearchModeIntegration:
                 service_with_collections, "_search_single_collection"
             ) as mock_search:
                 # Make search take longer than timeout
-                async def slow_search(*_args, **_kwargs):
+                async def slow_search(*_args, **__kwargs):
                     await asyncio.sleep(0.1)
                     return CollectionSearchResult(
                         collection_name="test",
                         results=[],
-                        total_hits=0,
+                        _total_hits=0,
                         search_time_ms=100.0,
                         confidence_score=0.8,
                         coverage_score=0.9,

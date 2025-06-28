@@ -83,7 +83,7 @@ class TestBackupProcedures:
             backup_config["collections"]
         )
         assert backup_result["indexes_backed_up"]
-        assert backup_result["total_vectors_backed_up"] > 0
+        assert backup_result["_total_vectors_backed_up"] > 0
 
         # Verify vector backup content
         content_verification = await vector_backup_manager.verify_backup_content(
@@ -273,7 +273,7 @@ class TestDataRestoration:
         backup_info = {
             "backup_path": temp_deployment_dir / "vector_backup_20241223.tar.gz",
             "collections": ["documents", "embeddings"],
-            "total_vectors": 10000,
+            "_total_vectors": 10000,
             "backup_timestamp": datetime.now(tz=UTC) - timedelta(hours=4),
         }
 
@@ -286,7 +286,7 @@ class TestDataRestoration:
         assert restoration_result["collections_restored"] == len(
             backup_info["collections"]
         )
-        assert restoration_result["vectors_restored"] == backup_info["total_vectors"]
+        assert restoration_result["vectors_restored"] == backup_info["_total_vectors"]
         assert restoration_result["indexes_rebuilt"]
 
         # Verify vector database functionality after restoration
@@ -690,7 +690,7 @@ class VectorDatabaseBackupManager:
             "backup_path": str(backup_path),
             "collections_backed_up": len(config["collections"]),
             "indexes_backed_up": config["include_indexes"],
-            "total_vectors_backed_up": 10000,
+            "_total_vectors_backed_up": 10000,
             "backup_size_mb": 500,
         }
 
@@ -842,7 +842,7 @@ class VectorDatabaseRestorationManager:
         return {
             "success": True,
             "collections_restored": len(backup_info["collections"]),
-            "vectors_restored": backup_info["total_vectors"],
+            "vectors_restored": backup_info["_total_vectors"],
             "indexes_rebuilt": True,
         }
 

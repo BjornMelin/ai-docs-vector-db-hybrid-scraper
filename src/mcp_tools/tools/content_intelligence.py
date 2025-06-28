@@ -7,7 +7,7 @@ and adaptive extraction recommendations using the Content Intelligence Service.
 import logging
 from typing import TYPE_CHECKING
 
-from ...services.content_intelligence.models import ContentType
+from src.services.content_intelligence.models import ContentType
 
 
 if TYPE_CHECKING:
@@ -23,20 +23,20 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from ...infrastructure.client_manager import ClientManager
-from ...services.content_intelligence.models import (
-    ContentAnalysisRequest,
-    ContentClassification,
-    ContentMetadata,
-    QualityScore,
-)
-from ..models.requests import (
+from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.models.requests import (
     ContentIntelligenceAnalysisRequest,
     ContentIntelligenceClassificationRequest,
     ContentIntelligenceMetadataRequest,
     ContentIntelligenceQualityRequest,
 )
-from ..models.responses import ContentIntelligenceResult
+from src.mcp_tools.models.responses import ContentIntelligenceResult
+from src.services.content_intelligence.models import (
+    ContentAnalysisRequest,
+    ContentClassification,
+    ContentMetadata,
+    QualityScore,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -49,8 +49,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def analyze_content_intelligence(
         request: ContentIntelligenceAnalysisRequest, ctx: Context
     ) -> ContentIntelligenceResult:
-        """
-        Perform comprehensive AI-powered content intelligence analysis.
+        """Perform comprehensive AI-powered content intelligence analysis.
 
         Provides semantic content classification, quality assessment, metadata enrichment,
         and site-specific adaptation recommendations using local models for improved
@@ -122,8 +121,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def classify_content_type(
         request: ContentIntelligenceClassificationRequest, ctx: Context
     ) -> ContentClassification:
-        """
-        Classify content type using AI-powered semantic analysis.
+        """Classify content type using AI-powered semantic analysis.
 
         Uses local models and heuristics to classify content into categories like
         documentation, code, FAQ, tutorial, reference, blog, news, or forum content.
@@ -147,7 +145,6 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if not content_service:
                 await ctx.error("Content Intelligence Service not available")
-                from ...services.content_intelligence.models import ContentType
 
                 return ContentClassification(
                     primary_type=ContentType.UNKNOWN,
@@ -184,8 +181,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def assess_content_quality(
         request: ContentIntelligenceQualityRequest, ctx: Context
     ) -> QualityScore:
-        """
-        Assess content quality using multi-metric scoring system.
+        """Assess content quality using multi-metric scoring system.
 
         Evaluates content across multiple dimensions including completeness,
         relevance, confidence, freshness, structure quality, readability,
@@ -248,8 +244,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def extract_content_metadata(
         request: ContentIntelligenceMetadataRequest, ctx: Context
     ) -> ContentMetadata:
-        """
-        Extract and enrich metadata from content and HTML.
+        """Extract and enrich metadata from content and HTML.
 
         Performs automatic metadata enrichment by extracting structured metadata
         from page elements, generating semantic tags and categories, parsing
@@ -306,8 +301,7 @@ def register_tools(mcp, client_manager: ClientManager):
         _quality_issues: list[str] | None = None,
         ctx: Context | None = None,
     ) -> list[dict]:
-        """
-        Generate site-specific optimization and adaptation recommendations.
+        """Generate site-specific optimization and adaptation recommendations.
 
         Analyzes site patterns and quality issues to provide actionable
         recommendations for improving content extraction quality through
@@ -359,8 +353,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def get_content_intelligence_metrics(ctx: Context = None) -> dict:
-        """
-        Get performance metrics for Content Intelligence Service.
+        """Get performance metrics for Content Intelligence Service.
 
         Returns comprehensive performance statistics including total analyses,
         processing times, cache hit rates, and service status for monitoring

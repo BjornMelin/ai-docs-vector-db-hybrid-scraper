@@ -8,8 +8,8 @@ import logging
 import time
 from typing import Any
 
-from ...config import Config
-from ...models.vector_search import QueryClassification
+from src.config import Config
+from src.models.vector_search import QueryClassification
 
 
 logger = logging.getLogger(__name__)
@@ -23,6 +23,7 @@ class AdaptiveFusionTuner:
 
         Args:
             config: Unified configuration
+
         """
         self.config = config
         self.performance_history: dict[str, dict[str, float]] = {}
@@ -55,6 +56,7 @@ class AdaptiveFusionTuner:
 
         Returns:
             Dictionary with 'dense' and 'sparse' weights that sum to 1.0
+
         """
         try:
             self.total_queries += 1
@@ -116,10 +118,9 @@ class AdaptiveFusionTuner:
         # Simpler queries benefit from dense search (semantic understanding)
         if complexity in ["complex", "high"]:
             return -0.1  # Favor sparse for complex queries
-        elif complexity in ["simple", "low"]:
+        if complexity in ["simple", "low"]:
             return 0.1  # Favor dense for simple queries
-        else:
-            return 0.0  # No adjustment for moderate complexity
+        return 0.0  # No adjustment for moderate complexity
 
     def _compute_performance_adjustment(
         self,

@@ -14,8 +14,6 @@ from src.services.utilities.hnsw_optimizer import HNSWOptimizer
 class TestError(Exception):
     """Custom exception for this module."""
 
-    pass
-
 
 class TestHNSWOptimizer:
     """Tests for HNSWOptimizer class."""
@@ -27,7 +25,7 @@ class TestHNSWOptimizer:
         return config
 
     @pytest.fixture
-    def mock_qdrant_service(self):
+    def _mock_qdrant_service(self):
         """Create mock Qdrant service."""
         service = MagicMock()
         service._initialized = True
@@ -37,23 +35,23 @@ class TestHNSWOptimizer:
         return service
 
     @pytest.fixture
-    def optimizer(self, mock_config, mock_qdrant_service):
+    def optimizer(self, mock_config, _mock_qdrant_service):
         """Create HNSWOptimizer instance."""
-        return HNSWOptimizer(config=mock_config, qdrant_service=mock_qdrant_service)
+        return HNSWOptimizer(config=mock_config, qdrant_service=_mock_qdrant_service)
 
-    def test_init(self, mock_config, mock_qdrant_service):
+    def test_init(self, mock_config, _mock_qdrant_service):
         """Test optimizer initialization."""
         optimizer = HNSWOptimizer(
-            config=mock_config, qdrant_service=mock_qdrant_service
+            config=mock_config, qdrant_service=_mock_qdrant_service
         )
 
         assert optimizer.config == mock_config
-        assert optimizer.qdrant_service == mock_qdrant_service
+        assert optimizer.qdrant_service == _mock_qdrant_service
         assert optimizer.performance_cache == {}
         assert optimizer.adaptive_ef_cache == {}
         assert optimizer._initialized is False
 
-    async def test_initialize_success(self, optimizer, _mock_qdrant_service):
+    async def test_initialize_success(self, optimizer, __mock_qdrant_service):
         """Test successful optimizer initialization."""
         await optimizer.initialize()
 
@@ -69,10 +67,10 @@ class TestHNSWOptimizer:
         assert optimizer._initialized is True
 
     async def test_initialize_qdrant_not_initialized(
-        self, optimizer, mock_qdrant_service
+        self, optimizer, _mock_qdrant_service
     ):
         """Test initialization when Qdrant service not initialized."""
-        mock_qdrant_service._initialized = False
+        _mock_qdrant_service._initialized = False
 
         with pytest.raises(QdrantServiceError) as exc_info:
             await optimizer.initialize()
@@ -80,14 +78,14 @@ class TestHNSWOptimizer:
         assert "QdrantService must be initialized" in str(exc_info.value)
         assert optimizer._initialized is False
 
-    async def test_adaptive_ef_retrieve_success(self, optimizer, mock_qdrant_service):
+    async def test_adaptive_ef_retrieve_success(self, optimizer, _mock_qdrant_service):
         """Test successful adaptive ef retrieval."""
         optimizer._initialized = True
 
         # Mock query results
         mock_result = MagicMock()
         mock_result.points = [{"id": "doc1", "score": 0.9}]
-        mock_qdrant_service._client.query_points.return_value = mock_result
+        _mock_qdrant_service._client.query_points.return_value = mock_result
 
         query_vector = [0.1, 0.2, 0.3]
         result = await optimizer.adaptive_ef_retrieve(
@@ -108,7 +106,7 @@ class TestHNSWOptimizer:
         assert len(result["ef_progression"]) > 0
 
     async def test_adaptive_ef_retrieve_with_cache_hit(
-        self, optimizer, mock_qdrant_service
+        self, optimizer, _mock_qdrant_service
     ):
         """Test adaptive ef retrieval with cache hit."""
         optimizer._initialized = True
@@ -124,7 +122,7 @@ class TestHNSWOptimizer:
         # Mock query result
         mock_result = MagicMock()
         mock_result.points = [{"id": "doc1", "score": 0.9}]
-        mock_qdrant_service._client.query_points.return_value = mock_result
+        _mock_qdrant_service._client.query_points.return_value = mock_result
 
         query_vector = [0.1, 0.2, 0.3]
         result = await optimizer.adaptive_ef_retrieve(
@@ -137,22 +135,22 @@ class TestHNSWOptimizer:
 
         assert result["ef_used"] == 75
         assert result["source"] == "cache"
-        mock_qdrant_service._client.query_points.assert_called_once()
+        _mock_qdrant_service._client.query_points.assert_called_once()
 
     async def test_adaptive_ef_retrieve_time_budget_exceeded(
-        self, optimizer, mock_qdrant_service
+        self, optimizer, _mock_qdrant_service
     ):
         """Test adaptive ef retrieval when time budget is exceeded."""
         optimizer._initialized = True
 
         # Mock slow query that exceeds budget
-        async def slow_query(*_args, **_kwargs):
+        async def slow_query(*_args, **__kwargs):
             await asyncio.sleep(0.1)  # Simulate 100ms query
             mock_result = MagicMock()
             mock_result.points = [{"id": "doc1", "score": 0.9}]
             return mock_result
 
-        mock_qdrant_service._client.query_points.side_effect = slow_query
+        _mock_qdrant_service._client.query_points.side_effect = slow_query
 
         query_vector = [0.1, 0.2, 0.3]
         result = await optimizer.adaptive_ef_retrieve(
@@ -169,12 +167,14 @@ class TestHNSWOptimizer:
         assert result["budget_utilized_percent"] > 80  # Should be close to budget
 
     async def test_adaptive_ef_retrieve_query_error(
-        self, optimizer, mock_qdrant_service
+        self, optimizer, _mock_qdrant_service
     ):
         """Test adaptive ef retrieval with query error."""
         optimizer._initialized = True
 
-        mock_qdrant_service._client.query_points.side_effect = Exception("Query failed")
+        _mock_qdrant_service._client.query_points.side_effect = Exception(
+            "Query failed"
+        )
 
         query_vector = [0.1, 0.2, 0.3]
         result = await optimizer.adaptive_ef_retrieve(
@@ -187,7 +187,7 @@ class TestHNSWOptimizer:
         assert "ef_used" in result
 
     async def test_adaptive_ef_retrieve_cache_size_limit(
-        self, optimizer, mock_qdrant_service
+        self, optimizer, _mock_qdrant_service
     ):
         """Test cache size limiting in adaptive ef retrieval."""
         optimizer._initialized = True
@@ -204,7 +204,7 @@ class TestHNSWOptimizer:
         # Mock query result
         mock_result = MagicMock()
         mock_result.points = [{"id": "doc1", "score": 0.9}]
-        mock_qdrant_service._client.query_points.return_value = mock_result
+        _mock_qdrant_service._client.query_points.return_value = mock_result
 
         query_vector = [0.1, 0.2, 0.3]
         await optimizer.adaptive_ef_retrieve(
@@ -272,7 +272,7 @@ class TestHNSWOptimizer:
         assert config["target_use_case"] == "General purpose documentation"
 
     async def test_optimize_collection_hnsw_success(
-        self, optimizer, mock_qdrant_service
+        self, optimizer, _mock_qdrant_service
     ):
         """Test successful collection HNSW optimization."""
         optimizer._initialized = True
@@ -281,7 +281,7 @@ class TestHNSWOptimizer:
         mock_collection_info = MagicMock()
         mock_collection_info.config.params.vectors.dense.hnsw_config.m = 12
         mock_collection_info.config.params.vectors.dense.hnsw_config.ef_construct = 128
-        mock_qdrant_service._client.get_collection.return_value = mock_collection_info
+        _mock_qdrant_service._client.get_collection.return_value = mock_collection_info
 
         result = await optimizer.optimize_collection_hnsw(
             collection_name="test_collection",
@@ -296,7 +296,7 @@ class TestHNSWOptimizer:
         assert "optimization_timestamp" in result
 
     async def test_optimize_collection_hnsw_with_test_queries(
-        self, optimizer, mock_qdrant_service
+        self, optimizer, _mock_qdrant_service
     ):
         """Test collection optimization with test queries."""
         optimizer._initialized = True
@@ -306,7 +306,7 @@ class TestHNSWOptimizer:
         mock_collection_info.config.params.vectors.dense.hnsw_config.m = 16
         mock_collection_info.config.params.vectors.dense.hnsw_config.ef_construct = 200
         mock_collection_info.config.params.vectors.dense.hnsw_config.full_scan_threshold = 10000
-        mock_qdrant_service._client.get_collection.return_value = mock_collection_info
+        _mock_qdrant_service._client.get_collection.return_value = mock_collection_info
 
         # Mock test performance
         with patch.object(optimizer, "_test_search_performance") as mock_test:
@@ -328,7 +328,7 @@ class TestHNSWOptimizer:
             mock_test.assert_called_once()
 
     async def test_optimize_collection_hnsw_needs_update(
-        self, optimizer, mock_qdrant_service
+        self, optimizer, _mock_qdrant_service
     ):
         """Test optimization when collection needs update."""
         optimizer._initialized = True
@@ -341,7 +341,7 @@ class TestHNSWOptimizer:
         mock_collection_info.config.params.vectors.dense.hnsw_config.ef_construct = (
             50  # Low ef
         )
-        mock_qdrant_service._client.get_collection.return_value = mock_collection_info
+        _mock_qdrant_service._client.get_collection.return_value = mock_collection_info
 
         result = await optimizer.optimize_collection_hnsw(
             collection_name="test_collection",
@@ -353,7 +353,7 @@ class TestHNSWOptimizer:
         assert "estimated_improvement" in result["update_recommendation"]
 
     async def test_optimize_collection_hnsw_no_update_needed(
-        self, optimizer, mock_qdrant_service
+        self, optimizer, _mock_qdrant_service
     ):
         """Test optimization when no update is needed."""
         optimizer._initialized = True
@@ -362,7 +362,7 @@ class TestHNSWOptimizer:
         mock_collection_info = MagicMock()
         mock_collection_info.config.params.vectors.dense.hnsw_config.m = 20
         mock_collection_info.config.params.vectors.dense.hnsw_config.ef_construct = 300
-        mock_qdrant_service._client.get_collection.return_value = mock_collection_info
+        _mock_qdrant_service._client.get_collection.return_value = mock_collection_info
 
         result = await optimizer.optimize_collection_hnsw(
             collection_name="test_collection",
@@ -394,8 +394,7 @@ class TestHNSWOptimizer:
         def mock_getattr(_obj, attr, default=None):
             if attr == "m":
                 return 16
-            else:
-                return default
+            return default
 
         with patch("builtins.getattr", side_effect=mock_getattr):
             config = optimizer._extract_current_hnsw_config(mock_collection_info)
@@ -485,13 +484,13 @@ class TestHNSWOptimizer:
         assert improvement["build_time_change_percent"] == 0
 
     async def test_test_search_performance_success(
-        self, optimizer, mock_qdrant_service
+        self, optimizer, _mock_qdrant_service
     ):
         """Test search performance testing."""
         optimizer._initialized = True
 
         # Mock query results with varying times
-        mock_qdrant_service._client.query_points = AsyncMock()
+        _mock_qdrant_service._client.query_points = AsyncMock()
 
         test_queries = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6], [0.7, 0.8, 0.9]]
 
@@ -512,7 +511,7 @@ class TestHNSWOptimizer:
         assert performance["ef_used"] == 100
 
     async def test_test_search_performance_with_errors(
-        self, optimizer, mock_qdrant_service
+        self, optimizer, _mock_qdrant_service
     ):
         """Test search performance testing with some query errors."""
         optimizer._initialized = True
@@ -520,15 +519,17 @@ class TestHNSWOptimizer:
         # Mock some successful and some failing queries
         call_count = 0
 
-        async def mock_query(*_args, **_kwargs):
+        async def mock_query(*_args, **__kwargs):
             nonlocal call_count
             call_count += 1
             if call_count <= 2:  # First 2 calls succeed
                 return MagicMock()
-                raise TestError("Query failed")
-                raise TestError("Query failed")
+                msg = "Query failed"
+                raise TestError(msg)
+                msg = "Query failed"
+                raise TestError(msg)
 
-        mock_qdrant_service._client.query_points.side_effect = mock_query
+        _mock_qdrant_service._client.query_points.side_effect = mock_query
 
         test_queries = [
             [0.1, 0.2, 0.3],
@@ -547,12 +548,12 @@ class TestHNSWOptimizer:
         assert performance["ef_used"] == 100
 
     async def test_test_search_performance_no_successful_queries(
-        self, optimizer, mock_qdrant_service
+        self, optimizer, _mock_qdrant_service
     ):
         """Test search performance testing with no successful queries."""
         optimizer._initialized = True
 
-        mock_qdrant_service._client.query_points.side_effect = Exception(
+        _mock_qdrant_service._client.query_points.side_effect = Exception(
             "All queries failed"
         )
 
@@ -595,7 +596,7 @@ class TestHNSWOptimizer:
         assert len(optimizer.performance_cache) == 0
 
     async def test_adaptive_ef_retrieve_step_size_adjustment(
-        self, optimizer, mock_qdrant_service
+        self, optimizer, _mock_qdrant_service
     ):
         """Test step size adjustment based on timing in adaptive ef retrieval."""
         optimizer._initialized = True
@@ -603,7 +604,7 @@ class TestHNSWOptimizer:
         # Mock query results with different timing patterns
         call_count = 0
 
-        async def mock_query_with_timing(*_args, **_kwargs):
+        async def mock_query_with_timing(*_args, **__kwargs):
             nonlocal call_count
             call_count += 1
 
@@ -621,7 +622,7 @@ class TestHNSWOptimizer:
             mock_result.points = [{"id": f"doc{call_count}", "score": 0.9}]
             return mock_result
 
-        mock_qdrant_service._client.query_points.side_effect = mock_query_with_timing
+        _mock_qdrant_service._client.query_points.side_effect = mock_query_with_timing
 
         query_vector = [0.1, 0.2, 0.3]
         result = await optimizer.adaptive_ef_retrieve(

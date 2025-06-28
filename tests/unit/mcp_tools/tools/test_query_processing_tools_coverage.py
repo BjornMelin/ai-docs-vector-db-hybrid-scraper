@@ -3,10 +3,10 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from pydantic import ValidationError
 
 from src.mcp_tools.models.responses import SearchResult
 from src.mcp_tools.tools.query_processing_tools import (
-from pydantic import ValidationError
     ClusteredSearchRequest,
     FederatedSearchRequest,
     OrchestrationRequest,
@@ -66,7 +66,7 @@ class TestQueryProcessingTools:
                 metadata={"source": "test"},
             )
         ]
-        mock_result.total_results = 1
+        mock_result._total_results = 1
         mock_result.processing_time_ms = 100.0
         mock_result.metadata = {"confidence": 0.9}
         mock_result.quality_score = 0.85

@@ -54,7 +54,8 @@ class MockFilter(BaseFilter):
         self.apply_called = True
 
         if self.should_fail:
-            raise FilterError("Mock filter error", filter_name=self.name)
+            msg = "Mock filter error"
+            raise FilterError(msg, filter_name=self.name)
 
         if self.delay > 0:
             await asyncio.sleep(self.delay)

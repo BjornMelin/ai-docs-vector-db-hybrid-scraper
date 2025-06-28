@@ -12,7 +12,7 @@ class TestVectorSearchConsumerContracts:
 
     @pytest.mark.pact
     async def test_search_consumer_contract(
-        self, pact_contract_builder, mock_contract_service
+        self, pact_contract_builder, __mock_contract_service
     ):
         """Test search API consumer contract."""
         # Define the interaction
@@ -43,7 +43,7 @@ class TestVectorSearchConsumerContracts:
                         "metadata": {"source": "documentation"},
                     }
                 ],
-                "total_count": 1,
+                "_total_count": 1,
                 "query_time_ms": 45.0,
                 "search_strategy": "hybrid",
                 "cache_hit": False,
@@ -98,7 +98,7 @@ class TestVectorSearchConsumerContracts:
                         "metadata": {"source": "research_paper", "reranked": True},
                     }
                 ],
-                "total_count": 15,
+                "_total_count": 15,
                 "query_time_ms": 120.0,
                 "search_strategy": "hybrid",
                 "cache_hit": False,
@@ -216,7 +216,7 @@ class TestDocumentProcessingConsumerContracts:
                 "success": True,
                 "processed_count": 3,
                 "failed_count": 0,
-                "total_chunks": 15,
+                "_total_chunks": 15,
                 "processing_time_ms": 4500.0,
                 "results": [
                     {
@@ -309,7 +309,7 @@ class TestCollectionManagementConsumerContracts:
                         "config": {"vector_size": 1024},
                     }
                 ],
-                "total_count": 1,
+                "_total_count": 1,
             },
         )
 
@@ -320,7 +320,7 @@ class TestCollectionManagementConsumerContracts:
 
         response_body = interaction["response"]["body"]
         assert "collections" in response_body
-        assert response_body["total_count"] == 1
+        assert response_body["_total_count"] == 1
 
 
 class TestPactContractVerification:
@@ -328,7 +328,7 @@ class TestPactContractVerification:
 
     @pytest.mark.pact
     async def test_verify_search_contract(
-        self, pact_contract_builder, mock_contract_service
+        self, pact_contract_builder, __mock_contract_service
     ):
         """Test verification of search contract against mock service."""
         # Set up the contract
@@ -342,7 +342,7 @@ class TestPactContractVerification:
             body={
                 "success": True,
                 "results": [{"id": "doc1", "title": "Test", "score": 0.95}],
-                "total_count": 1,
+                "_total_count": 1,
             },
         )
 
@@ -358,7 +358,7 @@ class TestPactContractVerification:
             "body": {
                 "success": True,
                 "results": [{"id": "doc1", "title": "Test", "score": 0.95}],
-                "total_count": 1,
+                "_total_count": 1,
             },
         }
 
@@ -420,7 +420,7 @@ class TestConsumerContractEvolution:
             status=200,
             body={
                 "results": [{"id": "doc1", "title": "Test", "score": 0.95}],
-                "total": 1,
+                "_total": 1,
             },
         )
 
@@ -446,7 +446,7 @@ class TestConsumerContractEvolution:
             body={
                 "success": True,  # New field
                 "results": [{"id": "doc1", "title": "Test", "score": 0.95}],
-                "total_count": 1,  # Renamed field
+                "_total_count": 1,  # Renamed field
                 "search_strategy": "hybrid",  # New field
             },
         )

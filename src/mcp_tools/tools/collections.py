@@ -17,8 +17,8 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from ...infrastructure.client_manager import ClientManager
-from ..models.responses import CollectionInfo, CollectionOperationResponse
+from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.models.responses import CollectionInfo, CollectionOperationResponse
 
 
 logger = logging.getLogger(__name__)
@@ -29,8 +29,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def list_collections(ctx: Context = None) -> list[CollectionInfo]:
-        """
-        List all vector database collections.
+        """List all vector database collections.
 
         Returns information about each collection including size and status.
         """
@@ -90,8 +89,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def delete_collection(
         collection_name: str, ctx: Context = None
     ) -> CollectionOperationResponse:
-        """
-        Delete a vector database collection.
+        """Delete a vector database collection.
 
         Permanently removes the collection and all its data.
         """
@@ -129,8 +127,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def optimize_collection(
         collection_name: str, ctx: Context = None
     ) -> CollectionOperationResponse:
-        """
-        Optimize a collection for better performance.
+        """Optimize a collection for better performance.
 
         Rebuilds indexes and optimizes storage.
         """

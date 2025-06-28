@@ -63,11 +63,13 @@ class CompositionRule(BaseModel):
 
         if operator == CompositionOperator.NOT:
             if len(v) != 1:
-                raise ValueError("NOT operator requires exactly one filter")
+                msg = "NOT operator requires exactly one filter"
+                raise ValueError(msg)
         elif (
             operator in [CompositionOperator.AND, CompositionOperator.OR] and len(v) < 2
         ):
-            raise ValueError(f"{operator} operator requires at least two filters")
+            msg = f"{operator} operator requires at least two filters"
+            raise ValueError(msg)
 
         return v
 
@@ -148,6 +150,7 @@ class FilterComposer(BaseFilter):
             enabled: Whether filter is enabled
             priority: Filter priority (higher = earlier execution)
             max_cache_size: Maximum number of items in execution cache
+
         """
         super().__init__(name, description, enabled, priority)
 
@@ -178,6 +181,7 @@ class FilterComposer(BaseFilter):
 
         Raises:
             FilterError: If filter composition fails
+
         """
         try:
             # Validate and parse criteria
@@ -232,7 +236,6 @@ class FilterComposer(BaseFilter):
         self, criteria: FilterCompositionCriteria, context: dict[str, Any] | None = None
     ) -> CompositionResult:
         """Execute the filter composition based on criteria."""
-
         start_time = time.time()
 
         # Get execution strategy
@@ -303,7 +306,6 @@ class FilterComposer(BaseFilter):
         criteria: FilterCompositionCriteria,
     ) -> dict[str, FilterResult]:
         """Execute filters in parallel."""
-
         results = {}
 
         # Create tasks for all filters
@@ -348,7 +350,8 @@ class FilterComposer(BaseFilter):
 
         except TimeoutError as e:
             self._logger.exception("Filter composition timed out")
-            raise FilterError("Filter composition execution timed out") from e
+            msg = "Filter composition execution timed out"
+            raise FilterError(msg) from e
 
         return results
 
@@ -372,9 +375,8 @@ class FilterComposer(BaseFilter):
                     and not result.filter_conditions
                     and criteria.fail_fast
                 ):
-                    raise FilterError(
-                        f"Required filter {filter_ref.filter_instance.name} failed"
-                    )
+                    msg = f"Required filter {filter_ref.filter_instance.name} failed"
+                    raise FilterError(msg)
 
             except Exception:
                 self._logger.exception(
@@ -447,8 +449,9 @@ class FilterComposer(BaseFilter):
             self._logger.exception(
                 "Filter {filter_ref.filter_instance.name} execution failed"
             )
+            msg = f"Filter {filter_ref.filter_instance.name} failed"
             raise FilterError(
-                f"Filter {filter_ref.filter_instance.name} failed",
+                msg,
                 filter_name=filter_ref.filter_instance.name,
                 filter_criteria=filter_ref.criteria,
                 underlying_error=e,
@@ -505,7 +508,7 @@ class FilterComposer(BaseFilter):
 
         if operator == CompositionOperator.AND:
             return self._create_and_filter(conditions)
-        elif operator == CompositionOperator.OR:
+        if operator == CompositionOperator.OR:
             return models.Filter(should=conditions)
 
         return None
@@ -593,21 +596,17 @@ class FilterComposer(BaseFilter):
                     total_weight += filter_ref.weight
 
             return weighted_confidence / total_weight if total_weight > 0 else 0.0
-        else:
-            # Simple average
-            confidences = [
-                result.confidence_score for result in filter_results.values()
-            ]
-            return sum(confidences) / len(confidences)
+        # Simple average
+        confidences = [result.confidence_score for result in filter_results.values()]
+        return sum(confidences) / len(confidences)
 
     def _estimate_composition_performance(self, result: CompositionResult) -> str:
         """Estimate performance impact of the composition."""
         if result.total_execution_time_ms > 2000:
             return "high"
-        elif result.total_execution_time_ms > 500:
+        if result.total_execution_time_ms > 500:
             return "medium"
-        else:
-            return "low"
+        return "low"
 
     async def validate_criteria(self, filter_criteria: dict[str, Any]) -> bool:
         """Validate filter composition criteria."""
@@ -638,6 +637,7 @@ class FilterComposer(BaseFilter):
 
         Returns:
             Dictionary suitable for FilterCompositionCriteria
+
         """
         filter_refs = []
         for filter_instance, criteria in filters:
@@ -667,6 +667,7 @@ class FilterComposer(BaseFilter):
 
         Returns:
             Human-readable explanation string
+
         """
 
         def explain_rule(rule: CompositionRule, indent: int = 0) -> str:
@@ -711,6 +712,7 @@ class FilterComposer(BaseFilter):
 
         Returns:
             Dictionary with cache statistics
+
         """
         return {
             "enabled": True,

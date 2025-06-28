@@ -214,7 +214,7 @@ class TestSPLADEProvider:
 
     async def test_token_id_generation(self, provider):
         """Test token ID generation and consistency."""
-        token = "python"  # noqa: S105  # Test token, not a password
+        token = "python"  # Test token, not a password
 
         # Should return consistent IDs
         id1 = provider._get_token_id(token)
@@ -226,7 +226,7 @@ class TestSPLADEProvider:
 
     async def test_unknown_token_handling(self, provider):
         """Test handling of unknown tokens."""
-        unknown_token = "veryunusualtoken12345"  # noqa: S105  # Test token, not a password
+        unknown_token = "veryunusualtoken12345"  # Test token, not a password
 
         token_id = provider._get_token_id(unknown_token)
 
@@ -335,7 +335,7 @@ class TestSPLADEProvider:
     async def test_token_info_retrieval(self, provider):
         """Test token information retrieval."""
         # Add a token to vocabulary
-        token = "testtoken"  # noqa: S105  # Test token, not a password
+        token = "testtoken"  # Test token, not a password
         token_id = provider._get_token_id(token)
 
         info = provider.get_token_info(token_id)
@@ -404,7 +404,7 @@ class TestSPLADEProvider:
         assert normalized == zero_vector
 
     @pytest.mark.parametrize(
-        "text,expected_features",
+        ("text", "expected_features"),
         [
             ("async def process():", ["async", "def", "process"]),
             ("import numpy as np", ["import", "numpy", "np"]),

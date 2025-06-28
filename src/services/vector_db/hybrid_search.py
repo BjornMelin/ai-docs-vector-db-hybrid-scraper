@@ -13,20 +13,20 @@ from typing import Any
 from qdrant_client import AsyncQdrantClient
 
 from src.config import ABTestVariant, Config, OptimizationStrategy
-
-from ...models.vector_search import (
+from src.models.vector_search import (
     HybridSearchRequest,
     HybridSearchResponse,
     RetrievalMetrics,
     SearchResult,
 )
-from ..errors import QdrantServiceError
-from ..query_processing import (
+from src.services.errors import QdrantServiceError
+from src.services.query_processing import (
     AdvancedSearchOrchestrator,
     AdvancedSearchRequest,
     SearchMode,
     SearchPipeline,
 )
+
 from .adaptive_fusion_tuner import AdaptiveFusionTuner
 from .model_selector import ModelSelector
 from .query_classifier import QueryClassifier
@@ -56,6 +56,7 @@ class HybridSearchService:
             client: Qdrant client instance
             config: Unified configuration
             qdrant_search: Base Qdrant search service
+
         """
         self.client = client
         self.config = config
@@ -100,6 +101,7 @@ class HybridSearchService:
 
         Returns:
             HybridSearchResponse with results and optimization metadata
+
         """
         start_time = time.time()
         query_id = str(uuid.uuid4())
@@ -221,30 +223,28 @@ class HybridSearchService:
             # Fallback to basic search
             if self.enable_fallback:
                 return await self._perform_fallback_search(request, start_time, str(e))
-            else:
-                raise QdrantServiceError(f"Advanced hybrid search failed: {e}") from e
+            msg = f"Advanced hybrid search failed: {e}"
+            raise QdrantServiceError(msg) from e
 
     def _determine_search_mode(self, request: HybridSearchRequest) -> SearchMode:
         """Determine the appropriate search mode based on request features."""
         if request.enable_adaptive_fusion and request.enable_query_classification:
             return SearchMode.INTELLIGENT
-        elif request.enable_model_selection:
+        if request.enable_model_selection:
             return SearchMode.PERSONALIZED
-        elif request.enable_splade:
+        if request.enable_splade:
             return SearchMode.ENHANCED
-        else:
-            return SearchMode.SIMPLE
+        return SearchMode.SIMPLE
 
     def _determine_pipeline(self, request: HybridSearchRequest) -> SearchPipeline:
         """Determine the appropriate pipeline based on request configuration."""
         if request.enable_adaptive_fusion:
             return SearchPipeline.COMPREHENSIVE
-        elif request.fusion_config.algorithm.value == "dbsf":
+        if request.fusion_config.algorithm.value == "dbsf":
             return SearchPipeline.PRECISION
-        elif request.search_params.accuracy_level.value == "fast":
+        if request.search_params.accuracy_level.value == "fast":
             return SearchPipeline.FAST
-        else:
-            return SearchPipeline.BALANCED
+        return SearchPipeline.BALANCED
 
     async def _classify_query_with_timeout(
         self, query: str, context: dict[str, Any] | None

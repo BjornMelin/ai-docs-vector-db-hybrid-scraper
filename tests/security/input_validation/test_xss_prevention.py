@@ -197,11 +197,7 @@ class TestXSSPrevention:
         # This would test actual CSP header configuration
         # For now, we'll verify the structure
         for directive in expected_csp_directives:
-            assert (
-                "'" in directive
-                or directive.endswith("'none'")
-                or directive.endswith("'self'")
-            )
+            assert "'" in directive or directive.endswith(("'none'", "'self'"))
 
     @pytest.mark.asyncio
     async def test_dom_xss_prevention(self):

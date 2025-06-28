@@ -176,7 +176,7 @@ class TestBlueGreenDeployment:
         # Verify zero downtime
         assert availability_report["zero_downtime_achieved"]
         assert availability_report["service_always_available"]
-        assert availability_report["total_downtime_seconds"] == 0
+        assert availability_report["_total_downtime_seconds"] == 0
         assert availability_report["successful_requests_during_switch"] > 0
 
     @pytest.mark.blue_green
@@ -525,7 +525,7 @@ class ZeroDowntimeTester:
 
     def __init__(self):
         self.availability_data = {
-            "total_requests": 0,
+            "_total_requests": 0,
             "successful_requests": 0,
             "failed_requests": 0,
             "downtime_periods": [],
@@ -540,8 +540,8 @@ class ZeroDowntimeTester:
                 await asyncio.sleep(0.1)
 
                 # Simulate successful requests (99.9% success rate)
-                self.availability_data["total_requests"] += 1
-                if self.availability_data["total_requests"] % 1000 != 0:
+                self.availability_data["_total_requests"] += 1
+                if self.availability_data["_total_requests"] % 1000 != 0:
                     self.availability_data["successful_requests"] += 1
                 else:
                     self.availability_data["failed_requests"] += 1
@@ -551,19 +551,19 @@ class ZeroDowntimeTester:
 
     def get_availability_report(self) -> dict[str, Any]:
         """Get availability report."""
-        total_time = (
+        _total_time = (
             datetime.now(tz=UTC) - self.availability_data["start_time"]
-        ).total_seconds()
+        )._total_seconds()
 
         return {
             "zero_downtime_achieved": self.availability_data["failed_requests"] == 0,
             "service_always_available": len(self.availability_data["downtime_periods"])
             == 0,
-            "total_downtime_seconds": 0,
+            "_total_downtime_seconds": 0,
             "successful_requests_during_switch": self.availability_data[
                 "successful_requests"
             ],
-            "total_monitoring_time_seconds": total_time,
+            "_total_monitoring_time_seconds": _total_time,
         }
 
 
@@ -600,15 +600,14 @@ class GradualTrafficRouter:
                         "step_results": step_results,
                     }
                 break
-            else:
-                step_result = {
-                    "step_number": i + 1,
-                    "percentage": step["percentage"],
-                    "success": True,
-                    "error_rate": 1.5,  # Below threshold
-                    "health_checks_passed": True,
-                }
-                step_results.append(step_result)
+            step_result = {
+                "step_number": i + 1,
+                "percentage": step["percentage"],
+                "success": True,
+                "error_rate": 1.5,  # Below threshold
+                "health_checks_passed": True,
+            }
+            step_results.append(step_result)
 
         return {
             "success": True,

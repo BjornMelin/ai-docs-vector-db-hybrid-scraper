@@ -120,6 +120,7 @@ class ReloadMetricsCollector:
         Args:
             trigger: Reload trigger type
             status: Reload status
+
         """
         reload_total.labels(trigger=trigger, status=status).inc()
 
@@ -132,6 +133,7 @@ class ReloadMetricsCollector:
             trigger: Reload trigger type
             phase: Reload phase (validation, apply, total)
             duration_seconds: Duration in seconds
+
         """
         reload_duration.labels(trigger=trigger, phase=phase).observe(duration_seconds)
 
@@ -158,6 +160,7 @@ class ReloadMetricsCollector:
 
         Args:
             duration_seconds: Validation duration in seconds
+
         """
         validation_duration.observe(duration_seconds)
 
@@ -172,6 +175,7 @@ class ReloadMetricsCollector:
 
         Args:
             error_type: Type of validation error
+
         """
         validation_errors.labels(error_type=error_type).inc()
 
@@ -184,6 +188,7 @@ class ReloadMetricsCollector:
             listener_name: Name of the listener
             status: Notification status (success, failed, timeout)
             duration_seconds: Notification duration
+
         """
         listener_notification_duration.labels(
             listener_name=listener_name, status=status
@@ -208,6 +213,7 @@ class ReloadMetricsCollector:
 
         Args:
             count: Current number of backups
+
         """
         config_backups.set(count)
 
@@ -217,6 +223,7 @@ class ReloadMetricsCollector:
         Args:
             status: Rollback status
             reason: Reason for rollback
+
         """
         rollback_operations.labels(status=status, reason=reason).inc()
 
@@ -226,6 +233,7 @@ class ReloadMetricsCollector:
         Args:
             file_path: Path of file being watched
             changed: Whether file changed
+
         """
         file_watch_checks.labels(
             file_path=file_path, changed=str(changed).lower()
@@ -247,6 +255,7 @@ class ReloadMetricsCollector:
         Args:
             component: Component name
             bytes_used: Memory usage in bytes
+
         """
         config_memory_usage.labels(component=component).set(bytes_used)
 
@@ -256,6 +265,7 @@ class ReloadMetricsCollector:
         Args:
             source: Configuration source
             bytes_used: Memory usage in bytes
+
         """
         snapshot_memory_usage.labels(source=source).set(bytes_used)
 
@@ -264,6 +274,7 @@ class ReloadMetricsCollector:
 
         Returns:
             Dictionary of reload statistics
+
         """
         if not self._reload_times:
             return {
@@ -308,6 +319,7 @@ def get_reload_metrics_collector() -> ReloadMetricsCollector:
 
     Returns:
         Global metrics collector
+
     """
     global _metrics_collector
     if _metrics_collector is None:
@@ -324,6 +336,7 @@ def track_reload_operation(trigger: str):
 
     Yields:
         Dictionary to store operation metadata
+
     """
     collector = get_reload_metrics_collector()
     start_time = time.time()
@@ -356,6 +369,7 @@ def track_reload_phase(phase_name: str, trigger: str, metadata: dict[str, Any]):
 
     Yields:
         None
+
     """
     collector = get_reload_metrics_collector()
     start_time = time.time()

@@ -14,8 +14,8 @@ from typing import Any
 import psutil
 from pydantic import BaseModel, Field
 
-from ..models.vector_search import HybridSearchRequest
-from ..services.vector_db.hybrid_search import AdvancedHybridSearchService
+from src.models.vector_search import HybridSearchRequest
+from src.services.vector_db.hybrid_search import AdvancedHybridSearchService
 
 
 logger = logging.getLogger(__name__)
@@ -88,6 +88,7 @@ class PerformanceProfiler:
 
         Args:
             sampling_interval: Time between resource samples in seconds
+
         """
         self.sampling_interval = sampling_interval
         self.resource_snapshots: list[ResourceSnapshot] = []
@@ -110,6 +111,7 @@ class PerformanceProfiler:
 
         Returns:
             Comprehensive profiling results
+
         """
         logger.info("Starting performance profiling session")
 

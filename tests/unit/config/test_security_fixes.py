@@ -10,7 +10,6 @@ import pytest
 
 from src.config.reload import ConfigReloader
 from src.config.security import (
-from unittest.mock import MagicMock
     SecureConfigManager,
     SecurityConfig,
 )

@@ -1,6 +1,8 @@
 """Lightweight HTTP scraping tool for MCP server."""
 
 import logging
+import re
+import time
 from typing import TYPE_CHECKING, Literal
 
 
@@ -17,8 +19,8 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from ...infrastructure.client_manager import ClientManager
-from ...services.errors import CrawlServiceError
+from src.infrastructure.client_manager import ClientManager
+from src.services.errors import CrawlServiceError
 
 
 logger = logging.getLogger(__name__)
@@ -32,9 +34,8 @@ def _validate_formats(formats: list[str] | None) -> list[str]:
     valid_formats = {"markdown", "html", "text"}
     invalid_formats = set(formats) - valid_formats
     if invalid_formats:
-        raise ValueError(
-            f"Invalid formats: {invalid_formats}. Valid options: {valid_formats}"
-        )
+        msg = f"Invalid formats: {invalid_formats}. Valid options: {valid_formats}"
+        raise ValueError(msg)
     return formats
 
 
@@ -72,8 +73,6 @@ def _convert_content_formats(
             content_dict["html"] = result.get("metadata", {}).get("raw_html", content)
         elif fmt == "text":
             # Strip markdown formatting for plain text
-            import re
-
             text_content = re.sub(r"[*_`#\[\]()]", "", content)
             content_dict["text"] = text_content
 
@@ -119,10 +118,11 @@ async def _handle_scrape_failure(result: dict, url: str, ctx: Context | None) ->
                 "Consider using standard search or crawl tools."
             )
 
-    raise CrawlServiceError(
+    msg = (
         f"Lightweight scraping failed: {error_msg}. "
         f"{'Try browser-based tools for this content.' if 'lightweight' in failed_tiers else ''}"
     )
+    raise CrawlServiceError(msg)
 
 
 def register_tools(mcp, client_manager: ClientManager):
@@ -134,8 +134,7 @@ def register_tools(mcp, client_manager: ClientManager):
         formats: list[Literal["markdown", "html", "text"]] | None = None,
         ctx: Context | None = None,
     ) -> dict:
-        """
-        Ultra-fast web scraping for simple static pages using httpx + BeautifulSoup.
+        """Ultra-fast web scraping for simple static pages using httpx + BeautifulSoup.
 
         This tool provides 5-10x faster scraping for static content compared to
         browser-based scrapers. It's ideal for:
@@ -171,6 +170,7 @@ def register_tools(mcp, client_manager: ClientManager):
         Raises:
             ValueError: If URL is invalid or formats are invalid
             CrawlServiceError: If scraping fails
+
         """
         if ctx:
             await ctx.info(f"Starting lightweight scrape of {url}")
@@ -190,8 +190,6 @@ def register_tools(mcp, client_manager: ClientManager):
 
         # Perform the scrape using UnifiedBrowserManager with forced lightweight tier
         try:
-            import time
-
             start_time = time.time()
 
             # Force lightweight tier by specifying preferred_provider
@@ -209,8 +207,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 return _build_success_response(
                     result, url, formats, elapsed_ms, can_handle
                 )
-            else:
-                await _handle_scrape_failure(result, url, ctx)
+            await _handle_scrape_failure(result, url, ctx)
 
         except Exception as e:
             if ctx:

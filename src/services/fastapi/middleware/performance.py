@@ -93,6 +93,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
         Args:
             app: ASGI application
             config: Performance configuration
+
         """
         super().__init__(app)
         self.config = config
@@ -176,6 +177,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Endpoint identifier string
+
         """
         return f"{request.method}:{request.url.path}"
 
@@ -184,6 +186,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Memory usage in MB or None if not available
+
         """
         try:
             if self._process:
@@ -198,6 +201,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 
         Args:
             metrics: Request metrics to record
+
         """
         with self._stats_lock:
             # Update endpoint statistics
@@ -240,6 +244,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Dictionary containing all performance metrics
+
         """
         with self._stats_lock:
             summary = {
@@ -293,6 +298,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Endpoint statistics or None if not found
+
         """
         with self._stats_lock:
             if endpoint in self._endpoint_stats:
@@ -319,6 +325,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 
         Returns:
             List of recent request metrics
+
         """
         with self._stats_lock:
             recent = list(self._recent_metrics)[-limit:]
@@ -350,6 +357,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Health status with recommendations
+
         """
         summary = self.get_metrics_summary()
 

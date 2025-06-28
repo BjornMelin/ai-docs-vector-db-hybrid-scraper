@@ -78,7 +78,7 @@ class CanaryMetrics(BaseModel):
 
     # Timestamps
     stage_start_time: datetime = Field(
-        default_factory=datetime.utcnow, description="Stage start time"
+        default_factory=lambda: datetime.now(UTC), description="Stage start time"
     )
     next_stage_time: datetime | None = Field(
         default=None, description="Next stage promotion time"
@@ -118,20 +118,22 @@ class CanaryConfig:
     def __post_init__(self):
         """Validate canary configuration."""
         if not 0 < self.initial_traffic_percentage <= 100:
-            raise ValueError("Initial traffic percentage must be 0-100")
+            msg = "Initial traffic percentage must be 0-100"
+            raise ValueError(msg)
         if self.max_error_rate < 0:
-            raise ValueError("Max error rate must be non-negative")
+            msg = "Max error rate must be non-negative"
+            raise ValueError(msg)
         if self.min_success_rate < 0 or self.min_success_rate > 100:
-            raise ValueError("Min success rate must be 0-100")
+            msg = "Min success rate must be 0-100"
+            raise ValueError(msg)
 
     @property
     def traffic_stages(self) -> list[float]:
         """Get traffic progression stages."""
         if self.custom_traffic_stages:
             return sorted(self.custom_traffic_stages)
-        else:
-            # Default progressive rollout: 5% -> 25% -> 50% -> 75% -> 100%
-            return [5.0, 25.0, 50.0, 75.0, 100.0]
+        # Default progressive rollout: 5% -> 25% -> 50% -> 75% -> 100%
+        return [5.0, 25.0, 50.0, 75.0, 100.0]
 
     def to_deployment_config(self) -> DeploymentConfig:
         """Convert to base deployment configuration."""
@@ -162,6 +164,7 @@ class CanaryDeployment:
             qdrant_service: Qdrant service for data storage
             cache_manager: Cache manager for metrics caching
             feature_flag_manager: Optional feature flag manager
+
         """
         self.qdrant_service = qdrant_service
         self.cache_manager = cache_manager
@@ -215,6 +218,7 @@ class CanaryDeployment:
         Raises:
             ValueError: If configuration is invalid
             RuntimeError: If deployment with same ID already exists
+
         """
         if not self._initialized:
             await self.initialize()
@@ -223,9 +227,8 @@ class CanaryDeployment:
         config.__post_init__()
 
         if config.deployment_id in self._active_deployments:
-            raise RuntimeError(
-                f"Canary deployment {config.deployment_id} already exists"
-            )
+            msg = f"Canary deployment {config.deployment_id} already exists"
+            raise RuntimeError(msg)
 
         # Initialize deployment
         self._active_deployments[config.deployment_id] = config
@@ -262,6 +265,7 @@ class CanaryDeployment:
 
         Returns:
             dict[str, Any]: Deployment status and metrics
+
         """
         if deployment_id not in self._active_deployments:
             return {"error": "Deployment not found"}
@@ -296,6 +300,7 @@ class CanaryDeployment:
 
         Returns:
             bool: True if promotion was successful
+
         """
         if deployment_id not in self._active_deployments:
             return False
@@ -381,6 +386,7 @@ class CanaryDeployment:
 
         Returns:
             bool: True if rollback was successful
+
         """
         if deployment_id not in self._active_deployments:
             return False
@@ -418,6 +424,7 @@ class CanaryDeployment:
 
         Returns:
             bool: True if paused successfully
+
         """
         if deployment_id not in self._active_deployments:
             return False
@@ -439,6 +446,7 @@ class CanaryDeployment:
 
         Returns:
             bool: True if resumed successfully
+
         """
         if deployment_id not in self._active_deployments:
             return False
@@ -498,9 +506,8 @@ class CanaryDeployment:
                             # Complete deployment
                             await self._complete_canary_deployment(deployment_id)
                             break
-                        else:
-                            # Promote to next stage
-                            await self.promote_canary(deployment_id)
+                        # Promote to next stage
+                        await self.promote_canary(deployment_id)
 
                 # Wait before next check
                 await asyncio.sleep(config.health_check_interval_seconds)
@@ -705,12 +712,10 @@ class CanaryDeployment:
     async def _load_active_deployments(self) -> None:
         """Load active canary deployments from storage."""
         # In production, load from database/storage
-        pass
 
     async def _persist_deployment_state(self, deployment_id: str) -> None:
         """Persist deployment state to storage."""
         # In production, save to database/storage
-        pass
 
     async def cleanup(self) -> None:
         """Cleanup canary deployment manager resources."""

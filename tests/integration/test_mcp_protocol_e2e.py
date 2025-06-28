@@ -58,13 +58,13 @@ class TestMCPProtocolE2E:
         ]
         client_manager.vector_service = mock_vector_service
 
-        mock_embedding_service = AsyncMock()
-        mock_embedding_service.generate_embeddings.return_value = {
+        _mock_embedding_service = AsyncMock()
+        _mock_embedding_service.generate_embeddings.return_value = {
             "embeddings": [[0.1] * 384],
             "model": "BAAI/bge-small-en-v1.5",
-            "total_tokens": 5,
+            "_total_tokens": 5,
         }
-        client_manager.embedding_service = mock_embedding_service
+        client_manager.embedding_service = _mock_embedding_service
 
         # Add missing services
         mock_project_service = AsyncMock()
@@ -80,7 +80,7 @@ class TestMCPProtocolE2E:
         mock_cache_service.get_stats.return_value = {
             "hit_rate": 0.85,
             "size": 1000,
-            "total_requests": 5000,
+            "_total_requests": 5000,
         }
         client_manager.cache_service = mock_cache_service
 
@@ -334,16 +334,16 @@ class TestMCPProtocolE2E:
                 embedding_tool = tool
 
         # Mock services with delays to simulate real processing
-        async def mock_search_with_delay(*_args, **_kwargs):
+        async def mock_search_with_delay(*_args, **__kwargs):
             await asyncio.sleep(0.1)  # Simulate processing time
             return [{"id": "concurrent-1", "content": "Search result", "score": 0.9}]
 
-        async def mock_embedding_with_delay(*_args, **_kwargs):
+        async def mock_embedding_with_delay(*_args, **__kwargs):
             await asyncio.sleep(0.15)  # Simulate processing time
             return {
                 "embeddings": [[0.1] * 384],
                 "model": "test-model",
-                "total_tokens": 3,
+                "_total_tokens": 3,
             }
 
         with (
@@ -395,17 +395,16 @@ class TestMCPProtocolE2E:
                 break
 
         # Mock large search results
-        large_results = []
-        for i in range(100):  # Large result set
-            large_results.append(
-                {
-                    "id": f"large-doc-{i}",
-                    "content": f"Large document content {i} "
-                    + "x" * 1000,  # ~1KB per result
-                    "score": 0.9 - (i * 0.001),
-                    "metadata": {"title": f"Large Doc {i}", "size": "large"},
-                }
-            )
+        large_results = [
+            {
+                "id": f"large-doc-{i}",
+                "content": f"Large document content {i} "
+                + "x" * 1000,  # ~1KB per result
+                "score": 0.9 - (i * 0.001),
+                "metadata": {"title": f"Large Doc {i}", "size": "large"},
+            }
+            for i in range(100)  # Large result set
+        ]
 
         with patch.object(
             mock_client_manager.vector_service, "search_documents"
@@ -471,7 +470,7 @@ class TestMCPProtocolE2E:
                 "timestamp": "2024-01-01T00:00:00Z",
                 "collections": {
                     f"project-{project_result['id']}": {
-                        "total_documents": 0,  # New project
+                        "_total_documents": 0,  # New project
                         "created_in_session": True,
                     }
                 },

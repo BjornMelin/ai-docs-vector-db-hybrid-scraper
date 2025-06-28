@@ -4,8 +4,11 @@ import logging
 from typing import Any
 
 from src.config import Config
-
-from ..errors import CrawlServiceError
+from src.services.browser.unified_manager import (
+    UnifiedBrowserManager,
+    UnifiedScrapingRequest,
+)
+from src.services.errors import CrawlServiceError
 
 
 logger = logging.getLogger(__name__)
@@ -25,6 +28,7 @@ class CrawlManager:
         Args:
             config: Unified configuration with crawl provider settings
             rate_limiter: Optional RateLimitManager instance for rate limiting
+
         """
         self.config = config
         self.rate_limiter = rate_limiter
@@ -43,13 +47,12 @@ class CrawlManager:
 
         Raises:
             CrawlServiceError: If UnifiedBrowserManager initialization fails
+
         """
         if self._initialized:
             return
 
         try:
-            from ..browser.unified_manager import UnifiedBrowserManager
-
             self._unified_browser_manager = UnifiedBrowserManager(self.config)
             await self._unified_browser_manager.initialize()
 
@@ -58,7 +61,8 @@ class CrawlManager:
 
         except Exception as e:
             logger.exception("Failed to initialize UnifiedBrowserManager")
-            raise CrawlServiceError("Failed to initialize crawl manager") from e
+            msg = "Failed to initialize crawl manager"
+            raise CrawlServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup the UnifiedBrowserManager."""
@@ -102,14 +106,14 @@ class CrawlManager:
 
         Raises:
             CrawlServiceError: If manager not initialized
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Manager not initialized")
+            msg = "Manager not initialized"
+            raise CrawlServiceError(msg)
 
         try:
             # Create unified request
-            from ..browser.unified_manager import UnifiedScrapingRequest
-
             request = UnifiedScrapingRequest(
                 url=url,
                 tier=preferred_provider if preferred_provider else "auto",
@@ -154,6 +158,7 @@ class CrawlManager:
 
         Returns:
             Dictionary with metrics for each tier including success rates and timing
+
         """
         if not self._unified_browser_manager:
             return {}
@@ -170,6 +175,7 @@ class CrawlManager:
 
         Returns:
             Recommended tool name based on UnifiedBrowserManager analysis
+
         """
         if not self._unified_browser_manager:
             return "crawl4ai"  # Default fallback
@@ -201,9 +207,11 @@ class CrawlManager:
 
         Raises:
             CrawlServiceError: If manager not initialized
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Manager not initialized")
+            msg = "Manager not initialized"
+            raise CrawlServiceError(msg)
 
         logger.info(f"Starting site crawl of {url} with max {max_pages} pages")
 
@@ -280,6 +288,7 @@ class CrawlManager:
 
         Returns:
             Tool information including tier assignments and metrics
+
         """
         if not self._unified_browser_manager:
             return {}
@@ -328,6 +337,7 @@ class CrawlManager:
 
         Returns:
             Tier performance metrics for all 5 tiers
+
         """
         if not self._unified_browser_manager:
             return {}
@@ -353,9 +363,11 @@ class CrawlManager:
                 - urls: List of discovered URLs
                 - total: Total number of URLs found
                 - error: Error message if mapping failed
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Manager not initialized")
+            msg = "Manager not initialized"
+            raise CrawlServiceError(msg)
 
         # URL mapping feature is not currently supported through AutomationRouter
         # This would require direct access to Firecrawl adapter

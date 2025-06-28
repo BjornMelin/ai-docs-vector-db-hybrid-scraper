@@ -19,8 +19,6 @@ from .data_generators import TestDataGenerator
 class CustomError(Exception):
     """Custom exception for this module."""
 
-    pass
-
 
 class MockFactory:
     """Factory for creating various types of mock objects."""
@@ -86,14 +84,15 @@ class MockFactory:
             Configured AsyncMock
         """
 
-        async def mock_coroutine(*_args, **_kwargs):
+        async def mock_coroutine(*_args, **__kwargs):
             # Simulate processing delay
             delay = random.uniform(*delay_range)
             await asyncio.sleep(delay)
 
             # Simulate random failures
             if random.random() < failure_rate:
-                raise exception_type("Simulated failure")
+                msg = "Simulated failure"
+                raise exception_type(msg)
 
             return return_value
 
@@ -120,9 +119,9 @@ class MockFactory:
         mock._state = state
 
         def create_stateful_method(method_name):
-            def method(*args, **kwargs):
+            def method(*args, **_kwargs):
                 if method_name in transitions:
-                    transitions[method_name](state, *args, **kwargs)
+                    transitions[method_name](state, *args, **_kwargs)
                 return state.copy()
 
             return method
@@ -164,7 +163,7 @@ def create_mock_vector_db(
     mock_db.dimension = dimension
     mock_db._documents = mock_documents
 
-    def mock_search(_query_vector: list[float], limit: int = 10, **_kwargs):
+    def mock_search(_query_vector: list[float], limit: int = 10, **__kwargs):
         """Mock search implementation."""
         # Simple similarity based on random scoring
         results = []
@@ -221,7 +220,7 @@ def create_mock_vector_db(
     return mock_db
 
 
-def create_mock_embedding_service(
+def create__mock_embedding_service(
     model_name: str = "test-model", dimension: int = 384, processing_delay: float = 0.1
 ) -> AsyncMock:
     """Create a mock embedding service.
@@ -282,7 +281,7 @@ def create_mock_web_scraper(
     """
     generator = TestDataGenerator()
 
-    async def mock_scrape_url(url: str, **_kwargs) -> dict[str, Any]:
+    async def mock_scrape_url(url: str, **__kwargs) -> dict[str, Any]:
         """Mock URL scraping."""
         # Simulate processing delay
         delay = random.uniform(*processing_delay_range)
@@ -290,7 +289,8 @@ def create_mock_web_scraper(
 
         # Simulate failures
         if random.random() > success_rate:
-            raise CustomError(f"Failed to scrape URL: {url}")
+            msg = f"Failed to scrape URL: {url}"
+            raise CustomError(msg)
 
         # Generate mock scraped content
         content = generator._generate_content(content_length_range)
@@ -311,12 +311,12 @@ def create_mock_web_scraper(
             "images": [generator.fake.image_url() for _ in range(random.randint(0, 5))],
         }
 
-    async def mock_scrape_batch(urls: list[str], **kwargs) -> list[dict[str, Any]]:
+    async def mock_scrape_batch(urls: list[str], **_kwargs) -> list[dict[str, Any]]:
         """Mock batch URL scraping."""
         results = []
         for url in urls:
             try:
-                result = await mock_scrape_url(url, **kwargs)
+                result = await mock_scrape_url(url, **_kwargs)
                 results.append(result)
             except Exception as e:
                 results.append({"url": url, "error": str(e), "success": False})
@@ -450,13 +450,15 @@ def create_mock_api_client(
 
         # Check rate limit
         if request_count >= rate_limit:
-            raise CustomError("Rate limit exceeded")
+            msg = "Rate limit exceeded"
+            raise CustomError(msg)
 
         request_count += 1
 
         # Simulate authentication check
         if auth_required and (not headers or "Authorization" not in headers):
-            raise CustomError("Authentication required")
+            msg = "Authentication required"
+            raise CustomError(msg)
 
         # Simulate network delay
         await asyncio.sleep(random.uniform(0.1, 0.3))
@@ -472,37 +474,35 @@ def create_mock_api_client(
                     }
                     for i in range(random.randint(1, 10))
                 ],
-                "total": random.randint(10, 100),
+                "_total": random.randint(10, 100),
                 "query": params.get("q", "") if params else "",
             }
-        elif endpoint.startswith("/documents"):
+        if endpoint.startswith("/documents"):
             if method.upper() == "POST":
                 return {
                     "id": str(uuid.uuid4()),
                     "status": "created",
                     "url": json_data.get("url", "") if json_data else "",
                 }
-            else:
-                return {
-                    "documents": [
-                        {"id": str(uuid.uuid4()), "title": f"Document {i}"}
-                        for i in range(random.randint(1, 5))
-                    ]
-                }
-        else:
-            return {"message": "Mock response", "endpoint": endpoint}
+            return {
+                "documents": [
+                    {"id": str(uuid.uuid4()), "title": f"Document {i}"}
+                    for i in range(random.randint(1, 5))
+                ]
+            }
+        return {"message": "Mock response", "endpoint": endpoint}
 
-    async def mock_get(endpoint: str, **kwargs):
-        return await mock_request("GET", endpoint, **kwargs)
+    async def mock_get(endpoint: str, **_kwargs):
+        return await mock_request("GET", endpoint, **_kwargs)
 
-    async def mock_post(endpoint: str, **kwargs):
-        return await mock_request("POST", endpoint, **kwargs)
+    async def mock_post(endpoint: str, **_kwargs):
+        return await mock_request("POST", endpoint, **_kwargs)
 
-    async def mock_put(endpoint: str, **kwargs):
-        return await mock_request("PUT", endpoint, **kwargs)
+    async def mock_put(endpoint: str, **_kwargs):
+        return await mock_request("PUT", endpoint, **_kwargs)
 
-    async def mock_delete(endpoint: str, **kwargs):
-        return await mock_request("DELETE", endpoint, **kwargs)
+    async def mock_delete(endpoint: str, **_kwargs):
+        return await mock_request("DELETE", endpoint, **_kwargs)
 
     def mock_get_stats():
         return {

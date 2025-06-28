@@ -42,6 +42,7 @@ class DependencyContainer:
 
         Args:
             config: Application configuration (loads default if None)
+
         """
         if self._initialized:
             return
@@ -94,35 +95,40 @@ class DependencyContainer:
     def config(self) -> Config:
         """Get configuration."""
         if not self._config:
-            raise RuntimeError("Dependency container not initialized")
+            msg = "Dependency container not initialized"
+            raise RuntimeError(msg)
         return self._config
 
     @property
     def vector_service(self) -> QdrantService:
         """Get vector database service."""
         if not self._vector_service:
-            raise RuntimeError("Vector service not initialized")
+            msg = "Vector service not initialized"
+            raise RuntimeError(msg)
         return self._vector_service
 
     @property
     def embedding_manager(self) -> Any:
         """Get embedding manager."""
         if not self._embedding_manager:
-            raise RuntimeError("Embedding manager not initialized")
+            msg = "Embedding manager not initialized"
+            raise RuntimeError(msg)
         return self._embedding_manager
 
     @property
     def cache_manager(self) -> Any:
         """Get cache manager."""
         if not self._cache_manager:
-            raise RuntimeError("Cache manager not initialized")
+            msg = "Cache manager not initialized"
+            raise RuntimeError(msg)
         return self._cache_manager
 
     @property
     def client_manager(self) -> ClientManager:
         """Get client manager."""
         if not self._client_manager:
-            raise RuntimeError("Client manager not initialized")
+            msg = "Client manager not initialized"
+            raise RuntimeError(msg)
         return self._client_manager
 
 
@@ -138,11 +144,11 @@ def get_container() -> DependencyContainer:
 
     Raises:
         RuntimeError: If container is not initialized
+
     """
     if _container is None:
-        raise RuntimeError(
-            "Dependency container not initialized. Call initialize_dependencies() first."
-        )
+        msg = "Dependency container not initialized. Call initialize_dependencies() first."
+        raise RuntimeError(msg)
     return _container
 
 
@@ -151,6 +157,7 @@ async def initialize_dependencies(config: Config | None = None) -> None:
 
     Args:
         config: Application configuration
+
     """
     global _container
     if _container is None:
@@ -174,6 +181,7 @@ def get_config_dependency() -> Config:
 
     Returns:
         Configuration instance
+
     """
     return get_container().config
 
@@ -183,6 +191,7 @@ def get_fastapi_config() -> Config:
 
     Returns:
         Configuration instance
+
     """
     return get_config_dependency()
 
@@ -203,6 +212,7 @@ async def get_vector_service() -> QdrantService:
 
     Raises:
         HTTPException: If service is not available
+
     """
     try:
         container = get_container()
@@ -234,6 +244,7 @@ async def get_embedding_manager_legacy() -> Any:
 
     Raises:
         HTTPException: If service is not available
+
     """
     try:
         container = get_container()
@@ -265,6 +276,7 @@ async def get_cache_manager_legacy() -> Any:
 
     Raises:
         HTTPException: If service is not available
+
     """
     try:
         container = get_container()
@@ -296,6 +308,7 @@ def get_client_manager() -> ClientManager:
 
     Raises:
         HTTPException: If service is not available
+
     """
     try:
         container = get_container()
@@ -319,6 +332,7 @@ def get_correlation_id_dependency(request: Request) -> str:
 
     Returns:
         Correlation ID string
+
     """
     return get_correlation_id(request)
 
@@ -331,6 +345,7 @@ async def database_session() -> AsyncGenerator[Any]:
 
     Yields:
         AsyncSession: SQLAlchemy async database session
+
     """
     client_manager = get_client_manager()
     db_manager = await client_manager.get_database_manager()
@@ -347,6 +362,7 @@ def get_request_context(request: Request) -> dict[str, Any]:
 
     Returns:
         Dictionary with request context data
+
     """
     return {
         "correlation_id": get_correlation_id(request),
@@ -365,6 +381,7 @@ class ServiceHealthChecker:
 
         Args:
             container: Dependency container to check
+
         """
         self.container = container
 
@@ -373,6 +390,7 @@ class ServiceHealthChecker:
 
         Returns:
             Health status dictionary
+
         """
         health = {"status": "healthy", "services": {}, "timestamp": None}
 
@@ -417,6 +435,7 @@ def get_health_checker() -> ServiceHealthChecker:
 
     Returns:
         Service health checker instance
+
     """
     return ServiceHealthChecker(get_container())
 

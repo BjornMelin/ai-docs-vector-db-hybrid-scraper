@@ -69,7 +69,8 @@ class TestAdvancedCircuitBreaker:
         breaker = AdvancedCircuitBreaker("test_service", failure_threshold=3)
 
         async def failing_function():
-            raise ExternalServiceError("Service unavailable")
+            msg = "Service unavailable"
+            raise ExternalServiceError(msg)
 
         # Execute failing calls
         for i in range(3):
@@ -91,7 +92,8 @@ class TestAdvancedCircuitBreaker:
         )
 
         async def failing_function():
-            raise ExternalServiceError("Service unavailable")
+            msg = "Service unavailable"
+            raise ExternalServiceError(msg)
 
         # Open the circuit
         for _ in range(2):
@@ -112,7 +114,8 @@ class TestAdvancedCircuitBreaker:
         )
 
         async def failing_function():
-            raise ExternalServiceError("Service unavailable")
+            msg = "Service unavailable"
+            raise ExternalServiceError(msg)
 
         async def successful_function():
             return "success"
@@ -141,7 +144,8 @@ class TestAdvancedCircuitBreaker:
         )
 
         async def failing_function():
-            raise ExternalServiceError("Service unavailable")
+            msg = "Service unavailable"
+            raise ExternalServiceError(msg)
 
         async def successful_function():
             return "success"
@@ -170,7 +174,8 @@ class TestAdvancedCircuitBreaker:
         )
 
         async def failing_function():
-            raise ExternalServiceError("Service unavailable")
+            msg = "Service unavailable"
+            raise ExternalServiceError(msg)
 
         # Open the circuit
         for _ in range(2):
@@ -216,7 +221,7 @@ class TestAdvancedCircuitBreaker:
         breaker.metrics.record_call(success=False, response_time=0.5)
         breaker.metrics.record_call(success=True, response_time=0.2)
 
-        assert breaker.metrics.total_calls == 3
+        assert breaker.metrics._total_calls == 3
         assert breaker.metrics.success_calls == 2
         assert breaker.metrics.failure_calls == 1
         assert abs(breaker.metrics.get_success_rate() - 66.67) < 0.01
@@ -234,7 +239,7 @@ class TestAdvancedCircuitBreaker:
         assert status["state"] == "closed"
         assert status["failure_count"] == 0
         assert status["failure_threshold"] == 5
-        assert "total_calls" in status
+        assert "_total_calls" in status
         assert "success_rate" in status
 
     def test_manual_reset(self):
@@ -296,7 +301,8 @@ class TestCircuitBreakerDecorators:
             nonlocal call_count
             call_count += 1
             if should_fail:
-                raise ExternalServiceError("Test error")
+                msg = "Test error"
+                raise ExternalServiceError(msg)
             return f"call_{call_count}"
 
         # Successful calls
@@ -326,7 +332,8 @@ class TestCircuitBreakerDecorators:
             nonlocal call_count
             call_count += 1
             if should_fail:
-                raise ExternalServiceError("Test error")
+                msg = "Test error"
+                raise ExternalServiceError(msg)
             return f"call_{call_count}"
 
         # Test successful call
@@ -352,9 +359,10 @@ class TestCircuitBreakerDecorators:
         )
         async def test_function(exception_type="retryable"):
             if exception_type == "retryable":
-                raise ExternalServiceError("Retryable error")
-            else:
-                raise ValueError("Non-retryable error")
+                msg = "Retryable error"
+                raise ExternalServiceError(msg)
+            msg = "Non-retryable error"
+            raise ValueError(msg)
 
         # Non-retryable exceptions should not affect circuit state
         with pytest.raises(ValueError):

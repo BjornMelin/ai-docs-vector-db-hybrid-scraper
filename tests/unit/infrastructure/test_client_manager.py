@@ -25,8 +25,6 @@ from src.services.errors import APIError
 class TestError(Exception):
     """Custom exception for this module."""
 
-    pass
-
 
 # Abstract interfaces for better testability
 class ClientFactoryInterface(ABC):
@@ -35,22 +33,18 @@ class ClientFactoryInterface(ABC):
     @abstractmethod
     async def create_qdrant_client(self, config: Config) -> Any:
         """Create Qdrant client instance."""
-        pass
 
     @abstractmethod
     async def create_openai_client(self, config: Config) -> Any:
         """Create OpenAI client instance."""
-        pass
 
     @abstractmethod
     async def create_redis_client(self, config: Config) -> Any:
         """Create Redis client instance."""
-        pass
 
     @abstractmethod
     async def create_firecrawl_client(self, config: Config) -> Any:
         """Create Firecrawl client instance."""
-        pass
 
 
 # Test doubles
@@ -70,7 +64,8 @@ class FakeQdrantClient:
     async def get_collections(self):
         """Simulate getting collections."""
         if not self.is_connected:
-            raise ConnectionError("Not connected to Qdrant")
+            msg = "Not connected to Qdrant"
+            raise ConnectionError(msg)
         return self.collections
 
     async def close(self):
@@ -241,7 +236,8 @@ class TestCircuitBreaker:
         """Test circuit breaker opens after threshold failures."""
 
         async def failing_func():
-            raise TestError("Test failure")
+            msg = "Test failure"
+            raise TestError(msg)
 
         # Fail multiple times - circuit breaker should pass through the original exception
         for _ in range(3):  # Fixture failure threshold is 3
@@ -260,7 +256,8 @@ class TestCircuitBreaker:
         """Test circuit breaker recovery after timeout."""
 
         async def failing_func():
-            raise RuntimeError("Test failure")
+            msg = "Test failure"
+            raise RuntimeError(msg)
 
         async def success_func():
             return "recovered"
@@ -529,7 +526,8 @@ class TestClientManagerErrorHandling:
 
         # Mock client creation to fail
         async def failing_create():
-            raise ConnectionError("Cannot connect")
+            msg = "Cannot connect"
+            raise ConnectionError(msg)
 
         manager._create_qdrant_client = failing_create
 
@@ -721,11 +719,11 @@ class TestClientManagerDatabaseIntegration:
 
             # Verify database manager was created with enterprise components
             mock_database_manager_class.assert_called_once()
-            call_kwargs = mock_database_manager_class.call_args.kwargs
-            assert "config" in call_kwargs
-            assert "load_monitor" in call_kwargs
-            assert "query_monitor" in call_kwargs
-            assert "circuit_breaker" in call_kwargs
+            call__kwargs = mock_database_manager_class.call_args._kwargs
+            assert "config" in call__kwargs
+            assert "load_monitor" in call__kwargs
+            assert "query_monitor" in call__kwargs
+            assert "circuit_breaker" in call__kwargs
             mock_database_manager.initialize.assert_called_once()
 
 
@@ -752,10 +750,10 @@ class TestClientManagerAdvancedCoverage:
             mock_ab_instance = AsyncMock()
             mock_ab_class.return_value = mock_ab_instance
 
-            mock_qdrant_service = Mock()
+            _mock_qdrant_service = Mock()
             mock_cache_manager = Mock()
             mock_feature_flag_manager = Mock()
-            mock_get_qdrant.return_value = mock_qdrant_service
+            mock_get_qdrant.return_value = _mock_qdrant_service
             mock_get_cache.return_value = mock_cache_manager
             mock_get_feature_flag.return_value = mock_feature_flag_manager
 
@@ -764,7 +762,7 @@ class TestClientManagerAdvancedCoverage:
 
             assert ab_manager is mock_ab_instance
             mock_ab_class.assert_called_once_with(
-                qdrant_service=mock_qdrant_service,
+                qdrant_service=_mock_qdrant_service,
                 cache_manager=mock_cache_manager,
                 feature_flag_manager=mock_feature_flag_manager,
             )
@@ -843,7 +841,7 @@ class TestClientManagerAdvancedCoverage:
 
         mock_hyde_engine = AsyncMock()
         mock_embedding_manager = AsyncMock()
-        mock_qdrant_service = AsyncMock()
+        _mock_qdrant_service = AsyncMock()
         mock_cache_manager = AsyncMock()
         mock_openai_client = AsyncMock()
 
@@ -861,7 +859,7 @@ class TestClientManagerAdvancedCoverage:
                 return_value=mock_embedding_manager,
             ),
             patch.object(
-                client_manager, "get_qdrant_service", return_value=mock_qdrant_service
+                client_manager, "get_qdrant_service", return_value=_mock_qdrant_service
             ),
             patch.object(
                 client_manager, "get_cache_manager", return_value=mock_cache_manager
@@ -895,15 +893,15 @@ class TestClientManagerAdvancedCoverage:
             # Verify initialization parameters
             call_args = mock_manager_class.call_args
             assert (
-                call_args.kwargs["dragonfly_url"]
+                call_args._kwargs["dragonfly_url"]
                 == client_manager.config.cache.dragonfly_url
             )
             assert (
-                call_args.kwargs["enable_local_cache"]
+                call_args._kwargs["enable_local_cache"]
                 == client_manager.config.cache.enable_local_cache
             )
             assert (
-                call_args.kwargs["enable_distributed_cache"]
+                call_args._kwargs["enable_distributed_cache"]
                 == client_manager.config.cache.enable_dragonfly_cache
             )
 

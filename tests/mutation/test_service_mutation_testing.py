@@ -4,8 +4,6 @@ import time
 class TestError(Exception):
     """Custom exception for this module."""
 
-    pass
-
 
 """Mutation testing for service logic validation.
 
@@ -43,13 +41,14 @@ class TestCircuitBreakerMutationTesting:
         circuit_breaker = CircuitBreaker(config)
 
         async def failing_service():
-            raise TestError("Test failure")
+            msg = "Test failure"
+            raise TestError(msg)
 
         # Test normal behavior (baseline)
         failure_count = 0
         for _i in range(3):
             try:
-                await circuit_breaker.call(failing_operation)
+                await circuit_breaker.call(failing_service)
             except Exception:
                 failure_count += 1
 
@@ -114,29 +113,29 @@ class TestCircuitBreakerMutationTesting:
         circuit_breaker = CircuitBreaker(config)
 
         # Setup metrics
-        circuit_breaker.metrics.total_requests = 100
+        circuit_breaker.metrics._total_requests = 100
         circuit_breaker.metrics.successful_requests = 85
         circuit_breaker.metrics.failed_requests = 15
 
         # Test normal calculation
         normal_failure_rate = (
             circuit_breaker.metrics.failed_requests
-            / circuit_breaker.metrics.total_requests
+            / circuit_breaker.metrics._total_requests
         )
         normal_success_rate = (
             circuit_breaker.metrics.successful_requests
-            / circuit_breaker.metrics.total_requests
+            / circuit_breaker.metrics._total_requests
         )
 
         assert normal_failure_rate == 0.15
         assert normal_success_rate == 0.85
 
         # Test mutation: What if calculation is wrong?
-        # Original: self.failed_requests / self.total_requests
-        # Mutation: self.failed_requests / (self.total_requests + 1)
+        # Original: self.failed_requests / self._total_requests
+        # Mutation: self.failed_requests / (self._total_requests + 1)
 
         mutated_failure_rate = circuit_breaker.metrics.failed_requests / (
-            circuit_breaker.metrics.total_requests + 1
+            circuit_breaker.metrics._total_requests + 1
         )
 
         # Mutation should produce different result
@@ -150,10 +149,12 @@ class TestCircuitBreakerMutationTesting:
         circuit_breaker = CircuitBreaker(config)
 
         async def operation_with_specific_error():
-            raise ConnectionError("Connection failed")
+            msg = "Connection failed"
+            raise ConnectionError(msg)
 
         async def operation_with_different_error():
-            raise ValueError("Value error")
+            msg = "Value error"
+            raise ValueError(msg)
 
         # Test normal behavior - ConnectionError should be caught
         try:
@@ -194,7 +195,7 @@ class TestCircuitBreakerMutationTesting:
 
         assert len(results) == 10
         assert all(r == "success" for r in results)
-        assert circuit_breaker.metrics.total_requests == 10
+        assert circuit_breaker.metrics._total_requests == 10
 
         # Test mutation: What if async lock is removed?
         # This would cause race conditions in metrics updates
@@ -298,7 +299,8 @@ class TestServiceLogicMutationTesting:
         # Test normal timeout behavior
         try:
             await asyncio.wait_for(slow_operation(), timeout=0.05)
-            raise AssertionError("Should have timed out")
+            msg = "Should have timed out"
+            raise AssertionError(msg)
         except TimeoutError:
             pass  # Expected
 
@@ -319,7 +321,8 @@ class TestServiceLogicMutationTesting:
             nonlocal attempt_count
             attempt_count += 1
             if attempt_count < 3:
-                raise ConnectionError("Temporary failure")
+                msg = "Temporary failure"
+                raise ConnectionError(msg)
             return "success"
 
         # Test normal retry logic
@@ -358,7 +361,8 @@ class TestServiceLogicMutationTesting:
         """Test mutations in fallback logic."""
 
         async def primary_service():
-            raise TestError("Primary service down")
+            msg = "Primary service down"
+            raise TestError(msg)
 
         async def fallback_service():
             return "fallback_result"
@@ -393,17 +397,20 @@ class TestServiceLogicMutationTesting:
         def validate_config(config_dict):
             """Example validation function."""
             if not isinstance(config_dict, dict):
-                raise ValueError("Config must be a dictionary")
+                msg = "Config must be a dictionary"
+                raise ValueError(msg)
 
             required_fields = ["database_url", "cache_url"]
             for field in required_fields:
                 if field not in config_dict:
-                    raise ValueError(f"Missing required field: {field}")
+                    msg = f"Missing required field: {field}"
+                    raise ValueError(msg)
 
             if not config_dict["database_url"].startswith(
                 ("postgresql://", "sqlite://")
             ):
-                raise ValueError("Invalid database URL format")
+                msg = "Invalid database URL format"
+                raise ValueError(msg)
 
             return True
 
@@ -581,7 +588,7 @@ def run_mutation_tests():
     and verify test detection.
     """
     mutation_results = {
-        "total_mutations": 0,
+        "_total_mutations": 0,
         "detected_mutations": 0,
         "undetected_mutations": 0,
         "mutation_score": 0.0,
@@ -617,7 +624,7 @@ if __name__ == "__main__":
 
     print("Mutation Testing Results:")
     print(f"Mutation Score: {results['mutation_score']:.2%}")
-    print(f"Detected: {results['detected_mutations']}/{results['total_mutations']}")
+    print(f"Detected: {results['detected_mutations']}/{results['_total_mutations']}")
 
     print("\nCoverage Analysis:")
     for component, status in coverage.items():

@@ -19,6 +19,7 @@ def build_filter(filters: dict[str, Any] | None) -> models.Filter | None:
 
     Raises:
         ValueError: If filter values have incorrect types
+
     """
     if not filters:
         return None
@@ -40,7 +41,8 @@ def build_filter(filters: dict[str, Any] | None) -> models.Filter | None:
     for field in keyword_fields:
         if field in filters:
             if not isinstance(filters[field], str | int | float | bool):
-                raise ValueError(f"Filter value for {field} must be a simple type")
+                msg = f"Filter value for {field} must be a simple type"
+                raise ValueError(msg)
             conditions.append(
                 models.FieldCondition(
                     key=field, match=models.MatchValue(value=filters[field])
@@ -51,7 +53,8 @@ def build_filter(filters: dict[str, Any] | None) -> models.Filter | None:
     for field in ["title", "content_preview"]:
         if field in filters:
             if not isinstance(filters[field], str):
-                raise ValueError(f"Text filter value for {field} must be a string")
+                msg = f"Text filter value for {field} must be a string"
+                raise ValueError(msg)
             conditions.append(
                 models.FieldCondition(
                     key=field, match=models.MatchText(text=filters[field])
@@ -87,12 +90,14 @@ def build_filter(filters: dict[str, Any] | None) -> models.Filter | None:
             )
 
     # Exact match filters for structural fields
-    for field in ["chunk_index", "depth"]:
-        if field in filters:
-            conditions.append(
-                models.FieldCondition(
-                    key=field, match=models.MatchValue(value=filters[field])
-                )
+    conditions.extend(
+        [
+            models.FieldCondition(
+                key=field, match=models.MatchValue(value=filters[field])
             )
+            for field in ["chunk_index", "depth"]
+            if field in filters
+        ]
+    )
 
     return models.Filter(must=conditions) if conditions else None

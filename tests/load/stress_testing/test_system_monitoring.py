@@ -23,13 +23,11 @@ from typing import Any
 import psutil
 import pytest
 
-from ..conftest import LoadTestConfig, LoadTestType
+from tests.load.conftest import LoadTestConfig, LoadTestType
 
 
 class TestError(Exception):
     """Custom exception for this module."""
-
-    pass
 
 
 logger = logging.getLogger(__name__)
@@ -242,7 +240,7 @@ class SystemMonitor:
 
         # GC stats
         gc_stats = gc.get_stats()
-        total_collections = sum(stat["collections"] for stat in gc_stats)
+        _total_collections = sum(stat["collections"] for stat in gc_stats)
 
         return ApplicationMetrics(
             timestamp=current_time,
@@ -255,7 +253,7 @@ class SystemMonitor:
             database_connections=min(active_requests, 10),
             embedding_queue_size=max(0, active_requests - 3),
             vector_db_operations=active_requests * 2,
-            gc_collections=total_collections,
+            gc_collections=_total_collections,
         )
 
     def _check_alerts(
@@ -356,10 +354,10 @@ class SystemMonitor:
         return {
             "collection_duration": self.system_metrics[-1].timestamp
             - self.system_metrics[0].timestamp,
-            "total_data_points": len(self.system_metrics),
+            "_total_data_points": len(self.system_metrics),
             "system_metrics": system_summary,
             "alerts": dict(alerts_by_severity),
-            "total_alerts": len(self.performance_alerts),
+            "_total_alerts": len(self.performance_alerts),
         }
 
     @staticmethod
@@ -428,9 +426,9 @@ class MetricsCollector:
         }
 
         # Error analysis
-        total_errors = sum(self.error_counts.values())
-        total_requests = len(self.response_times) + total_errors
-        error_rate = (total_errors / max(total_requests, 1)) * 100
+        _total_errors = sum(self.error_counts.values())
+        _total_requests = len(self.response_times) + _total_errors
+        error_rate = (_total_errors / max(_total_requests, 1)) * 100
 
         # Throughput analysis
         if self.throughput_samples:
@@ -494,7 +492,7 @@ class TestSystemMonitoring:
                     self.memory_hogs = []
                     self.cpu_intensive_tasks = []
 
-                async def stress_system(self, stress_type: str = "mixed", **_kwargs):
+                async def stress_system(self, stress_type: str = "mixed", **__kwargs):
                     """Generate different types of system stress."""
                     self.call_count += 1
                     start_time = time.perf_counter()
@@ -563,7 +561,8 @@ class TestSystemMonitoring:
                         response_time = time.perf_counter() - start_time
                         metrics_collector.record_response_time(response_time)
                         metrics_collector.record_error("StressError")
-                        raise TestError("Stress operation failed") from None
+                        msg = "Stress operation failed"
+                        raise TestError(msg) from None
 
             stressing_service = SystemStressingService()
 
@@ -678,9 +677,9 @@ class TestSystemMonitoring:
 
             logger.info("System monitoring test completed:")
             logger.info(
-                f"  - Total metrics collected: {final_metrics['total_data_points']}"
+                f"  - Total metrics collected: {final_metrics['_total_data_points']}"
             )
-            logger.info(f"  - Performance alerts: {final_metrics['total_alerts']}")
+            logger.info(f"  - Performance alerts: {final_metrics['_total_alerts']}")
             logger.info(
                 f"  - Peak CPU: {final_metrics['system_metrics']['cpu']['max']:.2f}%"
             )
@@ -715,7 +714,7 @@ class TestSystemMonitoring:
                     self.degradation_factor = 1.0
                     self.base_latency = 0.1
 
-                async def degrading_operation(self, **_kwargs):
+                async def degrading_operation(self, **__kwargs):
                     """Operation that gradually degrades over time."""
                     self.call_count += 1
 
@@ -745,8 +744,10 @@ class TestSystemMonitoring:
                     # Introduce errors as performance degrades
                     error_probability = max(0, (self.degradation_factor - 2.0) / 10)
                     if random.random() < error_probability:
-                        raise TestError("Service degraded - operation failed")
-                        raise TestError("Service degraded - operation failed")
+                        msg = "Service degraded - operation failed"
+                        raise TestError(msg)
+                        msg = "Service degraded - operation failed"
+                        raise TestError(msg)
 
                     return {
                         "status": "success",
@@ -844,10 +845,10 @@ class TestSystemMonitoring:
             ), "Degradation factor did not increase"
 
             # Verify errors increased with degradation
-            total_errors = sum(metrics_collector.error_counts.values())
-            if total_errors > 0:
+            _total_errors = sum(metrics_collector.error_counts.values())
+            if _total_errors > 0:
                 error_rate = (
-                    total_errors / performance_analysis["response_times"]["count"]
+                    _total_errors / performance_analysis["response_times"]["count"]
                 ) * 100
                 assert error_rate > 0, (
                     "No errors recorded despite performance degradation"

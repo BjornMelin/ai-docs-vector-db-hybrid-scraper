@@ -78,9 +78,8 @@ class FieldConditionModel(BaseModel):
     def validate_values_for_operator(cls, v, info):
         """Validate values list is provided for appropriate operators."""
         if info.data.get("operator") in [FieldOperator.IN, FieldOperator.NIN] and not v:
-            raise ValueError(
-                f"values list required for {info.data['operator']} operator"
-            )
+            msg = f"values list required for {info.data['operator']} operator"
+            raise ValueError(msg)
         return v
 
     @model_validator(mode="after")
@@ -88,12 +87,14 @@ class FieldConditionModel(BaseModel):
         """Ensure either value or values is provided based on operator."""
         if self.operator in [FieldOperator.IN, FieldOperator.NIN]:
             if not self.values:
-                raise ValueError(f"values list required for {self.operator} operator")
+                msg = f"values list required for {self.operator} operator"
+                raise ValueError(msg)
         elif (
             self.operator not in [FieldOperator.EXISTS, FieldOperator.NOT_EXISTS]
             and self.value is None
         ):
-            raise ValueError(f"value required for {self.operator} operator")
+            msg = f"value required for {self.operator} operator"
+            raise ValueError(msg)
 
         return self
 
@@ -114,9 +115,11 @@ class BooleanExpressionModel(BaseModel):
 
         if operator == BooleanOperator.NOT:
             if len(v) != 1:
-                raise ValueError("NOT operator requires exactly one condition")
+                msg = "NOT operator requires exactly one condition"
+                raise ValueError(msg)
         elif operator in [BooleanOperator.AND, BooleanOperator.OR] and len(v) < 2:
-            raise ValueError(f"{operator} operator requires at least two conditions")
+            msg = f"{operator} operator requires at least two conditions"
+            raise ValueError(msg)
 
         return v
 
@@ -175,7 +178,8 @@ class MetadataFilterCriteria(BaseModel):
         )
 
         if not has_conditions:
-            raise ValueError("At least one filtering condition must be provided")
+            msg = "At least one filtering condition must be provided"
+            raise ValueError(msg)
 
         return self
 
@@ -197,6 +201,7 @@ class MetadataFilter(BaseFilter):
             description: Filter description
             enabled: Whether filter is enabled
             priority: Filter priority (higher = earlier execution)
+
         """
         super().__init__(name, description, enabled, priority)
 
@@ -224,6 +229,7 @@ class MetadataFilter(BaseFilter):
 
         Raises:
             FilterError: If metadata filter application fails
+
         """
         try:
             # Validate and parse criteria
@@ -405,17 +411,17 @@ class MetadataFilter(BaseFilter):
                 return models.FieldCondition(
                     key=field, range=models.Range(gte=float("-inf"), lte=float("inf"))
                 )
-            elif operator == FieldOperator.NOT_EXISTS:
+            if operator == FieldOperator.NOT_EXISTS:
                 # For not exists, we use must_not with the exists condition
                 # This needs to be handled at a higher level
                 return None
 
             # Equality operators
-            elif operator == FieldOperator.EQ:
+            if operator == FieldOperator.EQ:
                 return models.FieldCondition(
                     key=field, match=models.MatchValue(value=value)
                 )
-            elif operator == FieldOperator.NE:
+            if operator == FieldOperator.NE:
                 # Convert value to string if it's not string/int (but exclude bool even though it's int)
                 exclude_value = (
                     str(value)
@@ -427,21 +433,21 @@ class MetadataFilter(BaseFilter):
                 )
 
             # Comparison operators
-            elif operator == FieldOperator.GT:
+            if operator == FieldOperator.GT:
                 return models.FieldCondition(key=field, range=models.Range(gt=value))
-            elif operator == FieldOperator.GTE:
+            if operator == FieldOperator.GTE:
                 return models.FieldCondition(key=field, range=models.Range(gte=value))
-            elif operator == FieldOperator.LT:
+            if operator == FieldOperator.LT:
                 return models.FieldCondition(key=field, range=models.Range(lt=value))
-            elif operator == FieldOperator.LTE:
+            if operator == FieldOperator.LTE:
                 return models.FieldCondition(key=field, range=models.Range(lte=value))
 
             # Collection operators
-            elif operator == FieldOperator.IN:
+            if operator == FieldOperator.IN:
                 return models.FieldCondition(
                     key=field, match=models.MatchAny(any=values)
                 )
-            elif operator == FieldOperator.NIN:
+            if operator == FieldOperator.NIN:
                 # Convert all values to strings if they're not string/int (but exclude bool even though it's int)
                 exclude_values = [
                     str(v) if isinstance(v, bool) or not isinstance(v, str | int) else v
@@ -452,7 +458,7 @@ class MetadataFilter(BaseFilter):
                 )
 
             # String operators (implemented as text search)
-            elif operator in [
+            if operator in [
                 FieldOperator.CONTAINS,
                 FieldOperator.STARTS_WITH,
                 FieldOperator.ENDS_WITH,
@@ -471,7 +477,7 @@ class MetadataFilter(BaseFilter):
                 )
 
             # Regular expression (approximated with text search)
-            elif operator == FieldOperator.REGEX:
+            if operator == FieldOperator.REGEX:
                 # Note: Qdrant doesn't support regex directly, so we use text search
                 # This is a limitation that would need to be handled differently
                 self._logger.warning(
@@ -481,9 +487,8 @@ class MetadataFilter(BaseFilter):
                     key=field, match=models.MatchText(text=str(value))
                 )
 
-            else:
-                self._logger.warning("Unsupported operator")
-                return None
+            self._logger.warning("Unsupported operator")
+            return None
 
         except Exception:
             self._logger.exception("Failed to build condition for field '{field}'")
@@ -517,15 +522,14 @@ class MetadataFilter(BaseFilter):
         # Apply boolean operator
         if operator == BooleanOperator.AND:
             return models.Filter(must=conditions)
-        elif operator == BooleanOperator.OR:
+        if operator == BooleanOperator.OR:
             return models.Filter(should=conditions)
-        elif operator == BooleanOperator.NOT:
+        if operator == BooleanOperator.NOT:
             # NOT with single condition
             if len(conditions) == 1:
                 return models.Filter(must_not=[conditions[0]])
-            else:
-                # NOT with multiple conditions (treat as NOT (condition1 OR condition2 ...))
-                return models.Filter(must_not=[models.Filter(should=conditions)])
+            # NOT with multiple conditions (treat as NOT (condition1 OR condition2 ...))
+            return models.Filter(must_not=[models.Filter(should=conditions)])
 
         return None
 
@@ -537,7 +541,7 @@ class MetadataFilter(BaseFilter):
 
         if condition_count == 0:
             return "none"
-        elif condition_count <= 2:
+        if condition_count <= 2:
             base_impact = "low"
         elif condition_count <= 5:
             base_impact = "medium"
@@ -589,19 +593,20 @@ class MetadataFilter(BaseFilter):
                     }
                 ]
             }
+
         """
         # Find the boolean operator (should be the only key)
         if len(expression_dict) != 1:
-            raise ValueError(
-                "Expression dict must have exactly one boolean operator key"
-            )
+            msg = "Expression dict must have exactly one boolean operator key"
+            raise ValueError(msg)
 
         operator_key, conditions_list = next(iter(expression_dict.items()))
 
         try:
             operator = BooleanOperator(operator_key)
         except ValueError:
-            raise ValueError("Invalid boolean operator") from None
+            msg = "Invalid boolean operator"
+            raise ValueError(msg) from None
 
         # Parse conditions
         parsed_conditions = []
@@ -617,7 +622,8 @@ class MetadataFilter(BaseFilter):
                     # Nested boolean expression
                     parsed_conditions.append(self.build_expression_from_dict(condition))
             else:
-                raise ValueError("Invalid condition format")
+                msg = "Invalid condition format"
+                raise ValueError(msg)
 
         return BooleanExpressionModel(operator=operator, conditions=parsed_conditions)
 
@@ -631,6 +637,7 @@ class MetadataFilter(BaseFilter):
 
         Returns:
             Optimized boolean expression
+
         """
         # Simple optimizations:
         # 1. Flatten nested expressions with same operator
@@ -684,6 +691,7 @@ class MetadataFilter(BaseFilter):
 
         Returns:
             Human-readable explanation string
+
         """
         explanations = []
 
@@ -702,11 +710,10 @@ class MetadataFilter(BaseFilter):
 
         # Explain field conditions
         if criteria.field_conditions:
-            field_explanations = []
-            for condition in criteria.field_conditions:
-                field_explanations.append(
-                    f"{condition.field} {condition.operator.value} {condition.value or condition.values}"
-                )
+            field_explanations = [
+                f"{condition.field} {condition.operator.value} {condition.value or condition.values}"
+                for condition in criteria.field_conditions
+            ]
             explanations.append(f"Field conditions: [{', '.join(field_explanations)}]")
 
         # Explain boolean expression
@@ -732,5 +739,4 @@ class MetadataFilter(BaseFilter):
         operator_word = expression.operator.value.upper()
         if expression.operator == BooleanOperator.NOT:
             return f"NOT ({condition_explanations[0]})"
-        else:
-            return f" {operator_word} ".join(condition_explanations)
+        return f" {operator_word} ".join(condition_explanations)

@@ -14,6 +14,12 @@ from src.cli.commands.config import (
 )
 
 
+# Test constants to avoid hardcoded sensitive values
+TEST_SECRET_VALUE = "test_secret"
+TEST_PASS_VALUE = "test_password"
+TEST_TOKEN_VALUE = "test_secret_token"
+
+
 class TestConfigCommandGroup:
     """Test the config command group."""
 
@@ -307,16 +313,16 @@ class TestSensitiveDataMasking:
     def test_mask_sensitive_data_case_insensitive(self):
         """Test case-insensitive sensitive field detection."""
         data = {
-            "API_KEY": "secret",
-            "Password": "secret",
-            "SECRET_TOKEN": "secret",
+            "API_KEY": TEST_SECRET_VALUE,
+            "Password": TEST_PASS_VALUE,
+            "SECRET_TOKEN": TEST_TOKEN_VALUE,
             "Normal_Field": "value",
         }
 
         # Test data structure is valid
-        assert data["API_KEY"] == "secret"
-        assert data["Password"] == "secret"
-        assert data["SECRET_TOKEN"] == "secret"
+        assert data["API_KEY"] == TEST_SECRET_VALUE
+        assert data["Password"] == TEST_PASS_VALUE
+        assert data["SECRET_TOKEN"] == TEST_TOKEN_VALUE
         assert data["Normal_Field"] == "value"
 
     def test_mask_sensitive_data_non_dict(self):

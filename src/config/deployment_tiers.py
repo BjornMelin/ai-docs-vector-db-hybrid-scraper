@@ -227,6 +227,7 @@ class TierManager:
 
         Args:
             current_tier: Current deployment tier
+
         """
         self.current_tier = current_tier
         self._config_cache: dict[DeploymentTier, TierConfiguration] = {}
@@ -239,6 +240,7 @@ class TierManager:
 
         Returns:
             TierConfiguration: Configuration for the tier
+
         """
         target_tier = tier or self.current_tier
 
@@ -258,6 +260,7 @@ class TierManager:
 
         Returns:
             bool: True if capability is enabled
+
         """
         config = self.get_tier_config(tier)
         return capability in config.enabled_capabilities
@@ -274,6 +277,7 @@ class TierManager:
 
         Returns:
             Any: Feature flag value
+
         """
         config = self.get_tier_config(tier)
         return config.feature_flags.get(flag_name, default)
@@ -289,6 +293,7 @@ class TierManager:
 
         Returns:
             dict[str, Any]: Service configuration
+
         """
         config = self.get_tier_config(tier)
         return config.deployment_services.get(service_name, {"enabled": False})
@@ -298,6 +303,7 @@ class TierManager:
 
         Args:
             tier: New deployment tier
+
         """
         self.current_tier = tier
 
@@ -306,6 +312,7 @@ class TierManager:
 
         Returns:
             dict[str, Any]: Tier comparison data
+
         """
         comparison = {
             "tiers": {},
@@ -343,6 +350,7 @@ class TierManager:
 
         Returns:
             dict[str, Any]: Validation results
+
         """
         results = {
             "tier": tier.value,
@@ -394,6 +402,7 @@ def get_current_tier_config() -> TierConfiguration:
 
     Returns:
         TierConfiguration: Current tier configuration
+
     """
     return default_tier_manager.get_tier_config()
 
@@ -406,5 +415,6 @@ def is_feature_enabled(capability: TierCapability) -> bool:
 
     Returns:
         bool: True if feature is enabled
+
     """
     return default_tier_manager.is_capability_enabled(capability)

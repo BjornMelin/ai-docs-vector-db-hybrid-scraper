@@ -2,7 +2,8 @@
 
 import logging
 
-from ...infrastructure.client_manager import ClientManager
+from src.infrastructure.client_manager import ClientManager
+
 from .helpers import (
     QueryProcessingPipelineFactory,
     QueryValidationHelper,

@@ -295,7 +295,7 @@ class TestFirecrawlProvider:
 
             assert result["success"] is True
             assert len(result["pages"]) == 2
-            assert result["total"] == 2
+            assert result["_total"] == 2
             assert result["crawl_id"] == "crawl-123"
             assert result["pages"][0]["url"] == "https://example.com"
             assert result["pages"][0]["content"] == "Home content"
@@ -457,7 +457,7 @@ class TestFirecrawlProvider:
 
         assert result["success"] is True
         assert len(result["urls"]) == 3
-        assert result["total"] == 3
+        assert result["_total"] == 3
         mock_client.map_url.assert_called_once_with(
             url="https://example.com", params={"includeSubdomains": True}
         )
@@ -476,7 +476,7 @@ class TestFirecrawlProvider:
         assert result["success"] is False
         assert result["error"] == "Mapping failed"
         assert result["urls"] == []
-        assert result["total"] == 0
+        assert result["_total"] == 0
 
     @pytest.mark.asyncio
     async def test_map_url_exception(self, basic_config):

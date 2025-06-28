@@ -672,7 +672,7 @@ class TestKeyboardNavigationCompliance:
         assert "Escape" in accessible_modal_html, "Should handle escape key"
 
     @pytest.mark.parametrize(
-        "element_type,expected_focusable",
+        ("element_type", "expected_focusable"),
         [
             ("button", True),
             ("a[href]", True),

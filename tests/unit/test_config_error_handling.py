@@ -86,24 +86,26 @@ class TestErrorContext:
             assert ctx.context["key"] == "value"
             assert "start_time" in ctx.context
 
-    def test_error_context_with_exception(self, caplog):
+    def test_error_context_with_exception(self, _caplog):
         """Test ErrorContext when exception occurs."""
         with pytest.raises(ValueError), ErrorContext("failing_operation", test_id=123):
-            raise ValueError("test error")
+            msg = "test error"
+            raise ValueError(msg)
 
         # Check that error was logged with context
-        assert "Error in failing_operation" in caplog.text
-        assert "test_id" in caplog.text
+        assert "Error in failing_operation" in _caplog.text
+        assert "test_id" in _caplog.text
 
     @pytest.mark.asyncio
-    async def test_async_error_context(self, caplog):
+    async def test_async_error_context(self, _caplog):
         """Test async error context manager."""
         with pytest.raises(RuntimeError):
             async with async_error_context("async_operation", async_id=456):
-                raise RuntimeError("async error")
+                msg = "async error"
+                raise RuntimeError(msg)
 
-        assert "Error in async_operation" in caplog.text
-        assert "async_id" in caplog.text
+        assert "Error in async_operation" in _caplog.text
+        assert "async_id" in _caplog.text
 
 
 class TestValidationErrorHandling:
@@ -163,7 +165,8 @@ class TestRetryableConfigOperation:
             nonlocal call_count
             call_count += 1
             if call_count < 3:
-                raise OSError("Transient error")
+                msg = "Transient error"
+                raise OSError(msg)
             return "success"
 
         result = await flaky_operation()
@@ -176,7 +179,8 @@ class TestRetryableConfigOperation:
 
         @RetryableConfigOperation(max_attempts=2)
         async def always_fails():
-            raise OSError("Persistent error")
+            msg = "Persistent error"
+            raise OSError(msg)
 
         with pytest.raises(OSError, match="Persistent error"):
             await always_fails()
@@ -190,7 +194,8 @@ class TestRetryableConfigOperation:
             nonlocal call_count
             call_count += 1
             if call_count < 2:
-                raise OSError("Transient error")
+                msg = "Transient error"
+                raise OSError(msg)
             return "success"
 
         result = flaky_operation()
@@ -407,7 +412,8 @@ class TestConfigManager:
             successful_calls.append((old.api_key, new.api_key))
 
         def bad_listener(_old, _new):
-            raise RuntimeError("Listener error")
+            msg = "Listener error"
+            raise RuntimeError(msg)
 
         manager.add_change_listener(good_listener)
         manager.add_change_listener(bad_listener)
@@ -483,7 +489,7 @@ class TestFileWatchingErrorHandling:
     """Tests for file watching error handling."""
 
     @patch("watchdog.observers.Observer")
-    def test_file_watch_start_failure(self, mock_observer_class, tmp_path, caplog):
+    def test_file_watch_start_failure(self, mock_observer_class, tmp_path, _caplog):
         """Test handling file watch start failure."""
         # Make observer creation fail
         mock_observer_class.side_effect = RuntimeError("Observer error")
@@ -498,7 +504,7 @@ class TestFileWatchingErrorHandling:
             enable_file_watching=True,
         )
 
-        assert "File watching setup failed" in caplog.text
+        assert "File watching setup failed" in _caplog.text
         assert manager._observer is None
 
     def test_file_watch_error_callback(self, tmp_path):
@@ -514,7 +520,8 @@ class TestFileWatchingErrorHandling:
         def reload_callback():
             reload_calls.append(1)
             if len(reload_calls) > 2:
-                raise RuntimeError("Reload error")
+                msg = "Reload error"
+                raise RuntimeError(msg)
 
         watcher = ConfigFileWatcher(config_file, reload_callback, error_callback)
 

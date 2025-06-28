@@ -7,7 +7,6 @@ validating system performance under expected user loads.
 import asyncio
 import logging
 import random
-from typing import Dict
 
 import pytest
 
@@ -176,11 +175,11 @@ class TestNormalLoad:
         # Run test with repeated queries
         repeated_queries = ["python tutorials", "fastapi documentation", "numpy guide"]
 
-        async def cached_search_workload(**kwargs):
+        async def cached_search_workload(**_kwargs):
             """Workload that repeats queries to test caching."""
 
             query = random.choice(repeated_queries)
-            return await mock_load_test_service.search_documents(query=query, **kwargs)
+            return await mock_load_test_service.search_documents(query=query, **_kwargs)
 
         result = load_test_runner.run_load_test(
             config=load_test_runner.load_test_config["test_profiles"]["light"],
@@ -199,7 +198,7 @@ class TestNormalLoad:
             < cache_metrics["uncached_response_time"] * 0.5
         ), "Cache not providing expected performance benefit"
 
-    def _simulate_normal_traffic(self, **_kwargs):
+    def _simulate_normal_traffic(self, **__kwargs):
         """Simulate normal traffic patterns."""
 
         operations = [
@@ -221,7 +220,7 @@ class TestNormalLoad:
 
         return asyncio.sleep(0.1)
 
-    def _get_phase_metrics(self, metrics, start_time: float, duration: float) -> Dict:
+    def _get_phase_metrics(self, metrics, start_time: float, duration: float) -> dict:
         """Extract metrics for a specific phase."""
 
         # Filter metrics by time window
@@ -241,7 +240,7 @@ class TestNormalLoad:
             / max(len(phase_response_times), 1),
         }
 
-    def _analyze_operation_mix(self, _result) -> Dict:
+    def _analyze_operation_mix(self, _result) -> dict:
         """Analyze the mix of operations performed."""
         # Simplified analysis - would parse actual operation types in real implementation
 
@@ -263,7 +262,7 @@ class TestNormalLoad:
 
         return error_spikes
 
-    def _calculate_cache_metrics(self, result) -> Dict:
+    def _calculate_cache_metrics(self, result) -> dict:
         """Calculate cache effectiveness metrics."""
         # Simplified calculation - would analyze actual cache hits in real implementation
         response_times = result.metrics.response_times

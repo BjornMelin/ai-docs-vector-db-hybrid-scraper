@@ -47,6 +47,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             service_name: Service name for tracing
             record_request_metrics: Whether to record request metrics
             record_ai_context: Whether to record AI-specific context
+
         """
         super().__init__(app)
         self.service_name = service_name
@@ -163,6 +164,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
         Args:
             request: HTTP request
             span: OpenTelemetry span
+
         """
         try:
             # Detect AI operation types from URL path
@@ -217,6 +219,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             request: HTTP request
             response: HTTP response
             start_time: Request start time
+
         """
         try:
             duration = time.perf_counter() - start_time
@@ -253,6 +256,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             request: HTTP request
             error: Exception that occurred
             start_time: Request start time
+
         """
         try:
             duration = time.perf_counter() - start_time

@@ -17,6 +17,22 @@ from urllib.parse import urlparse
 import httpx
 from pydantic import BaseModel
 
+
+try:
+    import asyncpg
+except ImportError:
+    asyncpg = None
+
+try:
+    import redis.asyncio as redis
+except ImportError:
+    redis = None
+
+try:
+    from qdrant_client import AsyncQdrantClient
+except ImportError:
+    AsyncQdrantClient = None
+
 from src.config.auto_detect import AutoDetectionConfig, DetectedService
 from src.services.errors import circuit_breaker
 
@@ -311,7 +327,9 @@ class ServiceDiscovery:
     ) -> dict[str, Any] | None:
         """Test Redis connection and get server info using redis-py."""
         try:
-            import redis.asyncio as redis
+            if redis is None:
+                msg = "redis not available"
+                raise ImportError(msg)
 
             # Use redis-py for reliable connection testing
             client = redis.Redis(
@@ -349,7 +367,9 @@ class ServiceDiscovery:
     ) -> dict[str, Any] | None:
         """Test Qdrant connection using AsyncQdrantClient directly."""
         try:
-            from qdrant_client import AsyncQdrantClient
+            if AsyncQdrantClient is None:
+                msg = "qdrant_client not available"
+                raise ImportError(msg)
 
             # Use AsyncQdrantClient for native connection testing
             client = AsyncQdrantClient(url=f"http://{host}:{port}", timeout=3.0)
@@ -398,7 +418,9 @@ class ServiceDiscovery:
     ) -> dict[str, Any] | None:
         """Test PostgreSQL connection using asyncpg directly."""
         try:
-            import asyncpg
+            if asyncpg is None:
+                msg = "asyncpg not available"
+                raise ImportError(msg)
 
             # Use asyncpg for native connection testing with common credentials
             connection_params = [

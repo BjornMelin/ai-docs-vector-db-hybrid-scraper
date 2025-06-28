@@ -27,7 +27,7 @@ try:
     from dotenv import load_dotenv  # type: ignore
 except ModuleNotFoundError:  # pragma: no cover - fallback for offline envs
 
-    def load_dotenv(*_args, **_kwargs):
+    def load_dotenv(*_args, **__kwargs):
         """Fallback no-op load_dotenv implementation."""
         return False
 
@@ -280,7 +280,7 @@ def test_urls() -> dict[str, str]:
 # The event loop scope is now configured in pyproject.toml
 
 
-@pytest.fixture()
+@pytest.fixture
 def temp_dir() -> Generator[Path]:
     """Create a temporary directory for test files.
 
@@ -291,7 +291,7 @@ def temp_dir() -> Generator[Path]:
         yield Path(temp_dir)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_env_vars() -> Generator[None]:
     """Mock environment variables for testing.
 
@@ -320,7 +320,7 @@ def mock_env_vars() -> Generator[None]:
             os.environ[key] = value
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_qdrant_client() -> MagicMock:
     """Mock Qdrant client for testing.
 
@@ -338,7 +338,7 @@ def mock_qdrant_client() -> MagicMock:
     return client
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_openai_client() -> MagicMock:
     """Mock OpenAI client for testing.
 
@@ -354,7 +354,7 @@ def mock_openai_client() -> MagicMock:
     return client
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_crawl4ai() -> MagicMock:
     """Mock Crawl4AI AsyncWebCrawler for testing.
 
@@ -376,7 +376,7 @@ def mock_crawl4ai() -> MagicMock:
     return crawler
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_documentation_site() -> dict[str, Any]:
     """Sample documentation site configuration.
 
@@ -391,7 +391,7 @@ def sample_documentation_site() -> dict[str, Any]:
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_crawl_result() -> dict[str, Any]:
     """Sample crawl result data.
 
@@ -414,7 +414,7 @@ def sample_crawl_result() -> dict[str, Any]:
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_vector_points() -> list[PointStruct]:
     """Sample vector points for testing.
 
@@ -475,7 +475,7 @@ def _check_browser_availability() -> bool:
     """
     try:
         # Try to check if Playwright browsers are installed
-        result = subprocess.run(  # noqa: S603  # Using sys.executable is safe
+        result = subprocess.run(  # Using sys.executable is safe
             [
                 sys.executable,
                 "-c",
@@ -499,7 +499,7 @@ def _check_browser_availability() -> bool:
 
 
 # Enhanced Database Testing Fixtures
-@pytest.fixture()
+@pytest.fixture
 def enhanced_db_config():
     """Enhanced SQLAlchemy configuration for testing."""
     return SQLAlchemyConfig(
@@ -519,7 +519,7 @@ def enhanced_db_config():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_multi_level_circuit_breaker():
     """Mock simple CircuitBreaker for testing (renamed for compatibility)."""
 
@@ -535,7 +535,7 @@ def mock_multi_level_circuit_breaker():
     breaker._failure_count = 0
 
     # Configure async methods with realistic behavior
-    async def mock_call(func, *_args, **_kwargs):
+    async def mock_call(func, *_args, **__kwargs):
         """Mock call method for simple circuit breaker."""
         if callable(func):
             if asyncio.iscoroutinefunction(func):
@@ -562,7 +562,7 @@ def mock_multi_level_circuit_breaker():
     return breaker
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_connection_affinity_manager():
     """Mock ConnectionAffinityManager for testing."""
 
@@ -579,7 +579,6 @@ def mock_connection_affinity_manager():
         query, query_type, connection_id, duration_ms, success=True
     ):
         """Mock performance tracking that accepts all expected parameters."""
-        pass
 
     manager.track_query_performance = AsyncMock(side_effect=mock_track_performance)
 
@@ -601,9 +600,9 @@ def mock_connection_affinity_manager():
     manager.get_performance_report = AsyncMock(
         return_value={
             "summary": {
-                "total_patterns": 25,
-                "total_connections": 5,
-                "total_queries": 150,
+                "_total_patterns": 25,
+                "_total_connections": 5,
+                "_total_queries": 150,
                 "avg_response_time_ms": 120.5,
             },
             "top_patterns": [
@@ -616,7 +615,7 @@ def mock_connection_affinity_manager():
             ],
             "connection_performance": {
                 "conn_123": {
-                    "total_queries": 75,
+                    "_total_queries": 75,
                     "avg_duration_ms": 110.0,
                     "success_rate": 0.98,
                     "specialization": "read_optimized",
@@ -628,7 +627,7 @@ def mock_connection_affinity_manager():
     return manager
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_adaptive_config_manager():
     """Mock AdaptiveConfigManager for testing."""
 
@@ -709,7 +708,7 @@ def mock_adaptive_config_manager():
     return manager
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_load_metrics():
     """Sample load metrics for testing."""
 
@@ -741,7 +740,7 @@ def sample_load_metrics():
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_query_patterns():
     """Sample query patterns for connection affinity testing."""
     return [

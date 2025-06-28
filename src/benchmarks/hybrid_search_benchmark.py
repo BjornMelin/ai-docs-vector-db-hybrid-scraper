@@ -13,13 +13,10 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from ..config import Config
-from ..models.vector_search import (
-    FusionConfig,
-    HybridSearchRequest,
-    SearchParams,
-)
-from ..services.vector_db.hybrid_search import HybridSearchService
+from src.config import Config
+from src.models.vector_search import FusionConfig, HybridSearchRequest, SearchParams
+from src.services.vector_db.hybrid_search import HybridSearchService
+
 from .benchmark_reporter import BenchmarkReporter
 from .component_benchmarks import ComponentBenchmarks
 from .load_test_runner import LoadTestConfig, LoadTestRunner
@@ -131,6 +128,7 @@ class HybridSearchBenchmark:
             config: Unified configuration
             search_service: Hybrid search service to benchmark
             benchmark_config: Benchmark configuration
+
         """
         self.config = config
         self.search_service = search_service
@@ -223,6 +221,7 @@ class HybridSearchBenchmark:
 
         Returns:
             Comprehensive benchmark results with performance metrics and recommendations
+
         """
         start_time = time.time()
         logger.info(f"Starting comprehensive benchmark: {self.benchmark_config.name}")
@@ -291,13 +290,14 @@ class HybridSearchBenchmark:
             )
             logger.info(f"Meets targets: {results.meets_targets}")
 
-            return results
-
         except Exception as e:
             logger.error(f"Benchmark failed: {e}", exc_info=True)
             results.duration_seconds = time.time() - start_time
             results.failed_targets.append(f"Benchmark execution failed: {e!s}")
+        else:
             return results
+
+        return results
 
     async def _run_component_benchmarks(self) -> dict[str, Any]:
         """Run component-level benchmarks."""

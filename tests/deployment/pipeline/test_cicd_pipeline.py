@@ -17,8 +17,6 @@ from tests.deployment.conftest import DeploymentEnvironment, DeploymentTestConfi
 class TestError(Exception):
     """Custom exception for this module."""
 
-    pass
-
 
 class TestCICDPipeline:
     """Test CI/CD pipeline functionality."""
@@ -538,20 +536,23 @@ class PipelineExecutor:
 
         try:
             if simulate_failure:
-                raise TestError(f"Simulated failure in {stage_name} stage")
-                raise TestError(f"Simulated failure in {stage_name} stage")
+                msg = f"Simulated failure in {stage_name} stage"
+                raise TestError(msg)
+                msg = f"Simulated failure in {stage_name} stage"
+                raise TestError(msg)
 
             # Execute stage-specific logic
             executor = self.stage_executors.get(stage_type)
             if not executor:
-                raise TestError(f"Unknown stage type: {stage_type}")
+                msg = f"Unknown stage type: {stage_type}"
+                raise TestError(msg)
 
             stage_result = await asyncio.wait_for(
                 executor(stage_config), timeout=timeout
             )
 
             end_time = datetime.now(tz=UTC)
-            duration = (end_time - start_time).total_seconds()
+            duration = (end_time - start_time)._total_seconds()
 
             return {
                 "name": stage_name,
@@ -565,7 +566,7 @@ class PipelineExecutor:
 
         except Exception as e:
             end_time = datetime.now(tz=UTC)
-            duration = (end_time - start_time).total_seconds()
+            duration = (end_time - start_time)._total_seconds()
 
             return {
                 "name": stage_name,
@@ -725,7 +726,7 @@ class DockerBuildManager:
             await asyncio.sleep(3)
 
             end_time = datetime.now(tz=UTC)
-            duration = (end_time - start_time).total_seconds()
+            duration = (end_time - start_time)._total_seconds()
 
             image_tag = f"{config['registry']}/{config['image_name']}:{config['tag']}"
 
@@ -753,7 +754,7 @@ class DockerBuildManager:
                 "error": str(e),
                 "build_duration_seconds": (
                     datetime.now(tz=UTC) - start_time
-                ).total_seconds(),
+                )._total_seconds(),
             }
 
 
@@ -808,10 +809,11 @@ class PipelineTestExecutor:
                 await asyncio.sleep(4)
                 result = self._simulate_load_test_results(config)
             else:
-                raise ValueError(f"Unknown test type: {test_type}")
+                msg = f"Unknown test type: {test_type}"
+                raise ValueError(msg)
 
             end_time = datetime.now(tz=UTC)
-            duration = (end_time - start_time).total_seconds()
+            duration = (end_time - start_time)._total_seconds()
 
             return {
                 "success": True,
@@ -825,7 +827,9 @@ class PipelineTestExecutor:
                 "success": False,
                 "test_type": test_type,
                 "error": str(e),
-                "duration_seconds": (datetime.now(tz=UTC) - start_time).total_seconds(),
+                "duration_seconds": (
+                    datetime.now(tz=UTC) - start_time
+                )._total_seconds(),
             }
 
     def _simulate_unit_test_results(self) -> dict[str, Any]:
@@ -877,8 +881,7 @@ class AutomatedDeploymentManager:
 
         if deployment_strategy == "blue_green":
             return await self._deploy_blue_green(config)
-        else:
-            return await self._deploy_rolling_update(config)
+        return await self._deploy_rolling_update(config)
 
     async def _deploy_rolling_update(self, config: dict[str, Any]) -> dict[str, Any]:
         """Execute rolling update deployment."""

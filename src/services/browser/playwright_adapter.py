@@ -9,9 +9,9 @@ from urllib.parse import urlparse
 from pydantic import ValidationError
 
 from src.config import PlaywrightConfig
+from src.services.base import BaseService
+from src.services.errors import CrawlServiceError
 
-from ..base import BaseService
-from ..errors import CrawlServiceError
 from .action_schemas import validate_actions
 from .anti_detection import EnhancedAntiDetection
 
@@ -44,6 +44,7 @@ class PlaywrightAdapter(BaseService):
         Args:
             config: Playwright configuration model
             enable_anti_detection: Whether to enable enhanced anti-detection features
+
         """
         super().__init__(config)
         self.config = config
@@ -68,9 +69,8 @@ class PlaywrightAdapter(BaseService):
     async def initialize(self) -> None:
         """Initialize Playwright browser."""
         if not self._available:
-            raise CrawlServiceError(
-                "Playwright not available - please install playwright package"
-            )
+            msg = "Playwright not available - please install playwright package"
+            raise CrawlServiceError(msg)
 
         if self._initialized:
             return
@@ -111,7 +111,8 @@ class PlaywrightAdapter(BaseService):
             )
 
         except Exception as e:
-            raise CrawlServiceError("Failed to initialize Playwright") from e
+            msg = "Failed to initialize Playwright"
+            raise CrawlServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup Playwright resources."""
@@ -146,12 +147,15 @@ class PlaywrightAdapter(BaseService):
 
         Returns:
             Scraping result with standardized format
+
         """
         if not self._available:
-            raise CrawlServiceError("Playwright not available")
+            msg = "Playwright not available"
+            raise CrawlServiceError(msg)
 
         if not self._initialized:
-            raise CrawlServiceError("Adapter not initialized")
+            msg = "Adapter not initialized"
+            raise CrawlServiceError(msg)
 
         start_time = time.time()
         context: Any | None = None
@@ -266,7 +270,8 @@ class PlaywrightAdapter(BaseService):
         try:
             validated_actions = validate_actions(actions)
         except ValidationError as e:
-            raise CrawlServiceError("Invalid actions") from e
+            msg = "Invalid actions"
+            raise CrawlServiceError(msg) from e
 
         # Execute custom actions
         action_results = []
@@ -389,6 +394,7 @@ class PlaywrightAdapter(BaseService):
         Args:
             page: Playwright page instance
             stealth_config: Browser stealth configuration
+
         """
         try:
             # Basic stealth script to hide automation indicators
@@ -499,6 +505,7 @@ class PlaywrightAdapter(BaseService):
 
         Returns:
             Action result
+
         """
         action_type = action.type
         start_time = time.time()
@@ -542,7 +549,8 @@ class PlaywrightAdapter(BaseService):
             await self._execute_drag_drop_action(page, action)
 
         else:
-            raise ValueError("Unknown action type")
+            msg = "Unknown action type"
+            raise ValueError(msg)
 
         return None  # No custom result
 
@@ -650,6 +658,7 @@ class PlaywrightAdapter(BaseService):
 
         Returns:
             Content dictionary with text and HTML
+
         """
         # Try multiple content selectors in order of preference
         content_selectors = [
@@ -696,6 +705,7 @@ class PlaywrightAdapter(BaseService):
 
         Returns:
             Metadata dictionary
+
         """
         try:
             metadata = await page.evaluate("""
@@ -757,6 +767,7 @@ class PlaywrightAdapter(BaseService):
 
         Returns:
             Performance metrics dictionary
+
         """
         try:
             metrics = await page.evaluate("""
@@ -788,6 +799,7 @@ class PlaywrightAdapter(BaseService):
 
         Returns:
             Capabilities dictionary
+
         """
         return {
             "name": "playwright",
@@ -832,6 +844,7 @@ class PlaywrightAdapter(BaseService):
 
         Returns:
             Health status dictionary
+
         """
         if not self._available:
             return {
@@ -904,6 +917,7 @@ class PlaywrightAdapter(BaseService):
 
         Returns:
             Test results
+
         """
         if not self._available or not self._initialized:
             return {

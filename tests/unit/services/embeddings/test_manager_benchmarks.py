@@ -304,7 +304,7 @@ class TestEmbeddingManagerBenchmarks:
         # Create mock text analysis
 
         text_analysis = TextAnalysis(
-            total_length=500,
+            _total_length=500,
             avg_length=100,
             complexity_score=0.5,
             estimated_tokens=125,

@@ -13,6 +13,12 @@ from contextlib import asynccontextmanager
 
 from fastmcp import FastMCP
 from starlette.applications import Starlette
+
+
+try:
+    import uvicorn
+except ImportError:
+    uvicorn = None
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
@@ -130,7 +136,9 @@ class ProductionMCPServer:
     ) -> None:
         """Run the production server asynchronously."""
         try:
-            import uvicorn
+            if uvicorn is None:
+                msg = "uvicorn not available"
+                raise ImportError(msg)
 
             # Create app
             app = self.create_app()

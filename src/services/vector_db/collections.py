@@ -7,9 +7,8 @@ from qdrant_client import AsyncQdrantClient, models
 from qdrant_client.http.exceptions import ResponseHandlingException
 
 from src.config.core import Config
-
-from ..base import BaseService
-from ..errors import QdrantServiceError
+from src.services.base import BaseService
+from src.services.errors import QdrantServiceError
 
 
 logger = logging.getLogger(__name__)
@@ -24,6 +23,7 @@ class QdrantCollections(BaseService):
         Args:
             config: Unified configuration
             qdrant_client: Initialized Qdrant client
+
         """
         super().__init__(config)
         self.config: Config = config
@@ -36,7 +36,8 @@ class QdrantCollections(BaseService):
             return
 
         if not self._client:
-            raise QdrantServiceError("QdrantClient must be provided and initialized")
+            msg = "QdrantClient must be provided and initialized"
+            raise QdrantServiceError(msg)
 
         self._initialized = True
         logger.info("QdrantCollections service initialized")
@@ -71,6 +72,7 @@ class QdrantCollections(BaseService):
 
         Raises:
             QdrantServiceError: If creation fails
+
         """
         self._validate_initialized()
 
@@ -96,9 +98,8 @@ class QdrantCollections(BaseService):
             try:
                 distance_enum = getattr(models.Distance, distance.upper())
             except AttributeError:
-                raise QdrantServiceError(
-                    f"Invalid distance metric '{distance}'. Valid options: Cosine, Euclidean, Dot"
-                ) from None
+                msg = f"Invalid distance metric '{distance}'. Valid options: Cosine, Euclidean, Dot"
+                raise QdrantServiceError(msg) from None
 
             vectors_config = {
                 "dense": models.VectorParams(
@@ -151,16 +152,14 @@ class QdrantCollections(BaseService):
             if "already exists" in error_msg:
                 logger.info(f"Collection {collection_name} already exists, continuing")
                 return True
-            elif "invalid distance" in error_msg:
-                raise QdrantServiceError(
-                    f"Invalid distance metric '{distance}'. Valid options: Cosine, Euclidean, Dot"
-                ) from e
-            elif "unauthorized" in error_msg:
-                raise QdrantServiceError(
-                    "Unauthorized access to Qdrant. Please check your API key."
-                ) from e
-            else:
-                raise QdrantServiceError(f"Failed to create collection: {e}") from e
+            if "invalid distance" in error_msg:
+                msg = f"Invalid distance metric '{distance}'. Valid options: Cosine, Euclidean, Dot"
+                raise QdrantServiceError(msg) from e
+            if "unauthorized" in error_msg:
+                msg = "Unauthorized access to Qdrant. Please check your API key."
+                raise QdrantServiceError(msg) from e
+            msg = f"Failed to create collection: {e}"
+            raise QdrantServiceError(msg) from e
 
     async def delete_collection(self, collection_name: str) -> bool:
         """Delete a collection.
@@ -170,6 +169,7 @@ class QdrantCollections(BaseService):
 
         Returns:
             Success status
+
         """
         self._validate_initialized()
 
@@ -178,7 +178,8 @@ class QdrantCollections(BaseService):
             logger.info(f"Deleted collection: {collection_name}")
             return True
         except Exception as e:
-            raise QdrantServiceError(f"Failed to delete collection: {e}") from e
+            msg = f"Failed to delete collection: {e}"
+            raise QdrantServiceError(msg) from e
 
     async def get_collection_info(self, collection_name: str) -> dict[str, Any]:
         """Get collection information.
@@ -188,6 +189,7 @@ class QdrantCollections(BaseService):
 
         Returns:
             Collection information
+
         """
         self._validate_initialized()
 
@@ -200,13 +202,15 @@ class QdrantCollections(BaseService):
                 "config": info.config.model_dump() if info.config else {},
             }
         except Exception as e:
-            raise QdrantServiceError(f"Failed to get collection info: {e}") from e
+            msg = f"Failed to get collection info: {e}"
+            raise QdrantServiceError(msg) from e
 
     async def list_collections(self) -> list[str]:
         """List all collection names.
 
         Returns:
             List of collection names
+
         """
         self._validate_initialized()
 
@@ -214,13 +218,15 @@ class QdrantCollections(BaseService):
             collections = await self._client.get_collections()
             return [col.name for col in collections.collections]
         except Exception as e:
-            raise QdrantServiceError(f"Failed to list collections: {e}") from e
+            msg = f"Failed to list collections: {e}"
+            raise QdrantServiceError(msg) from e
 
     async def list_collections_details(self) -> list[dict[str, Any]]:
         """List all collections with detailed information.
 
         Returns:
             List of collection details including name, vector count, status, and config
+
         """
         self._validate_initialized()
 
@@ -253,7 +259,8 @@ class QdrantCollections(BaseService):
 
             return details
         except Exception as e:
-            raise QdrantServiceError(f"Failed to list collection details: {e}") from e
+            msg = f"Failed to list collection details: {e}"
+            raise QdrantServiceError(msg) from e
 
     async def trigger_collection_optimization(self, collection_name: str) -> bool:
         """Trigger optimization for a collection.
@@ -267,6 +274,7 @@ class QdrantCollections(BaseService):
         Note:
             Qdrant automatically optimizes collections, but this method can trigger
             manual optimization by updating collection parameters.
+
         """
         self._validate_initialized()
 
@@ -281,7 +289,8 @@ class QdrantCollections(BaseService):
             logger.info(f"Triggered optimization for collection: {collection_name}")
             return True
         except Exception as e:
-            raise QdrantServiceError(f"Failed to optimize collection: {e}") from e
+            msg = f"Failed to optimize collection: {e}"
+            raise QdrantServiceError(msg) from e
 
     def _get_hnsw_config_for_collection_type(self, collection_type: str):
         """Get HNSW configuration for a specific collection type.
@@ -291,6 +300,7 @@ class QdrantCollections(BaseService):
 
         Returns:
             HNSWConfig object with optimized parameters
+
         """
         collection_configs = self.config.qdrant.collection_hnsw_configs
 
@@ -313,6 +323,7 @@ class QdrantCollections(BaseService):
 
         Returns:
             HNSW configuration information
+
         """
         hnsw_config = self._get_hnsw_config_for_collection_type(collection_type)
 
@@ -339,6 +350,7 @@ class QdrantCollections(BaseService):
 
         Returns:
             HNSW health assessment with recommendations
+
         """
         try:
             # Get current HNSW configuration from collection info
@@ -429,22 +441,22 @@ class QdrantCollections(BaseService):
 
         Returns:
             Inferred collection type
+
         """
         # Map collection names to types based on common patterns
         name_lower = collection_name.lower()
 
         if "api" in name_lower or "reference" in name_lower:
             return "api_reference"
-        elif "tutorial" in name_lower or "guide" in name_lower:
+        if "tutorial" in name_lower or "guide" in name_lower:
             return "tutorials"
-        elif "blog" in name_lower or "post" in name_lower:
+        if "blog" in name_lower or "post" in name_lower:
             return "blog_posts"
-        elif "doc" in name_lower or "documentation" in name_lower:
+        if "doc" in name_lower or "documentation" in name_lower:
             return "general_docs"
-        elif "code" in name_lower or "example" in name_lower:
+        if "code" in name_lower or "example" in name_lower:
             return "code_examples"
-        else:
-            return "general_docs"  # Default fallback
+        return "general_docs"  # Default fallback
 
     def _calculate_hnsw_optimality_score(
         self, current: dict[str, Any], optimal: Any
@@ -457,6 +469,7 @@ class QdrantCollections(BaseService):
 
         Returns:
             Optimality score (0-100)
+
         """
         score = 100.0
 

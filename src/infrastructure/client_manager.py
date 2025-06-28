@@ -5,7 +5,6 @@ import contextlib
 import logging
 import threading
 import time
-import typing
 from contextlib import asynccontextmanager
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
@@ -64,7 +63,7 @@ except ImportError:
     create_default_hyde_config = None
 
 try:
-    from src.services.core.project_storage import ProjectStorageService, ProjectStorage
+    from src.services.core.project_storage import ProjectStorage, ProjectStorageService
 except ImportError:
     ProjectStorageService = None
     ProjectStorage = None
@@ -96,8 +95,8 @@ except ImportError:
 
 try:
     from src.services.deployment.feature_flags import (
-        FeatureFlagManager,
         FeatureFlagConfig,
+        FeatureFlagManager,
     )
 except ImportError:
     FeatureFlagManager = None
@@ -153,7 +152,7 @@ logger = logging.getLogger(__name__)
 class ClientManager:
     """Centralized API client management with singleton pattern and health checks."""
 
-    _instance: typing.Optional["ClientManager"] = None
+    _instance: "ClientManager | None" = None
     _lock = asyncio.Lock()
     _init_lock = threading.Lock()  # Thread-safe lock for singleton creation
 
@@ -173,10 +172,10 @@ class ClientManager:
         This factory method loads configuration from environment variables
         and creates a properly configured ClientManager instance.
         """
-
         # Load the unified configuration
         if get_config is None:
-            raise RuntimeError("Configuration system not available")
+            msg = "Configuration system not available"
+            raise RuntimeError(msg)
         unified_config = get_config()
         return cls(unified_config)
 
@@ -187,10 +186,10 @@ class ClientManager:
         This async factory method loads configuration with service auto-detection
         and creates a properly configured ClientManager instance with discovered services.
         """
-
         # Load configuration with auto-detection applied
         if get_config_with_auto_detection is None:
-            raise RuntimeError("Configuration system with auto-detection not available")
+            msg = "Configuration system with auto-detection not available"
+            raise RuntimeError(msg)
 
         unified_config = await get_config_with_auto_detection()
         return cls(unified_config)
@@ -216,19 +215,22 @@ class ClientManager:
 
         Args:
             config: Unified configuration instance
+
         """
         # Skip re-initialization if already initialized
         if hasattr(self, "_initialized") and self._initialized:
             if config and config != self.config:
-                raise ValueError(
+                msg = (
                     "ClientManager already initialized with different config. "
                     "Use cleanup() and reinitialize or create a new instance."
                 )
+                raise ValueError(msg)
             return
 
         if config is None:
             if get_config is None:
-                raise RuntimeError("Configuration system not available")
+                msg = "Configuration system not available"
+                raise RuntimeError(msg)
             config = get_config()
 
         self.config = config
@@ -344,6 +346,7 @@ class ClientManager:
 
         Raises:
             APIError: If client is unhealthy or initialization fails
+
         """
         return await self._get_or_create_client(
             "qdrant",
@@ -359,6 +362,7 @@ class ClientManager:
 
         Raises:
             APIError: If client is unhealthy
+
         """
         if not self.config.openai.api_key:
             return None
@@ -377,6 +381,7 @@ class ClientManager:
 
         Raises:
             APIError: If client is unhealthy
+
         """
         if not self.config.firecrawl.api_key:
             return None
@@ -395,6 +400,7 @@ class ClientManager:
 
         Raises:
             APIError: If client is unhealthy
+
         """
         return await self._get_or_create_client(
             "redis",
@@ -412,7 +418,8 @@ class ClientManager:
             async with self._service_locks["qdrant_service"]:
                 if self._qdrant_service is None:
                     if QdrantService is None:
-                        raise ImportError("QdrantService not available")
+                        msg = "QdrantService not available"
+                        raise ImportError(msg)
 
                     self._qdrant_service = QdrantService(
                         self.config, client_manager=self
@@ -431,7 +438,8 @@ class ClientManager:
             async with self._service_locks["embedding_manager"]:
                 if self._embedding_manager is None:
                     if EmbeddingManager is None:
-                        raise ImportError("EmbeddingManager not available")
+                        msg = "EmbeddingManager not available"
+                        raise ImportError(msg)
 
                     # Pass ClientManager to EmbeddingManager
                     self._embedding_manager = EmbeddingManager(
@@ -452,7 +460,8 @@ class ClientManager:
             async with self._service_locks["cache_manager"]:
                 if self._cache_manager is None:
                     if CacheManager is None:
-                        raise ImportError("CacheManager not available")
+                        msg = "CacheManager not available"
+                        raise ImportError(msg)
 
                     # Check for auto-detected Redis service
                     auto_detected_redis = self._get_auto_detected_service("redis")
@@ -491,7 +500,8 @@ class ClientManager:
             async with self._service_locks["crawl_manager"]:
                 if self._crawl_manager is None:
                     if CrawlManager is None:
-                        raise ImportError("CrawlManager not available")
+                        msg = "CrawlManager not available"
+                        raise ImportError(msg)
 
                     # CrawlManager expects rate_limiter but we'll pass None for now
                     self._crawl_manager = CrawlManager(
@@ -516,7 +526,8 @@ class ClientManager:
                         or HyDEMetricsConfig is None
                         or HyDEPromptConfig is None
                     ):
-                        raise ImportError("HyDE configuration classes not available")
+                        msg = "HyDE configuration classes not available"
+                        raise ImportError(msg)
 
                     # Get dependencies
                     embedding_manager = await self.get_embedding_manager()
@@ -552,7 +563,8 @@ class ClientManager:
             async with self._service_locks["project_storage"]:
                 if self._project_storage is None:
                     if ProjectStorage is None:
-                        raise ImportError("ProjectStorage not available")
+                        msg = "ProjectStorage not available"
+                        raise ImportError(msg)
 
                     self._project_storage = ProjectStorage(
                         data_dir=self.config.data_dir
@@ -578,7 +590,8 @@ class ClientManager:
             async with self._service_locks["browser_automation_router"]:
                 if self._browser_automation_router is None:
                     if EnhancedAutomationRouter is None:
-                        raise ImportError("EnhancedAutomationRouter not available")
+                        msg = "EnhancedAutomationRouter not available"
+                        raise ImportError(msg)
 
                     self._browser_automation_router = EnhancedAutomationRouter(
                         config=self.config,
@@ -599,7 +612,8 @@ class ClientManager:
             async with self._service_locks["task_queue_manager"]:
                 if self._task_queue_manager is None:
                     if TaskQueueManager is None:
-                        raise ImportError("TaskQueueManager not available")
+                        msg = "TaskQueueManager not available"
+                        raise ImportError(msg)
 
                     # Check for auto-detected Redis service
                     auto_detected_redis = self._get_auto_detected_service("redis")
@@ -633,7 +647,8 @@ class ClientManager:
             async with self._service_locks["content_intelligence_service"]:
                 if self._content_intelligence_service is None:
                     if ContentIntelligenceService is None:
-                        raise ImportError("ContentIntelligenceService not available")
+                        msg = "ContentIntelligenceService not available"
+                        raise ImportError(msg)
 
                     # Get dependencies
                     embedding_manager = await self.get_embedding_manager()
@@ -658,7 +673,8 @@ class ClientManager:
             async with self._service_locks["rag_generator"]:
                 if self._rag_generator is None:
                     if RAGGenerator is None:
-                        raise ImportError("RAGGenerator not available")
+                        msg = "RAGGenerator not available"
+                        raise ImportError(msg)
 
                     self._rag_generator = RAGGenerator(
                         config=self.config.rag,
@@ -679,9 +695,8 @@ class ClientManager:
                 if self._database_manager is None:
                     # Create enterprise monitoring components
                     if LoadMonitor is None or QueryMonitor is None:
-                        raise ImportError(
-                            "Database monitoring components not available"
-                        )
+                        msg = "Database monitoring components not available"
+                        raise ImportError(msg)
 
                     load_monitor = LoadMonitor()
                     query_monitor = QueryMonitor()
@@ -715,7 +730,8 @@ class ClientManager:
             async with self._service_locks["search_orchestrator"]:
                 if self._search_orchestrator is None:
                     if AdvancedSearchOrchestrator is None:
-                        raise ImportError("AdvancedSearchOrchestrator not available")
+                        msg = "AdvancedSearchOrchestrator not available"
+                        raise ImportError(msg)
 
                     self._search_orchestrator = AdvancedSearchOrchestrator(
                         enable_all_features=True, enable_performance_optimization=True
@@ -735,7 +751,8 @@ class ClientManager:
             async with self._service_locks["feature_flag_manager"]:
                 if self._feature_flag_manager is None:
                     if FeatureFlagConfig is None or FeatureFlagManager is None:
-                        raise ImportError("Feature flag components not available")
+                        msg = "Feature flag components not available"
+                        raise ImportError(msg)
 
                     # Create feature flag config from deployment config
                     flag_config = FeatureFlagConfig(
@@ -763,7 +780,8 @@ class ClientManager:
             async with self._service_locks["ab_testing_manager"]:
                 if self._ab_testing_manager is None:
                     if ABTestingManager is None:
-                        raise ImportError("ABTestingManager not available")
+                        msg = "ABTestingManager not available"
+                        raise ImportError(msg)
 
                     # Get dependencies
                     qdrant_service = await self.get_qdrant_service()
@@ -792,7 +810,8 @@ class ClientManager:
             async with self._service_locks["blue_green_deployment"]:
                 if self._blue_green_deployment is None:
                     if BlueGreenDeployment is None:
-                        raise ImportError("BlueGreenDeployment not available")
+                        msg = "BlueGreenDeployment not available"
+                        raise ImportError(msg)
 
                     # Get dependencies
                     qdrant_service = await self.get_qdrant_service()
@@ -821,7 +840,8 @@ class ClientManager:
             async with self._service_locks["canary_deployment"]:
                 if self._canary_deployment is None:
                     if CanaryDeployment is None:
-                        raise ImportError("CanaryDeployment not available")
+                        msg = "CanaryDeployment not available"
+                        raise ImportError(msg)
 
                     # Get dependencies
                     qdrant_service = await self.get_qdrant_service()
@@ -856,12 +876,14 @@ class ClientManager:
 
         Raises:
             APIError: If client is unhealthy or creation fails
+
         """
         # Check circuit breaker state
         if name in self._circuit_breakers:
             breaker = self._circuit_breakers[name]
             if breaker.state == ClientState.FAILED:
-                raise APIError(f"{name} client circuit breaker is open")
+                msg = f"{name} client circuit breaker is open"
+                raise APIError(msg)
 
         # Get or create client
         if name not in self._clients:
@@ -912,7 +934,8 @@ class ClientManager:
 
                     except Exception as e:
                         logger.exception(f"Failed to create {name} client")
-                        raise APIError(f"Failed to create {name} client: {e}") from e
+                        msg = f"Failed to create {name} client: {e}"
+                        raise APIError(msg) from e
 
         # Check health status
         if name in self._health:
@@ -924,7 +947,8 @@ class ClientManager:
                 health.state == ClientState.FAILED
                 and health.consecutive_failures >= max_failures
             ):
-                raise APIError(f"{name} client is unhealthy: {health.last_error}")
+                msg = f"{name} client is unhealthy: {health.last_error}"
+                raise APIError(msg)
 
         return self._clients[name]
 
@@ -936,6 +960,7 @@ class ClientManager:
 
         Returns:
             Auto-detected service config or None
+
         """
         if not self._auto_detected_services:
             return None
@@ -965,7 +990,6 @@ class ClientManager:
 
     async def _create_qdrant_client(self) -> AsyncQdrantClient:
         """Create Qdrant client instance using auto-detected service when available."""
-
         # Check for auto-detected Qdrant service
         auto_detected = self._get_auto_detected_service("qdrant")
 
@@ -1023,7 +1047,6 @@ class ClientManager:
 
     async def _create_redis_client(self) -> redis.Redis:
         """Create Redis client with connection pooling using auto-detected service when available."""
-
         # Check for auto-detected Redis service
         auto_detected = self._get_auto_detected_service("redis")
 
@@ -1045,14 +1068,13 @@ class ClientManager:
                 ),
                 protocol=pool_config.get("protocol", 3),  # Redis 8.2 RESP3
             )
-        else:
-            # Fall back to manual configuration
-            logger.info("Using manual Redis configuration (no auto-detection)")
-            return redis.from_url(
-                self.config.cache.dragonfly_url,
-                max_connections=getattr(self.config.cache, "redis_pool_size", 20),
-                decode_responses=True,  # From cache config
-            )
+        # Fall back to manual configuration
+        logger.info("Using manual Redis configuration (no auto-detection)")
+        return redis.from_url(
+            self.config.cache.dragonfly_url,
+            max_connections=getattr(self.config.cache, "redis_pool_size", 20),
+            decode_responses=True,  # From cache config
+        )
 
     async def _check_qdrant_health(self) -> bool:
         """Check Qdrant client health."""
@@ -1286,6 +1308,7 @@ class ClientManager:
             async with client_manager.managed_client("database") as db_manager:
                 async with db_manager.get_session() as session:
                     result = await session.execute("SELECT 1")
+
         """
         client_getters = {
             "qdrant": self.get_qdrant_client,
@@ -1302,7 +1325,8 @@ class ClientManager:
         }
 
         if client_type not in client_getters:
-            raise ValueError(f"Unknown client type: {client_type}")
+            msg = f"Unknown client type: {client_type}"
+            raise ValueError(msg)
 
         try:
             client = await client_getters[client_type]()
@@ -1316,6 +1340,7 @@ class ClientManager:
 
         Returns:
             Dictionary mapping client names to health information
+
         """
         status = {}
 

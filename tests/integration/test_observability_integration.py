@@ -8,6 +8,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+import src.services.observability.middleware
 from src.config.core import get_config, reset_config
 from src.services.observability.config import ObservabilityConfig
 from src.services.observability.dependencies import (
@@ -16,7 +17,6 @@ from src.services.observability.dependencies import (
     get_observability_service,
     get_service_meter,
 )
-import src.services.observability.middleware
 from src.services.observability.init import (
     initialize_observability,
     is_observability_enabled,
@@ -96,7 +96,7 @@ class TestObservabilityIntegration:
 
         config = ObservabilityConfig(
             enabled=True,
-            service_name="integration-test",  # noqa: S105  # Test data
+            service_name="integration-test",  # Test data
             otlp_endpoint="http://test.example.com:4317",
         )
 
@@ -199,7 +199,8 @@ class TestFastAPIObservabilityIntegration:
 
         @self.app.get("/error")
         async def error_endpoint():
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
     def test_middleware_integration_disabled(self):
         """Test middleware integration when observability is disabled."""
@@ -220,10 +221,8 @@ class TestFastAPIObservabilityIntegration:
             # Add middleware
             self.app.add_middleware(
                 FastAPIObservabilityMiddleware,
-                **{
-                    "service_name": "test-service",
-                    "record_request_metrics": False,
-                },
+                service_name="test-service",
+                record_request_metrics=False,
             )
 
             client = TestClient(self.app)
@@ -282,10 +281,8 @@ class TestFastAPIObservabilityIntegration:
                 # Add middleware with metrics
                 self.app.add_middleware(
                     FastAPIObservabilityMiddleware,
-                    **{
-                        "service_name": "test-service",  # noqa: S105  # Test data
-                        "record_request_metrics": True,
-                    },
+                    service_name="test-service",
+                    record_request_metrics=True,
                 )
 
                 client = TestClient(self.app)
@@ -335,10 +332,8 @@ class TestFastAPIObservabilityIntegration:
                 # Add middleware
                 self.app.add_middleware(
                     FastAPIObservabilityMiddleware,
-                    **{
-                        "service_name": "test-service",  # noqa: S105  # Test data
-                        "record_request_metrics": False,
-                    },
+                    service_name="test-service",
+                    record_request_metrics=False,
                 )
 
                 client = TestClient(self.app)
@@ -389,11 +384,9 @@ class TestFastAPIObservabilityIntegration:
                 # Add middleware with AI context
                 self.app.add_middleware(
                     FastAPIObservabilityMiddleware,
-                    **{
-                        "service_name": "test-service",  # noqa: S105  # Test data
-                        "record_ai_context": True,
-                        "record_request_metrics": False,
-                    },
+                    service_name="test-service",
+                    record_ai_context=True,
+                    record_request_metrics=False,
                 )
 
                 client = TestClient(self.app)
@@ -444,7 +437,7 @@ class TestObservabilityConfigurationIntegration:
         config = get_config()
 
         assert config.observability.enabled is True
-        assert config.observability.service_name == "integration-test"  # noqa: S105  # Test data
+        assert config.observability.service_name == "integration-test"  # Test data
         assert config.observability.trace_sample_rate == 0.5
 
     def test_programmatic_configuration(self):
@@ -453,10 +446,10 @@ class TestObservabilityConfigurationIntegration:
 
         # Modify observability config
         config.observability.enabled = True
-        config.observability.service_name = "programmatic-test"  # noqa: S105  # Test data
+        config.observability.service_name = "programmatic-test"  # Test data
 
         assert config.observability.enabled is True
-        assert config.observability.service_name == "programmatic-test"  # noqa: S105  # Test data
+        assert config.observability.service_name == "programmatic-test"  # Test data
 
     def test_configuration_validation_integration(self):
         """Test configuration validation integration."""

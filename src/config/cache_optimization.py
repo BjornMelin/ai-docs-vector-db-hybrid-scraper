@@ -20,8 +20,9 @@ import json
 import time
 from functools import lru_cache, wraps
 from pathlib import Path
-from typing import Any, TypeVar, Union
+from typing import Any, TypeVar
 
+import aiofiles
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 
@@ -38,6 +39,7 @@ class ConfigCache:
         Args:
             max_size: Maximum number of cached configs
             default_ttl: Default time-to-live in seconds
+
         """
         self.max_size = max_size
         self.default_ttl = default_ttl
@@ -129,6 +131,7 @@ def cached_model(cache: ConfigCache | None = None, _ttl: float | None = None):
     Args:
         cache: Custom cache instance (uses global cache if None)
         ttl: Custom TTL for this model type
+
     """
 
     def decorator(model_class: type[T]) -> type[T]:
@@ -172,6 +175,7 @@ class AsyncConfigLoader:
 
         Args:
             max_concurrent_loads: Maximum concurrent config loading operations
+
         """
         self.max_concurrent_loads = max_concurrent_loads
         self._semaphore = asyncio.Semaphore(max_concurrent_loads)
@@ -180,7 +184,7 @@ class AsyncConfigLoader:
     async def load_config_async(
         self,
         config_class: type[T],
-        config_path: Union[str, Path] | None = None,
+        config_path: str | Path | None = None,
         **kwargs,
     ) -> T:
         """Load configuration asynchronously with caching.
@@ -192,6 +196,7 @@ class AsyncConfigLoader:
 
         Returns:
             Loaded configuration instance
+
         """
         # Generate cache key for this load operation
         cache_key = (
@@ -216,7 +221,7 @@ class AsyncConfigLoader:
             self._load_cache.pop(cache_key, None)
 
     async def _do_load_config(
-        self, config_class: type[T], config_path: Union[str, Path] | None, **kwargs
+        self, config_class: type[T], config_path: str | Path | None, **kwargs
     ) -> T:
         """Internal method to perform config loading."""
         async with self._semaphore:
@@ -229,8 +234,9 @@ class AsyncConfigLoader:
                     config_path = Path(config_path)
 
                 if config_path.exists() and config_path.suffix == ".json":
-                    with config_path.open() as f:
-                        file_data = json.load(f)
+                    async with aiofiles.open(config_path) as f:
+                        content = await f.read()
+                        file_data = json.loads(content)
                     kwargs.update(file_data)
 
             # Create config instance
@@ -252,7 +258,7 @@ class CachedConfigMixin:
 
     @classmethod
     async def load_async(
-        cls, config_path: Union[str, Path] | None = None, **kwargs
+        cls, config_path: str | Path | None = None, **kwargs
     ) -> "CachedConfigMixin":
         """Load config asynchronously."""
         return await _async_loader.load_config_async(cls, config_path, **kwargs)

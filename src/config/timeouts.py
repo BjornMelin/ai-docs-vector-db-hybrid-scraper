@@ -151,6 +151,7 @@ def get_timeout_settings() -> TimeoutSettings:
 
     Returns:
         TimeoutSettings instance with all timeout configurations
+
     """
     global _timeout_settings
     if _timeout_settings is None:
@@ -193,6 +194,7 @@ def get_timeout_config(operation_name: str) -> TimeoutConfig:
 
     Returns:
         TimeoutConfig instance with appropriate timeout settings
+
     """
     settings = get_timeout_settings()
 

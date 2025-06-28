@@ -9,7 +9,7 @@ from uuid import uuid4
 
 import yaml
 
-from ..models.responses import OperationStatus, ProjectInfo
+from src.mcp_tools.models.responses import OperationStatus, ProjectInfo
 
 
 if TYPE_CHECKING:
@@ -26,10 +26,9 @@ else:
 
 
 from src.config import SearchStrategy
-
-from ...infrastructure.client_manager import ClientManager
-from ..models.requests import ProjectRequest
-from ..models.responses import SearchResult
+from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.models.requests import ProjectRequest
+from src.mcp_tools.models.responses import SearchResult
 
 
 logger = logging.getLogger(__name__)
@@ -43,20 +42,21 @@ def register_tools(mcp, client_manager: ClientManager):
         """Raise ValueError for project not found."""
         if ctx:
             await ctx.error(f"Project {project_id} not found")
-        raise ValueError(f"Project {project_id} not found")
+        msg = f"Project {project_id} not found"
+        raise ValueError(msg)
 
     async def _raise_unsupported_format(format: str, ctx: Context = None) -> None:
         """Raise ValueError for unsupported format."""
         if ctx:
             await ctx.error(f"Unsupported format: {format}")
-        raise ValueError(f"Unsupported format: {format}. Use 'json' or 'yaml'")
+        msg = f"Unsupported format: {format}. Use 'json' or 'yaml'"
+        raise ValueError(msg)
 
     @mcp.tool()
     async def create_project(
         request: ProjectRequest, ctx: Context = None
     ) -> ProjectInfo:
-        """
-        Create a new documentation project.
+        """Create a new documentation project.
 
         Projects allow grouping related documents with shared configuration
         and quality settings.
@@ -162,8 +162,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def list_projects(ctx: Context = None) -> list[ProjectInfo]:
-        """
-        List all documentation projects.
+        """List all documentation projects.
 
         Returns all projects with their metadata and statistics.
         """
@@ -220,8 +219,7 @@ def register_tools(mcp, client_manager: ClientManager):
         strategy: SearchStrategy = SearchStrategy.HYBRID,
         ctx: Context = None,
     ) -> list[SearchResult]:
-        """
-        Search within a specific project.
+        """Search within a specific project.
 
         Uses project-specific quality settings and collection.
         """
@@ -307,8 +305,7 @@ def register_tools(mcp, client_manager: ClientManager):
         description: str | None = None,
         ctx: Context = None,
     ) -> ProjectInfo:
-        """
-        Update project metadata.
+        """Update project metadata.
 
         Updates the name and/or description of an existing project.
         """
@@ -353,8 +350,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def delete_project(
         project_id: str, delete_collection: bool = True, ctx: Context = None
     ) -> OperationStatus:
-        """
-        Delete a project and optionally its collection.
+        """Delete a project and optionally its collection.
 
         Args:
             project_id: Project ID to delete
@@ -362,6 +358,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Status message
+
         """
         if ctx:
             await ctx.info(
@@ -417,8 +414,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def export_project(
         project_id: str, format: str = "json", ctx: Context = None
     ) -> dict:
-        """
-        Export project data in the specified format.
+        """Export project data in the specified format.
 
         Args:
             project_id: Project ID to export
@@ -426,6 +422,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Dictionary containing status, format, and exported data
+
         """
         if ctx:
             await ctx.info(f"Exporting project {project_id} in {format} format")
@@ -482,8 +479,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def add_project_urls(
         project_id: str, urls: list[str], ctx: Context = None
     ) -> dict:
-        """
-        Add new URLs to an existing project.
+        """Add new URLs to an existing project.
 
         Args:
             project_id: Project ID to add URLs to
@@ -492,6 +488,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Status dict with urls_added and total_urls
+
         """
         if ctx:
             await ctx.info(f"Adding {len(urls)} URLs to project {project_id}")
@@ -562,8 +559,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def get_project_details(project_id: str, ctx: Context = None) -> dict:
-        """
-        Get detailed information about a specific project.
+        """Get detailed information about a specific project.
 
         Args:
             project_id: The ID of the project to retrieve
@@ -574,6 +570,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Raises:
             ValueError: If project not found
+
         """
         if ctx:
             await ctx.info(f"Getting details for project {project_id}")

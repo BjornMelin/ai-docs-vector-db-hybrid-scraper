@@ -91,7 +91,7 @@ class TestPydanticModelValidation:
                     "metadata": {"source": "test"},
                 }
             ],
-            "total_count": 1,
+            "_total_count": 1,
             "query_time_ms": 50.0,
             "search_strategy": "hybrid",
             "cache_hit": False,
@@ -102,7 +102,7 @@ class TestPydanticModelValidation:
         assert len(response.results) == 1
         assert response.results[0].id == "doc1"
         assert response.results[0].score == 0.95
-        assert response.total_count == 1
+        assert response._total_count == 1
         assert response.search_strategy == "hybrid"
 
     @pytest.mark.schema_validation
@@ -224,7 +224,7 @@ class TestJSONSchemaGeneration:
     """Test JSON schema generation from Pydantic models."""
 
     @pytest.mark.schema_validation
-    def test_generate_schemas(self, json_schema_validator):
+    def test_generate_schemas(self, _json_schema_validator):
         """Test generating JSON schemas from Pydantic models."""
         # Generate schema for SearchRequest
         search_schema = SearchRequest.model_json_schema()
@@ -250,24 +250,24 @@ class TestJSONSchemaGeneration:
         assert "minLength" in query_prop
 
         # Register and test validation
-        json_schema_validator.register_schema("search_request", search_schema)
+        _json_schema_validator.register_schema("search_request", search_schema)
 
         # Test valid data
         valid_data = {"query": "test query"}
-        result = json_schema_validator.validate_data(valid_data, "search_request")
+        result = _json_schema_validator.validate_data(valid_data, "search_request")
         assert result["valid"]
 
         # Test invalid data
         invalid_data = {"query": ""}  # Empty query
-        result = json_schema_validator.validate_data(invalid_data, "search_request")
+        result = _json_schema_validator.validate_data(invalid_data, "search_request")
         assert not result["valid"]
 
     @pytest.mark.schema_validation
-    def test_nested_schema_validation(self, json_schema_validator):
+    def test_nested_schema_validation(self, _json_schema_validator):
         """Test validation of nested schema structures."""
         # Generate schema for SearchResponse
         response_schema = SearchResponse.model_json_schema()
-        json_schema_validator.register_schema("search_response", response_schema)
+        _json_schema_validator.register_schema("search_response", response_schema)
 
         # Test valid nested data
         valid_data = {
@@ -281,13 +281,13 @@ class TestJSONSchemaGeneration:
                     "metadata": {"source": "test"},
                 }
             ],
-            "total_count": 1,
+            "_total_count": 1,
             "query_time_ms": 50.0,
             "search_strategy": "hybrid",
             "cache_hit": False,
         }
 
-        result = json_schema_validator.validate_data(valid_data, "search_response")
+        result = _json_schema_validator.validate_data(valid_data, "search_response")
         assert result["valid"], f"Validation errors: {result['errors']}"
 
         # Test invalid nested data (missing required field in result item)
@@ -300,13 +300,13 @@ class TestJSONSchemaGeneration:
                     "title": "Test Document",
                 }
             ],
-            "total_count": 1,
+            "_total_count": 1,
             "query_time_ms": 50.0,
             "search_strategy": "hybrid",
             "cache_hit": False,
         }
 
-        result = json_schema_validator.validate_data(invalid_data, "search_response")
+        result = _json_schema_validator.validate_data(invalid_data, "search_response")
         assert not result["valid"]
 
 
@@ -314,7 +314,7 @@ class TestSchemaCompatibility:
     """Test schema compatibility and evolution."""
 
     @pytest.mark.schema_validation
-    def test_schema_evolution(self, json_schema_validator):
+    def test_schema_evolution(self, _json_schema_validator):
         """Test schema evolution scenarios."""
         # Version 1 schema
         v1_schema = {
@@ -343,10 +343,10 @@ class TestSchemaCompatibility:
         v1_data = {"id": "doc1", "title": "Test Document", "score": 0.95}
 
         # Should be valid in both versions
-        result_v1 = json_schema_validator.validate_against_schema(v1_data, v1_schema)
+        result_v1 = _json_schema_validator.validate_against_schema(v1_data, v1_schema)
         assert result_v1["valid"]
 
-        result_v2 = json_schema_validator.validate_against_schema(v1_data, v2_schema)
+        result_v2 = _json_schema_validator.validate_against_schema(v1_data, v2_schema)
         assert result_v2["valid"]
 
         # Data with new field
@@ -358,13 +358,13 @@ class TestSchemaCompatibility:
         }
 
         # Should be valid in v2
-        result_v2_extended = json_schema_validator.validate_against_schema(
+        result_v2_extended = _json_schema_validator.validate_against_schema(
             v2_data, v2_schema
         )
         assert result_v2_extended["valid"]
 
     @pytest.mark.schema_validation
-    def test_schema_breaking_changes(self, json_schema_validator):
+    def test_schema_breaking_changes(self, _json_schema_validator):
         """Test detection of schema breaking changes."""
         # Original schema
         original_schema = {
@@ -393,13 +393,13 @@ class TestSchemaCompatibility:
         test_data = {"id": "doc1", "title": "Test Document"}
 
         # Should be valid in original
-        result_original = json_schema_validator.validate_against_schema(
+        result_original = _json_schema_validator.validate_against_schema(
             test_data, original_schema
         )
         assert result_original["valid"]
 
         # Should be invalid in breaking change
-        result_breaking = json_schema_validator.validate_against_schema(
+        result_breaking = _json_schema_validator.validate_against_schema(
             test_data, breaking_schema
         )
         assert not result_breaking["valid"]

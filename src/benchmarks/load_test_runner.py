@@ -13,9 +13,9 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from ..config import Config
-from ..models.vector_search import HybridSearchRequest
-from ..services.vector_db.hybrid_search import HybridSearchService
+from src.config import Config
+from src.models.vector_search import HybridSearchRequest
+from src.services.vector_db.hybrid_search import HybridSearchService
 
 
 logger = logging.getLogger(__name__)
@@ -107,6 +107,7 @@ class LoadTestUser:
             search_service: Search service to test
             test_queries: Pool of test queries
             config: Load test configuration
+
         """
         self.user_id = user_id
         self.search_service = search_service
@@ -128,6 +129,7 @@ class LoadTestUser:
 
         Returns:
             User session metrics
+
         """
         if start_delay > 0:
             await asyncio.sleep(start_delay)
@@ -143,7 +145,9 @@ class LoadTestUser:
 
             try:
                 # Select random query
-                query = random.choice(self.test_queries).model_copy()  # noqa: S311  # Non-crypto random for load testing
+                query = random.choice(
+                    self.test_queries
+                ).model_copy()  # Non-crypto random for load testing
                 query.user_id = f"load_test_user_{self.user_id}"
                 query.session_id = (
                     f"load_test_session_{self.user_id}_{int(time.time())}"
@@ -202,7 +206,7 @@ class LoadTestUser:
 
                 # Think time between requests
                 think_time = (
-                    random.randint(  # noqa: S311  # Non-crypto random for load testing
+                    random.randint(  # Non-crypto random for load testing
                         self.config.think_time_min_ms, self.config.think_time_max_ms
                     )
                     / 1000.0
@@ -234,6 +238,7 @@ class LoadTestRunner:
 
         Args:
             config: Unified configuration
+
         """
         self.config = config
 
@@ -252,6 +257,7 @@ class LoadTestRunner:
 
         Returns:
             Comprehensive load test metrics
+
         """
         logger.info(
             f"Starting load test: {load_config.concurrent_users} users, "
@@ -447,6 +453,7 @@ class LoadTestRunner:
 
         Returns:
             Dictionary mapping user counts to metrics
+
         """
         stress_results = {}
 
@@ -496,6 +503,7 @@ class LoadTestRunner:
 
         Returns:
             Load test metrics for endurance test
+
         """
         duration_seconds = int(duration_hours * 3600)
 

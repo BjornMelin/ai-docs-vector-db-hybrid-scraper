@@ -19,9 +19,9 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from ...infrastructure.client_manager import ClientManager
-from ..models.requests import SearchRequest
-from ..models.responses import SearchResult
+from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.models.requests import SearchRequest
+from src.mcp_tools.models.responses import SearchResult
 
 
 logger = logging.getLogger(__name__)
@@ -34,13 +34,11 @@ def register_tools(mcp, client_manager: ClientManager):
     async def search_documents(
         request: SearchRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Search documents with advanced hybrid search and reranking.
+        """Search documents with advanced hybrid search and reranking.
 
         Supports dense, sparse, and hybrid search strategies with optional
         BGE reranking for improved accuracy.
         """
-
         return await search_documents_core(request, client_manager, ctx)
 
     @mcp.tool()
@@ -51,8 +49,7 @@ def register_tools(mcp, client_manager: ClientManager):
         score_threshold: float = 0.7,
         ctx: Context = None,
     ) -> list[SearchResult]:
-        """
-        Search for documents similar to a given document ID.
+        """Search for documents similar to a given document ID.
 
         Uses the document's embedding to find semantically similar content.
         """
@@ -81,9 +78,8 @@ def register_tools(mcp, client_manager: ClientManager):
                     await ctx.error(
                         f"Document {query_id} not found in collection {collection}"
                     )
-                raise ValueError(
-                    f"Document {query_id} not found in collection {collection}"
-                )
+                msg = f"Document {query_id} not found in collection {collection}"
+                raise ValueError(msg)
 
             # Extract the vector
             source_doc = retrieved[0]

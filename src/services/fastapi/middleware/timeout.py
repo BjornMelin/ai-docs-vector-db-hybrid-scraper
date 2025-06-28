@@ -67,6 +67,7 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
         Args:
             app: ASGI application
             config: Timeout configuration
+
         """
         super().__init__(app)
         self.config = config
@@ -143,6 +144,7 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
 
         Raises:
             asyncio.TimeoutError: If request times out
+
         """
         try:
             return await asyncio.wait_for(
@@ -168,6 +170,7 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Endpoint identifier string
+
         """
         # Use method + path pattern for grouping
         return f"{request.method}:{request.url.path}"
@@ -180,6 +183,7 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Response if circuit is open, None if request should proceed
+
         """
         stats = self._circuit_stats.get(endpoint, CircuitBreakerStats())
         current_time = time.time()
@@ -221,6 +225,7 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
 
         Args:
             endpoint: Endpoint identifier
+
         """
         stats = self._circuit_stats.get(endpoint, CircuitBreakerStats())
         stats.success_count += 1
@@ -246,6 +251,7 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
 
         Args:
             endpoint: Endpoint identifier
+
         """
         stats = self._circuit_stats.get(endpoint, CircuitBreakerStats())
         stats.failure_count += 1
@@ -273,6 +279,7 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Dictionary of endpoint statistics
+
         """
         return {
             endpoint: {
@@ -294,6 +301,7 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
 
         Returns:
             True if circuit was reset, False if endpoint not found
+
         """
         if endpoint in self._circuit_stats:
             self._circuit_stats[endpoint] = CircuitBreakerStats()
@@ -315,6 +323,7 @@ class BulkheadMiddleware(BaseHTTPMiddleware):
         Args:
             app: ASGI application
             max_concurrent: Maximum concurrent requests per endpoint
+
         """
         super().__init__(app)
         self.max_concurrent = max_concurrent

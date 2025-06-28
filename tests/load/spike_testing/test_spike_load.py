@@ -8,7 +8,6 @@ import asyncio
 import logging
 import random
 import time
-from typing import Dict
 
 import pytest
 
@@ -19,8 +18,6 @@ from ..load_profiles import DoubleSpike, SpikeLoadProfile
 
 class TestError(Exception):
     """Custom exception for this module."""
-
-    pass
 
 
 logger = logging.getLogger(__name__)
@@ -106,18 +103,18 @@ class TestSpikeLoad:
         inter_spike_metrics = []
 
         @env.events.stats_reset.add_listener
-        def track_inter_spike_performance(**_kwargs):
+        def track_inter_spike_performance(**__kwargs):
             """Track performance between spikes."""
             stats = env.stats
-            if stats and stats.total.num_requests > 0:
+            if stats and stats._total.num_requests > 0:
                 inter_spike_metrics.append(
                     {
                         "timestamp": time.time(),
                         "users": env.runner.user_count if env.runner else 0,
-                        "rps": stats.total.current_rps,
-                        "avg_response_time": stats.total.avg_response_time,
+                        "rps": stats._total.current_rps,
+                        "avg_response_time": stats._total.avg_response_time,
                         "error_rate": (
-                            stats.total.num_failures / stats.total.num_requests
+                            stats._total.num_failures / stats._total.num_requests
                         )
                         * 100,
                     }
@@ -198,14 +195,14 @@ class TestSpikeLoad:
 
         auto_scaler = AutoScalingSimulator()
 
-        async def auto_scaling_aware_operation(**kwargs):
+        async def auto_scaling_aware_operation(**_kwargs):
             """Operation that updates auto-scaling metrics."""
             start_time = time.time()
-            result = await mock_load_test_service.process_request(**kwargs)
+            result = await mock_load_test_service.process_request(**_kwargs)
             response_time = time.time() - start_time
 
             # Update auto-scaler with current metrics
-            current_load = kwargs.get("concurrent_users", 50)
+            current_load = _kwargs.get("concurrent_users", 50)
             auto_scaler.update_utilization(current_load, response_time)
 
             # Simulate capacity-based latency
@@ -256,7 +253,7 @@ class TestSpikeLoad:
                 self.success_count = 0
                 self.events = []
 
-            async def call_service(self, **kwargs):
+            async def call_service(self, **_kwargs):
                 """Simulate service call through circuit breaker."""
                 current_time = time.time()
 
@@ -266,14 +263,17 @@ class TestSpikeLoad:
                         self.events.append(
                             {"timestamp": current_time, "event": "HALF_OPEN"}
                         )
-                        raise TestError("Circuit breaker is OPEN")
-                        raise TestError("Circuit breaker is OPEN")
+                        msg = "Circuit breaker is OPEN"
+                        raise TestError(msg)
+                        msg = "Circuit breaker is OPEN"
+                        raise TestError(msg)
 
                 try:
                     # Simulate higher failure rate during spikes
-                    failure_rate = kwargs.get("spike_intensity", 0.1)
+                    failure_rate = _kwargs.get("spike_intensity", 0.1)
                     if current_time % 1.0 < failure_rate:
-                        raise TestError("Service temporarily unavailable")
+                        msg = "Service temporarily unavailable"
+                        raise TestError(msg)
 
                     # Success
                     if self.state == "HALF_OPEN":
@@ -305,13 +305,13 @@ class TestSpikeLoad:
 
         circuit_breaker = CircuitBreakerSimulator()
 
-        async def circuit_breaker_operation(**kwargs):
+        async def circuit_breaker_operation(**_kwargs):
             """Operation with circuit breaker protection."""
             # Add spike intensity based on current load
-            kwargs["spike_intensity"] = min(
-                kwargs.get("concurrent_users", 50) / 500.0, 0.3
+            _kwargs["spike_intensity"] = min(
+                _kwargs.get("concurrent_users", 50) / 500.0, 0.3
             )
-            return await circuit_breaker.call_service(**kwargs)
+            return await circuit_breaker.call_service(**_kwargs)
 
         # Run spike test with circuit breaker
         config = LoadTestConfig(
@@ -357,18 +357,17 @@ class TestSpikeLoad:
                 if self.active_connections < self.current_size:
                     self.active_connections += 1
                     return f"conn_{self.active_connections}"
-                elif self.current_size < self.max_size:
+                if self.current_size < self.max_size:
                     # Expand pool
                     self.current_size = min(self.current_size + 2, self.max_size)
                     self.active_connections += 1
                     return f"conn_{self.active_connections}"
-                else:
-                    # Queue request
-                    self.queue_length += 1
-                    await asyncio.sleep(0.1)  # Wait for connection
-                    self.queue_length -= 1
-                    self.active_connections += 1
-                    return f"conn_{self.active_connections}"
+                # Queue request
+                self.queue_length += 1
+                await asyncio.sleep(0.1)  # Wait for connection
+                self.queue_length -= 1
+                self.active_connections += 1
+                return f"conn_{self.active_connections}"
 
             def release_connection(self, _conn_id: str):
                 """Release connection back to pool."""
@@ -387,14 +386,14 @@ class TestSpikeLoad:
 
         pool = ConnectionPoolSimulator(initial_size=10, max_size=100)
 
-        async def database_operation(**kwargs):
+        async def database_operation(**_kwargs):
             """Simulate database operation with connection pooling."""
             # Get connection
             conn = await pool.get_connection()
 
             try:
                 # Simulate database work
-                work_time = kwargs.get("work_complexity", 0.05)
+                work_time = _kwargs.get("work_complexity", 0.05)
                 await asyncio.sleep(work_time)
                 return {"status": "success", "connection": conn}
             finally:
@@ -423,11 +422,11 @@ class TestSpikeLoad:
         assert pool_analysis["max_queue_length"] < 20, "Excessive connection queuing"
         assert pool_analysis["avg_utilization"] > 0.6, "Low pool utilization"
 
-    def _spike_aware_operation(self, **kwargs):
+    def _spike_aware_operation(self, **_kwargs):
         """Operation that adapts to spike conditions."""
 
         # Simulate different behavior during spikes
-        concurrent_users = kwargs.get("concurrent_users", 50)
+        concurrent_users = _kwargs.get("concurrent_users", 50)
 
         if concurrent_users > 300:  # During spike
             # Increased processing time during spike
@@ -438,7 +437,7 @@ class TestSpikeLoad:
 
         return asyncio.sleep(processing_time)
 
-    def _analyze_spike_response(self, spike_metrics: Dict) -> Dict:
+    def _analyze_spike_response(self, spike_metrics: dict) -> dict:
         """Analyze system response to traffic spike."""
         baseline_times = spike_metrics["baseline_phase"]["response_times"]
         spike_times = spike_metrics["spike_phase"]["response_times"]
@@ -468,7 +467,7 @@ class TestSpikeLoad:
             "recovery_avg": recovery_avg * 1000,
         }
 
-    def _analyze_double_spike_recovery(self, metrics: list[Dict]) -> Dict:
+    def _analyze_double_spike_recovery(self, metrics: list[dict]) -> dict:
         """Analyze recovery between double spikes."""
         if len(metrics) < 10:
             return {
@@ -503,7 +502,7 @@ class TestSpikeLoad:
             "error_spikes": error_spikes,
         }
 
-    def _analyze_auto_scaling(self, utilization_history: list[Dict]) -> Dict:
+    def _analyze_auto_scaling(self, utilization_history: list[dict]) -> dict:
         """Analyze auto-scaling effectiveness."""
         if not utilization_history:
             return {"scaling_events": 0, "peak_capacity": 100, "avg_utilization": 0}
@@ -525,7 +524,7 @@ class TestSpikeLoad:
             "capacity_variance": max(capacities) - min(capacities),
         }
 
-    def _analyze_circuit_breaker(self, events: list[Dict]) -> Dict:
+    def _analyze_circuit_breaker(self, events: list[dict]) -> dict:
         """Analyze circuit breaker effectiveness."""
         open_events = [e for e in events if e["event"] == "OPEN"]
         closed_events = [e for e in events if e["event"] == "CLOSED"]
@@ -540,10 +539,10 @@ class TestSpikeLoad:
             "activation_count": activation_count,
             "recovery_count": recovery_count,
             "protection_effectiveness": protection_effectiveness,
-            "total_events": len(events),
+            "_total_events": len(events),
         }
 
-    def _analyze_connection_pool(self, metrics: list[Dict]) -> Dict:
+    def _analyze_connection_pool(self, metrics: list[dict]) -> dict:
         """Analyze database connection pool behavior."""
         if not metrics:
             return {"max_pool_size": 0, "max_queue_length": 0, "avg_utilization": 0}

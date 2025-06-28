@@ -16,21 +16,21 @@ except ImportError:
     FlagReranker = None
 
 try:
-    from ..cache import CacheManager
+    from src.services.cache import CacheManager
 except ImportError:
     CacheManager = None
 
 from src.config import Config
 from src.models import ModelBenchmark
+from src.services.errors import EmbeddingServiceError
 
-from ..errors import EmbeddingServiceError
 from .base import EmbeddingProvider
 from .fastembed_provider import FastEmbedProvider
 from .openai_provider import OpenAIEmbeddingProvider
 
 
 if TYPE_CHECKING:
-    from ...infrastructure.client_manager import ClientManager
+    from src.infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +91,7 @@ class EmbeddingManager:
             client_manager: ClientManager instance for dependency injection
             budget_limit: Optional daily budget limit in USD
             rate_limiter: Optional RateLimitManager instance
+
         """
         self.config = config
         self.providers: dict[str, EmbeddingProvider] = {}
@@ -141,6 +142,7 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If no providers can be initialized
+
         """
         if self._initialized:
             return
@@ -175,10 +177,11 @@ class EmbeddingManager:
             logger.warning("Failed to initialize FastEmbed provider")
 
         if not self.providers:
-            raise EmbeddingServiceError(
+            msg = (
                 "No embedding providers available. "
                 "Please configure OpenAI API key or enable local embeddings."
             )
+            raise EmbeddingServiceError(msg)
 
         self._initialized = True
         logger.info(
@@ -231,6 +234,7 @@ class EmbeddingManager:
                 - model_name: Name of the selected model
                 - estimated_cost: Estimated cost in USD
                 - reasoning: Human-readable explanation of selection
+
         """
         if auto_select and not provider_name:
             # Get smart recommendation
@@ -290,13 +294,13 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If requested provider is not available
+
         """
         if provider_name:
             provider = self.providers.get(provider_name)
             if not provider:
-                raise EmbeddingServiceError(
-                    f"Provider '{provider_name}' not available. Available"
-                )
+                msg = f"Provider '{provider_name}' not available. Available"
+                raise EmbeddingServiceError(msg)
         elif quality_tier:
             preferred = self._tier_providers.get(quality_tier)
             provider = self.providers.get(preferred)
@@ -321,13 +325,15 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If budget constraint would be violated
+
         """
         budget_check = self.check_budget_constraints(estimated_cost)
         if not budget_check["within_budget"]:
-            raise EmbeddingServiceError("Budget constraint violated")
+            msg = "Budget constraint violated"
+            raise EmbeddingServiceError(msg)
 
         # Log warnings if any
-        for warning in budget_check["warnings"]:
+        for _warning in budget_check["warnings"]:
             logger.warning("Budget warning")
 
     def _calculate_metrics_and_update_stats(
@@ -356,6 +362,7 @@ class EmbeddingManager:
                 - cost: Actual cost in USD
                 - tier_name: Name of quality tier used
                 - provider_key: Normalized provider name
+
         """
         end_time = time.time()
         latency_ms = (end_time - start_time) * 1000
@@ -412,9 +419,11 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If manager not initialized or provider fails
+
         """
         if not self._initialized:
-            raise EmbeddingServiceError("Manager not initialized")
+            msg = "Manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         if not texts:
             return {
@@ -553,6 +562,7 @@ class EmbeddingManager:
 
         Returns:
             Reranked results sorted by relevance
+
         """
         if not self._reranker:
             logger.warning("Reranker not available, returning original results")
@@ -599,6 +609,7 @@ class EmbeddingManager:
             FileNotFoundError: If benchmark file doesn't exist
             json.JSONDecodeError: If file contains invalid JSON
             pydantic.ValidationError: If data doesn't match expected schema
+
         """
         # Load and validate benchmark configuration
         benchmark_path = Path(benchmark_file)
@@ -635,9 +646,11 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If manager not initialized
+
         """
         if not self._initialized:
-            raise EmbeddingServiceError("Manager not initialized")
+            msg = "Manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         # Simple token estimation (avg 4 chars per token)
         total_chars = sum(len(text) for text in texts)
@@ -670,6 +683,7 @@ class EmbeddingManager:
                 - dimensions: Embedding dimensions
                 - cost_per_token: Cost per token in USD
                 - max_tokens: Maximum tokens per request
+
         """
         info = {}
         for name, provider in self.providers.items():
@@ -699,9 +713,11 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If no provider meets constraints
+
         """
         if not self._initialized:
-            raise EmbeddingServiceError("Manager not initialized")
+            msg = "Manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         # Simple heuristic for provider selection
         estimated_tokens = text_length / 4
@@ -723,9 +739,8 @@ class EmbeddingManager:
             )
 
         if not candidates:
-            raise EmbeddingServiceError(
-                f"No provider available within budget {budget_limit}"
-            )
+            msg = f"No provider available within budget {budget_limit}"
+            raise EmbeddingServiceError(msg)
 
         # Sort by preference
         if quality_required and "openai" in self.providers:
@@ -755,6 +770,7 @@ class EmbeddingManager:
                 - estimated_tokens: Estimated token count
                 - text_type: Categorization ("code", "docs", "short", "long")
                 - requires_high_quality: Whether high quality embedding is recommended
+
         """
         if not texts:
             return TextAnalysis(
@@ -856,9 +872,11 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If no models meet constraints or manager not initialized
+
         """
         if not self._initialized:
-            raise EmbeddingServiceError("Manager not initialized")
+            msg = "Manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         # Get available models with their benchmarks
         candidates = []
@@ -897,10 +915,11 @@ class EmbeddingManager:
                     )
 
         if not candidates:
-            raise EmbeddingServiceError(
+            msg = (
                 f"No models available for constraints: max_cost={max_cost}, "
                 f"tokens={text_analysis.estimated_tokens}"
             )
+            raise EmbeddingServiceError(msg)
 
         # Sort by score (higher is better)
         candidates.sort(key=lambda x: x["score"], reverse=True)
@@ -941,6 +960,7 @@ class EmbeddingManager:
                 - Cost efficiency score (local models get max score)
                 - Quality tier bonuses/penalties
                 - Text type specific bonuses
+
         """
         score = 0.0
 
@@ -1023,6 +1043,7 @@ class EmbeddingManager:
 
         Returns:
             str: Human-readable reasoning explaining the selection
+
         """
         benchmark = selection["benchmark"]
         reasons = []
@@ -1062,6 +1083,7 @@ class EmbeddingManager:
                 - daily_usage: Current daily cost
                 - estimated_total: Daily usage plus estimated cost
                 - budget_limit: Daily budget limit if set
+
         """
         result = {
             "within_budget": True,
@@ -1109,6 +1131,7 @@ class EmbeddingManager:
         Note:
             Daily cost is reset when a new day is detected based on the
             system date. All other statistics are cumulative.
+
         """
         self.usage_stats.total_requests += 1
         self.usage_stats.total_tokens += tokens
@@ -1132,6 +1155,7 @@ class EmbeddingManager:
                 - by_tier: Request counts by quality tier
                 - by_provider: Request counts by provider
                 - budget: Daily limit, usage, and remaining budget
+
         """
         total_cost = self.usage_stats.total_cost
         total_requests = self.usage_stats.total_requests

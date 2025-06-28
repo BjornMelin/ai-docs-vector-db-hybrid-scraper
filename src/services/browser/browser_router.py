@@ -16,8 +16,8 @@ from typing import Any
 from urllib.parse import urlparse
 
 from src.config import Config
+from src.services.errors import CrawlServiceError
 
-from ..errors import CrawlServiceError
 from .automation_router import AutomationRouter
 from .tier_config import (
     PerformanceHistoryEntry,
@@ -120,7 +120,8 @@ class EnhancedAutomationRouter(AutomationRouter):
     ) -> dict[str, Any]:
         """Enhanced scraping with performance tracking and intelligent routing."""
         if not self._initialized:
-            raise CrawlServiceError("Router not initialized")
+            msg = "Router not initialized"
+            raise CrawlServiceError(msg)
 
         domain = urlparse(url).netloc.lower()
         start_time = time.time()
@@ -131,7 +132,8 @@ class EnhancedAutomationRouter(AutomationRouter):
                 "crawl4ai_enhanced",
                 "firecrawl",
             ]:
-                raise CrawlServiceError(f"Forced tool '{force_tool}' not available")
+                msg = f"Forced tool '{force_tool}' not available"
+                raise CrawlServiceError(msg)
             selected_tier = force_tool
         else:
             selected_tier = await self._enhanced_select_tier(
@@ -156,13 +158,11 @@ class EnhancedAutomationRouter(AutomationRouter):
                         break
                 else:
                     # No available fallback, will fail
-                    raise CrawlServiceError(
-                        f"Circuit breaker open for {selected_tier} and no fallbacks available"
-                    )
+                    msg = f"Circuit breaker open for {selected_tier} and no fallbacks available"
+                    raise CrawlServiceError(msg)
             else:
-                raise CrawlServiceError(
-                    f"Circuit breaker open for {selected_tier} with no fallback configured"
-                )
+                msg = f"Circuit breaker open for {selected_tier} with no fallback configured"
+                raise CrawlServiceError(msg)
 
         # Execute scraping with rate limiting
         try:
@@ -538,18 +538,18 @@ class EnhancedAutomationRouter(AutomationRouter):
         # Use parent class methods for actual execution
         if tier == "lightweight":
             return await self._try_lightweight(url, timeout)
-        elif tier == "crawl4ai":
+        if tier == "crawl4ai":
             return await self._try_crawl4ai(url, custom_actions, timeout)
-        elif tier == "crawl4ai_enhanced":
+        if tier == "crawl4ai_enhanced":
             return await self._try_crawl4ai_enhanced(url, custom_actions, timeout)
-        elif tier == "browser_use":
+        if tier == "browser_use":
             return await self._try_browser_use(url, custom_actions, timeout)
-        elif tier == "playwright":
+        if tier == "playwright":
             return await self._try_playwright(url, custom_actions, timeout)
-        elif tier == "firecrawl":
+        if tier == "firecrawl":
             return await self._try_firecrawl(url, timeout)
-        else:
-            raise CrawlServiceError("Unknown tier")
+        msg = "Unknown tier"
+        raise CrawlServiceError(msg)
 
     async def _record_performance(
         self,

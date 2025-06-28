@@ -10,10 +10,20 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.config import Config
-from src.services.query_processing.orchestrator import AdvancedSearchResult
-from src.models.vector_search import ModelSelectionStrategy
+from src.models.vector_search import (
+    ABTestConfig,
+    FusionConfig,
+    HybridSearchRequest,
+    HybridSearchResponse,
+    ModelSelectionStrategy,
+    QueryClassification,
+    SearchAccuracy,
+    SearchParams,
+)
+from src.services.errors import QdrantServiceError
 from src.services.query_processing.orchestrator import (
     ABTestVariant,
+    AdvancedSearchResult,
     ModelType,
     OptimizationStrategy,
     QueryComplexity,
@@ -21,16 +31,6 @@ from src.services.query_processing.orchestrator import (
     SearchMode,
     SearchPipeline,
 )
-from src.models.vector_search import (
-    ABTestConfig,
-    FusionConfig,
-    HybridSearchRequest,
-    HybridSearchResponse,
-    QueryClassification,
-    SearchAccuracy,
-    SearchParams,
-)
-from src.services.errors import QdrantServiceError
 from src.services.vector_db.hybrid_search import HybridSearchService
 
 
@@ -83,8 +83,8 @@ class TestAdvancedHybridSearchService:
             enable_model_selection=True,
             enable_adaptive_fusion=True,
             enable_splade=True,
-            user_id="test_user",  # noqa: S105  # Test data
-            session_id="test_session",  # noqa: S105  # Test data
+            user_id="test_user",  # Test data
+            session_id="test_session",  # Test data
         )
 
     @pytest.fixture
@@ -187,12 +187,12 @@ class TestAdvancedHybridSearchService:
                     }
                     for i in range(4)
                 ],
-                total_results=4,
+                _total_results=4,
                 search_mode=SearchMode.ENHANCED,
                 pipeline=SearchPipeline.BALANCED,
                 query_processed="How to implement async functions in Python?",
                 stage_results=[],
-                total_processing_time_ms=150.0,
+                _total_processing_time_ms=150.0,
                 quality_score=0.85,
                 diversity_score=0.7,
                 relevance_score=0.8,
@@ -261,7 +261,7 @@ class TestAdvancedHybridSearchService:
     async def test_ab_test_assignment(self, service, sample_request):
         """Test A/B test variant assignment."""
         sample_request.ab_test_config = ABTestConfig(
-            experiment_name="test_experiment",  # noqa: S105  # Test data
+            experiment_name="test_experiment",  # Test data
             variants=[ABTestVariant.CONTROL, ABTestVariant.RRF_OPTIMIZED],
             traffic_allocation={"control": 0.5, "rrf_optimized": 0.5},
         )
@@ -276,7 +276,7 @@ class TestAdvancedHybridSearchService:
     async def test_ab_test_consistent_assignment(self, service, sample_request):
         """Test that A/B test assignment is consistent for same user."""
         sample_request.ab_test_config = ABTestConfig(
-            experiment_name="test_experiment",  # noqa: S105  # Test data
+            experiment_name="test_experiment",  # Test data
             variants=[ABTestVariant.CONTROL, ABTestVariant.RRF_OPTIMIZED],
             traffic_allocation={"control": 0.5, "rrf_optimized": 0.5},
         )
@@ -381,7 +381,7 @@ class TestAdvancedHybridSearchService:
         response = await service.hybrid_search(sample_request)
 
         assert response.retrieval_metrics is not None
-        assert response.retrieval_metrics.total_time_ms > 0
+        assert response.retrieval_metrics._total_time_ms > 0
         assert response.retrieval_metrics.results_count == len(response.results)
         assert (
             response.retrieval_metrics.hnsw_ef_used
@@ -399,8 +399,8 @@ class TestAdvancedHybridSearchService:
     async def test_performance_statistics(self, service):
         """Test performance statistics retrieval."""
         # Add some mock metrics
-        service.search_metrics["test1"] = MagicMock(total_time_ms=100.0)
-        service.search_metrics["test2"] = MagicMock(total_time_ms=200.0)
+        service.search_metrics["test1"] = MagicMock(_total_time_ms=100.0)
+        service.search_metrics["test2"] = MagicMock(_total_time_ms=200.0)
 
         with (
             patch.object(
@@ -408,12 +408,12 @@ class TestAdvancedHybridSearchService:
             ) as mock_stats,
             patch.object(service.splade_provider, "get_cache_stats") as mock_cache,
         ):
-            mock_stats.return_value = {"total_queries": 10}
+            mock_stats.return_value = {"_total_queries": 10}
             mock_cache.return_value = {"cache_size": 5}
 
             stats = service.get_performance_statistics()
 
-            assert stats["total_searches"] == 2
+            assert stats["_total_searches"] == 2
             assert stats["average_search_time"] == 150.0
             assert "fusion_tuner_stats" in stats
             assert "splade_cache_stats" in stats
@@ -432,7 +432,7 @@ class TestAdvancedHybridSearchService:
         response = HybridSearchResponse(
             results=[],
             retrieval_metrics={
-                "total_time_ms": 100.0,
+                "_total_time_ms": 100.0,
                 "results_count": 0,
                 "search_time_ms": 50.0,
                 "query_vector_time_ms": 25.0,
@@ -473,12 +473,12 @@ class TestAdvancedHybridSearchService:
         with patch.object(service.orchestrator, "search") as mock_orchestrator:
             mock_orchestrator.return_value = AdvancedSearchResult(
                 results=[],
-                total_results=0,
+                _total_results=0,
                 search_mode=SearchMode.ENHANCED,
                 pipeline=SearchPipeline.BALANCED,
                 query_processed="How to implement async functions in Python?",
                 stage_results=[],
-                total_processing_time_ms=100.0,
+                _total_processing_time_ms=100.0,
                 quality_score=0.0,
                 diversity_score=0.0,
                 relevance_score=0.0,
@@ -511,12 +511,12 @@ class TestAdvancedHybridSearchService:
         with patch.object(service.orchestrator, "search") as mock_orchestrator:
             mock_orchestrator.return_value = AdvancedSearchResult(
                 results=large_results,
-                total_results=sample_request.limit,
+                _total_results=sample_request.limit,
                 search_mode=SearchMode.ENHANCED,
                 pipeline=SearchPipeline.BALANCED,
                 query_processed="How to implement async functions in Python?",
                 stage_results=[],
-                total_processing_time_ms=150.0,
+                _total_processing_time_ms=150.0,
                 quality_score=0.85,
                 diversity_score=0.7,
                 relevance_score=0.8,
@@ -572,7 +572,7 @@ class TestAdvancedHybridSearchService:
         ],
     )
     async def test_different_optimization_strategies(
-        self, service, sample_request, optimization_strategy
+        self, service, sample_request, _optimization_strategy
     ):
         """Test search with different optimization strategies."""
         with patch.object(service.model_selector, "select_optimal_model") as mock_model:

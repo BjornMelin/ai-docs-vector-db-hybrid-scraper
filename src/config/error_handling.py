@@ -60,8 +60,6 @@ class ConfigError(Exception):
 class ConfigLoadError(ConfigError):
     """Error loading configuration from source."""
 
-    pass
-
 
 class ConfigValidationError(ConfigError):
     """Error validating configuration values."""
@@ -91,13 +89,9 @@ class ConfigValidationError(ConfigError):
 class ConfigReloadError(ConfigError):
     """Error during configuration reload operation."""
 
-    pass
-
 
 class ConfigFileWatchError(ConfigError):
     """Error in file watching operations."""
-
-    pass
 
 
 class ErrorContext:
@@ -229,8 +223,7 @@ class RetryableConfigOperation:
         # Return appropriate wrapper based on function type
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
-        else:
-            return sync_wrapper
+        return sync_wrapper
 
 
 # Decorator instance for easy use
@@ -248,13 +241,18 @@ class SafeConfigLoader:
         self.config_class = config_class
         self.fallback_config = fallback_config or config_class()
 
+    def _raise_config_load_error(self, message: str, **context_data: Any) -> None:
+        """Helper to raise ConfigLoadError with context."""
+        raise ConfigLoadError(message, context=context_data)
+
     @retry_config_operation
     def load_from_file(self, file_path: Path) -> dict[str, Any]:
         """Load configuration from file with retry logic."""
         with ErrorContext("load_config_file", file_path=str(file_path)):
             if not file_path.exists():
+                msg = f"Configuration file not found: {file_path}"
                 raise ConfigLoadError(
-                    f"Configuration file not found: {file_path}",
+                    msg,
                     context={"file_path": str(file_path)},
                 )
 
@@ -271,10 +269,8 @@ class SafeConfigLoader:
                         if data is None:
                             return {}
                         if not isinstance(data, dict):
-                            raise ConfigLoadError(
-                                f"Invalid YAML structure: expected dict, got {type(data).__name__}",
-                                context={"file_path": str(file_path)},
-                            )
+                            msg = f"Invalid YAML structure: expected dict, got {type(data).__name__}"
+                            self._raise_config_load_error(msg, file_path=str(file_path))
                         return data
 
                 elif suffix == ".toml":
@@ -282,14 +278,15 @@ class SafeConfigLoader:
                         return tomli.load(f)
 
                 else:
-                    raise ConfigLoadError(
-                        f"Unsupported configuration file format: {suffix}",
-                        context={"file_path": str(file_path), "suffix": suffix},
+                    msg = f"Unsupported configuration file format: {suffix}"
+                    self._raise_config_load_error(
+                        msg, file_path=str(file_path), suffix=suffix
                     )
 
             except json.JSONDecodeError as e:
+                msg = "Invalid JSON in configuration file"
                 raise ConfigLoadError(
-                    "Invalid JSON in configuration file",
+                    msg,
                     context={
                         "file_path": str(file_path),
                         "line": e.lineno,
@@ -298,14 +295,16 @@ class SafeConfigLoader:
                     cause=e,
                 ) from e
             except yaml.YAMLError as e:
+                msg = "Invalid YAML in configuration file"
                 raise ConfigLoadError(
-                    "Invalid YAML in configuration file",
+                    msg,
                     context={"file_path": str(file_path)},
                     cause=e,
                 ) from e
             except Exception as e:
+                msg = "Failed to load configuration file"
                 raise ConfigLoadError(
-                    "Failed to load configuration file",
+                    msg,
                     context={"file_path": str(file_path)},
                     cause=e,
                 ) from e
@@ -316,8 +315,7 @@ class SafeConfigLoader:
             try:
                 if config_data:
                     return self.config_class(**config_data)
-                else:
-                    return self.config_class()
+                return self.config_class()
 
             except ValidationError as e:
                 # Convert to our custom validation error with context
@@ -342,8 +340,7 @@ class SafeConfigLoader:
                         None, self.load_from_file, file_path
                     )
                     return self.create_config(config_data)
-                else:
-                    return self.create_config()
+                return self.create_config()
 
             except (ConfigLoadError, ConfigValidationError):
                 # Re-raise our custom errors
@@ -351,8 +348,9 @@ class SafeConfigLoader:
 
             except Exception as e:
                 # Wrap unexpected errors
+                msg = "Unexpected error loading configuration"
                 raise ConfigLoadError(
-                    "Unexpected error loading configuration",
+                    msg,
                     context={"file_path": str(file_path) if file_path else None},
                     cause=e,
                 ) from e

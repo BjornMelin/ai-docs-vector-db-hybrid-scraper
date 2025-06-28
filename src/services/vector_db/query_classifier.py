@@ -9,8 +9,7 @@ import re
 from typing import Any
 
 from src.config import Config, QueryComplexity, QueryType
-
-from ...models.vector_search import QueryClassification, QueryFeatures
+from src.models.vector_search import QueryClassification, QueryFeatures
 
 
 logger = logging.getLogger(__name__)
@@ -24,6 +23,7 @@ class QueryClassifier:
 
         Args:
             config: Unified configuration
+
         """
         self.config = config
         self._programming_keywords = {
@@ -167,6 +167,7 @@ class QueryClassifier:
 
         Returns:
             QueryClassification with type, complexity, and features
+
         """
         try:
             # Extract features from query
@@ -360,10 +361,9 @@ class QueryClassifier:
         # Classify based on score
         if complexity_score <= 2:
             return QueryComplexity.SIMPLE
-        elif complexity_score <= 4:
+        if complexity_score <= 4:
             return QueryComplexity.MODERATE
-        else:
-            return QueryComplexity.COMPLEX
+        return QueryComplexity.COMPLEX
 
     def _detect_domain(self, query: str, features: QueryFeatures) -> str:
         """Detect the technical domain of the query."""
@@ -514,10 +514,9 @@ class QueryClassifier:
 
         if advanced_count > basic_count and advanced_count > 0:
             return "advanced"
-        elif basic_count > 0:
+        if basic_count > 0:
             return "basic"
-        else:
-            return "medium"
+        return "medium"
 
     def _extract_entities(self, query_lower: str) -> list[str]:
         """Extract entities from the query (simple approach)."""

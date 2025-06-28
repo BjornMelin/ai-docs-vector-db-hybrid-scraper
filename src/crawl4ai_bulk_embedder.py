@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+import aiofiles
 import click
 import httpx
 from defusedxml import ElementTree
@@ -41,6 +42,23 @@ class ContentExtractionError(Exception):
 
 class ChunkGenerationError(Exception):
     """Exception raised when chunk generation fails."""
+
+
+def _raise_scraping_error(error_msg: str) -> None:
+    """Helper function to raise scraping error."""
+    raise ScrapingError(error_msg)
+
+
+def _raise_content_extraction_error() -> None:
+    """Helper function to raise content extraction error."""
+    msg = "No content extracted"
+    raise ContentExtractionError(msg)
+
+
+def _raise_chunk_generation_error() -> None:
+    """Helper function to raise chunk generation error."""
+    msg = "No chunks generated"
+    raise ChunkGenerationError(msg)
 
 
 logger = logging.getLogger(__name__)
@@ -77,6 +95,7 @@ class BulkEmbedder:
             client_manager: Client manager for services
             collection_name: Name of Qdrant collection
             state_file: Optional state file for resumability
+
         """
         self.config = config
         self.client_manager = client_manager
@@ -137,8 +156,9 @@ class BulkEmbedder:
         urls = []
 
         if file_path.suffix == ".csv":
-            with Path(file_path).open() as f:
-                reader = csv.DictReader(f)
+            async with aiofiles.open(file_path) as f:
+                content = await f.read()
+                reader = csv.DictReader(content.splitlines())
                 for row in reader:
                     # Try common column names
                     url = (
@@ -150,8 +170,9 @@ class BulkEmbedder:
                     if url:
                         urls.append(url.strip())
         elif file_path.suffix == ".json":
-            with Path(file_path).open() as f:
-                data = json.load(f)
+            async with aiofiles.open(file_path) as f:
+                content = await f.read()
+                data = json.loads(content)
                 if isinstance(data, list):
                     urls = [
                         item if isinstance(item, str) else item.get("url")
@@ -161,18 +182,20 @@ class BulkEmbedder:
                 elif isinstance(data, dict) and "urls" in data:
                     urls = data["urls"]
         elif file_path.suffix == ".txt":
-            with Path(file_path).open() as f:
+            async with aiofiles.open(file_path) as f:
+                content = await f.read()
                 urls = [
                     line.strip()
-                    for line in f
+                    for line in content.splitlines()
                     if line.strip() and not line.startswith("#")
                 ]
         else:
             # Try as plain text
-            with Path(file_path).open() as f:
+            async with aiofiles.open(file_path) as f:
+                content = await f.read()
                 urls = [
                     line.strip()
-                    for line in f
+                    for line in content.splitlines()
                     if line.strip() and not line.startswith("#")
                 ]
 
@@ -223,7 +246,7 @@ class BulkEmbedder:
             scrape_result = await self.crawl_manager.scrape_url(url=url)
 
             if not scrape_result.get("success"):
-                raise ScrapingError(scrape_result.get("error", "Scraping failed"))
+                _raise_scraping_error(scrape_result.get("error", "Scraping failed"))
 
             content = scrape_result.get("content", {})
             markdown_content = content.get("markdown", "")
@@ -234,7 +257,7 @@ class BulkEmbedder:
             content_to_chunk = markdown_content or text_content
 
             if not content_to_chunk:
-                raise ContentExtractionError("No content extracted")
+                _raise_content_extraction_error()
 
             # Chunk the content using DocumentChunker
             chunker = DocumentChunker(self.config.chunking)
@@ -242,7 +265,7 @@ class BulkEmbedder:
             chunks = chunk_results.chunks
 
             if not chunks:
-                raise ChunkGenerationError("No chunks generated")
+                _raise_chunk_generation_error()
 
             # Generate embeddings for all chunks
             texts = [chunk.content for chunk in chunks]
@@ -430,7 +453,7 @@ class BulkEmbedder:
         # Show failed URLs if any
         if self.state.failed_urls:
             console.print("\n[red]Failed URLs:[/red]")
-            for url, error in self.state.failed_urls.items():
+            for _url, _error in self.state.failed_urls.items():
                 console.print("  • {url}")
 
 
@@ -516,6 +539,7 @@ def main(
 
         # Custom configuration
         crawl4ai-bulk-embedder -f urls.csv --config config.json --concurrent 10
+
     """
     # Setup logging
     configure_logging(

@@ -5,7 +5,7 @@ providing type-safe interfaces for deployment operations and metrics.
 """
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -45,7 +45,8 @@ class DeploymentHealth(BaseModel):
     success_count: int = Field(default=0, description="Number of successful requests")
     error_count: int = Field(default=0, description="Number of failed requests")
     last_check: datetime = Field(
-        default_factory=datetime.utcnow, description="Last health check timestamp"
+        default_factory=lambda: datetime.now(UTC),
+        description="Last health check timestamp",
     )
     details: dict[str, Any] = Field(
         default_factory=dict, description="Additional health details"
@@ -85,7 +86,8 @@ class DeploymentMetrics(BaseModel):
 
     # Timestamps
     created_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Deployment creation time"
+        default_factory=lambda: datetime.now(UTC),
+        description="Deployment creation time",
     )
     started_at: datetime | None = Field(
         default=None, description="Deployment start time"
@@ -125,10 +127,12 @@ class TrafficSplit:
         """Validate traffic split percentages."""
         total = self.control_percentage + self.variant_percentage
         if not (99.9 <= total <= 100.1):  # Allow for floating point precision
-            raise ValueError(f"Traffic split must total 100%, got {total}%")
+            msg = f"Traffic split must total 100%, got {total}%"
+            raise ValueError(msg)
 
         if self.control_percentage < 0 or self.variant_percentage < 0:
-            raise ValueError("Traffic percentages must be non-negative")
+            msg = "Traffic percentages must be non-negative"
+            raise ValueError(msg)
 
 
 @dataclass

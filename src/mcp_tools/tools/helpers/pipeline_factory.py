@@ -3,7 +3,7 @@
 import logging
 from typing import TYPE_CHECKING
 
-from ....services.query_processing.orchestrator import QueryProcessingOrchestrator
+from src.services.query_processing.orchestrator import QueryProcessingOrchestrator
 
 
 if TYPE_CHECKING:
@@ -19,8 +19,8 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from ....infrastructure.client_manager import ClientManager
-from ....services.query_processing.pipeline import QueryProcessingPipeline
+from src.infrastructure.client_manager import ClientManager
+from src.services.query_processing.pipeline import QueryProcessingPipeline
 
 
 logger = logging.getLogger(__name__)

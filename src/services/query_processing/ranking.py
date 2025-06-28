@@ -108,9 +108,11 @@ class InteractionEvent(BaseModel):
 
         if interaction_type == InteractionType.RATING:
             if v is not None and not (1.0 <= v <= 5.0):
-                raise ValueError("Rating must be between 1.0 and 5.0")
+                msg = "Rating must be between 1.0 and 5.0"
+                raise ValueError(msg)
         elif interaction_type == InteractionType.DWELL_TIME and v is not None and v < 0:
-            raise ValueError("Dwell time cannot be negative")
+            msg = "Dwell time cannot be negative"
+            raise ValueError(msg)
 
         return v
 
@@ -243,12 +245,14 @@ class PersonalizedRankingRequest(BaseModel):
     def validate_results_structure(cls, v):
         """Validate results have required fields."""
         if not v:
-            raise ValueError("Results list cannot be empty")
+            msg = "Results list cannot be empty"
+            raise ValueError(msg)
 
         required_fields = {"id", "title", "score"}
         for result in v:
             if not all(field in result for field in required_fields):
-                raise ValueError(f"Results must contain fields: {required_fields}")
+                msg = f"Results must contain fields: {required_fields}"
+                raise ValueError(msg)
 
         return v
 
@@ -304,6 +308,7 @@ class PersonalizedRankingService:
             enable_collaborative_filtering: Enable collaborative filtering features
             profile_cache_size: Size of user profile cache
             interaction_retention_days: Days to retain interaction data
+
         """
         self._logger = logging.getLogger(
             f"{self.__class__.__module__}.{self.__class__.__name__}"
@@ -345,8 +350,8 @@ class PersonalizedRankingService:
 
         Returns:
             PersonalizedRankingResult with reranked results and metadata
-        """
 
+        """
         start_time = time.time()
 
         try:
@@ -436,6 +441,7 @@ class PersonalizedRankingService:
 
         Args:
             interaction: User interaction event
+
         """
         try:
             if not self.enable_learning:
@@ -516,18 +522,18 @@ class PersonalizedRankingService:
 
         if request.strategy == RankingStrategy.CONTENT_BASED:
             return await self._content_based_ranking(results, user_profile, request)
-        elif request.strategy == RankingStrategy.COLLABORATIVE_FILTERING:
+        if request.strategy == RankingStrategy.COLLABORATIVE_FILTERING:
             return await self._collaborative_filtering_ranking(
                 results, user_profile, request
             )
-        elif request.strategy == RankingStrategy.BEHAVIORAL:
+        if request.strategy == RankingStrategy.BEHAVIORAL:
             return await self._behavioral_ranking(results, user_profile, request)
-        elif request.strategy == RankingStrategy.CONTEXTUAL:
+        if request.strategy == RankingStrategy.CONTEXTUAL:
             return await self._contextual_ranking(results, user_profile, request)
-        elif request.strategy == RankingStrategy.LEARNING_TO_RANK:
+        if request.strategy == RankingStrategy.LEARNING_TO_RANK:
             return await self._learning_to_rank(results, user_profile, request)
-        else:  # HYBRID
-            return await self._hybrid_ranking(results, user_profile, request)
+        # HYBRID
+        return await self._hybrid_ranking(results, user_profile, request)
 
     async def _content_based_ranking(
         self,
@@ -972,10 +978,9 @@ class PersonalizedRankingService:
         # Boost diverse content types
         if same_type_count <= 1:
             return 0.1
-        elif same_type_count == 2:
+        if same_type_count == 2:
             return 0.05
-        else:
-            return -0.05  # Slight penalty for over-represented types
+        return -0.05  # Slight penalty for over-represented types
 
     def _calculate_freshness_boost(self, result: dict[str, Any]) -> float:
         """Calculate freshness boost based on content age."""
@@ -989,12 +994,11 @@ class PersonalizedRankingService:
             # Boost fresher content
             if age_days <= 7:
                 return 0.1
-            elif age_days <= 30:
+            if age_days <= 30:
                 return 0.05
-            elif age_days <= 90:
+            if age_days <= 90:
                 return 0.02
-            else:
-                return 0.0
+            return 0.0
         except (ValueError, TypeError):
             return 0.0
 
@@ -1213,14 +1217,12 @@ class PersonalizedRankingService:
         """Strengthen user preferences based on positive interaction."""
         # This is a simplified implementation
         # In production, would extract more sophisticated preferences
-        pass
 
     def _weaken_preferences(
         self, profile: UserProfile, interaction: InteractionEvent
     ) -> None:
         """Weaken user preferences based on negative interaction."""
         # This is a simplified implementation
-        pass
 
     def _calculate_diversity_score(self, results: list[RankedResult]) -> float:
         """Calculate diversity score for ranked results."""
@@ -1283,10 +1285,9 @@ class PersonalizedRankingService:
         """Generate explanation for content-based ranking."""
         if content_boost > 0.2:
             return "Ranked higher based on your content preferences"
-        elif content_boost > 0.1:
+        if content_boost > 0.1:
             return "Slightly boosted to match your interests"
-        else:
-            return "Standard ranking applied"
+        return "Standard ranking applied"
 
     def _generate_hybrid_explanation(self, ranking_factors: dict[str, float]) -> str:
         """Generate explanation for hybrid ranking."""

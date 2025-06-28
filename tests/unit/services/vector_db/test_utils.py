@@ -142,8 +142,8 @@ class TestQdrantUtils:
             "min_quality_score": 0.7,
             "max_quality_score": 1.0,
             "min_score": 0.5,
-            "min_total_chunks": 1,
-            "max_total_chunks": 10,
+            "min__total_chunks": 1,
+            "max__total_chunks": 10,
             "min_links_count": 0,
             "max_links_count": 50,
         }

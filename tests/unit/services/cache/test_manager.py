@@ -698,7 +698,7 @@ class TestCacheManager:
             mock_metrics = MagicMock()
             mock_metrics.get_hit_rates.return_value = {"hit_rate": 0.85}
             mock_metrics.get_latency_stats.return_value = {"avg_latency": 10.5}
-            mock_metrics.get_operation_counts.return_value = {"total_ops": 1000}
+            mock_metrics.get_operation_counts.return_value = {"_total_ops": 1000}
             mock_metrics_cls.return_value = mock_metrics
 
             manager = CacheManager(
@@ -712,7 +712,7 @@ class TestCacheManager:
 
             assert stats["hit_rates"] == {"hit_rate": 0.85}
             assert stats["latency_stats"] == {"avg_latency": 10.5}
-            assert stats["operation_counts"] == {"total_ops": 1000}
+            assert stats["operation_counts"] == {"_total_ops": 1000}
 
     @pytest.mark.asyncio
     async def test_get_performance_stats_disabled(self):

@@ -36,7 +36,7 @@ class MockContext:
 
 
 @pytest.fixture
-def mock_services():
+def _mock_services():
     """Create properly configured mock services."""
     return {
         "embedding_manager": AsyncMock(),
@@ -47,17 +47,19 @@ def mock_services():
 
 
 @pytest.fixture
-def mock_client_manager(mock_services):
+def mock_client_manager(_mock_services):
     """Create client manager with properly configured service mocks."""
     manager = Mock(spec=ClientManager)
 
     # Configure service getters to return the mock services
     manager.get_embedding_manager = AsyncMock(
-        return_value=mock_services["embedding_manager"]
+        return_value=_mock_services["embedding_manager"]
     )
-    manager.get_qdrant_service = AsyncMock(return_value=mock_services["qdrant_service"])
-    manager.get_hyde_engine = AsyncMock(return_value=mock_services["hyde_engine"])
-    manager.get_cache_manager = AsyncMock(return_value=mock_services["cache_manager"])
+    manager.get_qdrant_service = AsyncMock(
+        return_value=_mock_services["qdrant_service"]
+    )
+    manager.get_hyde_engine = AsyncMock(return_value=_mock_services["hyde_engine"])
+    manager.get_cache_manager = AsyncMock(return_value=_mock_services["cache_manager"])
 
     return manager
 
@@ -83,7 +85,7 @@ class TestPipelineFactoryBasics:
         assert factory.client_manager is mock_client_manager
 
     async def test_service_dependency_gathering(
-        self, pipeline_factory, _mock_context, mock_services
+        self, pipeline_factory, _mock_context, _mock_services
     ):
         """Test that factory correctly gathers required service dependencies."""
         # This test focuses on the real-world functionality of dependency gathering
@@ -173,7 +175,7 @@ class TestPipelineFactoryIntegration:
 class TestPipelineFactoryRealWorld:
     """Test real-world usage patterns and integration scenarios."""
 
-    async def test_service_configuration_validation(self, mock_services):
+    async def test_service_configuration_validation(self, _mock_services):
         """Test that services are properly configured for pipeline creation."""
         # Verify that all required services have the expected interface
         required_services = [
@@ -184,8 +186,8 @@ class TestPipelineFactoryRealWorld:
         ]
 
         for service_name in required_services:
-            assert service_name in mock_services
-            service = mock_services[service_name]
+            assert service_name in _mock_services
+            service = _mock_services[service_name]
             assert callable(service)  # Verify it's callable/mock
 
     def test_factory_handles_none_context(self, pipeline_factory):

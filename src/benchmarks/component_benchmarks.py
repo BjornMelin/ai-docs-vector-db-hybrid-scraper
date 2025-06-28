@@ -11,9 +11,9 @@ import time
 
 from pydantic import BaseModel, Field
 
-from ..config import Config
-from ..models.vector_search import HybridSearchRequest
-from ..services.vector_db.hybrid_search import AdvancedHybridSearchService
+from src.config import Config
+from src.models.vector_search import HybridSearchRequest
+from src.services.vector_db.hybrid_search import AdvancedHybridSearchService
 
 
 logger = logging.getLogger(__name__)
@@ -54,6 +54,7 @@ class ComponentBenchmarks:
 
         Args:
             config: Unified configuration
+
         """
         self.config = config
 
@@ -70,6 +71,7 @@ class ComponentBenchmarks:
 
         Returns:
             Dictionary mapping component names to benchmark results
+
         """
         results = {}
 
@@ -127,8 +129,8 @@ class ComponentBenchmarks:
                 latencies.append(latency_ms)
                 successes += 1
 
-            except Exception as e:
-                logger.debug(f"Query classification failed: {e}")
+            except (ValueError, RuntimeError, OSError) as e:
+                logger.debug("Query classification failed: %s", e)
                 failures += 1
 
         end_time = time.time()
@@ -175,8 +177,8 @@ class ComponentBenchmarks:
                 latencies.append(latency_ms)
                 successes += 1
 
-            except Exception as e:
-                logger.debug(f"Model selection failed: {e}")
+            except (ValueError, RuntimeError, OSError) as e:
+                logger.debug("Model selection failed: %s", e)
                 failures += 1
 
         end_time = time.time()
@@ -225,8 +227,8 @@ class ComponentBenchmarks:
                 latencies.append(latency_ms)
                 successes += 1
 
-            except Exception as e:
-                logger.debug(f"Adaptive fusion failed: {e}")
+            except (ValueError, RuntimeError, OSError) as e:
+                logger.debug("Adaptive fusion failed: %s", e)
                 failures += 1
 
         end_time = time.time()
@@ -267,8 +269,8 @@ class ComponentBenchmarks:
                 latencies.append(latency_ms)
                 successes += 1
 
-            except Exception as e:
-                logger.debug(f"SPLADE generation failed: {e}")
+            except (ValueError, RuntimeError, OSError) as e:
+                logger.debug("SPLADE generation failed: %s", e)
                 failures += 1
 
         end_time = time.time()
@@ -311,8 +313,8 @@ class ComponentBenchmarks:
                 latencies.append(latency_ms)
                 successes += 1
 
-            except Exception as e:
-                logger.debug(f"End-to-end search failed: {e}")
+            except (ValueError, RuntimeError, OSError) as e:
+                logger.debug("End-to-end search failed: %s", e)
                 failures += 1
 
         end_time = time.time()
@@ -363,8 +365,10 @@ class ComponentBenchmarks:
                 await search_service.splade_provider.generate_sparse_vector(query.query)
                 end = time.perf_counter()
                 cold_latencies.append((end - start) * 1000)
-            except Exception as e:
-                logger.warning(f"SPLADE cold run failed for query '{query.query}': {e}")
+            except (ValueError, RuntimeError, OSError) as e:
+                logger.warning(
+                    "SPLADE cold run failed for query '%s': %s", query.query, e
+                )
                 continue
 
         # Second run (warm cache) - same queries
@@ -375,8 +379,10 @@ class ComponentBenchmarks:
                 await search_service.splade_provider.generate_sparse_vector(query.query)
                 end = time.perf_counter()
                 warm_latencies.append((end - start) * 1000)
-            except Exception as e:
-                logger.warning(f"SPLADE warm run failed for query '{query.query}': {e}")
+            except (ValueError, RuntimeError, OSError) as e:
+                logger.warning(
+                    "SPLADE warm run failed for query '%s': %s", query.query, e
+                )
                 continue
 
         if cold_latencies and warm_latencies:

@@ -10,7 +10,7 @@ import logging
 import os
 import random
 import time
-from typing import Any
+from typing import Any, ClassVar
 
 from locust import HttpUser, TaskSet, between, events, task
 from locust.env import Environment
@@ -165,7 +165,7 @@ class VectorDBUserBehavior(TaskSet):
 class VectorDBUser(HttpUser):
     """Simulated user for vector database load testing."""
 
-    tasks = [VectorDBUserBehavior]
+    tasks: ClassVar[list[type]] = [VectorDBUserBehavior]
     wait_time = between(1, 3)  # Wait 1-3 seconds between tasks
 
     def on_start(self):
@@ -247,7 +247,7 @@ class PerformanceMetricsCollector:
 
         return {
             "duration_seconds": duration,
-            "total_requests": len(response_times),
+            "_total_requests": len(response_times),
             "response_times": {
                 "min": min(response_times),
                 "max": max(response_times),
@@ -277,14 +277,14 @@ metrics_collector = PerformanceMetricsCollector()
 
 
 @events.test_start.add_listener
-def on_test_start(_environment: Environment, **_kwargs):
+def on_test_start(_environment: Environment, **__kwargs):
     """Handle test start event."""
     logger.info("Load test started")
     metrics_collector.start_collection()
 
 
 @events.test_stop.add_listener
-def on_test_stop(_environment: Environment, **_kwargs):
+def on_test_stop(_environment: Environment, **__kwargs):
     """Handle test stop event."""
     logger.info("Load test stopped")
     metrics_collector.stop_collection()
@@ -305,7 +305,7 @@ def on_request(
     exception: Exception | None,
     _start_time: float,
     _url: str,
-    **_kwargs,
+    **__kwargs,
 ):
     """Handle request completion event."""
     metrics_collector.add_response_time(response_time)

@@ -11,8 +11,7 @@ from typing import Any
 import numpy as np
 
 from src.config import Config
-
-from ...models.vector_search import SPLADEConfig
+from src.models.vector_search import SPLADEConfig
 
 
 logger = logging.getLogger(__name__)
@@ -27,6 +26,7 @@ class SPLADEProvider:
         Args:
             config: Unified configuration
             splade_config: SPLADE-specific configuration
+
         """
         self.config = config
         self.splade_config = splade_config or SPLADEConfig()
@@ -63,7 +63,6 @@ class SPLADEProvider:
 
             # For now, use fallback implementation
             logger.info("Using fallback SPLADE implementation")
-            pass
 
         except ImportError:
             logger.warning(
@@ -84,6 +83,7 @@ class SPLADEProvider:
 
         Returns:
             Dictionary mapping token IDs to weights
+
         """
         # Check cache first
         cache_key = f"{text}_{normalize}"

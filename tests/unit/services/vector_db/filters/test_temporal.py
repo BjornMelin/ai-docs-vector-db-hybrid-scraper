@@ -258,7 +258,7 @@ class TestTemporalFilter:
     @pytest.mark.asyncio
     async def test_apply_with_context(self, temporal_filter):
         """Test applying filter with context."""
-        current_time = datetime(2024, 1, 15, 12, 0, 0)
+        current_time = datetime(2024, 1, 15, 12, 0, 0, tzinfo=UTC)
 
         criteria = {
             "created_within_days": 7,
@@ -414,19 +414,19 @@ class TestTemporalFilter:
         result = temporal_filter.parse_relative_date("last 7 days")
         assert result is not None
         expected = current_time - timedelta(days=7)
-        assert abs((result - expected).total_seconds()) < 60  # Within 1 minute
+        assert abs((result - expected)._total_seconds()) < 60  # Within 1 minute
 
         # Past week
         result = temporal_filter.parse_relative_date("past week")
         assert result is not None
         expected = current_time - timedelta(weeks=1)
-        assert abs((result - expected).total_seconds()) < 60
+        assert abs((result - expected)._total_seconds()) < 60
 
         # Yesterday
         result = temporal_filter.parse_relative_date("yesterday")
         assert result is not None
         expected = current_time - timedelta(days=1)
-        assert abs((result - expected).total_seconds()) < 60
+        assert abs((result - expected)._total_seconds()) < 60
 
         # Today
         result = temporal_filter.parse_relative_date("today")

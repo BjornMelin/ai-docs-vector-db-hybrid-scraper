@@ -23,8 +23,6 @@ from src.services.monitoring.initialization import (
 class TestError(Exception):
     """Custom exception for this module."""
 
-    pass
-
 
 class TestMonitoringInitialization:
     """Test monitoring system initialization."""
@@ -56,7 +54,7 @@ class TestMonitoringInitialization:
 
     @pytest.mark.asyncio
     async def test_initialize_monitoring_enabled(
-        self, mock_config, mock_qdrant_client, isolated_registry
+        self, mock_config, mock_qdrant_client, _isolated_registry
     ):
         """Test initialization with monitoring enabled."""
         with (
@@ -170,7 +168,7 @@ class TestBackgroundMonitoringTasks:
 
     @pytest.mark.asyncio
     async def test_start_background_tasks_enabled(
-        self, mock_metrics_registry, mock_health_manager, mock_cache_manager
+        self, mock_metrics_registry, mock_health_manager, _mock_cache_manager
     ):
         """Test starting background tasks when enabled."""
         # Configure the mock registries to have the right config attributes
@@ -290,7 +288,8 @@ class TestBackgroundMonitoringTasks:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                raise TestError("Test error")
+                msg = "Test error"
+                raise TestError(msg)
 
         mock_metrics_registry.update_system_metrics.side_effect = side_effect
 

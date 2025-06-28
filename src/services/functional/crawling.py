@@ -7,7 +7,7 @@ Provides crawling operations with circuit breaker patterns.
 import asyncio
 import logging
 import re
-from typing import Annotated, Any, Dict
+from typing import Annotated, Any
 from urllib.parse import urlparse
 
 from fastapi import Depends, HTTPException
@@ -40,6 +40,7 @@ async def crawl_url(
 
     Raises:
         HTTPException: If crawling fails critically
+
     """
     try:
         if not crawling_client:
@@ -63,7 +64,7 @@ async def crawl_url(
                 f"Failed to crawl {url}: {result.get('error', 'Unknown error')}"
             )
 
-    except HTTPException as e:
+    except HTTPException:
         raise
     except Exception as e:
         logger.exception(f"URL crawling failed for {url}")
@@ -94,6 +95,7 @@ async def crawl_site(
 
     Raises:
         HTTPException: If site crawling fails
+
     """
     try:
         if not crawling_client:
@@ -121,7 +123,7 @@ async def crawl_site(
                 f"Site crawl failed for {url}: {result.get('error', 'Unknown error')}"
             )
 
-    except HTTPException as e:
+    except HTTPException:
         raise
     except Exception as e:
         logger.exception(f"Site crawling failed for {url}")
@@ -134,7 +136,7 @@ async def crawl_site(
 
 async def get_crawl_metrics(
     crawling_client: Annotated[object, Depends(get_crawling_client)] = None,
-) -> dict[str, Dict]:
+) -> dict[str, dict]:
     """Get performance metrics for all crawling tiers.
 
     Pure function replacement for CrawlManager.get_metrics().
@@ -147,6 +149,7 @@ async def get_crawl_metrics(
 
     Raises:
         HTTPException: If metrics retrieval fails
+
     """
     try:
         if not crawling_client:
@@ -179,6 +182,7 @@ async def get_recommended_tool(
 
     Raises:
         HTTPException: If tool recommendation fails
+
     """
     try:
         if not crawling_client:
@@ -201,7 +205,7 @@ async def get_recommended_tool(
 
 async def get_provider_info(
     crawling_client: Annotated[object, Depends(get_crawling_client)] = None,
-) -> dict[str, Dict]:
+) -> dict[str, dict]:
     """Get information about available automation tools in 5-tier system.
 
     Pure function replacement for CrawlManager.get_provider_info().
@@ -214,6 +218,7 @@ async def get_provider_info(
 
     Raises:
         HTTPException: If provider info retrieval fails
+
     """
     try:
         if not crawling_client:
@@ -231,7 +236,7 @@ async def get_provider_info(
 
 async def get_tier_metrics(
     crawling_client: Annotated[object, Depends(get_crawling_client)] = None,
-) -> dict[str, Dict]:
+) -> dict[str, dict]:
     """Get performance metrics for each tier from UnifiedBrowserManager.
 
     Pure function replacement for CrawlManager.get_tier_metrics().
@@ -244,6 +249,7 @@ async def get_tier_metrics(
 
     Raises:
         HTTPException: If tier metrics retrieval fails
+
     """
     try:
         if not crawling_client:
@@ -282,6 +288,7 @@ async def batch_crawl_urls(
 
     Raises:
         HTTPException: If batch crawling fails
+
     """
     try:
         if not urls:
@@ -327,7 +334,7 @@ async def batch_crawl_urls(
             f"using max {max_parallel} parallel operations"
         )
 
-    except HTTPException as e:
+    except HTTPException:
         raise
     except Exception as e:
         logger.exception("Batch URL crawling failed")
@@ -348,6 +355,7 @@ async def validate_url(url: str) -> dict[str, Any]:
 
     Returns:
         Validation result with status and details
+
     """
     try:
         if not url:
@@ -413,6 +421,7 @@ async def estimate_crawl_cost(
 
     Returns:
         Cost estimation with time and resource requirements
+
     """
     try:
         if not urls:

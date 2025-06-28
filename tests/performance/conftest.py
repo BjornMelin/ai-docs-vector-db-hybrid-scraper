@@ -244,8 +244,8 @@ def memory_profiler():
             )
 
             if growth_trend:
-                total_growth = recent_snapshots[-1].rss_mb - recent_snapshots[0].rss_mb
-                return total_growth > threshold_mb
+                _total_growth = recent_snapshots[-1].rss_mb - recent_snapshots[0].rss_mb
+                return _total_growth > threshold_mb
 
             return False
 
@@ -274,7 +274,8 @@ def performance_timer():
         def stop(self, name: str) -> float:
             """Stop timing and return duration in seconds."""
             if name not in self.active_timers:
-                raise ValueError(f"Timer '{name}' was not started")
+                msg = f"Timer '{name}' was not started"
+                raise ValueError(msg)
 
             start_time = self.active_timers.pop(name)
             duration = time.perf_counter() - start_time
@@ -293,7 +294,7 @@ def performance_timer():
             durations = self.timings[name]
             return {
                 "count": len(durations),
-                "total": sum(durations),
+                "_total": sum(durations),
                 "average": sum(durations) / len(durations),
                 "min": min(durations),
                 "max": max(durations),
@@ -411,7 +412,7 @@ def database_performance_monitor():
                 return {"error": "No successful queries recorded"}
 
             return {
-                "total_queries": len(timings),
+                "_total_queries": len(timings),
                 "successful_queries": len(successful_timings),
                 "average_time": sum(successful_timings) / len(successful_timings),
                 "min_time": min(successful_timings),
@@ -502,7 +503,7 @@ def network_latency_monitor():
             latencies = [m["latency"] for m in successful_measurements]
 
             return {
-                "total_requests": len(measurements),
+                "_total_requests": len(measurements),
                 "successful_requests": len(successful_measurements),
                 "average_latency": sum(latencies) / len(latencies),
                 "min_latency": min(latencies),
@@ -567,7 +568,7 @@ def resource_limit_monitor():
                 "cpu_time": {
                     "user_time": cpu_times.user,
                     "system_time": cpu_times.system,
-                    "total_time": cpu_times.user + cpu_times.system,
+                    "_total_time": cpu_times.user + cpu_times.system,
                 },
             }
 
@@ -601,7 +602,7 @@ async def performance_test_session():
     # Cleanup and garbage collection
     gc.collect()
     session_data["end_time"] = time.time()
-    session_data["total_duration"] = (
+    session_data["_total_duration"] = (
         session_data["end_time"] - session_data["start_time"]
     )
 

@@ -6,7 +6,6 @@ import pytest
 
 from src.config import PlaywrightConfig
 from src.services.browser.anti_detection import (
-from src.services.browser.playwright_adapter import PlaywrightAdapter
     BrowserStealthConfig,
     EnhancedAntiDetection,
     SiteProfile,
@@ -15,6 +14,7 @@ from src.services.browser.playwright_adapter import PlaywrightAdapter
     UserAgentPool,
     ViewportProfile,
 )
+from src.services.browser.playwright_adapter import PlaywrightAdapter
 
 
 class TestUserAgentPool:
@@ -158,7 +158,7 @@ class TestSuccessRateMonitor:
         """Test success rate monitor initialization."""
         monitor = SuccessRateMonitor()
 
-        assert monitor.total_attempts == 0
+        assert monitor._total_attempts == 0
         assert monitor.successful_attempts == 0
         assert len(monitor.recent_successes) == 0
         assert len(monitor.strategy_performance) == 0
@@ -169,7 +169,7 @@ class TestSuccessRateMonitor:
 
         monitor.record_attempt(True, "test_strategy")
 
-        assert monitor.total_attempts == 1
+        assert monitor._total_attempts == 1
         assert monitor.successful_attempts == 1
         assert monitor.recent_successes == [True]
         assert "test_strategy" in monitor.strategy_performance
@@ -182,7 +182,7 @@ class TestSuccessRateMonitor:
 
         monitor.record_attempt(False, "test_strategy")
 
-        assert monitor.total_attempts == 1
+        assert monitor._total_attempts == 1
         assert monitor.successful_attempts == 0
         assert monitor.recent_successes == [False]
         assert monitor.strategy_performance["test_strategy"]["attempts"] == 1
@@ -211,7 +211,7 @@ class TestSuccessRateMonitor:
 
         # Should only keep last 50
         assert len(monitor.recent_successes) == 50
-        assert monitor.total_attempts == 60
+        assert monitor._total_attempts == 60
 
     def test_needs_strategy_adjustment(self):
         """Test strategy adjustment detection."""
@@ -420,12 +420,12 @@ class TestEnhancedAntiDetection:
         assert isinstance(metrics, dict)
         assert "overall_success_rate" in metrics
         assert "recent_success_rate" in metrics
-        assert "total_attempts" in metrics
+        assert "_total_attempts" in metrics
         assert "successful_attempts" in metrics
         assert "needs_adjustment" in metrics
         assert "strategy_performance" in metrics
 
-        assert metrics["total_attempts"] == 3
+        assert metrics["_total_attempts"] == 3
         assert metrics["successful_attempts"] == 2
 
     def test_recommended_strategy(self):
@@ -501,8 +501,8 @@ class TestPlaywrightAdapterIntegration:
         call_args = mock_browser_launcher.launch.call_args
 
         # Should include stealth arguments
-        assert "args" in call_args.kwargs
-        args = call_args.kwargs["args"]
+        assert "args" in call_args._kwargs
+        args = call_args._kwargs["args"]
         assert isinstance(args, list)
         assert any(
             "--disable-blink-features=AutomationControlled" in arg for arg in args

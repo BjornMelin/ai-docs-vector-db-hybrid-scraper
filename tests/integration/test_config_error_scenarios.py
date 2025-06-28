@@ -278,7 +278,8 @@ class TestRealWorldErrorScenarios:
             )
 
         def failing_listener(_old, _new):
-            raise RuntimeError("Listener explosion!")
+            msg = "Listener explosion!"
+            raise RuntimeError(msg)
 
         # Add mixed listeners
         manager.add_change_listener(tracking_listener)
@@ -315,10 +316,11 @@ class TestRealWorldErrorScenarios:
             await asyncio.sleep(5)  # Simulate slow operation
             return original_load(path)
 
-        with patch.object(manager.safe_loader, "load_from_file", side_effect=slow_load):
-            # Use asyncio timeout
-            with pytest.raises(asyncio.TimeoutError):
-                await asyncio.wait_for(manager.reload_config_async(), timeout=0.5)
+        with (
+            patch.object(manager.safe_loader, "load_from_file", side_effect=slow_load),
+            pytest.raises(asyncio.TimeoutError),
+        ):
+            await asyncio.wait_for(manager.reload_config_async(), timeout=0.5)
 
         # Manager should still be functional
         config = manager.get_config()
@@ -354,7 +356,7 @@ class TestEnvironmentSpecificErrors:
         # Reloader should still be functional
         assert reloader._config is not None
 
-    def test_file_watcher_recovery(self, config_dir, _reset_degradation, caplog):
+    def test_file_watcher_recovery(self, config_dir, _reset_degradation, _caplog):
         """Test file watcher recovery after errors."""
         config_file = config_dir / "config.json"
         config_file.write_text('{"openai": {"api_key": "sk-test"}}')
@@ -382,7 +384,7 @@ class TestEnvironmentSpecificErrors:
                     time.sleep(0.1)
 
             # Check that errors were logged
-            assert "Failed to reload configuration on file change" in caplog.text
+            assert "Failed to reload configuration on file change" in _caplog.text
 
         # Clean up
         manager.stop_file_watching()

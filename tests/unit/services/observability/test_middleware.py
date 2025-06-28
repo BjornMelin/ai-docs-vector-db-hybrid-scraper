@@ -226,7 +226,8 @@ class TestFastAPIObservabilityMiddleware:
         request.query_params = {}
 
         async def mock_call_next(_req):
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
         with pytest.raises(ValueError, match="Test error"):
             await middleware.dispatch(request, mock_call_next)

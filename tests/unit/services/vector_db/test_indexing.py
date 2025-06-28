@@ -39,7 +39,7 @@ class TestQdrantIndexing:
         keyword_calls = [
             call
             for call in mock_client.create_payload_index.call_args_list
-            if call.kwargs.get("field_schema") == models.PayloadSchemaType.KEYWORD
+            if call._kwargs.get("field_schema") == models.PayloadSchemaType.KEYWORD
         ]
         assert len(keyword_calls) >= 9  # doc_type, language, framework, etc.
 
@@ -47,7 +47,7 @@ class TestQdrantIndexing:
         text_calls = [
             call
             for call in mock_client.create_payload_index.call_args_list
-            if call.kwargs.get("field_schema") == models.PayloadSchemaType.TEXT
+            if call._kwargs.get("field_schema") == models.PayloadSchemaType.TEXT
         ]
         assert len(text_calls) >= 2  # title, content_preview
 
@@ -55,7 +55,7 @@ class TestQdrantIndexing:
         integer_calls = [
             call
             for call in mock_client.create_payload_index.call_args_list
-            if call.kwargs.get("field_schema") == models.PayloadSchemaType.INTEGER
+            if call._kwargs.get("field_schema") == models.PayloadSchemaType.INTEGER
         ]
         assert len(integer_calls) >= 10  # created_at, last_updated, word_count, etc.
 
@@ -163,7 +163,7 @@ class TestQdrantIndexing:
             mock_create.assert_called_once_with("test_collection")
 
     async def test_reindex_collection_drop_error(
-        self, indexing_service, _mock_client, caplog
+        self, indexing_service, _mock_client, _caplog
     ):
         """Test collection reindexing with drop error."""
         existing_indexes = ["field1", "field2"]
@@ -184,7 +184,7 @@ class TestQdrantIndexing:
             # Should continue despite drop errors
             assert mock_drop.call_count == 2
             mock_create.assert_called_once()
-            assert "Failed to drop index" in caplog.text
+            assert "Failed to drop index" in _caplog.text
 
     async def test_reindex_collection_error(self, indexing_service, _mock_client):
         """Test collection reindexing error."""
@@ -224,7 +224,7 @@ class TestQdrantIndexing:
             result = await indexing_service.get_payload_index_stats("test_collection")
 
         assert result["collection_name"] == "test_collection"
-        assert result["total_points"] == 1000
+        assert result["_total_points"] == 1000
         assert result["indexed_fields_count"] == 1
         assert result["indexed_fields"] == ["field1"]
         assert "payload_schema" in result
@@ -287,7 +287,7 @@ class TestQdrantIndexing:
         assert result["status"] == "healthy"
         assert result["health_score"] == 100.0
         assert result["collection_name"] == "test_collection"
-        assert result["total_points"] == 1000
+        assert result["_total_points"] == 1000
         assert len(result["payload_indexes"]["missing_indexes"]) == 0
         assert len(result["payload_indexes"]["extra_indexes"]) == 0
 
@@ -449,7 +449,7 @@ class TestQdrantIndexing:
             result = await indexing_service.get_index_usage_stats("test_collection")
 
         assert result["collection_name"] == "test_collection"
-        assert result["collection_stats"]["total_points"] == 50000
+        assert result["collection_stats"]["_total_points"] == 50000
         assert result["collection_stats"]["indexed_fields_count"] == 7
 
         # Check index categorization
@@ -610,9 +610,9 @@ class TestQdrantIndexing:
         keyword_calls = [
             call
             for call in calls
-            if call.kwargs["field_schema"] == models.PayloadSchemaType.KEYWORD
+            if call._kwargs["field_schema"] == models.PayloadSchemaType.KEYWORD
         ]
-        keyword_fields = [call.kwargs["field_name"] for call in keyword_calls]
+        keyword_fields = [call._kwargs["field_name"] for call in keyword_calls]
         assert "doc_type" in keyword_fields
         assert "language" in keyword_fields
 
@@ -620,9 +620,9 @@ class TestQdrantIndexing:
         text_calls = [
             call
             for call in calls
-            if call.kwargs["field_schema"] == models.PayloadSchemaType.TEXT
+            if call._kwargs["field_schema"] == models.PayloadSchemaType.TEXT
         ]
-        text_fields = [call.kwargs["field_name"] for call in text_calls]
+        text_fields = [call._kwargs["field_name"] for call in text_calls]
         assert "title" in text_fields
         assert "content_preview" in text_fields
 
@@ -630,9 +630,9 @@ class TestQdrantIndexing:
         integer_calls = [
             call
             for call in calls
-            if call.kwargs["field_schema"] == models.PayloadSchemaType.INTEGER
+            if call._kwargs["field_schema"] == models.PayloadSchemaType.INTEGER
         ]
-        integer_fields = [call.kwargs["field_name"] for call in integer_calls]
+        integer_fields = [call._kwargs["field_name"] for call in integer_calls]
         assert "created_at" in integer_fields
         assert "word_count" in integer_fields
 
@@ -650,7 +650,7 @@ class TestQdrantIndexing:
 
         # Should handle division by zero gracefully
         assert result["health_score"] >= 0
-        assert result["total_points"] == 0
+        assert result["_total_points"] == 0
 
     async def test_stats_with_missing_data_type(self, indexing_service, mock_client):
         """Test stats generation with missing data type attributes."""

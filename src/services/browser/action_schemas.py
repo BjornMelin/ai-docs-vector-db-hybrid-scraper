@@ -78,9 +78,8 @@ class ScrollAction(BaseAction):
     def validate_position_scrolling(self):
         """Validate Y position is required for position scrolling."""
         if self.direction == "position" and (self.y is None or self.y == 0):
-            raise ValueError(
-                "Y position must be specified for position-based scrolling"
-            )
+            msg = "Y position must be specified for position-based scrolling"
+            raise ValueError(msg)
         return self
 
 
@@ -161,6 +160,7 @@ def validate_action(action: dict[str, Any]) -> BrowserAction:
 
     Raises:
         ValidationError: If action is invalid
+
     """
     action_type = action.get("type")
 
@@ -182,7 +182,8 @@ def validate_action(action: dict[str, Any]) -> BrowserAction:
     }
 
     if action_type not in action_models:
-        raise ValueError(f"Unsupported action type: {action_type}")
+        msg = f"Unsupported action type: {action_type}"
+        raise ValueError(msg)
 
     model_class = action_models[action_type]
     return model_class(**action)
@@ -199,5 +200,6 @@ def validate_actions(actions: list[dict[str, Any]]) -> list[BrowserAction]:
 
     Raises:
         ValidationError: If any action is invalid
+
     """
     return [validate_action(action) for action in actions]

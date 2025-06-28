@@ -33,6 +33,7 @@ async def initialize_monitoring(
 
     Returns:
         Tuple of (MetricsRegistry, HealthCheckManager) or (None, None) if disabled
+
     """
     if not config.enabled:
         logger.info("Monitoring disabled by configuration")
@@ -72,6 +73,7 @@ async def cleanup_monitoring(
     Args:
         metrics_registry: Metrics registry to clean up
         health_manager: Health manager to clean up
+
     """
     if metrics_registry:
         logger.info("Cleaning up metrics registry...")
@@ -95,6 +97,7 @@ async def start_background_monitoring_tasks(
 
     Returns:
         List of started tasks
+
     """
     tasks = []
 
@@ -128,6 +131,7 @@ async def stop_background_monitoring_tasks(tasks: list[asyncio.Task]) -> None:
 
     Args:
         tasks: List of tasks to stop
+
     """
     if not tasks:
         return
@@ -155,6 +159,7 @@ def initialize_monitoring_system(
 
     Returns:
         Tuple of (MetricsRegistry, HealthCheckManager)
+
     """
     if not config.monitoring.enabled:
         logger.info("Monitoring disabled by configuration")
@@ -241,6 +246,7 @@ def setup_fastmcp_monitoring(
         config: Application configuration
         metrics_registry: Initialized metrics registry
         health_manager: Initialized health check manager
+
     """
     if not config.monitoring.enabled or not metrics_registry or not health_manager:
         logger.info("Monitoring not enabled or not initialized")
@@ -261,7 +267,6 @@ def setup_fastmcp_monitoring(
             )
             async def health_endpoint():
                 """Health check endpoint for FastMCP."""
-
                 if not health_manager:
                     return JSONResponse(
                         content={
@@ -296,7 +301,6 @@ def setup_fastmcp_monitoring(
             )
             async def liveness_endpoint():
                 """Kubernetes liveness probe endpoint."""
-
                 return JSONResponse(
                     content={"status": "alive", "timestamp": time.time()},
                     status_code=200,
@@ -310,7 +314,6 @@ def setup_fastmcp_monitoring(
             )
             async def readiness_endpoint():
                 """Kubernetes readiness probe endpoint."""
-
                 if not health_manager:
                     return JSONResponse(
                         content={
@@ -335,15 +338,14 @@ def setup_fastmcp_monitoring(
                         },
                         status_code=200,
                     )
-                else:
-                    return JSONResponse(
-                        content={
-                            "status": "not_ready",
-                            "health_summary": health_manager.get_health_summary(),
-                            "timestamp": time.time(),
-                        },
-                        status_code=503,
-                    )
+                return JSONResponse(
+                    content={
+                        "status": "not_ready",
+                        "health_summary": health_manager.get_health_summary(),
+                        "timestamp": time.time(),
+                    },
+                    status_code=503,
+                )
 
             logger.info(f"Added health endpoints at {config.monitoring.health_path}")
 
@@ -364,6 +366,7 @@ async def run_periodic_health_checks(
     Args:
         health_manager: Health check manager
         interval_seconds: Interval between health checks
+
     """
     if not health_manager:
         return
@@ -388,6 +391,7 @@ async def update_system_metrics_periodically(
     Args:
         metrics_registry: Metrics registry
         interval_seconds: Interval between updates
+
     """
     if not metrics_registry or not metrics_registry.config.include_system_metrics:
         return
@@ -415,6 +419,7 @@ async def update_cache_metrics_periodically(
         metrics_registry: Metrics registry
         cache_manager: Cache manager instance to collect stats from
         interval_seconds: Interval between updates
+
     """
     if not metrics_registry or not cache_manager:
         return

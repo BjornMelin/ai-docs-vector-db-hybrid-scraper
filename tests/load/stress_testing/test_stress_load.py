@@ -13,15 +13,13 @@ import time
 import psutil
 import pytest
 
-from ..base_load_test import create_load_test_runner
-from ..conftest import LoadTestConfig, LoadTestType
-from ..load_profiles import BreakpointLoadProfile, create_custom_step_profile
+from tests.load.base_load_test import create_load_test_runner
+from tests.load.conftest import LoadTestConfig, LoadTestType
+from tests.load.load_profiles import BreakpointLoadProfile, create_custom_step_profile
 
 
 class TestError(Exception):
     """Custom exception for this module."""
-
-    pass
 
 
 logger = logging.getLogger(__name__)
@@ -60,17 +58,17 @@ class TestStressLoad:
         breaking_point = None
 
         @env.events.stats_reset.add_listener
-        def on_stats_reset(**_kwargs):
+        def on_stats_reset(**__kwargs):
             """Capture metrics at each step."""
             nonlocal breaking_point
 
             stats = env.stats
-            total_requests = stats.total.total_num_requests
-            total_failures = stats.total.total_num_failures
+            _total_requests = stats._total._total_num_requests
+            _total_failures = stats._total._total_num_failures
 
-            if total_requests > 0:
-                error_rate = (total_failures / total_requests) * 100
-                avg_response_time = stats.total.avg_response_time
+            if _total_requests > 0:
+                error_rate = (_total_failures / _total_requests) * 100
+                avg_response_time = stats._total.avg_response_time
 
                 current_users = env.runner.user_count if env.runner else 0
 
@@ -79,7 +77,7 @@ class TestStressLoad:
                         "users": current_users,
                         "error_rate": error_rate,
                         "avg_response_time": avg_response_time,
-                        "throughput": stats.total.current_rps,
+                        "throughput": stats._total.current_rps,
                     }
                 )
 
@@ -134,10 +132,10 @@ class TestStressLoad:
             "rate_limit_errors": 0,
         }
 
-        async def monitor_resources(**kwargs):
+        async def monitor_resources(**_kwargs):
             """Monitor for resource exhaustion indicators."""
             try:
-                return await mock_load_test_service.process_request(**kwargs)
+                return await mock_load_test_service.process_request(**_kwargs)
             except Exception as e:
                 error_msg = str(e).lower()
                 if "timeout" in error_msg:
@@ -158,7 +156,7 @@ class TestStressLoad:
 
         # Verify resource handling
         assert (
-            resource_metrics["timeout_errors"] < result.metrics.total_requests * 0.5
+            resource_metrics["timeout_errors"] < result.metrics._total_requests * 0.5
         ), "Too many timeout errors"
         assert not resource_metrics["connection_pool_exhaustion"], (
             "Connection pool exhausted - need better pooling"
@@ -185,21 +183,24 @@ class TestStressLoad:
             async def call_service(self, service: str):
                 """Simulate service call with potential failure."""
                 if not self.service_health[service]:
-                    raise TestError(f"{service} service unavailable")
-                    raise TestError(f"{service} service unavailable")
+                    msg = f"{service} service unavailable"
+                    raise TestError(msg)
+                    msg = f"{service} service unavailable"
+                    raise TestError(msg)
 
                 # Simulate load-based failure probability
                 failure_chance = self.failure_counts[service] / 1000
                 if asyncio.create_task(asyncio.sleep(0)) and failure_chance > 0.5:
                     self.service_health[service] = False
-                    raise TestError(f"{service} service degraded")
+                    msg = f"{service} service degraded"
+                    raise TestError(msg)
 
                 await asyncio.sleep(0.1)
                 return f"{service} response"
 
         services = DependentServices()
 
-        async def test_with_dependencies(**_kwargs):
+        async def test_with_dependencies(**__kwargs):
             """Test operation with service dependencies."""
             try:
                 # Call multiple services
@@ -207,7 +208,6 @@ class TestStressLoad:
             except Exception as e:
                 # Check if failure is cascading
                 logger.warning(f"Service failure: {e}")
-                pass
             else:
                 await services.call_service("embedding")
                 await services.call_service("vector_db")
@@ -216,9 +216,8 @@ class TestStressLoad:
                     1 for h in services.service_health.values() if not h
                 )
                 if failed_services > 1:
-                    raise TestError(
-                        f"Cascading failure: {failed_services} services down"
-                    ) from None
+                    msg = f"Cascading failure: {failed_services} services down"
+                    raise TestError(msg) from None
 
         # Run stress test
         config = LoadTestConfig(
@@ -302,7 +301,7 @@ class TestStressLoad:
         # Configure for memory leak detection
         memory_samples = []
 
-        async def memory_tracking_operation(**kwargs):
+        async def memory_tracking_operation(**_kwargs):
             """Operation that tracks memory usage."""
             process = psutil.Process(os.getpid())
             memory_before = process.memory_info().rss / 1024 / 1024  # MB
@@ -310,7 +309,7 @@ class TestStressLoad:
             # Perform operation
             result = await mock_load_test_service.process_request(
                 data_size_mb=10.0,  # Large data to stress memory
-                **kwargs,
+                **_kwargs,
             )
 
             memory_after = process.memory_info().rss / 1024 / 1024  # MB
@@ -348,7 +347,7 @@ class TestStressLoad:
             f"Excessive memory usage: {memory_analysis['max_memory_mb']} MB"
         )
 
-    def _high_load_operation(self, **_kwargs):
+    def _high_load_operation(self, **__kwargs):
         """Simulate high-load operation."""
         # Simulate CPU-intensive operation
         start = time.time()

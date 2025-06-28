@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-from ..models.responses import ReindexCollectionResponse
+from src.mcp_tools.models.responses import ReindexCollectionResponse
 
 
 if TYPE_CHECKING:
@@ -22,9 +22,9 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from ...infrastructure.client_manager import ClientManager
-from ...security import MLSecurityValidator as SecurityValidator
-from ..models.responses import GenericDictResponse
+from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.models.responses import GenericDictResponse
+from src.security import MLSecurityValidator as SecurityValidator
 
 
 logger = logging.getLogger(__name__)
@@ -37,8 +37,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def create_payload_indexes(
         collection_name: str, ctx: Context
     ) -> "GenericDictResponse":
-        """
-        Create payload indexes on a collection for 10-100x faster filtering.
+        """Create payload indexes on a collection for 10-100x faster filtering.
 
         Creates indexes on key metadata fields like site_name, embedding_model,
         title, word_count, crawl_timestamp, etc. for dramatic performance improvements.
@@ -59,7 +58,8 @@ def register_tools(mcp, client_manager: ClientManager):
             # Check if collection exists
             collections = await client_manager.qdrant_service.list_collections()
             if collection_name not in collections:
-                raise ValueError(f"Collection '{collection_name}' not found")
+                msg = f"Collection '{collection_name}' not found"
+                raise ValueError(msg)
 
             # Create payload indexes
             await client_manager.qdrant_service.create_payload_indexes(collection_name)
@@ -91,8 +91,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def list_payload_indexes(
         collection_name: str, ctx: Context
     ) -> GenericDictResponse:
-        """
-        List all payload indexes in a collection.
+        """List all payload indexes in a collection.
 
         Shows which fields are indexed and their types for performance monitoring.
         """
@@ -125,8 +124,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def reindex_collection(
         collection_name: str, ctx: Context
     ) -> ReindexCollectionResponse:
-        """
-        Reindex all payload fields in a collection.
+        """Reindex all payload fields in a collection.
 
         Drops existing indexes and recreates them. Useful after bulk updates
         or when index performance degrades.
@@ -184,8 +182,7 @@ def register_tools(mcp, client_manager: ClientManager):
         query: str = "documentation search test",
         ctx: Context = None,
     ) -> GenericDictResponse:
-        """
-        Benchmark filtered search performance to demonstrate indexing improvements.
+        """Benchmark filtered search performance to demonstrate indexing improvements.
 
         Compares performance of filtered searches and provides metrics on the
         effectiveness of payload indexing.

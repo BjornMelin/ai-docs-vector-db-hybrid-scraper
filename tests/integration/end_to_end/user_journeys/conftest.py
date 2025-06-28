@@ -212,7 +212,8 @@ def journey_executor():
             # Check dependencies
             for dep in step.dependencies:
                 if dep not in context:
-                    raise ValueError(f"Missing dependency: {dep}")
+                    msg = f"Missing dependency: {dep}"
+                    raise ValueError(msg)
 
             # Execute the step with retries
             for attempt in range(step.retry_count + 1):
@@ -228,7 +229,8 @@ def journey_executor():
                         if not validation_result:
 
                             def _raise_validation_error():
-                                raise ValueError(f"Step validation failed: {step.name}")
+                                msg = f"Step validation failed: {step.name}"
+                                raise ValueError(msg)
 
                             _raise_validation_error()
 
@@ -239,9 +241,8 @@ def journey_executor():
                         ):
 
                             def _raise_expected_result_error():
-                                raise ValueError(
-                                    f"Result doesn't match expected: {step.name}"
-                                )
+                                msg = f"Result doesn't match expected: {step.name}"
+                                raise ValueError(msg)
 
                             _raise_expected_result_error()
 
@@ -260,8 +261,7 @@ def journey_executor():
                     if attempt < step.retry_count:
                         await asyncio.sleep(1.0 * (attempt + 1))  # Exponential backoff
                         continue
-                    else:
-                        raise
+                    raise
 
         async def _perform_action(
             self,
@@ -293,15 +293,17 @@ def journey_executor():
 
             handler = action_handlers.get(action)
             if not handler:
-                raise ValueError(f"Unknown action: {action}")
+                msg = f"Unknown action: {action}"
+                raise ValueError(msg)
 
             # Execute with timeout
             try:
                 return await asyncio.wait_for(
                     handler(resolved_params, context), timeout=timeout
                 )
-            except TimeoutError:
-                raise TimeoutError(f"Action '{action}' timed out after {timeout}s")
+            except TimeoutError as e:
+                msg = f"Action '{action}' timed out after {timeout}s"
+                raise TimeoutError(msg) from e
 
         async def _action_crawl_url(
             self, params: dict[str, Any], _context: dict[str, Any]
@@ -339,7 +341,7 @@ def journey_executor():
             return {
                 "embeddings": [[0.1] * 1536 for _ in chunks],
                 "embedding_model": "text-embedding-ada-002",
-                "total_tokens": len(chunks) * 100,
+                "_total_tokens": len(chunks) * 100,
             }
 
         async def _action_store_vectors(
@@ -373,7 +375,7 @@ def journey_executor():
                     }
                     for i in range(min(limit, 5))
                 ],
-                "total_found": min(limit, 5),
+                "_total_found": min(limit, 5),
                 "search_time_ms": 150,
             }
 
@@ -475,7 +477,7 @@ def journey_executor():
 
             valid_results = [r for r in results if r.get("score", 0) >= min_score]
             return {
-                "total_results": len(results),
+                "_total_results": len(results),
                 "valid_results": len(valid_results),
                 "validation_passed": len(valid_results) > 0,
                 "min_score_threshold": min_score,
@@ -571,13 +573,13 @@ def journey_executor():
             ]
 
             if not durations:
-                return {"avg_step_duration_ms": 0, "total_duration_ms": 0}
+                return {"avg_step_duration_ms": 0, "_total_duration_ms": 0}
 
             return {
                 "avg_step_duration_ms": sum(durations) / len(durations),
                 "max_step_duration_ms": max(durations),
                 "min_step_duration_ms": min(durations),
-                "total_duration_ms": sum(durations),
+                "_total_duration_ms": sum(durations),
                 "successful_steps": len(durations),
             }
 

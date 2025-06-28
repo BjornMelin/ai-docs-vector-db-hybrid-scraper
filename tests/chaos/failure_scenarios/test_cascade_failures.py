@@ -19,8 +19,6 @@ logger = logging.getLogger(__name__)
 class TestError(Exception):
     """Custom exception for this module."""
 
-    pass
-
 
 class ServiceState(Enum):
     """Service health states."""
@@ -77,7 +75,7 @@ class TestCascadeFailures:
         }
 
     async def test_downstream_failure_propagation(
-        self, service_topology, _fault_injector, resilience_validator
+        self, service_topology, _fault_injector, _resilience_validator
     ):
         """Test how downstream failures propagate upstream."""
         # Simulate storage failure (bottom of dependency chain)
@@ -93,8 +91,10 @@ class TestCascadeFailures:
 
             # Check if service itself has failed
             if service.state == ServiceState.FAILED:
-                raise TestError(f"Service {service_name} is failed")
-                raise TestError(f"Service {service_name} is failed")
+                msg = f"Service {service_name} is failed"
+                raise TestError(msg)
+                msg = f"Service {service_name} is failed"
+                raise TestError(msg)
 
             # Check dependencies
             for dep_name in service.dependencies:
@@ -108,9 +108,8 @@ class TestCascadeFailures:
                         service.circuit_breaker_open = True
                         service.state = ServiceState.CRITICAL
 
-                    raise TestError(
-                        f"Service {service_name} failed due to dependency {dep_name}"
-                    )
+                    msg = f"Service {service_name} failed due to dependency {dep_name}"
+                    raise TestError(msg)
 
             return {"service": service_name, "status": "success"}
 
@@ -145,7 +144,7 @@ class TestCascadeFailures:
         )
 
     async def test_circuit_breaker_cascade_prevention(
-        self, service_topology, _fault_injector, resilience_validator
+        self, service_topology, _fault_injector, _resilience_validator
     ):
         """Test circuit breakers preventing cascade failures."""
         failure_counts = {}
@@ -159,7 +158,8 @@ class TestCascadeFailures:
 
             # Check circuit breaker
             if circuit_breakers.get(service_name, False):
-                raise TestError(f"Circuit breaker open for {service_name}")
+                msg = f"Circuit breaker open for {service_name}"
+                raise TestError(msg)
 
             # Simulate dependency failure
             for dep_name in service.dependencies:
@@ -179,7 +179,8 @@ class TestCascadeFailures:
                             "circuit_breaker": "open",
                         }
 
-                    raise TestError(f"Dependency {dep_name} failed")
+                    msg = f"Dependency {dep_name} failed"
+                    raise TestError(msg)
 
             return {"service": service_name, "status": "success"}
 
@@ -210,7 +211,8 @@ class TestCascadeFailures:
 
         async def search_operation():
             if search_pool["used"] >= search_pool["size"]:
-                raise TestError("Search pool exhausted")
+                msg = "Search pool exhausted"
+                raise TestError(msg)
 
             search_pool["used"] += 1
             try:
@@ -222,7 +224,8 @@ class TestCascadeFailures:
 
         async def admin_operation():
             if admin_pool["used"] >= admin_pool["size"]:
-                raise TestError("Admin pool exhausted")
+                msg = "Admin pool exhausted"
+                raise TestError(msg)
 
             admin_pool["used"] += 1
             try:
@@ -254,7 +257,7 @@ class TestCascadeFailures:
     async def test_graceful_degradation_cascade(
         self, service_topology, _fault_injector
     ):
-        """Test graceful degradation preventing total system failure."""
+        """Test graceful degradation preventing _total system failure."""
         # Service capabilities matrix
         service_capabilities = {
             "search_service": {
@@ -298,13 +301,12 @@ class TestCascadeFailures:
                     "level": service_level,
                     "status": "success",
                 }
-            else:
-                return {
-                    "service": service_name,
-                    "capability": requested_capability,
-                    "level": service_level,
-                    "status": "capability_unavailable",
-                }
+            return {
+                "service": service_name,
+                "capability": requested_capability,
+                "level": service_level,
+                "status": "capability_unavailable",
+            }
 
         # Test graceful degradation
         # Fail vector_db
@@ -347,10 +349,9 @@ class TestCascadeFailures:
                         "status": "success",
                         "dependency": result,
                     }
-                else:
-                    # Simulate slow operation
-                    await asyncio.sleep(service_timeout + 0.5)  # Longer than timeout
-                    return {"service": service_name, "status": "success"}
+                # Simulate slow operation
+                await asyncio.sleep(service_timeout + 0.5)  # Longer than timeout
+                return {"service": service_name, "status": "success"}
             except TimeoutError:
                 return {
                     "service": service_name,
@@ -383,7 +384,8 @@ class TestCascadeFailures:
         async def failing_service():
             # Simulate service failure for 2 seconds
             if time.time() - failure_start_time < 2.0:
-                raise TestError("Service temporarily unavailable")
+                msg = "Service temporarily unavailable"
+                raise TestError(msg)
             return {"status": "recovered"}
 
         async def client_with_exponential_backoff(client_id: str):
@@ -422,12 +424,12 @@ class TestCascadeFailures:
         results = await asyncio.gather(*tasks)
 
         # Verify retry behavior
-        total_requests = sum(request_counts.values())
+        _total_requests = sum(request_counts.values())
         successful_clients = len([r for r in results if "result" in r])
 
         # Should have reasonable number of retries (not a storm)
-        assert total_requests < 100, (
-            f"Too many requests: {total_requests} (potential retry storm)"
+        assert _total_requests < 100, (
+            f"Too many requests: {_total_requests} (potential retry storm)"
         )
         assert successful_clients > 0, (
             "Some clients should succeed after service recovery"
@@ -453,24 +455,25 @@ class TestCascadeFailures:
                     n for n in nodes.values() if n["partition"] == "group_1"
                 ]
                 if len(accessible_nodes) < 2:  # Less than majority
-                    raise TestError(
-                        "Cannot achieve strong consistency - insufficient nodes"
-                    )
+                    msg = "Cannot achieve strong consistency - insufficient nodes"
+                    raise TestError(msg)
 
                 # Find data in accessible nodes
                 for node in accessible_nodes:
                     if key in node["data"]:
                         return {"value": node["data"][key], "consistency": "strong"}
 
-                raise KeyError(f"Key {key} not found in accessible nodes")
+                msg = f"Key {key} not found in accessible nodes"
+                raise KeyError(msg)
 
-            elif consistency_level == "eventual":
+            if consistency_level == "eventual":
                 # Eventual consistency - try any accessible node
                 for node in nodes.values():
                     if node["partition"] == "group_1" and key in node["data"]:
                         return {"value": node["data"][key], "consistency": "eventual"}
 
-                raise KeyError(f"Key {key} not found")
+                msg = f"Key {key} not found"
+                raise KeyError(msg)
 
         # Test reads during partition
         # Should succeed for keys in accessible partition
@@ -497,7 +500,8 @@ class TestCascadeFailures:
             memory_usage["current"] += 50  # Each operation "leaks" 50 units
 
             if memory_usage["current"] > memory_usage["limit"]:
-                raise MemoryError(f"Out of memory - current: {memory_usage['current']}")
+                msg = f"Out of memory - current: {memory_usage['current']}"
+                raise MemoryError(msg)
 
             return {"operation": operation_id, "memory_used": memory_usage["current"]}
 
@@ -536,7 +540,7 @@ class TestCascadeFailures:
         )
 
     async def test_dependency_health_monitoring(
-        self, service_topology, _fault_injector, resilience_validator
+        self, service_topology, _fault_injector, _resilience_validator
     ):
         """Test dependency health monitoring and automatic recovery."""
         health_status = {}
@@ -548,12 +552,11 @@ class TestCascadeFailures:
             if service.state == ServiceState.FAILED:
                 health_status[service_name] = "unhealthy"
                 return {"service": service_name, "status": "unhealthy"}
-            elif service.state == ServiceState.DEGRADED:
+            if service.state == ServiceState.DEGRADED:
                 health_status[service_name] = "degraded"
                 return {"service": service_name, "status": "degraded"}
-            else:
-                health_status[service_name] = "healthy"
-                return {"service": service_name, "status": "healthy"}
+            health_status[service_name] = "healthy"
+            return {"service": service_name, "status": "healthy"}
 
         async def dependency_health_monitor():
             """Monitor health of all dependencies."""

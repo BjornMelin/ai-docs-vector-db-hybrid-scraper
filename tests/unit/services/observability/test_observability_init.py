@@ -344,11 +344,12 @@ class TestObservabilityErrorHandling:
         config = ObservabilityConfig(enabled=True)
 
         # Simulate scenario where some imports succeed but others fail
-        def selective_import_failure(name, *args, **kwargs):
+        def selective_import_failure(name, *args, **_kwargs):
             if "opentelemetry.metrics" in name:
-                raise ImportError("Metrics not available")
+                msg = "Metrics not available"
+                raise ImportError(msg)
             # Allow other imports to succeed by calling original import
-            return __import__(name, *args, **kwargs)
+            return __import__(name, *args, **_kwargs)
 
         with patch("builtins.__import__", side_effect=selective_import_failure):
             result = initialize_observability(config)

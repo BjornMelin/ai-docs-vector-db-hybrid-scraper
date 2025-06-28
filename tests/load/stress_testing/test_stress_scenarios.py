@@ -1,8 +1,6 @@
 class TestError(Exception):
     """Custom exception for this module."""
 
-    pass
-
 
 """Stress testing scenarios for system breaking point analysis.
 
@@ -32,14 +30,14 @@ class TestStressScenarios:
                 self.service = service
                 self.cpu_load_factor = 1.0
 
-            async def cpu_intensive_task(self, **kwargs):
+            async def cpu_intensive_task(self, **_kwargs):
                 """Simulate CPU-intensive processing."""
                 # Simulate CPU-bound work by increasing latency based on load
                 cpu_latency = self.service.base_latency * self.cpu_load_factor
                 await asyncio.sleep(cpu_latency)
 
                 # Simulate some CPU work (simplified)
-                result = await self.service.process_request(**kwargs)
+                result = await self.service.process_request(**_kwargs)
                 result["cpu_processing_time"] = cpu_latency
                 return result
 
@@ -85,12 +83,12 @@ class TestStressScenarios:
                 "level": stress_level["name"],
                 "cpu_factor": stress_level["factor"],
                 "users": stress_level["users"],
-                "total_requests": result.metrics.total_requests,
+                "_total_requests": result.metrics._total_requests,
                 "successful_requests": result.metrics.successful_requests,
                 "failed_requests": result.metrics.failed_requests,
                 "success_rate": (
                     result.metrics.successful_requests
-                    / max(result.metrics.total_requests, 1)
+                    / max(result.metrics._total_requests, 1)
                 )
                 * 100,
                 "avg_response_time": sum(result.metrics.response_times)
@@ -103,7 +101,7 @@ class TestStressScenarios:
             stress_results.append(stress_result)
 
             # Check if system is still responsive
-            assert result.metrics.total_requests > 0, (
+            assert result.metrics._total_requests > 0, (
                 f"System completely unresponsive at {stress_level['name']}"
             )
 
@@ -138,7 +136,7 @@ class TestStressScenarios:
                 self.service = service
                 self.memory_pressure = {}  # Simulated memory usage
 
-            async def memory_intensive_task(self, data_size_mb: float = 1.0, **kwargs):
+            async def memory_intensive_task(self, data_size_mb: float = 1.0, **_kwargs):
                 """Simulate memory-intensive processing."""
                 # Simulate memory allocation
                 memory_key = f"mem_{time.time()}_{id(asyncio.current_task())}"
@@ -149,10 +147,10 @@ class TestStressScenarios:
                 try:
                     # Process with memory pressure
                     result = await self.service.process_request(
-                        data_size_mb=data_size_mb, **kwargs
+                        data_size_mb=data_size_mb, **_kwargs
                     )
                     result["memory_allocated_mb"] = data_size_mb
-                    result["total_memory_objects"] = len(self.memory_pressure)
+                    result["_total_memory_objects"] = len(self.memory_pressure)
 
                     # Simulate memory cleanup (sometimes fails under stress)
                     if len(self.memory_pressure) > 100:  # Memory pressure threshold
@@ -207,10 +205,10 @@ class TestStressScenarios:
                 "level": memory_level["name"],
                 "data_size_mb": memory_level["data_mb"],
                 "users": memory_level["users"],
-                "total_requests": result.metrics.total_requests,
+                "_total_requests": result.metrics._total_requests,
                 "success_rate": (
                     result.metrics.successful_requests
-                    / max(result.metrics.total_requests, 1)
+                    / max(result.metrics._total_requests, 1)
                 )
                 * 100,
                 "avg_response_time": sum(result.metrics.response_times)
@@ -222,7 +220,7 @@ class TestStressScenarios:
 
             memory_results.append(memory_result)
 
-            assert result.metrics.total_requests > 0, (
+            assert result.metrics._total_requests > 0, (
                 f"No requests processed at {memory_level['name']}"
             )
 
@@ -246,13 +244,12 @@ class TestStressScenarios:
                 self.max_connections = 50  # Simulated connection pool limit
                 self.connection_failures = 0
 
-            async def connection_intensive_task(self, **kwargs):
+            async def connection_intensive_task(self, **_kwargs):
                 """Simulate connection-intensive operations."""
                 # Try to acquire connection
                 if self.active_connections >= self.max_connections:
-                    raise TestError(
-                        f"Connection pool exhausted ({self.active_connections}/{self.max_connections})"
-                    )
+                    msg = f"Connection pool exhausted ({self.active_connections}/{self.max_connections})"
+                    raise TestError(msg)
 
                 # Acquire connection
                 self.active_connections += 1
@@ -264,7 +261,7 @@ class TestStressScenarios:
                     )
                     await asyncio.sleep(connection_hold_time)
 
-                    result = await self.service.process_request(**kwargs)
+                    result = await self.service.process_request(**_kwargs)
                     result["connections_used"] = self.active_connections
                     result["connection_hold_time"] = connection_hold_time
 
@@ -311,20 +308,20 @@ class TestStressScenarios:
                 "test": test["name"],
                 "users": test["users"],
                 "rps": test["rps"],
-                "total_requests": result.metrics.total_requests,
+                "_total_requests": result.metrics._total_requests,
                 "successful_requests": result.metrics.successful_requests,
                 "connection_failures": connection_stress.connection_failures,
                 "success_rate": (
                     result.metrics.successful_requests
-                    / max(result.metrics.total_requests, 1)
+                    / max(result.metrics._total_requests, 1)
                 )
                 * 100,
-                "total_failures": result.metrics.failed_requests,
+                "_total_failures": result.metrics.failed_requests,
             }
 
             connection_results.append(connection_result)
 
-            assert result.metrics.total_requests > 0, (
+            assert result.metrics._total_requests > 0, (
                 f"No requests attempted at {test['name']}"
             )
 
@@ -348,17 +345,17 @@ class TestStressScenarios:
                 self.consecutive_failures = 0
                 self.circuit_breaker_open = False
 
-            async def cascading_failure_task(self, **kwargs):
+            async def cascading_failure_task(self, **_kwargs):
                 """Simulate services that can cascade into failure."""
                 # Circuit breaker logic
                 if self.circuit_breaker_open:
                     if self.consecutive_failures > 50:  # Stay open for a while
                         self.consecutive_failures -= 1
-                        raise TestError("Circuit breaker is OPEN - rejecting requests")
-                    else:
-                        # Try to close circuit breaker
-                        self.circuit_breaker_open = False
-                        self.consecutive_failures = 0
+                        msg = "Circuit breaker is OPEN - rejecting requests"
+                        raise TestError(msg)
+                    # Try to close circuit breaker
+                    self.circuit_breaker_open = False
+                    self.consecutive_failures = 0
 
                 # Simulate failure probability that increases with load
                 import random
@@ -378,21 +375,17 @@ class TestStressScenarios:
                     if self.consecutive_failures > 10:
                         self.circuit_breaker_open = True
 
-                    raise TestError(
-                        f"Cascading failure (level {self.failure_cascade_level:.1f}, consecutive: {self.consecutive_failures})"
-                    )
-                else:
-                    # Success - reduce cascade level
-                    self.failure_cascade_level = max(
-                        0, self.failure_cascade_level - 0.05
-                    )
-                    self.consecutive_failures = max(0, self.consecutive_failures - 1)
+                    msg = f"Cascading failure (level {self.failure_cascade_level:.1f}, consecutive: {self.consecutive_failures})"
+                    raise TestError(msg)
+                # Success - reduce cascade level
+                self.failure_cascade_level = max(0, self.failure_cascade_level - 0.05)
+                self.consecutive_failures = max(0, self.consecutive_failures - 1)
 
-                    result = await self.service.process_request(**kwargs)
-                    result["cascade_level"] = self.failure_cascade_level
-                    result["circuit_breaker_open"] = self.circuit_breaker_open
+                result = await self.service.process_request(**_kwargs)
+                result["cascade_level"] = self.failure_cascade_level
+                result["circuit_breaker_open"] = self.circuit_breaker_open
 
-                    return result
+                return result
 
         cascade_simulator = CascadingFailureSimulator(mock_load_test_service)
 
@@ -433,12 +426,12 @@ class TestStressScenarios:
                 "test": test["name"],
                 "users": test["users"],
                 "duration": test["duration"],
-                "total_requests": result.metrics.total_requests,
+                "_total_requests": result.metrics._total_requests,
                 "successful_requests": result.metrics.successful_requests,
                 "failed_requests": result.metrics.failed_requests,
                 "success_rate": (
                     result.metrics.successful_requests
-                    / max(result.metrics.total_requests, 1)
+                    / max(result.metrics._total_requests, 1)
                 )
                 * 100,
                 "initial_cascade_level": initial_cascade_level,
@@ -449,7 +442,7 @@ class TestStressScenarios:
 
             cascade_results.append(cascade_result)
 
-            assert result.metrics.total_requests > 0, (
+            assert result.metrics._total_requests > 0, (
                 f"No requests processed during {test['name']}"
             )
 
@@ -473,16 +466,15 @@ class TestStressScenarios:
                 self.max_resources = 100
                 self.exhaustion_triggered = False
 
-            async def resource_consuming_task(self, **kwargs):
+            async def resource_consuming_task(self, **_kwargs):
                 """Simulate resource-consuming operations."""
                 # Try to acquire resources
                 resources_needed = 1
 
                 if self.resource_pool < resources_needed:
                     self.exhaustion_triggered = True
-                    raise TestError(
-                        f"Resource exhaustion: {self.resource_pool}/{self.max_resources} available"
-                    )
+                    msg = f"Resource exhaustion: {self.resource_pool}/{self.max_resources} available"
+                    raise TestError(msg)
 
                 # Consume resources
                 self.resource_pool -= resources_needed
@@ -494,7 +486,7 @@ class TestStressScenarios:
                     )  # Slower when resources low
                     await asyncio.sleep(work_time)
 
-                    result = await self.service.process_request(**kwargs)
+                    result = await self.service.process_request(**_kwargs)
                     result["resources_available"] = self.resource_pool
                     result["work_time"] = work_time
 
@@ -549,11 +541,11 @@ class TestStressScenarios:
             phase_result = {
                 "phase": phase["phase"],
                 "users": phase["users"],
-                "total_requests": result.metrics.total_requests,
+                "_total_requests": result.metrics._total_requests,
                 "successful_requests": result.metrics.successful_requests,
                 "success_rate": (
                     result.metrics.successful_requests
-                    / max(result.metrics.total_requests, 1)
+                    / max(result.metrics._total_requests, 1)
                 )
                 * 100,
                 "initial_resources": initial_resources,
@@ -568,7 +560,7 @@ class TestStressScenarios:
 
             exhaustion_results.append(phase_result)
 
-            assert result.metrics.total_requests > 0, (
+            assert result.metrics._total_requests > 0, (
                 f"No requests processed during {phase['phase']}"
             )
 

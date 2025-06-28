@@ -1,21 +1,12 @@
-import asyncio
-import time
-
-from src.services.errors import APIError
-
-
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Tests for query processing pipeline."""
 
+import asyncio
+import time
 from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+from src.services.errors import APIError
 from src.services.query_processing.models import (
     MatryoshkaDimension,
     QueryComplexity,
@@ -30,6 +21,10 @@ from src.services.query_processing.models import (
 from src.services.query_processing.pipeline import QueryProcessingPipeline
 
 
+class TestError(Exception):
+    """Custom exception for this module."""
+
+
 @pytest.fixture
 def mock_orchestrator():
     """Create a mock query processing orchestrator."""
@@ -38,19 +33,19 @@ def mock_orchestrator():
 
     def get_performance_stats():
         return {
-            "total_queries": orchestrator._call_count,
+            "_total_queries": orchestrator._call_count,
             "successful_queries": orchestrator._call_count,
             "average_processing_time": 100.0,
             "strategy_usage": {"semantic": orchestrator._call_count},
         }
 
-    def increment_calls(*_args, **_kwargs):
+    def increment_calls(*_args, **__kwargs):
         orchestrator._call_count += 1
         return QueryProcessingResponse(
             success=True,
             results=[{"id": "1", "content": "test content", "score": 0.9}],
-            total_results=1,
-            total_processing_time_ms=100.0,
+            _total_results=1,
+            _total_processing_time_ms=100.0,
             confidence_score=0.8,
             quality_score=0.85,
             intent_classification=QueryIntentClassification(
@@ -120,7 +115,7 @@ class TestQueryProcessingPipeline:
         assert isinstance(response, QueryProcessingResponse)
         assert response.success is True
         assert len(response.results) > 0
-        assert response.total_processing_time_ms > 0
+        assert response._total_processing_time_ms > 0
 
     async def test_string_query_processing(self, initialized_pipeline):
         """Test processing with string query input."""
@@ -163,15 +158,16 @@ class TestQueryProcessingPipeline:
         # Make second request fail
         call_count = 0
 
-        def side_effect(request):
+        def side_effect(_request):
             nonlocal call_count
             call_count += 1
             if call_count == 2:  # Second request fails
-                raise TestError("Processing failed")
+                msg = "Processing failed"
+                raise TestError(msg)
             return QueryProcessingResponse(
                 success=True,
                 results=[],
-                total_results=0,
+                _total_results=0,
             )
 
         mock_orchestrator.process_query.side_effect = side_effect
@@ -201,7 +197,7 @@ class TestQueryProcessingPipeline:
         """Test metrics retrieval."""
         metrics = await initialized_pipeline.get_metrics()
 
-        assert "total_queries" in metrics
+        assert "_total_queries" in metrics
         assert "successful_queries" in metrics
         assert "average_processing_time" in metrics
         assert "strategy_usage" in metrics
@@ -274,7 +270,7 @@ class TestQueryProcessingPipeline:
         metrics = await initialized_pipeline.get_metrics()
 
         # Should track performance metrics
-        assert metrics["total_queries"] >= 3
+        assert metrics["_total_queries"] >= 3
         assert metrics["average_processing_time"] > 0
 
     async def test_strategy_usage_tracking(self, initialized_pipeline):
@@ -304,8 +300,9 @@ class TestQueryProcessingPipeline:
         """Test error recovery mechanisms."""
 
         # Make orchestrator fail
-        def side_effect(*_args, **_kwargs):
-            raise TestError("Temporary failure")
+        def side_effect(*_args, **__kwargs):
+            msg = "Temporary failure"
+            raise TestError(msg)
 
         mock_orchestrator.process_query.side_effect = side_effect
 
@@ -355,13 +352,13 @@ class TestQueryProcessingPipeline:
         """Test handling of processing timeouts."""
 
         # Mock a slow response
-        async def slow_process(*_args, **_kwargs):
+        async def slow_process(*_args, **__kwargs):
             await asyncio.sleep(0.1)  # Simulate slow processing
             return QueryProcessingResponse(
                 success=True,
                 results=[],
-                total_results=0,
-                total_processing_time_ms=200.0,
+                _total_results=0,
+                _total_processing_time_ms=200.0,
             )
 
         mock_orchestrator.process_query = slow_process
@@ -523,8 +520,8 @@ class TestPipelineExecution:
         assert isinstance(response, QueryProcessingResponse)
         assert response.success
 
-    async def test_process_with_string_query_and_kwargs(self, initialized_pipeline):
-        """Test processing with string query and additional kwargs."""
+    async def test_process_with_string_query_and__kwargs(self, initialized_pipeline):
+        """Test processing with string query and additional _kwargs."""
         response = await initialized_pipeline.process(
             "Python best practices",
             collection_name="docs",
@@ -544,7 +541,7 @@ class TestPipelineExecution:
         assert isinstance(response, QueryProcessingResponse)
         assert not response.success
         assert response.error == "Empty query provided"
-        assert response.total_results == 0
+        assert response._total_results == 0
 
     async def test_process_whitespace_only_query(self, initialized_pipeline):
         """Test processing with whitespace-only query."""
@@ -638,9 +635,10 @@ class TestBatchProcessing:
             nonlocal call_count
             call_count += 1
             if call_count == 2:  # Second request fails
-                raise TestError("Processing error")
+                msg = "Processing error"
+                raise TestError(msg)
             return QueryProcessingResponse(
-                success=True, results=[{"id": f"result_{call_count}"}], total_results=1
+                success=True, results=[{"id": f"result_{call_count}"}], _total_results=1
             )
 
         mock_orchestrator.process_query.side_effect = side_effect
@@ -749,7 +747,7 @@ class TestMetricsAndPerformance:
         metrics = await initialized_pipeline.get_metrics()
 
         assert isinstance(metrics, dict)
-        assert "total_queries" in metrics
+        assert "_total_queries" in metrics
         assert "successful_queries" in metrics
         assert "average_processing_time" in metrics
         assert "strategy_usage" in metrics
@@ -761,13 +759,13 @@ class TestMetricsAndPerformance:
         metrics = await pipeline.get_metrics()
 
         assert isinstance(metrics, dict)
-        assert metrics["total_queries"] == 0
+        assert metrics["_total_queries"] == 0
         assert metrics["successful_queries"] == 0
         assert metrics["average_processing_time"] == 0.0
         assert metrics["strategy_usage"] == {}
 
     async def test_metrics_after_processing_queries(
-        self, initialized_pipeline, mock_orchestrator
+        self, initialized_pipeline, _mock_orchestrator
     ):
         """Test metrics tracking after processing multiple queries."""
         # Process several queries
@@ -777,7 +775,7 @@ class TestMetricsAndPerformance:
         metrics = await initialized_pipeline.get_metrics()
 
         # Should reflect the queries processed
-        assert metrics["total_queries"] >= 3
+        assert metrics["_total_queries"] >= 3
 
 
 class TestHealthCheck:
@@ -864,8 +862,9 @@ class TestWarmUp:
             nonlocal call_count
             call_count += 1
             if call_count == 2:  # Second warmup query fails
-                raise TestError("Warmup failure")
-            return QueryProcessingResponse(success=True, results=[], total_results=0)
+                msg = "Warmup failure"
+                raise TestError(msg)
+            return QueryProcessingResponse(success=True, results=[], _total_results=0)
 
         mock_orchestrator.process_query.side_effect = side_effect
 
@@ -877,13 +876,14 @@ class TestWarmUp:
         assert result["successful_queries"] < 3
 
     async def test_warm_up_complete_failure(
-        self, initialized_pipeline, mock_orchestrator
+        self, initialized_pipeline, _mock_orchestrator
     ):
         """Test warm-up with complete processing failure."""
 
         # Mock process_batch to fail completely
-        async def failing_batch(*_args, **_kwargs):
-            raise TestError("Complete failure")
+        async def failing_batch(*_args, **__kwargs):
+            msg = "Complete failure"
+            raise TestError(msg)
 
         # Mock the process_batch method directly on the pipeline
         original_process_batch = initialized_pipeline.process_batch
@@ -974,9 +974,9 @@ class TestEdgeCasesAndErrorHandling:
     ):
         """Test processing when orchestrator takes too long."""
 
-        async def slow_process(*_args, **_kwargs):
+        async def slow_process(*_args, **__kwargs):
             await asyncio.sleep(0.1)
-            return QueryProcessingResponse(success=True, results=[], total_results=0)
+            return QueryProcessingResponse(success=True, results=[], _total_results=0)
 
         mock_orchestrator.process_query = slow_process
 
@@ -1058,11 +1058,11 @@ class TestCachingBehavior:
         """Test cache hit tracking in responses."""
 
         # Create a new mock function that returns the desired response
-        async def cache_hit_response(*_args, **_kwargs):
+        async def cache_hit_response(*_args, **__kwargs):
             return QueryProcessingResponse(
                 success=True,
                 results=[{"id": "cached_result"}],
-                total_results=1,
+                _total_results=1,
                 cache_hit=True,
             )
 
@@ -1076,11 +1076,11 @@ class TestCachingBehavior:
         """Test cache miss tracking in responses."""
 
         # Create a new mock function that returns the desired response
-        async def cache_miss_response(*_args, **_kwargs):
+        async def cache_miss_response(*_args, **__kwargs):
             return QueryProcessingResponse(
                 success=True,
                 results=[{"id": "fresh_result"}],
-                total_results=1,
+                _total_results=1,
                 cache_hit=False,
             )
 
@@ -1145,11 +1145,11 @@ class TestIntegrationBetweenStages:
         """Test data flow between pipeline stages."""
 
         # Create a new mock function that returns detailed stage information
-        async def detailed_stage_response(*_args, **_kwargs):
+        async def detailed_stage_response(*_args, **__kwargs):
             return QueryProcessingResponse(
                 success=True,
                 results=[{"id": "result_1", "score": 0.9}],
-                total_results=1,
+                _total_results=1,
                 intent_classification=QueryIntentClassification(
                     primary_intent=QueryIntent.TROUBLESHOOTING,
                     complexity_level=QueryComplexity.COMPLEX,
@@ -1175,7 +1175,7 @@ class TestIntegrationBetweenStages:
                     "Search executed",
                     "Results ranked",
                 ],
-                total_processing_time_ms=250.0,
+                _total_processing_time_ms=250.0,
                 strategy_selection_time_ms=25.0,
             )
 
@@ -1224,11 +1224,11 @@ class TestIntegrationBetweenStages:
         """Test error propagation between stages."""
 
         # Create a mock function that returns response with warnings
-        async def error_propagation_response(*_args, **_kwargs):
+        async def error_propagation_response(*_args, **__kwargs):
             return QueryProcessingResponse(
                 success=True,
                 results=[],
-                total_results=0,
+                _total_results=0,
                 warnings=[
                     "Preprocessing stage had issues",
                     "Intent classification uncertain",
@@ -1253,11 +1253,11 @@ class TestAdditionalEdgeCases:
     ):
         """Test analyze_query when intent classification returns None."""
 
-        async def null_classification_response(*_args, **_kwargs):
+        async def null_classification_response(*_args, **__kwargs):
             return QueryProcessingResponse(
                 success=True,
                 results=[],
-                total_results=0,
+                _total_results=0,
                 intent_classification=None,  # Null classification
                 preprocessing_result=QueryPreprocessingResult(
                     original_query="test query", processed_query="test query"
@@ -1308,7 +1308,7 @@ class TestAdditionalEdgeCases:
             return QueryProcessingResponse(
                 success=True,
                 results=[],
-                total_results=0,
+                _total_results=0,
                 preprocessing_result=QueryPreprocessingResult(
                     original_query="test", processed_query="test"
                 ),
@@ -1334,11 +1334,11 @@ class TestAdditionalEdgeCases:
     ):
         """Test health check with various component status combinations."""
 
-        async def partial_health_response(*_args, **_kwargs):
+        async def partial_health_response(*_args, **__kwargs):
             return QueryProcessingResponse(
                 success=True,
                 results=[],
-                total_results=0,
+                _total_results=0,
                 intent_classification=QueryIntentClassification(
                     primary_intent=QueryIntent.CONCEPTUAL,
                     complexity_level=QueryComplexity.SIMPLE,
@@ -1414,7 +1414,7 @@ class TestAdditionalEdgeCases:
 
         def edge_case_stats():
             return {
-                "total_queries": None,  # None value
+                "_total_queries": None,  # None value
                 "successful_queries": -1,  # Negative value
                 "average_processing_time": float("inf"),  # Infinity
                 "strategy_usage": None,  # None strategy usage
@@ -1426,7 +1426,7 @@ class TestAdditionalEdgeCases:
         metrics = await initialized_pipeline.get_metrics()
 
         # Should handle edge cases gracefully - the implementation returns raw values
-        assert metrics["total_queries"] is None or metrics["total_queries"] >= 0
+        assert metrics["_total_queries"] is None or metrics["_total_queries"] >= 0
         assert metrics["successful_queries"] == -1 or metrics["successful_queries"] >= 0
         assert (
             metrics["average_processing_time"] == float("inf")

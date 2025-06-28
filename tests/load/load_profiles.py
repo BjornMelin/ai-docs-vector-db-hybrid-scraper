@@ -44,7 +44,6 @@ class BaseLoadProfile(LoadTestShape, ABC):
     @abstractmethod
     def get_target_users(self, run_time: float) -> tuple[int, float] | None:
         """Get target users for current run time."""
-        pass
 
 
 class SteadyLoadProfile(BaseLoadProfile):
@@ -90,7 +89,7 @@ class RampUpLoadProfile(BaseLoadProfile):
                 self.start_users + (self.end_users - self.start_users) * progress
             )
             return (current_users, self.spawn_rate)
-        elif run_time < self.ramp_time + self.hold_time:
+        if run_time < self.ramp_time + self.hold_time:
             # Hold phase
             return (self.end_users, self.spawn_rate)
         return None
@@ -121,10 +120,10 @@ class SpikeLoadProfile(BaseLoadProfile):
         if run_time < self.baseline_time:
             # Initial baseline
             return (self.baseline_users, self.spawn_rate / 10)
-        elif run_time < self.baseline_time + self.spike_time:
+        if run_time < self.baseline_time + self.spike_time:
             # Spike phase
             return (self.spike_users, self.spawn_rate)
-        elif run_time < self.baseline_time + self.spike_time + self.recovery_time:
+        if run_time < self.baseline_time + self.spike_time + self.recovery_time:
             # Recovery phase
             return (self.baseline_users, self.spawn_rate)
         return None
@@ -157,19 +156,19 @@ class WaveLoadProfile(BaseLoadProfile):
         min_users: int = 10,
         max_users: int = 100,
         wave_duration: int = 300,
-        total_duration: int = 1800,
+        _total_duration: int = 1800,
         spawn_rate: float = 5,
     ):
         super().__init__()
         self.min_users = min_users
         self.max_users = max_users
         self.wave_duration = wave_duration
-        self.total_duration = total_duration
+        self._total_duration = _total_duration
         self.spawn_rate = spawn_rate
 
     def get_target_users(self, run_time: float) -> tuple[int, float] | None:
         """Create wave pattern."""
-        if run_time < self.total_duration:
+        if run_time < self._total_duration:
             # Sinusoidal wave
             amplitude = (self.max_users - self.min_users) / 2
             midpoint = self.min_users + amplitude

@@ -570,7 +570,7 @@ class TestCapabilitiesAndHealth:
         adapter._initialized = True
 
         # Mock timeout
-        async def timeout_scrape(*_args, **_kwargs):
+        async def timeout_scrape(*_args, **__kwargs):
             await asyncio.sleep(20)  # Longer than timeout
 
         with patch.object(adapter, "scrape", side_effect=timeout_scrape):

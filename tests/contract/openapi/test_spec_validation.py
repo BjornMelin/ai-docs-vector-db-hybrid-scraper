@@ -168,24 +168,24 @@ class TestMCPContractValidation:
 
     @pytest.mark.contract
     @pytest.mark.mcp
-    def test_mcp_tool_schemas(self, mock_contract_service):
+    def test_mcp_tool_schemas(self, _mock_contract_service):
         """Test that MCP tools have valid schemas."""
         # This would test the MCP tool definitions
         # For now, we'll test basic structure
-        assert hasattr(mock_contract_service, "search")
-        assert hasattr(mock_contract_service, "add_document")
+        assert hasattr(_mock_contract_service, "search")
+        assert hasattr(_mock_contract_service, "add_document")
 
     @pytest.mark.contract
     @pytest.mark.mcp
     def test_mcp_request_response_contracts(
-        self, json_schema_validator, contract_test_data
+        self, _json_schema_validator, contract_test_data
     ):
         """Test MCP request/response contracts."""
         # Register schemas
-        json_schema_validator.register_schema(
+        _json_schema_validator.register_schema(
             "search_result", contract_test_data["json_schemas"]["search_result"]
         )
-        json_schema_validator.register_schema(
+        _json_schema_validator.register_schema(
             "document_input", contract_test_data["json_schemas"]["document_input"]
         )
 
@@ -197,7 +197,7 @@ class TestMCPContractValidation:
             "metadata": {"source": "test", "timestamp": "2024-01-01T00:00:00Z"},
         }
 
-        validation_result = json_schema_validator.validate_data(
+        validation_result = _json_schema_validator.validate_data(
             valid_result, "search_result"
         )
         assert validation_result["valid"], (
@@ -207,7 +207,7 @@ class TestMCPContractValidation:
         # Test invalid search result (missing required field)
         invalid_result = {"title": "Test Document", "score": 0.95}
 
-        validation_result = json_schema_validator.validate_data(
+        validation_result = _json_schema_validator.validate_data(
             invalid_result, "search_result"
         )
         assert not validation_result["valid"]
@@ -257,7 +257,7 @@ class TestAPIContractEvolution:
         # Test v1 response
         response_data = {
             "results": [{"id": "doc1", "title": "Test", "score": 0.95}],
-            "total": 1,
+            "_total": 1,
         }
 
         validation_result = api_contract_validator.validate_response(
@@ -272,7 +272,7 @@ class TestContractBreakingChanges:
     """Test detection of contract breaking changes."""
 
     @pytest.mark.contract
-    def test_detect_breaking_changes(self, json_schema_validator):
+    def test_detect_breaking_changes(self, _json_schema_validator):
         """Test detection of breaking changes in schemas."""
         # Original schema
         original_schema = {
@@ -313,19 +313,19 @@ class TestContractBreakingChanges:
         test_data = {"id": "doc1", "title": "Test Document", "score": 0.95}
 
         # Should be valid in original
-        result = json_schema_validator.validate_against_schema(
+        result = _json_schema_validator.validate_against_schema(
             test_data, original_schema
         )
         assert result["valid"]
 
         # Should still be valid in non-breaking change
-        result = json_schema_validator.validate_against_schema(
+        result = _json_schema_validator.validate_against_schema(
             test_data, non_breaking_schema
         )
         assert result["valid"]
 
         # Should be invalid in breaking change
-        result = json_schema_validator.validate_against_schema(
+        result = _json_schema_validator.validate_against_schema(
             test_data, breaking_schema
         )
         assert not result["valid"]

@@ -99,7 +99,8 @@ class MockFilter(BaseFilter):
         self.apply_called = True
 
         if self.should_fail:
-            raise FilterError("Mock filter error", filter_name=self.name)
+            msg = "Mock filter error"
+            raise FilterError(msg, filter_name=self.name)
 
         if self.apply_delay > 0:
             await asyncio.sleep(self.apply_delay)
@@ -398,7 +399,8 @@ class TestFilterRegistry:
         class ErrorFilter(BaseFilter):
             def __init__(self, _name: str):
                 # Simulate error in initialization
-                raise ValueError("Initialization error")
+                msg = "Initialization error"
+                raise ValueError(msg)
 
             async def apply(self, criteria, context):
                 pass

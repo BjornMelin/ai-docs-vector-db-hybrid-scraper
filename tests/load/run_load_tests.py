@@ -15,14 +15,14 @@ import sys
 import time
 from pathlib import Path
 
-from locust import main as locust_main
-from locust.env import Environment
-from locust.log import setup_logging
-
 
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
+
+from locust import main as locust_main
+from locust.env import Environment
+from locust.log import setup_logging
 
 from tests.load.load_profiles import LOAD_PROFILES, get_load_profile
 from tests.load.locust_load_runner import (
@@ -127,34 +127,33 @@ class LoadTestRunner:
                 logger.info(f"Test report saved to: {report_file}")
 
             return report
-        else:
-            # Run with web UI
-            logger.info(f"Starting Locust web UI on port {web_port}")
-            logger.info(f"Visit http://localhost:{web_port} to control the test")
+        # Run with web UI
+        logger.info(f"Starting Locust web UI on port {web_port}")
+        logger.info(f"Visit http://localhost:{web_port} to control the test")
 
-            # Set up Locust arguments for web mode
-            locust_args = [
-                "--web-port",
-                str(web_port),
-                "--host",
-                config["host"],
-                "--users",
-                str(config["users"]),
-                "--spawn-rate",
-                str(config["spawn_rate"]),
-            ]
+        # Set up Locust arguments for web mode
+        locust_args = [
+            "--web-port",
+            str(web_port),
+            "--host",
+            config["host"],
+            "--users",
+            str(config["users"]),
+            "--spawn-rate",
+            str(config["spawn_rate"]),
+        ]
 
-            if config.get("duration"):
-                locust_args.extend(["--run-time", f"{config['duration']}s"])
+        if config.get("duration"):
+            locust_args.extend(["--run-time", f"{config['duration']}s"])
 
-            # Run Locust main
-            os.environ["LOCUST_USER_CLASSES"] = "VectorDBUser,AdminUser"
-            sys.argv = ["locust", *locust_args]
+        # Run Locust main
+        os.environ["LOCUST_USER_CLASSES"] = "VectorDBUser,AdminUser"
+        sys.argv = ["locust", *locust_args]
 
-            with contextlib.suppress(SystemExit):
-                locust_main.main()
+        with contextlib.suppress(SystemExit):
+            locust_main.main()
 
-            return {"status": "completed_web_mode"}
+        return {"status": "completed_web_mode"}
 
     def run_pytest_load_tests(
         self, test_type: str = "all", markers: list[str] | None = None
@@ -189,10 +188,18 @@ class LoadTestRunner:
         # Add output options
         cmd.extend(["--tb=short", "--disable-warnings"])
 
+        # Validate command components for security
+        allowed_executables = ["uv", "python", "python3"]
+        if cmd[0] not in allowed_executables:
+            msg = f"Executable '{cmd[0]}' not allowed"
+            raise ValueError(msg)
+
         # Run tests
         try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, cwd=project_root, check=False
+            result = (
+                subprocess.run(  # Secure: validated executable, no shell, no user input
+                    cmd, capture_output=True, text=True, cwd=project_root, check=False
+                )
             )
 
             return {
@@ -330,18 +337,18 @@ class LoadTestRunner:
         """Generate comprehensive test report."""
         stats = env.stats
 
-        if not stats or stats.total.num_requests == 0:
+        if not stats or stats._total.num_requests == 0:
             return {
                 "status": "no_data",
                 "message": "No requests were made during the test",
             }
 
         # Calculate key metrics
-        total_requests = stats.total.num_requests
-        total_failures = stats.total.num_failures
+        _total_requests = stats._total.num_requests
+        _total_failures = stats._total.num_failures
         success_rate = (
-            ((total_requests - total_failures) / total_requests) * 100
-            if total_requests > 0
+            ((_total_requests - _total_failures) / _total_requests) * 100
+            if _total_requests > 0
             else 0
         )
 
@@ -365,13 +372,13 @@ class LoadTestRunner:
             "config": config,
             "profile": profile,
             "summary": {
-                "total_requests": total_requests,
-                "total_failures": total_failures,
+                "_total_requests": _total_requests,
+                "_total_failures": _total_failures,
                 "success_rate_percent": success_rate,
-                "avg_response_time_ms": stats.total.avg_response_time,
-                "min_response_time_ms": stats.total.min_response_time,
-                "max_response_time_ms": stats.total.max_response_time,
-                "requests_per_second": stats.total.current_rps,
+                "avg_response_time_ms": stats._total.avg_response_time,
+                "min_response_time_ms": stats._total.min_response_time,
+                "max_response_time_ms": stats._total.max_response_time,
+                "requests_per_second": stats._total.current_rps,
                 "percentiles": percentiles,
             },
             "endpoint_breakdown": {},
@@ -502,46 +509,45 @@ class LoadTestRunner:
 
     def _calculate_performance_grade(self, stats) -> str:
         """Calculate performance grade based on test results."""
-        if stats.total.num_requests == 0:
+        if stats._total.num_requests == 0:
             return "N/A"
 
         score = 100
 
         # Deduct for high response times
-        avg_response_time = stats.total.avg_response_time
+        avg_response_time = stats._total.avg_response_time
         if avg_response_time > 100:
             score -= min(40, (avg_response_time - 100) / 25)
 
         # Deduct for errors
-        error_rate = (stats.total.num_failures / stats.total.num_requests) * 100
+        error_rate = (stats._total.num_failures / stats._total.num_requests) * 100
         score -= error_rate * 10
 
         # Deduct for low throughput
-        rps = stats.total.current_rps
+        rps = stats._total.current_rps
         if rps < 10:
             score -= (10 - rps) * 2
 
         # Convert to letter grade
         if score >= 90:
             return "A"
-        elif score >= 80:
+        if score >= 80:
             return "B"
-        elif score >= 70:
+        if score >= 70:
             return "C"
-        elif score >= 60:
+        if score >= 60:
             return "D"
-        else:
-            return "F"
+        return "F"
 
     def _generate_recommendations(self, stats) -> list[str]:
         """Generate performance recommendations based on test results."""
         recommendations = []
 
-        if stats.total.num_requests == 0:
+        if stats._total.num_requests == 0:
             return ["No requests were made - check test configuration"]
 
         # Response time recommendations
-        avg_response_time = stats.total.avg_response_time
+        avg_response_time = stats._total.avg_response_time
         if avg_response_time > 1000:
             recommendations.append(
                 "High response times detected - consider optimizing database queries and adding caching"
@@ -552,7 +558,7 @@ class LoadTestRunner:
             )
 
         # Error rate recommendations
-        error_rate = (stats.total.num_failures / stats.total.num_requests) * 100
+        error_rate = (stats._total.num_failures / stats._total.num_requests) * 100
         if error_rate > 5:
             recommendations.append(
                 "High error rate - implement better error handling and retry mechanisms"
@@ -563,7 +569,7 @@ class LoadTestRunner:
             )
 
         # Throughput recommendations
-        rps = stats.total.current_rps
+        rps = stats._total.current_rps
         if rps < 10:
             recommendations.append(
                 "Low throughput - consider horizontal scaling or performance optimization"
@@ -763,7 +769,7 @@ def main():
 
             if "summary" in result:
                 summary = result["summary"]
-                print(f"Total Requests: {summary.get('total_requests', 'N/A')}")
+                print(f"Total Requests: {summary.get('_total_requests', 'N/A')}")
                 print(
                     f"Success Rate: {summary.get('success_rate_percent', 'N/A'):.1f}%"
                 )

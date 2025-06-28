@@ -1,8 +1,6 @@
 class TestError(Exception):
     """Custom exception for this module."""
 
-    pass
-
 
 """Tests for crawling manager module."""
 
@@ -30,7 +28,8 @@ class MockCrawlProvider(CrawlProvider):
 
     async def initialize(self) -> None:
         if self.should_fail:
-            raise TestError(f"Failed to initialize {self.name}")
+            msg = f"Failed to initialize {self.name}"
+            raise TestError(msg)
         self.initialized = True
 
     async def cleanup(self) -> None:
@@ -61,7 +60,7 @@ class MockCrawlProvider(CrawlProvider):
                 "success": False,
                 "error": f"{self.name} crawl failed",
                 "pages": [],
-                "total": 0,
+                "_total": 0,
             }
 
         pages = [
@@ -71,7 +70,7 @@ class MockCrawlProvider(CrawlProvider):
         return {
             "success": True,
             "pages": pages,
-            "total": len(pages),
+            "_total": len(pages),
         }
 
 
@@ -374,7 +373,7 @@ class TestCrawlManager:
 
         assert result["success"] is True
         assert result["provider"] == "crawl4ai"
-        assert result["total"] == 3  # MockCrawlProvider returns 3 pages
+        assert result["_total"] == 3  # MockCrawlProvider returns 3 pages
         assert len(provider.crawl_calls) == 1
         assert provider.crawl_calls[0]["max_pages"] == 25
 
@@ -419,7 +418,8 @@ class TestCrawlManager:
                 self.crawl_calls.append(
                     {"url": url, "max_pages": max_pages, "formats": formats}
                 )
-                raise TestError("Crawl4AI provider failed")
+                msg = "Crawl4AI provider failed"
+                raise TestError(msg)
 
         failing_provider = FailingCrawlProvider("crawl4ai", should_fail=True)
         working_provider = MockCrawlProvider("firecrawl")
@@ -453,7 +453,7 @@ class TestCrawlManager:
 
         assert result["success"] is False
         assert result["provider"] == "crawl4ai"  # Primary provider name
-        assert result["total"] == 0
+        assert result["_total"] == 0
 
     @pytest.mark.skip(
         reason="Test uses obsolete provider-based architecture - needs update for UnifiedBrowserManager"
@@ -504,7 +504,7 @@ class TestCrawlManager:
         assert result["success"] is False
         assert "URL mapping requires Firecrawl provider" in result["error"]
         assert result["urls"] == []
-        assert result["total"] == 0
+        assert result["_total"] == 0
 
     @pytest.mark.skip(
         reason="Test uses obsolete provider-based architecture - needs update for UnifiedBrowserManager"
@@ -520,7 +520,7 @@ class TestCrawlManager:
         firecrawl_provider.map_url.return_value = {
             "success": True,
             "urls": ["https://example.com/page1", "https://example.com/page2"],
-            "total": 2,
+            "_total": 2,
         }
 
         manager.providers = {"firecrawl": firecrawl_provider}
@@ -529,7 +529,7 @@ class TestCrawlManager:
         result = await manager.map_url("https://example.com", include_subdomains=True)
 
         assert result["success"] is True
-        assert result["total"] == 2
+        assert result["_total"] == 2
         firecrawl_provider.map_url.assert_called_once_with("https://example.com", True)
 
     @pytest.mark.asyncio

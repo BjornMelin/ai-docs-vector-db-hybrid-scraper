@@ -6,9 +6,6 @@ import pytest
 
 from src.services.observability.config import ObservabilityConfig
 from src.services.observability.dependencies import (
-from src.services.observability.tracking import _NoOpMeter, _NoOpTracer
-from src.services.observability.tracking import _NoOpTracer
-from src.services.observability.tracking import _NoOpMeter
     create_span_context,
     get_ai_tracer,
     get_observability_health,
@@ -17,6 +14,7 @@ from src.services.observability.tracking import _NoOpMeter
     record_ai_operation_metrics,
     track_ai_cost_metrics,
 )
+from src.services.observability.tracking import _NoOpMeter, _NoOpTracer
 
 
 class TestObservabilityDependencies:
@@ -167,7 +165,6 @@ class TestObservabilityDependencies:
 
         tracer = get_ai_tracer(observability_service)
 
-
         assert isinstance(tracer, _NoOpTracer)
 
     @patch("src.services.observability.dependencies.get_meter")
@@ -194,7 +191,6 @@ class TestObservabilityDependencies:
         }
 
         meter = get_service_meter(observability_service)
-
 
         assert isinstance(meter, _NoOpMeter)
 

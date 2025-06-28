@@ -393,7 +393,7 @@ class TestAllHealthChecks:
             summary = ServiceHealthChecker.get_connection_summary(config)
 
             assert summary["overall_status"] == "healthy"
-            assert summary["total_services"] == 3
+            assert summary["_total_services"] == 3
             assert summary["connected_count"] == 3
             assert summary["failed_count"] == 0
             assert set(summary["connected_services"]) == {
@@ -420,7 +420,7 @@ class TestAllHealthChecks:
             summary = ServiceHealthChecker.get_connection_summary(config)
 
             assert summary["overall_status"] == "unhealthy"
-            assert summary["total_services"] == 3
+            assert summary["_total_services"] == 3
             assert summary["connected_count"] == 1
             assert summary["failed_count"] == 2
             assert summary["connected_services"] == ["qdrant"]
@@ -440,7 +440,7 @@ class TestAllHealthChecks:
             summary = ServiceHealthChecker.get_connection_summary(config)
 
             assert summary["overall_status"] == "unhealthy"
-            assert summary["total_services"] == 1
+            assert summary["_total_services"] == 1
             assert summary["connected_count"] == 0
             assert summary["failed_count"] == 1
             assert summary["connected_services"] == []

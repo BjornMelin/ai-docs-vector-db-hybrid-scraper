@@ -235,8 +235,8 @@ class TestDatabasePerformance:
                 workers = [query_worker() for _ in range(5)]
                 await asyncio.gather(*workers)
 
-                total_time = asyncio.get_event_loop().time() - start_time
-                throughput_qps = query_count / total_time
+                _total_time = asyncio.get_event_loop().time() - start_time
+                throughput_qps = query_count / _total_time
 
                 return throughput_qps
 

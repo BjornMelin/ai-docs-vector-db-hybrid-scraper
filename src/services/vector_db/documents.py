@@ -10,8 +10,8 @@ from typing import Any
 from qdrant_client import AsyncQdrantClient, models
 
 from src.config import Config
+from src.services.errors import QdrantServiceError
 
-from ..errors import QdrantServiceError
 from .utils import build_filter
 
 
@@ -27,6 +27,7 @@ class QdrantDocuments:
         Args:
             client: Initialized Qdrant client
             config: Unified configuration
+
         """
         self.client = client
         self.config = config
@@ -49,6 +50,7 @@ class QdrantDocuments:
 
         Raises:
             QdrantServiceError: If upsert fails
+
         """
         try:
             # Process in batches
@@ -81,8 +83,6 @@ class QdrantDocuments:
                     f"({len(point_structs)} points)"
                 )
 
-            return True
-
         except Exception as e:
             logger.error(
                 f"Failed to upsert {len(points)} points to {collection_name}: {e}",
@@ -91,19 +91,18 @@ class QdrantDocuments:
 
             error_msg = str(e).lower()
             if "collection not found" in error_msg:
-                raise QdrantServiceError(
-                    f"Collection '{collection_name}' not found. Create it before upserting."
-                ) from e
-            elif "wrong vector size" in error_msg:
-                raise QdrantServiceError(
-                    "Vector dimension mismatch. Check that vectors match collection configuration."
-                ) from e
-            elif "payload too large" in error_msg:
-                raise QdrantServiceError(
-                    f"Payload too large. Try reducing batch size (current: {batch_size})."
-                ) from e
-            else:
-                raise QdrantServiceError(f"Failed to upsert points: {e}") from e
+                msg = f"Collection '{collection_name}' not found. Create it before upserting."
+                raise QdrantServiceError(msg) from e
+            if "wrong vector size" in error_msg:
+                msg = "Vector dimension mismatch. Check that vectors match collection configuration."
+                raise QdrantServiceError(msg) from e
+            if "payload too large" in error_msg:
+                msg = f"Payload too large. Try reducing batch size (current: {batch_size})."
+                raise QdrantServiceError(msg) from e
+            msg = f"Failed to upsert points: {e}"
+            raise QdrantServiceError(msg) from e
+        else:
+            return True
 
     async def get_points(
         self,
@@ -125,6 +124,7 @@ class QdrantDocuments:
 
         Raises:
             QdrantServiceError: If retrieval fails
+
         """
         try:
             # Retrieve points
@@ -150,14 +150,15 @@ class QdrantDocuments:
 
                 formatted_results.append(result)
 
-            return formatted_results
-
         except Exception as e:
             logger.error(
                 f"Failed to retrieve points from {collection_name}: {e}",
                 exc_info=True,
             )
-            raise QdrantServiceError(f"Failed to retrieve points: {e}") from e
+            msg = f"Failed to retrieve points: {e}"
+            raise QdrantServiceError(msg) from e
+        else:
+            return formatted_results
 
     async def delete_points(
         self,
@@ -177,9 +178,11 @@ class QdrantDocuments:
 
         Raises:
             QdrantServiceError: If deletion fails
+
         """
         if not point_ids and not filter_condition:
-            raise ValueError("Either point_ids or filter_condition must be provided")
+            msg = "Either point_ids or filter_condition must be provided"
+            raise ValueError(msg)
 
         try:
             if point_ids:
@@ -207,7 +210,8 @@ class QdrantDocuments:
                 f"Failed to delete points from {collection_name}: {e}",
                 exc_info=True,
             )
-            raise QdrantServiceError(f"Failed to delete points: {e}") from e
+            msg = f"Failed to delete points: {e}"
+            raise QdrantServiceError(msg) from e
 
     async def update_point_payload(
         self,
@@ -229,6 +233,7 @@ class QdrantDocuments:
 
         Raises:
             QdrantServiceError: If update fails
+
         """
         try:
             if replace:
@@ -257,7 +262,8 @@ class QdrantDocuments:
                 f"Failed to update payload for point {point_id}: {e}",
                 exc_info=True,
             )
-            raise QdrantServiceError(f"Failed to update point payload: {e}") from e
+            msg = f"Failed to update point payload: {e}"
+            raise QdrantServiceError(msg) from e
 
     async def count_points(
         self,
@@ -277,6 +283,7 @@ class QdrantDocuments:
 
         Raises:
             QdrantServiceError: If counting fails
+
         """
         try:
             filter_obj = build_filter(filter_condition) if filter_condition else None
@@ -292,7 +299,8 @@ class QdrantDocuments:
             logger.error(
                 f"Failed to count points in {collection_name}: {e}", exc_info=True
             )
-            raise QdrantServiceError(f"Failed to count points: {e}") from e
+            msg = f"Failed to count points: {e}"
+            raise QdrantServiceError(msg) from e
 
     async def scroll_points(
         self,
@@ -318,6 +326,7 @@ class QdrantDocuments:
 
         Raises:
             QdrantServiceError: If scrolling fails
+
         """
         try:
             filter_obj = build_filter(filter_condition) if filter_condition else None
@@ -354,7 +363,8 @@ class QdrantDocuments:
                 f"Failed to scroll points in {collection_name}: {e}",
                 exc_info=True,
             )
-            raise QdrantServiceError(f"Failed to scroll points: {e}") from e
+            msg = f"Failed to scroll points: {e}"
+            raise QdrantServiceError(msg) from e
 
     async def clear_collection(self, collection_name: str) -> bool:
         """Clear all points from a collection without deleting the collection.
@@ -367,6 +377,7 @@ class QdrantDocuments:
 
         Raises:
             QdrantServiceError: If clearing fails
+
         """
         try:
             # Delete all points using an empty filter (matches everything)
@@ -386,4 +397,5 @@ class QdrantDocuments:
                 f"Failed to clear collection {collection_name}: {e}",
                 exc_info=True,
             )
-            raise QdrantServiceError(f"Failed to clear collection: {e}") from e
+            msg = f"Failed to clear collection: {e}"
+            raise QdrantServiceError(msg) from e

@@ -105,6 +105,7 @@ class BlueGreenDeployment:
             qdrant_service: Qdrant service for data storage
             cache_manager: Cache manager for state management
             feature_flag_manager: Optional feature flag manager
+
         """
         self.qdrant_service = qdrant_service
         self.cache_manager = cache_manager
@@ -164,6 +165,7 @@ class BlueGreenDeployment:
 
         Raises:
             RuntimeError: If deployment is already in progress
+
         """
         if not self._initialized:
             await self.initialize()
@@ -173,9 +175,8 @@ class BlueGreenDeployment:
             BlueGreenStatus.COMPLETED,
             BlueGreenStatus.FAILED,
         ):
-            raise RuntimeError(
-                f"Deployment already in progress: {self._deployment_status}"
-            )
+            msg = f"Deployment already in progress: {self._deployment_status}"
+            raise RuntimeError(msg)
 
         self._current_deployment = config
         self._deployment_status = BlueGreenStatus.PREPARING
@@ -191,6 +192,7 @@ class BlueGreenDeployment:
 
         Returns:
             dict[str, Any]: Current status including environments and deployment info
+
         """
         return {
             "status": self._deployment_status.value,
@@ -217,6 +219,7 @@ class BlueGreenDeployment:
 
         Returns:
             bool: True if switch was successful
+
         """
         if not self._initialized:
             await self.initialize()
@@ -269,6 +272,7 @@ class BlueGreenDeployment:
 
         Returns:
             bool: True if rollback was successful
+
         """
         if not self._initialized:
             await self.initialize()
@@ -284,9 +288,8 @@ class BlueGreenDeployment:
             if success:
                 logger.info("Rollback completed successfully")
                 return True
-            else:
-                logger.error("Rollback failed")
-                return False
+            logger.error("Rollback failed")
+            return False
 
         except Exception:
             logger.exception("Error during rollback")
@@ -298,6 +301,7 @@ class BlueGreenDeployment:
 
         Returns:
             dict[str, DeploymentMetrics]: Metrics for blue and green environments
+
         """
         metrics = {}
 
@@ -510,12 +514,10 @@ class BlueGreenDeployment:
     async def _load_environment_state(self) -> None:
         """Load environment state from storage."""
         # In production, load from database/storage
-        pass
 
     async def _persist_environment_state(self) -> None:
         """Persist environment state to storage."""
         # In production, save to database/storage
-        pass
 
     async def cleanup(self) -> None:
         """Cleanup blue-green deployment manager resources."""

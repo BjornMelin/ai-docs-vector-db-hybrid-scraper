@@ -1,10 +1,9 @@
 """Tests for query expansion service."""
 
+import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
-import asyncio
 
 from src.services.query_processing.expansion import (
     ExpandedTerm,
@@ -287,14 +286,14 @@ class TestQueryExpansionResult:
             confidence_score=0.85,
             processing_time_ms=200.0,
             cache_hit=True,
-            term_statistics={"total_terms": 1},
+            term_statistics={"_total_terms": 1},
             expansion_metadata={"source": "test"},
         )
 
         assert len(result.expanded_terms) == 1
         assert result.expanded_terms[0].term == "coding"
         assert result.cache_hit is True
-        assert result.term_statistics == {"total_terms": 1}
+        assert result.term_statistics == {"_total_terms": 1}
         assert result.expansion_metadata == {"source": "test"}
 
 
@@ -742,7 +741,7 @@ class TestQueryExpansionService:
 
         stats = service._generate_term_statistics(terms)
 
-        assert stats["total_terms"] == 3
+        assert stats["_total_terms"] == 3
         assert stats["relation_type_counts"]["synonym"] == 2
         assert stats["relation_type_counts"]["related"] == 1
         assert stats["source_counts"]["wordnet"] == 1
@@ -811,8 +810,8 @@ class TestQueryExpansionService:
         service._update_performance_stats(ExpansionStrategy.SYNONYM_BASED, 150.0)
 
         assert (
-            service.performance_stats["total_expansions"]
-            == initial_stats["total_expansions"] + 1
+            service.performance_stats["_total_expansions"]
+            == initial_stats["_total_expansions"] + 1
         )
         assert service.performance_stats["avg_processing_time"] > 0
         assert service.performance_stats["strategy_usage"]["synonym_based"] == 1
@@ -833,7 +832,7 @@ class TestQueryExpansionService:
         """Test getting performance statistics."""
         stats = service.get_performance_stats()
 
-        assert "total_expansions" in stats
+        assert "_total_expansions" in stats
         assert "avg_processing_time" in stats
         assert "strategy_usage" in stats
         assert "cache_stats" in stats

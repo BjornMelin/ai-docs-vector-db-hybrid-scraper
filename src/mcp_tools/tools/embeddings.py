@@ -17,9 +17,12 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from ...infrastructure.client_manager import ClientManager
-from ..models.requests import EmbeddingRequest
-from ..models.responses import EmbeddingGenerationResponse, EmbeddingProviderInfo
+from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.models.requests import EmbeddingRequest
+from src.mcp_tools.models.responses import (
+    EmbeddingGenerationResponse,
+    EmbeddingProviderInfo,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -32,8 +35,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def generate_embeddings(
         request: EmbeddingRequest, ctx: Context = None
     ) -> EmbeddingGenerationResponse:
-        """
-        Generate embeddings using the optimal provider.
+        """Generate embeddings using the optimal provider.
 
         Automatically selects the best embedding model based on cost,
         performance, and availability.
@@ -89,8 +91,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def list_embedding_providers(
         ctx: Context = None,
     ) -> list[EmbeddingProviderInfo]:
-        """
-        List available embedding providers and their capabilities.
+        """List available embedding providers and their capabilities.
 
         Returns information about supported models, costs, and current status.
         """

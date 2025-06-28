@@ -4,8 +4,6 @@ import src.services.observability.init as init_module
 class TestError(Exception):
     """Custom exception for this module."""
 
-    pass
-
 
 """Tests for OpenTelemetry initialization."""
 
@@ -175,10 +173,11 @@ class TestObservabilityInitialization:
         # Mock the import to cause an exception during initialization
         with patch("builtins.__import__") as mock_import:
 
-            def side_effect(name, *args, **kwargs):
+            def side_effect(name, *args, **_kwargs):
                 if "opentelemetry" in name:
-                    raise TestError("Initialization failed")
-                return __import__(name, *args, **kwargs)
+                    msg = "Initialization failed"
+                    raise TestError(msg)
+                return __import__(name, *args, **_kwargs)
 
             mock_import.side_effect = side_effect
 

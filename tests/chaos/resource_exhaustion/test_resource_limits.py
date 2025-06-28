@@ -17,8 +17,6 @@ import pytest
 class TestError(Exception):
     """Custom exception for this module."""
 
-    pass
-
 
 class ResourceType(Enum):
     """Types of system resources."""
@@ -167,7 +165,8 @@ class ResourceExhaustionSimulator:
         if monitor.is_critical():
             # Simulate disk operations becoming slow/failing
             await asyncio.sleep(0.1)  # Simulate slow disk I/O
-            raise TestError("Disk full - cannot write data")
+            msg = "Disk full - cannot write data"
+            raise TestError(msg)
 
         return {
             "available_space": monitor.max_capacity - target_usage,
@@ -209,7 +208,7 @@ class ResourceExhaustionSimulator:
             "overall_health": overall_health,
             "critical_resources": critical_resources,
             "warning_resources": warning_resources,
-            "total_resources": len(self.monitors),
+            "_total_resources": len(self.monitors),
         }
 
 
@@ -246,7 +245,8 @@ class TestResourceExhaustion:
             monitor = resource_simulator.get_monitor(ResourceType.MEMORY)
             if monitor.is_critical():
                 # Simulate memory allocation failure
-                raise MemoryError("Insufficient memory available")
+                msg = "Insufficient memory available"
+                raise MemoryError(msg)
             return {"status": "success", "memory_used": 50}
 
         # Test that operations fail under memory pressure
@@ -334,7 +334,8 @@ class TestResourceExhaustion:
 
             if available <= 0:
                 # No connections available - implement queuing or rejection
-                raise TestError("Connection pool exhausted - request queued")
+                msg = "Connection pool exhausted - request queued"
+                raise TestError(msg)
 
             return {"connection_id": "conn_123", "status": "acquired"}
 
@@ -374,9 +375,8 @@ class TestResourceExhaustion:
             available_space = monitor.max_capacity - monitor.current_usage
 
             if data_size > available_space:
-                raise TestError(
-                    f"Insufficient disk space: need {data_size}GB, have {available_space}GB"
-                )
+                msg = f"Insufficient disk space: need {data_size}GB, have {available_space}GB"
+                raise TestError(msg)
 
             # Simulate successful write
             monitor.update_usage(monitor.current_usage + data_size)
@@ -426,7 +426,8 @@ class TestResourceExhaustion:
         async def open_file(filename: str):
             """Simulate opening a file."""
             if fd_monitor.current_usage >= fd_monitor.max_capacity:
-                raise OSError("Too many open files")
+                msg = "Too many open files"
+                raise OSError(msg)
 
             file_handle = {"name": filename, "fd": len(open_files)}
             open_files.append(file_handle)
@@ -553,7 +554,7 @@ class TestResourceExhaustion:
                             r["resource"] for r in health["critical_resources"]
                         ],
                     }
-                elif critical_count >= 2:
+                if critical_count >= 2:
                     # Partial shutdown of non-critical services
                     return {
                         "action": "partial_shutdown",
@@ -564,12 +565,11 @@ class TestResourceExhaustion:
                             "non_essential_apis",
                         ],
                     }
-                else:
-                    # Individual resource management
-                    return {
-                        "action": "resource_throttling",
-                        "reason": "single_resource_critical",
-                    }
+                # Individual resource management
+                return {
+                    "action": "resource_throttling",
+                    "reason": "single_resource_critical",
+                }
 
             return {"action": "monitor", "reason": "system_healthy"}
 
@@ -627,7 +627,7 @@ class TestResourceExhaustion:
                 warning_alerts = [a for a in self.alerts if a["level"] == "warning"]
 
                 return {
-                    "total_alerts": len(self.alerts),
+                    "_total_alerts": len(self.alerts),
                     "critical_alerts": len(critical_alerts),
                     "warning_alerts": len(warning_alerts),
                     "latest_critical": critical_alerts[-1] if critical_alerts else None,
@@ -653,7 +653,7 @@ class TestResourceExhaustion:
 
         # Get alert summary
         summary = alert_manager.get_alert_summary()
-        assert summary["total_alerts"] > 0
+        assert summary["_total_alerts"] > 0
         assert summary["critical_alerts"] > 0
         assert summary["latest_critical"] is not None
 

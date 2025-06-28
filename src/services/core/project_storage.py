@@ -23,8 +23,6 @@ logger = logging.getLogger(__name__)
 class ProjectStorageError(BaseError):
     """Project storage specific errors."""
 
-    pass
-
 
 class ProjectStorage:
     """Manages persistent storage of project configurations."""
@@ -40,6 +38,7 @@ class ProjectStorage:
             data_dir: Required base data directory from UnifiedConfig. Must be provided.
             storage_path: Optional custom path to storage file. If not provided, defaults to data_dir/projects.json.
                 When both storage_path and data_dir are provided, storage_path takes precedence.
+
         """
         if storage_path is None:
             base_dir = Path(data_dir)
@@ -68,7 +67,8 @@ class ProjectStorage:
             logger.info(f"Loaded {len(self._projects_cache)} projects from storage")
 
         except Exception as e:
-            raise ProjectStorageError("Failed to initialize project storage") from e
+            msg = "Failed to initialize project storage"
+            raise ProjectStorageError(msg) from e
 
     async def load_projects(self) -> dict[str, dict[str, Any]]:
         """Load projects from storage file."""
@@ -115,7 +115,8 @@ class ProjectStorage:
         """Update a project's data."""
         async with self._lock:
             if project_id not in self._projects_cache:
-                raise ProjectStorageError(f"Project {project_id} not found")
+                msg = f"Project {project_id} not found"
+                raise ProjectStorageError(msg)
 
             self._projects_cache[project_id].update(updates)
             self._projects_cache[project_id]["updated_at"] = datetime.now(
@@ -148,7 +149,8 @@ class ProjectStorage:
             temp_path.replace(self.storage_path)
 
         except Exception as e:
-            raise ProjectStorageError("Failed to save projects") from e
+            msg = "Failed to save projects"
+            raise ProjectStorageError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup resources."""

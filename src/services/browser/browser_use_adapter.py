@@ -7,9 +7,8 @@ import time
 from typing import Any
 
 from src.config import BrowserUseConfig
-
-from ..base import BaseService
-from ..errors import CrawlServiceError
+from src.services.base import BaseService
+from src.services.errors import CrawlServiceError
 
 
 logger = logging.getLogger(__name__)
@@ -46,6 +45,7 @@ class BrowserUseAdapter(BaseService):
 
         Args:
             config: BrowserUse configuration model with LLM provider settings
+
         """
         super().__init__(config)
         self.config = config
@@ -68,45 +68,46 @@ class BrowserUseAdapter(BaseService):
 
         Returns:
             Configured LLM instance
+
         """
         if self.config.llm_provider == "openai":
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
-                raise CrawlServiceError("OPENAI_API_KEY environment variable required")
+                msg = "OPENAI_API_KEY environment variable required"
+                raise CrawlServiceError(msg)
             return ChatOpenAI(
                 model=self.config.model,
                 temperature=0.1,
                 api_key=api_key,
             )
-        elif self.config.llm_provider == "anthropic":
+        if self.config.llm_provider == "anthropic":
             api_key = os.getenv("ANTHROPIC_API_KEY")
             if not api_key:
-                raise CrawlServiceError(
-                    "ANTHROPIC_API_KEY environment variable required"
-                )
+                msg = "ANTHROPIC_API_KEY environment variable required"
+                raise CrawlServiceError(msg)
             return ChatAnthropic(
                 model=self.config.model,
                 temperature=0.1,
                 api_key=api_key,
             )
-        elif self.config.llm_provider == "gemini":
+        if self.config.llm_provider == "gemini":
             api_key = os.getenv("GOOGLE_API_KEY")
             if not api_key:
-                raise CrawlServiceError("GOOGLE_API_KEY environment variable required")
+                msg = "GOOGLE_API_KEY environment variable required"
+                raise CrawlServiceError(msg)
             return ChatGoogleGenerativeAI(
                 model=self.config.model,
                 temperature=0.1,
                 google_api_key=api_key,
             )
-        else:
-            raise CrawlServiceError("Unsupported LLM provider")
+        msg = "Unsupported LLM provider"
+        raise CrawlServiceError(msg)
 
     async def initialize(self) -> None:
         """Initialize browser-use instance."""
         if not self._available:
-            raise CrawlServiceError(
-                "browser-use not available - please install browser-use package and dependencies"
-            )
+            msg = "browser-use not available - please install browser-use package and dependencies"
+            raise CrawlServiceError(msg)
 
         if self._initialized:
             return
@@ -127,7 +128,8 @@ class BrowserUseAdapter(BaseService):
                 f"BrowserUse adapter initialized with {self.config.llm_provider}/{self.config.model}"
             )
         except Exception as e:
-            raise CrawlServiceError("Failed to initialize browser-use") from e
+            msg = "Failed to initialize browser-use"
+            raise CrawlServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup browser-use resources."""
@@ -166,12 +168,15 @@ class BrowserUseAdapter(BaseService):
 
         Returns:
             Scraping result with standardized format
+
         """
         if not self._available:
-            raise CrawlServiceError("browser-use not available")
+            msg = "browser-use not available"
+            raise CrawlServiceError(msg)
 
         if not self._initialized:
-            raise CrawlServiceError("Adapter not initialized")
+            msg = "Adapter not initialized"
+            raise CrawlServiceError(msg)
 
         timeout = timeout or self.config.timeout
         start_time = time.time()
@@ -262,6 +267,7 @@ class BrowserUseAdapter(BaseService):
 
         Returns:
             Scraping result with standardized format
+
         """
         # Convert instructions to natural language task
         task = self._convert_instructions_to_task(instructions)
@@ -275,6 +281,7 @@ class BrowserUseAdapter(BaseService):
 
         Returns:
             Natural language task description
+
         """
         if not instructions:
             return "Navigate to the page and extract all documentation content including code examples."
@@ -291,14 +298,14 @@ class BrowserUseAdapter(BaseService):
 
         if task_parts:
             return f"Navigate to the page, then {' '.join(task_parts)} Finally, extract all documentation content including code examples and structured information."
-        else:
-            return "Navigate to the page and extract all documentation content including code examples."
+        return "Navigate to the page and extract all documentation content including code examples."
 
     def capabilities(self) -> dict[str, Any]:
         """Get adapter capabilities.
 
         Returns:
             Capabilities dictionary
+
         """
         return {
             "ai_powered": True,
@@ -319,6 +326,7 @@ class BrowserUseAdapter(BaseService):
 
         Returns:
             Formatted task description
+
         """
         if not instructions:
             return base_task
@@ -349,8 +357,7 @@ class BrowserUseAdapter(BaseService):
             return f"{base_task}\n\nPlease perform these actions:\n" + "\n".join(
                 formatted_actions
             )
-        else:
-            return base_task
+        return base_task
 
     async def _build_success_result(
         self,
@@ -371,6 +378,7 @@ class BrowserUseAdapter(BaseService):
 
         Returns:
             Standardized result dictionary
+
         """
         processing_time = (time.time() - start_time) * 1000
 
@@ -444,6 +452,7 @@ class BrowserUseAdapter(BaseService):
 
         Returns:
             Standardized error result
+
         """
         processing_time = (time.time() - start_time) * 1000
         self.logger.error("BrowserUse error for {url}")
@@ -467,6 +476,7 @@ class BrowserUseAdapter(BaseService):
 
         Returns:
             Capabilities dictionary
+
         """
         return {
             "name": "browser_use",
@@ -513,6 +523,7 @@ class BrowserUseAdapter(BaseService):
 
         Returns:
             Health status dictionary
+
         """
         if not self._available:
             return {
@@ -586,6 +597,7 @@ class BrowserUseAdapter(BaseService):
 
         Returns:
             Test results
+
         """
         if not self._available or not self._initialized:
             return {

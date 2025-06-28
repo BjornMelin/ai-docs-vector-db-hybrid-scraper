@@ -76,12 +76,12 @@ class WorkerSettings:
         )
 
     @classmethod
-    def on_startup(cls, ctx: dict[str, Any]) -> None:
+    def on_startup(cls, _ctx: dict[str, Any]) -> None:
         """Called when worker starts."""
         logger.info("ARQ worker starting up")
 
     @classmethod
-    def on_shutdown(cls, ctx: dict[str, Any]) -> None:
+    def on_shutdown(cls, _ctx: dict[str, Any]) -> None:
         """Called when worker shuts down."""
         logger.info("ARQ worker shutting down")
 

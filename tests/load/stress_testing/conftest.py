@@ -347,7 +347,7 @@ class FailureInjector:
         return {
             "active_failures": len(self.active_failures),
             "active_types": list({f["type"] for f in self.active_failures.values()}),
-            "total_injected": len(self.failure_history),
+            "_total_injected": len(self.failure_history),
             "history": self.failure_history[-10:],  # Last 10 failures
         }
 
@@ -647,7 +647,7 @@ def stress_test_environment():
     # Log system information
     logger.info("Setting up stress testing environment")
     logger.info(
-        f"System: {psutil.cpu_count()} CPUs, {psutil.virtual_memory().total / (1024**3):.2f} GB RAM"
+        f"System: {psutil.cpu_count()} CPUs, {psutil.virtual_memory()._total / (1024**3):.2f} GB RAM"
     )
 
     # Check resource limits

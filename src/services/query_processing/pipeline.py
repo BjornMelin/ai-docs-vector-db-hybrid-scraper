@@ -9,7 +9,8 @@ import logging
 import time
 from typing import Any
 
-from ..base import BaseService
+from src.services.base import BaseService
+
 from .models import QueryProcessingRequest, QueryProcessingResponse
 from .orchestrator import SearchOrchestrator as AdvancedSearchOrchestrator
 
@@ -34,9 +35,11 @@ class QueryProcessingPipeline(BaseService):
 
         Raises:
             ValueError: If orchestrator is None
+
         """
         if orchestrator is None:
-            raise ValueError("Orchestrator cannot be None")
+            msg = "Orchestrator cannot be None"
+            raise ValueError(msg)
 
         super().__init__(config)
         self.orchestrator = orchestrator
@@ -78,9 +81,11 @@ class QueryProcessingPipeline(BaseService):
 
         Raises:
             RuntimeError: If pipeline not initialized
+
         """
         if not self._initialized:
-            raise RuntimeError("QueryProcessingPipeline not initialized")
+            msg = "QueryProcessingPipeline not initialized"
+            raise RuntimeError(msg)
 
         # Handle both string query and QueryProcessingRequest
         if isinstance(query_or_request, QueryProcessingRequest):
@@ -116,6 +121,7 @@ class QueryProcessingPipeline(BaseService):
 
         Returns:
             QueryProcessingResponse: Complete processing results
+
         """
         self._validate_initialized()
         return await self.orchestrator.process_query(request)
@@ -131,6 +137,7 @@ class QueryProcessingPipeline(BaseService):
 
         Returns:
             list[QueryProcessingResponse]: Results for each query
+
         """
         self._validate_initialized()
 
@@ -170,6 +177,7 @@ class QueryProcessingPipeline(BaseService):
 
         Returns:
             dict[str, Any]: Analysis results including intent and strategy
+
         """
         self._validate_initialized()
 
@@ -205,6 +213,7 @@ class QueryProcessingPipeline(BaseService):
 
         Returns:
             dict[str, Any]: Performance statistics and metrics
+
         """
         if not self._initialized:
             return {
@@ -230,6 +239,7 @@ class QueryProcessingPipeline(BaseService):
 
         Returns:
             dict[str, Any]: Health status of all components
+
         """
         health_status = {
             "status": "healthy" if self._initialized else "unhealthy",
@@ -302,6 +312,7 @@ class QueryProcessingPipeline(BaseService):
 
         Returns:
             dict[str, Any]: Warmup results including status and timing
+
         """
         self._validate_initialized()
 

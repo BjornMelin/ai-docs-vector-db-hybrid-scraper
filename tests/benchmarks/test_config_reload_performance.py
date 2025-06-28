@@ -13,7 +13,7 @@ import asyncio
 import json
 import tempfile
 import time
-from datetime import UTC
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import AsyncMock
 
@@ -26,16 +26,15 @@ from src.config.drift_detection import (
     DriftDetectionConfig,
     DriftEvent,
     DriftSeverity,
+    DriftType,
 )
-from src.config.security import SecurityConfig
-from src.config.drift_detection import DriftType
 from src.config.reload import (
     ConfigChangeListener,
     ConfigReloader,
     ReloadOperation,
     ReloadTrigger,
 )
-from src.config.security import SecureConfigManager
+from src.config.security import SecureConfigManager, SecurityConfig
 
 
 class TestConfigReloadPerformance:
@@ -122,10 +121,10 @@ class TestConfigReloadPerformance:
         assert result.success
 
         # Validate performance
-        assert result.total_duration_ms < 100, (
-            f"Reload took {result.total_duration_ms:.2f}ms (target: <100ms)"
+        assert result._total_duration_ms < 100, (
+            f"Reload took {result._total_duration_ms:.2f}ms (target: <100ms)"
         )
-        print(f"\n✅ Basic reload performance: {result.total_duration_ms:.2f}ms")
+        print(f"\n✅ Basic reload performance: {result._total_duration_ms:.2f}ms")
 
     def test_reload_with_validation(self, benchmark, config_reloader, test_config):
         """Benchmark reload with configuration validation."""
@@ -173,10 +172,10 @@ class TestConfigReloadPerformance:
         assert len(result.services_notified) == 3
 
         # Even with listeners, should meet target
-        assert result.total_duration_ms < 100, (
-            f"Reload with listeners took {result.total_duration_ms:.2f}ms"
+        assert result._total_duration_ms < 100, (
+            f"Reload with listeners took {result._total_duration_ms:.2f}ms"
         )
-        print(f"\n✅ Reload with listeners: {result.total_duration_ms:.2f}ms")
+        print(f"\n✅ Reload with listeners: {result._total_duration_ms:.2f}ms")
         print(f"   Apply duration: {result.apply_duration_ms:.2f}ms")
 
     def test_concurrent_reload_rejection(self, benchmark, config_reloader, test_config):
@@ -185,13 +184,10 @@ class TestConfigReloadPerformance:
 
         async def concurrent_reloads():
             # Try to trigger multiple reloads concurrently
-            tasks = []
-            for _i in range(5):
-                tasks.append(
-                    config_reloader.reload_config(
-                        trigger=ReloadTrigger.MANUAL, force=True
-                    )
-                )
+            tasks = [
+                config_reloader.reload_config(trigger=ReloadTrigger.MANUAL, force=True)
+                for _i in range(5)
+            ]
 
             results = await asyncio.gather(*tasks)
             return results
@@ -214,7 +210,7 @@ class TestConfigReloadPerformance:
 
         # Rejections should be instant
         for result in rejected:
-            assert result.total_duration_ms < 1, "Rejection should be instant"
+            assert result._total_duration_ms < 1, "Rejection should be instant"
 
         print("\n✅ Concurrent reload handling: 1 success, 4 instant rejections")
 
@@ -241,8 +237,8 @@ class TestConfigReloadPerformance:
 
         result = benchmark(modify_and_reload)
         assert result.success
-        assert result.total_duration_ms < 100
-        print(f"\n✅ File-based reload: {result.total_duration_ms:.2f}ms")
+        assert result._total_duration_ms < 100
+        print(f"\n✅ File-based reload: {result._total_duration_ms:.2f}ms")
 
     def test_reload_history_performance(self, benchmark, config_reloader, test_config):
         """Benchmark reload history tracking performance."""
@@ -264,7 +260,7 @@ class TestConfigReloadPerformance:
         history_count, stats = result
 
         assert history_count == 20
-        assert stats["total_operations"] >= 20
+        assert stats["_total_operations"] >= 20
         print(f"\n✅ History tracking: Retrieved {history_count} records instantly")
 
 
@@ -456,7 +452,7 @@ class TestEncryptionPerformance:
         return {
             "database_password": "super_secret_password_123",
             "api_key": "sk-1234567890abcdef",
-            "jwt_secret": "jwt_secret_key_for_testing",
+            "_jwt_secret": "_jwt_secret_key_for_testing",
             "oauth_client_secret": "oauth_client_secret_value",
             "encryption_passphrase": "encryption_passphrase_for_data",
         }
@@ -526,7 +522,7 @@ class TestEncryptionPerformance:
                 "app_name": "encrypted-app",
                 "database_password": fernet.encrypt(b"db_password").decode(),
                 "api_key": fernet.encrypt(b"api_key_value").decode(),
-                "jwt_secret": fernet.encrypt(b"jwt_secret_value").decode(),
+                "_jwt_secret": fernet.encrypt(b"_jwt_secret_value").decode(),
             }
 
             # Decrypt on access (simulate real usage)
@@ -536,8 +532,8 @@ class TestEncryptionPerformance:
                     config_data["database_password"].encode()
                 ).decode(),
                 "api_key": fernet.decrypt(config_data["api_key"].encode()).decode(),
-                "jwt_secret": fernet.decrypt(
-                    config_data["jwt_secret"].encode()
+                "_jwt_secret": fernet.decrypt(
+                    config_data["_jwt_secret"].encode()
                 ).decode(),
             }
 
@@ -545,7 +541,7 @@ class TestEncryptionPerformance:
 
         result = benchmark(load_config_with_encryption)
         assert result["app_name"] == "encrypted-app"
-        assert result["database_password"] == "db_password"  # noqa: S105  # Test data
+        assert result["database_password"] == "db_password"  # Test data
 
         print("\n✅ Config with encryption: Minimal overhead for secure configuration")
 
@@ -628,7 +624,7 @@ class TestWatchdogOptimization:
                 return checks
 
             result = benchmark(optimized_file_watch)
-            assert result == 3  # Only checked 3 config files, not 23 total files
+            assert result == 3  # Only checked 3 config files, not 23 _total files
 
             print(
                 f"\n✅ Optimized watching: Only {result} files checked (not {len(list(temp_path.iterdir()))})"

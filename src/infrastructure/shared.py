@@ -41,6 +41,7 @@ class ClientHealth:
         last_check: Unix timestamp of last health check
         last_error: Description of the last error encountered, if any
         consecutive_failures: Number of consecutive failures for this client
+
     """
 
     state: ClientState
@@ -64,6 +65,7 @@ class CircuitBreaker:
             failure_threshold: Number of failures before opening circuit
             recovery_timeout: Time in seconds before attempting recovery
             half_open_requests: Number of test requests in half-open state
+
         """
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
@@ -84,6 +86,7 @@ class CircuitBreaker:
                 - HEALTHY: Normal operation
                 - DEGRADED: Half-open state, testing recovery
                 - FAILED: Circuit open, rejecting requests
+
         """
         if (
             self._state == ClientState.FAILED
@@ -107,17 +110,20 @@ class CircuitBreaker:
         Raises:
             APIError: If circuit breaker is open or half-open test fails
             Exception: Any exception raised by the executed function
+
         """
         async with self._lock:
             current_state = self.state
 
             if current_state == ClientState.FAILED:
-                raise APIError("Circuit breaker is open")
+                msg = "Circuit breaker is open"
+                raise APIError(msg)
 
             if current_state == ClientState.DEGRADED:
                 if self._half_open_attempts >= self.half_open_requests:
                     self._state = ClientState.FAILED
-                    raise APIError("Circuit breaker is open (half-open test failed)")
+                    msg = "Circuit breaker is open (half-open test failed)"
+                    raise APIError(msg)
                 self._half_open_attempts += 1
 
         try:

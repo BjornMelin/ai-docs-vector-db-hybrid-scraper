@@ -39,6 +39,7 @@ def get_observability_service() -> dict[str, any]:
 
     Returns:
         Dictionary with observability service components
+
     """
     try:
         config = get_observability_config()
@@ -77,6 +78,7 @@ def get_ai_tracer(
 
     Returns:
         OpenTelemetry tracer or NoOp tracer
+
     """
     if observability_service["enabled"] and observability_service["tracer"]:
         return get_tracer("ai-operations")
@@ -97,6 +99,7 @@ def get_service_meter(
 
     Returns:
         OpenTelemetry meter or NoOp meter
+
     """
     if observability_service["enabled"] and observability_service["meter"]:
         return get_meter("service-metrics")
@@ -119,6 +122,7 @@ def create_span_context(
 
     Returns:
         Span context manager
+
     """
     return tracer.start_as_current_span(operation_name)
 
@@ -141,6 +145,7 @@ async def record_ai_operation_metrics(
         duration: Operation duration in seconds
         meter: Service meter dependency
         **kwargs: Additional attributes
+
     """
     try:
         record_ai_operation(
@@ -170,6 +175,7 @@ async def track_ai_cost_metrics(
         cost_usd: Cost in USD
         meter: Service meter dependency
         **kwargs: Additional attributes
+
     """
     try:
         track_cost(
@@ -194,6 +200,7 @@ async def get_observability_health(
 
     Returns:
         Health status dictionary
+
     """
     try:
         config = observability_service["config"]

@@ -23,16 +23,15 @@ else:
 
 
 from src.config import SearchStrategy
-
-from ...infrastructure.client_manager import ClientManager
-from ...security import MLSecurityValidator as SecurityValidator
-from ..models.requests import (
+from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.models.requests import (
     FilteredSearchRequest,
     HyDESearchRequest,
     MultiStageSearchRequest,
     SearchRequest,
 )
-from ..models.responses import HyDEAdvancedResponse, SearchResult
+from src.mcp_tools.models.responses import HyDEAdvancedResponse, SearchResult
+from src.security import MLSecurityValidator as SecurityValidator
 
 
 logger = logging.getLogger(__name__)
@@ -48,7 +47,6 @@ async def _perform_ab_test_search(
     ctx: "Context | None",
 ) -> tuple[list, dict]:
     """Perform A/B test comparing HyDE vs regular search."""
-
     # Get services
     hyde_engine = await client_manager.get_hyde_engine()
     qdrant_service = await client_manager.get_qdrant_service()
@@ -118,15 +116,13 @@ def register_tools(mcp, client_manager: ClientManager):
         request: SearchRequest, ctx: Context
     ) -> list[SearchResult]:
         """Direct access to search_documents functionality without mock MCP."""
-
         return await search_documents_core(request, client_manager, ctx)
 
     @mcp.tool()
     async def multi_stage_search(
         request: MultiStageSearchRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Perform multi-stage retrieval with Matryoshka embeddings.
+        """Perform multi-stage retrieval with Matryoshka embeddings.
 
         Implements advanced Query API patterns for complex retrieval strategies
         with optimized prefetch and fusion algorithms.
@@ -206,8 +202,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def hyde_search(
         request: HyDESearchRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Search using HyDE (Hypothetical Document Embeddings).
+        """Search using HyDE (Hypothetical Document Embeddings).
 
         Generates hypothetical documents to improve retrieval accuracy by 15-25%
         using advanced Query API with optimized prefetch patterns and LLM generation.
@@ -364,8 +359,7 @@ def register_tools(mcp, client_manager: ClientManager):
         use_cache: bool = True,
         ctx: "Context | None" = None,
     ) -> HyDEAdvancedResponse:
-        """
-        Advanced HyDE search with full configuration control and A/B testing.
+        """Advanced HyDE search with full configuration control and A/B testing.
 
         Provides comprehensive HyDE search capabilities with detailed metrics,
         A/B testing comparison, and fine-grained control over generation parameters.
@@ -390,7 +384,8 @@ def register_tools(mcp, client_manager: ClientManager):
             except Exception as e:
                 if ctx:
                     await ctx.error("HyDE engine not available")
-                raise ValueError("HyDE engine not initialized") from e
+                msg = "HyDE engine not initialized"
+                raise ValueError(msg) from e
 
             result_dict = {
                 "request_id": request_id,
@@ -525,8 +520,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def filtered_search(
         request: FilteredSearchRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Optimized filtered search using indexed payload fields.
+        """Optimized filtered search using indexed payload fields.
 
         Performs efficient filtered search with Query API optimizations
         for high-performance filtering on indexed fields.

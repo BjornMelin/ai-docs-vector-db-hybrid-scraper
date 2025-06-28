@@ -35,6 +35,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         Args:
             app: ASGI application
             config: Security configuration
+
         """
         super().__init__(app)
         self.config = config
@@ -89,6 +90,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Dictionary of security headers
+
         """
         headers = {}
 
@@ -124,6 +126,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Args:
             response: HTTP response to modify
+
         """
         for header_name, header_value in self._security_headers.items():
             # Don't override existing headers
@@ -141,6 +144,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             True if request is allowed, False if rate limited
+
         """
         current_time = int(time.time())
         client_data = self._rate_limit_storage[client_ip]
@@ -167,6 +171,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Client IP address
+
         """
         # Check X-Forwarded-For header first
         forwarded_for = request.headers.get("x-forwarded-for")
@@ -219,6 +224,7 @@ class CSRFProtectionMiddleware(BaseHTTPMiddleware):
             app: ASGI application
             secret_key: Secret key for token generation
             exempt_paths: List of paths to exempt from CSRF protection
+
         """
         super().__init__(app)
         self.secret_key = secret_key

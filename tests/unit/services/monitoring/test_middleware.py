@@ -1,6 +1,7 @@
 """Comprehensive tests for monitoring middleware functionality."""
 
 import asyncio
+import threading
 import time
 from unittest.mock import AsyncMock, MagicMock
 
@@ -9,7 +10,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from src.services.monitoring.middleware import (
-import threading
     CustomMetricsMiddleware,
     PrometheusMiddleware,
 )
@@ -229,7 +229,7 @@ class TestCustomMetricsMiddleware:
         assert middleware.metrics_registry is mock_metrics_registry
 
     def test_successful_request_monitoring(
-        self, app_with_custom_middleware, mock_metrics_registry
+        self, app_with_custom_middleware, _mock_metrics_registry
     ):
         """Test monitoring of successful requests."""
         client = TestClient(app_with_custom_middleware)
@@ -240,7 +240,7 @@ class TestCustomMetricsMiddleware:
         assert response.json() == {"message": "Hello World"}
 
     def test_error_request_monitoring(
-        self, app_with_custom_middleware, mock_metrics_registry
+        self, app_with_custom_middleware, _mock_metrics_registry
     ):
         """Test monitoring of error requests."""
         client = TestClient(app_with_custom_middleware)
@@ -250,7 +250,7 @@ class TestCustomMetricsMiddleware:
         assert response.status_code == 500
 
     def test_slow_request_monitoring(
-        self, app_with_custom_middleware, mock_metrics_registry
+        self, app_with_custom_middleware, _mock_metrics_registry
     ):
         """Test monitoring of slow requests."""
         client = TestClient(app_with_custom_middleware)

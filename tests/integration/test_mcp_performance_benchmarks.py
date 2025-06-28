@@ -56,13 +56,12 @@ def _get_performance_thresholds():
             "min_rps_multiplier": 0.6,  # More lenient RPS target
             "spike_recovery_threshold": 20.0,  # More lenient spike recovery
         }
-    else:
-        return {
-            "degradation_threshold": 25.0,  # Still more lenient than original 20%
-            "min_success_rate": 0.98,  # Higher for local development
-            "min_rps_multiplier": 0.8,  # Original value
-            "spike_recovery_threshold": 10.0,  # Original value
-        }
+    return {
+        "degradation_threshold": 25.0,  # Still more lenient than original 20%
+        "min_success_rate": 0.98,  # Higher for local development
+        "min_rps_multiplier": 0.8,  # Original value
+        "spike_recovery_threshold": 10.0,  # Original value
+    }
 
 
 def _calculate_robust_degradation(early_metrics, late_metrics):
@@ -101,8 +100,8 @@ class PerformanceMetrics:
     """Container for performance test metrics."""
 
     operation: str
-    total_requests: int
-    total_time: float
+    _total_requests: int
+    _total_time: float
     avg_response_time: float
     min_response_time: float
     max_response_time: float
@@ -131,19 +130,19 @@ class TestMCPPerformanceBenchmarks:
         ]
         client_manager.vector_service = mock_vector_service
 
-        mock_embedding_service = AsyncMock()
-        mock_embedding_service.generate_embeddings.return_value = {
+        _mock_embedding_service = AsyncMock()
+        _mock_embedding_service.generate_embeddings.return_value = {
             "embeddings": [[0.1] * 384],
             "model": "test-model",
-            "total_tokens": 5,
+            "_total_tokens": 5,
         }
-        client_manager.embedding_service = mock_embedding_service
+        client_manager.embedding_service = _mock_embedding_service
 
         mock_cache_service = AsyncMock()
         mock_cache_service.get_stats.return_value = {
             "hit_rate": 0.85,
             "size": 1000,
-            "total_requests": 10000,
+            "_total_requests": 10000,
         }
         client_manager.cache_service = mock_cache_service
 
@@ -207,7 +206,7 @@ class TestMCPPerformanceBenchmarks:
                 else:
                     errors += 1
 
-        total_time = time.time() - start_time
+        _total_time = time.time() - start_time
 
         # Get memory usage
         current_memory = tracemalloc.get_traced_memory()[0]
@@ -222,8 +221,8 @@ class TestMCPPerformanceBenchmarks:
 
             metrics = PerformanceMetrics(
                 operation=operation_name,
-                total_requests=num_requests,
-                total_time=total_time,
+                _total_requests=num_requests,
+                _total_time=_total_time,
                 avg_response_time=mean(response_times),
                 min_response_time=min(response_times),
                 max_response_time=max(response_times),
@@ -231,7 +230,7 @@ class TestMCPPerformanceBenchmarks:
                 std_dev_response_time=stdev(response_times)
                 if len(response_times) > 1
                 else 0,
-                requests_per_second=num_requests / total_time,
+                requests_per_second=num_requests / _total_time,
                 memory_usage_mb=memory_usage_mb,
                 success_rate=(num_requests - errors) / num_requests,
                 p95_response_time=sorted_times[p95_index]
@@ -245,8 +244,8 @@ class TestMCPPerformanceBenchmarks:
             # All requests failed
             metrics = PerformanceMetrics(
                 operation=operation_name,
-                total_requests=num_requests,
-                total_time=total_time,
+                _total_requests=num_requests,
+                _total_time=_total_time,
                 avg_response_time=0,
                 min_response_time=0,
                 max_response_time=0,
@@ -266,8 +265,8 @@ class TestMCPPerformanceBenchmarks:
         print(f"\n{'=' * 60}")
         print(f"Performance Metrics: {metrics.operation}")
         print(f"{'=' * 60}")
-        print(f"Total Requests:        {metrics.total_requests}")
-        print(f"Total Time:            {metrics.total_time:.2f}s")
+        print(f"Total Requests:        {metrics._total_requests}")
+        print(f"Total Time:            {metrics._total_time:.2f}s")
         print(f"Requests/Second:       {metrics.requests_per_second:.2f}")
         print(f"Success Rate:          {metrics.success_rate * 100:.1f}%")
         print("")
@@ -308,11 +307,11 @@ class TestMCPPerformanceBenchmarks:
             (1000, 50),  # 1000 requests, 50 concurrent
         ]
 
-        for total_requests, concurrent in load_levels:
+        for _total_requests, concurrent in load_levels:
             metrics = await self._measure_operation(
-                f"Search (load: {total_requests}, concurrent: {concurrent})",
+                f"Search (load: {_total_requests}, concurrent: {concurrent})",
                 search_operation,
-                total_requests,
+                _total_requests,
                 concurrent,
             )
 
@@ -401,12 +400,11 @@ class TestMCPPerformanceBenchmarks:
                     collection="docs",
                     limit=5,
                 )
-            elif operation_type == 1:
+            if operation_type == 1:
                 return await tools["generate_embeddings"].handler(
                     texts=[f"mixed text {idx}"],
                 )
-            else:
-                return await tools["get_cache_stats"].handler()
+            return await tools["get_cache_stats"].handler()
 
         metrics = await self._measure_operation(
             "Mixed Workload",
@@ -483,11 +481,11 @@ class TestMCPPerformanceBenchmarks:
                 await asyncio.sleep(0.1 - batch_duration)
 
         # Analyze sustained performance
-        total_duration = time.time() - start_time
-        actual_rps = request_count / total_duration
+        _total_duration = time.time() - start_time
+        actual_rps = request_count / _total_duration
 
         print("\nSustained Load Test Results:")
-        print(f"Duration: {total_duration:.1f}s")
+        print(f"Duration: {_total_duration:.1f}s")
         print(f"Total Requests: {request_count}")
         print(f"Actual RPS: {actual_rps:.1f}")
 
@@ -700,36 +698,34 @@ class TestMCPPerformanceBenchmarks:
             ]
 
             async def concurrent_operations():
-                tasks = []
-
                 # Mix of different operations
-                for i in range(25):
-                    tasks.append(
-                        tools["search_documents"].handler(
-                            query=f"concurrent search {i}",
-                            collection="docs",
-                            limit=5,
-                        )
+                search_tasks = [
+                    tools["search_documents"].handler(
+                        query=f"concurrent search {i}",
+                        collection="docs",
+                        limit=5,
                     )
+                    for i in range(25)
+                ]
 
-                for i in range(25):
-                    tasks.append(
-                        tools["generate_embeddings"].handler(
-                            texts=[f"concurrent embedding {i}"],
-                        )
+                embedding_tasks = [
+                    tools["generate_embeddings"].handler(
+                        texts=[f"concurrent embedding {i}"],
                     )
+                    for i in range(25)
+                ]
 
-                for _i in range(25):
-                    tasks.append(tools["list_collections"].handler())
+                list_tasks = [tools["list_collections"].handler() for _ in range(25)]
 
-                for _i in range(25):
-                    tasks.append(tools["get_cache_stats"].handler())
+                cache_tasks = [tools["get_cache_stats"].handler() for _ in range(25)]
+
+                tasks = search_tasks + embedding_tasks + list_tasks + cache_tasks
 
                 return await asyncio.gather(*tasks, return_exceptions=True)
 
             start_time = time.time()
             results = await concurrent_operations()
-            total_time = time.time() - start_time
+            _total_time = time.time() - start_time
 
             # Count successes and failures
             successes = sum(1 for r in results if not isinstance(r, Exception))
@@ -739,13 +735,13 @@ class TestMCPPerformanceBenchmarks:
             print(f"Total Operations: {len(results)}")
             print(f"Successes: {successes}")
             print(f"Failures: {failures}")
-            print(f"Total Time: {total_time:.2f}s")
-            print(f"Operations/Second: {len(results) / total_time:.1f}")
+            print(f"Total Time: {_total_time:.2f}s")
+            print(f"Operations/Second: {len(results) / _total_time:.1f}")
 
             # All operations should succeed
             assert failures == 0, f"{failures} operations failed"
-            assert total_time < 5.0, (
-                f"Concurrent operations took too long: {total_time:.2f}s"
+            assert _total_time < 5.0, (
+                f"Concurrent operations took too long: {_total_time:.2f}s"
             )
 
 
@@ -765,19 +761,19 @@ class TestMCPResourceOptimization:
         ]
         client_manager.vector_service = mock_vector_service
 
-        mock_embedding_service = AsyncMock()
-        mock_embedding_service.generate_embeddings.return_value = {
+        _mock_embedding_service = AsyncMock()
+        _mock_embedding_service.generate_embeddings.return_value = {
             "embeddings": [[0.1] * 384],
             "model": "test-model",
-            "total_tokens": 10,
+            "_total_tokens": 10,
         }
-        client_manager.embedding_service = mock_embedding_service
+        client_manager.embedding_service = _mock_embedding_service
 
         mock_cache_service = AsyncMock()
         mock_cache_service.get_stats.return_value = {
             "hit_rate": 0.85,
             "size": 1000,
-            "total_requests": 10000,
+            "_total_requests": 10000,
         }
         client_manager.cache_service = mock_cache_service
 
@@ -826,22 +822,20 @@ class TestMCPResourceOptimization:
             return result
 
         # Execute many requests that would benefit from pooling
-        tasks = []
-        for i in range(100):
-            tasks.append(search_with_connection_tracking(i))
+        tasks = [search_with_connection_tracking(i) for i in range(100)]
 
         start_time = time.time()
         await asyncio.gather(*tasks)
-        total_time = time.time() - start_time
+        _total_time = time.time() - start_time
 
         # Analyze connection efficiency
         avg_conn_time = mean(connection_times)
-        total_conn_time = sum(connection_times)
-        conn_overhead_percent = (total_conn_time / total_time) * 100
+        _total_conn_time = sum(connection_times)
+        conn_overhead_percent = (_total_conn_time / _total_time) * 100
 
         print("\nConnection Pooling Analysis:")
         print(f"Average connection time: {avg_conn_time * 1000:.2f}ms")
-        print(f"Total connection overhead: {total_conn_time:.2f}s")
+        print(f"Total connection overhead: {_total_conn_time:.2f}s")
         print(f"Connection overhead %: {conn_overhead_percent:.1f}%")
 
         # With mock services, the overhead should be close to 100% since all time is "connection"
@@ -849,7 +843,7 @@ class TestMCPResourceOptimization:
         assert avg_conn_time < 0.01, (
             f"Average connection time too high: {avg_conn_time * 1000:.2f}ms"
         )
-        assert total_time < 1.0, f"Total operation time too high: {total_time:.2f}s"
+        assert _total_time < 1.0, f"Total operation time too high: {_total_time:.2f}s"
 
     async def test_batch_processing_optimization(self, benchmark_server):
         """Test optimization through batch processing."""

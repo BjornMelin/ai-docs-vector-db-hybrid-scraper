@@ -27,7 +27,6 @@ console = Console()
 @click.group()
 def config():
     """⚙️ Configuration management commands."""
-    pass
 
 
 @config.command()

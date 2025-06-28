@@ -26,6 +26,7 @@ class TemplateManager:
 
         Args:
             templates_dir: Directory containing templates. Defaults to config/templates
+
         """
         self.templates_dir = templates_dir or Path("config/templates")
         self._templates: dict[str, dict[str, Any]] = {}
@@ -127,12 +128,14 @@ class TemplateManager:
 
         Returns:
             Tuple of (is_valid, error_message)
+
         """
         try:
             Config(**template_data)
-            return True, None
         except Exception as e:
             return False, str(e)
+        else:
+            return True, None
 
     def show_template_comparison(self) -> None:
         """Display a comparison table of all templates."""
@@ -263,10 +266,12 @@ class TemplateManager:
 
         Raises:
             ValueError: If template not found or validation fails
+
         """
         template_data = self.get_template(template_name)
         if not template_data:
-            raise ValueError(f"Template '{template_name}' not found")
+            msg = f"Template '{template_name}' not found"
+            raise ValueError(msg)
 
         # Apply overrides if provided
         if overrides:
@@ -276,7 +281,8 @@ class TemplateManager:
         try:
             return Config(**template_data)
         except Exception as e:
-            raise ValueError(f"Failed to create config from template: {e}") from e
+            msg = f"Failed to create config from template: {e}"
+            raise ValueError(msg) from e
 
     def save_template(self, name: str, config: Config, description: str = "") -> Path:
         """Save a Config object as a new template.
@@ -288,6 +294,7 @@ class TemplateManager:
 
         Returns:
             Path to saved template file
+
         """
         template_file = self.templates_dir / f"{name}.json"
 

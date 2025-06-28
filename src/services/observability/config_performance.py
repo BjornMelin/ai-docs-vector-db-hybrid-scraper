@@ -98,6 +98,7 @@ class ConfigPerformanceMonitor:
 
         Args:
             max_history: Maximum number of operations to keep in history
+
         """
         self.max_history = max_history
         self.operation_history: deque[ConfigOperationMetrics] = deque(
@@ -191,6 +192,7 @@ class ConfigPerformanceMonitor:
             duration_ms: Operation duration in milliseconds
             success: Whether the operation succeeded
             **kwargs: Additional metrics (config_size_bytes, sections_count, etc.)
+
         """
         # Create operation metrics
         metrics_data = ConfigOperationMetrics(
@@ -269,6 +271,7 @@ class ConfigPerformanceMonitor:
 
         Returns:
             Performance statistics
+
         """
         cutoff_time = time.time() - (time_window_hours * 3600)
 
@@ -365,10 +368,10 @@ class ConfigPerformanceMonitor:
         # Time period
         if filtered_ops:
             stats.period_start = datetime.fromtimestamp(
-                min(op.start_time for op in filtered_ops)
+                min(op.start_time for op in filtered_ops), tz=UTC
             )
             stats.period_end = datetime.fromtimestamp(
-                max(op.end_time for op in filtered_ops)
+                max(op.end_time for op in filtered_ops), tz=UTC
             )
 
         return stats
@@ -386,6 +389,7 @@ class ConfigPerformanceMonitor:
 
         Returns:
             List of slow operations
+
         """
         slow_ops = [
             op for op in self.operation_history if op.duration_ms >= threshold_ms
@@ -407,6 +411,7 @@ class ConfigPerformanceMonitor:
 
         Returns:
             Error summary with counts and patterns
+
         """
         cutoff_time = time.time() - (time_window_hours * 3600)
 
@@ -440,7 +445,9 @@ class ConfigPerformanceMonitor:
                     "operation_name": op.operation_name,
                     "error_type": op.error_type,
                     "error_message": op.error_message,
-                    "timestamp": datetime.fromtimestamp(op.end_time).isoformat(),
+                    "timestamp": datetime.fromtimestamp(
+                        op.end_time, tz=UTC
+                    ).isoformat(),
                     "duration_ms": op.duration_ms,
                 }
                 for op in recent_errors
@@ -458,6 +465,7 @@ class ConfigPerformanceMonitor:
 
         Returns:
             Dictionary with all metrics and statistics
+
         """
         # Overall statistics
         overall_stats = self.get_operation_stats()
@@ -488,7 +496,9 @@ class ConfigPerformanceMonitor:
                     "operation_type": op.operation_type,
                     "operation_name": op.operation_name,
                     "duration_ms": op.duration_ms,
-                    "timestamp": datetime.fromtimestamp(op.end_time).isoformat(),
+                    "timestamp": datetime.fromtimestamp(
+                        op.end_time, tz=UTC
+                    ).isoformat(),
                 }
                 for op in slow_operations
             ],
@@ -504,6 +514,7 @@ def get_config_performance_monitor() -> ConfigPerformanceMonitor:
 
     Returns:
         ConfigPerformanceMonitor instance
+
     """
     global _config_performance_monitor
     if _config_performance_monitor is None:
@@ -526,6 +537,7 @@ def record_config_operation(
         duration_ms: Operation duration in milliseconds
         success: Whether the operation succeeded
         **kwargs: Additional metrics
+
     """
     monitor = get_config_performance_monitor()
     monitor.record_operation(
@@ -549,6 +561,7 @@ def get_config_performance_stats(
 
     Returns:
         Performance statistics
+
     """
     monitor = get_config_performance_monitor()
     return monitor.get_operation_stats(operation_type, time_window_hours)
@@ -562,6 +575,7 @@ def get_config_error_summary(time_window_hours: int = 24) -> dict[str, Any]:
 
     Returns:
         Error summary
+
     """
     monitor = get_config_performance_monitor()
     return monitor.get_error_summary(time_window_hours)

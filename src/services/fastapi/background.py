@@ -81,16 +81,19 @@ class BackgroundTask:
     max_retries: int = 3
     retry_delay: float = 1.0
     timeout: float | None = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def __post_init__(self):
         """Post-initialization validation."""
         if not callable(self.func):
-            raise ValueError("Task function must be callable")
+            msg = "Task function must be callable"
+            raise ValueError(msg)
         if self.max_retries < 0:
-            raise ValueError("Max retries cannot be negative")
+            msg = "Max retries cannot be negative"
+            raise ValueError(msg)
         if self.retry_delay < 0:
-            raise ValueError("Retry delay cannot be negative")
+            msg = "Retry delay cannot be negative"
+            raise ValueError(msg)
 
 
 class BackgroundTaskManager:
@@ -110,6 +113,7 @@ class BackgroundTaskManager:
         Args:
             max_workers: Maximum number of concurrent workers
             max_queue_size: Maximum size of task queue
+
         """
         self.max_workers = max_workers
         self.max_queue_size = max_queue_size
@@ -154,6 +158,7 @@ class BackgroundTaskManager:
 
         Args:
             timeout: Maximum time to wait for tasks to complete
+
         """
         if not self._running:
             return
@@ -216,9 +221,11 @@ class BackgroundTaskManager:
         Raises:
             RuntimeError: If manager is not running
             ValueError: If queue is full
+
         """
         if not self._running:
-            raise RuntimeError("Task manager is not running")
+            msg = "Task manager is not running"
+            raise RuntimeError(msg)
 
         # Generate task ID if not provided
         if task_id is None:
@@ -254,7 +261,8 @@ class BackgroundTaskManager:
                 del self._tasks[task_id]
                 del self._results[task_id]
                 self._total_tasks -= 1
-            raise ValueError("Task queue is full") from e
+            msg = "Task queue is full"
+            raise ValueError(msg) from e
 
     async def get_task_result(self, task_id: str) -> TaskResult | None:
         """Get result of a specific task.
@@ -264,6 +272,7 @@ class BackgroundTaskManager:
 
         Returns:
             Task result or None if not found
+
         """
         with self._task_lock:
             return self._results.get(task_id)
@@ -283,19 +292,22 @@ class BackgroundTaskManager:
         Raises:
             asyncio.TimeoutError: If timeout is reached
             ValueError: If task not found
+
         """
         start_time = time.time()
 
         while True:
             result = await self.get_task_result(task_id)
             if result is None:
-                raise ValueError(f"Task {task_id} not found")
+                msg = f"Task {task_id} not found"
+                raise ValueError(msg)
 
             if result.is_complete:
                 return result
 
             if timeout and (time.time() - start_time) > timeout:
-                raise TimeoutError(f"Timeout waiting for task {task_id}")
+                msg = f"Timeout waiting for task {task_id}"
+                raise TimeoutError(msg)
 
             await asyncio.sleep(0.1)
 
@@ -307,6 +319,7 @@ class BackgroundTaskManager:
 
         Returns:
             True if task was cancelled, False if not found or already complete
+
         """
         return await self._cancel_task(task_id)
 
@@ -326,6 +339,7 @@ class BackgroundTaskManager:
 
         Args:
             worker_name: Name of the worker for logging
+
         """
         logger.debug(f"Worker {worker_name} started")
 
@@ -352,6 +366,7 @@ class BackgroundTaskManager:
         Args:
             task_id: Task identifier
             worker_name: Name of executing worker
+
         """
         with self._task_lock:
             task = self._tasks.get(task_id)
@@ -429,6 +444,7 @@ class BackgroundTaskManager:
         Args:
             task: Failed task
             result: Task result
+
         """
         if task.retry_count < task.max_retries:
             task.retry_count += 1
@@ -464,6 +480,7 @@ class BackgroundTaskManager:
         Args:
             task_id: Task identifier
             delay: Delay in seconds
+
         """
         await asyncio.sleep(delay)
 
@@ -478,6 +495,7 @@ class BackgroundTaskManager:
 
         Returns:
             Statistics dictionary
+
         """
         with self._task_lock:
             queue_size = self._task_queue.qsize() if self._task_queue else 0
@@ -502,6 +520,7 @@ class BackgroundTaskManager:
 
         Returns:
             List of task information
+
         """
         task_list = []
 
@@ -539,6 +558,7 @@ def get_task_manager() -> BackgroundTaskManager:
 
     Returns:
         Background task manager instance
+
     """
     global _task_manager
     if _task_manager is None:
@@ -554,6 +574,7 @@ async def initialize_task_manager(
     Args:
         max_workers: Maximum number of concurrent workers
         max_queue_size: Maximum size of task queue
+
     """
     global _task_manager
     if _task_manager is None:
@@ -582,6 +603,7 @@ def submit_background_task(
         func: Function to execute
         *args: Positional arguments
         **kwargs: Keyword arguments
+
     """
     background_tasks.add_task(func, *args, **kwargs)
 
@@ -599,6 +621,7 @@ async def submit_managed_task(
 
     Returns:
         Task ID
+
     """
     manager = get_task_manager()
     return await manager.submit_task(func, *args, priority=priority, **kwargs)

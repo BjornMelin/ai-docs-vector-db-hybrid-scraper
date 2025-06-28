@@ -7,9 +7,8 @@ from typing import Any
 from qdrant_client import models
 
 from src.config import Config
-
-from ..base import BaseService
-from ..errors import QdrantServiceError
+from src.services.base import BaseService
+from src.services.errors import QdrantServiceError
 
 
 logger = logging.getLogger(__name__)
@@ -24,6 +23,7 @@ class HNSWOptimizer(BaseService):
         Args:
             config: Unified configuration
             qdrant_service: QdrantService instance
+
         """
         super().__init__(config)
         self.config = config
@@ -41,9 +41,8 @@ class HNSWOptimizer(BaseService):
 
         # Validate that qdrant service is initialized
         if not self.qdrant_service._initialized:
-            raise QdrantServiceError(
-                "QdrantService must be initialized before HNSWOptimizer"
-            )
+            msg = "QdrantService must be initialized before HNSWOptimizer"
+            raise QdrantServiceError(msg)
 
         self._initialized = True
         self.logger.info("HNSW optimizer initialized")
@@ -71,8 +70,8 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             Search results with optimal ef value used
-        """
 
+        """
         cache_key = f"{collection_name}:{time_budget_ms}:{min_ef}:{max_ef}"
 
         # Check cache for similar queries
@@ -144,7 +143,7 @@ class HNSWOptimizer(BaseService):
                     # Close to budget limit, stop here
                     self.logger.debug(f"Stopping at EF {current_ef} due to time budget")
                     break
-                elif search_time_ms < time_budget_ms * 0.5:
+                if search_time_ms < time_budget_ms * 0.5:
                     # Well within budget, try higher ef
                     current_ef = min(current_ef + step_size, max_ef)
                 else:
@@ -198,6 +197,7 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             HNSW configuration dictionary
+
         """
         # Collection-specific optimization profiles
         configs = {
@@ -270,6 +270,7 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             Optimization results and recommendations
+
         """
         self.logger.info(
             f"Optimizing HNSW parameters for collection {collection_name} (type: {collection_type})"
@@ -335,6 +336,7 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             Current HNSW configuration
+
         """
         try:
             # Access vector configuration
@@ -371,6 +373,7 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             True if update is recommended
+
         """
         # Check significant differences
         m_diff = abs(current.get("m", 16) - recommended.get("m", 16))
@@ -392,6 +395,7 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             Estimated improvements
+
         """
         current_m = current.get("m", 16)
         current_ef = current.get("ef_construct", 128)
@@ -446,8 +450,8 @@ class HNSWOptimizer(BaseService):
 
         Returns:
             Performance metrics
-        """
 
+        """
         search_times = []
 
         for query_vector in test_queries[:10]:  # Limit to 10 queries for performance
@@ -482,18 +486,18 @@ class HNSWOptimizer(BaseService):
                 "queries_tested": len(search_times),
                 "ef_used": ef_value,
             }
-        else:
-            return {
-                "error": "No successful queries",
-                "queries_tested": 0,
-                "ef_used": ef_value,
-            }
+        return {
+            "error": "No successful queries",
+            "queries_tested": 0,
+            "ef_used": ef_value,
+        }
 
     def get_performance_cache_stats(self) -> dict[str, Any]:
         """Get statistics about performance caching.
 
         Returns:
             Cache statistics
+
         """
         return {
             "adaptive_ef_cache_size": len(self.adaptive_ef_cache),

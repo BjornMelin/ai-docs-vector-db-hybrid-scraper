@@ -11,12 +11,20 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from ..base import BaseService
-from ..rag import RAGGenerator
-from ..rag.models import RAGRequest
+from src.config import get_config
+from src.services.base import BaseService
+from src.services.rag import RAGGenerator
+from src.services.rag.models import RAGRequest
+
 from .clustering import ResultClusteringRequest, ResultClusteringService
 from .expansion import QueryExpansionRequest, QueryExpansionService
-from .federated import FederatedSearchService
+from .federated import (
+    CollectionSelectionStrategy,
+    FederatedSearchRequest,
+    FederatedSearchService,
+    ResultMergingStrategy,
+    SearchMode as FedSearchMode,
+)
 from .ranking import PersonalizedRankingRequest, PersonalizedRankingService
 
 
@@ -129,6 +137,7 @@ class SearchOrchestrator(BaseService):
         Args:
             cache_size: Size of result cache
             enable_performance_optimization: Enable performance optimizations
+
         """
         super().__init__()
         self._logger = logging.getLogger(
@@ -211,8 +220,6 @@ class SearchOrchestrator(BaseService):
     def rag_generator(self) -> RAGGenerator:
         """Lazy load RAG generator service."""
         if self._rag_generator is None:
-            from src.config import get_config
-
             config = get_config()
             self._rag_generator = RAGGenerator(config.rag)
         return self._rag_generator
@@ -225,6 +232,7 @@ class SearchOrchestrator(BaseService):
 
         Returns:
             SearchResult with processed results
+
         """
         start_time = time.time()
         features_used = []
@@ -239,8 +247,7 @@ class SearchOrchestrator(BaseService):
                     cached_result = self.cache[cache_key]
                     cached_result.cache_hit = True
                     return cached_result
-                else:
-                    self.stats["cache_misses"] += 1
+                self.stats["cache_misses"] += 1
 
             # Apply pipeline configuration
             config = self._apply_pipeline_config(request)
@@ -327,8 +334,6 @@ class SearchOrchestrator(BaseService):
 
             if request.enable_rag and search_results:
                 try:
-                    from src.config import get_config
-
                     config = get_config()
 
                     # Only generate RAG answer if globally enabled or explicitly requested
@@ -454,17 +459,9 @@ class SearchOrchestrator(BaseService):
         self, query: str, request: SearchRequest, config: dict[str, Any]
     ) -> list[dict[str, Any]]:
         """Execute the actual search (calls federated search if enabled)."""
-
         # Check if federated search is enabled
         if request.enable_federation:
             try:
-                from .federated import (
-                    CollectionSelectionStrategy,
-                    FederatedSearchRequest,
-                    ResultMergingStrategy,
-                    SearchMode as FedSearchMode,
-                )
-
                 # Create federated search request
                 fed_request = FederatedSearchRequest(
                     query=query,

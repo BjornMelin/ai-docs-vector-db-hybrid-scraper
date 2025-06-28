@@ -18,7 +18,7 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -42,7 +42,7 @@ class TraceSpan:
     start_time: float
     end_time: float | None = None
     tags: dict[str, Any] = None
-    logs: list[Dict] = None
+    logs: list[dict] = None
 
     def __post_init__(self):
         if self.tags is None:
@@ -199,8 +199,8 @@ class TestDistributedTracing:
         assert all(s.parent_span_id == root_span.span_id for s in child_spans)
 
         # Verify timing
-        total_request_time = root_span.end_time - root_span.start_time
-        assert total_request_time > 0.04  # Should be sum of child operations
+        _total_request_time = root_span.end_time - root_span.start_time
+        assert _total_request_time > 0.04  # Should be sum of child operations
 
         # Verify tags
         embedding_span_found = next(
@@ -301,7 +301,10 @@ class TestDistributedTracing:
                 self.error_spans = []
 
             def record_error(
-                self, span: TraceSpan, error: Exception, error_context: Dict = None
+                self,
+                span: TraceSpan,
+                error: Exception,
+                error_context: dict | None = None,
             ):
                 """Record an error in a span."""
                 span.tags.update(
@@ -324,7 +327,7 @@ class TestDistributedTracing:
 
                 self.error_spans.append(span)
 
-            def analyze_error_patterns(self) -> Dict:
+            def analyze_error_patterns(self) -> dict:
                 """Analyze error patterns across spans."""
                 error_types = {}
                 error_services = {}
@@ -337,7 +340,7 @@ class TestDistributedTracing:
                     error_services[service] = error_services.get(service, 0) + 1
 
                 return {
-                    "total_errors": len(self.error_spans),
+                    "_total_errors": len(self.error_spans),
                     "error_types": error_types,
                     "affected_services": error_services,
                 }
@@ -397,7 +400,7 @@ class TestDistributedTracing:
         error_analysis = error_tracer.analyze_error_patterns()
 
         # Verify error tracking
-        assert error_analysis["total_errors"] == 2
+        assert error_analysis["_total_errors"] == 2
         assert "ConnectionError" in error_analysis["error_types"]
         assert "ValueError" in error_analysis["error_types"]
         assert "embedding_service" in error_analysis["affected_services"]
@@ -496,7 +499,7 @@ class TestMetricsCollection:
 
         # Simulate API Gateway metrics
         api_collector.record_counter(
-            "http.requests.total",
+            "http.requests._total",
             1,
             {
                 "service": "api_gateway",
@@ -516,7 +519,7 @@ class TestMetricsCollection:
 
         # Simulate Embedding Service metrics
         embedding_collector.record_counter(
-            "embeddings.requests.total",
+            "embeddings.requests._total",
             1,
             {
                 "service": "embedding_service",
@@ -530,7 +533,7 @@ class TestMetricsCollection:
             {"service": "embedding_service", "provider": "openai"},
         )
         embedding_collector.record_counter(
-            "embeddings.tokens.total",
+            "embeddings.tokens._total",
             150,
             {"service": "embedding_service", "provider": "openai"},
         )
@@ -542,7 +545,7 @@ class TestMetricsCollection:
 
         # Simulate Vector DB metrics
         vector_db_collector.record_counter(
-            "search.requests.total",
+            "search.requests._total",
             1,
             {
                 "service": "vector_db_service",
@@ -573,19 +576,19 @@ class TestMetricsCollection:
         assert len(metrics_storage) == 10  # Total metrics collected
 
         # Verify specific metrics
-        http_requests = [m for m in metrics_storage if m.name == "http.requests.total"]
+        http_requests = [m for m in metrics_storage if m.name == "http.requests._total"]
         assert len(http_requests) == 1
         assert http_requests[0].tags["service"] == "api_gateway"
         assert http_requests[0].tags["status_code"] == "200"
 
         embedding_requests = [
-            m for m in metrics_storage if m.name == "embeddings.requests.total"
+            m for m in metrics_storage if m.name == "embeddings.requests._total"
         ]
         assert len(embedding_requests) == 1
         assert embedding_requests[0].tags["provider"] == "openai"
 
         search_requests = [
-            m for m in metrics_storage if m.name == "search.requests.total"
+            m for m in metrics_storage if m.name == "search.requests._total"
         ]
         assert len(search_requests) == 1
         assert search_requests[0].tags["search_type"] == "hybrid"
@@ -608,21 +611,21 @@ class TestMetricsCollection:
         # Populate with sample metrics
         sample_metrics = [
             Metric(
-                "http.requests.total",
+                "http.requests._total",
                 100,
                 time.time() - 60,
                 {"service": "api_gateway"},
                 "counter",
             ),
             Metric(
-                "http.requests.total",
+                "http.requests._total",
                 150,
                 time.time() - 30,
                 {"service": "api_gateway"},
                 "counter",
             ),
             Metric(
-                "http.requests.total",
+                "http.requests._total",
                 200,
                 time.time(),
                 {"service": "api_gateway"},
@@ -650,21 +653,21 @@ class TestMetricsCollection:
                 "histogram",
             ),
             Metric(
-                "embeddings.errors.total",
+                "embeddings.errors._total",
                 0,
                 time.time() - 60,
                 {"service": "embedding_service"},
                 "counter",
             ),
             Metric(
-                "embeddings.errors.total",
+                "embeddings.errors._total",
                 2,
                 time.time() - 30,
                 {"service": "embedding_service"},
                 "counter",
             ),
             Metric(
-                "embeddings.errors.total",
+                "embeddings.errors._total",
                 5,
                 time.time(),
                 {"service": "embedding_service"},
@@ -732,7 +735,7 @@ class TestMetricsCollection:
                     {
                         "name": "high_request_rate",
                         "condition": lambda aggregator: aggregator.calculate_rate(
-                            "http.requests.total"
+                            "http.requests._total"
                         )
                         > 3.0,
                         "message": "High request rate detected",
@@ -748,7 +751,7 @@ class TestMetricsCollection:
                     {
                         "name": "embedding_errors",
                         "condition": lambda aggregator: aggregator.calculate_rate(
-                            "embeddings.errors.total"
+                            "embeddings.errors._total"
                         )
                         > 0.1,
                         "message": "Embedding service error rate increased",
@@ -780,9 +783,9 @@ class TestMetricsCollection:
         alerting_manager = AlertingManager()
 
         # Test aggregation
-        request_rate = aggregator.calculate_rate("http.requests.total")
+        request_rate = aggregator.calculate_rate("http.requests._total")
         latency_p95 = aggregator.calculate_percentile("http.request.duration", 0.95)
-        error_rate = aggregator.calculate_rate("embeddings.errors.total")
+        error_rate = aggregator.calculate_rate("embeddings.errors._total")
 
         # Verify aggregation calculations
         assert request_rate > 0  # Should detect increasing request rate
@@ -895,10 +898,9 @@ class TestMetricsCollection:
                 """Simple query classification."""
                 if "?" in query:
                     return "question"
-                elif len(query.split()) > 5:
+                if len(query.split()) > 5:
                     return "complex"
-                else:
-                    return "simple"
+                return "simple"
 
             def flush_metrics(self):
                 """Flush business metrics to storage."""
@@ -929,7 +931,7 @@ class TestMetricsCollection:
             def __init__(self, metrics: list[Metric]):
                 self.metrics = metrics
 
-            def analyze_search_quality_by_type(self) -> Dict:
+            def analyze_search_quality_by_type(self) -> dict:
                 """Analyze search quality metrics by query type."""
                 quality_by_type = {}
 
@@ -954,7 +956,7 @@ class TestMetricsCollection:
                     for query_type, values in quality_by_type.items()
                 }
 
-            def analyze_content_quality_trends(self) -> Dict:
+            def analyze_content_quality_trends(self) -> dict:
                 """Analyze content quality trends by type."""
                 quality_by_content_type = {}
 
@@ -1016,7 +1018,7 @@ class TestLogCorrelation:
                 correlation_id: str | None = None,
                 trace_id: str | None = None,
                 span_id: str | None = None,
-                **kwargs,
+                **_kwargs,
             ):
                 """Log with structured format."""
                 log_entry = {
@@ -1027,18 +1029,18 @@ class TestLogCorrelation:
                     "correlation_id": correlation_id,
                     "trace_id": trace_id,
                     "span_id": span_id,
-                    **kwargs,
+                    **_kwargs,
                 }
                 self.logs.append(log_entry)
 
-            def info(self, message: str, **kwargs):
-                self.log("INFO", message, **kwargs)
+            def info(self, message: str, **_kwargs):
+                self.log("INFO", message, **_kwargs)
 
-            def error(self, message: str, **kwargs):
-                self.log("ERROR", message, **kwargs)
+            def error(self, message: str, **_kwargs):
+                self.log("ERROR", message, **_kwargs)
 
-            def warning(self, message: str, **kwargs):
-                self.log("WARNING", message, **kwargs)
+            def warning(self, message: str, **_kwargs):
+                self.log("WARNING", message, **_kwargs)
 
         # Create loggers for different services
         api_logger = StructuredLogger("api_gateway")
@@ -1110,7 +1112,7 @@ class TestLogCorrelation:
             correlation_id=correlation_id,
             trace_id=trace_id,
             span_id=api_span_id,
-            total_duration_ms=156,
+            _total_duration_ms=156,
             response_size_bytes=2048,
         )
 
@@ -1167,7 +1169,7 @@ class TestLogCorrelation:
                 error_type: str,
                 message: str,
                 correlation_id: str,
-                context: Dict = None,
+                context: dict | None = None,
             ):
                 """Record an error with correlation context."""
                 error_record = {
@@ -1186,11 +1188,11 @@ class TestLogCorrelation:
 
                 self.error_contexts[error_id] = error_record
 
-            def get_error_chain(self, correlation_id: str) -> list[Dict]:
+            def get_error_chain(self, correlation_id: str) -> list[dict]:
                 """Get all errors in a correlation chain."""
                 return self.error_chains.get(correlation_id, [])
 
-            def analyze_error_propagation(self, correlation_id: str) -> Dict:
+            def analyze_error_propagation(self, correlation_id: str) -> dict:
                 """Analyze how errors propagated through services."""
                 error_chain = self.get_error_chain(correlation_id)
 
@@ -1349,7 +1351,7 @@ class TestHealthMonitoring:
 
                 return health_results
 
-            def get_overall_health(self) -> Dict:
+            def get_overall_health(self) -> dict:
                 """Get overall system health."""
                 service_statuses = [
                     config["status"] for config in self.health_checks.values()
@@ -1411,7 +1413,8 @@ class TestHealthMonitoring:
             }
 
         async def cache_service_health():
-            raise ConnectionError("Cache service unreachable")
+            msg = "Cache service unreachable"
+            raise ConnectionError(msg)
 
         # Setup health monitoring
         health_monitor = ServiceHealthMonitor()
@@ -1472,7 +1475,7 @@ class TestHealthMonitoring:
                 service: str,
                 operation: str,
                 duration: float,
-                metadata: Dict = None,
+                metadata: dict | None = None,
             ):
                 """Record performance data."""
                 record = {
@@ -1499,7 +1502,7 @@ class TestHealthMonitoring:
                     "critical_threshold": baseline_duration * (1 + tolerance * 2),
                 }
 
-            def analyze_performance_degradation(self) -> list[Dict]:
+            def analyze_performance_degradation(self) -> list[dict]:
                 """Analyze performance degradation against baselines."""
                 degradations = []
 

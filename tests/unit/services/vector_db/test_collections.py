@@ -126,7 +126,7 @@ class TestQdrantCollections:
 
         # Verify sparse vectors config was passed
         call_args = mock_client.create_collection.call_args
-        assert call_args.kwargs["sparse_vectors_config"] is not None
+        assert call_args._kwargs["sparse_vectors_config"] is not None
 
     async def test_create_collection_without_quantization(
         self, collections_service, mock_client
@@ -144,7 +144,7 @@ class TestQdrantCollections:
 
         # Verify quantization config is None
         call_args = mock_client.create_collection.call_args
-        assert call_args.kwargs["quantization_config"] is None
+        assert call_args._kwargs["quantization_config"] is None
 
     async def test_create_collection_invalid_distance(
         self, collections_service, mock_client
@@ -198,7 +198,7 @@ class TestQdrantCollections:
         assert result is True  # Should handle gracefully
 
     async def test_create_collection_payload_index_failure(
-        self, collections_service, mock_client, caplog
+        self, collections_service, mock_client, __caplog
     ):
         """Test collection creation with payload index creation failure."""
         mock_collections = MagicMock()

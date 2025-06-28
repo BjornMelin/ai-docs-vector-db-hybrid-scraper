@@ -3,6 +3,7 @@
 Tests environment variable loading, file loading, and complex integration scenarios.
 """
 
+import json
 import os
 import tempfile
 from pathlib import Path
@@ -13,7 +14,6 @@ import yaml
 from hypothesis import given, strategies as st
 
 from src.config.core import (
-import json
     Config,
     DocumentationSite,
     get_config,
@@ -212,7 +212,6 @@ class TestConfigurationFileLoading:
         }
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-
             json.dump(config_data, f, indent=2)
             json_file = f.name
 
@@ -348,7 +347,6 @@ class TestConfigurationFileLoading:
         }
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-
             json.dump(invalid_config, f)
             json_file = f.name
 

@@ -10,7 +10,6 @@ import logging
 import os
 import random
 import time
-from typing import Dict
 
 import psutil
 import pytest
@@ -57,7 +56,7 @@ class TestEnduranceLoad:
         memory_samples = []
 
         @env.events.stats_reset.add_listener
-        def collect_time_series_metrics(**_kwargs):
+        def collect_time_series_metrics(**__kwargs):
             """Collect metrics at regular intervals."""
 
             current_time = time.time()
@@ -65,14 +64,14 @@ class TestEnduranceLoad:
             memory_mb = process.memory_info().rss / 1024 / 1024
 
             stats = env.stats
-            if stats and stats.total.num_requests > 0:
+            if stats and stats._total.num_requests > 0:
                 time_series_metrics.append(
                     {
                         "timestamp": current_time,
-                        "requests": stats.total.num_requests,
-                        "failures": stats.total.num_failures,
-                        "avg_response_time": stats.total.avg_response_time,
-                        "rps": stats.total.current_rps,
+                        "requests": stats._total.num_requests,
+                        "failures": stats._total.num_failures,
+                        "avg_response_time": stats._total.avg_response_time,
+                        "rps": stats._total.current_rps,
                         "memory_mb": memory_mb,
                     }
                 )
@@ -115,16 +114,16 @@ class TestEnduranceLoad:
         # Configure service for memory leak simulation
         memory_leak_simulator = MemoryLeakSimulator()
 
-        async def memory_tracking_operation(**kwargs):
+        async def memory_tracking_operation(**_kwargs):
             """Operation that tracks memory usage patterns."""
             # Simulate varying memory usage
-            data_size = kwargs.get("data_size_mb", 1.0)
+            data_size = _kwargs.get("data_size_mb", 1.0)
 
             # Add memory leak simulation
             memory_leak_simulator.allocate_memory(data_size)
 
             result = await mock_load_test_service.process_request(
-                data_size_mb=data_size, **kwargs
+                data_size_mb=data_size, **_kwargs
             )
 
             # Sometimes release memory (simulating proper cleanup)
@@ -190,10 +189,9 @@ class TestEnduranceLoad:
                         self.access_times[key] = current_time
                         self._record_metrics("hit")
                         return self.cache[key]
-                    else:
-                        # Expired
-                        del self.cache[key]
-                        del self.access_times[key]
+                    # Expired
+                    del self.cache[key]
+                    del self.access_times[key]
 
                 # Cache miss
                 self.miss_count += 1
@@ -226,9 +224,9 @@ class TestEnduranceLoad:
 
             def _record_metrics(self, operation: str):
                 """Record cache metrics."""
-                total_operations = self.hit_count + self.miss_count
+                _total_operations = self.hit_count + self.miss_count
                 hit_rate = (
-                    self.hit_count / total_operations if total_operations > 0 else 0
+                    self.hit_count / _total_operations if _total_operations > 0 else 0
                 )
 
                 self.metrics_history.append(
@@ -241,28 +239,28 @@ class TestEnduranceLoad:
                     }
                 )
 
-            def get_metrics(self) -> Dict:
+            def get_metrics(self) -> dict:
                 """Get cache performance metrics."""
-                total_operations = self.hit_count + self.miss_count
+                _total_operations = self.hit_count + self.miss_count
                 return {
-                    "hit_rate": self.hit_count / total_operations
-                    if total_operations > 0
+                    "hit_rate": self.hit_count / _total_operations
+                    if _total_operations > 0
                     else 0,
-                    "miss_rate": self.miss_count / total_operations
-                    if total_operations > 0
+                    "miss_rate": self.miss_count / _total_operations
+                    if _total_operations > 0
                     else 0,
                     "eviction_count": self.eviction_count,
                     "cache_size": len(self.cache),
-                    "total_operations": total_operations,
+                    "_total_operations": _total_operations,
                 }
 
         cache = CacheSimulator(max_size=500, ttl_seconds=1800)
 
-        async def cache_aware_operation(**kwargs):
+        async def cache_aware_operation(**_kwargs):
             """Operation that uses cache."""
 
             # Generate cache key from operation parameters
-            query = kwargs.get("query", f"query_{random.randint(1, 100)}")
+            query = _kwargs.get("query", f"query_{random.randint(1, 100)}")
             cache_key = hashlib.sha256(query.encode()).hexdigest()[:8]
 
             # Try cache first
@@ -359,7 +357,7 @@ class TestEnduranceLoad:
                     return conn_id
 
                 # Create new connection if under limit
-                elif len(self.connections) < self.max_size:
+                if len(self.connections) < self.max_size:
                     conn_id = f"conn_{len(self.connections)}"
                     self.connections.append(
                         {
@@ -373,9 +371,8 @@ class TestEnduranceLoad:
                     return conn_id
 
                 # Pool exhausted - wait
-                else:
-                    await asyncio.sleep(0.1)
-                    return await self.get_connection()  # Retry
+                await asyncio.sleep(0.1)
+                return await self.get_connection()  # Retry
 
             def release_connection(self, conn_id: str):
                 """Release connection back to pool."""
@@ -387,7 +384,7 @@ class TestEnduranceLoad:
                     self.connection_metrics.append(
                         {
                             "timestamp": time.time(),
-                            "total_connections": len(self.connections),
+                            "_total_connections": len(self.connections),
                             "active_connections": len(self.active_connections),
                             "idle_connections": len(self.idle_connections),
                             "pool_utilization": len(self.active_connections)
@@ -405,13 +402,17 @@ class TestEnduranceLoad:
                     return
 
                 connections_to_remove = []
-                for conn in self.connections:
-                    if (
-                        conn["id"] in self.idle_connections
-                        and current_time - conn["last_used"] > self.idle_timeout
-                        and len(self.connections) > self.min_size
-                    ):
-                        connections_to_remove.append(conn)
+                connections_to_remove.extend(
+                    [
+                        conn
+                        for conn in self.connections
+                        if (
+                            conn["id"] in self.idle_connections
+                            and current_time - conn["last_used"] > self.idle_timeout
+                            and len(self.connections) > self.min_size
+                        )
+                    ]
+                )
 
                 # Remove idle connections
                 for conn in connections_to_remove:
@@ -423,7 +424,7 @@ class TestEnduranceLoad:
                         f"Cleaned up {len(connections_to_remove)} idle connections"
                     )
 
-            def get_pool_stats(self) -> Dict:
+            def get_pool_stats(self) -> dict:
                 """Get pool statistics."""
                 if not self.connection_metrics:
                     return {"no_data": True}
@@ -434,7 +435,7 @@ class TestEnduranceLoad:
                 ) / len(recent_metrics)
 
                 return {
-                    "total_connections": len(self.connections),
+                    "_total_connections": len(self.connections),
                     "active_connections": len(self.active_connections),
                     "idle_connections": len(self.idle_connections),
                     "avg_utilization": avg_utilization,
@@ -446,13 +447,13 @@ class TestEnduranceLoad:
 
         pool = EnduranceConnectionPool(min_size=10, max_size=100, idle_timeout=300)
 
-        async def database_endurance_operation(**kwargs):
+        async def database_endurance_operation(**_kwargs):
             """Database operation for endurance testing."""
             conn = await pool.get_connection()
 
             try:
                 # Simulate varying database work
-                work_time = kwargs.get("db_work_time", 0.05)
+                work_time = _kwargs.get("db_work_time", 0.05)
                 await asyncio.sleep(work_time)
 
                 return {
@@ -487,7 +488,7 @@ class TestEnduranceLoad:
         assert pool_analysis["pool_stability"] > 0.9, "Unstable pool behavior"
         assert pool_analysis["cleanup_effectiveness"] > 0.8, "Poor connection cleanup"
 
-    def _stable_operation(self, **_kwargs):
+    def _stable_operation(self, **__kwargs):
         """Stable operation for endurance testing."""
 
         # Consistent, predictable operation
@@ -497,8 +498,8 @@ class TestEnduranceLoad:
         return asyncio.sleep(base_time + variation)
 
     def _analyze_endurance_performance(
-        self, time_series: list[Dict], memory_samples: list[Dict]
-    ) -> Dict:
+        self, time_series: list[dict], memory_samples: list[dict]
+    ) -> dict:
         """Analyze performance over extended duration."""
         if len(time_series) < 10 or len(memory_samples) < 10:
             return {
@@ -561,7 +562,7 @@ class TestEnduranceLoad:
             "avg_error_rate": sum(error_rates) / len(error_rates) if error_rates else 0,
         }
 
-    def _analyze_cache_endurance(self, metrics_history: list[Dict]) -> Dict:
+    def _analyze_cache_endurance(self, metrics_history: list[dict]) -> dict:
         """Analyze cache performance over time."""
         if len(metrics_history) < 10:
             return {"hit_rate_stability": 0, "eviction_rate": 0}
@@ -580,9 +581,9 @@ class TestEnduranceLoad:
         eviction_operations = len(
             [m for m in metrics_history if m["operation"] == "put" and "evictions" in m]
         )
-        total_operations = len(metrics_history)
+        _total_operations = len(metrics_history)
         eviction_rate = (
-            eviction_operations / total_operations if total_operations > 0 else 0
+            eviction_operations / _total_operations if _total_operations > 0 else 0
         )
 
         return {
@@ -591,13 +592,13 @@ class TestEnduranceLoad:
             "cache_efficiency": sum(hit_rates) / len(hit_rates) if hit_rates else 0,
         }
 
-    def _analyze_connection_pool_endurance(self, metrics: list[Dict]) -> Dict:
+    def _analyze_connection_pool_endurance(self, metrics: list[dict]) -> dict:
         """Analyze connection pool behavior over time."""
         if len(metrics) < 10:
             return {"pool_stability": 0, "cleanup_effectiveness": 0}
 
         # Analyze pool size stability
-        pool_sizes = [m["total_connections"] for m in metrics]
+        pool_sizes = [m["_total_connections"] for m in metrics]
         utilizations = [m["pool_utilization"] for m in metrics]
 
         # Calculate stability (low variance in pool size)
@@ -651,11 +652,11 @@ class MemoryLeakSimulator:
         )
 
         # Record memory sample
-        total_allocated = sum(item["size_mb"] for item in self.allocated_memory)
+        _total_allocated = sum(item["size_mb"] for item in self.allocated_memory)
         self.memory_samples.append(
             {
                 "timestamp": time.time(),
-                "allocated_mb": total_allocated,
+                "allocated_mb": _total_allocated,
                 "allocation_count": len(self.allocated_memory),
             }
         )
@@ -670,7 +671,7 @@ class MemoryLeakSimulator:
             for _ in range(min(cleanup_count, len(self.allocated_memory))):
                 self.allocated_memory.pop(0)  # Remove oldest
 
-    def get_memory_analysis(self) -> Dict:
+    def get_memory_analysis(self) -> dict:
         """Analyze memory usage patterns."""
         if len(self.memory_samples) < 5:
             return {"insufficient_data": True}

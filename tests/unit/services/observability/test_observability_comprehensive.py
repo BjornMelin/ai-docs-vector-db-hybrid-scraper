@@ -8,8 +8,25 @@ import pytest
 
 from src.services.observability.ai_tracking import get_ai_tracker
 from src.services.observability.config import ObservabilityConfig
-from src.services.observability.correlation import get_correlation_manager
+from src.services.observability.correlation import get_correlation_manager, record_error
 from src.services.observability.instrumentation import get_tracer, instrument_function
+
+
+try:
+    from src.services.observability.metrics_bridge import initialize_metrics_bridge
+except ImportError:
+    initialize_metrics_bridge = None
+
+try:
+    from src.services.observability.performance import (
+        PerformanceThresholds,
+        initialize_performance_monitor,
+        monitor_operation,
+    )
+except ImportError:
+    PerformanceThresholds = None
+    initialize_performance_monitor = None
+    monitor_operation = None
 
 
 class TestObservabilitySystemCoverage:
@@ -89,7 +106,7 @@ class TestObservabilitySystemCoverage:
                 mock_usage = Mock()
                 mock_usage.prompt_tokens = 200
                 mock_usage.completion_tokens = 150
-                mock_usage.total_tokens = 350
+                mock_usage._total_tokens = 350
 
                 llm_result["usage"] = mock_usage
                 llm_result["cost"] = 0.021
@@ -107,7 +124,7 @@ class TestObservabilitySystemCoverage:
                 rag_result["generated_answer"] = "The future of AI involves..."
                 rag_result["retrieval_time"] = 0.15
                 rag_result["generation_time"] = 1.2
-                rag_result["total_cost"] = 0.023
+                rag_result["_total_cost"] = 0.023
 
         # Verify all tracking operations completed successfully
         assert correlation_id.startswith("ai_search_pipeline_")
@@ -126,11 +143,8 @@ class TestObservabilitySystemCoverage:
 
         # Test performance monitoring initialization
         try:
-            from src.services.observability.performance import (
-                PerformanceThresholds,
-                initialize_performance_monitor,
-                monitor_operation,
-            )
+            if PerformanceThresholds is None:
+                pytest.skip("Performance monitoring not available")
 
             # Initialize with custom thresholds
             thresholds = PerformanceThresholds(
@@ -185,8 +199,6 @@ class TestObservabilitySystemCoverage:
                 try:
                     raise error
                 except Exception as e:
-                    from src.services.observability.correlation import record_error
-
                     error_id = record_error(
                         error=e,
                         error_type=error_type,
@@ -210,9 +222,8 @@ class TestObservabilitySystemCoverage:
         meter.create_up_down_counter.return_value = Mock()
 
         try:
-            from src.services.observability.metrics_bridge import (
-                initialize_metrics_bridge,
-            )
+            if initialize_metrics_bridge is None:
+                pytest.skip("Metrics bridge not available")
 
             bridge = initialize_metrics_bridge()
 
@@ -394,15 +405,20 @@ class TestObservabilitySystemCoverage:
                     operation_type="resilience_testing", query_type=scenario
                 )
 
-                @instrument_function(f"resilient_operation_{scenario}")
-                def resilient_operation():
-                    # Simulate different operational states
-                    if scenario == "partial_failure":
-                        # Still complete successfully in degraded mode
-                        time.sleep(0.002)
-                    else:
-                        time.sleep(0.001)
-                    return f"completed_{scenario}"
+                def create_resilient_operation(test_scenario: str):
+                    @instrument_function(f"resilient_operation_{test_scenario}")
+                    def inner_resilient_operation():
+                        # Simulate different operational states
+                        if test_scenario == "partial_failure":
+                            # Still complete successfully in degraded mode
+                            time.sleep(0.002)
+                        else:
+                            time.sleep(0.001)
+                        return f"completed_{test_scenario}"
+
+                    return inner_resilient_operation
+
+                resilient_operation = create_resilient_operation(scenario)
 
                 result = resilient_operation()
                 assert result.startswith("completed_")
@@ -498,7 +514,7 @@ class TestObservabilityComplianceAndStandards:
             mock_usage = Mock()
             mock_usage.prompt_tokens = 100  # Maps to llm.usage.prompt_tokens
             mock_usage.completion_tokens = 50  # Maps to llm.usage.completion_tokens
-            mock_usage.total_tokens = 150  # Maps to llm.usage.total_tokens
+            mock_usage._total_tokens = 150  # Maps to llm.usage._total_tokens
 
             result["usage"] = mock_usage
             result["cost"] = 0.003  # Custom attribute for cost tracking
@@ -511,13 +527,13 @@ class TestObservabilityComplianceAndStandards:
         """Test compliance with metrics naming conventions."""
         # Test standard metric naming patterns
         standard_metrics = [
-            ("ai_operations_total", "counter"),
+            ("ai_operations__total", "counter"),
             ("ai_operation_duration_seconds", "histogram"),
-            ("ai_cost_total_usd", "counter"),
+            ("ai_cost__total_usd", "counter"),
             ("vector_search_results_count", "histogram"),
             ("cache_hit_rate_ratio", "gauge"),
             ("concurrent_operations_current", "gauge"),
-            ("error_rate_total", "counter"),
+            ("error_rate__total", "counter"),
         ]
 
         for metric_name, metric_type in standard_metrics:
@@ -528,7 +544,7 @@ class TestObservabilityComplianceAndStandards:
 
             # Verify suffix conventions
             if metric_type == "counter":
-                assert metric_name.endswith("_total") or metric_name.endswith("_usd")
+                assert metric_name.endswith(("__total", "_usd"))
             elif metric_type == "histogram":
                 assert "_duration_" in metric_name or "_count" in metric_name
             elif metric_type == "gauge":
@@ -628,10 +644,9 @@ class TestObservabilityDocumentationExamples:
         ) as correlation_id:
             try:
                 # Simulate an error scenario
-                raise ValueError("Example error for documentation")
+                msg = "Example error for documentation"
+                raise ValueError(msg)
             except ValueError as e:
-                from src.services.observability.correlation import record_error
-
                 error_id = record_error(
                     error=e,
                     error_type="example_error",

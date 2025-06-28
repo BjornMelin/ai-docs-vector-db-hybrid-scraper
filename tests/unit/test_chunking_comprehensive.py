@@ -82,7 +82,7 @@ class TestDocumentChunker:
         assert True
 
     @pytest.mark.parametrize(
-        "url,expected_lang",
+        ("url", "expected_lang"),
         [
             ("test.py", "python"),
             ("test.js", "javascript"),
@@ -741,13 +741,14 @@ class TestPerformanceAndLimits:
         chunker = DocumentChunker(config)
 
         # Generate many small functions
-        functions = []
-        for i in range(50):
-            functions.append(f"""
+        functions = [
+            f"""
 def function_{i}():
     '''Function number {i}'''
     return {i}
-""")
+"""
+            for i in range(50)
+        ]
 
         code_content = "\n".join(functions)
         chunks = chunker.chunk_content(code_content, "test.py")

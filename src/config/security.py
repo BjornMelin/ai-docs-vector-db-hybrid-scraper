@@ -44,7 +44,7 @@ class ConfigDataClassification(str, Enum):
     PUBLIC = "public"
     INTERNAL = "internal"
     CONFIDENTIAL = "confidential"
-    SECRET = "secret"  # noqa: S105  # This is an enum value, not a hardcoded password
+    SECRET = "secret"  # This is an enum value, not a hardcoded password
 
 
 class ConfigAccessLevel(str, Enum):
@@ -195,7 +195,7 @@ class ConfigurationAuditEvent(BaseModel):
     checksum_after: str | None = None
 
     class Config:
-        json_encoders = {datetime: lambda v: v.isoformat()}
+        json_encoders: ClassVar[dict[type, Any]] = {datetime: lambda v: v.isoformat()}
 
 
 class EncryptedConfigItem(BaseModel):
@@ -238,6 +238,7 @@ class SecureConfigManager:
         Args:
             config: Enhanced security configuration
             config_dir: Directory for storing encrypted configuration files
+
         """
         self.config = config
         self.config_dir = config_dir or Path("data/secure_config")
@@ -291,6 +292,7 @@ class SecureConfigManager:
 
         Args:
             key_file: Path to store encryption keys
+
         """
         logger.info("Generating initial encryption keys")
 
@@ -358,6 +360,7 @@ class SecureConfigManager:
 
         Args:
             key_file: Path to encryption keys file
+
         """
         logger.info("Loading existing encryption keys")
 
@@ -396,18 +399,20 @@ class SecureConfigManager:
 
         Returns:
             Fernet or MultiFernet instance for encryption operations
+
         """
         if not self._encryption_keys:
-            raise ValueError("No encryption keys available")
+            msg = "No encryption keys available"
+            raise ValueError(msg)
 
         if len(self._encryption_keys) == 1:
             return self._encryption_keys[0]
-        else:
-            return MultiFernet(self._encryption_keys)
+        return MultiFernet(self._encryption_keys)
 
     def _raise_integrity_check_failed(self) -> None:
         """Raise ValueError for configuration integrity check failure."""
-        raise ValueError("Configuration integrity check failed")
+        msg = "Configuration integrity check failed"
+        raise ValueError(msg)
 
     def _calculate_checksum(self, data: bytes, algorithm: str | None = None) -> str:
         """Calculate checksum for data integrity validation.
@@ -418,20 +423,22 @@ class SecureConfigManager:
 
         Returns:
             Hexadecimal checksum string
+
         """
         algorithm = algorithm or self.config.integrity_check_algorithm
 
         if algorithm not in self.SUPPORTED_HASH_ALGORITHMS:
-            raise ValueError(f"Unsupported hash algorithm: {algorithm}")
+            msg = f"Unsupported hash algorithm: {algorithm}"
+            raise ValueError(msg)
 
         if algorithm == "sha256":
             return hashlib.sha256(data).hexdigest()
-        elif algorithm == "sha384":
+        if algorithm == "sha384":
             return hashlib.sha384(data).hexdigest()
-        elif algorithm == "sha512":
+        if algorithm == "sha512":
             return hashlib.sha512(data).hexdigest()
-        else:
-            raise ValueError(f"Hash algorithm {algorithm} not implemented")
+        msg = f"Hash algorithm {algorithm} not implemented"
+        raise ValueError(msg)
 
     def _log_audit_event(
         self,
@@ -457,6 +464,7 @@ class SecureConfigManager:
             client_ip: Client IP address
             checksum_before: Configuration checksum before operation
             checksum_after: Configuration checksum after operation
+
         """
         if not self.config.audit_config_access:
             return
@@ -518,6 +526,7 @@ class SecureConfigManager:
 
         Returns:
             True if encryption was successful
+
         """
         try:
             # Validate input
@@ -606,6 +615,7 @@ class SecureConfigManager:
 
         Returns:
             Decrypted configuration data or None if operation failed
+
         """
         try:
             # Validate input
@@ -677,6 +687,7 @@ class SecureConfigManager:
         Args:
             config_path: Configuration path
             checksum: Current checksum
+
         """
         try:
             # Load existing integrity data
@@ -715,6 +726,7 @@ class SecureConfigManager:
 
         Returns:
             Dictionary mapping configuration paths to validation results
+
         """
         results = {}
 
@@ -787,6 +799,7 @@ class SecureConfigManager:
 
         Returns:
             True if backup was successful
+
         """
         if not self.config.enable_config_backup:
             logger.info("Configuration backup is disabled")
@@ -863,6 +876,7 @@ class SecureConfigManager:
 
         Returns:
             List of audit events
+
         """
         events = []
 
@@ -902,6 +916,7 @@ class SecureConfigManager:
 
         Returns:
             Dictionary containing security status information
+
         """
         try:
             # Get basic configuration status

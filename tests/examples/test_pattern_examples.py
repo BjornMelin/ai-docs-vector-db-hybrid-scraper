@@ -71,16 +71,16 @@ class TestStandardizedPatterns:
         mock_service.process_document.assert_called_once_with(sample_document_data)
 
     @pytest.mark.parametrize(
-        "input_data,expected_output",
+        ("input_data", "expected_output"),
         [
             pytest.param(
                 {"query": "test query", "limit": 5},
-                {"results": [], "total": 0},
+                {"results": [], "_total": 0},
                 id="empty_results",
             ),
             pytest.param(
                 {"query": "python", "limit": 10},
-                {"results": ["doc1", "doc2"], "total": 2},
+                {"results": ["doc1", "doc2"], "_total": 2},
                 id="with_results",
             ),
         ],
@@ -222,7 +222,7 @@ class TestStandardizedPatterns:
 
         # Assert - Validate call patterns
         expected_calls = [
-            {"args": ("/api/endpoint",), "kwargs": {"json": test_data, "timeout": 30}}
+            {"args": ("/api/endpoint",), "_kwargs": {"json": test_data, "timeout": 30}}
         ]
         assert_mock_called_with_pattern(mock_api_client.post, expected_calls)
 
@@ -331,7 +331,7 @@ class TestStandardizedPatterns:
         }
 
         # Act
-        result = await validate_user_input(malicious_input)
+        result = await validate__user_input(malicious_input)
 
         # Assert
         assert_error_response_standardized(
@@ -398,7 +398,7 @@ def mock_search_service() -> AsyncMock:
         Configured AsyncMock for search testing
     """
     service = AsyncMock()
-    service.search.return_value = {"results": [], "total": 0}
+    service.search.return_value = {"results": [], "_total": 0}
     service.index_document.return_value = quick_success_response()
     return service
 
@@ -476,9 +476,9 @@ async def some_async_service_function(_data: dict[str, Any]) -> dict[str, Any]:
     return quick_success_response({"processed": True})
 
 
-async def search_function(**_kwargs) -> dict[str, Any]:
+async def search_function(**__kwargs) -> dict[str, Any]:
     """Example search function for testing."""
-    return {"results": [], "total": 0}
+    return {"results": [], "_total": 0}
 
 
 def process_document_sync(document: dict[str, Any]) -> list[dict[str, Any]]:
@@ -493,7 +493,8 @@ async def batch_process_vectors(_vectors: list[list[float]]) -> dict[str, Any]:
 
 async def failing_service_operation() -> None:
     """Example function that raises ServiceError."""
-    raise ServiceError("Operation failed", error_code="CONNECTION_ERROR")
+    msg = "Operation failed"
+    raise ServiceError(msg, error_code="CONNECTION_ERROR")
 
 
 async def api_service_call(_data: dict[str, Any]) -> dict[str, Any]:
@@ -519,9 +520,9 @@ def process_complex_data(data: dict[str, Any]) -> dict[str, Any]:
     return {"processed": True, "metadata": data.get("metadata", {})}
 
 
-async def validate_user_input(user_input: str) -> dict[str, Any]:
+async def validate__user_input(_user_input: str) -> dict[str, Any]:
     """Example input validation function."""
-    if "malicious" in user_input.lower():
+    if "malicious" in _user_input.lower():
         return ResponseFactory.create_error_response(
             error_code="INVALID_INPUT", message="Input contains malicious content"
         )

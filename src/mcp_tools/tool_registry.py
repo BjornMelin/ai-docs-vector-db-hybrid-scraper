@@ -27,6 +27,7 @@ async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") ->
     Args:
         mcp: The FastMCP server instance
         client_manager: The unified client manager for all services
+
     """
     # Track registration for logging
     registered_tools = []

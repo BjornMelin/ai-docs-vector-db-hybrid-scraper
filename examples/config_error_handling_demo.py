@@ -167,7 +167,8 @@ def demonstrate_change_listeners():
 
         def bad_listener(_old_cfg, _new_cfg):
             print("Bad listener: about to fail...")
-            raise RuntimeError("Listener failure!")
+            msg = "Listener failure!"
+            raise RuntimeError(msg)
 
         def another_good_listener(_old_cfg, _new_cfg):
             print("Another good listener: still working!")

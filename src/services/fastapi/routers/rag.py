@@ -45,6 +45,7 @@ async def generate_answer(
 
     Raises:
         HTTPException: If RAG is not enabled or generation fails
+
     """
     # Check if RAG is enabled
     if not config.rag.enable_rag:
@@ -89,6 +90,7 @@ async def get_metrics(
 
     Raises:
         HTTPException: If metrics retrieval fails
+
     """
     try:
         metrics = await get_rag_metrics(rag_generator)
@@ -121,6 +123,7 @@ async def clear_cache(
 
     Raises:
         HTTPException: If cache clearing fails
+
     """
     try:
         result = await clear_rag_cache(rag_generator)
@@ -147,6 +150,7 @@ async def get_config(
 
     Returns:
         dict[str, Any]: RAG configuration details
+
     """
     return {
         "enabled": config.rag.enable_rag,
@@ -179,6 +183,7 @@ async def health_check(
 
     Returns:
         dict[str, Any]: Health check results
+
     """
     health_status = {
         "rag_enabled": config.rag.enable_rag,

@@ -11,9 +11,9 @@ import time
 from typing import Any
 
 from src.config import Config
+from src.services.base import BaseService
+from src.services.errors import APIError
 
-from ..base import BaseService
-from ..errors import APIError
 from .classifiers import ContentClassifier
 from .metadata_extractor import MetadataExtractor
 from .models import (
@@ -53,6 +53,7 @@ class ContentIntelligenceService(BaseService):
             config: Unified configuration
             embedding_manager: Optional EmbeddingManager for semantic analysis
             cache_manager: Optional CacheManager for result caching
+
         """
         super().__init__(config)
         self.embedding_manager = embedding_manager
@@ -120,7 +121,8 @@ class ContentIntelligenceService(BaseService):
 
         except Exception as e:
             logger.exception("Failed to initialize ContentIntelligenceService")
-            raise APIError(f"Content intelligence initialization failed: {e}") from e
+            msg = f"Content intelligence initialization failed: {e}"
+            raise APIError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup all content intelligence components."""
@@ -148,6 +150,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             ContentAnalysisResponse: Complete analysis results
+
         """
         self._validate_initialized()
         start_time = time.time()
@@ -212,6 +215,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             QualityScore: Comprehensive quality assessment
+
         """
         self._validate_initialized()
 
@@ -250,6 +254,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             ContentClassification: Content type classification results
+
         """
         self._validate_initialized()
 
@@ -288,6 +293,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             ContentMetadata: Enriched metadata
+
         """
         self._validate_initialized()
 
@@ -323,6 +329,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             list[AdaptationRecommendation]: List of adaptation recommendations
+
         """
         self._validate_initialized()
 
@@ -376,6 +383,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             EnrichedContent: Complete analysis results
+
         """
         analysis_start = time.time()
 
@@ -491,6 +499,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             list[AdaptationRecommendation]: Quality-based recommendations
+
         """
         recommendations = []
 
@@ -550,6 +559,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             list[AdaptationRecommendation]: Pattern-based recommendations
+
         """
         recommendations = []
 
@@ -589,6 +599,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             str: Cache key for the request
+
         """
         # Create hash from content and key parameters
         content_hash = hashlib.sha256(request.content.encode()).hexdigest()
@@ -608,6 +619,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             EnrichedContent | None: Cached result if found
+
         """
         if not self.cache_manager:
             return None
@@ -627,6 +639,7 @@ class ContentIntelligenceService(BaseService):
         Args:
             cache_key: Cache key
             result: Analysis result to cache
+
         """
         if not self.cache_manager:
             return
@@ -646,6 +659,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             dict[str, Any]: Performance metrics
+
         """
         return {
             "total_analyses": self._analysis_count,

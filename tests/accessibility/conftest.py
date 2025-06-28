@@ -171,7 +171,7 @@ def wcag_validator():
             return {
                 "compliant": len([i for i in issues if i["severity"] == "error"]) == 0,
                 "issues": issues,
-                "total_issues": len(issues),
+                "_total_issues": len(issues),
                 "errors": len([i for i in issues if i["severity"] == "error"]),
                 "warnings": len([i for i in issues if i["severity"] == "warning"]),
             }
@@ -261,21 +261,23 @@ def wcag_validator():
                 "rowspan",
             }
 
-            for attr in aria_attributes:
-                if attr.lower() not in valid_aria_attributes:
-                    issues.append(
-                        {
-                            "guideline": "4.1.2",
-                            "level": "A",
-                            "issue": f"Invalid ARIA attribute: aria-{attr}",
-                            "severity": "error",
-                        }
-                    )
+            issues.extend(
+                [
+                    {
+                        "guideline": "4.1.2",
+                        "level": "A",
+                        "issue": f"Invalid ARIA attribute: aria-{attr}",
+                        "severity": "error",
+                    }
+                    for attr in aria_attributes
+                    if attr.lower() not in valid_aria_attributes
+                ]
+            )
 
             return {
                 "compliant": len([i for i in issues if i["severity"] == "error"]) == 0,
                 "issues": issues,
-                "total_attributes": len(aria_attributes),
+                "_total_attributes": len(aria_attributes),
                 "unique_attributes": len(set(aria_attributes)),
             }
 
@@ -307,8 +309,7 @@ def color_contrast_analyzer():
                 value = value / 255.0
                 if value <= 0.03928:
                     return value / 12.92
-                else:
-                    return pow((value + 0.055) / 1.055, 2.4)
+                return pow((value + 0.055) / 1.055, 2.4)
 
             r, g, b = rgb
             r_linear = gamma_correct(r)
@@ -328,8 +329,7 @@ def color_contrast_analyzer():
             # Ensure lighter color is in numerator
             if lum1 > lum2:
                 return (lum1 + 0.05) / (lum2 + 0.05)
-            else:
-                return (lum2 + 0.05) / (lum1 + 0.05)
+            return (lum2 + 0.05) / (lum1 + 0.05)
 
         def check_contrast_compliance(
             self, foreground: str, background: str, text_size: str = "normal"
@@ -456,7 +456,7 @@ def keyboard_navigation_tester():
             return {
                 "compliant": len([i for i in issues if i["severity"] == "error"]) == 0,
                 "issues": issues,
-                "total_tabindex_elements": len(tabindex_matches),
+                "_total_tabindex_elements": len(tabindex_matches),
                 "positive_tabindex_count": len(positive_tabindex),
             }
 
@@ -665,19 +665,18 @@ def screen_reader_validator():
                 if id_match:
                     input_id = id_match.group(1)
                     label_pattern = f"<label[^>]*for=[\"']?{input_id}[\"']?[^>]*>"
-                    if not re.search(label_pattern, html_content, re.IGNORECASE):
-                        # Check for aria-label or aria-labelledby
-                        if (
-                            "aria-label" not in input_elem
-                            and "aria-labelledby" not in input_elem
-                        ):
-                            issues.append(
-                                {
-                                    "issue": f"Input element without associated label: {input_elem[:50]}...",
-                                    "severity": "error",
-                                    "guideline": "3.3.2",
-                                }
-                            )
+                    if (
+                        not re.search(label_pattern, html_content, re.IGNORECASE)
+                        and "aria-label" not in input_elem
+                        and "aria-labelledby" not in input_elem
+                    ):
+                        issues.append(
+                            {
+                                "issue": f"Input element without associated label: {input_elem[:50]}...",
+                                "severity": "error",
+                                "guideline": "3.3.2",
+                            }
+                        )
                 else:
                     # Input without ID - check for aria-label
                     if "aria-label" not in input_elem:
@@ -711,7 +710,7 @@ def screen_reader_validator():
             return {
                 "compliant": len([i for i in issues if i["severity"] == "error"]) == 0,
                 "issues": issues,
-                "total_inputs": len(inputs),
+                "_total_inputs": len(inputs),
                 "radio_inputs": len(radio_inputs),
                 "checkbox_inputs": len(checkbox_inputs),
             }

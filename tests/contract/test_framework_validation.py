@@ -18,7 +18,7 @@ class TestContractFrameworkValidation:
     @pytest.mark.contract
     def test_framework_components_integration(
         self,
-        json_schema_validator,
+        _json_schema_validator,
         api_contract_validator,
         openapi_contract_manager,
         pact_contract_builder,
@@ -27,7 +27,7 @@ class TestContractFrameworkValidation:
         """Test that all framework components work together."""
         # 1. Test JSON Schema Validator
         search_schema = SearchRequest.model_json_schema()
-        json_schema_validator.register_schema("search_request", search_schema)
+        _json_schema_validator.register_schema("search_request", search_schema)
 
         valid_request_data = {
             "query": "test query",
@@ -35,7 +35,7 @@ class TestContractFrameworkValidation:
             "limit": 10,
         }
 
-        validation_result = json_schema_validator.validate_data(
+        validation_result = _json_schema_validator.validate_data(
             valid_request_data, "search_request"
         )
         assert validation_result["valid"], (
@@ -75,11 +75,11 @@ class TestContractFrameworkValidation:
         assert True  # If we reach here, all components are integrated properly
 
     @pytest.mark.contract
-    def test_pydantic_model_contract_validation(self, json_schema_validator):
+    def test_pydantic_model_contract_validation(self, _json_schema_validator):
         """Test contract validation with Pydantic models."""
         # Test SearchRequest validation
         search_schema = SearchRequest.model_json_schema()
-        json_schema_validator.register_schema("search_request", search_schema)
+        _json_schema_validator.register_schema("search_request", search_schema)
 
         # Valid request
         valid_request = {
@@ -90,7 +90,7 @@ class TestContractFrameworkValidation:
             "enable_hyde": True,
         }
 
-        validation = json_schema_validator.validate_data(
+        validation = _json_schema_validator.validate_data(
             valid_request, "search_request"
         )
         assert validation["valid"]
@@ -102,7 +102,7 @@ class TestContractFrameworkValidation:
             # Missing required 'query' field
         }
 
-        validation = json_schema_validator.validate_data(
+        validation = _json_schema_validator.validate_data(
             invalid_request, "search_request"
         )
         assert not validation["valid"]
@@ -110,7 +110,7 @@ class TestContractFrameworkValidation:
 
         # Test SearchResponse validation
         response_schema = SearchResponse.model_json_schema()
-        json_schema_validator.register_schema("search_response", response_schema)
+        _json_schema_validator.register_schema("search_response", response_schema)
 
         valid_response = {
             "success": True,
@@ -124,22 +124,22 @@ class TestContractFrameworkValidation:
                     "metadata": {"source": "tutorial"},
                 }
             ],
-            "total_count": 1,
+            "_total_count": 1,
             "query_time_ms": 45.0,
             "search_strategy": "hybrid",
             "cache_hit": False,
         }
 
-        response_validation = json_schema_validator.validate_data(
+        response_validation = _json_schema_validator.validate_data(
             valid_response, "search_response"
         )
         assert response_validation["valid"]
 
     @pytest.mark.contract
-    def test_error_response_contract_validation(self, json_schema_validator):
+    def test_error_response_contract_validation(self, _json_schema_validator):
         """Test error response contract validation."""
         error_schema = ErrorResponse.model_json_schema()
-        json_schema_validator.register_schema("error_response", error_schema)
+        _json_schema_validator.register_schema("error_response", error_schema)
 
         # Valid error response
         valid_error = {
@@ -154,7 +154,7 @@ class TestContractFrameworkValidation:
             },
         }
 
-        validation = json_schema_validator.validate_data(valid_error, "error_response")
+        validation = _json_schema_validator.validate_data(valid_error, "error_response")
         assert validation["valid"]
 
         # Test that success=True is invalid for ErrorResponse
@@ -171,7 +171,7 @@ class TestContractFrameworkValidation:
 
     @pytest.mark.contract
     def test_contract_backward_compatibility_validation(
-        self, _json_schema_validator, api_contract_validator
+        self, __json_schema_validator, api_contract_validator
     ):
         """Test backward compatibility validation."""
         # Original API contract (v1)
@@ -187,9 +187,9 @@ class TestContractFrameworkValidation:
                             "type": "object",
                             "properties": {
                                 "results": {"type": "array"},
-                                "total": {"type": "integer"},
+                                "_total": {"type": "integer"},
                             },
-                            "required": ["results", "total"],
+                            "required": ["results", "_total"],
                         }
                     }
                 },
@@ -220,11 +220,11 @@ class TestContractFrameworkValidation:
                             "properties": {
                                 "success": {"type": "boolean"},  # New field
                                 "results": {"type": "array"},
-                                "total_count": {"type": "integer"},  # New field
-                                "total": {"type": "integer"},  # Kept for compatibility
+                                "_total_count": {"type": "integer"},  # New field
+                                "_total": {"type": "integer"},  # Kept for compatibility
                                 "search_strategy": {"type": "string"},  # New field
                             },
-                            "required": ["success", "results", "total_count"],
+                            "required": ["success", "results", "_total_count"],
                         }
                     }
                 },
@@ -258,7 +258,7 @@ class TestContractFrameworkValidation:
 
     @pytest.mark.contract
     def test_contract_breaking_change_detection(
-        self, json_schema_validator, api_contract_validator
+        self, _json_schema_validator, _api_contract_validator
     ):
         """Test detection of breaking changes in contracts."""
         # Original schema
@@ -284,8 +284,8 @@ class TestContractFrameworkValidation:
             "required": ["id", "title", "new_required_field"],  # Breaking change
         }
 
-        json_schema_validator.register_schema("original", original_schema)
-        json_schema_validator.register_schema("breaking", breaking_schema)
+        _json_schema_validator.register_schema("original", original_schema)
+        _json_schema_validator.register_schema("breaking", breaking_schema)
 
         # Data that was valid in original schema
         test_data = {
@@ -295,32 +295,36 @@ class TestContractFrameworkValidation:
         }
 
         # Should be valid in original
-        original_validation = json_schema_validator.validate_data(test_data, "original")
+        original_validation = _json_schema_validator.validate_data(
+            test_data, "original"
+        )
         assert original_validation["valid"]
 
         # Should be invalid in breaking schema (missing new required field)
-        breaking_validation = json_schema_validator.validate_data(test_data, "breaking")
+        breaking_validation = _json_schema_validator.validate_data(
+            test_data, "breaking"
+        )
         assert not breaking_validation["valid"]
         assert any(
             "new_required_field" in error for error in breaking_validation["errors"]
         )
 
     @pytest.mark.contract
-    async def test_mcp_tool_contract_validation(self, mock_contract_service):
+    async def test_mcp_tool_contract_validation(self, _mock_contract_service):
         """Test MCP tool contract validation."""
-        # The mock_contract_service fixture provides the mock implementation
+        # The _mock_contract_service fixture provides the mock implementation
 
         # Execute search tool
-        result = await mock_contract_service.search("test query", 10)
+        result = await _mock_contract_service.search("test query", 10)
         result_data = result if isinstance(result, dict) else json.loads(result)
 
         # Validate contract compliance
-        required_fields = ["results", "total"]
+        required_fields = ["results", "_total"]
         for field in required_fields:
             assert field in result_data, f"Missing required field: {field}"
 
         assert isinstance(result_data["results"], list)
-        assert isinstance(result_data["total"], int)
+        assert isinstance(result_data["_total"], int)
 
         # Validate result structure
         if result_data["results"]:
@@ -333,7 +337,7 @@ class TestContractFrameworkValidation:
 
     @pytest.mark.contract
     def test_openapi_spec_generation_and_validation(
-        self, openapi_contract_manager, json_schema_validator
+        self, openapi_contract_manager, _json_schema_validator
     ):
         """Test OpenAPI specification generation and validation."""
         # Create a comprehensive OpenAPI spec
@@ -394,12 +398,12 @@ class TestContractFrameworkValidation:
                                                         ],
                                                     },
                                                 },
-                                                "total_count": {"type": "integer"},
+                                                "_total_count": {"type": "integer"},
                                             },
                                             "required": [
                                                 "success",
                                                 "results",
-                                                "total_count",
+                                                "_total_count",
                                             ],
                                         }
                                     }

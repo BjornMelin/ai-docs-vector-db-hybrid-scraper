@@ -28,6 +28,7 @@ class TierRateLimiter:
 
         Args:
             tier_configs: Dictionary mapping tier names to configurations
+
         """
         self.tier_configs = tier_configs
 
@@ -62,6 +63,7 @@ class TierRateLimiter:
 
         Returns:
             True if permission granted, False if rate limited
+
         """
         if tier not in self.tier_configs:
             logger.warning(f"Unknown tier {tier}, allowing request")
@@ -112,6 +114,7 @@ class TierRateLimiter:
 
         Args:
             tier: Tier name
+
         """
         semaphore = self.tier_semaphores.get(tier)
         if semaphore:
@@ -129,6 +132,7 @@ class TierRateLimiter:
 
         Returns:
             True if within limit, False otherwise
+
         """
         config = self.tier_configs[tier]
         if (
@@ -157,6 +161,7 @@ class TierRateLimiter:
 
         Returns:
             Seconds to wait (0 if no wait needed)
+
         """
         config = self.tier_configs.get(tier)
         if not config or not hasattr(config, "requests_per_minute"):
@@ -184,6 +189,7 @@ class TierRateLimiter:
 
         Returns:
             Status information
+
         """
         if tier:
             return self._get_tier_status(tier)
@@ -207,6 +213,7 @@ class TierRateLimiter:
 
         Returns:
             Tier status information
+
         """
         config = self.tier_configs.get(tier)
         if not config:
@@ -238,6 +245,7 @@ class TierRateLimiter:
 
         Args:
             tier: Tier name
+
         """
         wait_time = self.get_wait_time(tier)
         if wait_time > 0:
@@ -249,6 +257,7 @@ class TierRateLimiter:
 
         Args:
             tier: Tier name
+
         """
         self.request_history[tier].clear()
         self.concurrent_requests[tier] = 0
@@ -275,6 +284,7 @@ class RateLimitContext:
             rate_limiter: Rate limiter instance
             tier: Tier name
             timeout: Timeout for acquiring permission
+
         """
         self.rate_limiter = rate_limiter
         self.tier = tier
@@ -286,6 +296,7 @@ class RateLimitContext:
 
         Returns:
             True if acquired, False if rate limited
+
         """
         self.acquired = await self.rate_limiter.acquire(self.tier, self.timeout)
         return self.acquired

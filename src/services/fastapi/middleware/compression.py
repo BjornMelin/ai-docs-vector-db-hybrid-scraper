@@ -13,6 +13,12 @@ from starlette.requests import Request
 from starlette.responses import Response, StreamingResponse
 
 
+try:
+    import brotli
+except ImportError:
+    brotli = None
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -40,6 +46,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
             minimum_size: Minimum response size to compress (bytes)
             compression_level: Gzip compression level (1-9)
             compressible_types: List of content types to compress
+
         """
         super().__init__(app)
         self.minimum_size = minimum_size
@@ -85,6 +92,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
 
         Returns:
             True if response should be compressed
+
         """
         # Don't compress if already compressed
         if response.headers.get("content-encoding"):
@@ -111,6 +119,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Compressed response
+
         """
         try:
             # Get response body
@@ -179,18 +188,17 @@ class BrotliCompressionMiddleware(BaseHTTPMiddleware):
             minimum_size: Minimum response size to compress (bytes)
             quality: Brotli compression quality (0-11)
             compressible_types: List of content types to compress
+
         """
         super().__init__(app)
         self.minimum_size = minimum_size
         self.quality = max(0, min(11, quality))
 
         # Check if brotli is available
-        try:
-            import brotli
-
+        if brotli is not None:
             self.brotli = brotli
             self.brotli_available = True
-        except ImportError:
+        else:
             self.brotli = None
             self.brotli_available = False
             logger.warning("Brotli compression not available, falling back to gzip")

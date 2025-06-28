@@ -7,15 +7,14 @@ from arq import ArqRedis, create_pool
 from arq.connections import RedisSettings
 
 from src.config import Config
-
-from ..base import BaseService
+from src.services.base import BaseService
 
 
 logger = logging.getLogger(__name__)
 
 # Import monitoring registry for Prometheus integration
 try:
-    from ..monitoring.metrics import get_metrics_registry
+    from src.services.monitoring.metrics import get_metrics_registry
 
     MONITORING_AVAILABLE = True
 except ImportError:
@@ -30,6 +29,7 @@ class TaskQueueManager(BaseService):
 
         Args:
             config: Unified configuration
+
         """
         super().__init__(config)
         self._redis_pool: ArqRedis | None = None
@@ -114,6 +114,7 @@ class TaskQueueManager(BaseService):
 
         Returns:
             Job ID if successful, None otherwise
+
         """
         if not self._redis_pool:
             logger.error("Task queue not initialized")
@@ -140,14 +141,13 @@ class TaskQueueManager(BaseService):
                     )  # Just tracking enqueue for now
 
                 return job.job_id
-            else:
-                logger.error(f"Failed to enqueue task {task_name}")
+            logger.error(f"Failed to enqueue task {task_name}")
 
-                # Record failure metrics
-                if self.metrics_registry:
-                    self.metrics_registry.record_task_execution(task_name, 0.0, False)
+            # Record failure metrics
+            if self.metrics_registry:
+                self.metrics_registry.record_task_execution(task_name, 0.0, False)
 
-                return None
+            return None
 
         except Exception:
             logger.exception("Error enqueueing task {task_name}")
@@ -161,6 +161,7 @@ class TaskQueueManager(BaseService):
 
         Returns:
             Job status information
+
         """
         if not self._redis_pool:
             return {"status": "error", "message": "Task queue not initialized"}
@@ -197,6 +198,7 @@ class TaskQueueManager(BaseService):
 
         Returns:
             True if cancelled successfully
+
         """
         if not self._redis_pool:
             return False
@@ -221,6 +223,7 @@ class TaskQueueManager(BaseService):
 
         Returns:
             Queue statistics
+
         """
         if not self._redis_pool:
             return {"error": -1}

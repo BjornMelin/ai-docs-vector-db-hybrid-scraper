@@ -32,7 +32,7 @@ class TestAnalyticsTools:
         mock_cache.get_stats.return_value = {
             "hit_rate": 0.85,
             "size": 500,
-            "total_requests": 10000,
+            "_total_requests": 10000,
         }
         mock_manager.get_cache_manager = AsyncMock(return_value=mock_cache)
 

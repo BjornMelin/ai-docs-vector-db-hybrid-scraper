@@ -620,7 +620,8 @@ class TestAccessControl:
         def validate_role_input(role_input) -> str:
             """Validate and normalize role input."""
             if not isinstance(role_input, str):
-                raise SecurityError("Role must be a string")
+                msg = "Role must be a string"
+                raise SecurityError(msg)
 
             # Remove null bytes and control characters
             role = "".join(c for c in role_input if ord(c) >= 32)
@@ -638,7 +639,8 @@ class TestAccessControl:
                 "api_service",
             }
             if role not in valid_roles:
-                raise SecurityError(f"Invalid role: {role}")
+                msg = f"Invalid role: {role}"
+                raise SecurityError(msg)
 
             return role
 

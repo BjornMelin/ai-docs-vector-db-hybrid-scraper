@@ -103,7 +103,7 @@ class TestChunk:
         assert chunk.start_pos == 0
         assert chunk.end_pos == 20
         assert chunk.chunk_index == 0
-        assert chunk.total_chunks == 0
+        assert chunk._total_chunks == 0
         assert chunk.char_count == 0
         assert chunk.token_estimate == 0
         assert chunk.chunk_type == "text"
@@ -119,7 +119,7 @@ class TestChunk:
             start_pos=100,
             end_pos=121,
             chunk_index=2,
-            total_chunks=5,
+            _total_chunks=5,
             char_count=21,
             token_estimate=5,
             chunk_type="code",
@@ -127,7 +127,7 @@ class TestChunk:
             has_code=True,
             metadata=metadata,
         )
-        assert chunk.total_chunks == 5
+        assert chunk._total_chunks == 5
         assert chunk.char_count == 21
         assert chunk.token_estimate == 5
         assert chunk.chunk_type == "code"
@@ -440,7 +440,7 @@ def function_three():
                 start_pos=0,
                 end_pos=12,
                 chunk_index=0,
-                total_chunks=1,
+                _total_chunks=1,
                 char_count=12,
                 token_estimate=3,
                 chunk_type="text",
@@ -454,4 +454,4 @@ def function_three():
         assert formatted[0]["title"] == "Test Title"
         assert formatted[0]["url"] == "http://test.com"
         assert formatted[0]["chunk_index"] == 0
-        assert formatted[0]["total_chunks"] == 1
+        assert formatted[0]["_total_chunks"] == 1

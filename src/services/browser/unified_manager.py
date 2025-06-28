@@ -13,20 +13,20 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, Field
 
 from src.config import Config
+from src.services.base import BaseService
+from src.services.errors import CrawlServiceError
 
-from ..base import BaseService
-from ..errors import CrawlServiceError
 from .monitoring import BrowserAutomationMonitor
 
 
 # Optional imports that may not be available in all configurations
 try:
-    from ...infrastructure.client_manager import ClientManager
+    from src.infrastructure.client_manager import ClientManager
 except ImportError:
     ClientManager = None
 
 try:
-    from ...services.cache.browser_cache import BrowserCache, BrowserCacheEntry
+    from src.services.cache.browser_cache import BrowserCache, BrowserCacheEntry
 except ImportError:
     BrowserCache = None
     BrowserCacheEntry = None
@@ -108,7 +108,8 @@ class TierMetrics(BaseModel):
 
 def _raise_client_manager_unavailable() -> None:
     """Raise ImportError for ClientManager not available."""
-    raise ImportError("ClientManager not available")
+    msg = "ClientManager not available"
+    raise ImportError(msg)
 
 
 class UnifiedBrowserManager(BaseService):
@@ -129,6 +130,7 @@ class UnifiedBrowserManager(BaseService):
 
         Args:
             config: Unified configuration instance
+
         """
         super().__init__(config)
         self._automation_router: Any = None
@@ -217,9 +219,8 @@ class UnifiedBrowserManager(BaseService):
 
         except Exception as e:
             logger.exception("Failed to initialize UnifiedBrowserManager")
-            raise CrawlServiceError(
-                "Failed to initialize unified browser manager"
-            ) from e
+            msg = "Failed to initialize unified browser manager"
+            raise CrawlServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup all resources."""
@@ -256,16 +257,17 @@ class UnifiedBrowserManager(BaseService):
 
         Raises:
             CrawlServiceError: If manager not initialized or scraping fails
+
         """
         if not self._initialized:
-            raise CrawlServiceError("UnifiedBrowserManager not initialized")
+            msg = "UnifiedBrowserManager not initialized"
+            raise CrawlServiceError(msg)
 
         # Handle both structured and simple request formats
         if request is None:
             if url is None:
-                raise CrawlServiceError(
-                    "Either request object or url parameter required"
-                )
+                msg = "Either request object or url parameter required"
+                raise CrawlServiceError(msg)
             request = UnifiedScrapingRequest(url=url, **kwargs)
 
         start_time = time.time()
@@ -465,9 +467,11 @@ class UnifiedBrowserManager(BaseService):
 
         Returns:
             Analysis results with tier recommendations
+
         """
         if not self._initialized:
-            raise CrawlServiceError("UnifiedBrowserManager not initialized")
+            msg = "UnifiedBrowserManager not initialized"
+            raise CrawlServiceError(msg)
 
         try:
             parsed = urlparse(url)
@@ -506,6 +510,7 @@ class UnifiedBrowserManager(BaseService):
 
         Returns:
             Dictionary mapping tier names to their metrics
+
         """
         return self._tier_metrics.copy()
 
@@ -514,6 +519,7 @@ class UnifiedBrowserManager(BaseService):
 
         Returns:
             System status information
+
         """
         if not self._initialized:
             return {"status": "not_initialized", "error": "Manager not initialized"}
@@ -578,6 +584,7 @@ class UnifiedBrowserManager(BaseService):
 
         Returns:
             Quality score between 0.0 and 1.0
+
         """
         if not result.get("success"):
             return 0.0
@@ -595,6 +602,7 @@ class UnifiedBrowserManager(BaseService):
             tier: Tier name
             success: Whether the operation was successful
             execution_time_ms: Execution time in milliseconds
+
         """
         if tier not in self._tier_metrics:
             self._tier_metrics[tier] = TierMetrics(tier_name=tier)

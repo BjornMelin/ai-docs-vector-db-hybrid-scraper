@@ -6,11 +6,11 @@ import pytest
 
 from src.config import Config
 from src.services.browser.unified_manager import (
-from src.services.cache.browser_cache import BrowserCacheEntry
     UnifiedBrowserManager,
     UnifiedScrapingRequest,
     UnifiedScrapingResponse,
 )
+from src.services.cache.browser_cache import BrowserCacheEntry
 from src.services.errors import CrawlServiceError
 
 
@@ -230,7 +230,7 @@ class TestUnifiedScrapingAPI:
             # Verify force_tool was set
             mock_automation_router.scrape.assert_awaited_once()
             call_args = mock_automation_router.scrape.call_args
-            assert call_args.kwargs["force_tool"] == "browser_use"
+            assert call_args._kwargs["force_tool"] == "browser_use"
 
     async def test_scrape_with_fallback(
         self, unified_manager, mock_client_manager, mock_automation_router
@@ -331,7 +331,7 @@ class TestMetricsTracking:
             assert tier in unified_manager._tier_metrics
             metrics = unified_manager._tier_metrics[tier]
             assert metrics.tier_name == tier
-            assert metrics.total_requests == 0
+            assert metrics._total_requests == 0
             assert metrics.successful_requests == 0
             assert metrics.failed_requests == 0
 
@@ -360,7 +360,7 @@ class TestMetricsTracking:
 
             # Check metrics
             metrics = unified_manager._tier_metrics["crawl4ai"]
-            assert metrics.total_requests == 1
+            assert metrics._total_requests == 1
             assert metrics.successful_requests == 1
             assert metrics.failed_requests == 0
             assert metrics.success_rate == 1.0
@@ -386,7 +386,7 @@ class TestMetricsTracking:
             # Check metrics - should track as unknown tier
             metrics = unified_manager._tier_metrics.get("unknown")
             assert metrics is not None
-            assert metrics.total_requests == 1
+            assert metrics._total_requests == 1
             assert metrics.successful_requests == 0
             assert metrics.failed_requests == 1
 
@@ -435,8 +435,8 @@ class TestMetricsTracking:
             # Verify
             assert "crawl4ai" in all_metrics
             assert "lightweight" in all_metrics
-            assert all_metrics["crawl4ai"].total_requests == 1
-            assert all_metrics["lightweight"].total_requests == 1
+            assert all_metrics["crawl4ai"]._total_requests == 1
+            assert all_metrics["lightweight"]._total_requests == 1
 
     async def test_average_response_time_calculation(
         self, unified_manager, mock_client_manager, mock_automation_router
@@ -563,7 +563,7 @@ class TestSystemStatus:
             # Verify
             assert status["status"] == "healthy"
             assert status["initialized"] is True
-            assert status["total_requests"] == 2
+            assert status["_total_requests"] == 2
             assert status["overall_success_rate"] == 1.0
             assert status["tier_count"] == 2
             assert status["router_available"] is True
@@ -655,8 +655,8 @@ class TestCustomActions:
             # Verify custom actions were passed
             mock_automation_router.scrape.assert_awaited_once()
             call_args = mock_automation_router.scrape.call_args
-            assert call_args.kwargs["custom_actions"] == custom_actions
-            assert call_args.kwargs["interaction_required"] is True
+            assert call_args._kwargs["custom_actions"] == custom_actions
+            assert call_args._kwargs["interaction_required"] is True
 
 
 class TestUnifiedBrowserManagerMonitoring:
@@ -761,7 +761,7 @@ class TestUnifiedBrowserManagerMonitoring:
         mock_monitor.get_system_health = Mock(
             return_value={
                 "overall_status": "healthy",
-                "tier_health": {"total": 2, "healthy": 2},
+                "tier_health": {"_total": 2, "healthy": 2},
                 "monitoring_active": True,
             }
         )

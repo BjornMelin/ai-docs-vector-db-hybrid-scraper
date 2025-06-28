@@ -12,9 +12,10 @@ if TYPE_CHECKING:
 
 from pydantic import BaseModel
 
-from ...infrastructure.client_manager import ClientManager
-from ..base import BaseService
-from ..errors import EmbeddingServiceError
+from src.infrastructure.client_manager import ClientManager
+from src.services.base import BaseService
+from src.services.errors import EmbeddingServiceError
+
 from .config import HyDEConfig, HyDEPromptConfig
 
 
@@ -47,6 +48,7 @@ class HypotheticalDocumentGenerator(BaseService):
             config: HyDE configuration
             prompt_config: Prompt configuration
             client_manager: Optional client manager (will create one if not provided)
+
         """
         super().__init__(config)
         self.config = config
@@ -74,6 +76,7 @@ class HypotheticalDocumentGenerator(BaseService):
 
         Raises:
             EmbeddingServiceError: If initialization fails or OpenAI client unavailable
+
         """
         if self._initialized:
             return
@@ -84,7 +87,8 @@ class HypotheticalDocumentGenerator(BaseService):
             self._llm_client = await self.client_manager.get_openai_client()
 
             if not self._llm_client:
-                raise EmbeddingServiceError("OpenAI client not available")
+                msg = "OpenAI client not available"
+                raise EmbeddingServiceError(msg)
 
             # Test LLM connection
             await self._llm_client.models.list()
@@ -93,9 +97,8 @@ class HypotheticalDocumentGenerator(BaseService):
             logger.info("HyDE document generator initialized")
 
         except Exception as e:
-            raise EmbeddingServiceError(
-                f"Failed to initialize HyDE generator: {e}"
-            ) from e
+            msg = f"Failed to initialize HyDE generator: {e}"
+            raise EmbeddingServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup generator resources.
@@ -132,6 +135,7 @@ class HypotheticalDocumentGenerator(BaseService):
 
         Raises:
             EmbeddingServiceError: If generation fails or LLM is unavailable
+
         """
         self._validate_initialized()
 
@@ -186,7 +190,8 @@ class HypotheticalDocumentGenerator(BaseService):
             logger.error(
                 f"Failed to generate hypothetical documents: {e}", exc_info=True
             )
-            raise EmbeddingServiceError(f"Document generation failed: {e}") from e
+            msg = f"Document generation failed: {e}"
+            raise EmbeddingServiceError(msg) from e
 
     def _build_diverse_prompts(
         self,
@@ -203,8 +208,8 @@ class HypotheticalDocumentGenerator(BaseService):
 
         Returns:
             list[str]: List of diverse prompts for document generation
-        """
 
+        """
         # Determine query type
         query_type = self._classify_query(query)
 
@@ -221,7 +226,9 @@ class HypotheticalDocumentGenerator(BaseService):
         # Fill remaining slots with base prompt
         while len(prompts) < self.config.num_generations:
             prompts.append(
-                base_prompt.format(query=query, domain=domain or "technical")
+                f"{base_prompt}".replace("{query}", query).replace(
+                    "{domain}", domain or "technical"
+                )
             )
 
         return prompts[: self.config.num_generations]
@@ -273,8 +280,8 @@ class HypotheticalDocumentGenerator(BaseService):
             instruction_idx = i % len(variation_templates["instruction_styles"])
             context_idx = i % len(variation_templates["context_additions"])
 
-            prefix = variation_templates["prefixes"][prefix_idx].format(
-                domain=domain or "documentation"
+            prefix = variation_templates["prefixes"][prefix_idx].replace(
+                "{domain}", domain or "documentation"
             )
             instruction = variation_templates["instruction_styles"][instruction_idx]
             context_addition = variation_templates["context_additions"][context_idx]
@@ -288,7 +295,6 @@ class HypotheticalDocumentGenerator(BaseService):
 
     async def _generate_parallel(self, prompts: list[str]) -> list[str]:
         """Generate documents in parallel."""
-
         # Create semaphore to limit concurrent requests
         semaphore = asyncio.Semaphore(self.config.max_concurrent_generations)
 
@@ -327,7 +333,6 @@ class HypotheticalDocumentGenerator(BaseService):
 
     async def _generate_single_document(self, prompt: str) -> str:
         """Generate a single hypothetical document."""
-
         try:
             response = await asyncio.wait_for(
                 self._llm_client.chat.completions.create(
@@ -351,7 +356,6 @@ class HypotheticalDocumentGenerator(BaseService):
 
     def _post_process_documents(self, documents: list[str], _query: str) -> list[str]:
         """Post-process generated documents."""
-
         if not documents:
             return documents
 
@@ -379,7 +383,6 @@ class HypotheticalDocumentGenerator(BaseService):
 
     def _calculate_cost(self, tokens: float) -> float:
         """Calculate estimated cost for token usage."""
-
         model_costs = self.model_pricing.get(
             self.config.generation_model,
             {"input": 0.002, "output": 0.002},  # Default fallback
@@ -397,7 +400,6 @@ class HypotheticalDocumentGenerator(BaseService):
 
     def _calculate_diversity_score(self, documents: list[str]) -> float:
         """Calculate diversity score between generated documents."""
-
         if len(documents) < 2:
             return 0.0
 
@@ -436,6 +438,7 @@ class HypotheticalDocumentGenerator(BaseService):
                 - total_tokens_used: Total estimated tokens used
                 - total_cost: Total estimated cost in USD
                 - avg_cost_per_generation: Average cost per generation
+
         """
         return {
             "generation_count": self.generation_count,

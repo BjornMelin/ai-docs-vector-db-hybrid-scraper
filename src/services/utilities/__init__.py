@@ -1,8 +1,8 @@
 """Utility services and helpers."""
 
 from src.config import SearchAccuracy, VectorType
+from src.models.vector_search import PrefetchConfig, SearchStage
 
-from ...models.vector_search import PrefetchConfig, SearchStage
 from .hnsw_optimizer import HNSWOptimizer
 from .rate_limiter import RateLimiter
 

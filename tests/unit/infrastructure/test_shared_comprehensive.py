@@ -42,8 +42,8 @@ class TestClientHealth:
         assert health.last_success_time is None
         assert health.last_failure_time is None
         assert health.consecutive_failures == 0
-        assert health.total_requests == 0
-        assert health.total_failures == 0
+        assert health._total_requests == 0
+        assert health._total_failures == 0
         assert isinstance(health.metadata, dict)
         assert len(health.metadata) == 0
 
@@ -53,15 +53,15 @@ class TestClientHealth:
         health = ClientHealth(
             state=ClientState.HEALTHY,
             consecutive_failures=5,
-            total_requests=100,
-            total_failures=10,
+            _total_requests=100,
+            _total_failures=10,
             metadata=metadata,
         )
 
         assert health.state == ClientState.HEALTHY
         assert health.consecutive_failures == 5
-        assert health.total_requests == 100
-        assert health.total_failures == 10
+        assert health._total_requests == 100
+        assert health._total_failures == 10
         assert health.metadata == metadata
 
     def test_client_health_with_timestamps(self):
@@ -142,7 +142,8 @@ class TestCircuitBreaker:
         """Test single failure doesn't open circuit."""
 
         async def failing_function():
-            raise APIError("Test error")
+            msg = "Test error"
+            raise APIError(msg)
 
         with pytest.raises(APIError):
             await circuit_breaker.call(failing_function)
@@ -158,7 +159,8 @@ class TestCircuitBreaker:
         """Test multiple failures open the circuit."""
 
         async def failing_function():
-            raise APIError("Test error")
+            msg = "Test error"
+            raise APIError(msg)
 
         # Fail multiple times to open circuit
         for _ in range(3):
@@ -175,7 +177,8 @@ class TestCircuitBreaker:
         """Test that open circuit raises without calling function."""
 
         async def failing_function():
-            raise APIError("Test error")
+            msg = "Test error"
+            raise APIError(msg)
 
         async def success_function():
             return "should not be called"
@@ -194,7 +197,8 @@ class TestCircuitBreaker:
         """Test circuit recovery after timeout."""
 
         async def failing_function():
-            raise APIError("Test error")
+            msg = "Test error"
+            raise APIError(msg)
 
         async def success_function():
             return "recovered"
@@ -221,7 +225,8 @@ class TestCircuitBreaker:
         """Test that failure in half-open state reopens circuit."""
 
         async def failing_function():
-            raise APIError("Test error")
+            msg = "Test error"
+            raise APIError(msg)
 
         # Open the circuit
         for _ in range(3):
@@ -254,7 +259,8 @@ class TestCircuitBreaker:
         """Test circuit breaker with synchronous failing function."""
 
         def sync_failing_function():
-            raise APIError("Sync error")
+            msg = "Sync error"
+            raise APIError(msg)
 
         with pytest.raises(APIError):
             await circuit_breaker.call(sync_failing_function)
@@ -262,7 +268,7 @@ class TestCircuitBreaker:
         assert circuit_breaker._failure_count == 1
 
     @pytest.mark.asyncio
-    async def test_circuit_breaker_function_with_args_kwargs(self, circuit_breaker):
+    async def test_circuit_breaker_function_with_args__kwargs(self, circuit_breaker):
         """Test circuit breaker with function arguments."""
 
         async def function_with_args(a, b, c=None):
@@ -315,7 +321,8 @@ class TestCircuitBreaker:
 
         # Test with non-APIError exception
         async def function_with_other_error():
-            raise ValueError("Not an API error")
+            msg = "Not an API error"
+            raise ValueError(msg)
 
         with pytest.raises(ValueError):
             await circuit_breaker.call(function_with_other_error)
@@ -330,7 +337,8 @@ class TestCircuitBreaker:
         cb_short = CircuitBreaker(failure_threshold=1, timeout_seconds=0.1)
 
         async def failing_function():
-            raise APIError("Test error")
+            msg = "Test error"
+            raise APIError(msg)
 
         # Fail once to open circuit
         with pytest.raises(APIError):
@@ -363,9 +371,9 @@ class TestCircuitBreakerIntegration:
             api_failure_count += 1
 
             if api_failure_count <= 3:
-                raise APIError(f"API failure #{api_failure_count}")
-            else:
-                return f"API success after {api_failure_count} calls"
+                msg = f"API failure #{api_failure_count}"
+                raise APIError(msg)
+            return f"API success after {api_failure_count} calls"
 
         cb = CircuitBreaker(failure_threshold=2, timeout_seconds=0.1)
 
@@ -397,7 +405,8 @@ class TestCircuitBreakerIntegration:
 
         async def sometimes_failing_function(should_fail=True):
             if should_fail:
-                raise APIError("Temporary failure")
+                msg = "Temporary failure"
+                raise APIError(msg)
             return "success"
 
         # Fail twice (under threshold)
@@ -420,13 +429,16 @@ class TestCircuitBreakerIntegration:
         cb = CircuitBreaker(failure_threshold=2)
 
         async def function_with_api_error():
-            raise APIError("API error")
+            msg = "API error"
+            raise APIError(msg)
 
         async def function_with_value_error():
-            raise ValueError("Value error")
+            msg = "Value error"
+            raise ValueError(msg)
 
         async def function_with_runtime_error():
-            raise RuntimeError("Runtime error")
+            msg = "Runtime error"
+            raise RuntimeError(msg)
 
         # All error types should increment failure count
         with pytest.raises(APIError):
@@ -464,10 +476,10 @@ class TestCircuitBreakerPerformance:
             assert result == "fast"
 
         end_time = time.perf_counter()
-        total_time = end_time - start_time
+        _total_time = end_time - start_time
 
         # Should complete 100 calls reasonably quickly
-        assert total_time < 1.0  # Less than 1 second for 100 calls
+        assert _total_time < 1.0  # Less than 1 second for 100 calls
         assert cb.state == ClientState.HEALTHY
 
     @pytest.mark.asyncio
@@ -561,7 +573,8 @@ class TestCircuitBreakerEdgeCases:
         cb = CircuitBreaker(failure_threshold=1000)
 
         async def failing_function():
-            raise APIError("Always fails")
+            msg = "Always fails"
+            raise APIError(msg)
 
         # Even many failures shouldn't open circuit
         for _ in range(50):

@@ -10,11 +10,13 @@ Philosophy: Use existing, proven security infrastructure rather than building ML
 """
 
 import importlib.util
+import json
 import logging
+import shutil
 import subprocess
 
 # Import SecurityValidator from the security.py file (not the package)
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -39,7 +41,7 @@ class SecurityCheckResult(BaseModel):
     passed: bool
     message: str
     severity: str = "info"  # info, warning, error, critical
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     details: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -78,6 +80,7 @@ class MLSecurityValidator:
 
         Returns:
             Security check result
+
         """
         # Check if ML input validation is enabled (use default if not configured)
         enable_validation = getattr(
@@ -160,6 +163,7 @@ class MLSecurityValidator:
 
         Returns:
             Security check result
+
         """
         # Check if dependency scanning is enabled (use default if not configured)
         enable_scanning = getattr(
@@ -176,8 +180,6 @@ class MLSecurityValidator:
 
         try:
             # Use pip-audit if available with full path for security
-            import shutil
-
             pip_audit_path = shutil.which("pip-audit")
             if not pip_audit_path:
                 # pip-audit not available
@@ -195,7 +197,7 @@ class MLSecurityValidator:
                     f"pip-audit found in unexpected location: {pip_audit_path}"
                 )
 
-            result = subprocess.run(  # noqa: S603  # Validated executable path
+            result = subprocess.run(  # Validated executable path
                 [pip_audit_path, "--format", "json"],
                 capture_output=True,
                 text=True,
@@ -205,8 +207,6 @@ class MLSecurityValidator:
             )
 
             if result.returncode == 0:
-                import json
-
                 audit_data = json.loads(result.stdout)
                 vulnerabilities = audit_data.get("vulnerabilities", [])
 
@@ -220,23 +220,21 @@ class MLSecurityValidator:
                     )
                     self.checks_performed.append(result)
                     return result
-                else:
-                    result = SecurityCheckResult(
-                        check_type="dependency_scan",
-                        passed=True,
-                        message="No vulnerabilities found",
-                    )
-                    self.checks_performed.append(result)
-                    return result
-            else:
-                # pip-audit not available or failed
                 result = SecurityCheckResult(
                     check_type="dependency_scan",
                     passed=True,
-                    message="Dependency scan skipped (pip-audit not available)",
+                    message="No vulnerabilities found",
                 )
                 self.checks_performed.append(result)
                 return result
+            # pip-audit not available or failed
+            result = SecurityCheckResult(
+                check_type="dependency_scan",
+                passed=True,
+                message="Dependency scan skipped (pip-audit not available)",
+            )
+            self.checks_performed.append(result)
+            return result
 
         except subprocess.TimeoutExpired:
             result = SecurityCheckResult(
@@ -266,11 +264,10 @@ class MLSecurityValidator:
 
         Returns:
             Security check result
+
         """
         try:
             # Try trivy first with full path for security
-            import shutil
-
             trivy_path = shutil.which("trivy")
             if not trivy_path:
                 result = SecurityCheckResult(
@@ -296,7 +293,7 @@ class MLSecurityValidator:
                 self.checks_performed.append(result)
                 return result
 
-            result = subprocess.run(  # noqa: S603  # Validated executable path
+            result = subprocess.run(  # Validated executable path
                 [
                     trivy_path,
                     "image",
@@ -315,8 +312,6 @@ class MLSecurityValidator:
             )
 
             if result.returncode == 0:
-                import json
-
                 scan_data = json.loads(result.stdout)
 
                 # Count vulnerabilities
@@ -335,22 +330,20 @@ class MLSecurityValidator:
                     )
                     self.checks_performed.append(result)
                     return result
-                else:
-                    result = SecurityCheckResult(
-                        check_type="container_scan",
-                        passed=True,
-                        message="No critical vulnerabilities found",
-                    )
-                    self.checks_performed.append(result)
-                    return result
-            else:
                 result = SecurityCheckResult(
                     check_type="container_scan",
                     passed=True,
-                    message="Container scan skipped (trivy not available)",
+                    message="No critical vulnerabilities found",
                 )
                 self.checks_performed.append(result)
                 return result
+            result = SecurityCheckResult(
+                check_type="container_scan",
+                passed=True,
+                message="Container scan skipped (trivy not available)",
+            )
+            self.checks_performed.append(result)
+            return result
 
         except Exception:
             logger.info("Container scan skipped")
@@ -371,6 +364,7 @@ class MLSecurityValidator:
 
         Returns:
             Validated collection name
+
         """
         return self.base_validator.validate_collection_name(name)
 
@@ -382,6 +376,7 @@ class MLSecurityValidator:
 
         Returns:
             Validated query string
+
         """
         return self.base_validator.validate_query_string(query)
 
@@ -393,6 +388,7 @@ class MLSecurityValidator:
 
         Returns:
             Sanitized filename
+
         """
         return self.base_validator.sanitize_filename(filename)
 
@@ -405,6 +401,7 @@ class MLSecurityValidator:
             event_type: Type of security event
             details: Event details
             severity: Event severity
+
         """
         # Use existing logging infrastructure
         if severity == "critical":
@@ -419,6 +416,7 @@ class MLSecurityValidator:
 
         Returns:
             Summary of security status
+
         """
         failed_checks = [c for c in self.checks_performed if not c.passed]
 
@@ -454,6 +452,7 @@ class SimpleRateLimiter:
 
         Returns:
             Whether request is allowed
+
         """
         # In production, use existing rate limiting infrastructure
         # This is just for local development

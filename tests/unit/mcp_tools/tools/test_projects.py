@@ -522,7 +522,7 @@ async def test_add_project_urls_success(mock_client_manager, mock_context):
 
     assert result["status"] == "urls_added"
     assert result["urls_added"] == len(new_urls)
-    assert result["total_urls"] == 3  # 1 existing + 2 new
+    assert result["_total_urls"] == 3  # 1 existing + 2 new
 
     # Verify processing
     assert crawling.crawl_url.call_count == len(new_urls)
@@ -575,7 +575,7 @@ async def test_add_project_urls_duplicate_handling(mock_client_manager, mock_con
 
     # Should only add the new URL
     assert result["urls_added"] == 1
-    assert result["total_urls"] == 2
+    assert result["_total_urls"] == 2
 
 
 @pytest.mark.asyncio

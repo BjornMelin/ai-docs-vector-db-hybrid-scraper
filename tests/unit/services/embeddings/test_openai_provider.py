@@ -240,9 +240,9 @@ class TestOpenAIProviderEmbeddingGeneration:
         """Test embedding generation with large batch requiring multiple API calls."""
 
         # Mock responses for each batch - need to return the correct number of embeddings
-        def mock_create_embeddings(*_args, **kwargs):
+        def mock_create_embeddings(*_args, **_kwargs):
             # Get the input text count from the request
-            input_texts = kwargs.get("input", [])
+            input_texts = _kwargs.get("input", [])
             batch_size = len(input_texts)
 
             embedding_response = MagicMock()

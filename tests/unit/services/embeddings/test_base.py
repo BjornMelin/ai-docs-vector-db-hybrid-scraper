@@ -16,9 +16,9 @@ from src.services.errors import EmbeddingServiceError
 class ConcreteEmbeddingProvider(EmbeddingProvider):
     """Concrete implementation of EmbeddingProvider for testing."""
 
-    def __init__(self, model_name: str = "test-model", **kwargs):
+    def __init__(self, model_name: str = "test-model", **_kwargs):
         """Initialize concrete provider."""
-        super().__init__(model_name, **kwargs)
+        super().__init__(model_name, **_kwargs)
         self.init_called = False
         self.cleanup_called = False
         self.init_error = None
@@ -118,8 +118,8 @@ class TestConcreteEmbeddingProvider:
         assert provider.model_name == "test-model"
         assert provider.dimensions == 3
 
-    def test_concrete_provider_with_kwargs(self):
-        """Test concrete provider initialization with additional kwargs."""
+    def test_concrete_provider_with__kwargs(self):
+        """Test concrete provider initialization with additional _kwargs."""
         provider = ConcreteEmbeddingProvider(
             "custom-model", custom_param="test_value", another_param=42
         )
@@ -392,8 +392,8 @@ class TestProviderIntegration:
         assert isinstance(max_tokens, int)
 
         # Relationship check (cost should be reasonable for token limit)
-        total_cost_for_max = cost * max_tokens
-        assert total_cost_for_max > 0
+        _total_cost_for_max = cost * max_tokens
+        assert _total_cost_for_max > 0
 
     @pytest.mark.asyncio
     async def test_provider_error_recovery(self):

@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.services.monitoring.health import (
-from src.services.monitoring.health import HTTPHealthCheck
     HealthCheckConfig,
     HealthCheckManager,
     HealthCheckResult,

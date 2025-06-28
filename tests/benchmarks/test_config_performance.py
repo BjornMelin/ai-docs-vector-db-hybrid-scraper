@@ -17,7 +17,7 @@ import json
 import tempfile
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 from pydantic import BaseModel, Field
@@ -46,9 +46,9 @@ class CachedConfigModel(BaseModel):
 
     @classmethod
     @lru_cache(maxsize=256)
-    def create_cached(cls, **kwargs) -> "CachedConfigModel":
+    def create_cached(cls, **_kwargs) -> "CachedConfigModel":
         """Create config with LRU caching for repeated identical configurations."""
-        return cls(**kwargs)
+        return cls(**_kwargs)
 
 
 class OptimizedConfig(BaseSettings):
@@ -198,10 +198,10 @@ class TestConfigurationPerformance:
             }
 
             app_name: str = "large-app"
-            services: Dict[str, Any] = Field(default_factory=dict)
-            feature_flags: Dict[str, bool] = Field(default_factory=dict)
-            rate_limits: Dict[str, Any] = Field(default_factory=dict)
-            cache_configs: Dict[str, Any] = Field(default_factory=dict)
+            services: dict[str, Any] = Field(default_factory=dict)
+            feature_flags: dict[str, bool] = Field(default_factory=dict)
+            rate_limits: dict[str, Any] = Field(default_factory=dict)
+            cache_configs: dict[str, Any] = Field(default_factory=dict)
 
         def create_large_config():
             return LargeConfigModel(**large_config_data)
@@ -372,7 +372,9 @@ class TestMemoryOptimization:
         result = benchmark(create_frozen_configs)
         assert len(result) == 50
         # Verify configs are actually frozen
-        with pytest.raises(Exception):  # Should raise validation error on frozen model
+        with pytest.raises(
+            ValueError, match="cannot assign"
+        ):  # Should raise validation error on frozen model
             result[0].app_name = "modified"
 
 
@@ -541,14 +543,13 @@ class TestRealWorldScenarios:
                 # Simulate different services accessing config
                 if service_name == "embedding":
                     return config.openai.model, config.fastembed.model
-                elif service_name == "crawling":
+                if service_name == "crawling":
                     return config.firecrawl.api_url, config.crawl4ai.browser_type
-                elif service_name == "database":
+                if service_name == "database":
                     return config.qdrant.url, config.database.database_url
-                elif service_name == "cache":
+                if service_name == "cache":
                     return config.cache.enable_caching, config.cache.ttl_seconds
-                else:
-                    return config.app_name, config.environment
+                return config.app_name, config.environment
 
             # Simulate 5 services accessing config concurrently
             services = ["embedding", "crawling", "database", "cache", "monitoring"]

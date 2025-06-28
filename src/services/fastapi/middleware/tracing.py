@@ -14,6 +14,15 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 
+try:
+    from opentelemetry import trace
+    from opentelemetry.trace import Status, StatusCode
+except ImportError:
+    trace = None
+    Status = None
+    StatusCode = None
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -25,6 +34,7 @@ def get_correlation_id(request: Request) -> str:
 
     Returns:
         Correlation ID string
+
     """
     # Check for existing correlation ID in headers
     correlation_id = request.headers.get("x-correlation-id")
@@ -74,6 +84,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
             log_request_body: Log request body content
             log_response_body: Log response body content
             max_body_size: Maximum body size to log (bytes)
+
         """
         super().__init__(app)
         self.enable_request_logging = enable_request_logging
@@ -140,6 +151,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
         Args:
             request: HTTP request
             correlation_id: Request correlation ID
+
         """
         log_data = {
             "correlation_id": correlation_id,
@@ -177,6 +189,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
             response: HTTP response
             correlation_id: Request correlation ID
             duration: Request processing duration
+
         """
         log_data = {
             "correlation_id": correlation_id,
@@ -213,6 +226,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Request body as string or None
+
         """
         try:
             # Read body
@@ -247,6 +261,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Response body as string or None
+
         """
         try:
             if not hasattr(response, "body"):
@@ -283,6 +298,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Client IP address
+
         """
         # Check X-Forwarded-For header first
         forwarded_for = request.headers.get("x-forwarded-for")
@@ -314,14 +330,16 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
         Args:
             app: ASGI application
             service_name: Name of the service for tracing
+
         """
         super().__init__(app)
         self.service_name = service_name
 
         # Try to import OpenTelemetry
         try:
-            from opentelemetry import trace
-            from opentelemetry.trace import Status, StatusCode
+            if trace is None:
+                msg = "opentelemetry not available"
+                raise ImportError(msg)
 
             self.tracer = trace.get_tracer(__name__)
             self.Status = Status

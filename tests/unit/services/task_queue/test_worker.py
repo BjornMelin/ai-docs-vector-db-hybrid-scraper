@@ -64,8 +64,8 @@ class TestWorkerSettings:
         """Test Redis settings with authentication."""
         mock_config = Mock()
         mock_config.task_queue = Mock()
-        mock_config.task_queue.redis_url = "redis://user:pass@localhost:6380"
-        mock_config.task_queue.redis_password = "override_pass"
+        mock_config.task_queue.redis_url = "redis://user:testpass@localhost:6380"
+        mock_config.task_queue.redis_password = "test_override_pass"
         mock_config.task_queue.redis_database = 2
 
         with patch(
@@ -75,7 +75,7 @@ class TestWorkerSettings:
 
         assert settings.host == "localhost"
         assert settings.port == 6380
-        assert settings.password == "override_pass"
+        assert settings.password == "test_override_pass"
         assert settings.database == 2
 
     def test_get_redis_settings_url_parsing(self):

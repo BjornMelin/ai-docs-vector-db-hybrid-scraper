@@ -6,8 +6,7 @@ import time
 from typing import TypeVar
 
 from src.config import Config
-
-from ..errors import APIError
+from src.services.errors import APIError
 
 
 logger = logging.getLogger(__name__)
@@ -26,6 +25,7 @@ class RateLimiter:
         max_calls: Maximum number of calls allowed
         time_window: Time window in seconds
         burst_multiplier: Multiplier for burst capacity
+
     """
 
     def __init__(
@@ -40,6 +40,7 @@ class RateLimiter:
             max_calls: Maximum calls allowed in time window
             time_window: Time window in seconds (default: 60)
             burst_multiplier: Burst capacity multiplier (default: 1.5)
+
         """
         self.max_calls = max_calls
         self.time_window = time_window
@@ -62,11 +63,11 @@ class RateLimiter:
 
         Raises:
             APIError: If requested tokens exceed bucket capacity
+
         """
         if tokens > self.max_tokens:
-            raise APIError(
-                f"Requested {tokens} tokens exceeds bucket capacity {self.max_tokens}"
-            )
+            msg = f"Requested {tokens} tokens exceeds bucket capacity {self.max_tokens}"
+            raise APIError(msg)
 
         async with self._lock:
             # Refill tokens based on elapsed time
@@ -105,6 +106,7 @@ class RateLimitManager:
 
         Args:
             config: Config instance with rate limiting configuration.
+
         """
         self.limiters: dict[str, RateLimiter] = {}
         self.default_limits = config.performance.default_rate_limits.copy()
@@ -118,16 +120,18 @@ class RateLimitManager:
 
         Returns:
             RateLimiter instance
+
         """
         key = f"{provider}:{endpoint}" if endpoint else provider
 
         if key not in self.limiters:
             # Get limits for provider or raise error if not configured
             if provider not in self.default_limits:
-                raise ValueError(
+                msg = (
                     f"No rate limits configured for provider '{provider}'. "
                     f"Available providers: {list(self.default_limits.keys())}"
                 )
+                raise ValueError(msg)
 
             limits = self.default_limits[provider]
 
@@ -155,6 +159,7 @@ class RateLimitManager:
             provider: Provider name
             endpoint: Optional endpoint name
             tokens: Number of tokens to acquire
+
         """
         limiter = self.get_limiter(provider, endpoint)
         await limiter.acquire(tokens)
@@ -190,6 +195,7 @@ class AdaptiveRateLimiter(RateLimiter):
             time_window: Time window in seconds
             min_rate: Minimum rate multiplier (default: 0.1)
             max_rate: Maximum rate multiplier (default: 2.0)
+
         """
         super().__init__(initial_max_calls, time_window)
         self.initial_max_calls = initial_max_calls
@@ -207,6 +213,7 @@ class AdaptiveRateLimiter(RateLimiter):
         Args:
             status_code: HTTP status code
             headers: Response headers containing rate limit info
+
         """
         async with self._lock:
             if status_code == 429:  # Rate limited

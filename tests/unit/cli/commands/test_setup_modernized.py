@@ -489,7 +489,9 @@ class TestSetupCommandModernized:
         """Test setup command with pre-selected profile."""
         with patch("src.cli.commands.setup.ConfigurationWizard") as mock_wizard_class:
             mock_wizard = MagicMock()
-            mock_wizard.run_setup.return_value = Path("/tmp/config.json")  # noqa: S108 # test temp path
+            mock_wizard.run_setup.return_value = Path(
+                "/tmp/config.json"
+            )  # test temp path
             mock_wizard_class.return_value = mock_wizard
 
             # Mock profile manager
@@ -528,7 +530,9 @@ class TestSetupCommandModernized:
         """Test setup command with configuration validation."""
         with patch("src.cli.commands.setup.ConfigurationWizard") as mock_wizard_class:
             mock_wizard = MagicMock()
-            mock_wizard.run_setup.return_value = Path("/tmp/config.json")  # noqa: S108 # test temp path
+            mock_wizard.run_setup.return_value = Path(
+                "/tmp/config.json"
+            )  # test temp path
             mock_wizard_class.return_value = mock_wizard
 
             with patch("src.cli.commands.config.validate_config"):
@@ -546,7 +550,9 @@ class TestSetupCommandModernized:
         """Test setup command validation fallback when config command unavailable."""
         with patch("src.cli.commands.setup.ConfigurationWizard") as mock_wizard_class:
             mock_wizard = MagicMock()
-            mock_wizard.run_setup.return_value = Path("/tmp/config.json")  # noqa: S108 # test temp path
+            mock_wizard.run_setup.return_value = Path(
+                "/tmp/config.json"
+            )  # test temp path
             mock_wizard_class.return_value = mock_wizard
 
             # Mock file content

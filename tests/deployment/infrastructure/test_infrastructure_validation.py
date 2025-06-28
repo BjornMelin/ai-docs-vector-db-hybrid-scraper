@@ -774,7 +774,7 @@ class ContainerProvisioner:
         return {
             "success": True,
             "provisioned_containers": provisioned_containers,
-            "total_containers": len(provisioned_containers),
+            "_total_containers": len(provisioned_containers),
         }
 
 
@@ -803,7 +803,7 @@ class StorageProvisioner:
         return {
             "success": True,
             "provisioned_volumes": provisioned_volumes,
-            "total_storage_gb": sum(v["size_gb"] for v in provisioned_volumes),
+            "_total_storage_gb": sum(v["size_gb"] for v in provisioned_volumes),
         }
 
 

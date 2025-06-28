@@ -53,7 +53,7 @@ async def deploy_with_timeout_monitoring(deployment_config: dict) -> bool:
             if elapsed > timeout_config.timeout_seconds:
                 print(f"ERROR: Deployment timeout exceeded ({elapsed:.1f}s)")
                 break
-            elif timeout_config.should_alert_critical(elapsed):
+            if timeout_config.should_alert_critical(elapsed):
                 print(f"CRITICAL: Deployment approaching timeout ({elapsed:.1f}s)")
             elif timeout_config.should_warn(elapsed):
                 print(
@@ -85,9 +85,8 @@ async def operation_timeout(operation_name: str):
 
     async def timeout_handler():
         await asyncio.sleep(timeout_config.timeout_seconds)
-        raise TimeoutError(
-            f"Operation '{operation_name}' timed out after {timeout_config.timeout_seconds}s"
-        )
+        msg = f"Operation '{operation_name}' timed out after {timeout_config.timeout_seconds}s"
+        raise TimeoutError(msg)
 
     timeout_task = asyncio.create_task(timeout_handler())
 

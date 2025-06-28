@@ -10,7 +10,8 @@ from typing import Annotated, Any
 
 from fastapi import Depends, HTTPException
 
-from ..embeddings.manager import QualityTier, TextAnalysis
+from src.services.embeddings.manager import QualityTier, TextAnalysis
+
 from .circuit_breaker import CircuitBreakerConfig, circuit_breaker
 from .dependencies import get_embedding_client
 
@@ -49,6 +50,7 @@ async def generate_embeddings(
 
     Raises:
         HTTPException: If embedding generation fails
+
     """
     if not embedding_client:
         raise HTTPException(status_code=500, detail="Embedding client not available")
@@ -98,6 +100,7 @@ async def rerank_results(
 
     Raises:
         HTTPException: If reranking fails
+
     """
     try:
         if not embedding_client:
@@ -132,6 +135,7 @@ async def analyze_text_characteristics(
 
     Raises:
         HTTPException: If analysis fails
+
     """
     if not embedding_client:
         raise HTTPException(status_code=500, detail="Embedding client not available")
@@ -173,6 +177,7 @@ async def estimate_embedding_cost(
 
     Raises:
         HTTPException: If cost estimation fails
+
     """
     if not embedding_client:
         raise HTTPException(status_code=500, detail="Embedding client not available")
@@ -205,6 +210,7 @@ async def get_provider_info(
 
     Raises:
         HTTPException: If provider info retrieval fails
+
     """
     try:
         if not embedding_client:
@@ -245,6 +251,7 @@ async def get_smart_recommendation(
 
     Raises:
         HTTPException: If recommendation fails
+
     """
     if not embedding_client:
         raise HTTPException(status_code=500, detail="Embedding client not available")
@@ -290,6 +297,7 @@ async def get_usage_report(
 
     Raises:
         HTTPException: If usage report retrieval fails
+
     """
     try:
         if not embedding_client:
@@ -335,6 +343,7 @@ async def batch_generate_embeddings(
 
     Raises:
         HTTPException: If batch processing fails
+
     """
     try:
         semaphore = asyncio.Semaphore(max_parallel)

@@ -9,9 +9,8 @@ from typing import Any
 from arq import func
 
 from src.config import get_config
-
-from ...infrastructure.client_manager import ClientManager
-from ..core.qdrant_alias_manager import QdrantAliasManager
+from src.infrastructure.client_manager import ClientManager
+from src.services.core.qdrant_alias_manager import QdrantAliasManager
 
 
 logger = logging.getLogger(__name__)
@@ -33,6 +32,7 @@ async def delete_collection(
 
     Returns:
         Task result with status
+
     """
     start_time = time.time()
     logger.info(
@@ -118,6 +118,7 @@ async def persist_cache(
 
     Returns:
         Task result with status
+
     """
     start_time = time.time()
     logger.info(f"Starting delayed persistence for {key} (delay: {delay}s)")
@@ -164,13 +165,14 @@ async def config_drift_snapshot(_ctx: dict[str, Any]) -> dict[str, Any]:
 
     Returns:
         Task result with snapshot status
+
     """
     start_time = time.time()
     logger.info("Starting configuration drift snapshot task")
 
     try:
         # Import here to avoid circular imports
-        from ..config_drift_service import get_drift_service
+        from src.services.config_drift_service import get_drift_service
 
         service = get_drift_service()
         result = await service.take_configuration_snapshot()
@@ -207,13 +209,14 @@ async def config_drift_comparison(_ctx: dict[str, Any]) -> dict[str, Any]:
 
     Returns:
         Task result with comparison status
+
     """
     start_time = time.time()
     logger.info("Starting configuration drift comparison task")
 
     try:
         # Import here to avoid circular imports
-        from ..config_drift_service import get_drift_service
+        from src.services.config_drift_service import get_drift_service
 
         service = get_drift_service()
         result = await service.compare_configurations()
@@ -248,7 +251,7 @@ async def config_drift_remediation(
     event_id: str,
     source: str,
     drift_type: str,
-    suggestion: str,
+    _suggestion: str,
 ) -> dict[str, Any]:
     """Execute configuration drift auto-remediation.
 
@@ -261,6 +264,7 @@ async def config_drift_remediation(
 
     Returns:
         Task result with remediation status
+
     """
     start_time = time.time()
     logger.info(f"Starting configuration drift remediation for event {event_id}")

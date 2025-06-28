@@ -69,7 +69,7 @@ class TestAutomationRouterInit:
             assert "success" in router.metrics[tool]
             assert "failed" in router.metrics[tool]
             assert "avg_time" in router.metrics[tool]
-            assert "total_time" in router.metrics[tool]
+            assert "_total_time" in router.metrics[tool]
             assert router.metrics[tool]["success"] == 0
             assert router.metrics[tool]["failed"] == 0
 
@@ -618,7 +618,7 @@ class TestMetrics:
         metrics = router.metrics["crawl4ai"]
         assert metrics["success"] == 1
         assert metrics["failed"] == 0
-        assert metrics["total_time"] == 1.5
+        assert metrics["_total_time"] == 1.5
         assert metrics["avg_time"] == 1.5
 
     def test_update_metrics_failure(self, router):
@@ -628,7 +628,7 @@ class TestMetrics:
         metrics = router.metrics["crawl4ai"]
         assert metrics["success"] == 0
         assert metrics["failed"] == 1
-        assert metrics["total_time"] == 2.0
+        assert metrics["_total_time"] == 2.0
         assert metrics["avg_time"] == 2.0
 
     def test_update_metrics_multiple(self, router):
@@ -640,7 +640,7 @@ class TestMetrics:
         metrics = router.metrics["crawl4ai"]
         assert metrics["success"] == 2
         assert metrics["failed"] == 1
-        assert metrics["total_time"] == 6.0
+        assert metrics["_total_time"] == 6.0
         assert metrics["avg_time"] == 2.0
 
     def test_get_metrics(self, router):
@@ -655,7 +655,7 @@ class TestMetrics:
         assert crawl4ai_metrics["success"] == 1
         assert crawl4ai_metrics["failed"] == 1
         assert crawl4ai_metrics["success_rate"] == 0.5
-        assert crawl4ai_metrics["total_attempts"] == 2
+        assert crawl4ai_metrics["_total_attempts"] == 2
         assert crawl4ai_metrics["available"] is False  # No adapters in this test
 
     async def test_get_recommended_tool(self, router):

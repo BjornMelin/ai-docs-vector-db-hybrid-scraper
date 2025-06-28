@@ -132,7 +132,8 @@ class ConfigManager:
             KeyError: If environment not found
         """
         if name not in self.environments:
-            raise KeyError(f"Test environment '{name}' not found")
+            msg = f"Test environment '{name}' not found"
+            raise KeyError(msg)
         return self.environments[name]
 
     def set_current_environment(self, name: str):
@@ -174,7 +175,8 @@ class ConfigManager:
             environment_name: Name for the environment
         """
         if not file_path.exists():
-            raise FileNotFoundError(f"Configuration file not found: {file_path}")
+            msg = f"Configuration file not found: {file_path}"
+            raise FileNotFoundError(msg)
 
         if file_path.suffix.lower() == ".yaml" or file_path.suffix.lower() == ".yml":
             with Path(file_path).open() as f:
@@ -183,9 +185,8 @@ class ConfigManager:
             with Path(file_path).open() as f:
                 config_data = json.load(f)
         else:
-            raise ValueError(
-                f"Unsupported configuration file format: {file_path.suffix}"
-            )
+            msg = f"Unsupported configuration file format: {file_path.suffix}"
+            raise ValueError(msg)
 
         # Create environment from config data
         env = EnvironmentConfig(**config_data)
@@ -213,7 +214,8 @@ class ConfigManager:
             with Path(file_path).open("w") as f:
                 json.dump(config_data, f, indent=2)
         else:
-            raise ValueError(f"Unsupported format: {format}")
+            msg = f"Unsupported format: {format}"
+            raise ValueError(msg)
 
     def cleanup_temp_directories(self):
         """Clean up all temporary directories created during testing."""
@@ -231,11 +233,11 @@ class ConfigManager:
         return self.environments.copy()
 
     @contextmanager
-    def temporary_environment(self, **kwargs):
+    def temporary_environment(self, **_kwargs):
         """Create a temporary test environment.
 
         Args:
-            **kwargs: Environment configuration parameters
+            **_kwargs: Environment configuration parameters
         """
         # Create temporary environment
         temp_name = f"temp_{len(self.environments)}"
@@ -247,7 +249,7 @@ class ConfigManager:
             "cache_url": "memory://localhost",
             "temp_dir": self._create_temp_dir(temp_name),
         }
-        defaults.update(kwargs)
+        defaults.update(_kwargs)
 
         temp_env = EnvironmentConfig(**defaults)
         self.environments[temp_name] = temp_env
@@ -381,7 +383,7 @@ def cleanup_test_data(environment_name: str = "unit") -> dict[str, Any]:
             cleanup_results["cache_cleared"] = True
             cleanup_results["cache_keys_removed"] = 0  # Mock count
 
-    except Exception as e:
+    except (ValueError, RuntimeError, OSError) as e:
         cleanup_results["errors"].append(str(e))
 
     return cleanup_results
@@ -459,7 +461,7 @@ def create_test_file(
     return file_path
 
 
-def setup_mock_services(environment_name: str = "unit") -> dict[str, Any]:
+def setup__mock_services(environment_name: str = "unit") -> dict[str, Any]:
     """Setup mock services for testing.
 
     Args:
@@ -470,7 +472,7 @@ def setup_mock_services(environment_name: str = "unit") -> dict[str, Any]:
     """
     env = get_test_environment(environment_name)
 
-    mock_services = {
+    _mock_services = {
         "vector_db": {
             "url": env.vector_db_url,
             "collections": ["test_collection"],
@@ -497,7 +499,7 @@ def setup_mock_services(environment_name: str = "unit") -> dict[str, Any]:
         },
     }
 
-    return mock_services
+    return _mock_services
 
 
 def validate_test_environment(environment_name: str) -> dict[str, Any]:

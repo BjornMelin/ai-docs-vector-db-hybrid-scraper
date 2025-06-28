@@ -24,13 +24,14 @@ from uuid import uuid4
 
 from pydantic import ValidationError
 
-from ..services.observability.config_instrumentation import (
+from src.services.observability.config_instrumentation import (
     ConfigOperationType,
     instrument_config_operation,
     record_config_change,
     trace_async_config_operation,
 )
-from ..services.observability.config_performance import record_config_operation
+from src.services.observability.config_performance import record_config_operation
+
 from .core import Config
 
 
@@ -138,6 +139,7 @@ class ConfigReloader:
             validation_timeout: Timeout for configuration validation
             enable_signal_handler: Whether to enable signal-based reloading
             signal_number: Signal number for triggering reload
+
         """
         self.config_source = config_source or Path(".env")
         self.backup_count = backup_count
@@ -243,6 +245,7 @@ class ConfigReloader:
             priority: Priority for callback execution (higher = earlier)
             async_callback: Whether the callback is async
             timeout_seconds: Timeout for callback execution
+
         """
         listener = ConfigChangeListener(
             name=name,
@@ -289,6 +292,7 @@ class ConfigReloader:
 
         Returns:
             ReloadOperation with results and metrics
+
         """
         operation = ReloadOperation(trigger=trigger)
         operation.config_source = str(config_source or self.config_source)
@@ -427,13 +431,11 @@ class ConfigReloader:
             if config_source.suffix.lower() in [".json", ".yaml", ".yml", ".toml"]:
                 # Load from structured config file
                 return Config.load_from_file(config_source)
-            else:
-                # Load with environment variables (typical .env file)
-                return Config()
+            # Load with environment variables (typical .env file)
+            return Config()
         except Exception as e:
-            raise ValueError(
-                f"Failed to load configuration from {config_source}: {e}"
-            ) from e
+            msg = f"Failed to load configuration from {config_source}: {e}"
+            raise ValueError(msg) from e
 
     async def _validate_config(self, config: Config) -> dict[str, list[str]]:
         """Validate new configuration."""
@@ -548,6 +550,7 @@ class ConfigReloader:
 
         Returns:
             ReloadOperation with rollback results
+
         """
         operation = ReloadOperation(trigger=ReloadTrigger.MANUAL)
         operation.status = ReloadStatus.IN_PROGRESS

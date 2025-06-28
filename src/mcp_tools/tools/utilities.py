@@ -3,7 +3,7 @@
 import logging
 from typing import TYPE_CHECKING
 
-from ..models.responses import ConfigValidationResponse, GenericDictResponse
+from src.mcp_tools.models.responses import ConfigValidationResponse, GenericDictResponse
 
 
 if TYPE_CHECKING:
@@ -19,7 +19,7 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from ...infrastructure.client_manager import ClientManager
+from src.infrastructure.client_manager import ClientManager
 
 
 logger = logging.getLogger(__name__)
@@ -35,8 +35,7 @@ def register_tools(mcp, client_manager: ClientManager):
         include_storage: bool = True,
         ctx: Context = None,
     ) -> GenericDictResponse:
-        """
-        Estimate costs for processing documents.
+        """Estimate costs for processing documents.
 
         Calculates embedding generation and storage costs based on
         current pricing models.
@@ -96,8 +95,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def validate_configuration(ctx: Context = None) -> ConfigValidationResponse:
-        """
-        Validate system configuration and API keys.
+        """Validate system configuration and API keys.
 
         Checks all required configuration and returns validation results.
         """

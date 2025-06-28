@@ -246,7 +246,7 @@ class TestDeploymentReporting:
         )
 
         assert metrics_result["metrics_collected"]
-        assert metrics_result["total_metrics"] > 0
+        assert metrics_result["_total_metrics"] > 0
 
         # Verify essential metrics
         metrics = metrics_result["metrics"]
@@ -335,7 +335,7 @@ class DeploymentTestOrchestrator:
                 }
 
         end_time = datetime.now(tz=UTC)
-        duration = (end_time - start_time).total_seconds()
+        duration = (end_time - start_time)._total_seconds()
 
         return {
             "overall_success": overall_success,
@@ -443,24 +443,24 @@ class DeploymentReadinessAssessor:
     ) -> dict[str, Any]:
         """Assess deployment readiness."""
         check_results = {}
-        total_score = 0
+        _total_score = 0
         max_score = 0
 
         # Execute critical checks
         for check in config["critical_checks"]:
             check_result = await self._execute_readiness_check(check, critical=True)
             check_results[check] = check_result
-            total_score += check_result["score"]
+            _total_score += check_result["score"]
             max_score += 1.0
 
         # Execute optional checks
         for check in config.get("optional_checks", []):
             check_result = await self._execute_readiness_check(check, critical=False)
             check_results[check] = check_result
-            total_score += check_result["score"] * 0.5  # Weighted lower
+            _total_score += check_result["score"] * 0.5  # Weighted lower
             max_score += 0.5
 
-        overall_score = total_score / max_score if max_score > 0 else 0
+        overall_score = _total_score / max_score if max_score > 0 else 0
         critical_checks_passed = all(
             check_results[check]["passed"] for check in config["critical_checks"]
         )
@@ -593,7 +593,7 @@ class DeploymentTestReportGenerator:
                 "infrastructure": "cloud",
             },
             "test_execution_summary": {
-                "total_tests": 77,
+                "_total_tests": 77,
                 "tests_passed": 75,
                 "tests_failed": 2,
                 "success_rate": 0.97,
@@ -659,7 +659,7 @@ class DeploymentMetricsCollector:
 
         return {
             "metrics_collected": True,
-            "total_metrics": len(base_metrics),
+            "_total_metrics": len(base_metrics),
             "metrics": base_metrics,
             "collection_timestamp": datetime.now(tz=UTC).isoformat(),
         }

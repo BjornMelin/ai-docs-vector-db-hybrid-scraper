@@ -152,7 +152,8 @@ class SimilarityThresholdCriteria(BaseModel):
             and info.data.get("min_threshold")
             and v <= info.data["min_threshold"]
         ):
-            raise ValueError("max_threshold must be > min_threshold")
+            msg = "max_threshold must be > min_threshold"
+            raise ValueError(msg)
         return v
 
 
@@ -175,6 +176,7 @@ class SimilarityThresholdManager(BaseFilter):
             enabled: Whether filter is enabled
             priority: Filter priority (higher = earlier execution)
             max_cache_size: Maximum number of items in clustering cache
+
         """
         super().__init__(name, description, enabled, priority)
 
@@ -207,6 +209,7 @@ class SimilarityThresholdManager(BaseFilter):
 
         Raises:
             FilterError: If threshold management fails
+
         """
         try:
             # Validate and parse criteria
@@ -288,28 +291,27 @@ class SimilarityThresholdManager(BaseFilter):
         if criteria.strategy == ThresholdStrategy.STATIC:
             return criteria.base_threshold
 
-        elif criteria.strategy == ThresholdStrategy.ADAPTIVE:
+        if criteria.strategy == ThresholdStrategy.ADAPTIVE:
             return await self._adaptive_threshold(criteria, query_info, historical_data)
 
-        elif criteria.strategy == ThresholdStrategy.CLUSTER_BASED:
+        if criteria.strategy == ThresholdStrategy.CLUSTER_BASED:
             return await self._cluster_based_threshold(
                 criteria, query_info, historical_data
             )
 
-        elif criteria.strategy == ThresholdStrategy.PERFORMANCE_BASED:
+        if criteria.strategy == ThresholdStrategy.PERFORMANCE_BASED:
             return await self._performance_based_threshold(criteria, historical_data)
 
-        elif criteria.strategy == ThresholdStrategy.CONTEXT_AWARE:
+        if criteria.strategy == ThresholdStrategy.CONTEXT_AWARE:
             return await self._context_aware_threshold(criteria, query_info)
 
-        elif criteria.strategy == ThresholdStrategy.ML_OPTIMIZED:
+        if criteria.strategy == ThresholdStrategy.ML_OPTIMIZED:
             return await self._ml_optimized_threshold(
                 criteria, query_info, historical_data
             )
 
-        else:
-            self._logger.warning("Unknown strategy")
-            return criteria.base_threshold
+        self._logger.warning("Unknown strategy")
+        return criteria.base_threshold
 
     async def _adaptive_threshold(
         self,
@@ -788,6 +790,7 @@ class SimilarityThresholdManager(BaseFilter):
 
         Returns:
             Dictionary with cache statistics
+
         """
         return {
             "enabled": True,

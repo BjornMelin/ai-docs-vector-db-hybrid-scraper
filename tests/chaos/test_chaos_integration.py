@@ -21,8 +21,6 @@ logger = logging.getLogger(__name__)
 class TestError(Exception):
     """Custom exception for this module."""
 
-    pass
-
 
 @pytest.mark.chaos
 @pytest.mark.integration
@@ -71,10 +69,10 @@ class TestChaosIntegration:
 
                 # Resource usage
                 self.resources = {
-                    "memory": {"used": 40, "total": 100},  # 40% used
-                    "cpu": {"used": 30, "total": 100},  # 30% used
-                    "disk": {"used": 50, "total": 100},  # 50% used
-                    "connections": {"used": 20, "total": 1000},  # 20 connections used
+                    "memory": {"used": 40, "_total": 100},  # 40% used
+                    "cpu": {"used": 30, "_total": 100},  # 30% used
+                    "disk": {"used": 50, "_total": 100},  # 50% used
+                    "connections": {"used": 20, "_total": 1000},  # 20 connections used
                 }
 
                 # Data stores
@@ -116,7 +114,7 @@ class TestChaosIntegration:
                         )
                     elif failure_type == FailureType.MEMORY_EXHAUSTION:
                         self.resources["memory"]["used"] = min(
-                            95, self.resources["memory"]["total"]
+                            95, self.resources["memory"]["_total"]
                         )
                         self.services[target_service]["status"] = "degraded"
 
@@ -154,10 +152,10 @@ class TestChaosIntegration:
                 healthy_services = len(
                     [s for s in self.services.values() if s["status"] == "healthy"]
                 )
-                total_services = len(self.services)
+                _total_services = len(self.services)
 
                 # Update availability
-                self.metrics["availability"] = healthy_services / total_services
+                self.metrics["availability"] = healthy_services / _total_services
 
                 # Update error rate
                 failed_services = len(
@@ -177,7 +175,7 @@ class TestChaosIntegration:
                 # Update latency
                 avg_response_time = (
                     sum([s["response_time"] for s in self.services.values()])
-                    / total_services
+                    / _total_services
                 )
                 self.metrics["latency_p95"] = (
                     avg_response_time * 5
@@ -227,9 +225,8 @@ class TestChaosIntegration:
                 ]
 
                 if failed_services:
-                    raise TestError(
-                        f"Health check failed - services down: {failed_services}"
-                    )
+                    msg = f"Health check failed - services down: {failed_services}"
+                    raise TestError(msg)
 
                 return {
                     "status": "healthy",
@@ -349,7 +346,7 @@ class TestChaosIntegration:
         assert final_health["status"] == "healthy"
 
     async def test_real_world_failure_simulation(
-        self, integrated_system, _fault_injector, resilience_validator
+        self, integrated_system, _fault_injector, _resilience_validator
     ):
         """Test realistic failure simulation combining multiple chaos types."""
         # Capture baseline metrics
@@ -429,7 +426,8 @@ class TestChaosIntegration:
 
             # Simulate vector_db failure
             if "vector_db" in integrated_system.active_failures:
-                raise TestError("Vector DB unavailable")
+                msg = "Vector DB unavailable"
+                raise TestError(msg)
 
             return {"status": "success", "data": "vector_search_results"}
 
@@ -470,7 +468,8 @@ class TestChaosIntegration:
             # Simulate search service issues
             if "search_service" in integrated_system.active_failures:
                 if call_count <= 3:  # Fail first 3 attempts
-                    raise TestError("Search service temporarily unavailable")
+                    msg = "Search service temporarily unavailable"
+                    raise TestError(msg)
 
             return {"results": ["doc1", "doc2", "doc3"]}
 
@@ -508,7 +507,8 @@ class TestChaosIntegration:
         # Verify system is degraded
         try:
             await integrated_system.health_check()
-            raise AssertionError("Health check should fail with multiple failures")
+            msg = "Health check should fail with multiple failures"
+            raise AssertionError(msg)
         except Exception:
             # Expected failure
             logger.debug("Exception suppressed during cleanup/testing")
@@ -595,7 +595,7 @@ class TestChaosIntegration:
         ) / baseline_throughput
         latency_impact = (degraded_latency - baseline_latency) / baseline_latency
 
-        # Performance impact should be significant but not total
+        # Performance impact should be significant but not _total
         assert 0.1 < throughput_impact < 0.9, (
             f"Throughput impact should be 10-90%, was {throughput_impact:.2%}"
         )
@@ -662,7 +662,7 @@ class TestChaosIntegration:
 
         # Verify automated execution
         assert suite_result["status"] == "completed"
-        assert suite_result["total_experiments"] == 2
+        assert suite_result["_total_experiments"] == 2
         assert (
             suite_result["successful_experiments"] >= 1
         )  # At least some should succeed

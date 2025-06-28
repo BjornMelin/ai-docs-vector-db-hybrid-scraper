@@ -206,7 +206,8 @@ class FederatedSearchRequest(BaseModel):
     def validate_target_collections(cls, v):
         """Validate target collection list."""
         if v is not None and len(v) == 0:
-            raise ValueError("Target collections list cannot be empty")
+            msg = "Target collections list cannot be empty"
+            raise ValueError(msg)
         return v
 
 
@@ -291,6 +292,7 @@ class FederatedSearchService:
             enable_result_caching: Enable federated result caching
             cache_size: Size of result cache
             max_concurrent_searches: Maximum concurrent collection searches
+
         """
         self._logger = logging.getLogger(
             f"{self.__class__.__module__}.{self.__class__.__name__}"
@@ -333,8 +335,8 @@ class FederatedSearchService:
 
         Returns:
             FederatedSearchResult with merged results and metadata
-        """
 
+        """
         start_time = time.time()
 
         try:
@@ -349,7 +351,8 @@ class FederatedSearchService:
             target_collections = await self._select_collections(request)
 
             if not target_collections:
-                raise ValueError("No collections selected for search")
+                msg = "No collections selected for search"
+                raise ValueError(msg)
 
             # Execute searches across collections
             collection_results = await self._execute_federated_search(
@@ -369,10 +372,11 @@ class FederatedSearchService:
                 request.require_minimum_collections
                 and len(successful_results) < request.require_minimum_collections
             ):
-                raise ValueError(
+                msg = (
                     f"Only {len(successful_results)} collections succeeded, "
                     "minimum required"
                 )
+                raise ValueError(msg)
 
             # Merge and deduplicate results
             merged_results = await self._merge_results(successful_results, request)
@@ -434,7 +438,7 @@ class FederatedSearchService:
 
             return result
 
-        except Exception:
+        except Exception as e:
             total_search_time = (time.time() - start_time) * 1000
             self._logger.error("Federated search failed", exc_info=True)
 
@@ -466,6 +470,7 @@ class FederatedSearchService:
             collection_name: Unique collection identifier
             metadata: Collection metadata and capabilities
             client: Qdrant client for the collection
+
         """
         try:
             self.collection_registry[collection_name] = metadata
@@ -493,6 +498,7 @@ class FederatedSearchService:
 
         Args:
             collection_name: Collection to unregister
+
         """
         try:
             self.collection_registry.pop(collection_name, None)
@@ -644,12 +650,12 @@ class FederatedSearchService:
         """Execute search across target collections."""
         if request.search_mode == SearchMode.PARALLEL:
             return await self._execute_parallel_search(request, target_collections)
-        elif request.search_mode == SearchMode.SEQUENTIAL:
+        if request.search_mode == SearchMode.SEQUENTIAL:
             return await self._execute_sequential_search(request, target_collections)
-        elif request.search_mode == SearchMode.PRIORITIZED:
+        if request.search_mode == SearchMode.PRIORITIZED:
             return await self._execute_prioritized_search(request, target_collections)
-        else:  # ADAPTIVE or ROUND_ROBIN
-            return await self._execute_adaptive_search(request, target_collections)
+        # ADAPTIVE or ROUND_ROBIN
+        return await self._execute_adaptive_search(request, target_collections)
 
     async def _execute_parallel_search(
         self, request: FederatedSearchRequest, target_collections: list[str]
@@ -764,14 +770,12 @@ class FederatedSearchService:
         # Simple adaptive logic - use parallel for small sets, sequential for large
         if len(target_collections) <= 5:
             return await self._execute_parallel_search(request, target_collections)
-        else:
-            return await self._execute_sequential_search(request, target_collections)
+        return await self._execute_sequential_search(request, target_collections)
 
     async def _search_single_collection(
         self, collection_name: str, request: FederatedSearchRequest
     ) -> CollectionSearchResult:
         """Search a single collection."""
-
         start_time = time.time()
 
         try:
@@ -837,16 +841,14 @@ class FederatedSearchService:
         """Merge results from multiple collections."""
         if request.result_merging_strategy == ResultMergingStrategy.SCORE_BASED:
             return self._merge_by_score(collection_results, request)
-        elif request.result_merging_strategy == ResultMergingStrategy.ROUND_ROBIN:
+        if request.result_merging_strategy == ResultMergingStrategy.ROUND_ROBIN:
             return self._merge_round_robin(collection_results, request)
-        elif (
-            request.result_merging_strategy == ResultMergingStrategy.COLLECTION_PRIORITY
-        ):
+        if request.result_merging_strategy == ResultMergingStrategy.COLLECTION_PRIORITY:
             return self._merge_by_priority(collection_results, request)
-        elif request.result_merging_strategy == ResultMergingStrategy.TEMPORAL:
+        if request.result_merging_strategy == ResultMergingStrategy.TEMPORAL:
             return self._merge_by_time(collection_results, request)
-        else:  # DIVERSITY_OPTIMIZED
-            return self._merge_for_diversity(collection_results, request)
+        # DIVERSITY_OPTIMIZED
+        return self._merge_for_diversity(collection_results, request)
 
     def _merge_by_score(
         self,

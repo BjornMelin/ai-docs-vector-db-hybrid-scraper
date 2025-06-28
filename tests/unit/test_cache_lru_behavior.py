@@ -5,12 +5,16 @@ Validates that caches respect size limits and properly evict items.
 """
 
 import asyncio
+import logging
 from unittest.mock import AsyncMock
 
 import pytest
 from hypothesis import given, settings, strategies as st
 
 from src.services.cache.local_cache import LocalCache
+
+
+logger = logging.getLogger(__name__)
 
 
 class TestLRUCacheBehavior:

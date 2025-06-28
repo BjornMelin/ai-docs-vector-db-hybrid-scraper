@@ -29,7 +29,8 @@ class MockLightweightScraper:
     async def scrape_url(self, url: str) -> dict:
         """Mock scrape URL method that makes real HTTP calls."""
         if not self._initialized:
-            raise RuntimeError("Scraper not initialized")
+            msg = "Scraper not initialized"
+            raise RuntimeError(msg)
 
         try:
             response = await self._http_client.get(url)
@@ -336,7 +337,8 @@ class TestAsyncTestPatterns:
 
             async def do_work(self):
                 if not self.initialized:
-                    raise RuntimeError("Service not initialized")
+                    msg = "Service not initialized"
+                    raise RuntimeError(msg)
                 return "work_done"
 
         # Act: Use async context manager
@@ -386,7 +388,8 @@ class TestAsyncTestPatterns:
 
         async def failing_operation():
             await asyncio.sleep(0.01)  # Simulate async work
-            raise ValueError("Simulated failure")
+            msg = "Simulated failure"
+            raise ValueError(msg)
 
         async def resilient_operation():
             try:

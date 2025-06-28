@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from src.mcp_tools.tools.filtering_tools import (
-from src.mcp_tools.tools.filtering_tools import register_filtering_tools
     CompositeFilterRequest,
     ContentTypeFilterRequest,
     MetadataFilterRequest,
@@ -15,6 +14,7 @@ from src.mcp_tools.tools.filtering_tools import register_filtering_tools
     content_type_filter_tool,
     create_orchestrator,
     metadata_filter_tool,
+    register_filtering_tools,
     similarity_filter_tool,
     temporal_filter_tool,
 )
@@ -61,7 +61,7 @@ class TestFilteringTools:
                     "metadata": {"source": "test"},
                 }
             ],
-            total_results=1,
+            _total_results=1,
             query_processed="test query",
             processing_time_ms=100.0,
             features_used=["temporal_filter", "content_type_filter"],
@@ -317,7 +317,7 @@ class TestFilteringTools:
                     "metadata": {"category": "guide"},
                 },
             ],
-            total_results=2,
+            _total_results=2,
             query_processed="test query",
             processing_time_ms=120.0,
             features_used=["temporal_filter", "content_type_filter"],

@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 # Import monitoring registry for Prometheus integration
 try:
-    from ..monitoring.metrics import get_metrics_registry
+    from src.services.monitoring.metrics import get_metrics_registry
 
     MONITORING_AVAILABLE = True
 except ImportError:
@@ -143,6 +143,7 @@ class BrowserAutomationMonitor:
 
         Args:
             config: Monitoring configuration
+
         """
         self.config = config or MonitoringConfig()
 
@@ -211,6 +212,7 @@ class BrowserAutomationMonitor:
             response_time_ms: Response time in milliseconds
             error_type: Type of error if failed
             cache_hit: Whether request was served from cache
+
         """
         async with self.metrics_lock:
             # Calculate current metrics for this tier
@@ -494,6 +496,7 @@ class BrowserAutomationMonitor:
 
         Args:
             handler: Function that takes an Alert object
+
         """
         self.alert_handlers.append(handler)
         logger.info("Added alert handler")
@@ -503,6 +506,7 @@ class BrowserAutomationMonitor:
 
         Returns:
             Dictionary with system health information
+
         """
         total_tiers = len(self.health_status)
         healthy_tiers = sum(
@@ -549,6 +553,7 @@ class BrowserAutomationMonitor:
 
         Returns:
             List of performance metrics
+
         """
         cutoff_time = time.time() - (hours * 3600)
 
@@ -566,6 +571,7 @@ class BrowserAutomationMonitor:
 
         Returns:
             List of active alerts
+
         """
         alerts = [a for a in self.alerts if not a.resolved]
         if severity:
@@ -578,6 +584,7 @@ class BrowserAutomationMonitor:
 
         Args:
             alert_id: ID of alert to resolve
+
         """
         async with self.alerts_lock:
             for alert in self.alerts:

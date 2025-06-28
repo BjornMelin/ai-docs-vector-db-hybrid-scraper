@@ -154,7 +154,8 @@ class TestResolveImportsDecorator:
         """Test decorator when decorated function raises exception."""
 
         def failing_function():
-            raise ValueError("Test exception")
+            msg = "Test exception"
+            raise ValueError(msg)
 
         decorated_function = resolve_imports()(failing_function)
 
@@ -244,8 +245,8 @@ class TestIntegrationScenarios:
         """Test behavior with nested or chained decorators."""
 
         def other_decorator(func):
-            def wrapper(*args, **kwargs):
-                result = func(*args, **kwargs)
+            def wrapper(*args, **_kwargs):
+                result = func(*args, **_kwargs)
                 return f"decorated_{result}"
 
             return wrapper
@@ -303,7 +304,7 @@ class TestEdgeCases:
         decorated_function = resolve_imports()(mock_function)
 
         with patch("src.utils.imports.setup_import_paths"):
-            # Test with mixed args and kwargs
+            # Test with mixed args and _kwargs
             result = decorated_function(
                 "pos1", "pos2", keyword1="kw1", keyword2={"nested": "dict"}
             )

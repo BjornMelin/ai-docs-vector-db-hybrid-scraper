@@ -42,6 +42,7 @@ class PrometheusMiddleware:
             metrics_path: Path for Prometheus metrics endpoint
             health_path: Path for health check endpoint
             enable_default_metrics: Enable default HTTP metrics
+
         """
         self.app = app
         self.metrics_registry = metrics_registry
@@ -214,15 +215,14 @@ class PrometheusMiddleware:
                     },
                     status_code=200,
                 )
-            else:
-                return JSONResponse(
-                    content={
-                        "status": "not_ready",
-                        "health_summary": self.health_manager.get_health_summary(),
-                        "timestamp": time.time(),
-                    },
-                    status_code=503,
-                )
+            return JSONResponse(
+                content={
+                    "status": "not_ready",
+                    "health_summary": self.health_manager.get_health_summary(),
+                    "timestamp": time.time(),
+                },
+                status_code=503,
+            )
 
     def expose_metrics(self) -> None:
         """Expose Prometheus metrics (if using instrumentator)."""
@@ -239,6 +239,7 @@ class CustomMetricsMiddleware(BaseHTTPMiddleware):
         Args:
             app: ASGI application
             metrics_registry: Optional metrics registry
+
         """
         super().__init__(app)
         self.metrics_registry = metrics_registry or get_metrics_registry()
@@ -252,6 +253,7 @@ class CustomMetricsMiddleware(BaseHTTPMiddleware):
 
         Returns:
             HTTP response
+
         """
         start_time = time.time()
 
@@ -301,6 +303,7 @@ def setup_monitoring(
 
     Returns:
         Configured PrometheusMiddleware instance
+
     """
     # Set up Prometheus middleware
     prometheus_middleware = PrometheusMiddleware(
@@ -335,6 +338,7 @@ def create_health_manager_with_defaults(
 
     Returns:
         Configured HealthCheckManager
+
     """
     health_manager = HealthCheckManager(metrics_registry)
 

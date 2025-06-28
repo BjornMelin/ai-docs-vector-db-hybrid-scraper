@@ -24,6 +24,7 @@ class ConfigAuditor:
 
         Args:
             audit_dir: Directory for storing audit logs
+
         """
         self.audit_dir = audit_dir or Path("config/audit")
         self.audit_dir.mkdir(parents=True, exist_ok=True)
@@ -127,6 +128,7 @@ class ConfigAuditor:
 
         Returns:
             List of recent audit records
+
         """
         recent_records = []
 
@@ -189,6 +191,7 @@ class ConfigAuditor:
 
         Args:
             keep_days: Number of days of audit history to keep
+
         """
         cutoff_date = datetime.now(tz=UTC) - timedelta(days=keep_days)
 
@@ -199,7 +202,7 @@ class ConfigAuditor:
             try:
                 # Extract date from filename
                 date_str = audit_file.stem.replace("audit_", "")
-                file_date = datetime.strptime(date_str, "%Y%m%d")
+                file_date = datetime.strptime(date_str, "%Y%m%d").replace(tzinfo=UTC)
 
                 if file_date < cutoff_date:
                     audit_file.unlink()

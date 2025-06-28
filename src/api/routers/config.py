@@ -11,12 +11,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from ...config.reload import (
-    ReloadOperation,
-    ReloadTrigger,
-    get_config_reloader,
-)
-from ...services.observability.config_instrumentation import (
+from src.config.reload import ReloadOperation, ReloadTrigger, get_config_reloader
+from src.services.observability.config_instrumentation import (
     ConfigOperationType,
     instrument_config_operation,
 )
@@ -130,6 +126,7 @@ async def reload_configuration(request: ReloadRequest) -> ReloadResponse:
 
     Raises:
         HTTPException: If reload operation fails
+
     """
     try:
         reloader = get_config_reloader()
@@ -188,6 +185,7 @@ async def rollback_configuration(request: RollbackRequest) -> ReloadResponse:
 
     Raises:
         HTTPException: If rollback operation fails
+
     """
     try:
         reloader = get_config_reloader()
@@ -200,7 +198,7 @@ async def rollback_configuration(request: RollbackRequest) -> ReloadResponse:
         if not operation.success:
             _raise_rollback_error(operation)
 
-    except HTTPException as e:
+    except HTTPException:
         raise
     except Exception as e:
         logger.exception("Unexpected error during configuration rollback")
@@ -228,6 +226,7 @@ async def get_reload_history(
 
     Returns:
         Historical reload operations
+
     """
     try:
         reloader = get_config_reloader()
@@ -258,6 +257,7 @@ async def get_reload_stats() -> ReloadStatsResponse:
 
     Returns:
         Configuration reload statistics
+
     """
     try:
         reloader = get_config_reloader()
@@ -279,6 +279,7 @@ async def get_config_status() -> dict[str, Any]:
 
     Returns:
         Current configuration status including hash, listeners, and settings
+
     """
     try:
         reloader = get_config_reloader()
@@ -326,6 +327,7 @@ async def enable_file_watching(
 
     Returns:
         File watching status
+
     """
     try:
         reloader = get_config_reloader()
@@ -352,6 +354,7 @@ async def disable_file_watching() -> dict[str, Any]:
 
     Returns:
         File watching status
+
     """
     try:
         reloader = get_config_reloader()
@@ -379,6 +382,7 @@ async def list_config_backups() -> dict[str, Any]:
 
     Returns:
         Available configuration backups
+
     """
     try:
         reloader = get_config_reloader()

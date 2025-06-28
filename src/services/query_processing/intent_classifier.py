@@ -29,6 +29,7 @@ class QueryIntentClassifier:
 
         Args:
             embedding_manager: Optional EmbeddingManager for semantic analysis
+
         """
         self.embedding_manager = embedding_manager
         self._initialized = False
@@ -525,9 +526,11 @@ class QueryIntentClassifier:
 
         Raises:
             RuntimeError: If classifier not initialized
+
         """
         if not self._initialized:
-            raise RuntimeError("QueryIntentClassifier not initialized")
+            msg = "QueryIntentClassifier not initialized"
+            raise RuntimeError(msg)
 
         if not query.strip():
             return QueryIntentClassification(

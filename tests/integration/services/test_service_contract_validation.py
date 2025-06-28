@@ -218,7 +218,7 @@ class TestAPIEndpointContracts:
                                 "usage": {
                                     "type": "object",
                                     "properties": {
-                                        "total_tokens": {"type": "integer"},
+                                        "_total_tokens": {"type": "integer"},
                                         "cost_usd": {"type": "number"},
                                     },
                                 },
@@ -372,7 +372,7 @@ class TestAPIEndpointContracts:
         valid_embedding_response = {
             "embeddings": [[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]],
             "model": "text-embedding-3-small",
-            "usage": {"total_tokens": 50, "cost_usd": 0.001},
+            "usage": {"_total_tokens": 50, "cost_usd": 0.001},
         }
 
         invalid_embedding_response = {
@@ -864,14 +864,14 @@ class TestVersionCompatibility:
                     "vector_db_service": {
                         "1.0": {
                             "endpoints": ["/search", "/collections"],
-                            "search_response_fields": ["matches", "total"],
+                            "search_response_fields": ["matches", "_total"],
                             "breaking_changes": [],
                         },
                         "1.1": {
                             "endpoints": ["/search", "/collections", "/health"],
                             "search_response_fields": [
                                 "matches",
-                                "total",
+                                "_total",
                                 "search_time_ms",
                             ],
                             "breaking_changes": [],
@@ -961,26 +961,26 @@ class TestVersionCompatibility:
                             {"id": "doc1", "score": 0.9},
                             {"id": "doc2", "score": 0.8},
                         ],
-                        "total": 2,
+                        "_total": 2,
                     }
-                elif self.api_version == "1.1":
+                if self.api_version == "1.1":
                     # Enhanced format (backward compatible)
                     return {
                         "matches": [
                             {"id": "doc1", "score": 0.9, "payload": {}},
                             {"id": "doc2", "score": 0.8, "payload": {}},
                         ],
-                        "total": 2,
+                        "_total": 2,
                         "search_time_ms": 45,
                     }
-                elif self.api_version == "2.0":
+                if self.api_version == "2.0":
                     # New format (breaking change)
                     return {
                         "results": [
                             {"document_id": "doc1", "relevance": 0.9, "metadata": {}},
                             {"document_id": "doc2", "relevance": 0.8, "metadata": {}},
                         ],
-                        "metadata": {"total_count": 2, "search_duration_ms": 45},
+                        "metadata": {"_total_count": 2, "search_duration_ms": 45},
                     }
 
             def adapt_response(
@@ -991,7 +991,7 @@ class TestVersionCompatibility:
                     # Convert v2.0 format to v1.x format
                     adapted_response = {
                         "matches": [],
-                        "total": response["metadata"]["total_count"],
+                        "_total": response["metadata"]["_total_count"],
                     }
 
                     for result in response["results"]:
@@ -1026,7 +1026,7 @@ class TestVersionCompatibility:
 
         # Verify version-specific formats
         assert "matches" in v1_response
-        assert "total" in v1_response
+        assert "_total" in v1_response
         assert "search_time_ms" not in v1_response  # Not in v1.0
 
         assert "matches" in v11_response
@@ -1040,9 +1040,9 @@ class TestVersionCompatibility:
         adapted_response = v2_client.adapt_response(v2_response, "1.1")
 
         assert "matches" in adapted_response
-        assert "total" in adapted_response
+        assert "_total" in adapted_response
         assert "search_time_ms" in adapted_response
-        assert adapted_response["total"] == 2
+        assert adapted_response["_total"] == 2
         assert len(adapted_response["matches"]) == 2
 
     @pytest.mark.asyncio
@@ -1353,7 +1353,7 @@ class TestConsumerDrivenContracts:
 
                 return {
                     "provider": provider,
-                    "total_tests": len(test_results),
+                    "_total_tests": len(test_results),
                     "passed": sum(1 for r in test_results if r["passed"]),
                     "failed": sum(1 for r in test_results if not r["passed"]),
                     "test_results": test_results,
@@ -1455,7 +1455,7 @@ class TestConsumerDrivenContracts:
 
         # Verify test execution
         assert test_results["provider"] == "vector_db_service"
-        assert test_results["total_tests"] == 1
+        assert test_results["_total_tests"] == 1
         assert test_results["passed"] == 1
         assert test_results["failed"] == 0
 

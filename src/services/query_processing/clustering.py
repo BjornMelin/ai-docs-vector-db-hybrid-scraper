@@ -108,7 +108,8 @@ class SearchResult(BaseModel):
     def validate_embedding_size(cls, v):
         """Validate embedding dimensions."""
         if v is not None and len(v) == 0:
-            raise ValueError("Embedding cannot be empty")
+            msg = "Embedding cannot be empty"
+            raise ValueError(msg)
         return v
 
 
@@ -205,18 +206,21 @@ class ResultClusteringRequest(BaseModel):
     def validate_results_count(cls, v):
         """Validate minimum results for clustering."""
         if len(v) < 3:
-            raise ValueError("Need at least 3 results for clustering")
+            msg = "Need at least 3 results for clustering"
+            raise ValueError(msg)
         return v
 
 
 def _raise_invalid_clustering_request() -> None:
     """Raise ValueError for invalid clustering request."""
-    raise ValueError("Invalid clustering request")
+    msg = "Invalid clustering request"
+    raise ValueError(msg)
 
 
 def _raise_no_valid_embeddings() -> None:
     """Raise ValueError when no valid embeddings are found."""
-    raise ValueError("No valid embeddings found in results")
+    msg = "No valid embeddings found in results"
+    raise ValueError(msg)
 
 
 class ResultClusteringResult(BaseModel):
@@ -270,6 +274,7 @@ class ResultClusteringService:
             enable_hdbscan: Enable HDBSCAN algorithm (requires hdbscan package)
             enable_advanced_metrics: Enable advanced clustering metrics
             cache_size: Size of clustering cache
+
         """
         self._logger = logging.getLogger(
             f"{self.__class__.__module__}.{self.__class__.__name__}"
@@ -304,6 +309,7 @@ class ResultClusteringService:
 
         Returns:
             ResultClusteringResult with clustered groups and metadata
+
         """
         start_time = time.time()
 
@@ -466,12 +472,11 @@ class ResultClusteringService:
 
         if n_samples < 50 and self.enable_hdbscan:
             return ClusteringMethod.HDBSCAN
-        elif n_samples < 100:
+        if n_samples < 100:
             return ClusteringMethod.DBSCAN
-        elif request.max_clusters is not None:
+        if request.max_clusters is not None:
             return ClusteringMethod.KMEANS
-        else:
-            return ClusteringMethod.AGGLOMERATIVE
+        return ClusteringMethod.AGGLOMERATIVE
 
     async def _apply_clustering(
         self,
@@ -484,18 +489,18 @@ class ResultClusteringService:
 
         if method == ClusteringMethod.HDBSCAN:
             return self._apply_hdbscan(embeddings, request, metadata)
-        elif method == ClusteringMethod.DBSCAN:
+        if method == ClusteringMethod.DBSCAN:
             return self._apply_dbscan(embeddings, request, metadata)
-        elif method == ClusteringMethod.KMEANS:
+        if method == ClusteringMethod.KMEANS:
             return self._apply_kmeans(embeddings, request, metadata)
-        elif method == ClusteringMethod.AGGLOMERATIVE:
+        if method == ClusteringMethod.AGGLOMERATIVE:
             return self._apply_agglomerative(embeddings, request, metadata)
-        elif method == ClusteringMethod.SPECTRAL:
+        if method == ClusteringMethod.SPECTRAL:
             return self._apply_spectral(embeddings, request, metadata)
-        elif method == ClusteringMethod.GAUSSIAN_MIXTURE:
+        if method == ClusteringMethod.GAUSSIAN_MIXTURE:
             return self._apply_gaussian_mixture(embeddings, request, metadata)
-        else:
-            raise ValueError(f"Unsupported clustering method: {method}")
+        msg = f"Unsupported clustering method: {method}"
+        raise ValueError(msg)
 
     def _apply_hdbscan(
         self,
@@ -505,7 +510,8 @@ class ResultClusteringService:
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """Apply HDBSCAN clustering."""
         if hdbscan is None:
-            raise ImportError("HDBSCAN requires the 'hdbscan' package")
+            msg = "HDBSCAN requires the 'hdbscan' package"
+            raise ImportError(msg)
 
         # Configure parameters
         min_cluster_size = max(request.min_cluster_size, 3)
@@ -544,7 +550,8 @@ class ResultClusteringService:
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """Apply DBSCAN clustering."""
         if DBSCAN is None:
-            raise ImportError("DBSCAN requires scikit-learn")
+            msg = "DBSCAN requires scikit-learn"
+            raise ImportError(msg)
 
         # Auto-determine eps if not provided
         eps = request.eps
@@ -584,7 +591,8 @@ class ResultClusteringService:
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """Apply K-means clustering."""
         if KMeans is None:
-            raise ImportError("KMeans requires scikit-learn")
+            msg = "KMeans requires scikit-learn"
+            raise ImportError(msg)
 
         # Determine number of clusters
         n_clusters = request.max_clusters
@@ -614,7 +622,8 @@ class ResultClusteringService:
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """Apply agglomerative clustering."""
         if AgglomerativeClustering is None:
-            raise ImportError("AgglomerativeClustering requires scikit-learn")
+            msg = "AgglomerativeClustering requires scikit-learn"
+            raise ImportError(msg)
 
         # Determine number of clusters
         n_clusters = request.max_clusters
@@ -640,7 +649,8 @@ class ResultClusteringService:
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """Apply spectral clustering."""
         if SpectralClustering is None:
-            raise ImportError("SpectralClustering requires scikit-learn")
+            msg = "SpectralClustering requires scikit-learn"
+            raise ImportError(msg)
 
         # Determine number of clusters
         n_clusters = request.max_clusters
@@ -670,7 +680,8 @@ class ResultClusteringService:
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """Apply Gaussian mixture model clustering."""
         if GaussianMixture is None:
-            raise ImportError("GaussianMixture requires scikit-learn")
+            msg = "GaussianMixture requires scikit-learn"
+            raise ImportError(msg)
 
         # Determine number of components
         n_components = request.max_clusters
@@ -698,7 +709,8 @@ class ResultClusteringService:
     def _estimate_eps(self, embeddings: np.ndarray, min_cluster_size: int) -> float:
         """Estimate eps parameter for DBSCAN using k-distance."""
         if NearestNeighbors is None:
-            raise ImportError("NearestNeighbors requires scikit-learn")
+            msg = "NearestNeighbors requires scikit-learn"
+            raise ImportError(msg)
 
         # Use k = min_cluster_size for k-distance
         k = min_cluster_size

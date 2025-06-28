@@ -222,7 +222,7 @@ class TestBrowserAutomationMonitor:
         system_health = monitor.get_system_health()
 
         assert system_health["overall_status"] == "unhealthy"  # One unhealthy tier
-        assert system_health["tier_health"]["total"] == 3
+        assert system_health["tier_health"]["_total"] == 3
         assert system_health["tier_health"]["healthy"] == 2
         assert system_health["tier_health"]["unhealthy"] == 1
         assert "tier_details" in system_health

@@ -9,8 +9,9 @@ from typing import Any
 
 import numpy as np
 
-from ..base import BaseService
-from ..errors import EmbeddingServiceError
+from src.services.base import BaseService
+from src.services.errors import EmbeddingServiceError
+
 from .config import HyDEConfig
 from .generator import GenerationResult
 
@@ -27,6 +28,7 @@ class HyDECache(BaseService):
         Args:
             config: HyDE configuration
             cache_manager: DragonflyCache or compatible cache manager
+
         """
         super().__init__(config)
         self.config = config
@@ -59,7 +61,8 @@ class HyDECache(BaseService):
             test_value = await self.cache_manager.get(test_key)
 
             if test_value != "test_value":
-                raise EmbeddingServiceError("Cache test failed")
+                msg = "Cache test failed"
+                raise EmbeddingServiceError(msg)
 
             await self.cache_manager.delete(test_key)
 
@@ -67,7 +70,8 @@ class HyDECache(BaseService):
             logger.info("HyDE cache initialized")
 
         except Exception as e:
-            raise EmbeddingServiceError(f"Failed to initialize HyDE cache: {e}") from e
+            msg = f"Failed to initialize HyDE cache: {e}"
+            raise EmbeddingServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup cache resources."""
@@ -87,6 +91,7 @@ class HyDECache(BaseService):
 
         Returns:
             Cached embedding or None if not found
+
         """
         self._validate_initialized()
 
@@ -144,6 +149,7 @@ class HyDECache(BaseService):
 
         Returns:
             True if cached successfully
+
         """
         self._validate_initialized()
 
@@ -195,6 +201,7 @@ class HyDECache(BaseService):
 
         Returns:
             Cached documents or None if not found
+
         """
         if not self.config.cache_hypothetical_docs:
             return None
@@ -235,6 +242,7 @@ class HyDECache(BaseService):
 
         Returns:
             True if cached successfully
+
         """
         if not self.config.cache_hypothetical_docs:
             return True
@@ -281,6 +289,7 @@ class HyDECache(BaseService):
 
         Returns:
             Cached results or None if not found
+
         """
         self._validate_initialized()
 
@@ -322,6 +331,7 @@ class HyDECache(BaseService):
 
         Returns:
             True if cached successfully
+
         """
         self._validate_initialized()
 
@@ -366,6 +376,7 @@ class HyDECache(BaseService):
 
         Returns:
             Dictionary mapping queries to warm-up success status
+
         """
         self._validate_initialized()
 
@@ -400,6 +411,7 @@ class HyDECache(BaseService):
 
         Returns:
             True if invalidation was successful
+
         """
         self._validate_initialized()
 

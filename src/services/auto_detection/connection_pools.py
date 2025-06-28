@@ -8,6 +8,7 @@ Provides optimized connection pools with:
 - Performance monitoring and metrics
 """
 
+import importlib.util
 import logging
 import time
 from collections.abc import AsyncGenerator
@@ -16,6 +17,7 @@ from typing import Any
 
 import redis.asyncio as redis
 from pydantic import BaseModel
+from qdrant_client import AsyncQdrantClient
 
 from src.config.auto_detect import AutoDetectionConfig, DetectedService
 from src.services.errors import circuit_breaker
@@ -91,8 +93,6 @@ class ConnectionPoolManager:
     async def _initialize_redis_pool(self, service: DetectedService) -> None:
         """Initialize Redis connection pool with Redis 8.2 optimizations."""
         try:
-            import redis.asyncio as redis
-
             pool_config = {
                 **service.pool_config,
                 "host": service.host,
@@ -136,8 +136,6 @@ class ConnectionPoolManager:
     async def _initialize_qdrant_pool(self, service: DetectedService) -> None:
         """Initialize Qdrant connection pool with gRPC optimization."""
         try:
-            from qdrant_client import AsyncQdrantClient
-
             # Prefer gRPC if available
             prefer_grpc = service.metadata.get("grpc_available", False)
 
@@ -193,10 +191,9 @@ class ConnectionPoolManager:
         """Initialize PostgreSQL connection pool with asyncpg."""
         try:
             # Check if asyncpg is available without importing
-            import importlib.util
-
             if not importlib.util.find_spec("asyncpg"):
-                raise ImportError("asyncpg not available")
+                msg = "asyncpg not available"
+                raise ImportError(msg)
 
             # Note: In real implementation, would need actual connection parameters
             # This is a placeholder showing the structure
@@ -239,13 +236,12 @@ class ConnectionPoolManager:
     async def get_redis_connection(self) -> AsyncGenerator[Any]:
         """Get Redis connection from pool."""
         if "redis" not in self._pools:
-            raise RuntimeError("Redis pool not initialized")
+            msg = "Redis pool not initialized"
+            raise RuntimeError(msg)
 
         client = None
 
         try:
-            import redis.asyncio as redis
-
             pool = self._pools["redis"]
             client = redis.Redis(connection_pool=pool)
 
@@ -262,7 +258,8 @@ class ConnectionPoolManager:
     async def get_qdrant_client(self) -> AsyncGenerator[Any]:
         """Get Qdrant client from pool."""
         if "qdrant" not in self._pools:
-            raise RuntimeError("Qdrant pool not initialized")
+            msg = "Qdrant pool not initialized"
+            raise RuntimeError(msg)
 
         try:
             client = self._pools["qdrant"]
@@ -277,7 +274,8 @@ class ConnectionPoolManager:
     async def get_postgresql_connection(self) -> AsyncGenerator[Any]:
         """Get PostgreSQL connection from pool."""
         if "postgresql" not in self._pools:
-            raise RuntimeError("PostgreSQL pool not initialized")
+            msg = "PostgreSQL pool not initialized"
+            raise RuntimeError(msg)
 
         connection = None
 

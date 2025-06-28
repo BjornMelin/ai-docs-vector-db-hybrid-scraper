@@ -95,7 +95,8 @@ class TestAsyncToSyncClick:
 
         @cli_group.command()
         async def failing_command():
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
         async_to_sync_click(cli_group)
 
@@ -209,7 +210,8 @@ class TestAsyncCommand:
 
         @async_command
         async def failing_func():
-            raise RuntimeError("Test error")
+            msg = "Test error"
+            raise RuntimeError(msg)
 
         with pytest.raises(RuntimeError, match="Test error"):
             failing_func()
@@ -239,7 +241,7 @@ class TestAsyncCommand:
         assert documented_func.__name__ == "documented_func"
         assert documented_func.__doc__ == "This is a documented function."
 
-    def test_async_command_with_args_and_kwargs(self):
+    def test_async_command_with_args_and__kwargs(self):
         """Test async_command with mixed arguments."""
 
         @async_command
@@ -341,11 +343,13 @@ class TestIntegration:
 
         @cli_group.command()
         async def group_error():
-            raise ValueError("Group error")
+            msg = "Group error"
+            raise ValueError(msg)
 
         @async_command
         async def standalone_error():
-            raise ValueError("Standalone error")
+            msg = "Standalone error"
+            raise ValueError(msg)
 
         async_to_sync_click(cli_group)
 

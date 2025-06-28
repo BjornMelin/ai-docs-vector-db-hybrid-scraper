@@ -394,7 +394,7 @@ class TestSecureConfigManagerCore:
             "audit_enabled",
             "integrity_checks_enabled",
             "backup_enabled",
-            "total_configurations",
+            "_total_configurations",
             "recent_audit_events",
             "failed_operations",
             "integrity_failures",
@@ -416,7 +416,7 @@ class TestSecureConfigManagerCore:
             == security_config.enable_config_integrity_checks
         )
         assert status["backup_enabled"] == security_config.enable_config_backup
-        assert isinstance(status["total_configurations"], int)
+        assert isinstance(status["_total_configurations"], int)
         assert isinstance(status["key_version"], int)
         assert status["config_dir"] == str(temp_config_dir)
 

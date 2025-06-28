@@ -10,7 +10,7 @@ try:
 except ImportError:
     colorlog = None
 
-from ..config import get_config
+from src.config import get_config
 
 
 # Custom formatter for structured logging
@@ -41,6 +41,7 @@ def configure_logging(
         level: Logging level (DEBUG, INFO, WARNING, ERROR)
         enable_color: Enable colored output for console
         log_file: Optional log file path
+
     """
     config = get_config()
 
@@ -144,5 +145,6 @@ def with_service_context(service_name: str):
     Example:
         with with_service_context("OpenAIProvider"):
             logger.info("Generating embeddings")
+
     """
     return LogContext(service=service_name)

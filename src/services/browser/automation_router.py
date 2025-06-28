@@ -8,9 +8,9 @@ from typing import Any, Literal
 from urllib.parse import urlparse
 
 from src.config import Config
+from src.services.base import BaseService
+from src.services.errors import CrawlServiceError
 
-from ..base import BaseService
-from ..errors import CrawlServiceError
 from .browser_use_adapter import BrowserUseAdapter
 from .crawl4ai_adapter import Crawl4AIAdapter
 from .lightweight_scraper import LightweightScraper
@@ -36,6 +36,7 @@ class AutomationRouter(BaseService):
 
         Args:
             config: Unified configuration containing browser automation settings
+
         """
         super().__init__(config)
         self.config = config
@@ -88,6 +89,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Dictionary mapping tool names to lists of domains
+
         """
         try:
             # Get project root directory (3 levels up from this file)
@@ -114,6 +116,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Default routing rules dictionary
+
         """
         return {
             "browser_use": [
@@ -193,7 +196,8 @@ class AutomationRouter(BaseService):
         #     self.logger.warning("Failed to initialize Firecrawl adapter")
 
         if not self._adapters:
-            raise CrawlServiceError("No automation adapters available")
+            msg = "No automation adapters available"
+            raise CrawlServiceError(msg)
 
         self._initialized = True
         self.logger.info(
@@ -243,9 +247,11 @@ class AutomationRouter(BaseService):
 
         Raises:
             CrawlServiceError: If router not initialized or all tools fail
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Router not initialized")
+            msg = "Router not initialized"
+            raise CrawlServiceError(msg)
 
         # Determine which tool to use
         if force_tool:
@@ -253,7 +259,8 @@ class AutomationRouter(BaseService):
                 "crawl4ai_enhanced",
                 "firecrawl",
             }:
-                raise CrawlServiceError(f"Forced tool '{force_tool}' not available")
+                msg = f"Forced tool '{force_tool}' not available"
+                raise CrawlServiceError(msg)
             tool = force_tool
         else:
             tool = await self._select_tool(url, interaction_required, custom_actions)
@@ -308,6 +315,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Tool name to use
+
         """
         domain = urlparse(url).netloc.lower()
 
@@ -410,6 +418,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Scraping result
+
         """
         adapter = self._adapters["crawl4ai"]
 
@@ -443,6 +452,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Scraping result
+
         """
         adapter = self._adapters["browser_use"]
 
@@ -474,6 +484,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Scraping result
+
         """
         adapter = self._adapters["playwright"]
 
@@ -500,6 +511,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Scraping result or error
+
         """
         # Define fallback order
         fallback_order = {
@@ -561,6 +573,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             JavaScript code string
+
         """
         return """
         // Wait for content to load
@@ -592,6 +605,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             JavaScript code string
+
         """
         js_lines = []
 
@@ -630,6 +644,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Natural language task description
+
         """
         task_parts = []
 
@@ -662,8 +677,7 @@ class AutomationRouter(BaseService):
 
         if task_parts:
             return f"Navigate to the page, then {', '.join(task_parts)}, and finally extract all documentation content including code examples."
-        else:
-            return "Navigate to the page and extract all documentation content including code examples."
+        return "Navigate to the page and extract all documentation content including code examples."
 
     def _update_metrics(self, tool: str, success: bool, elapsed: float) -> None:
         """Update performance metrics for a tool.
@@ -672,6 +686,7 @@ class AutomationRouter(BaseService):
             tool: Tool name
             success: Whether the operation succeeded
             elapsed: Time elapsed in seconds
+
         """
         metrics = self.metrics[tool]
 
@@ -692,6 +707,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Dictionary with metrics for each tool including success rate
+
         """
         result = {}
 
@@ -718,6 +734,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Recommended tool name
+
         """
         # Get base recommendation from selection logic
         base_tool = await self._select_tool(url, False, None)
@@ -762,6 +779,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Scraping result
+
         """
         adapter = self._adapters["lightweight"]
 
@@ -773,9 +791,8 @@ class AutomationRouter(BaseService):
 
         if scrape_result is None:
             # Escalate to higher tier
-            raise CrawlServiceError(
-                "Lightweight scraper returned None - content should escalate"
-            )
+            msg = "Lightweight scraper returned None - content should escalate"
+            raise CrawlServiceError(msg)
 
         # Convert LightweightScraper format to standard format
         return {
@@ -809,6 +826,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Scraping result
+
         """
         adapter = self._adapters["crawl4ai"]
 
@@ -836,10 +854,12 @@ class AutomationRouter(BaseService):
 
         Returns:
             Scraping result
+
         """
         # TODO: Implement Firecrawl adapter
         # For now, return error indicating not available
-        raise CrawlServiceError("Firecrawl adapter not yet implemented")
+        msg = "Firecrawl adapter not yet implemented"
+        raise CrawlServiceError(msg)
 
     def _get_enhanced_js(
         self, _url: str, custom_actions: list[dict] | None = None
@@ -852,6 +872,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Enhanced JavaScript code
+
         """
         enhanced_js = """
         // Enhanced JavaScript for dynamic content

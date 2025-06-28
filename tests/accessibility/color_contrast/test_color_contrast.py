@@ -347,7 +347,7 @@ class TestColorContrastCompliance:
             )
 
     @pytest.mark.parametrize(
-        "foreground,background,expected_ratio",
+        ("foreground", "background", "expected_ratio"),
         [
             ("#000000", "#FFFFFF", 21.0),
             ("#FFFFFF", "#808080", 3.95),
@@ -418,7 +418,7 @@ class TestColorContrastCompliance:
             "timestamp": "2024-01-01T00:00:00Z",
             "page_url": "http://test.example.com",
             "wcag_level": "AA",
-            "total_elements": len(test_page_colors),
+            "_total_elements": len(test_page_colors),
             "compliant_elements": 0,
             "non_compliant_elements": 0,
             "elements": [],
@@ -429,7 +429,7 @@ class TestColorContrastCompliance:
             },
         }
 
-        total_ratio = 0.0
+        _total_ratio = 0.0
 
         for element_info in test_page_colors:
             result = color_contrast_analyzer.check_contrast_compliance(
@@ -458,14 +458,14 @@ class TestColorContrastCompliance:
                 report["compliant_elements"] += 1
 
             report["elements"].append(element_result)
-            total_ratio += result["contrast_ratio"]
+            _total_ratio += result["contrast_ratio"]
 
         # Calculate summary statistics
         report["summary"]["pass_rate"] = (
-            report["compliant_elements"] / report["total_elements"]
+            report["compliant_elements"] / report["_total_elements"]
         )
         report["summary"]["average_contrast_ratio"] = (
-            total_ratio / report["total_elements"]
+            _total_ratio / report["_total_elements"]
         )
 
         # Add recommendations
@@ -482,10 +482,10 @@ class TestColorContrastCompliance:
         # Verify report structure
         assert "timestamp" in report
         assert "wcag_level" in report
-        assert report["total_elements"] == len(test_page_colors)
+        assert report["_total_elements"] == len(test_page_colors)
         assert (
             report["compliant_elements"] + report["non_compliant_elements"]
-            == report["total_elements"]
+            == report["_total_elements"]
         )
         assert 0.0 <= report["summary"]["pass_rate"] <= 1.0
         assert report["summary"]["average_contrast_ratio"] > 0.0

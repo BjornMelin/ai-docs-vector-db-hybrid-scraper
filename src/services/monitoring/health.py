@@ -71,6 +71,7 @@ class HealthCheck(ABC):
         Args:
             name: Name of the health check
             timeout_seconds: Timeout for health check operation
+
         """
         self.name = name
         self.timeout_seconds = timeout_seconds
@@ -81,8 +82,8 @@ class HealthCheck(ABC):
 
         Returns:
             Health check result
+
         """
-        pass
 
     async def _execute_with_timeout(self, coro) -> HealthCheckResult:
         """Execute health check with timeout.
@@ -92,6 +93,7 @@ class HealthCheck(ABC):
 
         Returns:
             Health check result
+
         """
         start_time = time.time()
 
@@ -135,6 +137,7 @@ class QdrantHealthCheck(HealthCheck):
             client: Qdrant client instance
             name: Name of the health check
             timeout_seconds: Timeout for health check
+
         """
         super().__init__(name, timeout_seconds)
         self.client = client
@@ -144,6 +147,7 @@ class QdrantHealthCheck(HealthCheck):
 
         Returns:
             Health check result
+
         """
 
         async def _check():
@@ -165,13 +169,12 @@ class QdrantHealthCheck(HealthCheck):
                             else 0,
                         },
                     )
-                else:
-                    return HealthCheckResult(
-                        name=self.name,
-                        status=HealthStatus.DEGRADED,
-                        message="Qdrant responding but cluster info unavailable",
-                        duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                    )
+                return HealthCheckResult(
+                    name=self.name,
+                    status=HealthStatus.DEGRADED,
+                    message="Qdrant responding but cluster info unavailable",
+                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
+                )
 
             except UnexpectedResponse as e:
                 return HealthCheckResult(
@@ -204,6 +207,7 @@ class RedisHealthCheck(HealthCheck):
             redis_url: Redis connection URL
             name: Name of the health check
             timeout_seconds: Timeout for health check
+
         """
         super().__init__(name, timeout_seconds)
         self.redis_url = redis_url
@@ -213,6 +217,7 @@ class RedisHealthCheck(HealthCheck):
 
         Returns:
             Health check result
+
         """
 
         async def _check():
@@ -239,13 +244,12 @@ class RedisHealthCheck(HealthCheck):
                             ),
                         },
                     )
-                else:
-                    return HealthCheckResult(
-                        name=self.name,
-                        status=HealthStatus.UNHEALTHY,
-                        message="Redis ping failed",
-                        duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                    )
+                return HealthCheckResult(
+                    name=self.name,
+                    status=HealthStatus.UNHEALTHY,
+                    message="Redis ping failed",
+                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
+                )
 
             except redis.ConnectionError as e:
                 return HealthCheckResult(
@@ -289,6 +293,7 @@ class HTTPHealthCheck(HealthCheck):
             name: Name of the health check (defaults to URL host)
             timeout_seconds: Timeout for health check
             headers: Optional HTTP headers
+
         """
         if name is None:
             from urllib.parse import urlparse
@@ -306,6 +311,7 @@ class HTTPHealthCheck(HealthCheck):
 
         Returns:
             Health check result
+
         """
 
         async def _check():
@@ -328,14 +334,13 @@ class HTTPHealthCheck(HealthCheck):
                                 ),
                             },
                         )
-                    else:
-                        return HealthCheckResult(
-                            name=self.name,
-                            status=HealthStatus.UNHEALTHY,
-                            message=f"HTTP endpoint returned status {response.status}, expected {self.expected_status}",
-                            duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                            metadata={"status_code": response.status},
-                        )
+                    return HealthCheckResult(
+                        name=self.name,
+                        status=HealthStatus.UNHEALTHY,
+                        message=f"HTTP endpoint returned status {response.status}, expected {self.expected_status}",
+                        duration_ms=0.0,  # Will be updated by _execute_with_timeout
+                        metadata={"status_code": response.status},
+                    )
 
             except aiohttp.ClientError as e:
                 return HealthCheckResult(
@@ -375,6 +380,7 @@ class SystemResourceHealthCheck(HealthCheck):
             memory_threshold: Memory usage threshold percentage
             disk_threshold: Disk usage threshold percentage
             timeout_seconds: Timeout for health check
+
         """
         super().__init__(name, timeout_seconds)
         self.cpu_threshold = cpu_threshold
@@ -386,6 +392,7 @@ class SystemResourceHealthCheck(HealthCheck):
 
         Returns:
             Health check result
+
         """
 
         async def _check():
@@ -462,6 +469,7 @@ class HealthCheckManager:
         Args:
             config: Health check configuration
             metrics_registry: Optional metrics registry for recording health status
+
         """
         self.config = config
         self.health_checks: list[HealthCheck] = []
@@ -485,6 +493,7 @@ class HealthCheckManager:
 
         Args:
             health_check: Health check to add
+
         """
         self.health_checks.append(health_check)
 
@@ -496,6 +505,7 @@ class HealthCheckManager:
         Args:
             client: Qdrant client instance
             timeout_seconds: Timeout for health check
+
         """
         self.add_health_check(
             QdrantHealthCheck(client, timeout_seconds=timeout_seconds)
@@ -507,6 +517,7 @@ class HealthCheckManager:
         Args:
             redis_url: Redis connection URL
             timeout_seconds: Timeout for health check
+
         """
         self.add_health_check(
             RedisHealthCheck(redis_url, timeout_seconds=timeout_seconds)
@@ -526,6 +537,7 @@ class HealthCheckManager:
             expected_status: Expected HTTP status code
             name: Optional name for the check
             timeout_seconds: Timeout for health check
+
         """
         self.add_health_check(
             HTTPHealthCheck(url, expected_status, name, timeout_seconds)
@@ -545,6 +557,7 @@ class HealthCheckManager:
             memory_threshold: Memory usage threshold percentage
             disk_threshold: Disk usage threshold percentage
             timeout_seconds: Timeout for health check
+
         """
         self.add_health_check(
             SystemResourceHealthCheck(
@@ -560,6 +573,7 @@ class HealthCheckManager:
 
         Returns:
             Dictionary mapping check names to results
+
         """
         if not self.health_checks:
             return {}
@@ -602,6 +616,7 @@ class HealthCheckManager:
 
         Returns:
             Health check result or None if check not found
+
         """
         for check in self.health_checks:
             if check.name == check_name:
@@ -624,6 +639,7 @@ class HealthCheckManager:
 
         Returns:
             Dictionary of last health check results
+
         """
         return self._last_results.copy()
 
@@ -632,6 +648,7 @@ class HealthCheckManager:
 
         Returns:
             Overall health status based on all checks
+
         """
         if not self._last_results:
             return HealthStatus.UNKNOWN
@@ -640,18 +657,18 @@ class HealthCheckManager:
 
         if any(status == HealthStatus.UNHEALTHY for status in statuses):
             return HealthStatus.UNHEALTHY
-        elif any(status == HealthStatus.DEGRADED for status in statuses):
+        if any(status == HealthStatus.DEGRADED for status in statuses):
             return HealthStatus.DEGRADED
-        elif all(status == HealthStatus.HEALTHY for status in statuses):
+        if all(status == HealthStatus.HEALTHY for status in statuses):
             return HealthStatus.HEALTHY
-        else:
-            return HealthStatus.UNKNOWN
+        return HealthStatus.UNKNOWN
 
     def get_health_summary(self) -> dict[str, Any]:
         """Get comprehensive health summary.
 
         Returns:
             Health summary including overall status and individual check results
+
         """
         return {
             "overall_status": self.get_overall_status(),

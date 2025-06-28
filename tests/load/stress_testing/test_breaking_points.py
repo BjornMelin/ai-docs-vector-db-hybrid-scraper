@@ -14,15 +14,13 @@ from dataclasses import dataclass, field
 
 import pytest
 
-from ..base_load_test import create_load_test_runner
-from ..conftest import LoadTestConfig, LoadTestType
-from ..load_profiles import SpikeLoadProfile
+from tests.load.base_load_test import create_load_test_runner
+from tests.load.conftest import LoadTestConfig, LoadTestType
+from tests.load.load_profiles import SpikeLoadProfile
 
 
 class TestError(Exception):
     """Custom exception for this module."""
-
-    pass
 
 
 logger = logging.getLogger(__name__)
@@ -214,7 +212,7 @@ class TestBreakingPoints:
                 self.base_latency = 0.1
                 self.error_threshold = 300  # Start failing after 300 users
 
-            async def process_request(self, current_users: int = 0, **_kwargs):
+            async def process_request(self, current_users: int = 0, **__kwargs):
                 # Increase latency based on load
                 load_factor = max(1.0, current_users / 100)
                 latency = self.base_latency * load_factor
@@ -225,7 +223,8 @@ class TestBreakingPoints:
                 )
 
                 if random.random() < error_probability:
-                    raise TestError(f"Service overloaded at {current_users} users")
+                    msg = f"Service overloaded at {current_users} users"
+                    raise TestError(msg)
 
                 await asyncio.sleep(latency)
 
@@ -270,7 +269,7 @@ class TestBreakingPoints:
                 # Calculate metrics for this step
                 error_rate = (
                     result.metrics.failed_requests
-                    / max(result.metrics.total_requests, 1)
+                    / max(result.metrics._total_requests, 1)
                 ) * 100
                 avg_response_time = (
                     statistics.mean(result.metrics.response_times) * 1000
@@ -368,7 +367,7 @@ class TestBreakingPoints:
                 self.spike_penalty = 2.0
                 self.users_history = []
 
-            async def process_request(self, current_users: int = 0, **_kwargs):
+            async def process_request(self, current_users: int = 0, **__kwargs):
                 self.users_history.append(current_users)
 
                 # Detect spike (rapid increase in users)
@@ -394,7 +393,8 @@ class TestBreakingPoints:
                 # Higher error rate during spikes
                 spike_error_rate = max(0, (current_users - 300) / 2000)
                 if spike_error_rate > 0 and time.time() % 1.0 < spike_error_rate:
-                    raise TestError(f"Spike overload at {current_users} users")
+                    msg = f"Spike overload at {current_users} users"
+                    raise TestError(msg)
 
                 await asyncio.sleep(min(latency, 5.0))  # Cap at 5s
 
@@ -454,7 +454,7 @@ class TestBreakingPoints:
                 # Analyze spike handling
                 error_rate = (
                     result.metrics.failed_requests
-                    / max(result.metrics.total_requests, 1)
+                    / max(result.metrics._total_requests, 1)
                 ) * 100
                 avg_response_time = (
                     statistics.mean(result.metrics.response_times) * 1000
@@ -517,8 +517,8 @@ class TestBreakingPoints:
 
         # Verify spike handling capability
         handled_spikes = sum(1 for r in spike_results if r["spike_handled"])
-        total_spikes = len(spike_results)
-        spike_success_rate = handled_spikes / total_spikes
+        _total_spikes = len(spike_results)
+        spike_success_rate = handled_spikes / _total_spikes
 
         assert spike_success_rate > 0.3, "System handled too few spikes"
 
@@ -538,7 +538,7 @@ class TestBreakingPoints:
                 self.recovery_factor = 1.0
                 self.base_latency = 0.1
 
-            async def process_request(self, phase: str = "normal", **_kwargs):
+            async def process_request(self, phase: str = "normal", **__kwargs):
                 current_time = time.time()
 
                 if phase == "overload":
@@ -548,7 +548,8 @@ class TestBreakingPoints:
                     # High latency and errors during overload
                     latency = self.base_latency * 10
                     if time.time() % 1.0 < 0.3:  # 30% error rate
-                        raise TestError("System overloaded")
+                        msg = "System overloaded"
+                        raise TestError(msg)
 
                 elif phase == "recovery" and self.overload_start:
                     # Gradual recovery based on time since overload
@@ -561,7 +562,8 @@ class TestBreakingPoints:
                     error_probability = self.recovery_factor * 0.1  # Decreasing errors
 
                     if time.time() % 1.0 < error_probability:
-                        raise TestError("System still recovering")
+                        msg = "System still recovering"
+                        raise TestError(msg)
 
                 else:
                     # Normal operation
@@ -622,7 +624,7 @@ class TestBreakingPoints:
 
             # Calculate phase metrics
             error_rate = (
-                result.metrics.failed_requests / max(result.metrics.total_requests, 1)
+                result.metrics.failed_requests / max(result.metrics._total_requests, 1)
             ) * 100
             avg_response_time = (
                 statistics.mean(result.metrics.response_times) * 1000

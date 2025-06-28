@@ -70,7 +70,7 @@ class WorkflowOrchestrator:
 
         # Mock performance metrics
         performance_metrics = {
-            "total_steps": len(workflow_steps),
+            "_total_steps": len(workflow_steps),
             "successful_steps": len(workflow_steps),
             "failed_steps": 0,
             "avg_step_duration_s": 0.05,

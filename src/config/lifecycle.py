@@ -10,10 +10,11 @@ from collections.abc import Callable
 
 from fastapi import FastAPI
 
-from ..services.observability.init import (
+from src.services.observability.init import (
     initialize_observability,
     shutdown_observability,
 )
+
 from .core import Config, get_config, set_config
 from .reload import ConfigReloader, set_config_reloader
 
@@ -29,6 +30,7 @@ class ConfigurationLifecycleManager:
 
         Args:
             app: FastAPI application instance
+
         """
         self.app = app
         self.reloader: ConfigReloader | None = None
@@ -260,6 +262,7 @@ class ConfigurationLifecycleManager:
             callback: Callback function (old_config, new_config) -> success
             priority: Callback priority (higher = called earlier)
             async_callback: Whether the callback is async
+
         """
         if self.reloader:
             self.reloader.add_change_listener(
@@ -278,6 +281,7 @@ class ConfigurationLifecycleManager:
 
         Returns:
             True if callback was removed, False if not found
+
         """
         if self.reloader:
             return self.reloader.remove_change_listener(name)
@@ -288,6 +292,7 @@ class ConfigurationLifecycleManager:
 
         Args:
             poll_interval: File polling interval in seconds
+
         """
         if self.reloader:
             await self.reloader.enable_file_watching(poll_interval)
@@ -316,6 +321,7 @@ def setup_configuration_lifecycle(app: FastAPI) -> ConfigurationLifecycleManager
 
     Returns:
         ConfigurationLifecycleManager instance
+
     """
     global _lifecycle_manager
     _lifecycle_manager = ConfigurationLifecycleManager(app)
@@ -342,6 +348,7 @@ def register_config_callback(
         callback: Callback function (old_config, new_config) -> success
         priority: Callback priority (higher = called earlier)
         async_callback: Whether the callback is async
+
     """
     if _lifecycle_manager:
         _lifecycle_manager.register_service_callback(

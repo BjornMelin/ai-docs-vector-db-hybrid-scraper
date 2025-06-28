@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.services.observability.tracking import (
 import src.services.observability.tracking as tracking_module
+from src.services.observability.tracking import (
     _initialize_metrics,
     _NoOpCounter,
     _NoOpHistogram,
@@ -177,7 +177,8 @@ class TestInstrumentFunction:
 
         @instrument_function()
         def test_function():
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
         with pytest.raises(ValueError, match="Test error"):
             test_function()

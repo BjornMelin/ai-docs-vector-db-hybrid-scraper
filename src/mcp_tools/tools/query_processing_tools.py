@@ -23,16 +23,16 @@ else:
 
 from pydantic import BaseModel, Field
 
-from ...infrastructure.client_manager import ClientManager
+from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.models.responses import SearchResult
 
 # ProcessingStage removed from simplified orchestrator
-from ...services.query_processing import (
+from src.services.query_processing import (
     SearchMode,
     SearchOrchestrator,
     SearchPipeline,
     SearchRequest,
 )
-from ..models.responses import SearchResult
 
 
 logger = logging.getLogger(__name__)
@@ -388,7 +388,6 @@ async def orchestrated_search_tool(
 
 def register_query_processing_tools(mcp, _client_manager: ClientManager):
     """Register advanced query processing tools with the MCP server."""
-
     # Initialize the orchestrator
     orchestrator = create_orchestrator()
 
@@ -396,8 +395,7 @@ def register_query_processing_tools(mcp, _client_manager: ClientManager):
     async def search_with_query_expansion(
         request: QueryExpansionRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Search with automatic query expansion.
+        """Search with automatic query expansion.
 
         Enhance queries by adding synonyms, related terms, and contextual
         expansions to improve recall and find more relevant results.
@@ -408,8 +406,7 @@ def register_query_processing_tools(mcp, _client_manager: ClientManager):
     async def search_with_clustering(
         request: ClusteredSearchRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Search with result clustering.
+        """Search with result clustering.
 
         Group search results into meaningful clusters based on content
         similarity, topics, or other features for better organization.
@@ -420,8 +417,7 @@ def register_query_processing_tools(mcp, _client_manager: ClientManager):
     async def search_federated(
         request: FederatedSearchRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Search across multiple collections simultaneously.
+        """Search across multiple collections simultaneously.
 
         Execute federated search across different data sources with
         intelligent result merging and ranking strategies.
@@ -432,8 +428,7 @@ def register_query_processing_tools(mcp, _client_manager: ClientManager):
     async def search_personalized(
         request: PersonalizedSearchRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Search with user personalization.
+        """Search with user personalization.
 
         Tailor search results based on user history, preferences, and
         behavior patterns for more relevant results.
@@ -444,8 +439,7 @@ def register_query_processing_tools(mcp, _client_manager: ClientManager):
     async def search_orchestrated(
         request: OrchestrationRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Search with intelligent orchestration.
+        """Search with intelligent orchestration.
 
         Automatically select and coordinate multiple processing stages
         based on query characteristics and time/quality constraints.

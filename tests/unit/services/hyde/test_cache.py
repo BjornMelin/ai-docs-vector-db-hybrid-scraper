@@ -611,7 +611,7 @@ class TestHyDECache:
         assert metrics["cache_misses"] == 2
         assert metrics["cache_sets"] == 5
         assert metrics["cache_errors"] == 1
-        assert metrics["total_requests"] == 10
+        assert metrics["_total_requests"] == 10
         assert metrics["hit_rate"] == 0.8
         assert metrics["error_rate"] == 0.1
 
@@ -623,7 +623,7 @@ class TestHyDECache:
         assert metrics["cache_misses"] == 0
         assert metrics["cache_sets"] == 0
         assert metrics["cache_errors"] == 0
-        assert metrics["total_requests"] == 0
+        assert metrics["_total_requests"] == 0
         assert metrics["hit_rate"] == 0.0
         assert metrics["error_rate"] == 0.0
 

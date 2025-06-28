@@ -96,6 +96,7 @@ def get_config_tracer() -> trace.Tracer:
 
     Returns:
         OpenTelemetry tracer instance
+
     """
     return trace.get_tracer(f"{__name__}.config")
 
@@ -118,6 +119,7 @@ def instrument_config_operation(
 
     Returns:
         Decorated function with configuration operation instrumentation
+
     """
 
     def decorator(func: F) -> F:
@@ -273,6 +275,7 @@ def instrument_config_validation(
 
     Returns:
         Decorated function with validation instrumentation
+
     """
 
     def decorator(func: F) -> F:
@@ -402,6 +405,7 @@ def instrument_auto_detection(
 
     Returns:
         Decorated function with auto-detection instrumentation
+
     """
 
     def decorator(func: F) -> F:
@@ -529,6 +533,7 @@ def trace_config_operation(
 
     Yields:
         OpenTelemetry span instance
+
     """
     tracer = get_config_tracer()
     operation_id = correlation_id or str(uuid4())
@@ -574,6 +579,7 @@ async def trace_async_config_operation(
 
     Yields:
         OpenTelemetry span instance
+
     """
     tracer = get_config_tracer()
     operation_id = correlation_id or str(uuid4())
@@ -609,6 +615,7 @@ def _extract_config_source_info(span: trace.Span, args: tuple, kwargs: dict) -> 
         span: OpenTelemetry span to add attributes to
         args: Function positional arguments
         kwargs: Function keyword arguments
+
     """
     try:
         # Check for config_path or file path arguments
@@ -654,6 +661,7 @@ def _extract_config_content_metrics(span: trace.Span, result: Any) -> None:
     Args:
         span: OpenTelemetry span to add attributes to
         result: Function result to analyze
+
     """
     try:
         # Handle Config objects
@@ -715,6 +723,7 @@ def record_config_change(
         old_value: Previous value (if applicable)
         new_value: New value (if applicable)
         correlation_id: Optional correlation ID
+
     """
     current_span = trace.get_current_span()
     if current_span and current_span.is_recording():
@@ -743,6 +752,7 @@ def get_current_config_correlation_id() -> str | None:
 
     Returns:
         Correlation ID if available
+
     """
     return baggage.get_baggage("config.operation_id")
 
@@ -758,6 +768,7 @@ def set_config_context(
         environment: Environment name (development, staging, production)
         deployment_tier: Deployment tier (personal, professional, enterprise)
         service_name: Service name
+
     """
     if environment:
         baggage.set_baggage("config.environment", environment)

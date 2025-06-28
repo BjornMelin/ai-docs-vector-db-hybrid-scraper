@@ -13,9 +13,8 @@ from qdrant_client.models import (
 )
 
 from src.config import Config
-
-from ..base import BaseService
-from ..errors import QdrantServiceError
+from src.services.base import BaseService
+from src.services.errors import QdrantServiceError
 
 
 logger = logging.getLogger(__name__)
@@ -40,6 +39,7 @@ class QdrantAliasManager(BaseService):
             config: Unified configuration
             client: Qdrant client instance
             task_queue_manager: Required task queue manager for background tasks
+
         """
         super().__init__(config)
         self.client = client
@@ -56,24 +56,25 @@ class QdrantAliasManager(BaseService):
 
         Raises:
             QdrantServiceError: If name is invalid
+
         """
         if not name:
-            raise QdrantServiceError(f"{name_type} cannot be empty")
+            msg = f"{name_type} cannot be empty"
+            raise QdrantServiceError(msg)
 
         if len(name) > MAX_NAME_LENGTH:
-            raise QdrantServiceError(
-                f"{name_type} '{name}' exceeds maximum length of {MAX_NAME_LENGTH}"
-            )
+            msg = f"{name_type} '{name}' exceeds maximum length of {MAX_NAME_LENGTH}"
+            raise QdrantServiceError(msg)
 
         if not VALID_NAME_PATTERN.match(name):
-            raise QdrantServiceError(
+            msg = (
                 f"{name_type} '{name}' contains invalid characters. "
                 "Only alphanumeric, underscore, and hyphen are allowed."
             )
+            raise QdrantServiceError(msg)
 
     async def initialize(self) -> None:
         """No-op as client is already initialized."""
-        pass
 
     async def cleanup(self) -> None:
         """Cleanup alias manager.
@@ -81,7 +82,6 @@ class QdrantAliasManager(BaseService):
         Note: Persistent task queue jobs continue running independently.
         """
         # No local cleanup needed as tasks are managed by task queue
-        pass
 
     async def create_alias(
         self, alias_name: str, collection_name: str, force: bool = False
@@ -98,6 +98,7 @@ class QdrantAliasManager(BaseService):
 
         Raises:
             QdrantServiceError: If operation fails
+
         """
         # Validate names
         self.validate_name(alias_name, "Alias name")
@@ -129,7 +130,8 @@ class QdrantAliasManager(BaseService):
 
         except Exception as e:
             logger.exception("Failed to create alias")
-            raise QdrantServiceError(f"Failed to create alias: {e}") from e
+            msg = f"Failed to create alias: {e}"
+            raise QdrantServiceError(msg) from e
         else:
             return True
 
@@ -148,6 +150,7 @@ class QdrantAliasManager(BaseService):
 
         Raises:
             QdrantServiceError: If operation fails
+
         """
         # Validate names
         self.validate_name(alias_name, "Alias name")
@@ -197,7 +200,8 @@ class QdrantAliasManager(BaseService):
 
         except Exception as e:
             logger.exception("Failed to switch alias")
-            raise QdrantServiceError(f"Failed to switch alias: {e}") from e
+            msg = f"Failed to switch alias: {e}"
+            raise QdrantServiceError(msg) from e
         else:
             return old_collection
 
@@ -212,6 +216,7 @@ class QdrantAliasManager(BaseService):
 
         Raises:
             QdrantServiceError: If operation fails
+
         """
         try:
             await self.client.update_collection_aliases(
@@ -238,6 +243,7 @@ class QdrantAliasManager(BaseService):
 
         Returns:
             True if alias exists
+
         """
         try:
             aliases = await self.client.get_aliases()
@@ -253,6 +259,7 @@ class QdrantAliasManager(BaseService):
 
         Returns:
             Collection name if alias exists, None otherwise
+
         """
         try:
             aliases = await self.client.get_aliases()
@@ -269,6 +276,7 @@ class QdrantAliasManager(BaseService):
 
         Returns:
             Dictionary mapping alias names to collection names
+
         """
         try:
             aliases = await self.client.get_aliases()
@@ -289,6 +297,7 @@ class QdrantAliasManager(BaseService):
         Args:
             collection_name: Name of collection to delete
             grace_period_minutes: Minutes to wait before deletion
+
         """
         # Check if any alias points to this collection
         aliases = await self.list_aliases()
@@ -303,10 +312,11 @@ class QdrantAliasManager(BaseService):
 
         # Task queue is required for persistent deletion scheduling
         if not self._task_queue_manager:
-            raise RuntimeError(
+            msg = (
                 "TaskQueueManager is required for safe collection deletion. "
                 "Initialize QdrantAliasManager with a TaskQueueManager instance."
             )
+            raise RuntimeError(msg)
 
         job_id = await self._task_queue_manager.enqueue(
             "delete_collection",
@@ -320,9 +330,8 @@ class QdrantAliasManager(BaseService):
                 f"Scheduled deletion of {collection_name} with job ID: {job_id}"
             )
         else:
-            raise RuntimeError(
-                f"Failed to schedule deletion of {collection_name} via task queue"
-            )
+            msg = f"Failed to schedule deletion of {collection_name} via task queue"
+            raise RuntimeError(msg)
 
     async def clone_collection_schema(self, source: str, target: str) -> bool:
         """Clone collection schema from source to target.
@@ -336,6 +345,7 @@ class QdrantAliasManager(BaseService):
 
         Raises:
             QdrantServiceError: If operation fails
+
         """
         try:
             # Get source collection info
@@ -370,7 +380,8 @@ class QdrantAliasManager(BaseService):
 
         except Exception as e:
             logger.exception("Failed to clone collection schema")
-            raise QdrantServiceError(f"Failed to clone collection schema: {e}") from e
+            msg = f"Failed to clone collection schema: {e}"
+            raise QdrantServiceError(msg) from e
         else:
             return True
 
@@ -396,6 +407,7 @@ class QdrantAliasManager(BaseService):
 
         Raises:
             QdrantServiceError: If operation fails
+
         """
         # Validate names
         self.validate_name(source, "Source collection name")
@@ -453,7 +465,8 @@ class QdrantAliasManager(BaseService):
 
         except Exception as e:
             logger.exception("Failed to copy collection data")
-            raise QdrantServiceError(f"Failed to copy collection data: {e}") from e
+            msg = f"Failed to copy collection data: {e}"
+            raise QdrantServiceError(msg) from e
         else:
             return total_copied
 
@@ -468,6 +481,7 @@ class QdrantAliasManager(BaseService):
 
         Returns:
             Tuple of (is_compatible, message)
+
         """
         try:
             # Get collection info

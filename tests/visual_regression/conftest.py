@@ -374,7 +374,7 @@ def visual_comparator():
         def analyze_differences(self, result: VisualComparisonResult) -> dict[str, Any]:
             """Analyze differences in detail."""
             analysis = {
-                "total_changed_pixels": int(
+                "_total_changed_pixels": int(
                     result.difference_percentage * 1000000
                 ),  # Mock calculation
                 "change_intensity": "high"

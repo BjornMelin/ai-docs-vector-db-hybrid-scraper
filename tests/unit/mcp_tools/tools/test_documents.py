@@ -230,7 +230,8 @@ class TestAddDocument:
 
             try:
                 await tool_func(sample_document_request, mock_context)
-                raise AssertionError("Expected ValueError to be raised")
+                msg = "Expected ValueError to be raised"
+                raise AssertionError(msg)
             except Exception as e:
                 # Verify error is propagated correctly
                 assert "URL not allowed" in str(e)
@@ -256,7 +257,8 @@ class TestAddDocument:
 
             try:
                 await tool_func(sample_document_request, mock_context)
-                raise AssertionError("Expected AttributeError to be raised")
+                msg = "Expected AttributeError to be raised"
+                raise AssertionError(msg)
             except AttributeError as e:
                 # Verify error is related to None crawl manager
                 assert "'NoneType' object has no attribute 'scrape_url'" in str(e)
@@ -292,7 +294,8 @@ class TestAddDocument:
 
             try:
                 await tool_func(sample_document_request, mock_context)
-                raise AssertionError("Expected ValueError to be raised")
+                msg = "Expected ValueError to be raised"
+                raise AssertionError(msg)
             except ValueError as e:
                 # Verify error relates to scraping failure
                 assert "Failed to scrape" in str(e)
@@ -328,7 +331,8 @@ class TestAddDocument:
 
             try:
                 await tool_func(sample_document_request, mock_context)
-                raise AssertionError("Expected Exception to be raised")
+                msg = "Expected Exception to be raised"
+                raise AssertionError(msg)
             except Exception as e:
                 # Verify error relates to embedding failure
                 assert "Embedding service error" in str(e)
@@ -371,7 +375,8 @@ class TestAddDocument:
 
             try:
                 await tool_func(sample_document_request, mock_context)
-                raise AssertionError("Expected Exception to be raised")
+                msg = "Expected Exception to be raised"
+                raise AssertionError(msg)
             except Exception as e:
                 # Verify error relates to vector DB failure
                 assert "Vector DB storage error" in str(e)
@@ -415,7 +420,7 @@ class TestAddDocumentBatch:
 
             # Verify successful batch response
             assert isinstance(result, DocumentBatchResponse)
-            assert result.total == 3
+            assert result._total == 3
             assert len(result.successful) == 3
             assert len(result.failed) == 0
 
@@ -438,7 +443,8 @@ class TestAddDocumentBatch:
                 nonlocal call_count
                 call_count += 1
                 if call_count == 2:  # Second URL fails
-                    raise ValueError("URL validation failed")
+                    msg = "URL validation failed"
+                    raise ValueError(msg)
                 return url
 
             mock_security_instance = mock_security.from_unified_config.return_value
@@ -447,7 +453,7 @@ class TestAddDocumentBatch:
             result = await tool_func(sample_batch_request, mock_context)
 
             # Verify partial success response
-            assert result.total == 3
+            assert result._total == 3
             assert len(result.successful) == 2
             assert len(result.failed) == 1
 
@@ -467,7 +473,7 @@ class TestAddDocumentBatch:
             result = await tool_func(sample_batch_request, mock_context)
 
             # Verify complete failure response
-            assert result.total == 3
+            assert result._total == 3
             assert len(result.successful) == 0
             assert len(result.failed) == 3
 
@@ -509,7 +515,7 @@ class TestAddDocumentBatch:
             result = await tool_func(batch_request, mock_context)
 
             # Verify successful processing
-            assert result.total == 2
+            assert result._total == 2
             assert len(result.successful) == 2
 
 
@@ -532,7 +538,8 @@ class TestDocumentIntegration:
 
             try:
                 await tool_func(minimal_request, mock_context)
-                raise AssertionError("Expected ValueError to be raised")
+                msg = "Expected ValueError to be raised"
+                raise AssertionError(msg)
             except ValueError as e:
                 # Should handle minimal data gracefully even when URL validation fails
                 assert "URL not allowed" in str(e)
@@ -593,7 +600,7 @@ class TestDocumentIntegration:
             # Verify complete workflow success
             assert single_result.url == "https://example.com/comprehensive-doc"
             assert single_result.chunks_created == 2
-            assert batch_result.total == 2
+            assert batch_result._total == 2
             assert len(batch_result.successful) == 2
 
             # Verify consistent collection usage

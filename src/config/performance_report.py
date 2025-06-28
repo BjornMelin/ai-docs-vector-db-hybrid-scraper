@@ -40,6 +40,7 @@ class ConfigPerformanceReporter:
 
         Args:
             output_dir: Directory for output reports
+
         """
         self.output_dir = output_dir
         self.output_dir.mkdir(exist_ok=True)
@@ -55,6 +56,7 @@ class ConfigPerformanceReporter:
 
         Returns:
             Benchmark results
+
         """
         console.print(
             Panel("🚀 Configuration Performance Validation", style="bold blue")

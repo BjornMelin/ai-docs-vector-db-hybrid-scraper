@@ -16,6 +16,7 @@ Consolidates functionality from:
 - test_chunking_import_coverage.py
 """
 
+import logging
 import sys
 from unittest.mock import Mock, patch
 
@@ -23,6 +24,9 @@ from src.chunking import DocumentChunker
 from src.config import ChunkingConfig
 from src.config.enums import ChunkingStrategy
 from src.models.document_processing import Chunk
+
+
+logger = logging.getLogger(__name__)
 
 
 class TestChunkingEdgeCases:
@@ -190,10 +194,9 @@ class TestTreeSitterImportErrors:
     def test_tree_sitter_import_error(self):
         """Test that import errors for tree_sitter are handled properly."""
         # Remove the chunking module from cache to force re-import
-        modules_to_remove = []
-        for module_name in sys.modules:
-            if "chunking" in module_name:
-                modules_to_remove.append(module_name)
+        modules_to_remove = [
+            module_name for module_name in sys.modules if "chunking" in module_name
+        ]
 
         for module_name in modules_to_remove:
             if module_name in sys.modules:
@@ -202,10 +205,11 @@ class TestTreeSitterImportErrors:
         # Mock the tree_sitter import to fail
         original_import = __builtins__["__import__"]
 
-        def mock_import(name, *args, **kwargs):
+        def mock_import(name, *args, **_kwargs):
             if name == "tree_sitter":
-                raise ImportError("No module named 'tree_sitter'")
-            return original_import(name, *args, **kwargs)
+                msg = "No module named 'tree_sitter'"
+                raise ImportError(msg)
+            return original_import(name, *args, **_kwargs)
 
         # Test the import error handling
         try:
@@ -226,9 +230,10 @@ class TestTreeSitterImportErrors:
         config = ChunkingConfig(enable_ast_chunking=True)
 
         # Mock individual language imports to fail
-        def mock_import(name, *_args, **_kwargs):
+        def mock_import(name, *_args, **__kwargs):
             if "tree_sitter_python" in name:
-                raise ImportError("Parser not available")
+                msg = "Parser not available"
+                raise ImportError(msg)
             return Mock()
 
         with (

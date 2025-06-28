@@ -108,7 +108,8 @@ class TestFunctionInstrumentation:
 
         @instrument_function("failing_operation")
         def failing_function():
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
         with pytest.raises(ValueError):
             failing_function()
@@ -162,7 +163,8 @@ class TestVectorSearchInstrumentation:
 
         @instrument_vector_search("test_collection", "semantic")
         def failing_search(_query):
-            raise ConnectionError("Vector database unavailable")
+            msg = "Vector database unavailable"
+            raise ConnectionError(msg)
 
         with pytest.raises(ConnectionError):
             failing_search("test query")
@@ -231,7 +233,7 @@ class TestLLMInstrumentation:
                 "usage": {
                     "prompt_tokens": 10,
                     "completion_tokens": 20,
-                    "total_tokens": 30,
+                    "_total_tokens": 30,
                 },
             }
 
@@ -281,7 +283,8 @@ class TestContextManagers:
     def test_trace_operation_with_exception(self):
         """Test trace_operation context manager with exceptions."""
         with pytest.raises(ValueError), trace_operation("failing_operation"):
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
     def test_trace_async_operation(self):
         """Test async trace_operation context manager."""
@@ -299,7 +302,8 @@ class TestContextManagers:
 
         async def async_failing_test():
             async with trace_async_operation("async_failing_operation"):
-                raise ValueError("Async test error")
+                msg = "Async test error"
+                raise ValueError(msg)
 
         with pytest.raises(ValueError):
             asyncio.run(async_failing_test())
@@ -393,7 +397,8 @@ class TestInstrumentationIntegration:
 
         @instrument_function("error_test")
         def failing_function():
-            raise RuntimeError("Test error")
+            msg = "Test error"
+            raise RuntimeError(msg)
 
         with pytest.raises(RuntimeError):
             failing_function()

@@ -18,8 +18,6 @@ from tests.chaos.conftest import FailureType
 class TestError(Exception):
     """Custom exception for this module."""
 
-    pass
-
 
 class AuthenticationError(Exception):
     """Custom authentication error for testing."""
@@ -92,7 +90,8 @@ class TestServiceFaultInjection:
             db_connection_count += 1
 
             if db_connection_count > max_connections:
-                raise ConnectionError("Database connection pool exhausted")
+                msg = "Database connection pool exhausted"
+                raise ConnectionError(msg)
 
             # Simulate database operation
             await asyncio.sleep(0.01)
@@ -123,13 +122,17 @@ class TestServiceFaultInjection:
 
             async def auth_operation(mode=failure_mode):
                 if mode == "token_expired":
-                    raise AuthenticationError("Authentication token has expired")
-                elif mode == "invalid_credentials":
-                    raise AuthenticationError("Invalid authentication credentials")
-                elif mode == "auth_service_down":
-                    raise ConnectionError("Authentication service unavailable")
-                elif mode == "rate_limit_exceeded":
-                    raise AuthenticationError("Authentication rate limit exceeded")
+                    msg = "Authentication token has expired"
+                    raise AuthenticationError(msg)
+                if mode == "invalid_credentials":
+                    msg = "Invalid authentication credentials"
+                    raise AuthenticationError(msg)
+                if mode == "auth_service_down":
+                    msg = "Authentication service unavailable"
+                    raise ConnectionError(msg)
+                if mode == "rate_limit_exceeded":
+                    msg = "Authentication rate limit exceeded"
+                    raise AuthenticationError(msg)
 
             # Test each failure mode
             with pytest.raises((AuthenticationError, ConnectionError)):
@@ -144,7 +147,8 @@ class TestServiceFaultInjection:
             nonlocal cache_hit_count
 
             if random.random() < cache_failure_rate:
-                raise ConnectionError("Cache service temporarily unavailable")
+                msg = "Cache service temporarily unavailable"
+                raise ConnectionError(msg)
 
             cache_hit_count += 1
             return f"cached_value_for_{key}"
@@ -191,7 +195,8 @@ class TestServiceFaultInjection:
             request_count += 1
 
             if request_count > rate_limit:
-                raise RateLimitError("API rate limit exceeded - too many requests")
+                msg = "API rate limit exceeded - too many requests"
+                raise RateLimitError(msg)
 
             return {"status": "success", "data": "api_response"}
 
@@ -224,7 +229,8 @@ class TestServiceFaultInjection:
             nonlocal service_c_failures
             service_c_failures += 1
             if service_c_failures > 2:
-                raise TestError("Service C is overloaded")
+                msg = "Service C is overloaded"
+                raise TestError(msg)
             return {"service": "C", "data": "service_c_data"}
 
         async def service_b():
@@ -235,7 +241,8 @@ class TestServiceFaultInjection:
                 service_b_failures += 1
                 # Circuit breaker: fail fast after dependency failure
                 if service_b_failures > 1:
-                    raise TestError("Service B circuit breaker open") from None
+                    msg = "Service B circuit breaker open"
+                    raise TestError(msg) from None
                 raise
             else:
                 return {"service": "B", "dependency": result_c}
@@ -282,7 +289,8 @@ class TestServiceFaultInjection:
         async def data_validator(data: dict[str, Any]):
             # Validate data integrity
             if data.get("checksum_invalid"):
-                raise ValueError("Data integrity check failed")
+                msg = "Data integrity check failed"
+                raise ValueError(msg)
             return data
 
         # Test data processing with validation
@@ -317,7 +325,7 @@ class TestServiceFaultInjection:
                     "features": ["feature_a", "feature_b", "feature_c"],
                     "response_time": "normal",
                 }
-            elif service_health == "degraded":
+            if service_health == "degraded":
                 # Reduced functionality
                 await asyncio.sleep(0.05)  # Slower response
                 return {
@@ -325,8 +333,9 @@ class TestServiceFaultInjection:
                     "features": ["feature_a"],  # Only core features
                     "response_time": "slow",
                 }
-            else:  # critical
-                raise TestError("Service in critical state")
+            # critical
+            msg = "Service in critical state"
+            raise TestError(msg)
 
         # Test healthy state
         result = await adaptive_service()
@@ -356,7 +365,8 @@ class TestServiceFaultInjection:
 
             if startup_attempts < max_startup_attempts:
                 # Simulate startup failure
-                raise TestError(f"Service startup failed (attempt {startup_attempts})")
+                msg = f"Service startup failed (attempt {startup_attempts})"
+                raise TestError(msg)
 
             # Successful startup
             return {"status": "started", "attempts": startup_attempts}
@@ -457,7 +467,8 @@ class TestAdvancedServiceFaults:
                 cpu_pool["used"] + cpu_required > cpu_pool["available"]
                 or memory_pool["used"] + memory_required > memory_pool["available"]
             ):
-                raise TestError("Insufficient resources - operation rejected")
+                msg = "Insufficient resources - operation rejected"
+                raise TestError(msg)
 
             # Allocate resources
             cpu_pool["used"] += cpu_required
@@ -557,8 +568,7 @@ class TestAdvancedServiceFaults:
                     "value": consensus_value,
                     "agreement_count": count,
                 }
-            else:
-                return {"consensus": False, "reason": "no_majority"}
+            return {"consensus": False, "reason": "no_majority"}
 
         # Test consensus with Byzantine node
         result = await consensus_algorithm()

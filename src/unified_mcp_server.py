@@ -98,7 +98,6 @@ def validate_configuration():
 
     Checks for required API keys and validates critical settings.
     """
-
     config = get_config()
     warnings = []
     errors = []
@@ -127,7 +126,8 @@ def validate_configuration():
     if errors:
         for error in errors:
             logger.error(f"Configuration error: {error}")
-        raise ValueError(f"Configuration validation failed: {'; '.join(errors)}")
+        msg = f"Configuration validation failed: {'; '.join(errors)}"
+        raise ValueError(msg)
 
     logger.info("Configuration validation passed")
 

@@ -244,8 +244,8 @@ class TestCompleteUserJourneys:
         )
 
         # Validate concurrent execution didn't degrade performance significantly
-        total_duration = end_time - start_time
-        assert total_duration < 30, "Concurrent execution took too long"
+        _total_duration = end_time - start_time
+        assert _total_duration < 30, "Concurrent execution took too long"
 
         # Validate individual journey success
         for result in successful_results:
@@ -729,8 +729,8 @@ class TestCrossSystemIntegration:
         )
 
         # Validate reasonable performance under load
-        total_duration = end_time - start_time
-        assert total_duration < 60, f"Load test took too long: {total_duration}s"
+        _total_duration = end_time - start_time
+        assert _total_duration < 60, f"Load test took too long: {_total_duration}s"
 
         # Validate individual journey performance didn't degrade too much
         avg_duration = sum(r.duration_seconds for r in successful_journeys) / len(

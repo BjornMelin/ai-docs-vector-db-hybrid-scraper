@@ -184,7 +184,7 @@ def contract_test_config():
 
 
 @pytest.fixture
-def json_schema_validator():
+def _json_schema_validator():
     """JSON schema validation utilities."""
     return JSONSchemaValidator()
 
@@ -203,7 +203,7 @@ def api_contract_validator():
             self.contracts[endpoint] = contract
 
         def validate_request(
-            self, endpoint: str, method: str, **kwargs
+            self, endpoint: str, method: str, **_kwargs
         ) -> dict[str, Any]:
             """Validate a request against its contract."""
             if endpoint not in self.contracts:
@@ -226,14 +226,14 @@ def api_contract_validator():
             # Validate request parameters
             if "parameters" in method_contract:
                 param_errors = self._validate_parameters(
-                    kwargs.get("params", {}), method_contract["parameters"]
+                    _kwargs.get("params", {}), method_contract["parameters"]
                 )
                 errors.extend(param_errors)
 
             # Validate request body
             if "requestBody" in method_contract:
                 body_errors = self._validate_request_body(
-                    kwargs.get("json", kwargs.get("data")),
+                    _kwargs.get("json", _kwargs.get("data")),
                     method_contract["requestBody"],
                 )
                 errors.extend(body_errors)
@@ -241,7 +241,7 @@ def api_contract_validator():
             # Validate headers
             if "headers" in method_contract:
                 header_errors = self._validate_headers(
-                    kwargs.get("headers", {}), method_contract["headers"]
+                    _kwargs.get("headers", {}), method_contract["headers"]
                 )
                 errors.extend(header_errors)
 
@@ -630,19 +630,18 @@ def openapi_contract_manager():
                 for prop_name, prop_schema in properties.items():
                     result[prop_name] = self._generate_simple_test_data(prop_schema)
                 return result
-            elif schema_type == "array":
+            if schema_type == "array":
                 item_schema = schema.get("items", {"type": "string"})
                 return [self._generate_simple_test_data(item_schema)]
-            elif schema_type == "string":
+            if schema_type == "string":
                 return "test_string"
-            elif schema_type == "integer":
+            if schema_type == "integer":
                 return 42
-            elif schema_type == "number":
+            if schema_type == "number":
                 return 3.14
-            elif schema_type == "boolean":
+            if schema_type == "boolean":
                 return True
-            else:
-                return "default_value"
+            return "default_value"
 
     return OpenAPIContractManager()
 
@@ -671,7 +670,7 @@ def pact_contract_builder():
             self.interactions[-1]["description"] = description
             return self
 
-        def with_request(self, method: str, path: str, **kwargs):
+        def with_request(self, method: str, path: str, **_kwargs):
             """Define the expected request."""
             if not self.interactions:
                 self.interactions.append({})
@@ -681,27 +680,27 @@ def pact_contract_builder():
                 "path": path,
             }
 
-            if "headers" in kwargs:
-                request["headers"] = kwargs["headers"]
-            if "query" in kwargs:
-                request["query"] = kwargs["query"]
-            if "body" in kwargs:
-                request["body"] = kwargs["body"]
+            if "headers" in _kwargs:
+                request["headers"] = _kwargs["headers"]
+            if "query" in _kwargs:
+                request["query"] = _kwargs["query"]
+            if "body" in _kwargs:
+                request["body"] = _kwargs["body"]
 
             self.interactions[-1]["request"] = request
             return self
 
-        def will_respond_with(self, status: int, **kwargs):
+        def will_respond_with(self, status: int, **_kwargs):
             """Define the expected response."""
             if not self.interactions:
                 self.interactions.append({})
 
             response = {"status": status}
 
-            if "headers" in kwargs:
-                response["headers"] = kwargs["headers"]
-            if "body" in kwargs:
-                response["body"] = kwargs["body"]
+            if "headers" in _kwargs:
+                response["headers"] = _kwargs["headers"]
+            if "body" in _kwargs:
+                response["body"] = _kwargs["body"]
 
             self.interactions[-1]["response"] = response
             return self
@@ -739,9 +738,8 @@ def pact_contract_builder():
                         "interaction": interaction["description"],
                         "errors": [],
                     }
-                else:
-                    errors.extend(request_match.get("errors", []))
-                    errors.extend(response_match.get("errors", []))
+                errors.extend(request_match.get("errors", []))
+                errors.extend(response_match.get("errors", []))
 
             return {
                 "verified": False,
@@ -819,9 +817,9 @@ def contract_test_data():
                                             "required": ["id", "title", "score"],
                                         },
                                     },
-                                    "total": {"type": "integer"},
+                                    "_total": {"type": "integer"},
                                 },
-                                "required": ["results", "total"],
+                                "required": ["results", "_total"],
                             }
                         },
                         "400": {
@@ -936,7 +934,7 @@ def contract_test_data():
 
 # Mock services for contract testing
 @pytest.fixture
-def mock_contract_service():
+def _mock_contract_service():
     """Mock service for contract testing."""
     service = AsyncMock()
 
@@ -947,7 +945,7 @@ def mock_contract_service():
                 {"id": "doc1", "title": "Test Document 1", "score": 0.95},
                 {"id": "doc2", "title": "Test Document 2", "score": 0.87},
             ],
-            "total": 2,
+            "_total": 2,
         }
 
     async def mock_add_document(_url: str, _collection: str = "default"):

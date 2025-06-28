@@ -20,8 +20,6 @@ from tests.chaos.conftest import ChaosExperiment, ExperimentResult, FailureType
 class TestError(Exception):
     """Custom exception for this module."""
 
-    pass
-
 
 class ExperimentStatus(Enum):
     """Chaos experiment execution status."""
@@ -98,7 +96,8 @@ class ChaosTestRunner:
             if self.global_config["safety_mode"]:
                 safety_check = await self._perform_safety_checks(experiment)
                 if not safety_check.get("passed", True):
-                    raise TestError(f"Safety check failed: {safety_check['reason']}")
+                    msg = f"Safety check failed: {safety_check['reason']}"
+                    raise TestError(msg)
 
             # Execute the experiment
             result = await self._run_experiment_implementation(
@@ -134,7 +133,8 @@ class ChaosTestRunner:
     ) -> dict[str, Any]:
         """Execute a complete chaos test suite."""
         if suite_name not in self.test_suites:
-            raise ValueError(f"Test suite '{suite_name}' not found")
+            msg = f"Test suite '{suite_name}' not found"
+            raise ValueError(msg)
 
         suite = self.test_suites[suite_name]
         suite_start_time = time.time()
@@ -169,7 +169,7 @@ class ChaosTestRunner:
                 "status": "completed",
                 "suite_name": suite_name,
                 "execution_time": time.time() - suite_start_time,
-                "total_experiments": len(suite.experiments),
+                "_total_experiments": len(suite.experiments),
                 "successful_experiments": suite_results["successful"],
                 "failed_experiments": suite_results["failed"],
                 "experiment_results": [asdict(exec) for exec in experiment_executions],
@@ -426,7 +426,7 @@ class ChaosTestRunner:
         )
         failed = len([e for e in executions if e.status == ExperimentStatus.FAILED])
 
-        total_duration = sum(
+        _total_duration = sum(
             [
                 (e.end_time or 0) - (e.start_time or 0)
                 for e in executions
@@ -436,23 +436,23 @@ class ChaosTestRunner:
 
         # Calculate success criteria metrics
         all_criteria_met = 0
-        total_criteria = 0
+        _total_criteria = 0
 
         for execution in executions:
             if execution.result and execution.result.success_criteria_met:
                 criteria_met = sum(execution.result.success_criteria_met)
                 all_criteria_met += criteria_met
-                total_criteria += len(execution.result.success_criteria_met)
+                _total_criteria += len(execution.result.success_criteria_met)
 
-        success_rate = all_criteria_met / total_criteria if total_criteria > 0 else 0
+        success_rate = all_criteria_met / _total_criteria if _total_criteria > 0 else 0
 
         return {
             "successful": successful,
             "failed": failed,
-            "total": len(executions),
+            "_total": len(executions),
             "success_rate": success_rate,
-            "total_duration": total_duration,
-            "average_duration": total_duration / len(executions) if executions else 0,
+            "_total_duration": _total_duration,
+            "average_duration": _total_duration / len(executions) if executions else 0,
             "criteria_success_rate": success_rate,
         }
 
@@ -478,7 +478,7 @@ class ChaosTestRunner:
             return {"error": "No execution data available"}
 
         # Calculate overall metrics
-        total_experiments = len(executions)
+        _total_experiments = len(executions)
         successful_experiments = len(
             [e for e in executions if e.status == ExperimentStatus.COMPLETED]
         )
@@ -491,9 +491,13 @@ class ChaosTestRunner:
         for execution in executions:
             failure_type = execution.experiment.failure_type.value
             if failure_type not in failure_types:
-                failure_types[failure_type] = {"total": 0, "successful": 0, "failed": 0}
+                failure_types[failure_type] = {
+                    "_total": 0,
+                    "successful": 0,
+                    "failed": 0,
+                }
 
-            failure_types[failure_type]["total"] += 1
+            failure_types[failure_type]["_total"] += 1
             if execution.status == ExperimentStatus.COMPLETED:
                 failure_types[failure_type]["successful"] += 1
             else:
@@ -514,11 +518,11 @@ class ChaosTestRunner:
             "report_generated_at": time.time(),
             "suite_name": suite_name,
             "summary": {
-                "total_experiments": total_experiments,
+                "_total_experiments": _total_experiments,
                 "successful_experiments": successful_experiments,
                 "failed_experiments": failed_experiments,
-                "success_rate": successful_experiments / total_experiments
-                if total_experiments > 0
+                "success_rate": successful_experiments / _total_experiments
+                if _total_experiments > 0
                 else 0,
             },
             "failure_type_analysis": failure_types,
@@ -526,7 +530,7 @@ class ChaosTestRunner:
                 "average_recovery_time": avg_recovery_time,
                 "min_recovery_time": min(recovery_times) if recovery_times else 0,
                 "max_recovery_time": max(recovery_times) if recovery_times else 0,
-                "total_recovery_samples": len(recovery_times),
+                "_total_recovery_samples": len(recovery_times),
             },
             "recommendations": self._generate_recommendations(executions),
         }
@@ -659,7 +663,8 @@ class TestChaosRunner:
 
             async def health_check(self):
                 if self.failure_injected:
-                    raise TestError("System unhealthy due to injected failure")
+                    msg = "System unhealthy due to injected failure"
+                    raise TestError(msg)
                 return {"status": "healthy"}
 
         return MockTargetSystem()
@@ -711,7 +716,7 @@ class TestChaosRunner:
 
         # Verify suite execution
         assert suite_result["status"] == "completed"
-        assert suite_result["total_experiments"] == 3
+        assert suite_result["_total_experiments"] == 3
         assert suite_result["successful_experiments"] >= 0
         assert suite_result["execution_time"] > 0
 
@@ -785,7 +790,8 @@ class TestChaosRunner:
             ):
                 self.call_count += 1
                 if self.call_count <= 2:  # Fail first 2 attempts
-                    raise TestError("Simulated injection failure")
+                    msg = "Simulated injection failure"
+                    raise TestError(msg)
                 # Succeed on 3rd attempt
 
             async def stop_failure_injection(self, target_service: str):
@@ -835,7 +841,7 @@ class TestChaosRunner:
 
         # Verify summary metrics
         summary = report["summary"]
-        assert summary["total_experiments"] == 3
+        assert summary["_total_experiments"] == 3
         assert summary["success_rate"] >= 0.0
         assert summary["success_rate"] <= 1.0
 

@@ -72,7 +72,8 @@ class ExpandedTerm(BaseModel):
     def validate_term_format(cls, v):
         """Validate term format."""
         if not v or not v.strip():
-            raise ValueError("Term cannot be empty")
+            msg = "Term cannot be empty"
+            raise ValueError(msg)
         return v.strip().lower()
 
 
@@ -169,6 +170,7 @@ class QueryExpansionService:
             enable_semantic_expansion: Enable semantic similarity expansion
             enable_domain_expansion: Enable domain-specific expansion
             cache_size: Size of expansion cache
+
         """
         self._logger = logging.getLogger(
             f"{self.__class__.__module__}.{self.__class__.__name__}"
@@ -209,8 +211,8 @@ class QueryExpansionService:
 
         Returns:
             QueryExpansionResult with expanded terms and metadata
-        """
 
+        """
         start_time = time.time()
 
         try:

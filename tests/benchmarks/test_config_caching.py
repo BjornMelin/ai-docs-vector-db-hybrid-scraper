@@ -54,24 +54,24 @@ class MockEnvironment:
 class MockFastConfig:
     """Mock FastConfig for testing purposes."""
 
-    def __init__(self, app_name: str, debug: bool = False, **kwargs):
+    def __init__(self, app_name: str, debug: bool = False, **_kwargs):
         self.app_name = app_name
         self.debug = debug
-        env_value = kwargs.get("environment", "development")
+        env_value = _kwargs.get("environment", "development")
         self.environment = MockEnvironment(env_value)
 
     @classmethod
-    def create_fast(cls, app_name: str, **kwargs):
-        return cls(app_name=app_name, **kwargs)
+    def create_fast(cls, app_name: str, **_kwargs):
+        return cls(app_name=app_name, **_kwargs)
 
     @classmethod
     def load_sync(cls, _config_file):
         return cls(app_name="test-config")
 
     @classmethod
-    async def load_async(cls, app_name: str | None = None, **kwargs):
+    async def load_async(cls, app_name: str | None = None, **_kwargs):
         await asyncio.sleep(0.001)  # Simulate async delay
-        return cls(app_name=app_name or "async-config", **kwargs)
+        return cls(app_name=app_name or "async-config", **_kwargs)
 
 
 class MockConfigFactory:

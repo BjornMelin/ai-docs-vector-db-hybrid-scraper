@@ -31,7 +31,8 @@ class TestWatchdogIntegration:
         Path(f.name).unlink(missing_ok=True)
 
     @pytest.mark.asyncio
-    async def test_file_watcher_setup(self, _temp_config_file: Path):
+    @pytest.mark.usefixtures("_temp_config_file")
+    async def test_file_watcher_setup(self):
         """Test that file watcher is properly set up.
 
         Verifies that watchdog observer is configured correctly
@@ -159,7 +160,8 @@ class TestWatchdogIntegration:
             nonlocal error_count
             try:
                 # Simulate config reload that fails
-                raise ValueError("Invalid configuration format")
+                msg = "Invalid configuration format"
+                raise ValueError(msg)
             except Exception:
                 error_count += 1
                 # In real implementation, this would be logged
@@ -216,14 +218,34 @@ class TestWatchdogIntegration:
             """Gracefully shutdown file watcher."""
             observer.stop()
 
-            # Wait for observer to stop
-            start_time = time.time()
-            while observer.is_alive() and (time.time() - start_time) < timeout:
-                await asyncio.sleep(0.1)
-
-            if observer.is_alive():
+            # Wait for observer to stop using asyncio.wait_for
+            try:
+                await asyncio.wait_for(
+                    _wait_for_observer_shutdown(observer), timeout=timeout
+                )
+            except TimeoutError:
                 # Force stop if graceful shutdown failed
                 observer.stop()
+
+        async def _wait_for_observer_shutdown(observer):
+            """Wait for observer to finish using event-based approach."""
+            shutdown_event = asyncio.Event()
+
+            def check_observer():
+                if not observer.is_alive():
+                    shutdown_event.set()
+
+            # Simulate the observer stopping after a short time
+            task = asyncio.create_task(
+                _simulate_observer_stop(observer, shutdown_event)
+            )
+            await shutdown_event.wait()
+
+        async def _simulate_observer_stop(observer, event):
+            """Simulate observer stopping after a delay."""
+            await asyncio.sleep(0.05)  # Simulate some processing time
+            observer.is_alive.return_value = False
+            event.set()
 
         # Act
         await shutdown_watcher(mock_observer)
@@ -243,18 +265,21 @@ class TestWatchdogIntegration:
             required_keys = ["database_url", "api_key", "cache_size"]
 
             if not isinstance(config_data, dict):
-                raise ValueError("Config must be a dictionary")
+                msg = "Config must be a dictionary"
+                raise ValueError(msg)
 
             for key in required_keys:
                 if key not in config_data:
-                    raise ValueError(f"Missing required key: {key}")
+                    msg = f"Missing required key: {key}"
+                    raise ValueError(msg)
 
             # Validate specific values
             if (
                 not isinstance(config_data["cache_size"], int)
                 or config_data["cache_size"] <= 0
             ):
-                raise ValueError("cache_size must be a positive integer")
+                msg = "cache_size must be a positive integer"
+                raise ValueError(msg)
 
             return True
 
@@ -279,7 +304,7 @@ class TestWatchdogIntegration:
         assert validate_config(valid_config) is True
 
         for invalid_config in invalid_configs:
-            with pytest.raises(ValueError):
+            with pytest.raises(ValueError, match=r".*"):
                 validate_config(invalid_config)
 
 
@@ -303,7 +328,8 @@ class TestConfigurationReloadPatterns:
                 async with self._lock:
                     # Validate before applying
                     if not isinstance(new_config, dict):
-                        raise ValueError("Invalid config format")
+                        msg = "Invalid config format"
+                        raise ValueError(msg)
 
                     # Apply atomically
                     old_config = self._config.copy()
@@ -327,7 +353,7 @@ class TestConfigurationReloadPatterns:
         assert config.get("key2") == "value2"
 
         # Failed update shouldn't affect config
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".*"):
             await config.update("invalid_config")
 
         # Config should remain unchanged

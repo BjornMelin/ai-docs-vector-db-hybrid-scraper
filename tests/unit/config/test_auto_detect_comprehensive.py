@@ -427,7 +427,7 @@ class TestAutoDetectedServices:
 
         # Initially not completed
         assert services.detection_completed_at is None
-        assert services.total_detection_time_ms is None
+        assert services._total_detection_time_ms is None
 
         # Mark as completed
         start_time = services.detection_started_at
@@ -435,9 +435,9 @@ class TestAutoDetectedServices:
         services.mark_completed()
 
         assert services.detection_completed_at is not None
-        assert services.total_detection_time_ms is not None
+        assert services._total_detection_time_ms is not None
         assert services.detection_completed_at > start_time
-        assert services.total_detection_time_ms > 0
+        assert services._total_detection_time_ms > 0
 
 
 @pytest.mark.asyncio
@@ -648,7 +648,7 @@ class TestServiceDiscovery:
 
             assert isinstance(result, ServiceDiscoveryResult)
             assert len(result.services) == 2
-            assert result.metadata["total_attempted"] == 3
+            assert result.metadata["_total_attempted"] == 3
             assert result.metadata["successful"] == 2
             assert result.metadata["failed"] == 1
 
@@ -878,7 +878,7 @@ class TestConnectionPoolManager:
         # Initialize with empty metrics
         pool_manager._health_metrics["redis"] = PoolHealthMetrics(
             pool_name="redis",
-            total_connections=10,
+            _total_connections=10,
             active_connections=3,
             idle_connections=7,
             pool_utilization=0.3,
@@ -902,7 +902,7 @@ class TestConnectionPoolManager:
         # Initialize metrics
         pool_manager._health_metrics["redis"] = PoolHealthMetrics(
             pool_name="redis",
-            total_connections=0,
+            _total_connections=0,
             active_connections=0,
             idle_connections=0,
             pool_utilization=0.0,
@@ -948,7 +948,7 @@ class TestConnectionPoolManager:
         # Add some mock metrics
         pool_manager._health_metrics["redis"] = PoolHealthMetrics(
             pool_name="redis",
-            total_connections=10,
+            _total_connections=10,
             active_connections=3,
             idle_connections=7,
             pool_utilization=0.3,
@@ -960,7 +960,7 @@ class TestConnectionPoolManager:
 
         pool_manager._health_metrics["qdrant"] = PoolHealthMetrics(
             pool_name="qdrant",
-            total_connections=1,
+            _total_connections=1,
             active_connections=0,
             idle_connections=1,
             pool_utilization=0.0,
@@ -972,7 +972,7 @@ class TestConnectionPoolManager:
 
         stats = pool_manager.get_pool_stats()
 
-        assert stats["total_pools"] == 2
+        assert stats["_total_pools"] == 2
         assert stats["healthy_pools"] == 2
         assert "redis" in stats["pools"]
         assert "qdrant" in stats["pools"]

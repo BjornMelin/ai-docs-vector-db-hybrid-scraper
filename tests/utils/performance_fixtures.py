@@ -2,18 +2,22 @@
 
 import asyncio
 import gc
+import logging
 import time
-from typing import Any
+from typing import Any, ClassVar
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 
+logger = logging.getLogger(__name__)
+
+
 class FixtureCache:
     """Global fixture cache for expensive objects."""
 
-    _cache: dict[str, Any] = {}
-    _creation_times: dict[str, float] = {}
+    _cache: ClassVar[dict[str, Any]] = {}
+    _creation_times: ClassVar[dict[str, float]] = {}
 
     @classmethod
     def get(cls, key: str, factory, ttl: float = 300.0):
@@ -74,9 +78,9 @@ def optimized_async_loop():
 def fast_mock_factory():
     """Factory for creating optimized mock objects."""
 
-    def create_async_mock(**kwargs):
+    def create_async_mock(**_kwargs):
         """Create fast async mock with pre-configured methods."""
-        mock = AsyncMock(**kwargs)
+        mock = AsyncMock(**_kwargs)
 
         # Pre-configure common async patterns
         mock.__aenter__ = AsyncMock(return_value=mock)
@@ -90,9 +94,9 @@ def fast_mock_factory():
 
         return mock
 
-    def create_sync_mock(**kwargs):
+    def create_sync_mock(**_kwargs):
         """Create fast sync mock with pre-configured methods."""
-        mock = MagicMock(**kwargs)
+        mock = MagicMock(**_kwargs)
 
         # Pre-configure common sync patterns
         mock.__enter__ = MagicMock(return_value=mock)
@@ -243,17 +247,17 @@ def performance_monitor():
                 }
             )
 
-        def get_total_time(self) -> float:
-            """Get total elapsed time."""
+        def get__total_time(self) -> float:
+            """Get _total elapsed time."""
             if self.start_time is None:
                 return 0.0
             return time.perf_counter() - self.start_time
 
         def assert_under(self, max_time: float, message: str = ""):
-            """Assert that total time is under threshold."""
-            total_time = self.get_total_time()
-            assert total_time <= max_time, (
-                f"Performance assertion failed: {total_time:.3f}s > {max_time:.3f}s. {message}"
+            """Assert that _total time is under threshold."""
+            _total_time = self.get__total_time()
+            assert _total_time <= max_time, (
+                f"Performance assertion failed: {_total_time:.3f}s > {max_time:.3f}s. {message}"
             )
 
     return TestPerformanceMonitor()

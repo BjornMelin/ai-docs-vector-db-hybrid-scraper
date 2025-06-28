@@ -248,7 +248,7 @@ class TestSearchResponse:
         response = SearchResponse(timestamp=123.45)
         assert response.success is True
         assert response.results == []
-        assert response.total_count == 0
+        assert response._total_count == 0
         assert response.query_time_ms == 0.0
         assert response.search_strategy == "unknown"
         assert response.cache_hit is False
@@ -262,13 +262,13 @@ class TestSearchResponse:
         response = SearchResponse(
             timestamp=123.45,
             results=results,
-            total_count=2,
+            _total_count=2,
             query_time_ms=15.5,
             search_strategy="hybrid",
             cache_hit=True,
         )
         assert len(response.results) == 2
-        assert response.total_count == 2
+        assert response._total_count == 2
         assert response.query_time_ms == 15.5
         assert response.search_strategy == "hybrid"
         assert response.cache_hit is True
@@ -410,7 +410,7 @@ class TestBulkDocumentResponse:
         assert response.success is True
         assert response.processed_count == 0
         assert response.failed_count == 0
-        assert response.total_chunks == 0
+        assert response._total_chunks == 0
         assert response.processing_time_ms == 0.0
         assert response.results == []
         assert response.errors == []
@@ -437,14 +437,14 @@ class TestBulkDocumentResponse:
             timestamp=123.45,
             processed_count=2,
             failed_count=1,
-            total_chunks=8,
+            _total_chunks=8,
             processing_time_ms=500.0,
             results=results,
             errors=errors,
         )
         assert response.processed_count == 2
         assert response.failed_count == 1
-        assert response.total_chunks == 8
+        assert response._total_chunks == 8
         assert len(response.results) == 2
         assert len(response.errors) == 1
 
@@ -569,7 +569,7 @@ class TestListCollectionsResponse:
         response = ListCollectionsResponse(timestamp=123.45)
         assert response.success is True
         assert response.collections == []
-        assert response.total_count == 0
+        assert response._total_count == 0
 
     def test_with_collections(self):
         """Test response with collections."""
@@ -580,10 +580,10 @@ class TestListCollectionsResponse:
         response = ListCollectionsResponse(
             timestamp=123.45,
             collections=collections,
-            total_count=2,
+            _total_count=2,
         )
         assert len(response.collections) == 2
-        assert response.total_count == 2
+        assert response._total_count == 2
 
 
 class TestAnalyticsRequest:
@@ -766,7 +766,7 @@ class TestCacheResponse:
     def test_with_stats(self):
         """Test response with cache stats."""
         stats = {
-            "total_keys": 1000,
+            "_total_keys": 1000,
             "memory_used": "512MB",
             "hit_rate": 0.85,
         }

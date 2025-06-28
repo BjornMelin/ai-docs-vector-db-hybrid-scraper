@@ -1,6 +1,7 @@
 """Tests for error tracking and correlation across observability systems."""
 
 import asyncio
+import logging
 from unittest.mock import Mock, patch
 
 import pytest
@@ -19,6 +20,8 @@ try:
     from src.services.observability.metrics_bridge import initialize_metrics_bridge
 except ImportError:
     initialize_metrics_bridge = None
+
+logger = logging.getLogger(__name__)
 
 
 # Helper functions to avoid TRY301 violations
@@ -227,7 +230,8 @@ class TestErrorTracking:
         @instrument_function("risky_operation")
         def risky_function(should_fail=True):
             if should_fail:
-                raise RuntimeError("Function failed")
+                msg = "Function failed"
+                raise RuntimeError(msg)
             return "success"
 
         # Test successful execution
@@ -259,7 +263,8 @@ class TestErrorTracking:
                 input_texts=["test text"],
             ),
         ):
-            raise ConnectionError("OpenAI API unavailable")
+            msg = "OpenAI API unavailable"
+            raise ConnectionError(msg)
 
         # Test vector search error
         with (
@@ -268,14 +273,16 @@ class TestErrorTracking:
                 collection_name="documents", query_type="semantic"
             ),
         ):
-            raise TimeoutError("Vector database timeout")
+            msg = "Vector database timeout"
+            raise TimeoutError(msg)
 
         # Test LLM call error
         with (
             pytest.raises(ValueError),
             ai_tracker.track_llm_call(provider="openai", model="gpt-4"),
         ):
-            raise ValueError("Invalid API response")
+            msg = "Invalid API response"
+            raise ValueError(msg)
 
         assert request_id is not None
 

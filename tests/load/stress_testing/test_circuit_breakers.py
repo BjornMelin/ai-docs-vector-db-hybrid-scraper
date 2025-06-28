@@ -14,13 +14,11 @@ from typing import Any
 
 import pytest
 
-from ..conftest import LoadTestConfig, LoadTestType
+from tests.load.conftest import LoadTestConfig, LoadTestType
 
 
 class TestError(Exception):
     """Custom exception for this module."""
-
-    pass
 
 
 logger = logging.getLogger(__name__)
@@ -48,7 +46,7 @@ class CircuitBreakerConfig:
 class CircuitBreakerMetrics:
     """Circuit breaker metrics."""
 
-    total_requests: int = 0
+    _total_requests: int = 0
     successful_requests: int = 0
     failed_requests: int = 0
     circuit_opened_count: int = 0
@@ -68,9 +66,9 @@ class MockCircuitBreaker:
         self.last_failure_time = None
         self.metrics = CircuitBreakerMetrics()
 
-    async def call(self, func, *args, **kwargs):
+    async def call(self, func, *args, **_kwargs):
         """Execute function with circuit breaker protection."""
-        self.metrics.total_requests += 1
+        self.metrics._total_requests += 1
 
         # Check if circuit is open
         if self.state == CircuitBreakerState.OPEN:
@@ -82,12 +80,14 @@ class MockCircuitBreaker:
                 self._transition_to_half_open()
             else:
                 # Reject request
-                raise TestError("Circuit breaker is open - rejecting request")
-                raise TestError("Circuit breaker is open - rejecting request")
+                msg = "Circuit breaker is open - rejecting request"
+                raise TestError(msg)
+                msg = "Circuit breaker is open - rejecting request"
+                raise TestError(msg)
 
         try:
             # Execute the function
-            result = await func(*args, **kwargs)
+            result = await func(*args, **_kwargs)
 
             # Success - reset failure count
             self.failure_count = 0
@@ -177,7 +177,7 @@ class RateLimiterConfig:
 class RateLimiterMetrics:
     """Rate limiter metrics."""
 
-    total_requests: int = 0
+    _total_requests: int = 0
     allowed_requests: int = 0
     rejected_requests: int = 0
     current_rate: float = 0.0
@@ -198,7 +198,7 @@ class MockRateLimiter:
     async def allow_request(self) -> bool:
         """Check if request should be allowed."""
         current_time = time.time()
-        self.metrics.total_requests += 1
+        self.metrics._total_requests += 1
 
         # Clean old requests outside time window
         cutoff_time = current_time - self.config.time_window
@@ -231,9 +231,8 @@ class MockRateLimiter:
                 self.burst_allowance -= 1
 
             return True
-        else:
-            self.metrics.rejected_requests += 1
-            return False
+        self.metrics.rejected_requests += 1
+        return False
 
 
 class TestCircuitBreakers:
@@ -261,12 +260,13 @@ class TestCircuitBreakers:
             def set_failure_rate(self, rate: float):
                 self.failure_rate = max(0.0, min(1.0, rate))
 
-            async def process_request(self, **_kwargs):
+            async def process_request(self, **__kwargs):
                 self.call_count += 1
 
                 # Inject failures based on failure rate
                 if time.time() % 1.0 < self.failure_rate:
-                    raise TestError(f"Injected failure (rate: {self.failure_rate})")
+                    msg = f"Injected failure (rate: {self.failure_rate})"
+                    raise TestError(msg)
 
                 await asyncio.sleep(0.1)  # Simulate processing
                 return {"status": "success", "call_count": self.call_count}
@@ -305,10 +305,10 @@ class TestCircuitBreakers:
                 circuit_breaker.failure_count = 0
                 circuit_breaker.success_count = 0
 
-            async def circuit_protected_request(**kwargs):
+            async def circuit_protected_request(**_kwargs):
                 """Request protected by circuit breaker."""
                 return await circuit_breaker.call(
-                    failing_service.process_request, **kwargs
+                    failing_service.process_request, **_kwargs
                 )
 
             # Configure test
@@ -333,7 +333,7 @@ class TestCircuitBreakers:
             # Analyze results
             circuit_opened = circuit_breaker.metrics.circuit_opened_count > 0
             error_rate = (
-                result.metrics.failed_requests / max(result.metrics.total_requests, 1)
+                result.metrics.failed_requests / max(result.metrics._total_requests, 1)
             ) * 100
 
             scenario_results.append(
@@ -404,11 +404,12 @@ class TestCircuitBreakers:
                     self.recovery_time = time.time()
                 self.is_healthy = healthy
 
-            async def process_request(self, **_kwargs):
+            async def process_request(self, **__kwargs):
                 self.call_count += 1
 
                 if not self.is_healthy:
-                    raise TestError("Service is unhealthy")
+                    msg = "Service is unhealthy"
+                    raise TestError(msg)
 
                 await asyncio.sleep(0.05)  # Fast processing when healthy
                 return {"status": "success", "call_count": self.call_count}
@@ -437,9 +438,9 @@ class TestCircuitBreakers:
 
         phase_results = []
 
-        async def circuit_protected_request(**kwargs):
+        async def circuit_protected_request(**_kwargs):
             """Request protected by circuit breaker."""
-            return await circuit_breaker.call(service.process_request, **kwargs)
+            return await circuit_breaker.call(service.process_request, **_kwargs)
 
         for phase in phases:
             logger.info(f"Running recovery phase: {phase['name']}")
@@ -461,7 +462,7 @@ class TestCircuitBreakers:
             # Track circuit breaker state changes during phase
             initial_state = circuit_breaker.state
             initial_metrics = {
-                "total_requests": circuit_breaker.metrics.total_requests,
+                "_total_requests": circuit_breaker.metrics._total_requests,
                 "rejections": circuit_breaker.metrics.rejection_count,
                 "opened_count": circuit_breaker.metrics.circuit_opened_count,
                 "closed_count": circuit_breaker.metrics.circuit_closed_count,
@@ -475,7 +476,7 @@ class TestCircuitBreakers:
 
             final_state = circuit_breaker.state
             final_metrics = {
-                "total_requests": circuit_breaker.metrics.total_requests,
+                "_total_requests": circuit_breaker.metrics._total_requests,
                 "rejections": circuit_breaker.metrics.rejection_count,
                 "opened_count": circuit_breaker.metrics.circuit_opened_count,
                 "closed_count": circuit_breaker.metrics.circuit_closed_count,
@@ -483,8 +484,8 @@ class TestCircuitBreakers:
 
             # Calculate phase-specific metrics
             phase_metrics = {
-                "requests": final_metrics["total_requests"]
-                - initial_metrics["total_requests"],
+                "requests": final_metrics["_total_requests"]
+                - initial_metrics["_total_requests"],
                 "rejections": final_metrics["rejections"]
                 - initial_metrics["rejections"],
                 "state_changes": final_metrics["opened_count"]
@@ -494,7 +495,7 @@ class TestCircuitBreakers:
             }
 
             error_rate = (
-                result.metrics.failed_requests / max(result.metrics.total_requests, 1)
+                result.metrics.failed_requests / max(result.metrics._total_requests, 1)
             ) * 100
 
             phase_results.append(
@@ -541,15 +542,15 @@ class TestCircuitBreakers:
         )
 
         # Verify state transitions occurred
-        total_state_changes = sum(
+        _total_state_changes = sum(
             p["phase_metrics"]["state_changes"] for p in phase_results
         )
-        assert total_state_changes >= 2, (
-            f"Expected at least 2 state changes (open -> half-open -> closed), got {total_state_changes}"
+        assert _total_state_changes >= 2, (
+            f"Expected at least 2 state changes (open -> half-open -> closed), got {_total_state_changes}"
         )
 
         logger.info("Circuit breaker recovery completed successfully")
-        logger.info(f"Total state changes: {total_state_changes}")
+        logger.info(f"Total state changes: {_total_state_changes}")
         logger.info(f"Final circuit breaker metrics: {circuit_breaker.metrics}")
 
 
@@ -569,10 +570,11 @@ class TestRateLimiters:
         rate_limiter = MockRateLimiter(rl_config)
 
         # Mock service protected by rate limiter
-        async def rate_limited_service(**_kwargs):
+        async def rate_limited_service(**__kwargs):
             """Service protected by rate limiter."""
             if not await rate_limiter.allow_request():
-                raise TestError("Rate limit exceeded")
+                msg = "Rate limit exceeded"
+                raise TestError(msg)
 
             await asyncio.sleep(0.1)  # Simulate processing
             return {"status": "processed", "timestamp": time.time()}
@@ -628,18 +630,18 @@ class TestRateLimiters:
             )
 
             # Analyze rate limiting effectiveness
-            total_attempted = rate_limiter.metrics.total_requests
+            _total_attempted = rate_limiter.metrics._total_requests
             allowed = rate_limiter.metrics.allowed_requests
             rejected = rate_limiter.metrics.rejected_requests
 
-            rejection_rate = (rejected / max(total_attempted, 1)) * 100
+            rejection_rate = (rejected / max(_total_attempted, 1)) * 100
             actual_rate = allowed / (pattern["duration"] / 60)  # Requests per minute
 
             pattern_results.append(
                 {
                     "pattern": pattern["name"],
                     "target_rps": pattern["rps"],
-                    "total_attempted": total_attempted,
+                    "_total_attempted": _total_attempted,
                     "allowed": allowed,
                     "rejected": rejected,
                     "rejection_rate": rejection_rate,
@@ -701,16 +703,16 @@ class TestRateLimiters:
             def __init__(self):
                 self.concurrent_executions = 0
                 self.max_concurrent = 0
-                self.total_executions = 0
+                self._total_executions = 0
                 self.execution_times = []
 
-            async def expensive_operation(self, **_kwargs):
+            async def expensive_operation(self, **__kwargs):
                 """Simulate expensive operation that shouldn't be overwhelmed."""
                 self.concurrent_executions += 1
                 self.max_concurrent = max(
                     self.max_concurrent, self.concurrent_executions
                 )
-                self.total_executions += 1
+                self._total_executions += 1
 
                 try:
                     # Simulate expensive work (database query, cache rebuild, etc.)
@@ -723,7 +725,7 @@ class TestRateLimiters:
 
                     return {
                         "status": "completed",
-                        "execution_id": self.total_executions,
+                        "execution_id": self._total_executions,
                         "processing_time": processing_time,
                         "concurrent_count": self.concurrent_executions,
                     }
@@ -732,12 +734,13 @@ class TestRateLimiters:
 
         expensive_service = ExpensiveService()
 
-        async def rate_limited_expensive_operation(**kwargs):
+        async def rate_limited_expensive_operation(**_kwargs):
             """Expensive operation protected by rate limiter."""
             if not await rate_limiter.allow_request():
-                raise TestError("Rate limit exceeded - protecting expensive service")
+                msg = "Rate limit exceeded - protecting expensive service"
+                raise TestError(msg)
 
-            return await expensive_service.expensive_operation(**kwargs)
+            return await expensive_service.expensive_operation(**_kwargs)
 
         # Simulate thundering herd scenario
         config = LoadTestConfig(
@@ -758,10 +761,10 @@ class TestRateLimiters:
         )
 
         # Analyze protection effectiveness
-        total_attempted = rate_limiter.metrics.total_requests
+        _total_attempted = rate_limiter.metrics._total_requests
         rejected = rate_limiter.metrics.rejected_requests
 
-        rejection_rate = (rejected / max(total_attempted, 1)) * 100
+        rejection_rate = (rejected / max(_total_attempted, 1)) * 100
 
         # Assertions for thundering herd protection
         assert rejection_rate > 70, (
@@ -772,8 +775,8 @@ class TestRateLimiters:
             f"Too many concurrent executions: {expensive_service.max_concurrent}"
         )
 
-        assert expensive_service.total_executions <= 50, (
-            f"Too many expensive operations executed: {expensive_service.total_executions}"
+        assert expensive_service._total_executions <= 50, (
+            f"Too many expensive operations executed: {expensive_service._total_executions}"
         )
 
         # Verify service performance wasn't degraded
@@ -791,7 +794,7 @@ class TestRateLimiters:
             f"  - Max concurrent executions: {expensive_service.max_concurrent}"
         )
         logger.info(
-            f"  - Total expensive operations: {expensive_service.total_executions}"
+            f"  - Total expensive operations: {expensive_service._total_executions}"
         )
         logger.info("  - Service remained responsive")
 

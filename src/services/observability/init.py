@@ -14,6 +14,7 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
+
 # Optional OpenTelemetry imports - handled at runtime
 try:
     from opentelemetry import metrics, trace
@@ -82,6 +83,7 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
 
     Returns:
         True if initialization succeeded, False otherwise
+
     """
     global _tracer_provider, _meter_provider
 
@@ -184,6 +186,7 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
 
     Args:
         config: Observability configuration
+
     """
     try:
         # FastAPI instrumentation
@@ -270,5 +273,6 @@ def is_observability_enabled() -> bool:
 
     Returns:
         True if observability is enabled and initialized
+
     """
     return _tracer_provider is not None

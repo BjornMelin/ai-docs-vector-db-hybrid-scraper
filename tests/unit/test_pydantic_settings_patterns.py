@@ -199,7 +199,7 @@ class TestPydanticSettingsPatterns:
             settings = AliasedSettings()
 
             assert settings.database_url == "postgresql://localhost/test"
-            assert settings.api_secret == "super-secret-key"  # noqa: S105  # Test data
+            assert settings.api_secret == "super-secret-key"  # Test data
 
         # Test with field names
         with patch.dict(
@@ -212,7 +212,7 @@ class TestPydanticSettingsPatterns:
             settings = AliasedSettings()
 
             assert settings.database_url == "mysql://localhost/app"
-            assert settings.api_secret == "another-secret"  # noqa: S105  # Test data
+            assert settings.api_secret == "another-secret"  # Test data
 
     def test_configuration_from_multiple_sources(self):
         """Test configuration loading from multiple sources.
@@ -276,7 +276,7 @@ class TestPydanticSettingsPatterns:
         settings = SerializableSettings(
             app_name="my-app",
             version="2.0.0",
-            secret_key="super-secret",  # noqa: S106  # Test data
+            secret_key="super-secret",  # Test data
         )
 
         # Test serialization
@@ -322,35 +322,40 @@ class TestPydanticSettingsPatterns:
             @classmethod
             def validate_email(cls, v):
                 if "@" not in v:
-                    raise ValueError("Invalid email format")
+                    msg = "Invalid email format"
+                    raise ValueError(msg)
                 return v.lower()
 
             @field_validator("password")
             @classmethod
             def validate_password(cls, v):
                 if not any(c.isupper() for c in v):
-                    raise ValueError(
-                        "Password must contain at least one uppercase letter"
-                    )
+                    msg = "Password must contain at least one uppercase letter"
+                    raise ValueError(msg)
                 if not any(c.isdigit() for c in v):
-                    raise ValueError("Password must contain at least one digit")
+                    msg = "Password must contain at least one digit"
+                    raise ValueError(msg)
                 return v
 
         # Test valid configuration
         settings = CustomValidatedSettings(
             email="USER@EXAMPLE.COM",
-            password="SecurePass123",  # noqa: S106  # Test data
+            password="SecurePass123",  # Test data
         )
         assert settings.email == "user@example.com"  # Lowercased
-        assert settings.password == "SecurePass123"  # noqa: S105  # Test data
+        assert settings.password == "SecurePass123"  # Test data
 
         # Test invalid configurations
         with pytest.raises(ValidationError) as exc_info:
-            CustomValidatedSettings(email="invalid-email", password="SecurePass123")  # noqa: S106  # Test data
+            CustomValidatedSettings(
+                email="invalid-email", password="SecurePass123"
+            )  # Test data
         assert "Invalid email format" in str(exc_info.value)
 
         with pytest.raises(ValidationError) as exc_info:
-            CustomValidatedSettings(email="user@example.com", password="weakpass")  # noqa: S106  # Test data
+            CustomValidatedSettings(
+                email="user@example.com", password="weakpass"
+            )  # Test data
         assert "uppercase" in str(exc_info.value)
 
     def test_configuration_model_rebuild(self):

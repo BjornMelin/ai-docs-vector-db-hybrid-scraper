@@ -72,18 +72,20 @@ class TemporalCriteria(BaseModel):
 
     @field_validator("created_before", "updated_before", "crawled_before")
     @classmethod
-    def validate_before_dates(cls, v, info):
+    def validate_before_dates(cls, v, _info):
         """Ensure 'before' dates are not in the future."""
         if v and v > datetime.now(tz=UTC):
-            raise ValueError(f"Date cannot be in the future: {v}")
+            msg = f"Date cannot be in the future: {v}"
+            raise ValueError(msg)
         return v
 
     @field_validator("created_after", "updated_after", "crawled_after")
     @classmethod
-    def validate_after_dates(cls, v, info):
+    def validate_after_dates(cls, v, _info):
         """Validate 'after' dates are reasonable."""
         if v and v > datetime.now(tz=UTC):
-            raise ValueError(f"Date cannot be in the future: {v}")
+            msg = f"Date cannot be in the future: {v}"
+            raise ValueError(msg)
         return v
 
 
@@ -117,6 +119,7 @@ class TemporalFilter(BaseFilter):
             description: Filter description
             enabled: Whether filter is enabled
             priority: Filter priority (higher = earlier execution)
+
         """
         super().__init__(name, description, enabled, priority)
 
@@ -145,6 +148,7 @@ class TemporalFilter(BaseFilter):
 
         Raises:
             FilterError: If temporal filter application fails
+
         """
         try:
             # Validate and parse criteria
@@ -382,12 +386,11 @@ class TemporalFilter(BaseFilter):
         """Estimate performance impact based on filter complexity."""
         if condition_count == 0:
             return "none"
-        elif condition_count <= 2:
+        if condition_count <= 2:
             return "low"
-        elif condition_count <= 4:
+        if condition_count <= 4:
             return "medium"
-        else:
-            return "high"
+        return "high"
 
     async def validate_criteria(self, filter_criteria: dict[str, Any]) -> bool:
         """Validate temporal filter criteria."""
@@ -431,6 +434,7 @@ class TemporalFilter(BaseFilter):
 
         Returns:
             FreshnessScore with calculated score and metadata
+
         """
         if current_time is None:
             current_time = datetime.now(tz=UTC)
@@ -481,8 +485,8 @@ class TemporalFilter(BaseFilter):
 
         Returns:
             Parsed datetime or None if parsing fails
-        """
 
+        """
         relative_date_str = relative_date_str.lower().strip()
         current_time = datetime.now(tz=UTC)
 

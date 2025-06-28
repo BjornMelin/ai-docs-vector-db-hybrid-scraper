@@ -281,16 +281,15 @@ class TestSimilarityThresholdManager:
     async def test_apply_adaptive_strategy(self, manager, _sample_context):
         """Test applying filter with adaptive strategy."""
         # Add multiple historical data points for adaptation to work
-        historical_data = []
-        for _ in range(5):  # Need multiple data points
-            historical_data.append(
-                {
-                    "timestamp": datetime.now(tz=UTC).isoformat(),
-                    "result_count": 2,  # Too few results (< min_result_count=3)
-                    "precision": 0.9,
-                    "query_time_ms": 200,
-                }
-            )
+        historical_data = [
+            {
+                "timestamp": datetime.now(tz=UTC).isoformat(),
+                "result_count": 2,  # Too few results (< min_result_count=3)
+                "precision": 0.9,
+                "query_time_ms": 200,
+            }
+            for _ in range(5)  # Need multiple data points
+        ]
 
         context = {
             "query_info": {"query": "test query"},
@@ -381,16 +380,15 @@ class TestSimilarityThresholdManager:
         query_info = {"query": "test query"}
 
         # Test with too few results - need multiple data points
-        historical_data = []
-        for _ in range(5):  # Need >= 3 data points for adaptation
-            historical_data.append(
-                {
-                    "timestamp": datetime.now(tz=UTC).isoformat(),
-                    "result_count": 2,  # Much less than min_result_count=10
-                    "precision": 0.9,
-                    "query_time_ms": 200,
-                }
-            )
+        historical_data = [
+            {
+                "timestamp": datetime.now(tz=UTC).isoformat(),
+                "result_count": 2,  # Much less than min_result_count=10
+                "precision": 0.9,
+                "query_time_ms": 200,
+            }
+            for _ in range(5)  # Need >= 3 data points for adaptation
+        ]
 
         threshold = await manager._adaptive_threshold(
             criteria, query_info, historical_data
@@ -489,20 +487,19 @@ class TestSimilarityThresholdManager:
         criteria = SimilarityThresholdCriteria(base_threshold=0.7)
 
         # Create sufficient historical data for ML optimization
-        historical_data = []
-        for i in range(25):
-            historical_data.append(
-                {
-                    "timestamp": datetime.now(tz=UTC).isoformat(),
-                    "query": f"test query {i}",
-                    "has_technical_terms": i % 2,
-                    "context_score": 0.5 + i * 0.01,
-                    "f1_score": 0.7 + (i % 5) * 0.05,
-                    "result_count": 10 + i,
-                    "threshold": 0.65 + i * 0.01,
-                    "user_satisfaction": 0.7 + (i % 3) * 0.1,
-                }
-            )
+        historical_data = [
+            {
+                "timestamp": datetime.now(tz=UTC).isoformat(),
+                "query": f"test query {i}",
+                "has_technical_terms": i % 2,
+                "context_score": 0.5 + i * 0.01,
+                "f1_score": 0.7 + (i % 5) * 0.05,
+                "result_count": 10 + i,
+                "threshold": 0.65 + i * 0.01,
+                "user_satisfaction": 0.7 + (i % 3) * 0.1,
+            }
+            for i in range(25)
+        ]
 
         query_info = {
             "query": "test query similar",

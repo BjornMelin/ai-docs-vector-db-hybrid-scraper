@@ -469,7 +469,7 @@ class TestSearchResponse:
         """Test default field values."""
         response = SearchResponse()
         assert response.results == []
-        assert response.total_count == 0
+        assert response._total_count == 0
         assert response.query_time_ms == 0.0
         assert response.search_params == {}
 
@@ -483,12 +483,12 @@ class TestSearchResponse:
 
         response = SearchResponse(
             results=results,
-            total_count=50,
+            _total_count=50,
             query_time_ms=15.5,
             search_params=search_params,
         )
         assert len(response.results) == 2
-        assert response.total_count == 50
+        assert response._total_count == 50
         assert response.query_time_ms == 15.5
         assert response.search_params == search_params
 
@@ -501,7 +501,7 @@ class TestRetrievalMetrics:
         metrics = RetrievalMetrics()
         assert metrics.query_vector_time_ms == 0.0
         assert metrics.search_time_ms == 0.0
-        assert metrics.total_time_ms == 0.0
+        assert metrics._total_time_ms == 0.0
         assert metrics.results_count == 0
         assert metrics.filtered_count == 0
         assert metrics.cache_hit is False
@@ -512,7 +512,7 @@ class TestRetrievalMetrics:
         metrics = RetrievalMetrics(
             query_vector_time_ms=5.0,
             search_time_ms=10.0,
-            total_time_ms=15.5,
+            _total_time_ms=15.5,
             results_count=20,
             filtered_count=15,
             cache_hit=True,
@@ -520,7 +520,7 @@ class TestRetrievalMetrics:
         )
         assert metrics.query_vector_time_ms == 5.0
         assert metrics.search_time_ms == 10.0
-        assert metrics.total_time_ms == 15.5
+        assert metrics._total_time_ms == 15.5
         assert metrics.results_count == 20
         assert metrics.filtered_count == 15
         assert metrics.cache_hit is True

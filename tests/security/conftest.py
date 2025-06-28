@@ -194,8 +194,9 @@ def mock_encryption_service():
         # Simple hex decode mock decryption for testing
         try:
             return bytes.fromhex(encrypted_data).decode()
-        except ValueError:
-            raise ValueError("Invalid encrypted data format")
+        except ValueError as e:
+            msg = "Invalid encrypted data format"
+            raise ValueError(msg) from e
 
     service.encrypt = AsyncMock(side_effect=mock_encrypt)
     service.decrypt = AsyncMock(side_effect=mock_decrypt)
@@ -343,7 +344,7 @@ def security_headers_validator():
         }
 
         results = {"compliant": True, "missing": [], "invalid": [], "score": 0}
-        total_checks = len(required_headers)
+        _total_checks = len(required_headers)
         passed_checks = 0
 
         for header, expected in required_headers.items():
@@ -360,7 +361,7 @@ def security_headers_validator():
             else:
                 passed_checks += 1
 
-        results["score"] = int((passed_checks / total_checks) * 100)
+        results["score"] = int((passed_checks / _total_checks) * 100)
         return results
 
     return validate_security_headers
@@ -374,7 +375,7 @@ def input_sanitizer():
         """Test utilities for input sanitization."""
 
         @staticmethod
-        def is_sanitized(user_input: str, sanitized_output: str) -> bool:
+        def is_sanitized(_user_input: str, sanitized_output: str) -> bool:
             """Check if input was properly sanitized."""
             dangerous_patterns = [
                 "<script",
@@ -499,9 +500,9 @@ def vulnerability_scanner(mock_security_scanner):
                 "details": "Input properly sanitized",
             }
 
-        async def scan_url(self, *args, **kwargs):
+        async def scan_url(self, *args, **_kwargs):
             """Delegate to base scanner."""
-            return await self._scanner.scan_url(*args, **kwargs)
+            return await self._scanner.scan_url(*args, **_kwargs)
 
     return VulnerabilityScanner(mock_security_scanner)
 
@@ -514,7 +515,7 @@ def input_validator(input_sanitizer):
         def __init__(self, sanitizer):
             self._sanitizer = sanitizer
 
-        def validate_user_input(self, user_input: str) -> dict[str, Any]:
+        def validate__user_input(self, _user_input: str) -> dict[str, Any]:
             """Validate user input for security threats."""
             dangerous_patterns = [
                 r"(?i)<script.*?>.*?</script>",
@@ -525,10 +526,11 @@ def input_validator(input_sanitizer):
                 r"(?i)drop.*?table",
             ]
 
-            threats_found = []
-            for pattern in dangerous_patterns:
-                if re.search(pattern, user_input):
-                    threats_found.append(pattern)
+            threats_found = [
+                pattern
+                for pattern in dangerous_patterns
+                if re.search(pattern, _user_input)
+            ]
 
             return {
                 "valid": len(threats_found) == 0,
@@ -536,10 +538,10 @@ def input_validator(input_sanitizer):
                 "risk_level": "high" if threats_found else "low",
             }
 
-        def sanitize_input(self, user_input: str) -> str:
+        def sanitize_input(self, _user_input: str) -> str:
             """Sanitize user input."""
             # Basic sanitization
-            sanitized = user_input.replace("<script>", "&lt;script&gt;")
+            sanitized = _user_input.replace("<script>", "&lt;script&gt;")
             sanitized = sanitized.replace("</script>", "&lt;/script&gt;")
             sanitized = sanitized.replace("javascript:", "")
             sanitized = sanitized.replace("'", "&#x27;")
@@ -578,14 +580,14 @@ def penetration_tester(mock_penetration_tester):
             }
 
         # Delegate to base tester methods
-        async def test_sql_injection(self, *args, **kwargs):
-            return await self._tester.test_sql_injection(*args, **kwargs)
+        async def test_sql_injection(self, *args, **_kwargs):
+            return await self._tester.test_sql_injection(*args, **_kwargs)
 
-        async def test_xss(self, *args, **kwargs):
-            return await self._tester.test_xss(*args, **kwargs)
+        async def test_xss(self, *args, **_kwargs):
+            return await self._tester.test_xss(*args, **_kwargs)
 
-        async def test_csrf(self, *args, **kwargs):
-            return await self._tester.test_csrf(*args, **kwargs)
+        async def test_csrf(self, *args, **_kwargs):
+            return await self._tester.test_csrf(*args, **_kwargs)
 
     return PenetrationTester(mock_penetration_tester)
 
@@ -598,17 +600,17 @@ def compliance_checker(mock_compliance_checker):
         def __init__(self, base_checker):
             self._checker = base_checker
 
-        async def check_owasp_compliance(self, *args, **kwargs):
+        async def check_owasp_compliance(self, *args, **_kwargs):
             """Check OWASP compliance."""
-            return await self._checker.check_owasp_compliance(*args, **kwargs)
+            return await self._checker.check_owasp_compliance(*args, **_kwargs)
 
-        async def check_gdpr_compliance(self, *args, **kwargs):
+        async def check_gdpr_compliance(self, *args, **_kwargs):
             """Check GDPR compliance."""
-            return await self._checker.check_gdpr_compliance(*args, **kwargs)
+            return await self._checker.check_gdpr_compliance(*args, **_kwargs)
 
-        async def check_nist_compliance(self, *args, **kwargs):
+        async def check_nist_compliance(self, *args, **_kwargs):
             """Check NIST compliance."""
-            return await self._checker.check_nist_compliance(*args, **kwargs)
+            return await self._checker.check_nist_compliance(*args, **_kwargs)
 
     return ComplianceChecker(mock_compliance_checker)
 

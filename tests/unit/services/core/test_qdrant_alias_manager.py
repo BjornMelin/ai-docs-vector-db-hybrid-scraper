@@ -1,8 +1,6 @@
 class TestError(Exception):
     """Custom exception for this module."""
 
-    pass
-
 
 """Tests for Qdrant alias manager service."""
 
@@ -705,8 +703,8 @@ class TestQdrantAliasManager:
 
         progress_calls = []
 
-        async def progress_callback(copied, total):
-            progress_calls.append((copied, total))
+        async def progress_callback(_copied, _total):
+            progress_calls.append((_copied, _total))
 
         result = await alias_manager.copy_collection_data(
             "source", "target", progress_callback=progress_callback
@@ -726,8 +724,9 @@ class TestQdrantAliasManager:
         mock_points = [MagicMock() for _ in range(10)]
         mock_client.scroll.side_effect = [(mock_points, None)]
 
-        async def failing_callback(copied, total):
-            raise TestError("Callback failed")
+        async def failing_callback(_copied, _total):
+            msg = "Callback failed"
+            raise TestError(msg)
 
         # Should not raise exception, just log warning
         result = await alias_manager.copy_collection_data(

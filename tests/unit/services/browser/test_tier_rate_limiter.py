@@ -209,7 +209,7 @@ class TestTierRateLimiter:
 
         assert "tiers" in status
         assert len(status["tiers"]) == 4
-        assert status["total_rate_limit_hits"] == 4
+        assert status["_total_rate_limit_hits"] == 4
 
         # Check individual tier status
         assert "lightweight" in status["tiers"]

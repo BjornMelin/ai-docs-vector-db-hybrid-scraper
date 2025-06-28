@@ -18,12 +18,11 @@ from src.config import Config
 class CustomError(Exception):
     """Custom exception for this module."""
 
-    pass
-
 
 def _raise_openai_client_unavailable() -> None:
     """Raise CustomError for OpenAI client not available."""
-    raise CustomError("OpenAI client not available")
+    msg = "OpenAI client not available"
+    raise CustomError(msg)
 
 
 class ServiceHealthChecker:
@@ -42,6 +41,7 @@ class ServiceHealthChecker:
                 - connected: Whether connection was successful
                 - error: Error message if connection failed
                 - details: Additional information (collections count, URL)
+
         """
         result = {"service": "qdrant", "connected": False, "error": None, "details": {}}
 
@@ -73,6 +73,7 @@ class ServiceHealthChecker:
 
         Returns:
             Dictionary with connection status and details
+
         """
         result = {
             "service": "dragonfly",
@@ -114,6 +115,7 @@ class ServiceHealthChecker:
                 - connected: Whether connection was successful
                 - error: Error message if connection failed or not configured
                 - details: Model info and available models count
+
         """
         result = {"service": "openai", "connected": False, "error": None, "details": {}}
 
@@ -170,6 +172,7 @@ class ServiceHealthChecker:
                 - connected: Whether connection was successful
                 - error: Error message if connection failed or not configured
                 - details: API URL and credits remaining (if available)
+
         """
         result = {
             "service": "firecrawl",
@@ -215,6 +218,7 @@ class ServiceHealthChecker:
         Returns:
             dict[str, dict[str, object]]: Service names mapped to health check results.
                 Each result contains service, connected, error, and details fields.
+
         """
         results = {}
 
@@ -247,6 +251,7 @@ class ServiceHealthChecker:
 
         Returns:
             Summary dictionary with overall status and individual service results
+
         """
         results = cls.perform_all_health_checks(config, client_manager)
 

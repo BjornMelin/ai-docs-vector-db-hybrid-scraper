@@ -62,8 +62,8 @@ def sample_state_data():
         "urls_to_process": ["https://example.com/page3"],
         "completed_urls": ["https://example.com/page1"],
         "failed_urls": {"https://example.com/error": "404 Not Found"},
-        "total_chunks_processed": 10,
-        "total_embeddings_generated": 10,
+        "_total_chunks_processed": 10,
+        "_total_embeddings_generated": 10,
         "start_time": "2024-01-01T00:00:00",
         "last_checkpoint": "2024-01-01T01:00:00",
         "collection_name": "test_collection",
@@ -79,8 +79,8 @@ class TestProcessingState:
         assert state.urls_to_process == []
         assert state.completed_urls == []
         assert state.failed_urls == {}
-        assert state.total_chunks_processed == 0
-        assert state.total_embeddings_generated == 0
+        assert state._total_chunks_processed == 0
+        assert state._total_embeddings_generated == 0
         assert state.collection_name == "bulk_embeddings"
 
     def test_from_dict(self, sample_state_data):
@@ -89,7 +89,7 @@ class TestProcessingState:
         assert state.urls_to_process == ["https://example.com/page3"]
         assert state.completed_urls == ["https://example.com/page1"]
         assert state.failed_urls == {"https://example.com/error": "404 Not Found"}
-        assert state.total_chunks_processed == 10
+        assert state._total_chunks_processed == 10
         assert state.collection_name == "test_collection"
 
 
@@ -126,7 +126,7 @@ class TestBulkEmbedder:
         )
 
         assert embedder.state.completed_urls == ["https://example.com/page1"]
-        assert embedder.state.total_chunks_processed == 10
+        assert embedder.state._total_chunks_processed == 10
 
     def test_save_state(self, mock_config, mock_client_manager, temp_state_file):
         """Test saving state to file."""
@@ -137,7 +137,7 @@ class TestBulkEmbedder:
         )
 
         embedder.state.completed_urls = ["https://example.com/test"]
-        embedder.state.total_chunks_processed = 5
+        embedder.state._total_chunks_processed = 5
         embedder._save_state()
 
         # Verify file was written
@@ -148,7 +148,7 @@ class TestBulkEmbedder:
             saved_data = json.load(f)
 
         assert saved_data["completed_urls"] == ["https://example.com/test"]
-        assert saved_data["total_chunks_processed"] == 5
+        assert saved_data["_total_chunks_processed"] == 5
 
     @pytest.mark.asyncio
     async def test_initialize_services(self, mock_config, mock_client_manager):
@@ -162,7 +162,7 @@ class TestBulkEmbedder:
         # Mock services
         mock_crawl_manager = AsyncMock()
         mock_embedding_manager = AsyncMock()
-        mock_qdrant_service = AsyncMock()
+        _mock_qdrant_service = AsyncMock()
 
         mock_client_manager.get_crawl_manager = AsyncMock(
             return_value=mock_crawl_manager
@@ -171,24 +171,24 @@ class TestBulkEmbedder:
             return_value=mock_embedding_manager
         )
         mock_client_manager.get_qdrant_service = AsyncMock(
-            return_value=mock_qdrant_service
+            return_value=_mock_qdrant_service
         )
 
         # Mock collection doesn't exist
-        mock_qdrant_service.list_collections = AsyncMock(
+        _mock_qdrant_service.list_collections = AsyncMock(
             return_value=["other_collection"]
         )
-        mock_qdrant_service.create_collection = AsyncMock(return_value=True)
+        _mock_qdrant_service.create_collection = AsyncMock(return_value=True)
 
         await embedder.initialize_services()
 
         # Verify services initialized
         assert embedder.crawl_manager == mock_crawl_manager
         assert embedder.embedding_manager == mock_embedding_manager
-        assert embedder.qdrant_service == mock_qdrant_service
+        assert embedder.qdrant_service == _mock_qdrant_service
 
         # Verify collection created
-        mock_qdrant_service.create_collection.assert_called_once_with(
+        _mock_qdrant_service.create_collection.assert_called_once_with(
             collection_name="test_collection",
             vector_size=1536,
             distance="Cosine",
@@ -441,14 +441,14 @@ https://example.com/page2,Page 2
                 max_concurrent=2,
             )
 
-            assert results["total"] == 4
+            assert results["_total"] == 4
             assert results["successful"] == 3
             assert results["failed"] == 1
 
             # Check state updates
             assert len(embedder.state.completed_urls) == 3
             assert len(embedder.state.failed_urls) == 1
-            assert embedder.state.total_chunks_processed == 6
+            assert embedder.state._total_chunks_processed == 6
 
     @pytest.mark.asyncio
     async def test_run_with_resume(self, mock_config, mock_client_manager, sample_urls):
@@ -468,7 +468,7 @@ https://example.com/page2,Page 2
             ) as mock_process,
         ):
             mock_process.return_value = {
-                "total": 2,
+                "_total": 2,
                 "successful": 2,
                 "failed": 0,
                 "results": [],
@@ -502,7 +502,7 @@ https://example.com/page2,Page 2
             ) as mock_process,
         ):
             mock_process.return_value = {
-                "total": 3,
+                "_total": 3,
                 "successful": 3,
                 "failed": 0,
                 "results": [],

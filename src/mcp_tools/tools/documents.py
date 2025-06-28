@@ -5,7 +5,7 @@ import logging
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from ..models.responses import AddDocumentResponse, DocumentBatchResponse
+from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
 
 
 if TYPE_CHECKING:
@@ -21,12 +21,11 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
+from src.chunking import DocumentChunker
 from src.config import ChunkingConfig, ChunkingStrategy
-
-from ...chunking import DocumentChunker
-from ...infrastructure.client_manager import ClientManager
-from ...security import MLSecurityValidator as SecurityValidator
-from ..models.requests import BatchRequest, DocumentRequest
+from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
+from src.security import MLSecurityValidator as SecurityValidator
 
 
 logger = logging.getLogger(__name__)
@@ -39,8 +38,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def add_document(
         request: DocumentRequest, ctx: Context
     ) -> AddDocumentResponse:
-        """
-        Add a document to the vector database with smart chunking.
+        """Add a document to the vector database with smart chunking.
 
         Crawls the URL, applies the selected chunking strategy, generates
         embeddings, and stores in the specified collection.
@@ -78,7 +76,8 @@ def register_tools(mcp, client_manager: ClientManager):
             ):
 
                 def _raise_scrape_error():
-                    raise ValueError(f"Failed to scrape {request.url}")
+                    msg = f"Failed to scrape {request.url}"
+                    raise ValueError(msg)
 
                 await ctx.error(f"Failed to scrape {request.url}")
                 _raise_scrape_error()
@@ -277,8 +276,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def add_documents_batch(
         request: BatchRequest, ctx: Context
     ) -> DocumentBatchResponse:
-        """
-        Add multiple documents in batch with optimized processing.
+        """Add multiple documents in batch with optimized processing.
 
         Processes multiple URLs concurrently with rate limiting and
         progress tracking.

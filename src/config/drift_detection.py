@@ -20,8 +20,8 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, Field
 
-from ..services.observability.metrics_bridge import get_metrics_bridge
-from ..services.observability.performance import get_performance_monitor
+from src.services.observability.metrics_bridge import get_metrics_bridge
+from src.services.observability.performance import get_performance_monitor
 
 
 logger = logging.getLogger(__name__)
@@ -134,6 +134,7 @@ class ConfigDriftDetector:
 
         Args:
             config: Drift detection configuration
+
         """
         self.config = config
         self._snapshots: dict[str, list[ConfigSnapshot]] = {}
@@ -210,6 +211,7 @@ class ConfigDriftDetector:
 
         Returns:
             SHA256 hash of configuration
+
         """
         # Sort keys to ensure deterministic hashing
         config_json = json.dumps(config_data, sort_keys=True, separators=(",", ":"))
@@ -223,6 +225,7 @@ class ConfigDriftDetector:
 
         Returns:
             Current configuration data
+
         """
         source_path = Path(source)
 
@@ -240,8 +243,8 @@ class ConfigDriftDetector:
                 # Parse environment file
                 config = {}
                 with source_path.open() as f:
-                    for line in f:
-                        line = line.strip()
+                    for raw_line in f:
+                        line = raw_line.strip()
                         if line and not line.startswith("#") and "=" in line:
                             key, value = line.split("=", 1)
                             config[key.strip()] = value.strip()
@@ -266,6 +269,7 @@ class ConfigDriftDetector:
 
         Returns:
             Configuration snapshot
+
         """
         start_time = time.time()
 
@@ -329,6 +333,7 @@ class ConfigDriftDetector:
 
         Returns:
             List of detected drift events
+
         """
         # Thread-safe snapshot access
         with self._snapshots_lock:
@@ -422,6 +427,7 @@ class ConfigDriftDetector:
 
         Returns:
             List of detected changes
+
         """
         changes = []
 
@@ -479,6 +485,7 @@ class ConfigDriftDetector:
 
         Returns:
             Drift type classification
+
         """
         change_type = change.get("type", "")
         path = change.get("path", "")
@@ -526,6 +533,7 @@ class ConfigDriftDetector:
 
         Returns:
             Drift severity level
+
         """
         change_type = change.get("type", "")
         path = change.get("path", "").lower()
@@ -562,6 +570,7 @@ class ConfigDriftDetector:
 
         Returns:
             True if auto-remediable
+
         """
         # Simple heuristics for auto-remediation
         change_type = change.get("type", "")
@@ -588,6 +597,7 @@ class ConfigDriftDetector:
 
         Returns:
             Remediation suggestion or None
+
         """
         change_type = change.get("type", "")
         path = change.get("path", "")
@@ -595,9 +605,9 @@ class ConfigDriftDetector:
 
         if change_type == "modified" and old_value is not None:
             return "Revert '{path}' to previous value"
-        elif change_type == "added":
+        if change_type == "added":
             return f"Remove newly added key: '{path}'"
-        elif change_type == "removed":
+        if change_type == "removed":
             return f"Restore removed key: '{path}'"
 
         return "Manual review and remediation required"
@@ -610,6 +620,7 @@ class ConfigDriftDetector:
 
         Returns:
             Integer representation
+
         """
         return {
             DriftSeverity.LOW: 1,
@@ -623,6 +634,7 @@ class ConfigDriftDetector:
 
         Args:
             source: Configuration source
+
         """
         with self._snapshots_lock:
             if source not in self._snapshots:
@@ -667,6 +679,7 @@ class ConfigDriftDetector:
 
         Returns:
             True if alert should be sent
+
         """
         # Check severity threshold
         if event.severity not in self.config.alert_on_severity:
@@ -697,6 +710,7 @@ class ConfigDriftDetector:
 
         Args:
             event: Drift event to alert on
+
         """
         # Use existing performance monitoring for alerting
         if self.performance_monitor:
@@ -732,6 +746,7 @@ class ConfigDriftDetector:
 
         Returns:
             List of all detected drift events
+
         """
         if not self.config.enabled:
             return []
@@ -766,6 +781,7 @@ class ConfigDriftDetector:
 
         Returns:
             Drift status summary
+
         """
         # Thread-safe access to drift events
         with self._events_lock:
@@ -814,6 +830,7 @@ def initialize_drift_detector(config: DriftDetectionConfig) -> ConfigDriftDetect
 
     Returns:
         Initialized drift detector
+
     """
     global _drift_detector
     _drift_detector = ConfigDriftDetector(config)
@@ -828,12 +845,14 @@ def get_drift_detector() -> ConfigDriftDetector:
 
     Raises:
         RuntimeError: If detector not initialized
+
     """
     if _drift_detector is None:
-        raise RuntimeError(
+        msg = (
             "Configuration drift detector not initialized. "
             "Call initialize_drift_detector() first."
         )
+        raise RuntimeError(msg)
     return _drift_detector
 
 

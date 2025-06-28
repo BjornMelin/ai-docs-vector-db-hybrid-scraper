@@ -172,12 +172,11 @@ class HealthChecker:
         try:
             if service.service_type == "redis":
                 return await self._check_redis_health(service, start_time)
-            elif service.service_type == "qdrant":
+            if service.service_type == "qdrant":
                 return await self._check_qdrant_health(service, start_time)
-            elif service.service_type == "postgresql":
+            if service.service_type == "postgresql":
                 return await self._check_postgresql_health(service, start_time)
-            else:
-                return await self._check_generic_health(service, start_time)
+            return await self._check_generic_health(service, start_time)
 
         except Exception as e:
             response_time_ms = (time.time() - start_time) * 1000
@@ -198,7 +197,9 @@ class HealthChecker:
     ) -> HealthCheckResult:
         """Check Redis service health."""
         try:
-            import redis.asyncio as redis
+            if redis is None:
+                msg = "redis not available"
+                raise ImportError(msg)
 
             client = redis.Redis(host=service.host, port=service.port, socket_timeout=5)
 
@@ -226,9 +227,11 @@ class HealthChecker:
             )
 
         except ImportError:
-            raise RuntimeError("redis package not available") from None
+            msg = "redis package not available"
+            raise RuntimeError(msg) from None
         except Exception as e:
-            raise RuntimeError("Redis health check failed") from e
+            msg = "Redis health check failed"
+            raise RuntimeError(msg) from e
 
     async def _check_qdrant_health(
         self, service: DetectedService, start_time: float
@@ -236,7 +239,8 @@ class HealthChecker:
         """Check Qdrant service health."""
         try:
             if httpx is None:
-                raise ImportError("httpx package not available")
+                msg = "httpx package not available"
+                raise ImportError(msg)
 
             async with httpx.AsyncClient(timeout=5.0) as client:
                 # Use HTTP health endpoint
@@ -273,7 +277,8 @@ class HealthChecker:
                 )
 
         except Exception as e:
-            raise RuntimeError("Qdrant health check failed") from e
+            msg = "Qdrant health check failed"
+            raise RuntimeError(msg) from e
 
     async def _check_postgresql_health(
         self, service: DetectedService, start_time: float
@@ -302,7 +307,8 @@ class HealthChecker:
             )
 
         except Exception as e:
-            raise RuntimeError("PostgreSQL health check failed") from e
+            msg = "PostgreSQL health check failed"
+            raise RuntimeError(msg) from e
 
     async def _check_generic_health(
         self, service: DetectedService, start_time: float
@@ -312,7 +318,8 @@ class HealthChecker:
             if service.health_check_url:
                 # HTTP health check
                 if httpx is None:
-                    raise ImportError("httpx package not available")
+                    msg = "httpx package not available"
+                    raise ImportError(msg)
 
                 async with httpx.AsyncClient(timeout=5.0) as client:
                     response = await client.get(service.health_check_url)
@@ -351,7 +358,8 @@ class HealthChecker:
                 )
 
         except Exception as e:
-            raise RuntimeError("Generic health check failed") from e
+            msg = "Generic health check failed"
+            raise RuntimeError(msg) from e
 
     async def _monitor_loop(self) -> None:
         """Background monitoring loop."""

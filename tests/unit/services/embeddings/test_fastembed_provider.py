@@ -6,8 +6,6 @@ from src.services.embeddings.base import EmbeddingProvider
 class TestError(Exception):
     """Custom exception for this module."""
 
-    pass
-
 
 """Tests for services/embeddings/fastembed_provider.py - FastEmbed integration.
 
@@ -640,7 +638,8 @@ class TestFastEmbedProviderIntegration:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                raise TestError("Temporary failure")
+                msg = "Temporary failure"
+                raise TestError(msg)
             # Success on second call
             return iter([np.array([0.1, 0.2, 0.3]) for _ in texts])
 

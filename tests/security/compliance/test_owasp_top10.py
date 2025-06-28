@@ -360,13 +360,13 @@ class TestOWASPTop10Compliance:
                     self.check_a10_ssrf,
                 ]
 
-                total_score = 0
+                _total_score = 0
                 for method in category_methods:
                     category_result = method()
                     results["categories"].append(category_result)
-                    total_score += category_result["overall_score"]
+                    _total_score += category_result["overall_score"]
 
-                results["overall_score"] = total_score / len(category_methods)
+                results["overall_score"] = _total_score / len(category_methods)
                 results["compliant"] = results["overall_score"] >= 90
 
                 return results
@@ -653,10 +653,9 @@ class TestOWASPTop10Compliance:
 
                 if all(scores[i] >= scores[i - 1] for i in range(1, len(scores))):
                     return "improving"
-                elif all(scores[i] <= scores[i - 1] for i in range(1, len(scores))):
+                if all(scores[i] <= scores[i - 1] for i in range(1, len(scores))):
                     return "declining"
-                else:
-                    return "stable"
+                return "stable"
 
         monitor = ContinuousComplianceMonitor(owasp_compliance_checker)
 
@@ -691,7 +690,7 @@ class TestOWASPTop10Compliance:
                 return {
                     "overall_compliance": assessment["compliant"],
                     "overall_score": assessment["overall_score"],
-                    "total_categories": len(assessment["categories"]),
+                    "_total_categories": len(assessment["categories"]),
                     "compliant_categories": len(
                         [cat for cat in assessment["categories"] if cat["compliant"]]
                     ),
@@ -705,13 +704,11 @@ class TestOWASPTop10Compliance:
                 self, assessment: dict[str, Any]
             ) -> list[str]:
                 """Generate recommendations based on assessment."""
-                recommendations = []
-
-                for category in assessment["categories"]:
-                    if category["overall_score"] < 90:
-                        recommendations.append(
-                            f"Review and strengthen {category['category']} controls"
-                        )
+                recommendations = [
+                    f"Review and strengthen {category['category']} controls"
+                    for category in assessment["categories"]
+                    if category["overall_score"] < 90
+                ]
 
                 if not recommendations:
                     recommendations.append("Maintain current security posture")
@@ -723,7 +720,7 @@ class TestOWASPTop10Compliance:
 
         assert summary["overall_compliance"] is True
         assert summary["overall_score"] >= 90
-        assert summary["total_categories"] == 10
+        assert summary["_total_categories"] == 10
         assert summary["compliant_categories"] == 10
         assert len(summary["recommendations"]) > 0
 

@@ -18,9 +18,9 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from ...infrastructure.client_manager import ClientManager
-from ..models.requests import AnalyticsRequest
-from ..models.responses import AnalyticsResponse, SystemHealthResponse
+from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.models.requests import AnalyticsRequest
+from src.mcp_tools.models.responses import AnalyticsResponse, SystemHealthResponse
 
 
 logger = logging.getLogger(__name__)
@@ -33,8 +33,7 @@ def register_tools(mcp, client_manager: ClientManager):
     async def get_analytics(
         request: AnalyticsRequest, ctx: Context
     ) -> AnalyticsResponse:
-        """
-        Get analytics and metrics for collections and operations.
+        """Get analytics and metrics for collections and operations.
 
         Provides performance metrics, cost analysis, and usage statistics.
         """
@@ -114,8 +113,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def get_system_health(ctx: Context) -> SystemHealthResponse:
-        """
-        Get system health and status information.
+        """Get system health and status information.
 
         Checks all services and returns their health status.
         """

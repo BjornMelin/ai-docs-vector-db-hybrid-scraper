@@ -161,6 +161,7 @@ class SiteAdapter:
 
         Returns:
             list[str]: List of detected patterns
+
         """
         patterns = []
         domain = self._extract_domain(url)
@@ -197,6 +198,7 @@ class SiteAdapter:
 
         Returns:
             list[AdaptationRecommendation]: Site-specific recommendations
+
         """
         recommendations = []
         domain = self._extract_domain(url)
@@ -239,6 +241,7 @@ class SiteAdapter:
 
         Returns:
             str: Domain name
+
         """
         try:
             parsed = urlparse(url)
@@ -258,6 +261,7 @@ class SiteAdapter:
 
         Returns:
             list[str]: Detected content patterns
+
         """
         patterns = []
         content_lower = content.lower()
@@ -299,6 +303,7 @@ class SiteAdapter:
 
         Returns:
             list[str]: Detected HTML patterns
+
         """
         patterns = []
         html_lower = html.lower()
@@ -340,15 +345,14 @@ class SiteAdapter:
 
         Returns:
             list[str]: Detected URL patterns
+
         """
         patterns = []
         url_lower = url.lower()
 
         # Check for common URL patterns (use if statements instead of elif to detect multiple patterns)
-        if (
-            "/api/" in url_lower
-            or url_lower.startswith("https://api.")
-            or url_lower.startswith("http://api.")
+        if "/api/" in url_lower or url_lower.startswith(
+            ("https://api.", "http://api.")
         ):
             patterns.append("api_endpoint")
         if "/docs/" in url_lower or "/documentation/" in url_lower:
@@ -379,6 +383,7 @@ class SiteAdapter:
 
         Returns:
             list[AdaptationRecommendation]: Site-specific recommendations
+
         """
         recommendations = []
 
@@ -413,6 +418,7 @@ class SiteAdapter:
 
         Returns:
             list[AdaptationRecommendation]: Pattern-based recommendations
+
         """
         recommendations = []
 
@@ -520,6 +526,7 @@ class SiteAdapter:
 
         Returns:
             list[AdaptationRecommendation]: Issue-specific recommendations
+
         """
         recommendations = []
 

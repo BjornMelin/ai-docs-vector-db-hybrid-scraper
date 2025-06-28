@@ -80,7 +80,7 @@ class TestDocumentIngestionDataFlow:
             "success_count": 3,
             "failure_count": 0,
             "results": crawling_results,
-            "total_processing_time_ms": 3600,
+            "_total_processing_time_ms": 3600,
         }
 
         # Stage 2: Content intelligence analysis
@@ -111,7 +111,7 @@ class TestDocumentIngestionDataFlow:
         services["content_intelligence"].batch_analyze.return_value = {
             "analyses": content_analysis_results,
             "processing_stats": {
-                "total_documents": 3,
+                "_total_documents": 3,
                 "successful_analyses": 3,
                 "average_quality_score": 0.88,
                 "processing_time_ms": 2400,
@@ -128,7 +128,7 @@ class TestDocumentIngestionDataFlow:
             ],
             "model": "text-embedding-3-small",
             "provider": "openai",
-            "usage": {"total_tokens": 150, "cost_usd": 0.0003},
+            "usage": {"_total_tokens": 150, "cost_usd": 0.0003},
             "processing_time_ms": 800,
         }
         services[
@@ -343,7 +343,7 @@ class TestDocumentIngestionDataFlow:
 
         # Execute pipeline with error handling
         pipeline_result = {
-            "total_urls": len(urls),
+            "_total_urls": len(urls),
             "crawl_success": 0,
             "analysis_success": 0,
             "embedding_success": 0,
@@ -592,7 +592,7 @@ class TestSearchPipelineDataFlow:
                     },
                 },
             ],
-            "total_matches": 3,
+            "_total_matches": 3,
             "search_time_ms": 45,
         }
         services["vector_db_service"].hybrid_search.return_value = vector_search_results
@@ -690,7 +690,7 @@ class TestSearchPipelineDataFlow:
             session_id=search_session_id,
         )
 
-        total_search_time = (time.time() - start_time) * 1000
+        _total_search_time = (time.time() - start_time) * 1000
 
         # Compile complete search response
         search_response = {
@@ -700,8 +700,8 @@ class TestSearchPipelineDataFlow:
             "results": final_results["results"],
             "answer": answer_data["answer"],
             "metadata": {
-                "total_results": len(final_results["results"]),
-                "search_time_ms": total_search_time,
+                "_total_results": len(final_results["results"]),
+                "search_time_ms": _total_search_time,
                 "answer_confidence": answer_data["confidence"],
                 "processing_stages": {
                     "query_analysis": query_data,
@@ -761,7 +761,7 @@ class TestSearchPipelineDataFlow:
             "metadata": {
                 "cached": False,
                 "search_time_ms": 450,
-                "total_results": 2,
+                "_total_results": 2,
                 "generated_at": time.time(),
             },
         }
@@ -858,7 +858,7 @@ class TestSearchPipelineDataFlow:
             "metadata": {
                 "cached": False,
                 "search_time_ms": 450,
-                "total_results": len(final_results["results"]),
+                "_total_results": len(final_results["results"]),
                 "generated_at": time.time(),
             },
         }

@@ -1,9 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-    pass
-
-
 """Tests for database connection pooling with ML-based scaling.
 
 This module tests database connection pooling patterns, ML-based predictive scaling,
@@ -12,10 +6,18 @@ for 99.9% uptime SLA requirements.
 """
 
 import asyncio
+import logging
 from typing import Any
 from unittest.mock import Mock
 
 import pytest
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+
+logger = logging.getLogger(__name__)
 
 
 class MockConnectionPool:
@@ -27,18 +29,20 @@ class MockConnectionPool:
         self.active_connections = min_connections
         self.used_connections = 0
         self.connection_affinity_hits = 0
-        self.total_requests = 0
+        self._total_requests = 0
 
     async def get_connection(self):
         """Get connection from pool."""
-        self.total_requests += 1
+        self._total_requests += 1
         if self.used_connections < self.active_connections:
             self.used_connections += 1
             # Simulate connection affinity hit rate of 73%
-            if self.total_requests % 100 < 73:
+            if self._total_requests % 100 < 73:
                 self.connection_affinity_hits += 1
-        raise TestError("No connections available")
-        raise TestError("No connections available")
+        msg = "No connections available"
+        raise TestError(msg)
+        msg = "No connections available"
+        raise TestError(msg)
 
     async def release_connection(self, _conn):
         """Release connection back to pool."""
@@ -54,9 +58,9 @@ class MockConnectionPool:
 
     def get_affinity_hit_rate(self) -> float:
         """Get connection affinity hit rate."""
-        if self.total_requests == 0:
+        if self._total_requests == 0:
             return 0.0
-        return self.connection_affinity_hits / self.total_requests
+        return self.connection_affinity_hits / self._total_requests
 
 
 class MockMLScalingPredictor:
@@ -77,7 +81,7 @@ class MockMLScalingPredictor:
 
         if current_load > 80:
             return min(base_size * 2, 50)  # Scale up
-        elif current_load < 30:
+        if current_load < 30:
             return max(base_size // 2, 5)  # Scale down
         return base_size  # No change
 
@@ -99,13 +103,14 @@ class MockCircuitBreaker:
         self.success_count = 0
         self.uptime_sla = 99.9
 
-    def call(self, func, *args, **kwargs):
+    def call(self, func, *args, **_kwargs):
         """Execute function with circuit breaker protection."""
         if self.state == "open":
-            raise TestError("Circuit breaker is open")
+            msg = "Circuit breaker is open"
+            raise TestError(msg)
 
         try:
-            result = func(*args, **kwargs)
+            result = func(*args, **_kwargs)
             self.success_count += 1
             if self.failure_count > 0:
                 self.failure_count = max(0, self.failure_count - 1)
@@ -118,10 +123,10 @@ class MockCircuitBreaker:
 
     def get_uptime_sla(self) -> float:
         """Get current uptime SLA."""
-        total_requests = self.success_count + self.failure_count
-        if total_requests == 0:
+        _total_requests = self.success_count + self.failure_count
+        if _total_requests == 0:
             return 100.0
-        return (self.success_count / total_requests) * 100
+        return (self.success_count / _total_requests) * 100
 
 
 @pytest.mark.database_pooling
@@ -238,7 +243,7 @@ class TestDatabaseConnectionPooling:
 
         # Some failures (but not enough to trip breaker)
         for _ in range(3):
-            with pytest.raises(Exception):
+            with pytest.raises(Exception, match="DB error"):
                 mock_circuit_breaker.call(
                     lambda: (_ for _ in ()).throw(Exception("DB error"))
                 )
@@ -286,8 +291,7 @@ class TestDatabaseConnectionPooling:
             return "done"
 
         # Create concurrent workers
-        for _ in range(5):
-            tasks.append(asyncio.create_task(worker()))
+        tasks.extend([asyncio.create_task(worker()) for _ in range(5)])
 
         # Wait for all workers to complete
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -301,14 +305,14 @@ class TestDatabaseConnectionPooling:
         """Test connection pool monitoring metrics."""
         # Generate some activity
         for i in range(50):
-            mock_pool.total_requests += 1
+            mock_pool._total_requests += 1
             if i % 3 == 0:  # Simulate some affinity hits
                 mock_pool.connection_affinity_hits += 1
 
         # Verify metrics
         hit_rate = mock_pool.get_affinity_hit_rate()
         assert 0 <= hit_rate <= 1
-        assert mock_pool.total_requests == 50
+        assert mock_pool._total_requests == 50
 
     @pytest.mark.asyncio
     async def test_pool_exhaustion_handling(self, mock_pool):
@@ -386,13 +390,13 @@ class TestAdvancedPoolingFeatures:
 
         # Simulate operations for statistics
         stats = {
-            "total_connections_created": pool.active_connections,
+            "_total_connections_created": pool.active_connections,
             "active_connections": pool.active_connections,
             "peak_usage": pool.max_connections,
             "average_wait_time": 0.05,
             "connection_lifecycle": "managed",
         }
 
-        assert stats["total_connections_created"] >= pool.min_connections
+        assert stats["_total_connections_created"] >= pool.min_connections
         assert stats["active_connections"] == pool.active_connections
         assert stats["peak_usage"] == pool.max_connections

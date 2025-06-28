@@ -234,7 +234,7 @@ class ResponseFactory:
         items: list[Any],
         page: int = 1,
         per_page: int = 10,
-        total: int | None = None,
+        _total: int | None = None,
     ) -> dict[str, Any]:
         """Create a paginated API response.
 
@@ -242,13 +242,13 @@ class ResponseFactory:
             items: List of items for current page
             page: Current page number
             per_page: Items per page
-            total: Total item count (calculated if not provided)
+            _total: Total item count (calculated if not provided)
 
         Returns:
             Standardized paginated response dictionary
         """
-        if total is None:
-            total = len(items)
+        if _total is None:
+            _total = len(items)
 
         return ResponseFactory.create_success_response(
             data={
@@ -256,9 +256,9 @@ class ResponseFactory:
                 "pagination": {
                     "page": page,
                     "per_page": per_page,
-                    "total": total,
-                    "pages": (total + per_page - 1) // per_page,
-                    "has_next": page * per_page < total,
+                    "_total": _total,
+                    "pages": (_total + per_page - 1) // per_page,
+                    "has_next": page * per_page < _total,
                     "has_prev": page > 1,
                 },
             }
@@ -275,7 +275,7 @@ class ChunkFactory:
         title: str = "Test Document",
         url: str = "https://example.com/doc",
         chunk_index: int = 0,
-        total_chunks: int = 1,
+        _total_chunks: int = 1,
         start_pos: int = 0,
         end_pos: int | None = None,
         metadata: dict[str, Any] | None = None,
@@ -287,7 +287,7 @@ class ChunkFactory:
             title: Source document title
             url: Source document URL
             chunk_index: Index of this chunk
-            total_chunks: Total number of chunks
+            _total_chunks: Total number of chunks
             start_pos: Starting character position
             end_pos: Ending character position
             metadata: Additional metadata
@@ -303,7 +303,7 @@ class ChunkFactory:
             "title": title if chunk_index == 0 else f"{title} (Part {chunk_index + 1})",
             "url": url,
             "chunk_index": chunk_index,
-            "total_chunks": total_chunks,
+            "_total_chunks": _total_chunks,
             "start_pos": start_pos,
             "end_pos": end_pos,
             "char_count": len(content),
@@ -319,7 +319,7 @@ class ChunkFactory:
         code_content: str = "def test_function():\n    return True",
         language: str = "python",
         function_name: str = "test_function",
-        **kwargs,
+        **_kwargs,
     ) -> dict[str, Any]:
         """Create a code chunk for testing.
 
@@ -327,12 +327,12 @@ class ChunkFactory:
             code_content: Code content
             language: Programming language
             function_name: Function name (if applicable)
-            **kwargs: Additional arguments for create_chunk
+            **_kwargs: Additional arguments for create_chunk
 
         Returns:
             Dictionary representing a code chunk
         """
-        chunk = ChunkFactory.create_chunk(content=code_content, **kwargs)
+        chunk = ChunkFactory.create_chunk(content=code_content, **_kwargs)
         chunk.update(
             {
                 "chunk_type": "code",
@@ -424,7 +424,7 @@ class ConfigFactory:
         url: str = "sqlite+aiosqlite:///:memory:",
         pool_size: int = 5,
         echo: bool = False,
-        **kwargs,
+        **_kwargs,
     ) -> dict[str, Any]:
         """Create database configuration for testing.
 
@@ -432,7 +432,7 @@ class ConfigFactory:
             url: Database URL
             pool_size: Connection pool size
             echo: Whether to echo SQL queries
-            **kwargs: Additional configuration parameters
+            **_kwargs: Additional configuration parameters
 
         Returns:
             Database configuration dictionary
@@ -444,7 +444,7 @@ class ConfigFactory:
             "timeout": 30.0,
             "retry_attempts": 3,
             "isolation_level": None,
-            **kwargs,
+            **_kwargs,
         }
         return config
 
@@ -454,7 +454,7 @@ class ConfigFactory:
         port: int = 6333,
         collection_name: str = "test_collection",
         vector_dim: int = 1536,
-        **kwargs,
+        **_kwargs,
     ) -> dict[str, Any]:
         """Create vector database configuration for testing.
 
@@ -463,7 +463,7 @@ class ConfigFactory:
             port: Vector DB port
             collection_name: Collection name
             vector_dim: Vector dimension
-            **kwargs: Additional configuration parameters
+            **_kwargs: Additional configuration parameters
 
         Returns:
             Vector database configuration dictionary
@@ -475,7 +475,7 @@ class ConfigFactory:
             "vector_dim": vector_dim,
             "distance_metric": "cosine",
             "timeout": 60.0,
-            **kwargs,
+            **_kwargs,
         }
         return config
 
@@ -484,7 +484,7 @@ class ConfigFactory:
         base_url: str = "http://localhost:8000",
         timeout: float = 30.0,
         max_retries: int = 3,
-        **kwargs,
+        **_kwargs,
     ) -> dict[str, Any]:
         """Create API configuration for testing.
 
@@ -492,7 +492,7 @@ class ConfigFactory:
             base_url: API base URL
             timeout: Request timeout
             max_retries: Maximum retry attempts
-            **kwargs: Additional configuration parameters
+            **_kwargs: Additional configuration parameters
 
         Returns:
             API configuration dictionary
@@ -506,7 +506,7 @@ class ConfigFactory:
                 "Content-Type": "application/json",
                 "User-Agent": "test-client/1.0",
             },
-            **kwargs,
+            **_kwargs,
         }
         return config
 
@@ -521,7 +521,7 @@ class PerformanceDataFactory:
         memory_usage_mb: float = 10.0,
         cpu_usage_percent: float = 15.0,
         success: bool = True,
-        **kwargs,
+        **_kwargs,
     ) -> dict[str, Any]:
         """Create performance metrics for testing.
 
@@ -531,7 +531,7 @@ class PerformanceDataFactory:
             memory_usage_mb: Memory usage in MB
             cpu_usage_percent: CPU usage percentage
             success: Whether operation succeeded
-            **kwargs: Additional metrics
+            **_kwargs: Additional metrics
 
         Returns:
             Performance metrics dictionary
@@ -545,7 +545,7 @@ class PerformanceDataFactory:
             "timestamp": time.time(),
             "thread_count": 1,
             "error_count": 0 if success else 1,
-            **kwargs,
+            **_kwargs,
         }
 
     @staticmethod
@@ -568,16 +568,16 @@ class PerformanceDataFactory:
         Returns:
             Load test data dictionary
         """
-        total_requests = int(requests_per_second * duration_seconds)
-        successful_requests = int(total_requests * success_rate)
+        _total_requests = int(requests_per_second * duration_seconds)
+        successful_requests = int(_total_requests * success_rate)
 
         return {
             "concurrent_users": concurrent_users,
             "requests_per_second": requests_per_second,
             "duration_seconds": duration_seconds,
-            "total_requests": total_requests,
+            "_total_requests": _total_requests,
             "successful_requests": successful_requests,
-            "failed_requests": total_requests - successful_requests,
+            "failed_requests": _total_requests - successful_requests,
             "success_rate": success_rate,
             "avg_response_time": avg_response_time,
             "p95_response_time": avg_response_time * 1.5,

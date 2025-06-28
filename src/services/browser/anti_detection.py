@@ -173,6 +173,7 @@ class SessionManager:
 
         Args:
             session_dir: Directory to store session data
+
         """
         self.session_dir = Path(session_dir or "./.anti_detection_sessions")
         self.session_dir.mkdir(exist_ok=True)
@@ -218,9 +219,8 @@ class SessionManager:
                 if not session.is_expired():
                     self.active_sessions[session.session_id] = session
                     return session
-                else:
-                    # Clean up expired session
-                    session_file.unlink(missing_ok=True)
+                # Clean up expired session
+                session_file.unlink(missing_ok=True)
             except Exception:
                 # Clean up corrupted session file
                 session_file.unlink(missing_ok=True)
@@ -405,6 +405,7 @@ class EnhancedAntiDetection:
 
         Returns:
             BrowserStealthConfig with anti-detection settings
+
         """
         # Get site profile or use default
         profile = self.site_profiles.get(site_profile, self.site_profiles["default"])
@@ -427,18 +428,20 @@ class EnhancedAntiDetection:
             self.user_agents.safari_agents,
         ]
 
-        selected_pool = random.choices(browser_pools, weights=browser_weights)[0]  # noqa: S311  # Anti-detection randomization
-        return random.choice(selected_pool)  # noqa: S311  # Anti-detection randomization
+        selected_pool = random.choices(browser_pools, weights=browser_weights)[
+            0
+        ]  # Anti-detection randomization
+        return random.choice(selected_pool)  # Anti-detection randomization
 
     def _randomize_viewport(self) -> ViewportProfile:
         """Randomize viewport with common resolution patterns."""
         # Filter to non-mobile profiles for better compatibility
         desktop_profiles = [p for p in self.viewport_profiles if not p.is_mobile]
-        profile = random.choice(desktop_profiles)  # noqa: S311  # Anti-detection randomization
+        profile = random.choice(desktop_profiles)  # Anti-detection randomization
 
         # Add slight randomization to avoid exact pattern matching
-        width_variance = random.randint(-50, 50)  # noqa: S311  # Anti-detection randomization
-        height_variance = random.randint(-30, 30)  # noqa: S311  # Anti-detection randomization
+        width_variance = random.randint(-50, 50)  # Anti-detection randomization
+        height_variance = random.randint(-30, 30)  # Anti-detection randomization
 
         return ViewportProfile(
             width=max(1200, min(1920, profile.width + width_variance)),
@@ -461,7 +464,7 @@ class EnhancedAntiDetection:
         headers = {
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
             "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": random.choice(languages),  # noqa: S311  # Anti-detection randomization
+            "Accept-Language": random.choice(languages),  # Anti-detection randomization
             "Cache-Control": "max-age=0",
             "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
             "Sec-Ch-Ua-Mobile": "?0",
@@ -474,7 +477,7 @@ class EnhancedAntiDetection:
         }
 
         # Add DNT header occasionally (privacy-conscious users)
-        if random.random() < 0.3:  # noqa: S311  # Anti-detection randomization
+        if random.random() < 0.3:  # Anti-detection randomization
             headers["DNT"] = "1"
 
         return headers
@@ -532,22 +535,22 @@ class EnhancedAntiDetection:
                 typing_speed_wpm=(60, 100),
                 page_reading_time=(1000, 3000),
             )
-        elif profile.risk_level == "high":
+        if profile.risk_level == "high":
             return TimingPattern(
                 mouse_movement_delay=(100, 300),
                 click_delay=(200, 500),
                 typing_speed_wpm=(30, 60),
                 page_reading_time=(5000, 12000),
             )
-        elif profile.risk_level == "extreme":
+        if profile.risk_level == "extreme":
             return TimingPattern(
                 mouse_movement_delay=(200, 500),
                 click_delay=(300, 800),
                 typing_speed_wpm=(20, 45),
                 page_reading_time=(8000, 20000),
             )
-        else:  # medium
-            return TimingPattern()
+        # medium
+        return TimingPattern()
 
     async def apply_stealth_to_playwright_config(
         self, config: PlaywrightConfig, site_profile: str = "default"
@@ -560,6 +563,7 @@ class EnhancedAntiDetection:
 
         Returns:
             Enhanced PlaywrightConfig with anti-detection settings
+
         """
         stealth_config = self.get_stealth_config(site_profile)
 
@@ -585,13 +589,16 @@ class EnhancedAntiDetection:
 
         Returns:
             Delay in seconds
+
         """
         profile = self.site_profiles.get(site_profile, self.site_profiles["default"])
         min_delay, max_delay = profile.required_delay_ms
 
         # Add some randomness to avoid pattern detection
-        base_delay = random.uniform(min_delay, max_delay) / 1000.0  # noqa: S311  # Anti-detection randomization
-        jitter = random.uniform(0.8, 1.2)  # noqa: S311  # Anti-detection randomization
+        base_delay = (
+            random.uniform(min_delay, max_delay) / 1000.0
+        )  # Anti-detection randomization
+        jitter = random.uniform(0.8, 1.2)  # Anti-detection randomization
 
         return base_delay * jitter
 
@@ -623,7 +630,7 @@ class EnhancedAntiDetection:
             current_rate = self.success_monitor.get_recent_success_rate()
             if current_rate < 0.6:
                 return "cloudflare.com"  # Maximum stealth
-            elif current_rate < 0.8:
+            if current_rate < 0.8:
                 return "linkedin.com"  # High stealth
 
         return "default"

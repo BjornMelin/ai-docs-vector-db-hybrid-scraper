@@ -31,7 +31,7 @@ class TestContractIntegration:
         self,
         _client_manager,
         api_contract_validator,
-        json_schema_validator,
+        _json_schema_validator,
         openapi_contract_manager,
         pact_contract_builder,
         contract_test_data,
@@ -39,7 +39,7 @@ class TestContractIntegration:
         """Test the complete contract validation pipeline."""
         # 1. JSON Schema Validation
         search_schema = contract_test_data["json_schemas"]["search_result"]
-        json_schema_validator.register_schema("search_result", search_schema)
+        _json_schema_validator.register_schema("search_result", search_schema)
 
         valid_search_result = {
             "id": "doc1",
@@ -48,7 +48,7 @@ class TestContractIntegration:
             "metadata": {"source": "test"},
         }
 
-        schema_validation = json_schema_validator.validate_data(
+        schema_validation = _json_schema_validator.validate_data(
             valid_search_result, "search_result"
         )
         assert schema_validation["valid"], (
@@ -65,7 +65,7 @@ class TestContractIntegration:
         )
         assert request_validation["valid"]
 
-        response_data = {"results": [valid_search_result], "total": 1}
+        response_data = {"results": [valid_search_result], "_total": 1}
 
         response_validation = api_contract_validator.validate_response(
             "/api/search", "GET", 200, response_data
@@ -100,12 +100,12 @@ class TestContractIntegration:
     @pytest.mark.contract
     @pytest.mark.integration
     async def test_contract_violation_detection_pipeline(
-        self, api_contract_validator, json_schema_validator, contract_test_data
+        self, api_contract_validator, _json_schema_validator, contract_test_data
     ):
         """Test detection of contract violations across different layers."""
         # Register contracts
         search_schema = contract_test_data["json_schemas"]["search_result"]
-        json_schema_validator.register_schema("search_result", search_schema)
+        _json_schema_validator.register_schema("search_result", search_schema)
 
         api_contract_validator.register_contract(
             "/api/search", contract_test_data["api_contracts"]["/api/search"]
@@ -117,7 +117,7 @@ class TestContractIntegration:
             "title": "Test Document",
         }
 
-        schema_validation = json_schema_validator.validate_data(
+        schema_validation = _json_schema_validator.validate_data(
             invalid_result, "search_result"
         )
         assert not schema_validation["valid"]
@@ -135,7 +135,7 @@ class TestContractIntegration:
         # Test response contract violation
         invalid_response = {
             "results": [invalid_result],
-            # Missing required 'total' field
+            # Missing required '_total' field
         }
 
         response_validation = api_contract_validator.validate_response(
@@ -146,7 +146,7 @@ class TestContractIntegration:
     @pytest.mark.contract
     @pytest.mark.integration
     async def test_cross_service_contract_validation(
-        self, api_contract_validator, json_schema_validator
+        self, api_contract_validator, _json_schema_validator
     ):
         """Test contract validation across service boundaries."""
         # Define service contracts
@@ -296,9 +296,9 @@ class TestContractVersionCompatibility:
                             "type": "object",
                             "properties": {
                                 "results": {"type": "array"},
-                                "total": {"type": "integer"},
+                                "_total": {"type": "integer"},
                             },
-                            "required": ["results", "total"],
+                            "required": ["results", "_total"],
                         }
                     }
                 },
@@ -326,11 +326,11 @@ class TestContractVersionCompatibility:
                             "properties": {
                                 "success": {"type": "boolean"},
                                 "results": {"type": "array"},
-                                "total_count": {"type": "integer"},
-                                "total": {"type": "integer", "deprecated": True},
+                                "_total_count": {"type": "integer"},
+                                "_total": {"type": "integer", "deprecated": True},
                                 "search_strategy": {"type": "string"},
                             },
-                            "required": ["success", "results", "total_count"],
+                            "required": ["success", "results", "_total_count"],
                         }
                     }
                 },
@@ -365,7 +365,7 @@ class TestContractVersionCompatibility:
 
         # Test response compatibility
         # V1 response format
-        v1_response = {"results": [{"id": "doc1", "title": "Test"}], "total": 1}
+        v1_response = {"results": [{"id": "doc1", "title": "Test"}], "_total": 1}
 
         v1_response_validation = api_contract_validator.validate_response(
             "/api/v1/search", "GET", 200, v1_response
@@ -376,8 +376,8 @@ class TestContractVersionCompatibility:
         v2_response = {
             "success": True,
             "results": [{"id": "doc1", "title": "Test"}],
-            "total_count": 1,
-            "total": 1,  # Deprecated but included for compatibility
+            "_total_count": 1,
+            "_total": 1,  # Deprecated but included for compatibility
             "search_strategy": "hybrid",
         }
 
@@ -478,7 +478,7 @@ class TestContractPerformanceValidation:
     @pytest.mark.integration
     @pytest.mark.performance
     def test_contract_validation_performance(
-        self, _api_contract_validator, json_schema_validator
+        self, _api_contract_validator, _json_schema_validator
     ):
         """Test performance of contract validation at scale."""
 
@@ -491,7 +491,7 @@ class TestContractPerformanceValidation:
             ],  # Every 10th field required
         }
 
-        json_schema_validator.register_schema("large_schema", large_schema)
+        _json_schema_validator.register_schema("large_schema", large_schema)
 
         # Generate test data
         test_data = {f"field_{i}": f"value_{i}" for i in range(100)}
@@ -500,7 +500,7 @@ class TestContractPerformanceValidation:
         start_time = time.time()
 
         for _ in range(1000):
-            result = json_schema_validator.validate_data(test_data, "large_schema")
+            result = _json_schema_validator.validate_data(test_data, "large_schema")
             assert result["valid"]
 
         end_time = time.time()

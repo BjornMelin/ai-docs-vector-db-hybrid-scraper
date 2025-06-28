@@ -13,6 +13,7 @@ class EmbeddingProvider(ABC):
         Args:
             model_name: Name of the embedding model
             **kwargs: Additional provider-specific arguments
+
         """
         self.model_name = model_name
         self.dimensions: int = 0
@@ -29,27 +30,23 @@ class EmbeddingProvider(ABC):
 
         Returns:
             List of embedding vectors
+
         """
-        pass
 
     @abstractmethod
     async def initialize(self) -> None:
         """Initialize the provider."""
-        pass
 
     @abstractmethod
     async def cleanup(self) -> None:
         """Cleanup provider resources."""
-        pass
 
     @property
     @abstractmethod
     def cost_per_token(self) -> float:
         """Get cost per token for this provider."""
-        pass
 
     @property
     @abstractmethod
     def max_tokens_per_request(self) -> int:
         """Get maximum tokens per request."""
-        pass

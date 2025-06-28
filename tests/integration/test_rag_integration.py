@@ -131,10 +131,10 @@ class TestRAGIntegration:
         mock_generator = MagicMock()
         mock_generator.get_metrics.return_value = {
             "generation_count": 5,
-            "total_generation_time": 6250.0,
+            "_total_generation_time": 6250.0,
             "avg_generation_time": 1250.0,
-            "total_tokens_used": 225,
-            "total_cost": 0.006,
+            "_total_tokens_used": 225,
+            "_total_cost": 0.006,
             "avg_cost_per_generation": 0.0012,
             "cache_hits": 2,
             "cache_misses": 3,
@@ -147,7 +147,7 @@ class TestRAGIntegration:
         # Verify metrics structure and values
         assert metrics["generation_count"] == 5
         assert metrics["avg_generation_time"] == 1250.0
-        assert metrics["total_cost"] == 0.006
+        assert metrics["_total_cost"] == 0.006
         assert metrics["cache_hit_rate"] == 0.4
 
         # Verify generator was called

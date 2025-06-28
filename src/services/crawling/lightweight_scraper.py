@@ -9,8 +9,8 @@ import httpx
 from bs4 import BeautifulSoup
 
 from src.config import Config  # LightweightScraperConfig not in simplified config
+from src.services.errors import CrawlServiceError
 
-from ..errors import CrawlServiceError
 from .base import CrawlProvider
 
 
@@ -38,6 +38,7 @@ class LightweightScraper(CrawlProvider):
         Args:
             config: Configuration for the lightweight scraper
             rate_limiter: Optional rate limiter instance
+
         """
         self.config = config
         self.rate_limiter = rate_limiter
@@ -81,6 +82,7 @@ class LightweightScraper(CrawlProvider):
 
         Returns:
             True if URL can be handled by lightweight tier
+
         """
         if not self.config.enable_lightweight_tier:
             return False
@@ -115,9 +117,11 @@ class LightweightScraper(CrawlProvider):
 
         Returns:
             TierRecommendation constant
+
         """
         if not self._http_client:
-            raise CrawlServiceError("Scraper not initialized")
+            msg = "Scraper not initialized"
+            raise CrawlServiceError(msg)
 
         try:
             response = await self._http_client.head(
@@ -174,9 +178,11 @@ class LightweightScraper(CrawlProvider):
 
         Returns:
             Scrape result with content and metadata, or None to escalate
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Scraper not initialized")
+            msg = "Scraper not initialized"
+            raise CrawlServiceError(msg)
 
         formats = formats or ["markdown"]
 
@@ -261,6 +267,7 @@ class LightweightScraper(CrawlProvider):
 
         Returns:
             Extracted content dictionary or None
+
         """
         # Remove script and style elements
         for element in soup(["script", "style", "noscript"]):
@@ -333,6 +340,7 @@ class LightweightScraper(CrawlProvider):
 
         Returns:
             Main content element or None
+
         """
         # Find all text-containing elements
         candidates = []
@@ -374,6 +382,7 @@ class LightweightScraper(CrawlProvider):
 
         Returns:
             Markdown formatted content
+
         """
         markdown_lines = []
 
@@ -458,6 +467,7 @@ class LightweightScraper(CrawlProvider):
 
         Returns:
             Error result indicating this tier doesn't support crawling
+
         """
         return {
             "success": False,

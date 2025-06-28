@@ -4,8 +4,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.services.observability.metrics_bridge import (
 import src.services.observability.metrics_bridge as bridge_module
+from src.services.observability.metrics_bridge import (
     OpenTelemetryMetricsBridge,
     get_metrics_bridge,
     initialize_metrics_bridge,
@@ -463,9 +463,9 @@ class TestOpenTelemetryMetricsBridge:
             def isinstance_side_effect(obj, type_class):
                 if obj is counter:
                     return "Counter" in str(type_class)
-                elif obj is histogram:
+                if obj is histogram:
                     return "Histogram" in str(type_class)
-                elif obj is gauge:
+                if obj is gauge:
                     return False  # Force hasattr check for gauges
                 return False
 
@@ -503,12 +503,12 @@ class TestOpenTelemetryMetricsBridge:
 
         # Test custom counter creation
         result_counter = bridge.create_custom_counter(
-            "custom_operations_total", "Total custom operations", "operations"
+            "custom_operations__total", "Total custom operations", "operations"
         )
 
         assert result_counter is not None
-        assert "custom_operations_total" in bridge._instruments
-        assert bridge._instruments["custom_operations_total"] is result_counter
+        assert "custom_operations__total" in bridge._instruments
+        assert bridge._instruments["custom_operations__total"] is result_counter
 
         # Test custom gauge creation
         result_gauge = bridge.create_custom_gauge(

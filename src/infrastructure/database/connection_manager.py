@@ -19,8 +19,8 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from src.config import Config
+from src.infrastructure.shared import CircuitBreaker, ClientState
 
-from ..shared import CircuitBreaker, ClientState
 from .monitoring import LoadMonitor, QueryMonitor
 
 
@@ -53,6 +53,7 @@ class DatabaseManager:
             load_monitor: ML-based load monitoring (auto-created if None)
             query_monitor: Query performance tracking (auto-created if None)
             circuit_breaker: Circuit breaker for resilience (auto-created if None)
+
         """
         self.config = config
         self._engine: AsyncEngine | None = None
@@ -145,13 +146,16 @@ class DatabaseManager:
 
         Yields:
             AsyncSession: Monitored database session
+
         """
         if not self._session_factory:
-            raise RuntimeError("Database manager not initialized")
+            msg = "Database manager not initialized"
+            raise RuntimeError(msg)
 
         # Circuit breaker protection
         if self.circuit_breaker.state == ClientState.FAILED:
-            raise RuntimeError("Database circuit breaker is open")
+            msg = "Database circuit breaker is open"
+            raise RuntimeError(msg)
 
         # Start query monitoring
         query_start = self.query_monitor.start_query()
@@ -206,5 +210,6 @@ class DatabaseManager:
     def engine(self) -> AsyncEngine:
         """Get the enterprise database engine."""
         if not self._engine:
-            raise RuntimeError("Database manager not initialized")
+            msg = "Database manager not initialized"
+            raise RuntimeError(msg)
         return self._engine

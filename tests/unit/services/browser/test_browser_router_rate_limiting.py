@@ -172,7 +172,7 @@ class TestEnhancedRouterRateLimiting:
         router.rate_limiter = TierRateLimiter(router.routing_config.tier_configs)
 
         # Make requests wait to test concurrency
-        async def slow_response(*_args, **_kwargs):
+        async def slow_response(*_args, **__kwargs):
             await asyncio.sleep(0.5)
             return {"success": True, "content": "Slow content", "metadata": {}}
 

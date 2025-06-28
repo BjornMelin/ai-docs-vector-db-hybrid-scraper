@@ -364,7 +364,8 @@ class TestRetryAsync:
             nonlocal call_count
             call_count += 1
             if call_count < 3:
-                raise ValueError(f"Attempt {call_count} failed")
+                msg = f"Attempt {call_count} failed"
+                raise ValueError(msg)
             return "success"
 
         with patch("asyncio.sleep") as mock_sleep:
@@ -380,7 +381,8 @@ class TestRetryAsync:
 
         @retry_async(max_attempts=2, base_delay=0.01)
         async def failing_func():
-            raise ValueError("Always fails")
+            msg = "Always fails"
+            raise ValueError(msg)
 
         with patch("asyncio.sleep"), pytest.raises(ValueError, match="Always fails"):
             await failing_func()
@@ -391,7 +393,8 @@ class TestRetryAsync:
 
         @retry_async(max_attempts=4, base_delay=1.0, backoff_factor=2.0)
         async def failing_func():
-            raise ValueError("Error")
+            msg = "Error"
+            raise ValueError(msg)
 
         with patch("asyncio.sleep") as mock_sleep, pytest.raises(ValueError):
             await failing_func()
@@ -409,7 +412,8 @@ class TestRetryAsync:
             max_attempts=4, base_delay=10.0, max_delay=15.0, backoff_factor=2.0
         )
         async def failing_func():
-            raise ValueError("Error")
+            msg = "Error"
+            raise ValueError(msg)
 
         with patch("asyncio.sleep") as mock_sleep, pytest.raises(ValueError):
             await failing_func()
@@ -425,9 +429,10 @@ class TestRetryAsync:
         @retry_async(max_attempts=3, exceptions=(ValueError,))
         async def selective_func(should_raise_value_error=True):
             if should_raise_value_error:
-                raise ValueError("Retryable error")
-            else:
-                raise TypeError("Non-retryable error")
+                msg = "Retryable error"
+                raise ValueError(msg)
+            msg = "Non-retryable error"
+            raise TypeError(msg)
 
         # Should retry ValueError
         with patch("asyncio.sleep"), pytest.raises(ValueError):
@@ -473,7 +478,8 @@ class TestCircuitBreaker:
         async def failing_func():
             nonlocal call_count
             call_count += 1
-            raise ValueError(f"Failure {call_count}")
+            msg = f"Failure {call_count}"
+            raise ValueError(msg)
 
         # First failure
         with pytest.raises(ValueError, match="Failure 1"):
@@ -499,7 +505,8 @@ class TestCircuitBreaker:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                raise ValueError("Initial failure")
+                msg = "Initial failure"
+                raise ValueError(msg)
             return "recovered"
 
         # Trigger failure and open circuit
@@ -523,7 +530,8 @@ class TestCircuitBreaker:
         async def still_failing_func():
             nonlocal call_count
             call_count += 1
-            raise ValueError(f"Still failing {call_count}")
+            msg = f"Still failing {call_count}"
+            raise ValueError(msg)
 
         # Open circuit
         with pytest.raises(ValueError):
@@ -547,9 +555,10 @@ class TestCircuitBreaker:
         @circuit_breaker(failure_threshold=1, expected_exception=ValueError)
         async def custom_exception_func(raise_value_error=True):
             if raise_value_error:
-                raise ValueError("Monitored error")
-            else:
-                raise TypeError("Unmonitored error")
+                msg = "Monitored error"
+                raise ValueError(msg)
+            msg = "Unmonitored error"
+            raise TypeError(msg)
 
         # ValueError should trigger circuit breaker
         with pytest.raises(ValueError):
@@ -593,7 +602,8 @@ class TestHandleMCPErrors:
 
         @handle_mcp_errors
         async def tool_error_func():
-            raise ToolError("Tool execution failed", error_code="TOOL_FAILED")
+            msg = "Tool execution failed"
+            raise ToolError(msg, error_code="TOOL_FAILED")
 
         result = await tool_error_func()
         assert result["success"] is False
@@ -606,7 +616,8 @@ class TestHandleMCPErrors:
 
         @handle_mcp_errors
         async def resource_error_func():
-            raise ResourceError("Resource not found")
+            msg = "Resource not found"
+            raise ResourceError(msg)
 
         result = await resource_error_func()
         assert result["success"] is False
@@ -621,7 +632,8 @@ class TestHandleMCPErrors:
 
         @handle_mcp_errors
         async def validation_error_func():
-            raise ValidationError("Invalid input format")
+            msg = "Invalid input format"
+            raise ValidationError(msg)
 
         result = await validation_error_func()
         assert result["success"] is False
@@ -634,7 +646,8 @@ class TestHandleMCPErrors:
 
         @handle_mcp_errors
         async def rate_limit_func():
-            raise RateLimitError("Rate limit exceeded", retry_after=60)
+            msg = "Rate limit exceeded"
+            raise RateLimitError(msg, retry_after=60)
 
         result = await rate_limit_func()
         assert result["success"] is False
@@ -647,7 +660,8 @@ class TestHandleMCPErrors:
 
         @handle_mcp_errors
         async def unexpected_error_func():
-            raise RuntimeError("Unexpected system error")
+            msg = "Unexpected system error"
+            raise RuntimeError(msg)
 
         result = await unexpected_error_func()
         assert result["success"] is False
@@ -664,7 +678,8 @@ class TestValidateInput:
 
         def validate_positive(value):
             if value <= 0:
-                raise ValueError("Must be positive")
+                msg = "Must be positive"
+                raise ValueError(msg)
             return value
 
         @validate_input(count=validate_positive)
@@ -680,7 +695,8 @@ class TestValidateInput:
 
         def validate_email(email):
             if "@" not in email:
-                raise ValueError("Invalid email format")
+                msg = "Invalid email format"
+                raise ValueError(msg)
             return email
 
         @validate_input(email=validate_email)
@@ -714,12 +730,14 @@ class TestValidateInput:
 
         def validate_positive(value):
             if value <= 0:
-                raise ValueError("Must be positive")
+                msg = "Must be positive"
+                raise ValueError(msg)
             return value
 
         def validate_string(value):
             if not isinstance(value, str):
-                raise ValueError("Must be string")
+                msg = "Must be string"
+                raise ValueError(msg)
             return value.strip()
 
         @validate_input(count=validate_positive, name=validate_string)
@@ -792,7 +810,8 @@ class TestErrorIntegration:
         @retry_async(max_attempts=2, base_delay=0.01)
         async def complex_operation(should_fail=False):
             if should_fail:
-                raise NetworkError("Connection failed")
+                msg = "Connection failed"
+                raise NetworkError(msg)
             return {"data": "success"}
 
         # Success case
@@ -813,7 +832,8 @@ class TestErrorIntegration:
 
         @handle_mcp_errors
         async def logging_test():
-            raise ToolError("Test tool error")
+            msg = "Test tool error"
+            raise ToolError(msg)
 
         result = await logging_test()
 

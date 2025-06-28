@@ -11,10 +11,10 @@ import numpy as np
 from qdrant_client import AsyncQdrantClient, models
 
 from src.config import Config, SearchAccuracy, VectorType
+from src.models.vector_search import PrefetchConfig
+from src.services.errors import QdrantServiceError
+from src.services.monitoring.metrics import get_metrics_registry
 
-from ...models.vector_search import PrefetchConfig
-from ..errors import QdrantServiceError
-from ..monitoring.metrics import get_metrics_registry
 from .utils import build_filter
 
 
@@ -30,6 +30,7 @@ class QdrantSearch:
         Args:
             client: Initialized Qdrant client
             config: Unified configuration
+
         """
         self.client = client
         self.config = config
@@ -76,6 +77,7 @@ class QdrantSearch:
 
         Raises:
             QdrantServiceError: If search fails
+
         """
         # Monitor search performance
         if self.metrics_registry:
@@ -96,16 +98,15 @@ class QdrantSearch:
                 )
 
             return await decorator(_monitored_search)()
-        else:
-            return await self._execute_hybrid_search(
-                collection_name,
-                query_vector,
-                sparse_vector,
-                limit,
-                score_threshold,
-                fusion_type,
-                search_accuracy,
-            )
+        return await self._execute_hybrid_search(
+            collection_name,
+            query_vector,
+            sparse_vector,
+            limit,
+            score_threshold,
+            fusion_type,
+            search_accuracy,
+        )
 
     async def _execute_hybrid_search(
         self,
@@ -197,19 +198,18 @@ class QdrantSearch:
 
             error_msg = str(e).lower()
             if "collection not found" in error_msg:
-                raise QdrantServiceError(
+                msg = (
                     f"Collection '{collection_name}' not found. Please create it first."
-                ) from e
-            elif "wrong vector size" in error_msg:
-                raise QdrantServiceError(
-                    f"Vector dimension mismatch. Expected size for collection '{collection_name}'."
-                ) from e
-            elif "timeout" in error_msg:
-                raise QdrantServiceError(
-                    "Search request timed out. Try reducing the limit or simplifying the query."
-                ) from e
-            else:
-                raise QdrantServiceError(f"Hybrid search failed: {e}") from e
+                )
+                raise QdrantServiceError(msg) from e
+            if "wrong vector size" in error_msg:
+                msg = f"Vector dimension mismatch. Expected size for collection '{collection_name}'."
+                raise QdrantServiceError(msg) from e
+            if "timeout" in error_msg:
+                msg = "Search request timed out. Try reducing the limit or simplifying the query."
+                raise QdrantServiceError(msg) from e
+            msg = f"Hybrid search failed: {e}"
+            raise QdrantServiceError(msg) from e
 
     async def multi_stage_search(
         self,
@@ -236,6 +236,7 @@ class QdrantSearch:
 
         Raises:
             QdrantServiceError: If search fails
+
         """
         # Monitor search performance
         if self.metrics_registry:
@@ -249,10 +250,9 @@ class QdrantSearch:
                 )
 
             return await decorator(_monitored_search)()
-        else:
-            return await self._execute_multi_stage_search(
-                collection_name, stages, limit, fusion_algorithm, search_accuracy
-            )
+        return await self._execute_multi_stage_search(
+            collection_name, stages, limit, fusion_algorithm, search_accuracy
+        )
 
     async def _execute_multi_stage_search(
         self,
@@ -265,20 +265,26 @@ class QdrantSearch:
         """Execute the actual multi-stage search operation."""
         # Validate input parameters
         if not stages:
-            raise ValueError("Stages list cannot be empty")
+            msg = "Stages list cannot be empty"
+            raise ValueError(msg)
 
         if not isinstance(stages, list):
-            raise ValueError("Stages must be a list")
+            msg = "Stages must be a list"
+            raise ValueError(msg)
 
         for i, stage in enumerate(stages):
             if not isinstance(stage, dict):
-                raise ValueError(f"Stage {i} must be a dictionary")
+                msg = f"Stage {i} must be a dictionary"
+                raise ValueError(msg)
             if "query_vector" not in stage:
-                raise ValueError(f"Stage {i} must contain 'query_vector'")
+                msg = f"Stage {i} must contain 'query_vector'"
+                raise ValueError(msg)
             if "vector_name" not in stage:
-                raise ValueError(f"Stage {i} must contain 'vector_name'")
+                msg = f"Stage {i} must contain 'vector_name'"
+                raise ValueError(msg)
             if "limit" not in stage:
-                raise ValueError(f"Stage {i} must contain 'limit'")
+                msg = f"Stage {i} must contain 'limit'"
+                raise ValueError(msg)
 
         try:
             prefetch_queries = []
@@ -334,7 +340,8 @@ class QdrantSearch:
                 f"Multi-stage search failed in collection {collection_name}: {e}",
                 exc_info=True,
             )
-            raise QdrantServiceError(f"Multi-stage search failed: {e}") from e
+            msg = f"Multi-stage search failed: {e}"
+            raise QdrantServiceError(msg) from e
 
     async def hyde_search(
         self,
@@ -362,6 +369,7 @@ class QdrantSearch:
 
         Raises:
             QdrantServiceError: If search fails
+
         """
         # Monitor search performance
         if self.metrics_registry:
@@ -381,16 +389,15 @@ class QdrantSearch:
                 )
 
             return await decorator(_monitored_search)()
-        else:
-            return await self._execute_hyde_search(
-                collection_name,
-                query,
-                query_embedding,
-                hypothetical_embeddings,
-                limit,
-                fusion_algorithm,
-                search_accuracy,
-            )
+        return await self._execute_hyde_search(
+            collection_name,
+            query,
+            query_embedding,
+            hypothetical_embeddings,
+            limit,
+            fusion_algorithm,
+            search_accuracy,
+        )
 
     async def _execute_hyde_search(
         self,
@@ -463,7 +470,8 @@ class QdrantSearch:
                 f"HyDE search failed in collection {collection_name}: {e}",
                 exc_info=True,
             )
-            raise QdrantServiceError(f"HyDE search failed: {e}") from e
+            msg = f"HyDE search failed: {e}"
+            raise QdrantServiceError(msg) from e
 
     async def filtered_search(
         self,
@@ -487,6 +495,7 @@ class QdrantSearch:
 
         Raises:
             QdrantServiceError: If search fails
+
         """
         # Monitor search performance
         if self.metrics_registry:
@@ -500,10 +509,9 @@ class QdrantSearch:
                 )
 
             return await decorator(_monitored_search)()
-        else:
-            return await self._execute_filtered_search(
-                collection_name, query_vector, filters, limit, search_accuracy
-            )
+        return await self._execute_filtered_search(
+            collection_name, query_vector, filters, limit, search_accuracy
+        )
 
     async def _execute_filtered_search(
         self,
@@ -516,20 +524,22 @@ class QdrantSearch:
         """Execute the actual filtered search operation."""
         # Validate input parameters
         if not isinstance(query_vector, list):
-            raise ValueError("query_vector must be a list")
+            msg = "query_vector must be a list"
+            raise ValueError(msg)
 
         if not query_vector:
-            raise ValueError("query_vector cannot be empty")
+            msg = "query_vector cannot be empty"
+            raise ValueError(msg)
 
         if not isinstance(filters, dict):
-            raise ValueError("filters must be a dictionary")
+            msg = "filters must be a dictionary"
+            raise ValueError(msg)
 
         # Validate vector dimensions (assuming 1536 for OpenAI embeddings)
         expected_dim = 1536
         if len(query_vector) != expected_dim:
-            raise ValueError(
-                f"query_vector dimension {len(query_vector)} does not match expected {expected_dim}"
-            )
+            msg = f"query_vector dimension {len(query_vector)} does not match expected {expected_dim}"
+            raise ValueError(msg)
 
         try:
             # Build optimized Qdrant filter
@@ -562,7 +572,8 @@ class QdrantSearch:
                 f"Filtered search failed in collection {collection_name}: {e}",
                 exc_info=True,
             )
-            raise QdrantServiceError(f"Filtered search failed: {e}") from e
+            msg = f"Filtered search failed: {e}"
+            raise QdrantServiceError(msg) from e
 
     def _calculate_prefetch_limit(
         self, vector_type: VectorType, final_limit: int

@@ -40,6 +40,7 @@ async def cache_get(
 
     Raises:
         HTTPException: If cache operation fails critically
+
     """
     try:
         if not cache_client:
@@ -85,6 +86,7 @@ async def cache_set(
 
     Raises:
         HTTPException: If cache operation fails critically
+
     """
     try:
         if not cache_client:
@@ -126,6 +128,7 @@ async def cache_delete(
 
     Raises:
         HTTPException: If cache operation fails critically
+
     """
     try:
         if not cache_client:
@@ -164,6 +167,7 @@ async def cache_clear(
 
     Raises:
         HTTPException: If cache operation fails critically
+
     """
     try:
         if not cache_client:
@@ -200,6 +204,7 @@ async def get_cache_stats(
 
     Raises:
         HTTPException: If stats retrieval fails
+
     """
     try:
         if not cache_client:
@@ -236,6 +241,7 @@ async def get_performance_stats(
 
     Raises:
         HTTPException: If performance stats retrieval fails
+
     """
     try:
         if not cache_client:
@@ -270,6 +276,7 @@ async def cache_embedding(
 
     Returns:
         True if successfully cached
+
     """
     try:
         if not cache_client or not hasattr(cache_client, "embedding_cache"):
@@ -307,6 +314,7 @@ async def get_cached_embedding(
 
     Returns:
         Cached embedding vector or None if not found
+
     """
     try:
         if not cache_client or not hasattr(cache_client, "embedding_cache"):
@@ -348,6 +356,7 @@ async def cache_search_results(
 
     Returns:
         True if successfully cached
+
     """
     try:
         if not cache_client or not hasattr(cache_client, "search_cache"):
@@ -385,6 +394,7 @@ async def get_cached_search_results(
 
     Returns:
         Cached search results or None if not found
+
     """
     try:
         if not cache_client or not hasattr(cache_client, "search_cache"):
@@ -423,6 +433,7 @@ async def bulk_cache_operations(
 
     Returns:
         Results summary with success/failure counts
+
     """
     try:
         if not cache_client:

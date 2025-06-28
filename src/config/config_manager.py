@@ -104,7 +104,8 @@ class OpenAIConfigSecure(OpenAIConfig):
     @classmethod
     def validate_api_key(cls, v: SecretStr | None) -> SecretStr | None:
         if v and not v.get_secret_value().startswith("sk-"):
-            raise ValueError("OpenAI API key must start with 'sk-'")
+            msg = "OpenAI API key must start with 'sk-'"
+            raise ValueError(msg)
         return v
 
 
@@ -117,7 +118,8 @@ class FirecrawlConfigSecure(FirecrawlConfig):
     @classmethod
     def validate_api_key(cls, v: SecretStr | None) -> SecretStr | None:
         if v and not v.get_secret_value().startswith("fc-"):
-            raise ValueError("Firecrawl API key must start with 'fc-'")
+            msg = "Firecrawl API key must start with 'fc-'"
+            raise ValueError(msg)
         return v
 
 
@@ -185,6 +187,7 @@ class ConfigManager:
             config_file: Optional configuration file path
             enable_file_watching: Enable automatic file watching
             enable_drift_detection: Enable configuration drift detection
+
         """
         self.config_class = config_class
         self.config_file = config_file or Path(".env")
@@ -243,6 +246,7 @@ class ConfigManager:
 
         Returns:
             True if configuration was successfully reloaded and changed
+
         """
         try:
             old_config = self._config
@@ -280,11 +284,11 @@ class ConfigManager:
             logger.info(
                 f"Configuration reloaded successfully (hash: {self._config_hash})"
             )
-            return True
-
         except Exception:
             logger.exception("Failed to reload configuration")
             return False
+
+        return True
 
     def _create_config_with_file_source(self) -> BaseSettings:
         """Create configuration with custom file source."""
@@ -329,6 +333,7 @@ class ConfigManager:
 
         Args:
             callback: Function called with (old_config, new_config) on changes
+
         """
         self._change_listeners.append(callback)
 
@@ -339,12 +344,14 @@ class ConfigManager:
 
         Returns:
             True if listener was found and removed
+
         """
         try:
             self._change_listeners.remove(callback)
-            return True
         except ValueError:
             return False
+        else:
+            return True
 
     def _notify_change_listeners(
         self, old_config: BaseSettings, new_config: BaseSettings
@@ -359,7 +366,8 @@ class ConfigManager:
     def get_config(self) -> BaseSettings:
         """Get current configuration instance."""
         if self._config is None:
-            raise RuntimeError("Configuration not loaded")
+            msg = "Configuration not loaded"
+            raise RuntimeError(msg)
         return self._config
 
     def check_drift(self) -> dict[str, Any] | None:
@@ -367,6 +375,7 @@ class ConfigManager:
 
         Returns:
             Drift information if drift detected, None otherwise
+
         """
         if not self.enable_drift_detection:
             return None
@@ -427,6 +436,7 @@ async def create_and_load_config_async(
 
     Returns:
         Tuple of (manager, config) instances
+
     """
     manager = ConfigManager(
         config_class=config_class,

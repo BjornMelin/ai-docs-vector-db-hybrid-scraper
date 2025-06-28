@@ -6,8 +6,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.services.observability.performance import (
 import src.services.observability.performance as perf_module
+from src.services.observability.performance import (
     PerformanceMetrics,
     PerformanceMonitor,
     PerformanceThresholds,
@@ -185,9 +185,12 @@ class TestPerformanceMonitor:
         """Test operation monitoring with exceptions."""
         monitor = PerformanceMonitor()
 
-        with pytest.raises(ValueError):
-            with monitor.monitor_operation("failing_operation"):
-                raise ValueError("Test error")
+        with (
+            pytest.raises(ValueError),
+            monitor.monitor_operation("failing_operation"),
+        ):
+            msg = "Test error"
+            raise ValueError(msg)
 
     def test_monitor_operation_without_resource_tracking(self):
         """Test operation monitoring without resource tracking."""
@@ -224,7 +227,8 @@ class TestPerformanceMonitor:
 
         async def async_failing_test():
             async with monitor.monitor_async_operation("async_failing_operation"):
-                raise ValueError("Async test error")
+                msg = "Async test error"
+                raise ValueError(msg)
 
         with pytest.raises(ValueError):
             asyncio.run(async_failing_test())
@@ -390,7 +394,7 @@ class TestOperationStatistics:
         stats = monitor.get_operation_statistics("test_operation")
 
         assert stats["operation_name"] == "test_operation"
-        assert stats["total_operations"] == 10
+        assert stats["_total_operations"] == 10
         assert stats["success_count"] == 8
         assert stats["error_count"] == 2
         assert stats["error_rate"] == 0.2
@@ -432,13 +436,13 @@ class TestOperationStatistics:
         assert "timestamp" in summary
         assert "current_metrics" in summary
         assert "operation_count" in summary
-        assert "total_operations" in summary
-        assert "total_errors" in summary
+        assert "_total_operations" in summary
+        assert "_total_errors" in summary
         assert "overall_error_rate" in summary
 
         assert summary["operation_count"] == 5  # 5 different operations
-        assert summary["total_operations"] == 5
-        assert summary["total_errors"] == 1
+        assert summary["_total_operations"] == 5
+        assert summary["_total_errors"] == 1
         assert summary["overall_error_rate"] == 0.2
 
 
@@ -651,9 +655,11 @@ class TestPerformanceEdgeCases:
         """Test nested operation monitoring."""
         monitor = PerformanceMonitor()
 
-        with monitor.monitor_operation("outer_operation"):
-            with monitor.monitor_operation("inner_operation"):
-                time.sleep(0.001)
+        with (
+            monitor.monitor_operation("outer_operation"),
+            monitor.monitor_operation("inner_operation"),
+        ):
+            time.sleep(0.001)
 
     def test_concurrent_operation_monitoring(self):
         """Test concurrent operation monitoring."""

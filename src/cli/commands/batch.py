@@ -157,7 +157,6 @@ def batch():
     Perform bulk operations on collections, documents, and configurations
     with Rich progress visualization and operation queuing.
     """
-    pass
 
 
 @batch.command("index-documents")

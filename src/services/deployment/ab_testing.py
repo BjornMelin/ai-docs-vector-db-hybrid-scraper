@@ -76,9 +76,8 @@ class ABTestVariant:
     def __post_init__(self):
         """Validate variant configuration."""
         if not 0 <= self.traffic_percentage <= 100:
-            raise ValueError(
-                f"Traffic percentage must be 0-100, got {self.traffic_percentage}"
-            )
+            msg = f"Traffic percentage must be 0-100, got {self.traffic_percentage}"
+            raise ValueError(msg)
 
 
 @dataclass
@@ -97,11 +96,13 @@ class ABTestConfig:
     def __post_init__(self):
         """Validate A/B test configuration."""
         if len(self.variants) < 2:
-            raise ValueError("A/B test requires at least 2 variants")
+            msg = "A/B test requires at least 2 variants"
+            raise ValueError(msg)
 
         total_traffic = sum(variant.traffic_percentage for variant in self.variants)
         if not (99.9 <= total_traffic <= 100.1):  # Allow floating point precision
-            raise ValueError(f"Variant traffic must total 100%, got {total_traffic}%")
+            msg = f"Variant traffic must total 100%, got {total_traffic}%"
+            raise ValueError(msg)
 
 
 class ABTestingManager:
@@ -119,6 +120,7 @@ class ABTestingManager:
             qdrant_service: Qdrant service for data storage
             cache_manager: Cache manager for session state
             feature_flag_manager: Optional feature flag manager
+
         """
         self.qdrant_service = qdrant_service
         self.cache_manager = cache_manager
@@ -176,6 +178,7 @@ class ABTestingManager:
 
         Raises:
             ValueError: If test configuration is invalid
+
         """
         if not self._initialized:
             await self.initialize()
@@ -213,6 +216,7 @@ class ABTestingManager:
 
         Returns:
             str | None: Assigned variant name, or None if test not found
+
         """
         if test_id not in self._active_tests:
             return None
@@ -262,6 +266,7 @@ class ABTestingManager:
 
         Returns:
             dict[str, Any]: Feature flags for the variant
+
         """
         if test_id not in self._active_tests:
             return {}
@@ -290,6 +295,7 @@ class ABTestingManager:
 
         Returns:
             bool: True if conversion recorded successfully
+
         """
         if test_id not in self._active_tests or test_id not in self._user_assignments:
             return False
@@ -332,6 +338,7 @@ class ABTestingManager:
 
         Returns:
             list[ABTestResult]: Results for each variant
+
         """
         if test_id not in self._active_tests:
             return []
@@ -382,6 +389,7 @@ class ABTestingManager:
 
         Returns:
             bool: True if test stopped successfully
+
         """
         if test_id not in self._active_tests:
             return False
@@ -407,6 +415,7 @@ class ABTestingManager:
 
         Returns:
             float: Conversion rate as percentage
+
         """
         if (
             test_id not in self._test_metrics
@@ -432,6 +441,7 @@ class ABTestingManager:
 
         Returns:
             tuple[float | None, bool]: (uplift_percentage, is_significant)
+
         """
         try:
             control_metrics = self._test_metrics[test_id][control_variant]
@@ -507,22 +517,18 @@ class ABTestingManager:
     async def _load_active_tests(self) -> None:
         """Load active tests from storage."""
         # In production, load from database/storage
-        pass
 
     async def _persist_test_config(self, config: ABTestConfig) -> None:
         """Persist A/B test configuration to storage."""
         # In production, save to database/storage
-        pass
 
     async def _persist_conversion_event(self, conversion_data: dict[str, Any]) -> None:
         """Persist conversion event to storage."""
         # In production, save to database/storage
-        pass
 
     async def _update_test_status(self, test_id: str, status: ABTestStatus) -> None:
         """Update test status in storage."""
         # In production, update in database/storage
-        pass
 
     async def cleanup(self) -> None:
         """Cleanup A/B testing manager resources."""

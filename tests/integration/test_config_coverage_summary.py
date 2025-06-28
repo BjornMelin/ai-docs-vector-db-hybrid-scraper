@@ -8,15 +8,17 @@ test scenarios are properly covered.
 try:
     from tests.integration.test_concurrent_config import (
         TestConcurrentConfigurationAccess,
+        test_concurrent_config,
     )
-    from tests.integration.test_concurrent_config import test_concurrent_config
 except ImportError:
     TestConcurrentConfigurationAccess = None
     test_concurrent_config = None
 
 try:
-    from tests.integration.test_config_load_stress import TestConfigurationLoadStress
-    from tests.integration.test_config_load_stress import test_config_load_stress
+    from tests.integration.test_config_load_stress import (
+        TestConfigurationLoadStress,
+        test_config_load_stress,
+    )
 except ImportError:
     TestConfigurationLoadStress = None
     test_config_load_stress = None
@@ -24,8 +26,6 @@ except ImportError:
 try:
     from tests.integration.test_security_config_edge_cases import (
         TestSecurityConfigurationEdgeCases,
-    )
-    from tests.integration.test_security_config_edge_cases import (
         test_security_config_edge_cases,
     )
 except ImportError:
@@ -33,11 +33,11 @@ except ImportError:
     test_security_config_edge_cases = None
 
 try:
-    from tests.property.test_config_transitions import ConfigurationStateMachine
+    from tests.property import test_config_transitions
     from tests.property.test_config_transitions import (
+        ConfigurationStateMachine,
         TestConfigurationTransitionProperties,
     )
-    from tests.property import test_config_transitions
 except ImportError:
     ConfigurationStateMachine = None
     TestConfigurationTransitionProperties = None
@@ -50,7 +50,8 @@ class TestConfigurationCoverageSummary:
     def test_concurrent_operations_coverage(self):
         """Verify concurrent operation tests exist."""
         if TestConcurrentConfigurationAccess is None:
-            raise ImportError("TestConcurrentConfigurationAccess not available")
+            msg = "TestConcurrentConfigurationAccess not available"
+            raise ImportError(msg)
 
         test_methods = [
             method
@@ -74,7 +75,8 @@ class TestConfigurationCoverageSummary:
     def test_load_stress_coverage(self):
         """Verify load stress tests exist."""
         if TestConfigurationLoadStress is None:
-            raise ImportError("TestConfigurationLoadStress not available")
+            msg = "TestConfigurationLoadStress not available"
+            raise ImportError(msg)
 
         test_methods = [
             method
@@ -98,7 +100,8 @@ class TestConfigurationCoverageSummary:
     def test_security_edge_cases_coverage(self):
         """Verify security edge case tests exist."""
         if TestSecurityConfigurationEdgeCases is None:
-            raise ImportError("TestSecurityConfigurationEdgeCases not available")
+            msg = "TestSecurityConfigurationEdgeCases not available"
+            raise ImportError(msg)
 
         test_methods = [
             method
@@ -133,7 +136,8 @@ class TestConfigurationCoverageSummary:
             ConfigurationStateMachine is None
             or TestConfigurationTransitionProperties is None
         ):
-            raise ImportError("Property-based transition classes not available")
+            msg = "Property-based transition classes not available"
+            raise ImportError(msg)
 
         # Check state machine rules
         state_machine_rules = [
@@ -165,8 +169,8 @@ class TestConfigurationCoverageSummary:
 
     def test_coverage_metrics(self):
         """Verify overall test coverage metrics."""
-        # Count total test methods across all new test files
-        total_tests = 0
+        # Count _total test methods across all new test files
+        _total_tests = 0
 
         # Check if modules are available
         modules = []
@@ -188,14 +192,14 @@ class TestConfigurationCoverageSummary:
                         for m in dir(cls)
                         if m.startswith("test_") and callable(getattr(cls, m))
                     ]
-                    total_tests += len(test_methods)
+                    _total_tests += len(test_methods)
 
         # We should have at least 30 test methods across all files
-        assert total_tests >= 30, (
-            f"Only found {total_tests} test methods, expected at least 30"
+        assert _total_tests >= 30, (
+            f"Only found {_total_tests} test methods, expected at least 30"
         )
 
-        print(f"\nTotal configuration test methods: {total_tests}")
+        print(f"\nTotal configuration test methods: {_total_tests}")
         print("✓ Concurrent operations tests")
         print("✓ Load stress tests")
         print("✓ Security edge case tests")

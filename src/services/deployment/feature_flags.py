@@ -7,11 +7,19 @@ simplicity for personal use.
 
 import logging
 import os
+import time
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 from src.config.enums import DeploymentTier
+
+
+# Optional dependency handling
+try:
+    from flagsmith import Flagsmith
+except ImportError:
+    Flagsmith = None
 
 
 logger = logging.getLogger(__name__)
@@ -47,6 +55,7 @@ class FeatureFlagManager:
 
         Args:
             config: Feature flag configuration
+
         """
         self.config = config
         self._client = None
@@ -63,9 +72,11 @@ class FeatureFlagManager:
         try:
             if self.config.enabled and self.config.api_key:
                 # Initialize Flagsmith client (optional dependency)
-                try:
-                    from flagsmith import Flagsmith
+                if Flagsmith is None:
+                    logger.warning("Flagsmith not available - feature flags disabled")
+                    return
 
+                try:
                     self._client = Flagsmith(
                         environment_key=self.config.environment_key,
                         api_url=self.config.api_url,
@@ -98,6 +109,7 @@ class FeatureFlagManager:
 
         Returns:
             DeploymentTier: Current deployment configuration tier
+
         """
         if not self._initialized:
             await self.initialize()
@@ -115,6 +127,7 @@ class FeatureFlagManager:
 
         Returns:
             bool: True if feature is enabled
+
         """
         if not self._initialized:
             await self.initialize()
@@ -124,9 +137,8 @@ class FeatureFlagManager:
                 # Use Flagsmith client
                 flags = await self._get_flags_from_client(user_id)
                 return flags.get(feature_name, False)
-            else:
-                # Use tier-based fallback
-                return self._get_feature_by_tier(feature_name)
+            # Use tier-based fallback
+            return self._get_feature_by_tier(feature_name)
 
         except Exception as e:
             logger.exception("Error checking feature flag %s: %s", feature_name, e)
@@ -144,6 +156,7 @@ class FeatureFlagManager:
 
         Returns:
             Any: Configuration value or default
+
         """
         if not self._initialized:
             await self.initialize()
@@ -153,9 +166,8 @@ class FeatureFlagManager:
                 # Use Flagsmith client for remote config
                 flags = await self._get_flags_from_client(user_id)
                 return flags.get(config_key, default)
-            else:
-                # Use tier-based fallback
-                return self._get_config_by_tier(config_key, default)
+            # Use tier-based fallback
+            return self._get_config_by_tier(config_key, default)
 
         except Exception as e:
             logger.exception("Error getting config value %s: %s", config_key, e)
@@ -169,6 +181,7 @@ class FeatureFlagManager:
 
         Returns:
             bool: True if feature is available in current tier
+
         """
         tier_features = {
             DeploymentTier.PERSONAL: {
@@ -211,6 +224,7 @@ class FeatureFlagManager:
 
         Returns:
             Any: Configuration value for current tier
+
         """
         tier_configs = {
             DeploymentTier.PERSONAL: {
@@ -246,6 +260,7 @@ class FeatureFlagManager:
 
         Returns:
             DeploymentTier: Determined tier
+
         """
         try:
             if self._client:
@@ -254,15 +269,13 @@ class FeatureFlagManager:
 
                 if flags.get("enterprise_features_enabled", False):
                     return DeploymentTier.ENTERPRISE
-                elif flags.get("professional_features_enabled", False):
+                if flags.get("professional_features_enabled", False):
                     return DeploymentTier.PROFESSIONAL
-                else:
-                    return DeploymentTier.PERSONAL
-            else:
-                # Fallback to environment-based detection
+                return DeploymentTier.PERSONAL
+            # Fallback to environment-based detection
 
-                tier_env = os.getenv("DEPLOYMENT_TIER", "personal").lower()
-                return DeploymentTier(tier_env)
+            tier_env = os.getenv("DEPLOYMENT_TIER", "personal").lower()
+            return DeploymentTier(tier_env)
 
         except Exception as e:
             logger.exception("Error determining deployment tier: %s", e)
@@ -278,6 +291,7 @@ class FeatureFlagManager:
 
         Returns:
             dict[str, Any]: Feature flags and config values
+
         """
         if not self._client:
             return {}

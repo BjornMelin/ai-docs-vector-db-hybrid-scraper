@@ -145,7 +145,7 @@ class TestRegisterAllTools:
 
     @pytest.mark.asyncio
     async def test_logs_registration_progress(
-        self, mock_mcp, mock_client_manager, mock_tool_modules, caplog
+        self, mock_mcp, mock_client_manager, mock_tool_modules, _caplog
     ):
         """Test that registration progress is properly logged."""
         with (
@@ -163,12 +163,12 @@ class TestRegisterAllTools:
                 cache=mock_tool_modules["cache"],
                 utilities=mock_tool_modules["utilities"],
             ),
-            caplog.at_level(logging.INFO),
+            _caplog.at_level(logging.INFO),
         ):
             await register_all_tools(mock_mcp, mock_client_manager)
 
         # Check for expected log messages
-        log_messages = [record.message for record in caplog.records]
+        log_messages = [record.message for record in _caplog.records]
 
         assert any("Registering core tools" in msg for msg in log_messages)
         assert any("Registering management tools" in msg for msg in log_messages)
@@ -180,7 +180,7 @@ class TestRegisterAllTools:
 
     @pytest.mark.asyncio
     async def test_logs_registered_tool_names(
-        self, mock_mcp, mock_client_manager, mock_tool_modules, caplog
+        self, mock_mcp, mock_client_manager, mock_tool_modules, _caplog
     ):
         """Test that all registered tool names are logged."""
         with (
@@ -198,14 +198,14 @@ class TestRegisterAllTools:
                 cache=mock_tool_modules["cache"],
                 utilities=mock_tool_modules["utilities"],
             ),
-            caplog.at_level(logging.INFO),
+            _caplog.at_level(logging.INFO),
         ):
             await register_all_tools(mock_mcp, mock_client_manager)
 
         # Find the summary log message
         summary_logs = [
             record.message
-            for record in caplog.records
+            for record in _caplog.records
             if "Successfully registered" in record.message
         ]
 
@@ -218,7 +218,7 @@ class TestRegisterAllTools:
 
     @pytest.mark.asyncio
     async def test_handles_missing_register_function_gracefully(
-        self, mock_mcp, mock_client_manager, mock_tool_modules, caplog
+        self, mock_mcp, mock_client_manager, mock_tool_modules, _caplog
     ):
         """Test that missing register_tools method raises AttributeError."""
         # Remove register_tools from one module
@@ -262,7 +262,7 @@ class TestRegisterAllTools:
 
     @pytest.mark.asyncio
     async def test_continues_registration_after_module_error(
-        self, mock_mcp, mock_client_manager, mock_tool_modules, caplog
+        self, mock_mcp, mock_client_manager, mock_tool_modules, _caplog
     ):
         """Test that registration stops on module error."""
         # Make one module raise an exception
@@ -545,11 +545,11 @@ class TestErrorScenarios:
         return modules
 
     @pytest.mark.asyncio
-    async def test_handles_import_error(self, mock_mcp, mock_client_manager, caplog):
+    async def test_handles_import_error(self, mock_mcp, mock_client_manager, _caplog):
         """Test handling when tool module import fails."""
         with (
             patch("builtins.__import__", side_effect=ImportError("Module not found")),
-            caplog.at_level(logging.ERROR),
+            _caplog.at_level(logging.ERROR),
             pytest.raises(ImportError),
         ):
             await register_all_tools(mock_mcp, mock_client_manager)
@@ -630,7 +630,7 @@ class TestLoggingBehavior:
 
     @pytest.mark.asyncio
     async def test_logger_name_is_correct(
-        self, mock_mcp, mock_client_manager, mock_tool_modules, caplog
+        self, mock_mcp, mock_client_manager, mock_tool_modules, _caplog
     ):
         """Test that logging messages are produced during registration."""
         with (
@@ -648,17 +648,17 @@ class TestLoggingBehavior:
                 cache=mock_tool_modules["cache"],
                 utilities=mock_tool_modules["utilities"],
             ),
-            caplog.at_level(logging.INFO),
+            _caplog.at_level(logging.INFO),
         ):
             await register_all_tools(mock_mcp, mock_client_manager)
 
         # Verify that registration produces log messages
-        assert len(caplog.records) >= 4  # At least 4 info messages
-        assert any("Registering" in record.message for record in caplog.records)
+        assert len(_caplog.records) >= 4  # At least 4 info messages
+        assert any("Registering" in record.message for record in _caplog.records)
 
     @pytest.mark.asyncio
     async def test_registration_count_is_accurate(
-        self, mock_mcp, mock_client_manager, mock_tool_modules, caplog
+        self, mock_mcp, mock_client_manager, mock_tool_modules, _caplog
     ):
         """Test that the reported registration count is accurate."""
         with (
@@ -681,14 +681,14 @@ class TestLoggingBehavior:
                 utilities=mock_tool_modules["utilities"],
                 content_intelligence=mock_tool_modules["content_intelligence"],
             ),
-            caplog.at_level(logging.INFO),
+            _caplog.at_level(logging.INFO),
         ):
             await register_all_tools(mock_mcp, mock_client_manager)
 
         # Find the summary message
         summary_logs = [
             record.message
-            for record in caplog.records
+            for record in _caplog.records
             if "Successfully registered" in record.message
         ]
 

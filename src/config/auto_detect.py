@@ -421,12 +421,11 @@ class EnvironmentDetector:
         """Determine environment type based on detection results."""
         if cloud_info.get("provider"):
             return Environment.PRODUCTION
-        elif is_kubernetes:
+        if is_kubernetes:
             return Environment.STAGING
-        elif is_containerized:
+        if is_containerized:
             return Environment.TESTING
-        else:
-            return Environment.DEVELOPMENT
+        return Environment.DEVELOPMENT
 
     def _calculate_confidence(
         self, is_containerized: bool, is_kubernetes: bool, cloud_info: dict[str, Any]

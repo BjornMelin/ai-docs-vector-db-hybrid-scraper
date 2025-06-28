@@ -39,7 +39,7 @@ class TestEmbeddingsTools:
                 else None
             )
             mock_result.model = model if model else "BAAI/bge-small-en-v1.5"
-            mock_result.total_tokens = len(texts) * 10  # 10 tokens per text
+            mock_result._total_tokens = len(texts) * 10  # 10 tokens per text
             return mock_result
 
         mock_embedding.generate_embeddings.side_effect = mock_generate_embeddings
@@ -223,7 +223,7 @@ class TestEmbeddingsTools:
 
         assert isinstance(result, EmbeddingGenerationResponse)
         assert result.embeddings == []  # Empty list for empty input
-        assert result.total_tokens == 0  # No tokens for empty input
+        assert result._total_tokens == 0  # No tokens for empty input
 
         # No specific warning required - just handle gracefully
 

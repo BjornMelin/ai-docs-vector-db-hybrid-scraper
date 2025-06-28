@@ -34,7 +34,7 @@ def mock_embedding_manager():
 
 
 @pytest.fixture
-def mock_qdrant_service():
+def _mock_qdrant_service():
     """Create a mock Qdrant service."""
     service = AsyncMock()
     service.filtered_search = AsyncMock(
@@ -150,8 +150,8 @@ class TestAdvancedSearchOrchestrator:
 
         assert isinstance(response, QueryProcessingResponse)
         assert response.success is True
-        assert response.total_results >= 0  # May be 0 with mocked search
-        assert response.total_processing_time_ms > 0
+        assert response._total_results >= 0  # May be 0 with mocked search
+        assert response._total_processing_time_ms > 0
 
     async def test_advanced_search(
         self, initialized_orchestrator, advanced_sample_request
@@ -165,8 +165,8 @@ class TestAdvancedSearchOrchestrator:
         assert isinstance(response, AdvancedSearchResult)
         assert response.search_mode == SearchMode.ENHANCED
         assert response.pipeline == SearchPipeline.BALANCED
-        assert response.total_results >= 0  # May be 0 with mocked search
-        assert response.total_processing_time_ms > 0
+        assert response._total_results >= 0  # May be 0 with mocked search
+        assert response._total_processing_time_ms > 0
 
     async def test_preprocessing_enabled(
         self, initialized_orchestrator, sample_request
@@ -316,12 +316,12 @@ class TestAdvancedSearchOrchestrator:
         self,
         initialized_orchestrator,
         sample_request,
-        mock_qdrant_service,
+        _mock_qdrant_service,
         mock_hyde_engine,
     ):
         """Test fallback strategy when primary fails."""
         # Make filtered search fail (primary strategy)
-        mock_qdrant_service.filtered_search.side_effect = Exception("Primary failed")
+        _mock_qdrant_service.filtered_search.side_effect = Exception("Primary failed")
 
         # But make HyDE search succeed (used as fallback)
         mock_hyde_engine.enhanced_search.return_value = [
@@ -429,7 +429,7 @@ class TestAdvancedSearchOrchestrator:
         response = await initialized_orchestrator.process_query(sample_request)
 
         assert response.success is True
-        assert response.total_processing_time_ms > 0
+        assert response._total_processing_time_ms > 0
         assert response.search_time_ms >= 0
 
     async def test_empty_results_handling(
@@ -442,7 +442,7 @@ class TestAdvancedSearchOrchestrator:
         response = await initialized_orchestrator.process_query(sample_request)
 
         assert response.success is True
-        assert response.total_results == 0
+        assert response._total_results == 0
         assert len(response.results) == 0
 
     async def test_error_handling(self, initialized_orchestrator, sample_request):
@@ -476,7 +476,7 @@ class TestAdvancedSearchOrchestrator:
 
         stats = initialized_orchestrator.get_performance_stats()
 
-        assert stats["total_queries"] == 3
+        assert stats["_total_queries"] == 3
         assert stats["successful_queries"] == 3
         assert stats["average_processing_time"] > 0
 
@@ -530,12 +530,12 @@ class TestAdvancedSearchOrchestrator:
         self,
         initialized_orchestrator,
         sample_request,
-        mock_qdrant_service,
+        _mock_qdrant_service,
         mock_hyde_engine,
     ):
         """Test adaptive search strategy behavior."""
         # First make semantic search return few results
-        mock_qdrant_service.filtered_search.return_value = []
+        _mock_qdrant_service.filtered_search.return_value = []
 
         # Then make HyDE return good results
         mock_hyde_engine.enhanced_search.return_value = [

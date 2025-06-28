@@ -10,7 +10,7 @@ import logging
 import os
 import random
 import time
-from typing import Any, List
+from typing import Any, ClassVar
 
 from locust import HttpUser, TaskSet, between, events, task
 from locust.env import Environment
@@ -359,7 +359,7 @@ class VectorDBEmbeddingBehavior(TaskSet):
 class VectorDBUser(HttpUser):
     """Simulated user for vector database load testing."""
 
-    tasks = {
+    tasks: ClassVar[dict[type, int]] = {
         VectorDBSearchBehavior: 60,  # 60% search operations
         VectorDBDocumentBehavior: 25,  # 25% document operations
         VectorDBEmbeddingBehavior: 15,  # 15% embedding operations
@@ -518,7 +518,7 @@ class LoadTestMetricsCollector:
 
         # Calculate percentiles
         response_times_sorted = sorted(response_times)
-        total_requests = len(response_times_sorted)
+        _total_requests = len(response_times_sorted)
 
         def percentile(data: list[float], p: int) -> float:
             if not data:
@@ -529,13 +529,13 @@ class LoadTestMetricsCollector:
         # Performance analysis
         summary = {
             "test_duration_seconds": test_duration,
-            "total_requests": total_requests,
+            "_total_requests": _total_requests,
             "successful_requests": len(successful_requests),
             "failed_requests": len(failed_requests),
-            "error_rate_percent": (len(failed_requests) / total_requests) * 100
-            if total_requests > 0
+            "error_rate_percent": (len(failed_requests) / _total_requests) * 100
+            if _total_requests > 0
             else 0,
-            "throughput_rps": total_requests / test_duration
+            "throughput_rps": _total_requests / test_duration
             if test_duration > 0
             else 0,
             "response_times_ms": {
@@ -577,14 +577,13 @@ class LoadTestMetricsCollector:
         # Convert to grade
         if score >= 90:
             return "A"
-        elif score >= 80:
+        if score >= 80:
             return "B"
-        elif score >= 70:
+        if score >= 70:
             return "C"
-        elif score >= 60:
+        if score >= 60:
             return "D"
-        else:
-            return "F"
+        return "F"
 
     def _check_thresholds(self) -> list[str]:
         """Check performance threshold violations."""
@@ -630,14 +629,14 @@ metrics_collector = LoadTestMetricsCollector()
 
 
 @events.test_start.add_listener
-def on_test_start(_environment: Environment, **_kwargs):
+def on_test_start(_environment: Environment, **__kwargs):
     """Handle test start event."""
     logger.info("Locust load test started")
     metrics_collector.start_test()
 
 
 @events.test_stop.add_listener
-def on_test_stop(environment: Environment, **_kwargs):
+def on_test_stop(environment: Environment, **__kwargs):
     """Handle test stop event."""
     logger.info("Locust load test stopped")
     metrics_collector.stop_test()
@@ -659,7 +658,7 @@ def on_request(
     _response: Any,
     _context: dict[str, Any],
     exception: Exception | None,
-    **_kwargs,
+    **__kwargs,
 ):
     """Handle request completion event."""
     metrics_collector.add_request_metric(
@@ -683,10 +682,10 @@ def save_load_test_report(summary: dict[str, Any], environment: Environment):
         },
         "performance_summary": summary,
         "locust_stats": {
-            "total_requests": environment.stats.total.num_requests,
-            "total_failures": environment.stats.total.num_failures,
-            "average_response_time": environment.stats.total.avg_response_time,
-            "requests_per_second": environment.stats.total.current_rps,
+            "_total_requests": environment.stats._total.num_requests,
+            "_total_failures": environment.stats._total.num_failures,
+            "average_response_time": environment.stats._total.avg_response_time,
+            "requests_per_second": environment.stats._total.current_rps,
         }
         if environment.stats
         else {},
@@ -702,15 +701,15 @@ def save_load_test_report(summary: dict[str, Any], environment: Environment):
 
 def create_load_test_environment(
     host: str = "http://localhost:8000",
-    user_classes: List | None = None,
-    **kwargs,
+    user_classes: list | None = None,
+    **_kwargs,
 ) -> Environment:
     """Create a Locust environment for programmatic testing.
 
     Args:
         host: Target host URL
         user_classes: List of user classes to use
-        **kwargs: Additional environment parameters
+        **_kwargs: Additional environment parameters
 
     Returns:
         Configured Locust environment
@@ -722,6 +721,6 @@ def create_load_test_environment(
         user_classes = [VectorDBUser, AdminUser]
 
     # Create environment
-    env = Environment(user_classes=user_classes, host=host, **kwargs)
+    env = Environment(user_classes=user_classes, host=host, **_kwargs)
 
     return env

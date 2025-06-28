@@ -24,14 +24,14 @@ else:
 
 from pydantic import BaseModel, Field
 
-from ...infrastructure.client_manager import ClientManager
-from ...services.query_processing import (
+from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.models.responses import SearchResult
+from src.services.query_processing import (
     AdvancedSearchOrchestrator,
     AdvancedSearchRequest,
     SearchMode,
     SearchPipeline,
 )
-from ..models.responses import SearchResult
 
 
 logger = logging.getLogger(__name__)
@@ -431,7 +431,6 @@ async def composite_filter_tool(
 
 def register_filtering_tools(mcp, _client_manager: ClientManager):
     """Register advanced filtering tools with the MCP server."""
-
     # Initialize the orchestrator
     orchestrator = create_orchestrator()
 
@@ -439,8 +438,7 @@ def register_filtering_tools(mcp, _client_manager: ClientManager):
     async def search_with_temporal_filter(
         request: TemporalFilterRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Search with temporal filtering for date-based content.
+        """Search with temporal filtering for date-based content.
 
         Apply temporal filters to find content within specific date ranges,
         with support for relative time windows and content freshness scoring.
@@ -451,8 +449,7 @@ def register_filtering_tools(mcp, _client_manager: ClientManager):
     async def search_with_content_type_filter(
         request: ContentTypeFilterRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Search with content type filtering.
+        """Search with content type filtering.
 
         Filter results by content type (documentation, code, tutorials, etc.)
         with configurable type classification confidence thresholds.
@@ -463,8 +460,7 @@ def register_filtering_tools(mcp, _client_manager: ClientManager):
     async def search_with_metadata_filter(
         request: MetadataFilterRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Search with metadata filtering.
+        """Search with metadata filtering.
 
         Apply metadata-based filters using key-value pairs with flexible
         matching modes (all/any) and partial matching support.
@@ -475,8 +471,7 @@ def register_filtering_tools(mcp, _client_manager: ClientManager):
     async def search_with_similarity_filter(
         request: SimilarityFilterRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Search with similarity-based filtering.
+        """Search with similarity-based filtering.
 
         Filter results based on semantic similarity thresholds with support
         for synonym expansion and fuzzy matching.
@@ -487,8 +482,7 @@ def register_filtering_tools(mcp, _client_manager: ClientManager):
     async def search_with_composite_filter(
         request: CompositeFilterRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Search with composite filtering using boolean logic.
+        """Search with composite filtering using boolean logic.
 
         Combine multiple filters using AND/OR/NOT operators with support
         for nested expressions and optimized execution order.

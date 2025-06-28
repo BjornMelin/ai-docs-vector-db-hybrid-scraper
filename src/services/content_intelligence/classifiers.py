@@ -6,6 +6,7 @@ classification with semantic similarity for accurate content type detection.
 """
 
 import logging
+import math
 import re
 from typing import Any
 
@@ -37,6 +38,7 @@ class ContentClassifier:
 
         Args:
             embedding_manager: Optional EmbeddingManager for semantic analysis
+
         """
         self.embedding_manager = embedding_manager
         self._initialized = False
@@ -373,9 +375,11 @@ class ContentClassifier:
 
         Raises:
             RuntimeError: If classifier not initialized
+
         """
         if not self._initialized:
-            raise RuntimeError("ContentClassifier not initialized")
+            msg = "ContentClassifier not initialized"
+            raise RuntimeError(msg)
 
         if not content.strip():
             return self._create_unknown_classification("Empty content provided")
@@ -601,6 +605,7 @@ class ContentClassifier:
 
         Returns:
             dict[ContentType, float]: Semantic similarity scores for each type
+
         """
         # Reference texts for each content type (used for semantic similarity)
         reference_texts = {
@@ -658,10 +663,9 @@ class ContentClassifier:
 
         Returns:
             float: Cosine similarity between vectors
+
         """
         try:
-            import math
-
             # Calculate dot product
             dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=False))
 
@@ -685,6 +689,7 @@ class ContentClassifier:
 
         Returns:
             bool: True if code blocks are detected
+
         """
         code_patterns = [
             r"```\w*\n",  # Markdown code fences
@@ -708,6 +713,7 @@ class ContentClassifier:
 
         Returns:
             list[str]: List of detected programming languages
+
         """
         detected_languages = []
 
@@ -725,6 +731,7 @@ class ContentClassifier:
 
         Returns:
             bool: True if content appears tutorial-like
+
         """
         tutorial_indicators = [
             r"step\s+\d+",
@@ -755,6 +762,7 @@ class ContentClassifier:
 
         Returns:
             bool: True if content appears reference-like
+
         """
         reference_indicators = [
             r"parameters?:",
@@ -786,6 +794,7 @@ class ContentClassifier:
 
         Returns:
             bool: True if content appears to be pure code
+
         """
         lines = [line.strip() for line in content.split("\n") if line.strip()]
         if len(lines) < 3:
@@ -869,6 +878,7 @@ class ContentClassifier:
 
         Returns:
             dict: Adjusted type scores
+
         """
         content_lower = content.lower()
 
