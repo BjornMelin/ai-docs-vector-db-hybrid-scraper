@@ -178,7 +178,7 @@ class PerformanceProfiler:
                 await asyncio.sleep(0.1)
 
             except Exception as e:
-                logger.debug(f"Query execution failed during profiling: {e}")
+                logger.debug(f"Query execution failed during profiling: {e}")  # TODO: Convert f-string to logging format
 
     async def _monitor_resources(self) -> None:
         """Monitor system resources continuously."""
@@ -235,7 +235,7 @@ class PerformanceProfiler:
                 self.resource_snapshots.append(snapshot)
 
             except Exception as e:
-                logger.warning(f"Error collecting resource snapshot: {e}")
+                logger.warning(f"Error collecting resource snapshot: {e}")  # TODO: Convert f-string to logging format
 
             await asyncio.sleep(self.sampling_interval)
 

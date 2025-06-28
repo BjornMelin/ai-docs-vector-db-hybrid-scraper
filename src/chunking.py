@@ -186,7 +186,7 @@ class DocumentChunker:
                 # Create parser with the language
                 parser = Parser(language)
                 self.parsers[lang] = parser
-                self.logger.debug(f"Successfully loaded parser for '{lang}'")
+                self.logger.debug(f"Successfully loaded parser for '{lang}'")  # TODO: Convert f-string to logging format
 
             except Exception as e:
                 self.logger.warning(

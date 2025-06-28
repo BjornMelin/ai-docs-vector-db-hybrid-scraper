@@ -88,6 +88,16 @@ async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") ->
     tools.content_intelligence.register_tools(mcp, client_manager)
     registered_tools.append("content_intelligence")
 
+    # Agentic RAG (NEW - Pydantic-AI based autonomous agents)
+    logger.info("Registering agentic RAG tools...")
+    try:
+        tools.agentic_rag.register_tools(mcp, client_manager)
+        registered_tools.append("agentic_rag")
+    except ImportError as e:
+        logger.warning(f"Agentic RAG tools not available (missing dependencies): {e}")
+    except Exception as e:
+        logger.error(f"Failed to register agentic RAG tools: {e}")
+
     logger.info(
         f"Successfully registered {len(registered_tools)} tool modules: {', '.join(registered_tools)}"
     )

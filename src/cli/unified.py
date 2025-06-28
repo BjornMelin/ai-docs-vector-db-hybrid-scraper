@@ -5,7 +5,6 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
 
 import click
 
@@ -75,11 +74,15 @@ def setup():
 
     # Install pre-commit hooks
     click.echo("🪝 Installing pre-commit hooks...")
-    subprocess.run(["uv", "run", "pre-commit", "install"], check=False, capture_output=True)
+    subprocess.run(
+        ["uv", "run", "pre-commit", "install"], check=False, capture_output=True
+    )
 
     # Validate configuration
     click.echo("✅ Validating configuration...")
-    subprocess.run(["python", "scripts/validate_config.py"], check=False, capture_output=True)
+    subprocess.run(
+        ["python", "scripts/validate_config.py"], check=False, capture_output=True
+    )
 
     click.echo("✅ Setup complete! Run 'task dev' to start development.")
 
@@ -100,7 +103,9 @@ def quality():
 
     # Type check
     click.echo("🔍 Type checking...")
-    result = subprocess.run(["mypy", "src/", "--config-file", "pyproject.toml"], check=False)
+    result = subprocess.run(
+        ["mypy", "src/", "--config-file", "pyproject.toml"], check=False
+    )
 
     if result.returncode == 0:
         click.echo("✅ All quality checks passed!")
@@ -115,7 +120,9 @@ def quality():
 def docs(host: str, port: int):
     """Serve documentation locally"""
     click.echo(f"📚 Starting documentation server at http://{host}:{port}")
-    subprocess.run(["mkdocs", "serve", "--host", host, "--port", str(port)], check=False)
+    subprocess.run(
+        ["mkdocs", "serve", "--host", host, "--port", str(port)], check=False
+    )
 
 
 @cli.command()
@@ -130,7 +137,9 @@ def services():
 def benchmark(profile: str):
     """Run performance benchmarks"""
     click.echo(f"⚡ Running {profile} benchmark profile...")
-    subprocess.run(["python", "scripts/run_benchmarks.py", "--profile", profile], check=False)
+    subprocess.run(
+        ["python", "scripts/run_benchmarks.py", "--profile", profile], check=False
+    )
 
 
 @cli.command()

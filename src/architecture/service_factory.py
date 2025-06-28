@@ -6,7 +6,7 @@ application mode, enabling different implementations for simple vs enterprise mo
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Protocol, Type, TypeVar
+from typing import Any, Protocol, TypeVar
 
 from .modes import ApplicationMode, get_current_mode, get_mode_config
 
@@ -61,15 +61,15 @@ class ModeAwareServiceFactory:
         """
         self.mode = mode or get_current_mode()
         self.mode_config = get_mode_config(self.mode)
-        self._service_registry: Dict[str, Dict[str, Type[ServiceProtocol]]] = {}
-        self._service_instances: Dict[str, ServiceProtocol] = {}
-        self._initialization_status: Dict[str, bool] = {}
+        self._service_registry: dict[str, dict[str, type[ServiceProtocol]]] = {}
+        self._service_instances: dict[str, ServiceProtocol] = {}
+        self._initialization_status: dict[str, bool] = {}
 
     def register_service(
         self,
         name: str,
-        simple_impl: Type[ServiceProtocol] | None = None,
-        enterprise_impl: Type[ServiceProtocol] | None = None,
+        simple_impl: type[ServiceProtocol] | None = None,
+        enterprise_impl: type[ServiceProtocol] | None = None,
     ) -> None:
         """Register different implementations for different modes.
 
@@ -89,7 +89,7 @@ class ModeAwareServiceFactory:
         logger.debug(f"Registered service '{name}' with mode implementations")
 
     def register_universal_service(
-        self, name: str, implementation: Type[ServiceProtocol]
+        self, name: str, implementation: type[ServiceProtocol]
     ) -> None:
         """Register a service that works in both modes.
 
@@ -144,7 +144,7 @@ class ModeAwareServiceFactory:
                 f"Failed to initialize service '{name}': {e}"
             ) from e
 
-    def _get_service_class(self, name: str) -> Type[ServiceProtocol]:
+    def _get_service_class(self, name: str) -> type[ServiceProtocol]:
         """Get the service class for the current mode."""
         if name not in self._service_registry:
             raise ServiceNotFoundError(f"Service '{name}' not registered")
@@ -212,7 +212,7 @@ class ModeAwareServiceFactory:
         """Get list of services available in the current mode.
 
         Returns:
-            List of service names available in current mode
+            list of service names available in current mode
         """
         available = []
         for service_name in self.mode_config.enabled_services:
@@ -340,8 +340,8 @@ def is_service_available(name: str) -> bool:
 
 def register_service(
     name: str,
-    simple_impl: Type[ServiceProtocol] | None = None,
-    enterprise_impl: Type[ServiceProtocol] | None = None,
+    simple_impl: type[ServiceProtocol] | None = None,
+    enterprise_impl: type[ServiceProtocol] | None = None,
 ) -> None:
     """Register a service with the global service factory."""
     factory = get_service_factory()
@@ -349,7 +349,7 @@ def register_service(
 
 
 def register_universal_service(
-    name: str, implementation: Type[ServiceProtocol]
+    name: str, implementation: type[ServiceProtocol]
 ) -> None:
     """Register a universal service with the global service factory."""
     factory = get_service_factory()

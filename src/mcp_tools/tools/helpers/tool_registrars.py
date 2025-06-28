@@ -123,7 +123,7 @@ def register_advanced_query_processing_tool(
 
         except Exception as e:
             await ctx.error(f"Advanced query processing {request_id} failed: {e}")
-            logger.error(f"Advanced query processing failed: {e}", exc_info=True)
+            logger.error(f"Advanced query processing failed: {e}", exc_info=True)  # TODO: Convert f-string to logging format
 
             # Return error response
             return AdvancedQueryProcessingResponse(
@@ -213,5 +213,5 @@ def register_query_analysis_tool(
 
         except Exception as e:
             await ctx.error(f"Query analysis {request_id} failed: {e}")
-            logger.error(f"Query analysis failed: {e}", exc_info=True)
+            logger.error(f"Query analysis failed: {e}", exc_info=True)  # TODO: Convert f-string to logging format
             raise

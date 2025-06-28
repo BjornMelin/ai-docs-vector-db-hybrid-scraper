@@ -120,12 +120,12 @@ def validate_configuration():
 
     # Log warnings
     for warning in warnings:
-        logger.warning(f"Configuration warning: {warning}")
+        logger.warning(f"Configuration warning: {warning}")  # TODO: Convert f-string to logging format
 
     # Raise on errors
     if errors:
         for error in errors:
-            logger.error(f"Configuration error: {error}")
+            logger.error(f"Configuration error: {error}")  # TODO: Convert f-string to logging format
         msg = f"Configuration validation failed: {'; '.join(errors)}"
         raise ValueError(msg)
 
@@ -233,14 +233,14 @@ if __name__ == "__main__":
     # Default to streamable-http for better performance and streaming capabilities
     transport = os.getenv("FASTMCP_TRANSPORT", "streamable-http")
 
-    logger.info(f"Starting MCP server with transport: {transport}")
+    logger.info(f"Starting MCP server with transport: {transport}")  # TODO: Convert f-string to logging format
 
     if transport == "streamable-http":
         # Enhanced streaming configuration
         host = os.getenv("FASTMCP_HOST", "127.0.0.1")
         port = int(os.getenv("FASTMCP_PORT", "8000"))
 
-        logger.info(f"Starting streamable HTTP server on {host}:{port}")
+        logger.info(f"Starting streamable HTTP server on {host}:{port}")  # TODO: Convert f-string to logging format
         logger.info("Enhanced streaming support enabled for large search results")
 
         mcp.run(
@@ -254,5 +254,5 @@ if __name__ == "__main__":
         mcp.run(transport="stdio")
     else:
         # Support for other transport types
-        logger.info(f"Using {transport} transport")
+        logger.info(f"Using {transport} transport")  # TODO: Convert f-string to logging format
         mcp.run(transport=transport)

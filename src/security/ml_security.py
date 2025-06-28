@@ -280,7 +280,7 @@ class MLSecurityValidator:
 
             # Validate executable path for security
             if not trivy_path.startswith(("/usr/bin/", "/usr/local/bin/", "/opt/")):
-                logger.warning(f"trivy found in unexpected location: {trivy_path}")
+                logger.warning(f"trivy found in unexpected location: {trivy_path}")  # TODO: Convert f-string to logging format
 
             # Validate image name for security
             if not image_name or ".." in image_name or "/" not in image_name:
@@ -405,11 +405,11 @@ class MLSecurityValidator:
         """
         # Use existing logging infrastructure
         if severity == "critical":
-            logger.error(f"Security event: {event_type}", extra=details)
+            logger.error(f"Security event: {event_type}", extra=details)  # TODO: Convert f-string to logging format
         elif severity == "error":
-            logger.warning(f"Security event: {event_type}", extra=details)
+            logger.warning(f"Security event: {event_type}", extra=details)  # TODO: Convert f-string to logging format
         else:
-            logger.info(f"Security event: {event_type}", extra=details)
+            logger.info(f"Security event: {event_type}", extra=details)  # TODO: Convert f-string to logging format
 
     def get_security_summary(self) -> dict[str, Any]:
         """Get summary of security checks performed.

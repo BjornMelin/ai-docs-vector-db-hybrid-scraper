@@ -839,5 +839,5 @@ class BenchmarkReporter:
                 f.write(csv_report)
             saved_files["csv"] = str(csv_file)
 
-        logger.info(f"Saved benchmark reports: {list(saved_files.keys())}")
+        logger.info(f"Saved benchmark reports: {list(saved_files.keys())}")  # TODO: Convert f-string to logging format
         return saved_files
