@@ -127,7 +127,6 @@ class CircuitBreaker:
                 self._failure_count = 0
                 self._half_open_attempts = 0
                 self._state = ClientState.HEALTHY
-            return result
 
         except Exception:
             async with self._lock:
@@ -141,3 +140,5 @@ class CircuitBreaker:
                     )
 
             raise
+        else:
+            return result

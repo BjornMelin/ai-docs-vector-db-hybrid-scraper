@@ -199,7 +199,7 @@ class TestPydanticSettingsPatterns:
             settings = AliasedSettings()
 
             assert settings.database_url == "postgresql://localhost/test"
-            assert settings.api_secret == "super-secret-key"
+            assert settings.api_secret == "super-secret-key"  # noqa: S105  # Test data
 
         # Test with field names
         with patch.dict(
@@ -212,7 +212,7 @@ class TestPydanticSettingsPatterns:
             settings = AliasedSettings()
 
             assert settings.database_url == "mysql://localhost/app"
-            assert settings.api_secret == "another-secret"
+            assert settings.api_secret == "another-secret"  # noqa: S105  # Test data
 
     def test_configuration_from_multiple_sources(self):
         """Test configuration loading from multiple sources.
@@ -274,7 +274,7 @@ class TestPydanticSettingsPatterns:
             )  # Exclude from serialization
 
         settings = SerializableSettings(
-            app_name="my-app", version="2.0.0", secret_key="super-secret"
+            app_name="my-app", version="2.0.0", secret_key="super-secret"  # noqa: S106  # Test data
         )
 
         # Test serialization
@@ -336,18 +336,18 @@ class TestPydanticSettingsPatterns:
 
         # Test valid configuration
         settings = CustomValidatedSettings(
-            email="USER@EXAMPLE.COM", password="SecurePass123"
+            email="USER@EXAMPLE.COM", password="SecurePass123"  # noqa: S106  # Test data
         )
         assert settings.email == "user@example.com"  # Lowercased
-        assert settings.password == "SecurePass123"
+        assert settings.password == "SecurePass123"  # noqa: S105  # Test data
 
         # Test invalid configurations
         with pytest.raises(ValidationError) as exc_info:
-            CustomValidatedSettings(email="invalid-email", password="SecurePass123")
+            CustomValidatedSettings(email="invalid-email", password="SecurePass123")  # noqa: S106  # Test data
         assert "Invalid email format" in str(exc_info.value)
 
         with pytest.raises(ValidationError) as exc_info:
-            CustomValidatedSettings(email="user@example.com", password="weakpass")
+            CustomValidatedSettings(email="user@example.com", password="weakpass")  # noqa: S106  # Test data
         assert "uppercase" in str(exc_info.value)
 
     def test_configuration_model_rebuild(self):

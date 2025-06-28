@@ -10,7 +10,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.config import Config
-from src.config.enums import (
 from src.services.query_processing.orchestrator import AdvancedSearchResult
 from src.models.vector_search import ModelSelectionStrategy
 from src.services.query_processing.orchestrator import (
@@ -19,6 +18,8 @@ from src.services.query_processing.orchestrator import (
     OptimizationStrategy,
     QueryComplexity,
     QueryType,
+    SearchMode,
+    SearchPipeline,
 )
 from src.models.vector_search import (
     ABTestConfig,
@@ -161,9 +162,6 @@ class TestAdvancedHybridSearchService:
             )
 
             # Mock orchestrator response
-                SearchMode,
-                SearchPipeline,
-            )
 
             mock_orchestrator.return_value = AdvancedSearchResult(
                 results=[
@@ -471,10 +469,6 @@ class TestAdvancedHybridSearchService:
 
     async def test_empty_results_handling(self, service, sample_request):
         """Test handling of empty search results."""
-            AdvancedSearchResult,
-            SearchMode,
-            SearchPipeline,
-        )
 
         with patch.object(service.orchestrator, "search") as mock_orchestrator:
             mock_orchestrator.return_value = AdvancedSearchResult(
@@ -502,10 +496,6 @@ class TestAdvancedHybridSearchService:
 
     async def test_large_result_set_handling(self, service, sample_request):
         """Test handling of large result sets."""
-            AdvancedSearchResult,
-            SearchMode,
-            SearchPipeline,
-        )
 
         # Mock large result set limited by orchestrator
         large_results = [

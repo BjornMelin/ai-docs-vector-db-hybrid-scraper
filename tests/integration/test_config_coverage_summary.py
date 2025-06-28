@@ -1,14 +1,39 @@
-from tests.integration.test_concurrent_config import (
-from tests.integration.test_config_load_stress import (
-from tests.integration.test_security_config_edge_cases import (
-from tests.property.test_config_transitions import (
-from tests.integration import (
-from tests.property import test_config_transitions
 """Summary test to verify configuration test coverage.
 
 This module provides a quick verification that all configuration
 test scenarios are properly covered.
 """
+
+# Import all required test modules and classes
+try:
+    from tests.integration.test_concurrent_config import TestConcurrentConfigurationAccess
+    from tests.integration.test_concurrent_config import test_concurrent_config
+except ImportError:
+    TestConcurrentConfigurationAccess = None
+    test_concurrent_config = None
+
+try:
+    from tests.integration.test_config_load_stress import TestConfigurationLoadStress
+    from tests.integration.test_config_load_stress import test_config_load_stress
+except ImportError:
+    TestConfigurationLoadStress = None
+    test_config_load_stress = None
+
+try:
+    from tests.integration.test_security_config_edge_cases import TestSecurityConfigurationEdgeCases
+    from tests.integration.test_security_config_edge_cases import test_security_config_edge_cases
+except ImportError:
+    TestSecurityConfigurationEdgeCases = None
+    test_security_config_edge_cases = None
+
+try:
+    from tests.property.test_config_transitions import ConfigurationStateMachine
+    from tests.property.test_config_transitions import TestConfigurationTransitionProperties
+    from tests.property import test_config_transitions
+except ImportError:
+    ConfigurationStateMachine = None
+    TestConfigurationTransitionProperties = None
+    test_config_transitions = None
 
 
 class TestConfigurationCoverageSummary:
@@ -16,8 +41,8 @@ class TestConfigurationCoverageSummary:
 
     def test_concurrent_operations_coverage(self):
         """Verify concurrent operation tests exist."""
-            TestConcurrentConfigurationAccess,
-        )
+        if TestConcurrentConfigurationAccess is None:
+            raise ImportError("TestConcurrentConfigurationAccess not available")
 
         test_methods = [
             method
@@ -40,8 +65,8 @@ class TestConfigurationCoverageSummary:
 
     def test_load_stress_coverage(self):
         """Verify load stress tests exist."""
-            TestConfigurationLoadStress,
-        )
+        if TestConfigurationLoadStress is None:
+            raise ImportError("TestConfigurationLoadStress not available")
 
         test_methods = [
             method
@@ -64,8 +89,8 @@ class TestConfigurationCoverageSummary:
 
     def test_security_edge_cases_coverage(self):
         """Verify security edge case tests exist."""
-            TestSecurityConfigurationEdgeCases,
-        )
+        if TestSecurityConfigurationEdgeCases is None:
+            raise ImportError("TestSecurityConfigurationEdgeCases not available")
 
         test_methods = [
             method
@@ -96,9 +121,8 @@ class TestConfigurationCoverageSummary:
 
     def test_property_based_transitions_coverage(self):
         """Verify property-based transition tests exist."""
-            ConfigurationStateMachine,
-            TestConfigurationTransitionProperties,
-        )
+        if ConfigurationStateMachine is None or TestConfigurationTransitionProperties is None:
+            raise ImportError("Property-based transition classes not available")
 
         # Check state machine rules
         state_machine_rules = [
@@ -133,17 +157,18 @@ class TestConfigurationCoverageSummary:
         # Count total test methods across all new test files
         total_tests = 0
 
-            test_concurrent_config,
-            test_config_load_stress,
-            test_security_config_edge_cases,
-        )
+        # Check if modules are available
+        modules = []
+        if test_concurrent_config is not None:
+            modules.append(test_concurrent_config)
+        if test_config_load_stress is not None:
+            modules.append(test_config_load_stress)
+        if test_security_config_edge_cases is not None:
+            modules.append(test_security_config_edge_cases)
+        if test_config_transitions is not None:
+            modules.append(test_config_transitions)
 
-        for module in [
-            test_concurrent_config,
-            test_config_load_stress,
-            test_security_config_edge_cases,
-            test_config_transitions,
-        ]:
+        for module in modules:
             for item in dir(module):
                 cls = getattr(module, item)
                 if isinstance(cls, type) and item.startswith("Test"):

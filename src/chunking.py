@@ -742,11 +742,11 @@ class DocumentChunker:
                 chunk.char_count = len(chunk.content)
                 chunk.token_estimate = chunk.char_count // 4
 
-            return chunks
-
         except Exception:
             # Fall back to semantic chunking on error
             return self._semantic_chunking(content, language)
+        else:
+            return chunks
 
     def _extract_code_units(
         self, node: Any, content: str, language: str

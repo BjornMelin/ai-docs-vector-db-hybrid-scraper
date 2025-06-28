@@ -44,7 +44,7 @@ class ConfigDataClassification(str, Enum):
     PUBLIC = "public"
     INTERNAL = "internal"
     CONFIDENTIAL = "confidential"
-    SECRET = "secret"  # This is an enum, not a hardcoded password
+    SECRET = "secret"  # noqa: S105  # This is an enum value, not a hardcoded password
 
 
 class ConfigAccessLevel(str, Enum):

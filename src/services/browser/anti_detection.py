@@ -461,7 +461,7 @@ class EnhancedAntiDetection:
         headers = {
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
             "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": random.choice(languages),
+            "Accept-Language": random.choice(languages),  # noqa: S311  # Anti-detection randomization
             "Cache-Control": "max-age=0",
             "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
             "Sec-Ch-Ua-Mobile": "?0",
@@ -474,7 +474,7 @@ class EnhancedAntiDetection:
         }
 
         # Add DNT header occasionally (privacy-conscious users)
-        if random.random() < 0.3:
+        if random.random() < 0.3:  # noqa: S311  # Anti-detection randomization
             headers["DNT"] = "1"
 
         return headers
@@ -590,8 +590,8 @@ class EnhancedAntiDetection:
         min_delay, max_delay = profile.required_delay_ms
 
         # Add some randomness to avoid pattern detection
-        base_delay = random.uniform(min_delay, max_delay) / 1000.0
-        jitter = random.uniform(0.8, 1.2)
+        base_delay = random.uniform(min_delay, max_delay) / 1000.0  # noqa: S311  # Anti-detection randomization
+        jitter = random.uniform(0.8, 1.2)  # noqa: S311  # Anti-detection randomization
 
         return base_delay * jitter
 

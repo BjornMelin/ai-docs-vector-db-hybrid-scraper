@@ -21,6 +21,11 @@ class CustomError(Exception):
     pass
 
 
+def _raise_openai_client_unavailable() -> None:
+    """Raise CustomError for OpenAI client not available."""
+    raise CustomError("OpenAI client not available")
+
+
 class ServiceHealthChecker:
     """Centralized service health checking utility."""
 
@@ -125,7 +130,7 @@ class ServiceHealthChecker:
                 async def _check_async():
                     client = await client_manager.get_openai_client()
                     if not client:
-                        raise CustomError("OpenAI client not available")
+                        _raise_openai_client_unavailable()
                     models = await client.models.list()
                     return list(models)
 
