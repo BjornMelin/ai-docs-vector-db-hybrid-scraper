@@ -14,7 +14,7 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 import psutil
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
@@ -39,7 +39,7 @@ class SystemMetrics:
     cpu_percent: float
     memory_percent: float
     disk_percent: float
-    network_io: Dict[str, int]
+    network_io: dict[str, int]
     connection_count: int
     error_rate: float
     response_time_ms: float
@@ -80,7 +80,7 @@ class AdaptiveCircuitBreaker:
         self.half_open_max_calls = half_open_max_calls
 
         self.state = CircuitBreakerState()
-        self.historical_data: List[Dict[str, Any]] = []
+        self.historical_data: list[dict[str, Any]] = []
 
     async def call(self, func: Callable, *args, **kwargs):
         """Execute function with circuit breaker protection."""
@@ -353,7 +353,7 @@ class AutoScalingManager:
     """Automatically scales system resources based on demand."""
 
     def __init__(self):
-        self.metrics_history: List[SystemMetrics] = []
+        self.metrics_history: list[SystemMetrics] = []
         self.scaling_enabled = True
         self.last_scale_action = 0
         self.min_scale_interval = 300  # 5 minutes between scaling actions
@@ -491,7 +491,7 @@ class SelfHealingManager:
     def __init__(self):
         self.database_manager: SelfHealingDatabaseManager | None = None
         self.scaling_manager: AutoScalingManager | None = None
-        self.circuit_breakers: Dict[str, AdaptiveCircuitBreaker] = {}
+        self.circuit_breakers: dict[str, AdaptiveCircuitBreaker] = {}
 
     async def initialize(self, database_url: str):
         """Initialize all self-healing components."""
@@ -511,7 +511,7 @@ class SelfHealingManager:
             self.circuit_breakers[name] = AdaptiveCircuitBreaker(name)
         return self.circuit_breakers[name]
 
-    async def health_check(self) -> Dict[str, HealthStatus]:
+    async def health_check(self) -> dict[str, HealthStatus]:
         """Get health status of all managed components."""
         health_status = {}
 

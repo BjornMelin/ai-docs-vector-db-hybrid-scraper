@@ -13,12 +13,15 @@ import logging
 import os
 import platform
 from pathlib import Path
-from typing import Any, Dict, Optional
 
 import psutil
-from pydantic import BaseSettings, Field, validator
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
+
+from typing import Any
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +32,9 @@ def detect_environment() -> str:
         return "kubernetes"
     elif os.getenv("AWS_EXECUTION_ENV"):
         return "aws"
-    elif os.getenv("DOCKER_CONTAINER") or (platform.system() == "Linux" and Path("/.dockerenv").exists()):
+    elif os.getenv("DOCKER_CONTAINER") or (
+        platform.system() == "Linux" and Path("/.dockerenv").exists()
+    ):
         return "docker"
     elif os.getenv("CI"):
         return "ci"
@@ -161,18 +166,14 @@ class ZeroMaintenanceConfig(BaseSettings):
     log_level: str = Field(default="INFO")
     log_format: str = Field(default="json")
 
-    @validator("*", pre=True)
-    def auto_correct_values(cls, v, values, field):
-        """Auto-correct configuration values."""
-        return ConfigAutoCorrector.fix_value(v, field.name)
-
-    @validator("database_pool_size")
-    def validate_pool_size(cls, v, values):
+    @field_validator("database_pool_size")
+    @classmethod
+    def validate_pool_size(cls, v):
         """Ensure pool size is reasonable for the environment."""
-        max_pool = values.get("max_workers", 20)
-        return min(v, max_pool)
+        return min(v, 20)  # Simplified validation for Pydantic v2
 
-    @validator("memory_limit")
+    @field_validator("memory_limit")
+    @classmethod
     def validate_memory_limit(cls, v):
         """Ensure memory limit doesn't exceed system memory."""
         total_memory = psutil.virtual_memory().total / (1024**2)

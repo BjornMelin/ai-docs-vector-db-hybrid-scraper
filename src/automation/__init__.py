@@ -3,27 +3,23 @@
 This module provides automated systems for:
 - Self-healing infrastructure
 - Configuration management
-- Dependency updates
-- Performance optimization
-- Error recovery
+- Infrastructure automation
 """
 
-from .config_automation import AutoConfigManager, ConfigDriftHealer
-from .dependency_automation import DependencyUpdateAgent, SecurityUpdateManager
-from .infrastructure_automation import AutoScalingManager, SelfHealingManager
-from .monitoring_automation import AdaptiveAlertManager, PredictiveMaintenanceSystem
-from .test_automation import AutomatedQualityGate, SelfMaintainingTestSuite
+from .config_automation import AutoConfigManager
+from .infrastructure_automation import SelfHealingDatabaseManager
 
+# Self-healing infrastructure components
+from .self_healing.autonomous_health_monitor import AutonomousHealthMonitor
+from .self_healing.auto_remediation_engine import AutoRemediationEngine
+from .self_healing.predictive_maintenance import PredictiveMaintenanceScheduler
+from .self_healing.intelligent_chaos_orchestrator import IntelligentChaosOrchestrator
 
 __all__ = [
-    "AdaptiveAlertManager",
     "AutoConfigManager",
-    "AutoScalingManager",
-    "AutomatedQualityGate",
-    "ConfigDriftHealer",
-    "DependencyUpdateAgent",
-    "PredictiveMaintenanceSystem",
-    "SecurityUpdateManager",
-    "SelfHealingManager",
-    "SelfMaintainingTestSuite",
+    "SelfHealingDatabaseManager",
+    "AutonomousHealthMonitor",
+    "AutoRemediationEngine", 
+    "PredictiveMaintenanceScheduler",
+    "IntelligentChaosOrchestrator",
 ]
