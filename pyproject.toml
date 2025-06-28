@@ -70,9 +70,9 @@ dependencies = [
     "arq>=0.25.0,<0.27.0",
     "cachetools>=5.3.0,<6.0.0", # For LRU cache implementation
     # Modern libraries for optimization
-    "slowapi>=0.1.9,<0.2.0",                   # Rate limiting
-    "purgatory-circuitbreaker>=0.7.2,<0.8.0",  # Distributed circuit breaker
-    "aiocache>=0.12.0,<0.13.0",               # Modern async caching
+    "slowapi>=0.1.9,<0.2.0", # Rate limiting
+    "purgatory-circuitbreaker>=0.7.2,<0.8.0", # Distributed circuit breaker
+    "aiocache>=0.12.0,<0.13.0", # Modern async caching
     # CLI & user interface
     "click>=8.2.1,<9.0.0",
     "rich>=14.0.0,<15.0.0",
@@ -95,6 +95,10 @@ dependencies = [
     "tool>=0.8.0",
     "ruff>=0.12.0",
     "taskipy>=1.14.0,<2.0.0",
+    "dependency-injector>=4.48.1",
+    "pydeps>=3.0.1",
+    "pydantic-ai>=0.2.17",
+    "scikit-learn>=1.7.0",
 ]
 
 [project.optional-dependencies]
@@ -227,12 +231,24 @@ constraint-dependencies = [
     "hatchling>=1.25.0",  # Ensure Python 3.13 compatible hatchling
 ]
 
-# ===== Optimized Ruff Configuration =====
+# ===== Enterprise-Grade Ruff Configuration for Zero Violations =====
 [tool.ruff]
 line-length = 88
 target-version = "py313"
-src = ["src", "tests", "examples"]
-exclude = ["scripts"]
+src = ["src", "tests", "examples", "docs"]
+exclude = [
+    "scripts", 
+    ".venv", 
+    "venv", 
+    "__pycache__", 
+    ".git",
+    "cache/",
+    "logs/",
+    "htmlcov/",
+    ".mypy_cache/",
+    ".pytest_cache/",
+    ".ruff_cache/"
+]
 # Performance optimization
 show-fixes = true         # Show what was fixed
 cache-dir = ".ruff_cache" # Enable caching
@@ -248,115 +264,180 @@ docstring-code-format = true
 docstring-code-line-length = 72
 
 [tool.ruff.lint]
-# Comprehensive rule selection for 2025 best practices
+# Comprehensive rule selection for enterprise-grade 2025 standards
 select = [
     "E",     # pycodestyle errors
-    "W",     # pycodestyle warnings
+    "W",     # pycodestyle warnings  
     "F",     # pyflakes
     "I",     # isort
-    "B",     # flake8-bugbear
-    "C4",    # flake8-comprehensions
+    "N",     # pep8-naming
     "UP",    # pyupgrade
-    "SIM",   # flake8-simplify
-    "RUF",   # Ruff-specific rules
-    "PL",    # pylint (basic subset)
-    "S",     # flake8-bandit (security)
+    "YTT",   # flake8-2020
+    "BLE",   # flake8-blind-except
+    "B",     # flake8-bugbear
+    "A",     # flake8-builtins
+    "C4",    # flake8-comprehensions
     "DTZ",   # flake8-datetimez
-    "PTH",   # flake8-use-pathlib
-    "PERF",  # Perflint (performance)
-    "ASYNC", # flake8-async
+    "T10",   # flake8-debugger
+    "EM",    # flake8-errmsg
+    "FA",    # flake8-future-annotations
+    "ISC",   # flake8-implicit-str-concat
+    "ICN",   # flake8-import-conventions
+    "G",     # flake8-logging-format
+    "INP",   # flake8-no-pep420
+    "PIE",   # flake8-pie
+    "T20",   # flake8-print
+    "PYI",   # flake8-pyi
+    "PT",    # flake8-pytest-style
+    "Q",     # flake8-quotes
+    "RSE",   # flake8-raise
+    "RET",   # flake8-return
+    "SLF",   # flake8-self
+    "SLOT",  # flake8-slots
+    "SIM",   # flake8-simplify
+    "TID",   # flake8-tidy-imports
+    "TCH",   # flake8-type-checking
     "ARG",   # flake8-unused-arguments
+    "PTH",   # flake8-use-pathlib
+    "TD",    # flake8-todos
+    "FIX",   # flake8-fixme
+    "ERA",   # eradicate
+    "PD",    # pandas-vet
+    "PGH",   # pygrep-hooks
+    "PL",    # pylint
     "TRY",   # tryceratops
+    "FLY",   # flynt
+    "NPY",   # NumPy-specific rules
+    "PERF",  # Perflint
+    "FURB",  # refurb
+    "LOG",   # flake8-logging
+    "RUF",   # Ruff-specific rules
+    "S",     # flake8-bandit (security)
+    "ASYNC", # flake8-async
 ]
 
 ignore = [
     # Formatter conflicts (universal ignores)
-    "COM812",
-    "COM819", # Comma rules
-    "D206",
-    "D300",   # Docstring formatting
-    "E111",
-    "E114",
-    "E117",   # Indentation
-    "Q000",
-    "Q001",
-    "Q002",
-    "Q003",   # Quote rules
-    "W191",   # Tab indentation
+    "COM812", "COM819",  # Comma rules
+    "D206", "D300",      # Docstring formatting  
+    "E111", "E114", "E117",  # Indentation
+    "Q000", "Q001", "Q002", "Q003",  # Quote rules
+    "W191",              # Tab indentation
 
-    # Documentation rules (common production ignores)
-    "D100",
-    "D101",
-    "D102",
-    "D103",
-    "D104",
-    "D105", # Missing docstrings
-    "D200",
-    "D205",
-    "D212",
-    "D400",
-    "D401",
-    "D415", # Docstring formatting
+    # Documentation rules (for incremental adoption)
+    "D100", "D101", "D102", "D103", "D104", "D105",  # Missing docstrings
+    "D200", "D205", "D212", "D400", "D401", "D415",  # Docstring formatting
 
-    # Complexity rules (existing)
-    "PLR0911", # Too many return statements
-    "PLR0912", # Too many branches
-    "PLR0913", # Too many arguments
-    "PLR0915", # Too many statements
+    # Complexity rules (project-specific tolerances)
+    "PLR0911", # Too many return statements (>6)
+    "PLR0912", # Too many branches (>12) 
+    "PLR0913", # Too many arguments (>5)
+    "PLR0915", # Too many statements (>50)
     "PLR2004", # Magic value used in comparison
 
-    # Practical ignores
-    "E501",    # Line too long (handled by formatter)
+    # Test-specific overrides
     "S101",    # Use of assert (needed for tests)
-    "TRY003",  # Avoid long messages in exceptions
-    "PERF203", # try-except in loop (sometimes necessary)
-    "TD002",
-    "TD003",
-    "FIX002",  # TODO formatting
-    "UP006",
-    "UP007",   # Type annotation modernization
+    "S311",    # Standard pseudo-random generators (tests)
+    "PT009",   # Use regular assert for simple comparisons
+    "PT011",   # pytest.raises() should be specific
+    
+    # Development-specific ignores  
+    "T20",     # Print statements (examples/dev scripts)
+    "ERA001",  # Commented-out code (temporary)
+    "FIX002",  # TODO comments should be more descriptive
+    "TD002", "TD003",  # TODO formatting
 
-    # Additional ignores for zero violations requirement
-    "ASYNC109", # Async function without await
-    "B017",     # pytest.raises() without match parameter
-    "E402",     # Module level import not at top of file
-    "PERF102",  # Incorrect use of dict.get
-    "PERF401",  # Use list comprehension instead of for loop
-    "PERF402",  # Use list comprehension
-    "PERF403",  # Use dict comprehension
-    "PLC0415",  # Import should be at module level
-    "PLW0603",  # Using global without assignment
-    "PTH109",   # Use pathlib instead of os.path.splitext
-    "PTH113",   # Use pathlib instead of os.path.isfile
-    "RUF001",   # String contains ambiguous character
-    "RUF005",   # Unpacked list comprehension
-    "RUF006",   # Store a reference to the return value
-    "RUF100",   # Unused noqa directive
-    "S105",     # Possible hardcoded password
-    "S106",     # Possible hardcoded password in argument
-    "S108",     # Probable insecure usage of temp file/directory
-    "S311",     # Standard pseudo-random generators
-    "S603",     # subprocess call without shell=True
-    "SIM102",   # Use a single if-statement
-    "SIM105",   # Use contextlib.suppress
-    "SIM113",   # Use enumerate
-    "SIM115",   # Use context manager for file operations
-    "SIM117",   # Use a single with statement
-    "TRY004",   # Prefer TypeError exception for wrong type
-    "TRY300",   # Consider moving this statement to an else block
-    "TRY301",   # Abstract raise to an inner function
-    "TRY401",   # Use logging.exception instead of logging.error
+    # Performance exceptions (where needed)
+    "PERF203", # try-except in loop (when necessary)
+    
+    # Security exceptions (where reviewed)
+    "S108",    # Temp file usage (when secure)
+    "S603",    # subprocess call (when secure)
+    
+    # Temporary ignores for migration (REMOVE THESE GRADUALLY)
+    "E501",    # Line too long (handled by formatter during migration)
 ]
 
 # Prevent auto-fixing these rules for safety
-unfixable = ["F401", "F841"] # Don't auto-remove unused imports/variables
+unfixable = [
+    "F401",    # Don't auto-remove unused imports (manual review needed)
+    "F841",    # Don't auto-remove unused variables (manual review needed)
+    "ERA001",  # Don't auto-remove commented code (manual review needed)
+]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*" = ["D", "ANN", "S101", "S311", "PLR"]
-"examples/**/*" = ["D", "ANN", "T201", "F841"]
-"src/config/**/*" = ["PLW0603"]  # Allow global statements for singleton patterns
-"src/services/observability/**/*" = ["PLW0603"]  # Allow global statements for observability singletons
-"src/services/config_drift_service.py" = ["PLW0603"]  # Allow global statements for drift service singleton
+# Test files - more permissive
+"tests/**/*" = [
+    "D",       # Skip all docstring rules for tests
+    "ANN",     # Skip type annotations for tests
+    "S101",    # Allow assert statements
+    "S311",    # Allow standard pseudo-random generators
+    "PLR",     # Skip complexity rules for tests
+    "ARG",     # Skip unused argument rules for fixtures
+    "B904",    # Allow raise without from in tests
+    "TRY401",  # Allow simple error logging in tests
+]
+
+# Example files - demonstration code
+"examples/**/*" = [
+    "D",       # Skip docstring rules for examples
+    "ANN",     # Skip type annotations for examples  
+    "T20",     # Allow print statements
+    "F841",    # Allow unused variables for demonstration
+    "ARG",     # Allow unused arguments for examples
+    "S101",    # Allow assert statements
+    "PLR",     # Skip complexity rules for examples
+]
+
+# Documentation files - interactive/demo code
+"docs/**/*" = [
+    "D",       # Skip docstring rules for docs
+    "ANN",     # Skip type annotations for docs
+    "T20",     # Allow print statements
+    "F841",    # Allow unused variables 
+    "ARG",     # Allow unused arguments
+    "S101",    # Allow assert statements
+    "PLR",     # Skip complexity rules
+    "UP035",   # Allow deprecated typing for compatibility
+]
+
+# Configuration modules - allow global patterns
+"src/config/**/*" = [
+    "PLW0603", # Allow global statements for singleton patterns
+    "S105",    # Allow hardcoded passwords in config (environment-based)
+]
+
+# Observability modules - allow instrumentation patterns
+"src/services/observability/**/*" = [
+    "PLW0603", # Allow global statements for observability singletons
+    "S106",    # Allow hardcoded passwords for instrumentation keys
+]
+
+# Specific service files requiring singleton patterns
+"src/services/config_drift_service.py" = ["PLW0603"]
+"src/infrastructure/shared.py" = ["PLW0603"]
+"src/services/monitoring/initialization.py" = ["PLW0603"]
+
+# CLI and utility scripts - allow flexibility
+"src/cli/**/*" = [
+    "T20",     # Allow print statements in CLI
+    "PLR0913", # Allow many arguments for CLI commands
+]
+
+# MCP tools - allow MCP-specific patterns
+"src/mcp_tools/**/*" = [
+    "ARG001",  # Allow unused arguments for MCP protocol
+    "PLR0913", # Allow many arguments for tool functions
+]
+
+# Legacy or migration files (temporary)
+"src/manage_vector_db.py" = [
+    "T20",     # Allow print statements in management script
+    "S603",    # Allow subprocess calls in management
+]
+"src/cli_worker.py" = [
+    "ARG001",  # Allow unused arguments for worker interface
+]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
@@ -556,42 +637,108 @@ dev = [
     "locust>=2.37.10",
     "pyjwt>=2.10.1",
     "mypy>=1.16.1",
+    "bandit>=1.8.5",
+    "safety>=3.2.4",
+    "semgrep>=1.79.0",
 ]
 
-# ===== Mypy Type Checking Configuration =====
+# ===== Enhanced Mypy Configuration for Enterprise Type Safety =====
 [tool.mypy]
 python_version = "3.13"
+# Core strictness settings
+strict = false  # Start with False and gradually enable
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = false       # Start permissive
+disallow_untyped_defs = false       # Gradually enable
 disallow_incomplete_defs = true
 check_untyped_defs = true
-disallow_untyped_decorators = false
+disallow_untyped_decorators = false # Gradually enable
 no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+
+# Error handling
 ignore_missing_imports = true
-pretty = true
 show_error_context = true
 show_error_codes = true
 show_column_numbers = true
+pretty = true
+color_output = true
+error_summary = true
+
+# Advanced type checking features
+disallow_any_unimported = false     # Enable gradually
+disallow_any_expr = false           # Enable gradually
+disallow_any_decorated = false      # Enable gradually
+disallow_any_explicit = false       # Enable gradually
+disallow_any_generics = true        # Enable stricter generics
+disallow_subclassing_any = true     # Prevent Any subclassing
+
 # Performance optimizations
 cache_dir = ".mypy_cache"
 incremental = true
-follow_imports = "skip"
+follow_imports = "normal"           # Changed from skip for better analysis
 follow_imports_for_stubs = true
+skip_version_check = true
+fast_parser = true
 
-# Per-module overrides
+# Additional checks
+warn_incomplete_stub = true
+
+# Per-module overrides for gradual adoption
 [[tool.mypy.overrides]]
-module = ["tests.*", "docs.*", "scripts.*"]
+module = ["tests.*", "examples.*", "scripts.*"]
+ignore_errors = false
+disallow_untyped_defs = false
+# More permissive for test/example code
+
+[[tool.mypy.overrides]]
+module = ["docs.*"]
 ignore_errors = true
+# Skip docs for now
 
+# Third-party library overrides
 [[tool.mypy.overrides]]
-module = ["crawl4ai.*", "firecrawl.*", "qdrant_client.*", "fastembed.*"]
+module = [
+    "crawl4ai.*", 
+    "firecrawl.*", 
+    "qdrant_client.*", 
+    "fastembed.*",
+    "browser_use.*",
+    "playwright.*",
+    "uvicorn.*",
+    "arq.*",
+    "slowapi.*",
+    "tenacity.*",
+    "cachetools.*",
+    "prometheus_client.*",
+    "psutil.*",
+    "httpx.*",
+    "respx.*",
+    "aiofiles.*",
+    "aiohttp.*",
+    "redis.*",
+    "dependency_injector.*",
+    "opentelemetry.*"
+]
 ignore_missing_imports = true
+
+# Core source modules - stricter checking
+[[tool.mypy.overrides]]
+module = ["src.core.*", "src.models.*", "src.config.*"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_decorators = true
+warn_return_any = true
+
+# Service modules - medium strictness  
+[[tool.mypy.overrides]]
+module = ["src.services.*", "src.infrastructure.*"]
+disallow_incomplete_defs = true
+check_untyped_defs = true
 
 # ===== Bandit Security Configuration =====
 [tool.bandit]
@@ -653,7 +800,9 @@ vector_db_connections = 20
 cache_ttl = 3600
 max_memory_mb = 1000
 
-# ===== Project-specific tool configurations =====
+# ===== Enterprise Code Quality Tools Configuration =====
+
+# Docstring coverage analysis
 [tool.interrogate]
 ignore-init-method = true
 ignore-init-module = true
@@ -665,13 +814,35 @@ ignore-module = false
 ignore-nested-functions = false
 ignore-nested-classes = true
 ignore-setters = false
-fail-under = 80
-exclude = ["setup.py", "docs", "build", "tests"]
-verbose = 0
+fail-under = 85  # Increased for enterprise standards
+exclude = ["setup.py", "docs", "build", "tests", "examples", "scripts"]
+verbose = 1
 quiet = false
 whitelist-regex = []
 color = true
 omit-covered-files = false
+
+# Code complexity measurement
+[tool.radon]
+# Complexity thresholds for enterprise grade
+cc_min = "C"  # Show complexity C and above
+mi_min = "B"  # Show maintainability index B and above  
+show_complexity = true
+show_mi = true
+exclude = ["tests/*", "docs/*", "examples/*", "scripts/*", ".venv/*"]
+
+# Additional quality gates
+[tool.vulture]
+min_confidence = 80
+sort_by_size = true
+exclude = ["tests/", "docs/", "examples/", "scripts/"]
+ignore_decorators = ["@app.route", "@click.command", "@pytest.fixture"]
+ignore_names = ["setUp", "tearDown", "_*"]
+
+# Dead code detection configuration  
+[tool.dead]
+exclude = ["tests/", "docs/", "examples/", "scripts/", "__pycache__/"]
+ignore_decorators = true
 
 # ===== Task runner configuration =====
 [tool.taskipy.tasks]
@@ -689,11 +860,26 @@ test-ai = "pytest tests/unit/ai/ tests/integration/ai/ -v"
 test-performance = "python scripts/benchmark_query_api.py"
 coverage = "pytest --cov=src --cov-report=html --cov-report=term-missing"
 
-# Code Quality
+# Code Quality & Enterprise Standards
 lint = "ruff check . --fix"
 format = "ruff format ."
 typecheck = "mypy src/ --config-file pyproject.toml"
 quality = "task format && task lint && task typecheck"
+
+# Advanced Quality Analysis  
+quality-check = "task quality && python scripts/quality_analysis.py"
+complexity-check = "python scripts/complexity_analyzer.py"
+security-check = "bandit -r src/ -f json -o security_report.json"
+docstring-check = "interrogate src/ --fail-under=85"
+
+# Quality Gates for CI/CD
+quality-gate = "task quality-check && task complexity-check && task security-check && task docstring-check"
+quality-baseline = "python scripts/create_quality_baseline.py"
+quality-report = "python scripts/generate_quality_report.py"
+
+# Zero-Violation Goals
+zero-violations = "python scripts/zero_violations_fix.py --auto-fix"
+quality-enterprise = "task zero-violations && task quality-gate"
 
 # Specialized Scripts Integration
 fix-try = "python scripts/fix_try_violations.py"
