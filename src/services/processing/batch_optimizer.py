@@ -9,7 +9,7 @@ import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Generic, List, TypeVar
+from typing import Any, Generic, TypeVar
 
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ class BatchProcessor(Generic[T, R]):
 
     def __init__(
         self,
-        process_func: Callable[[List[T]], List[R]],
+        process_func: Callable[[list[T]], list[R]],
         config: BatchConfig | None = None,
     ):
         """Initialize batch processor with processing function and configuration.
@@ -46,13 +46,13 @@ class BatchProcessor(Generic[T, R]):
         """
         self.process_func = process_func
         self.config = config or BatchConfig()
-        self.pending_items: List[T] = []
-        self.pending_futures: List[asyncio.Future] = []
+        self.pending_items: list[T] = []
+        self.pending_futures: list[asyncio.Future] = []
         self.last_batch_time = time.time()
         self.processing_lock = asyncio.Lock()
 
         # Performance tracking for adaptive sizing
-        self.batch_performance_history: List[tuple[int, float]] = []
+        self.batch_performance_history: list[tuple[int, float]] = []
         self.optimal_batch_size = self.config.max_batch_size
 
     async def process_item(self, item: T) -> R:
@@ -222,7 +222,7 @@ class BatchProcessor(Generic[T, R]):
         """Get current performance statistics.
 
         Returns:
-            Dict containing performance metrics
+            dict containing performance metrics
 
         """
         if not self.batch_performance_history:
@@ -274,7 +274,7 @@ class OptimizedEmbeddingService:
             ),
         )
 
-    async def generate_embedding(self, text: str) -> List[float]:
+    async def generate_embedding(self, text: str) -> list[float]:
         """Generate single embedding with batching optimization.
 
         Args:
@@ -286,14 +286,14 @@ class OptimizedEmbeddingService:
         """
         return await self.batch_processor.process_item(text)
 
-    async def _batch_generate_embeddings(self, texts: List[str]) -> List[List[float]]:
+    async def _batch_generate_embeddings(self, texts: list[str]) -> list[list[float]]:
         """Actual batch embedding generation implementation.
 
         Args:
-            texts: List of texts to generate embeddings for
+            texts: list of texts to generate embeddings for
 
         Returns:
-            List of embedding vectors
+            list of embedding vectors
 
         """
         # This would be replaced with actual embedding service calls
