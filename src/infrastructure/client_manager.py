@@ -45,20 +45,29 @@ except ImportError:
     CacheManager = None
 
 try:
-    from src.services.crawling.manager import CrawlingManager
+    from src.services.crawling.manager import CrawlingManager, CrawlManager
 except ImportError:
     CrawlingManager = None
+    CrawlManager = None
 
 try:
-    from src.services.hyde.config import HyDEConfig, create_default_hyde_config
+    from src.services.hyde.config import (
+        HyDEConfig,
+        HyDEMetricsConfig,
+        HyDEPromptConfig,
+        create_default_hyde_config,
+    )
 except ImportError:
     HyDEConfig = None
+    HyDEMetricsConfig = None
+    HyDEPromptConfig = None
     create_default_hyde_config = None
 
 try:
-    from src.services.core.project_storage import ProjectStorageService
+    from src.services.core.project_storage import ProjectStorageService, ProjectStorage
 except ImportError:
     ProjectStorageService = None
+    ProjectStorage = None
 
 try:
     from src.services.browser.browser_router import EnhancedAutomationRouter
@@ -456,9 +465,8 @@ class ClientManager:
 
             async with self._service_locks["crawl_manager"]:
                 if self._crawl_manager is None:
-                    from src.services.crawling.manager import (
-                        CrawlManager,
-                    )
+                    if CrawlManager is None:
+                        raise ImportError("CrawlManager not available")
 
                     # CrawlManager expects rate_limiter but we'll pass None for now
                     self._crawl_manager = CrawlManager(
@@ -478,11 +486,8 @@ class ClientManager:
 
             async with self._service_locks["hyde_engine"]:
                 if self._hyde_engine is None:
-                    from src.services.hyde.config import (
-                        HyDEConfig,
-                        HyDEMetricsConfig,
-                        HyDEPromptConfig,
-                    )
+                    if HyDEConfig is None or HyDEMetricsConfig is None or HyDEPromptConfig is None:
+                        raise ImportError("HyDE configuration classes not available")
 
                     # Get dependencies
                     embedding_manager = await self.get_embedding_manager()
@@ -517,9 +522,8 @@ class ClientManager:
 
             async with self._service_locks["project_storage"]:
                 if self._project_storage is None:
-                    from src.services.core.project_storage import (
-                        ProjectStorage,
-                    )
+                    if ProjectStorage is None:
+                        raise ImportError("ProjectStorage not available")
 
                     self._project_storage = ProjectStorage(
                         data_dir=self.config.data_dir

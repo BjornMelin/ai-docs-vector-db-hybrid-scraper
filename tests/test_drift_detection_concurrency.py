@@ -18,11 +18,12 @@ from typing import Any
 import pytest
 
 from src.config.drift_detection import (
-from src.config.drift_detection import DriftEvent, DriftType
-from src.config.drift_detection import ConfigSnapshot, DriftEvent, DriftType
     ConfigDriftDetector,
+    ConfigSnapshot,
     DriftDetectionConfig,
+    DriftEvent,
     DriftSeverity,
+    DriftType,
 )
 
 

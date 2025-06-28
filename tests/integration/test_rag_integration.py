@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.services.dependencies import (
 from src.config import get_config
+from src.services.dependencies import (
     RAGRequest,
     RAGResponse,
     clear_rag_cache,

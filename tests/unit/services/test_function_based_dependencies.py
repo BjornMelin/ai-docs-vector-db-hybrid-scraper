@@ -5,19 +5,19 @@ provides equivalent functionality to the original Manager classes
 while achieving the target 60% complexity reduction.
 """
 
+from inspect import signature
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import FastAPI
 
 from src.services.dependencies import (
-from inspect import signature
-from src.services.dependencies import CacheManagerDep, EmbeddingManagerDep
-from src.services.errors import (
-from fastapi import FastAPI
-from src.services.dependencies import ConfigDep
+    CacheManagerDep,
+    ConfigDep,
     CrawlRequest,
     CrawlResponse,
-    EmbeddingRequest,  # Pydantic Models
+    EmbeddingManagerDep,
+    EmbeddingRequest,
     EmbeddingResponse,
     TaskRequest,
     cache_delete,
@@ -25,9 +25,9 @@ from src.services.dependencies import ConfigDep
     cache_set,
     crawl_site,
     enqueue_task,
-    generate_embeddings,  # Service Functions
+    generate_embeddings,
     get_cache_manager,
-    get_client_manager,  # Core Dependencies
+    get_client_manager,
     get_embedding_manager,
     get_service_health,
     get_service_metrics,
@@ -533,10 +533,6 @@ class TestComplexityReduction:
     def test_error_handling_consistency(self):
         """Test that error handling is consistent across functions."""
         # All service functions use consistent error types
-            CrawlServiceError,
-            EmbeddingServiceError,
-            TaskQueueServiceError,
-        )
 
         # Error classes follow consistent naming pattern
         error_classes = [

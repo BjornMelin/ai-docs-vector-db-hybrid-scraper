@@ -83,8 +83,8 @@ class TestAdvancedHybridSearchService:
             enable_model_selection=True,
             enable_adaptive_fusion=True,
             enable_splade=True,
-            user_id="test_user",
-            session_id="test_session",
+            user_id="test_user",  # noqa: S105  # Test data
+            session_id="test_session",  # noqa: S105  # Test data
         )
 
     @pytest.fixture
@@ -261,7 +261,7 @@ class TestAdvancedHybridSearchService:
     async def test_ab_test_assignment(self, service, sample_request):
         """Test A/B test variant assignment."""
         sample_request.ab_test_config = ABTestConfig(
-            experiment_name="test_experiment",
+            experiment_name="test_experiment",  # noqa: S105  # Test data
             variants=[ABTestVariant.CONTROL, ABTestVariant.RRF_OPTIMIZED],
             traffic_allocation={"control": 0.5, "rrf_optimized": 0.5},
         )
@@ -276,7 +276,7 @@ class TestAdvancedHybridSearchService:
     async def test_ab_test_consistent_assignment(self, service, sample_request):
         """Test that A/B test assignment is consistent for same user."""
         sample_request.ab_test_config = ABTestConfig(
-            experiment_name="test_experiment",
+            experiment_name="test_experiment",  # noqa: S105  # Test data
             variants=[ABTestVariant.CONTROL, ABTestVariant.RRF_OPTIMIZED],
             traffic_allocation={"control": 0.5, "rrf_optimized": 0.5},
         )

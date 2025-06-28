@@ -7,9 +7,9 @@ from click.testing import CliRunner
 
 from src.config import Config
 from src.manage_vector_db import (
-from src.manage_vector_db import SearchResult
     CollectionInfo,
     DatabaseStats,
+    SearchResult,
     VectorDBManager,
     _create_manager_from_context,
     cli,

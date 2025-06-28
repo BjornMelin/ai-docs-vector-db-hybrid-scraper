@@ -47,12 +47,12 @@ class TestTaskQueueManager:
     def test_create_redis_settings_with_auth(self, manager):
         """Test Redis settings with authentication."""
         manager.config.task_queue.redis_url = "redis://user:pass@localhost:6380"
-        manager.config.task_queue.redis_password = "override_pass"
+        manager.config.task_queue.redis_password = "override_pass"  # noqa: S105  # Test data
 
         settings = manager._create_redis_settings()
         assert settings.host == "localhost"
         assert settings.port == 6380
-        assert settings.password == "override_pass"
+        assert settings.password == "override_pass"  # noqa: S105  # Test data
 
     def test_create_redis_settings_custom_port(self, manager):
         """Test Redis settings with custom port."""

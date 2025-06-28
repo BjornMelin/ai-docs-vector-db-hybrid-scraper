@@ -9,8 +9,8 @@ import pytest
 import yaml
 from pydantic import SecretStr
 
-from src.config.config_manager import (
 import src.config.config_manager
+from src.config.config_manager import (
     ConfigFileSettingsSource,
     ConfigManager,
     SecureConfig,

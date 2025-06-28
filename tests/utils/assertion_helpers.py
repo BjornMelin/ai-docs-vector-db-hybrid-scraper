@@ -559,8 +559,8 @@ def assert_collection_has_size(
     )
 
 
-def assert_all_items_have_type[T](
-    collection: list[Any], expected_type: type[T], collection_name: str = "Collection"
+def assert_all_items_have_type(
+    collection: list[Any], expected_type: type, collection_name: str = "Collection"
 ) -> None:
     """Assert that all items in collection have expected type.
 

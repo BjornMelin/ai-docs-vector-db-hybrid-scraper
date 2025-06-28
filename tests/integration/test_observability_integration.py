@@ -11,13 +11,12 @@ from fastapi.testclient import TestClient
 from src.config.core import get_config, reset_config
 from src.services.observability.config import ObservabilityConfig
 from src.services.observability.dependencies import (
-import src.services.observability.middleware
-from src.services.observability.middleware import (
     get_ai_tracer,
     get_observability_health,
     get_observability_service,
     get_service_meter,
 )
+import src.services.observability.middleware
 from src.services.observability.init import (
     initialize_observability,
     is_observability_enabled,
@@ -97,7 +96,7 @@ class TestObservabilityIntegration:
 
         config = ObservabilityConfig(
             enabled=True,
-            service_name="integration-test",
+            service_name="integration-test",  # noqa: S105  # Test data
             otlp_endpoint="http://test.example.com:4317",
         )
 
@@ -280,14 +279,11 @@ class TestFastAPIObservabilityIntegration:
 
                 importlib.reload(src.services.observability.middleware)
 
-                    FastAPIObservabilityMiddleware,
-                )
-
                 # Add middleware with metrics
                 self.app.add_middleware(
                     FastAPIObservabilityMiddleware,
                     **{
-                        "service_name": "test-service",
+                        "service_name": "test-service",  # noqa: S105  # Test data
                         "record_request_metrics": True,
                     },
                 )
@@ -336,14 +332,11 @@ class TestFastAPIObservabilityIntegration:
 
                 importlib.reload(src.services.observability.middleware)
 
-                    FastAPIObservabilityMiddleware,
-                )
-
                 # Add middleware
                 self.app.add_middleware(
                     FastAPIObservabilityMiddleware,
                     **{
-                        "service_name": "test-service",
+                        "service_name": "test-service",  # noqa: S105  # Test data
                         "record_request_metrics": False,
                     },
                 )
@@ -388,9 +381,6 @@ class TestFastAPIObservabilityIntegration:
 
                 importlib.reload(src.services.observability.middleware)
 
-                    FastAPIObservabilityMiddleware,
-                )
-
                 # Add AI endpoint
                 @self.app.post("/api/search")
                 async def search_endpoint():
@@ -400,7 +390,7 @@ class TestFastAPIObservabilityIntegration:
                 self.app.add_middleware(
                     FastAPIObservabilityMiddleware,
                     **{
-                        "service_name": "test-service",
+                        "service_name": "test-service",  # noqa: S105  # Test data
                         "record_ai_context": True,
                         "record_request_metrics": False,
                     },
@@ -454,7 +444,7 @@ class TestObservabilityConfigurationIntegration:
         config = get_config()
 
         assert config.observability.enabled is True
-        assert config.observability.service_name == "integration-test"
+        assert config.observability.service_name == "integration-test"  # noqa: S105  # Test data
         assert config.observability.trace_sample_rate == 0.5
 
     def test_programmatic_configuration(self):
@@ -463,10 +453,10 @@ class TestObservabilityConfigurationIntegration:
 
         # Modify observability config
         config.observability.enabled = True
-        config.observability.service_name = "programmatic-test"
+        config.observability.service_name = "programmatic-test"  # noqa: S105  # Test data
 
         assert config.observability.enabled is True
-        assert config.observability.service_name == "programmatic-test"
+        assert config.observability.service_name == "programmatic-test"  # noqa: S105  # Test data
 
     def test_configuration_validation_integration(self):
         """Test configuration validation integration."""

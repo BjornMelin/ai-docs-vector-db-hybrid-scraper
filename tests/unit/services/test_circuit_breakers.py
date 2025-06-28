@@ -14,9 +14,13 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from src.services.errors import (
 from src.services.dependencies import (
-from src.services.dependencies import get_service_health
+    get_circuit_breaker_status,
+    get_service_health,
+    reset_all_circuit_breakers,
+    reset_circuit_breaker,
+)
+from src.services.errors import (
     AdvancedCircuitBreaker,
     CircuitBreakerRegistry,
     CircuitState,
@@ -367,10 +371,6 @@ class TestCircuitBreakerIntegration:
     @pytest.mark.asyncio
     async def test_service_dependency_protection(self):
         """Test that service dependencies are protected by circuit breakers."""
-            get_circuit_breaker_status,
-            reset_all_circuit_breakers,
-            reset_circuit_breaker,
-        )
 
         # Test circuit breaker status endpoint
         status = await get_circuit_breaker_status()

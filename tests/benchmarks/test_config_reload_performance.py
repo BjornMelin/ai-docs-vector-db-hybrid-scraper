@@ -22,14 +22,13 @@ from cryptography.fernet import Fernet
 
 from src.config.core import Config
 from src.config.drift_detection import (
-from datetime import datetime
-from src.config.drift_detection import DriftEvent
-from src.config.security import SecurityConfig
     ConfigDriftDetector,
     DriftDetectionConfig,
+    DriftEvent,
     DriftSeverity,
-    DriftType,
 )
+from src.config.security import SecurityConfig
+from src.config.drift_detection import DriftType
 from src.config.reload import (
     ConfigChangeListener,
     ConfigReloader,
@@ -547,7 +546,7 @@ class TestEncryptionPerformance:
 
         result = benchmark(load_config_with_encryption)
         assert result["app_name"] == "encrypted-app"
-        assert result["database_password"] == "db_password"
+        assert result["database_password"] == "db_password"  # noqa: S105  # Test data
 
         print("\n✅ Config with encryption: Minimal overhead for secure configuration")
 
