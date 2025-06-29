@@ -12,7 +12,6 @@ from . import tools
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
-
     from src.infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)

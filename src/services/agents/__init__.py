@@ -10,6 +10,7 @@ from .core import (
     BaseAgentDependencies,
     create_agent_dependencies,
 )
+from .native_tool_agent import NativeToolAgent
 from .query_orchestrator import QueryOrchestrator
 from .tool_composition import ToolCompositionEngine
 
@@ -18,6 +19,7 @@ __all__ = [
     "AgentState",
     "BaseAgent",
     "BaseAgentDependencies",
+    "NativeToolAgent",
     "QueryOrchestrator",
     "ToolCompositionEngine",
     "create_agent_dependencies",

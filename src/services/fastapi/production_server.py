@@ -11,8 +11,9 @@ import signal
 import sys
 from contextlib import asynccontextmanager
 
-from fastmcp import FastMCP
 from starlette.applications import Starlette
+
+from fastmcp import FastMCP
 
 
 try:
