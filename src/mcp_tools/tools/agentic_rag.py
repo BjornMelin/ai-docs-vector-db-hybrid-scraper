@@ -543,7 +543,6 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
             orchestration_metrics = {
                 "system_status": {
                     "architecture": "pure_pydantic_ai_native",
-                    "code_reduction": "950 lines → ~200 lines (79% reduction)",
                     "total_requests_processed": 245,
                     "success_rate": 0.96,
                     "avg_latency_ms": 185.0,
@@ -576,12 +575,6 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
                         "Improved tool selection accuracy through pattern recognition",
                         "Enhanced reasoning quality through feedback integration",
                     ],
-                },
-                "benefits_achieved": {
-                    "complexity_reduction": "78% improvement in code complexity",
-                    "maintenance_reduction": "75% reduction in maintenance overhead",
-                    "performance_improvement": "20-30% latency reduction vs legacy",
-                    "autonomous_intelligence": "Native decision-making capabilities enabled",
                 },
             }
 
