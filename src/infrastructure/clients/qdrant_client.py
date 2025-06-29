@@ -3,6 +3,7 @@
 import logging
 from typing import List
 
+
 try:
     from qdrant_client import AsyncQdrantClient
     from qdrant_client.models import CollectionInfo
@@ -10,8 +11,10 @@ except ImportError:
     # Create placeholders if qdrant-client is not available
     class AsyncQdrantClient:
         pass
+
     class CollectionInfo:
         pass
+
 
 logger = logging.getLogger(__name__)
 
@@ -44,11 +47,13 @@ class QdrantClientProvider:
             self._healthy = True
             return True
         except Exception as e:
-            logger.warning(f"Qdrant health check failed: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Qdrant health check failed: {e}"
+            )  # TODO: Convert f-string to logging format
             self._healthy = False
             return False
 
-    async def get_collections(self) -> List[CollectionInfo]:
+    async def get_collections(self) -> list[CollectionInfo]:
         """Get all collections.
 
         Returns:
@@ -85,7 +90,7 @@ class QdrantClientProvider:
             return False
 
     async def search(
-        self, collection_name: str, query_vector: List[float], limit: int = 10, **kwargs
+        self, collection_name: str, query_vector: list[float], limit: int = 10, **kwargs
     ):
         """Search vectors in collection.
 

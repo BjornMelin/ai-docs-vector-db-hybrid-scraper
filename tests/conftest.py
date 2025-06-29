@@ -461,16 +461,28 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "embedding: Embedding-related tests")
     config.addinivalue_line("markers", "vector_db: Vector database tests")
     config.addinivalue_line("markers", "rag: RAG system tests")
-    config.addinivalue_line("markers", "property: Property-based tests using Hypothesis")
-    config.addinivalue_line("markers", "hypothesis: marks tests as property-based tests using Hypothesis")
+    config.addinivalue_line(
+        "markers", "property: Property-based tests using Hypothesis"
+    )
+    config.addinivalue_line(
+        "markers", "hypothesis: marks tests as property-based tests using Hypothesis"
+    )
 
     # Security testing markers
     config.addinivalue_line("markers", "security: mark test as security test")
-    config.addinivalue_line("markers", "vulnerability_scan: mark test as vulnerability scan test")
-    config.addinivalue_line("markers", "penetration_test: mark test as penetration test")
+    config.addinivalue_line(
+        "markers", "vulnerability_scan: mark test as vulnerability scan test"
+    )
+    config.addinivalue_line(
+        "markers", "penetration_test: mark test as penetration test"
+    )
     config.addinivalue_line("markers", "owasp: mark test as OWASP compliance test")
-    config.addinivalue_line("markers", "input_validation: mark test as input validation test")
-    config.addinivalue_line("markers", "authentication: mark test as authentication test")
+    config.addinivalue_line(
+        "markers", "input_validation: mark test as input validation test"
+    )
+    config.addinivalue_line(
+        "markers", "authentication: mark test as authentication test"
+    )
     config.addinivalue_line("markers", "authorization: mark test as authorization test")
     config.addinivalue_line("markers", "compliance: mark test as compliance test")
 
@@ -479,26 +491,42 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "a11y: mark test as general accessibility test")
     config.addinivalue_line("markers", "wcag: mark test as WCAG compliance test")
     config.addinivalue_line("markers", "screen_reader: mark test as screen reader test")
-    config.addinivalue_line("markers", "keyboard_navigation: mark test as keyboard navigation test")
-    config.addinivalue_line("markers", "color_contrast: mark test as color contrast test")
+    config.addinivalue_line(
+        "markers", "keyboard_navigation: mark test as keyboard navigation test"
+    )
+    config.addinivalue_line(
+        "markers", "color_contrast: mark test as color contrast test"
+    )
     config.addinivalue_line("markers", "aria: mark test as ARIA attributes test")
 
     # Contract testing markers
     config.addinivalue_line("markers", "contract: mark test as contract test")
     config.addinivalue_line("markers", "api_contract: mark test as API contract test")
-    config.addinivalue_line("markers", "schema_validation: mark test as schema validation test")
+    config.addinivalue_line(
+        "markers", "schema_validation: mark test as schema validation test"
+    )
     config.addinivalue_line("markers", "pact: mark test as Pact contract test")
     config.addinivalue_line("markers", "openapi: mark test as OpenAPI contract test")
-    config.addinivalue_line("markers", "consumer_driven: mark test as consumer-driven contract test")
+    config.addinivalue_line(
+        "markers", "consumer_driven: mark test as consumer-driven contract test"
+    )
 
     # Chaos engineering markers
     config.addinivalue_line("markers", "chaos: mark test as chaos engineering test")
-    config.addinivalue_line("markers", "fault_injection: mark test as fault injection test")
+    config.addinivalue_line(
+        "markers", "fault_injection: mark test as fault injection test"
+    )
     config.addinivalue_line("markers", "resilience: mark test as resilience test")
-    config.addinivalue_line("markers", "failure_scenarios: mark test as failure scenario test")
+    config.addinivalue_line(
+        "markers", "failure_scenarios: mark test as failure scenario test"
+    )
     config.addinivalue_line("markers", "network_chaos: mark test as network chaos test")
-    config.addinivalue_line("markers", "resource_exhaustion: mark test as resource exhaustion test")
-    config.addinivalue_line("markers", "dependency_failure: mark test as dependency failure test")
+    config.addinivalue_line(
+        "markers", "resource_exhaustion: mark test as resource exhaustion test"
+    )
+    config.addinivalue_line(
+        "markers", "dependency_failure: mark test as dependency failure test"
+    )
 
     # Load testing markers
     config.addinivalue_line("markers", "load: mark test as load test")
@@ -816,23 +844,32 @@ def sample_query_patterns():
 
 # ===== Enhanced AI/ML Testing Infrastructure =====
 
+
 @pytest.fixture
 def ai_test_utilities():
     """AI/ML testing utilities for embeddings, similarity, and model validation."""
 
     class AITestUtilities:
-
         @staticmethod
         def assert_valid_embedding(embedding: list[float], expected_dim: int = 1536):
             """Assert embedding meets quality criteria."""
-            assert len(embedding) == expected_dim, f"Expected {expected_dim}D, got {len(embedding)}D"
-            assert all(isinstance(x, (int, float)) for x in embedding), "All values must be numeric"
+            assert len(embedding) == expected_dim, (
+                f"Expected {expected_dim}D, got {len(embedding)}D"
+            )
+            assert all(isinstance(x, (int, float)) for x in embedding), (
+                "All values must be numeric"
+            )
 
             import math
-            assert not any(math.isnan(x) or math.isinf(x) for x in embedding), "No NaN/Inf values"
+
+            assert not any(math.isnan(x) or math.isinf(x) for x in embedding), (
+                "No NaN/Inf values"
+            )
 
             # Check for reasonable value range (normalized embeddings should be < 1)
-            assert all(abs(x) <= 2.0 for x in embedding), "Values outside reasonable range"
+            assert all(abs(x) <= 2.0 for x in embedding), (
+                "Values outside reasonable range"
+            )
 
             # Check vector is not zero
             norm = sum(x**2 for x in embedding) ** 0.5
@@ -844,8 +881,7 @@ def ai_test_utilities():
             if len(vec1) != len(vec2):
                 raise ValueError(f"Dimension mismatch: {len(vec1)} vs {len(vec2)}")
 
-
-            dot_product = sum(a * b for a, b in zip(vec1, vec2))
+            dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=False))
             norm1 = sum(a * a for a in vec1) ** 0.5
             norm2 = sum(b * b for b in vec2) ** 0.5
 
@@ -855,9 +891,12 @@ def ai_test_utilities():
             return dot_product / (norm1 * norm2)
 
         @staticmethod
-        def generate_test_embeddings(count: int = 10, dim: int = 1536) -> list[list[float]]:
+        def generate_test_embeddings(
+            count: int = 10, dim: int = 1536
+        ) -> list[list[float]]:
             """Generate deterministic test embeddings."""
             import random
+
             embeddings = []
 
             for i in range(count):
@@ -882,10 +921,7 @@ try:
 
     @st.composite
     def embedding_strategy(
-        draw,
-        min_dim: int = 128,
-        max_dim: int = 1536,
-        normalized: bool = True
+        draw, min_dim: int = 128, max_dim: int = 1536, normalized: bool = True
     ):
         """Hypothesis strategy for generating realistic embedding vectors."""
         # Use common embedding dimensions
@@ -905,7 +941,7 @@ try:
                     max_value=1.0,
                     allow_nan=False,
                     allow_infinity=False,
-                    width=32  # Use 32-bit floats for consistency
+                    width=32,  # Use 32-bit floats for consistency
                 ),
                 min_size=dim,
                 max_size=dim,
@@ -933,13 +969,13 @@ try:
                     alphabet=st.characters(
                         whitelist_categories=("Lu", "Ll"),
                         min_codepoint=65,
-                        max_codepoint=122
+                        max_codepoint=122,
                     ),
                     min_size=2,
-                    max_size=12
+                    max_size=12,
                 ),
                 min_size=2,
-                max_size=max_length // 5  # Approximate word count
+                max_size=max_length // 5,  # Approximate word count
             )
         )
 
@@ -958,8 +994,9 @@ except ImportError:
     def embedding_strategy(*args, **kwargs):
         """Fallback embedding strategy when Hypothesis not available."""
         import random
-        dim = kwargs.get('max_dim', 384)
-        normalized = kwargs.get('normalized', True)
+
+        dim = kwargs.get("max_dim", 384)
+        normalized = kwargs.get("normalized", True)
 
         values = [random.uniform(-1, 1) for _ in range(dim)]
         if normalized:
@@ -970,11 +1007,19 @@ except ImportError:
 
     def document_strategy(*args, **kwargs):
         """Fallback document strategy when Hypothesis not available."""
-        min_length = kwargs.get('min_length', 10)
-        max_length = kwargs.get('max_length', 500)
+        min_length = kwargs.get("min_length", 10)
+        max_length = kwargs.get("max_length", 500)
         import random
 
-        words = ["test", "content", "document", "information", "data", "analysis", "research"]
+        words = [
+            "test",
+            "content",
+            "document",
+            "information",
+            "data",
+            "analysis",
+            "research",
+        ]
         word_count = random.randint(max(2, min_length // 5), max_length // 5)
         text = " ".join(random.choices(words, k=word_count))
 

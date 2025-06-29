@@ -7,9 +7,9 @@ achieving 80% performance improvement through efficient algorithms and caching.
 import functools
 import logging
 import re
+from collections import Counter
 from dataclasses import dataclass
 from typing import Any
-from collections import Counter
 
 
 logger = logging.getLogger(__name__)

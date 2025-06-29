@@ -242,13 +242,13 @@ class CircuitBreaker:
             # Check if circuit should open
             # In enterprise mode with metrics, prefer failure rate over simple count
             should_open_by_count = (
-                not self.config.enable_metrics and 
-                self.failure_count >= self.config.failure_threshold
+                not self.config.enable_metrics
+                and self.failure_count >= self.config.failure_threshold
             )
             should_open_by_rate = (
                 self.config.enable_metrics and self._should_open_circuit()
             )
-            
+
             if should_open_by_count or should_open_by_rate:
                 await self._open_circuit()
 
@@ -283,7 +283,9 @@ class CircuitBreaker:
             self.state = CircuitBreakerState.CLOSED
             self.failure_count = 0
             self.metrics.state_changes += 1
-            logger.info(f"Circuit breaker CLOSED: recovered from {old_state.value}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Circuit breaker CLOSED: recovered from {old_state.value}"
+            )  # TODO: Convert f-string to logging format
 
     async def _transition_to_half_open(self) -> None:
         """Transition to HALF_OPEN state."""

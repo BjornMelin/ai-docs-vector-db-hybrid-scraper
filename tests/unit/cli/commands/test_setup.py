@@ -1,6 +1,6 @@
 """Tests for the setup command module.
 
-This module tests the modern template-driven configuration wizard including 
+This module tests the modern template-driven configuration wizard including
 profile selection, template customization, and Rich console output.
 """
 
@@ -25,11 +25,11 @@ class TestConfigurationWizard:
     def test_welcome(self, rich_output_capturer):
         """Test welcome message display."""
         wizard = ConfigurationWizard()
-        
+
         # This should not raise an exception
         wizard.welcome()
-        
-        # Since the output might be captured differently by Rich, 
+
+        # Since the output might be captured differently by Rich,
         # just verify the method executes without error
 
     def test_select_profile_personal(self, rich_output_capturer):
@@ -39,7 +39,9 @@ class TestConfigurationWizard:
         with (
             patch.object(wizard.profile_manager, "show_profiles_table") as mock_show,
             patch.object(wizard.profile_manager, "list_profiles") as mock_list,
-            patch.object(wizard.profile_manager, "show_profile_setup_instructions") as mock_instructions,
+            patch.object(
+                wizard.profile_manager, "show_profile_setup_instructions"
+            ) as mock_instructions,
             patch("questionary.select") as mock_select,
             patch("questionary.confirm") as mock_confirm,
         ):
@@ -66,7 +68,10 @@ class TestConfigurationWizard:
         ):
             mock_list.return_value = ["personal", "development", "production"]
             mock_select.return_value.ask.side_effect = ["development", "personal"]
-            mock_confirm.return_value.ask.side_effect = [False, True]  # First no, then yes
+            mock_confirm.return_value.ask.side_effect = [
+                False,
+                True,
+            ]  # First no, then yes
 
             result = wizard.select_profile()
 
@@ -82,7 +87,10 @@ class TestConfigurationWizard:
             patch("questionary.confirm") as mock_confirm,
         ):
             mock_get.return_value = {"template": "data"}
-            mock_confirm.return_value.ask.side_effect = [True, False]  # Preview yes, customize no
+            mock_confirm.return_value.ask.side_effect = [
+                True,
+                False,
+            ]  # Preview yes, customize no
 
             result = wizard.customize_template("personal")
 
@@ -104,9 +112,9 @@ class TestConfigurationWizard:
             mock_validate.return_value = (True, None)
             mock_confirm.return_value.ask.side_effect = [
                 False,  # No preview
-                True,   # Do customize
-                True,   # Customize API Keys
-                True,   # Set OpenAI key
+                True,  # Do customize
+                True,  # Customize API Keys
+                True,  # Set OpenAI key
                 False,  # Don't set Firecrawl key
                 False,  # Don't customize other sections
                 False,  # Don't customize other sections
@@ -162,7 +170,9 @@ class TestConfigurationWizard:
         wizard = ConfigurationWizard()
 
         with (
-            patch.object(wizard.profile_manager, "create_profile_config") as mock_create,
+            patch.object(
+                wizard.profile_manager, "create_profile_config"
+            ) as mock_create,
             patch.object(wizard.profile_manager, "activate_profile") as mock_activate,
             patch.object(wizard.profile_manager, "generate_env_file") as mock_env,
             patch("questionary.confirm") as mock_confirm,
@@ -171,12 +181,17 @@ class TestConfigurationWizard:
             mock_create.return_value = config_path
             mock_activate.return_value = config_path
             mock_env.return_value = Path("/test/.env")
-            mock_confirm.return_value.ask.side_effect = [True, True]  # Activate and generate env
+            mock_confirm.return_value.ask.side_effect = [
+                True,
+                True,
+            ]  # Activate and generate env
 
             result = wizard.save_configuration("personal", {"test": "data"})
 
             assert result == config_path
-            mock_create.assert_called_once_with("personal", customizations={"test": "data"})
+            mock_create.assert_called_once_with(
+                "personal", customizations={"test": "data"}
+            )
             mock_activate.assert_called_once_with("personal")
             mock_env.assert_called_once_with("personal")
 

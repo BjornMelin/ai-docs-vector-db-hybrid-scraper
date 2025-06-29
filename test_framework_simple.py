@@ -29,9 +29,8 @@ def test_framework_files_exist():
     if missing_files:
         print(f"❌ Missing files: {missing_files}")
         return False
-    else:
-        print("✅ All essential framework files exist")
-        return True
+    print("✅ All essential framework files exist")
+    return True
 
 
 def test_pytest_configuration():
@@ -62,9 +61,8 @@ def test_pytest_configuration():
     if missing_markers:
         print(f"❌ Missing pytest markers: {missing_markers}")
         return False
-    else:
-        print("✅ All required pytest markers configured")
-        return True
+    print("✅ All required pytest markers configured")
+    return True
 
 
 def test_script_executable():
@@ -80,12 +78,11 @@ def test_script_executable():
     if hasattr(os, "access") and os.access(script_path, os.X_OK):
         print("✅ Test runner script is executable")
         return True
-    elif script_path.read_text().startswith("#!/usr/bin/env python3"):
+    if script_path.read_text().startswith("#!/usr/bin/env python3"):
         print("✅ Test runner script has correct shebang")
         return True
-    else:
-        print("⚠️ Test runner script may not be executable")
-        return True  # Still pass, as this might be platform-dependent
+    print("⚠️ Test runner script may not be executable")
+    return True  # Still pass, as this might be platform-dependent
 
 
 def test_modern_testing_structure():
@@ -119,9 +116,8 @@ def test_modern_testing_structure():
     if missing_components:
         print(f"❌ Missing testing components: {missing_components}")
         return False
-    else:
-        print("✅ Modern testing utilities have all required components")
-        return True
+    print("✅ Modern testing utilities have all required components")
+    return True
 
 
 def test_security_testing_framework():
@@ -153,9 +149,8 @@ def test_security_testing_framework():
     if missing_tests:
         print(f"❌ Missing security tests: {missing_tests}")
         return False
-    else:
-        print("✅ Security testing framework has all required tests")
-        return True
+    print("✅ Security testing framework has all required tests")
+    return True
 
 
 def test_comprehensive_runner_structure():
@@ -188,9 +183,8 @@ def test_comprehensive_runner_structure():
     if missing_components:
         print(f"❌ Missing runner components: {missing_components}")
         return False
-    else:
-        print("✅ Comprehensive test runner has all required components")
-        return True
+    print("✅ Comprehensive test runner has all required components")
+    return True
 
 
 def main():
@@ -232,11 +226,8 @@ def main():
             "\n🎉 All validation tests passed! Modern testing framework is properly implemented."
         )
         return True
-    else:
-        print(
-            f"\n💥 {failed} validation tests failed. Please check the implementation."
-        )
-        return False
+    print(f"\n💥 {failed} validation tests failed. Please check the implementation.")
+    return False
 
 
 if __name__ == "__main__":

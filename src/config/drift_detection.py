@@ -408,7 +408,9 @@ class ConfigDriftDetector:
                 )
                 self.drift_severity_gauge.set(max_severity, {"source": source})
 
-            logger.info(f"Detected {len(events)} drift events for {source}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Detected {len(events)} drift events for {source}"
+            )  # TODO: Convert f-string to logging format
             return events
 
         except Exception:
@@ -653,7 +655,9 @@ class ConfigDriftDetector:
 
             cleaned_count = original_count - len(self._snapshots[source])
             if cleaned_count > 0:
-                logger.debug(f"Cleaned up {cleaned_count} old snapshots for {source}")  # TODO: Convert f-string to logging format
+                logger.debug(
+                    f"Cleaned up {cleaned_count} old snapshots for {source}"
+                )  # TODO: Convert f-string to logging format
 
     def _cleanup_old_events(self) -> None:
         """Clean up old drift events based on retention policy."""
@@ -669,7 +673,9 @@ class ConfigDriftDetector:
 
             cleaned_count = original_count - len(self._drift_events)
             if cleaned_count > 0:
-                logger.debug(f"Cleaned up {cleaned_count} old drift events")  # TODO: Convert f-string to logging format
+                logger.debug(
+                    f"Cleaned up {cleaned_count} old drift events"
+                )  # TODO: Convert f-string to logging format
 
     def should_alert(self, event: DriftEvent) -> bool:
         """Determine if an alert should be sent for a drift event.

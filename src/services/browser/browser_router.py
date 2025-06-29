@@ -140,12 +140,16 @@ class EnhancedAutomationRouter(AutomationRouter):
                 url, domain, interaction_required, custom_actions
             )
 
-        logger.info(f"Enhanced router selected {selected_tier} for {url}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Enhanced router selected {selected_tier} for {url}"
+        )  # TODO: Convert f-string to logging format
 
         # Check circuit breaker
         breaker = self.circuit_breakers.get(selected_tier)
         if breaker and not breaker.can_attempt():
-            logger.warning(f"Circuit breaker open for {selected_tier}, using fallback")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Circuit breaker open for {selected_tier}, using fallback"
+            )  # TODO: Convert f-string to logging format
             # Get first available fallback tier
             tier_config = self.routing_config.tier_configs.get(selected_tier)
             if tier_config and tier_config.fallback_tiers:
@@ -405,11 +409,15 @@ class EnhancedAutomationRouter(AutomationRouter):
             # Check circuit breaker
             breaker = self.circuit_breakers.get(fallback_tier)
             if breaker and not breaker.can_attempt():
-                logger.debug(f"Skipping {fallback_tier} due to open circuit breaker")  # TODO: Convert f-string to logging format
+                logger.debug(
+                    f"Skipping {fallback_tier} due to open circuit breaker"
+                )  # TODO: Convert f-string to logging format
                 continue
 
             try:
-                logger.info(f"Intelligent fallback to {fallback_tier} for {url}")  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"Intelligent fallback to {fallback_tier} for {url}"
+                )  # TODO: Convert f-string to logging format
                 start_time = time.time()
 
                 result = await self._execute_tier_scraping(

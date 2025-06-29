@@ -804,7 +804,9 @@ class SimilarityThresholdManager(BaseFilter):
         cache_size = len(self.clustering_cache)
         self.clustering_cache.clear()
         self.last_clustering_analysis = None
-        logger.info(f"Cleared clustering cache ({cache_size} items)")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Cleared clustering cache ({cache_size} items)"
+        )  # TODO: Convert f-string to logging format
 
     def cleanup(self) -> None:
         """Cleanup resources and clear caches."""

@@ -88,7 +88,9 @@ class SecurityTestRunner:
 
         for category in categories_to_run:
             if category in available_categories:
-                self.logger.info(f"Running {category} tests...")  # TODO: Convert f-string to logging format
+                self.logger.info(
+                    f"Running {category} tests..."
+                )  # TODO: Convert f-string to logging format
                 try:
                     category_results = available_categories[category]()
                     results["test_categories"][category] = category_results
@@ -314,7 +316,9 @@ class SecurityTestRunner:
         Returns:
             Test execution results
         """
-        self.logger.info(f"Running pytest for {category} category...")  # TODO: Convert f-string to logging format
+        self.logger.info(
+            f"Running pytest for {category} category..."
+        )  # TODO: Convert f-string to logging format
 
         # Build pytest command
         cmd = [
@@ -516,7 +520,9 @@ class SecurityTestRunner:
         # Executive summary
         self._generate_executive_summary(results)
 
-        self.logger.info(f"Reports generated in {self.output_dir}")  # TODO: Convert f-string to logging format
+        self.logger.info(
+            f"Reports generated in {self.output_dir}"
+        )  # TODO: Convert f-string to logging format
 
     def _generate_html_report(self, results: dict[str, Any]) -> None:
         """Generate HTML summary report."""

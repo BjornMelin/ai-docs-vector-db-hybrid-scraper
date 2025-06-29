@@ -5,12 +5,10 @@ Optimized for solo developer use with in-memory LRU cache and minimal overhead.
 
 import logging
 import time
+from typing import Any, Dict
 
 from src.architecture.service_factory import BaseService
 
-
-from typing import Dict
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +25,7 @@ class SimpleCacheService(BaseService):
 
     def __init__(self):
         super().__init__()
-        self.cache: Dict[str, Dict[str, Any]] = {}
+        self.cache: dict[str, dict[str, Any]] = {}
         self.max_size = 500  # Reduced from enterprise 10000
         self.max_memory_mb = 50  # Reduced from enterprise 1000
         self.default_ttl = 1800  # 30 minutes default TTL
@@ -98,7 +96,9 @@ class SimpleCacheService(BaseService):
         # Update access order
         self._update_access_order(key)
 
-        logger.debug(f"Cached value for key: {key}")  # TODO: Convert f-string to logging format
+        logger.debug(
+            f"Cached value for key: {key}"
+        )  # TODO: Convert f-string to logging format
 
     async def delete(self, key: str) -> bool:
         """Delete value from cache.
@@ -141,7 +141,7 @@ class SimpleCacheService(BaseService):
 
         return True
 
-    def _is_expired(self, entry: Dict[str, Any]) -> bool:
+    def _is_expired(self, entry: dict[str, Any]) -> bool:
         """Check if cache entry is expired."""
         return time.time() > entry["expires_at"]
 
@@ -160,7 +160,9 @@ class SimpleCacheService(BaseService):
         while len(self.cache) >= self.max_size and self._access_order:
             lru_key = self._access_order[0]
             await self.delete(lru_key)
-            logger.debug(f"Evicted LRU entry: {lru_key}")  # TODO: Convert f-string to logging format
+            logger.debug(
+                f"Evicted LRU entry: {lru_key}"
+            )  # TODO: Convert f-string to logging format
 
     async def _cleanup_expired(self) -> None:
         """Clean up expired cache entries."""
@@ -175,9 +177,11 @@ class SimpleCacheService(BaseService):
             await self.delete(key)
 
         if expired_keys:
-            logger.debug(f"Cleaned up {len(expired_keys)} expired entries")  # TODO: Convert f-string to logging format
+            logger.debug(
+                f"Cleaned up {len(expired_keys)} expired entries"
+            )  # TODO: Convert f-string to logging format
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         total_entries = len(self.cache)
 
@@ -200,7 +204,7 @@ class SimpleCacheService(BaseService):
             },
         }
 
-    async def get_cache_health(self) -> Dict[str, Any]:
+    async def get_cache_health(self) -> dict[str, Any]:
         """Get cache health information."""
         await self._cleanup_expired()
 

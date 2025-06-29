@@ -14,6 +14,9 @@ Requirements:
 """
 
 import time
+
+# Configuration
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -21,9 +24,6 @@ import plotly.graph_objects as go
 import requests
 import streamlit as st
 
-
-# Configuration
-from datetime import datetime
 
 API_BASE_URL = "http://localhost:8000"
 DEFAULT_TIMEOUT = 30
@@ -73,8 +73,8 @@ st.markdown(
 
 
 def make_api_request(
-    endpoint: str, method: str = "GET", data: Dict | None = None
-) -> Dict[str, Any]:
+    endpoint: str, method: str = "GET", data: dict | None = None
+) -> dict[str, Any]:
     """Make API request with error handling and timing."""
     start_time = time.time()
 
@@ -109,7 +109,7 @@ def make_api_request(
         return {"success": False, "error": str(e), "response_time_ms": 0}
 
 
-def create_performance_chart(metrics: List[Dict]) -> go.Figure:
+def create_performance_chart(metrics: list[dict]) -> go.Figure:
     """Create interactive performance chart."""
     if not metrics:
         return go.Figure()

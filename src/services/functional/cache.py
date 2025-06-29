@@ -50,9 +50,13 @@ async def cache_get(
         result = await cache_client.get(key, cache_type, default)
 
         if result != default:
-            logger.debug(f"Cache hit for key: {key}")  # TODO: Convert f-string to logging format
+            logger.debug(
+                f"Cache hit for key: {key}"
+            )  # TODO: Convert f-string to logging format
         else:
-            logger.debug(f"Cache miss for key: {key}")  # TODO: Convert f-string to logging format
+            logger.debug(
+                f"Cache miss for key: {key}"
+            )  # TODO: Convert f-string to logging format
 
     except Exception:
         logger.exception(f"Cache get failed for key {key}")
@@ -96,9 +100,13 @@ async def cache_set(
         success = await cache_client.set(key, value, cache_type, ttl)
 
         if success:
-            logger.debug(f"Cache set successful for key: {key}")  # TODO: Convert f-string to logging format
+            logger.debug(
+                f"Cache set successful for key: {key}"
+            )  # TODO: Convert f-string to logging format
         else:
-            logger.warning(f"Cache set failed for key: {key}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Cache set failed for key: {key}"
+            )  # TODO: Convert f-string to logging format
 
     except Exception:
         logger.exception(f"Cache set failed for key {key}")
@@ -138,9 +146,13 @@ async def cache_delete(
         success = await cache_client.delete(key, cache_type)
 
         if success:
-            logger.debug(f"Cache delete successful for key: {key}")  # TODO: Convert f-string to logging format
+            logger.debug(
+                f"Cache delete successful for key: {key}"
+            )  # TODO: Convert f-string to logging format
         else:
-            logger.warning(f"Cache delete failed for key: {key}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Cache delete failed for key: {key}"
+            )  # TODO: Convert f-string to logging format
 
     except Exception:
         logger.exception(f"Cache delete failed for key {key}")
@@ -178,9 +190,13 @@ async def cache_clear(
 
         if success:
             scope = cache_type.value if cache_type else "all"
-            logger.info(f"Cache clear successful for scope: {scope}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Cache clear successful for scope: {scope}"
+            )  # TODO: Convert f-string to logging format
         else:
-            logger.warning(f"Cache clear failed for cache_type: {cache_type}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Cache clear failed for cache_type: {cache_type}"
+            )  # TODO: Convert f-string to logging format
 
     except Exception:
         logger.exception("Cache clear failed")
@@ -287,7 +303,9 @@ async def cache_embedding(
                 content_hash, model, embedding
             )
             if success:
-                logger.debug(f"Cached embedding for model {model}")  # TODO: Convert f-string to logging format
+                logger.debug(
+                    f"Cached embedding for model {model}"
+                )  # TODO: Convert f-string to logging format
 
     except Exception:
         logger.exception("Embedding cache failed")
@@ -325,7 +343,9 @@ async def get_cached_embedding(
                 content_hash, model
             )
             if embedding:
-                logger.debug(f"Retrieved cached embedding for model {model}")  # TODO: Convert f-string to logging format
+                logger.debug(
+                    f"Retrieved cached embedding for model {model}"
+                )  # TODO: Convert f-string to logging format
 
     except Exception:
         logger.exception("Cached embedding retrieval failed")
@@ -367,7 +387,9 @@ async def cache_search_results(
                 query_hash, collection, results, ttl
             )
             if success:
-                logger.debug(f"Cached search results for collection {collection}")  # TODO: Convert f-string to logging format
+                logger.debug(
+                    f"Cached search results for collection {collection}"
+                )  # TODO: Convert f-string to logging format
 
     except Exception:
         logger.exception("Search results cache failed")

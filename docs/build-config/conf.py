@@ -84,7 +84,7 @@ intersphinx_mapping = {
     "qdrant": ("https://qdrant.tech/", None),
 }
 
-# Todo extension
+# TODO extension
 todo_include_todos = True
 
 # Mock imports for problematic dependencies

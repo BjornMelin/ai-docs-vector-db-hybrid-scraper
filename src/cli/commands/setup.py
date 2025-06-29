@@ -393,7 +393,7 @@ class ConfigurationWizard:
 
             # Step 5: Success Message
             self._show_success_message(config_path)
-            
+
             return config_path
 
         except KeyboardInterrupt:

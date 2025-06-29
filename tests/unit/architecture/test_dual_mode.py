@@ -348,14 +348,14 @@ class TestServiceFactory:
 
         # Register service and check availability through service list modification
         factory.register_service("test_service", TestService, TestService)
-        
+
         # Create a copy of enabled services to avoid mutating the global config
         original_services = factory.mode_config.enabled_services.copy()
         factory.mode_config.enabled_services = original_services + ["test_service"]
 
         assert factory.is_service_available("test_service") is True
         assert factory.is_service_available("nonexistent_service") is False
-        
+
         # Restore original services to avoid affecting other tests
         factory.mode_config.enabled_services = original_services
 
@@ -372,12 +372,15 @@ class TestServiceFactory:
 
         # Create a copy and add test services to avoid mutating the global config
         original_services = factory.mode_config.enabled_services.copy()
-        factory.mode_config.enabled_services = original_services + ["service1", "service2"]
+        factory.mode_config.enabled_services = original_services + [
+            "service1",
+            "service2",
+        ]
 
         available = factory.get_available_services()
         assert "service1" in available
         assert "service2" in available
-        
+
         # Restore original services to avoid affecting other tests
         factory.mode_config.enabled_services = original_services
 
@@ -389,7 +392,7 @@ class TestServiceFactory:
             pass
 
         factory.register_service("test_service", TestService, TestService)
-        
+
         # Create a copy and add test service to avoid mutating the global config
         original_services = factory.mode_config.enabled_services.copy()
         factory.mode_config.enabled_services = original_services + ["test_service"]
@@ -401,7 +404,7 @@ class TestServiceFactory:
         assert status["enabled"] is True
         assert status["initialized"] is False
         assert status["mode"] == "simple"
-        
+
         # Restore original services to avoid affecting other tests
         factory.mode_config.enabled_services = original_services
 

@@ -13,15 +13,12 @@ import logging
 import os
 import platform
 from pathlib import Path
+from typing import Any, Dict
 
 import psutil
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings
-from pydantic_settings import SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
-from typing import Any
-from typing import Dict
 
 logger = logging.getLogger(__name__)
 
@@ -30,18 +27,17 @@ def detect_environment() -> str:
     """Auto-detect the deployment environment."""
     if os.getenv("KUBERNETES_SERVICE_HOST"):
         return "kubernetes"
-    elif os.getenv("AWS_EXECUTION_ENV"):
+    if os.getenv("AWS_EXECUTION_ENV"):
         return "aws"
-    elif os.getenv("DOCKER_CONTAINER") or (
+    if os.getenv("DOCKER_CONTAINER") or (
         platform.system() == "Linux" and Path("/.dockerenv").exists()
     ):
         return "docker"
-    elif os.getenv("CI"):
+    if os.getenv("CI"):
         return "ci"
-    elif os.getenv("PYTEST_CURRENT_TEST"):
+    if os.getenv("PYTEST_CURRENT_TEST"):
         return "test"
-    else:
-        return "development"
+    return "development"
 
 
 def auto_detect_database() -> str:
@@ -50,12 +46,11 @@ def auto_detect_database() -> str:
 
     if env == "kubernetes":
         return "postgresql://postgres:password@postgres-service:5432/vectordb"
-    elif env == "docker":
+    if env == "docker":
         return "postgresql://postgres:password@localhost:5432/vectordb"
-    elif env == "test":
+    if env == "test":
         return "sqlite+aiosqlite:///./test.db"
-    else:
-        return "sqlite+aiosqlite:///./local.db"
+    return "sqlite+aiosqlite:///./local.db"
 
 
 def adaptive_threshold() -> float:
@@ -286,7 +281,7 @@ class ConfigDriftHealer:
 
     def __init__(self, config_manager: AutoConfigManager):
         self.config_manager = config_manager
-        self.drift_patterns: Dict[str, Any] = {}
+        self.drift_patterns: dict[str, Any] = {}
         self.healing_enabled = True
 
     async def start_monitoring(self, check_interval: float = 300):

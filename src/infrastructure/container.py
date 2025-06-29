@@ -3,6 +3,7 @@
 import logging
 from collections.abc import AsyncGenerator
 from functools import lru_cache
+from typing import Any
 
 import redis.asyncio as redis
 from dependency_injector import containers, providers
@@ -10,8 +11,6 @@ from firecrawl import AsyncFirecrawlApp
 from openai import AsyncOpenAI
 from qdrant_client import AsyncQdrantClient
 
-
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +31,9 @@ def _create_openai_client(config: Any) -> AsyncOpenAI:
         )
         return AsyncOpenAI(api_key=api_key, max_retries=max_retries)
     except Exception as e:
-        logger.warning(f"Failed to create OpenAI client with config: {e}")  # TODO: Convert f-string to logging format
+        logger.warning(
+            f"Failed to create OpenAI client with config: {e}"
+        )  # TODO: Convert f-string to logging format
         return AsyncOpenAI(api_key="", max_retries=3)
 
 
@@ -55,7 +56,9 @@ def _create_qdrant_client(config: Any) -> AsyncQdrantClient:
             url=url, api_key=api_key, timeout=timeout, prefer_grpc=prefer_grpc
         )
     except Exception as e:
-        logger.warning(f"Failed to create Qdrant client with config: {e}")  # TODO: Convert f-string to logging format
+        logger.warning(
+            f"Failed to create Qdrant client with config: {e}"
+        )  # TODO: Convert f-string to logging format
         return AsyncQdrantClient(url="http://localhost:6333")
 
 
@@ -74,7 +77,9 @@ def _create_redis_client(config: Any) -> redis.Redis:
         pool_size = getattr(cache_config, "redis_pool_size", None) or 20
         return redis.from_url(url, max_connections=pool_size, decode_responses=True)
     except Exception as e:
-        logger.warning(f"Failed to create Redis client with config: {e}")  # TODO: Convert f-string to logging format
+        logger.warning(
+            f"Failed to create Redis client with config: {e}"
+        )  # TODO: Convert f-string to logging format
         return redis.from_url(
             "redis://localhost:6379", max_connections=20, decode_responses=True
         )
@@ -94,7 +99,9 @@ def _create_firecrawl_client(config: Any) -> AsyncFirecrawlApp:
         api_key = getattr(firecrawl_config, "api_key", None) or ""
         return AsyncFirecrawlApp(api_key=api_key)
     except Exception as e:
-        logger.warning(f"Failed to create Firecrawl client with config: {e}")  # TODO: Convert f-string to logging format
+        logger.warning(
+            f"Failed to create Firecrawl client with config: {e}"
+        )  # TODO: Convert f-string to logging format
         return AsyncFirecrawlApp(api_key="")
 
 
@@ -141,7 +148,9 @@ def _create_parallel_processing_system(embedding_manager: Any) -> Any:
         return ParallelProcessingSystem(embedding_manager, config)
 
     except Exception as e:
-        logger.warning(f"Failed to create parallel processing system: {e}")  # TODO: Convert f-string to logging format
+        logger.warning(
+            f"Failed to create parallel processing system: {e}"
+        )  # TODO: Convert f-string to logging format
 
         # Return a minimal mock system if creation fails
         class MockParallelProcessingSystem:
@@ -277,17 +286,18 @@ class ContainerManager:
             if hasattr(config, "model_dump"):
                 return config.model_dump()
             # Try to convert using dict() if it's a dataclass or similar
-            elif hasattr(config, "__dict__"):
+            if hasattr(config, "__dict__"):
                 return self._serialize_config_dict(config.__dict__)
-            else:
-                # Fallback to basic attributes
-                return {
-                    key: getattr(config, key)
-                    for key in dir(config)
-                    if not key.startswith("_") and not callable(getattr(config, key))
-                }
+            # Fallback to basic attributes
+            return {
+                key: getattr(config, key)
+                for key in dir(config)
+                if not key.startswith("_") and not callable(getattr(config, key))
+            }
         except Exception as e:
-            logger.warning(f"Failed to convert config to dict: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Failed to convert config to dict: {e}"
+            )  # TODO: Convert f-string to logging format
             return {}
 
     def _serialize_config_dict(self, data: Any) -> Any:
@@ -301,20 +311,19 @@ class ContainerManager:
         """
         if hasattr(data, "model_dump"):
             return data.model_dump()
-        elif hasattr(data, "__dict__"):
+        if hasattr(data, "__dict__"):
             return {
                 key: self._serialize_config_dict(value)
                 for key, value in data.__dict__.items()
                 if not key.startswith("_")
             }
-        elif isinstance(data, dict):
+        if isinstance(data, dict):
             return {
                 key: self._serialize_config_dict(value) for key, value in data.items()
             }
-        elif isinstance(data, (list, tuple)):
+        if isinstance(data, (list, tuple)):
             return [self._serialize_config_dict(item) for item in data]
-        else:
-            return data
+        return data
 
 
 # Global container manager instance

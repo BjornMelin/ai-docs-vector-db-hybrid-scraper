@@ -47,9 +47,15 @@ class TestPerformanceTargets:
         max_latency = max(latencies)
 
         logger.info("Search latency metrics:")
-        logger.info(f"  P95: {p95_latency:.1f}ms")  # TODO: Convert f-string to logging format
-        logger.info(f"  Average: {avg_latency:.1f}ms")  # TODO: Convert f-string to logging format
-        logger.info(f"  Maximum: {max_latency:.1f}ms")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  P95: {p95_latency:.1f}ms"
+        )  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  Average: {avg_latency:.1f}ms"
+        )  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  Maximum: {max_latency:.1f}ms"
+        )  # TODO: Convert f-string to logging format
 
         assert p95_latency < 100, (
             f"P95 latency {p95_latency:.1f}ms exceeds 100ms target"
@@ -91,10 +97,18 @@ class TestPerformanceTargets:
         throughput = successful_searches / total_time
 
         logger.info("Throughput test results:")
-        logger.info(f"  Successful searches: {successful_searches}/500")  # TODO: Convert f-string to logging format
-        logger.info(f"  Failed searches: {failed_searches}")  # TODO: Convert f-string to logging format
-        logger.info(f"  Throughput: {throughput:.1f} searches/sec")  # TODO: Convert f-string to logging format
-        logger.info(f"  Total time: {total_time:.2f}s")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  Successful searches: {successful_searches}/500"
+        )  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  Failed searches: {failed_searches}"
+        )  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  Throughput: {throughput:.1f} searches/sec"
+        )  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  Total time: {total_time:.2f}s"
+        )  # TODO: Convert f-string to logging format
 
         assert throughput >= 500, (
             f"Throughput {throughput:.1f} searches/sec below 500 target"
@@ -139,11 +153,15 @@ class TestPerformanceTargets:
             cache_stats = await cache.get_cache_stats()
 
             logger.info("Cache performance test results:")
-            logger.info(f"  Hit rate: {hit_rate:.1%}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"  Hit rate: {hit_rate:.1%}"
+            )  # TODO: Convert f-string to logging format
             logger.info(
                 f"  L1 cache utilization: {cache_stats['l1_cache']['utilization']:.1%}"
             )
-            logger.info(f"  Total hits: {hits}/{total_requests}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"  Total hits: {hits}/{total_requests}"
+            )  # TODO: Convert f-string to logging format
 
             assert hit_rate >= 0.85, f"Cache hit rate {hit_rate:.1%} below 85% target"
 
@@ -173,17 +191,23 @@ class TestPerformanceTargets:
         metrics = await optimizer.get_optimization_metrics(collection_name)
 
         logger.info("Quantization test results:")
-        logger.info(f"  Collection created: {success}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  Collection created: {success}"
+        )  # TODO: Convert f-string to logging format
         logger.info(
             f"  Quantization enabled: {metrics.get('quantization_enabled', False)}"
         )
-        logger.info(f"  Vector size: {vector_size}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  Vector size: {vector_size}"
+        )  # TODO: Convert f-string to logging format
 
         assert metrics.get("quantization_enabled", False), "Quantization not enabled"
 
         # Test memory efficiency (quantization should reduce memory by ~83%)
         expected_memory_reduction = 0.83
-        logger.info(f"  Expected memory reduction: {expected_memory_reduction:.1%}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  Expected memory reduction: {expected_memory_reduction:.1%}"
+        )  # TODO: Convert f-string to logging format
 
     @pytest.mark.asyncio
     async def test_batch_processing_optimization(self):
@@ -216,11 +240,21 @@ class TestPerformanceTargets:
         throughput = len(results) / total_time
 
         logger.info("Batch processing test results:")
-        logger.info(f"  Items processed: {len(results)}")  # TODO: Convert f-string to logging format
-        logger.info(f"  Total time: {total_time:.2f}s")  # TODO: Convert f-string to logging format
-        logger.info(f"  Throughput: {throughput:.1f} items/sec")  # TODO: Convert f-string to logging format
-        logger.info(f"  Average batch size: {stats.get('avg_batch_size', 0):.1f}")  # TODO: Convert f-string to logging format
-        logger.info(f"  Time per item: {stats.get('avg_time_per_item_ms', 0):.1f}ms")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  Items processed: {len(results)}"
+        )  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  Total time: {total_time:.2f}s"
+        )  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  Throughput: {throughput:.1f} items/sec"
+        )  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  Average batch size: {stats.get('avg_batch_size', 0):.1f}"
+        )  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  Time per item: {stats.get('avg_time_per_item_ms', 0):.1f}ms"
+        )  # TODO: Convert f-string to logging format
 
         assert len(results) == 200, "Not all items were processed"
         assert throughput > 100, f"Throughput {throughput:.1f} items/sec too low"
@@ -255,10 +289,18 @@ class TestPerformanceTargets:
             recommendations = monitor.get_optimization_recommendations()
 
             logger.info("Monitoring performance test results:")
-            logger.info(f"  Snapshots collected: {len(monitor.snapshots)}")  # TODO: Convert f-string to logging format
-            logger.info(f"  Current CPU: {summary.get('cpu_percent', 0):.1f}%")  # TODO: Convert f-string to logging format
-            logger.info(f"  Current memory: {summary.get('memory_percent', 0):.1f}%")  # TODO: Convert f-string to logging format
-            logger.info(f"  Recommendations: {len(recommendations)}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"  Snapshots collected: {len(monitor.snapshots)}"
+            )  # TODO: Convert f-string to logging format
+            logger.info(
+                f"  Current CPU: {summary.get('cpu_percent', 0):.1f}%"
+            )  # TODO: Convert f-string to logging format
+            logger.info(
+                f"  Current memory: {summary.get('memory_percent', 0):.1f}%"
+            )  # TODO: Convert f-string to logging format
+            logger.info(
+                f"  Recommendations: {len(recommendations)}"
+            )  # TODO: Convert f-string to logging format
 
             assert len(monitor.snapshots) > 0, "No performance snapshots collected"
             assert summary.get("timestamp") is not None, "Invalid performance summary"
@@ -333,11 +375,21 @@ class TestPerformanceTargets:
             cache_hit_rate = cached_requests / total_requests
 
             logger.info("End-to-end performance test results:")
-            logger.info(f"  Total requests: {total_requests}")  # TODO: Convert f-string to logging format
-            logger.info(f"  Cache hits: {cached_requests}")  # TODO: Convert f-string to logging format
-            logger.info(f"  Cache hit rate: {cache_hit_rate:.1%}")  # TODO: Convert f-string to logging format
-            logger.info(f"  Overall throughput: {overall_throughput:.1f} req/sec")  # TODO: Convert f-string to logging format
-            logger.info(f"  Total time: {total_time:.2f}s")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"  Total requests: {total_requests}"
+            )  # TODO: Convert f-string to logging format
+            logger.info(
+                f"  Cache hits: {cached_requests}"
+            )  # TODO: Convert f-string to logging format
+            logger.info(
+                f"  Cache hit rate: {cache_hit_rate:.1%}"
+            )  # TODO: Convert f-string to logging format
+            logger.info(
+                f"  Overall throughput: {overall_throughput:.1f} req/sec"
+            )  # TODO: Convert f-string to logging format
+            logger.info(
+                f"  Total time: {total_time:.2f}s"
+            )  # TODO: Convert f-string to logging format
             logger.info(
                 f"  L1 cache utilization: {cache_stats['l1_cache']['utilization']:.1%}"
             )

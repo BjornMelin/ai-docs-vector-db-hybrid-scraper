@@ -193,7 +193,9 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
             if current_time - stats.last_failure_time >= self.config.recovery_timeout:
                 stats.state = CircuitState.HALF_OPEN
                 stats.half_open_calls = 0
-                logger.info(f"Circuit breaker entering HALF_OPEN state for {endpoint}")  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"Circuit breaker entering HALF_OPEN state for {endpoint}"
+                )  # TODO: Convert f-string to logging format
             else:
                 # Circuit is still open, reject request
                 return JSONResponse(
@@ -305,7 +307,9 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
         """
         if endpoint in self._circuit_stats:
             self._circuit_stats[endpoint] = CircuitBreakerStats()
-            logger.info(f"Manually reset circuit breaker for {endpoint}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Manually reset circuit breaker for {endpoint}"
+            )  # TODO: Convert f-string to logging format
             return True
         return False
 

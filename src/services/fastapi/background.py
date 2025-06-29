@@ -151,7 +151,9 @@ class BackgroundTaskManager:
             worker = asyncio.create_task(self._worker_loop(f"worker-{i}"))
             self._workers.append(worker)
 
-        logger.info(f"Background task manager started with {self.max_workers} workers")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Background task manager started with {self.max_workers} workers"
+        )  # TODO: Convert f-string to logging format
 
     async def stop(self, timeout: float = 30.0) -> None:  # noqa: ASYNC109
         """Stop the background task manager gracefully.
@@ -253,7 +255,9 @@ class BackgroundTaskManager:
         # Add to queue
         try:
             await self._task_queue.put(task_id)
-            logger.debug(f"Task {task_id} submitted successfully")  # TODO: Convert f-string to logging format
+            logger.debug(
+                f"Task {task_id} submitted successfully"
+            )  # TODO: Convert f-string to logging format
             return task_id
         except asyncio.QueueFull as e:
             # Remove from storage if queue is full
@@ -332,7 +336,9 @@ class BackgroundTaskManager:
             if result and not result.is_complete:
                 result.status = TaskStatus.CANCELLED
                 result.end_time = datetime.now(tz=UTC)
-                logger.debug(f"Task {task_id} cancelled")  # TODO: Convert f-string to logging format
+                logger.debug(
+                    f"Task {task_id} cancelled"
+                )  # TODO: Convert f-string to logging format
                 return True
         return False
 
@@ -343,7 +349,9 @@ class BackgroundTaskManager:
             worker_name: Name of the worker for logging
 
         """
-        logger.debug(f"Worker {worker_name} started")  # TODO: Convert f-string to logging format
+        logger.debug(
+            f"Worker {worker_name} started"
+        )  # TODO: Convert f-string to logging format
 
         while self._running:
             try:
@@ -360,7 +368,9 @@ class BackgroundTaskManager:
             except Exception:
                 logger.exception("Worker {worker_name} error")
 
-        logger.debug(f"Worker {worker_name} stopped")  # TODO: Convert f-string to logging format
+        logger.debug(
+            f"Worker {worker_name} stopped"
+        )  # TODO: Convert f-string to logging format
 
     async def _execute_task(self, task_id: str, worker_name: str) -> None:
         """Execute a single task.
@@ -375,7 +385,9 @@ class BackgroundTaskManager:
             result = self._results.get(task_id)
 
         if not task or not result:
-            logger.warning(f"Task {task_id} not found for execution")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Task {task_id} not found for execution"
+            )  # TODO: Convert f-string to logging format
             return
 
         # Check if task was cancelled
@@ -386,7 +398,9 @@ class BackgroundTaskManager:
         result.status = TaskStatus.RUNNING
         result.start_time = datetime.now(tz=UTC)
 
-        logger.debug(f"Worker {worker_name} executing task {task_id}")  # TODO: Convert f-string to logging format
+        logger.debug(
+            f"Worker {worker_name} executing task {task_id}"
+        )  # TODO: Convert f-string to logging format
 
         try:
             # Execute task with timeout
@@ -419,7 +433,9 @@ class BackgroundTaskManager:
             with self._task_lock:
                 self._completed_tasks += 1
 
-            logger.debug(f"Task {task_id} completed successfully")  # TODO: Convert f-string to logging format
+            logger.debug(
+                f"Task {task_id} completed successfully"
+            )  # TODO: Convert f-string to logging format
 
         except TimeoutError:
             # Task timeout
@@ -474,7 +490,9 @@ class BackgroundTaskManager:
             # Max retries reached
             with self._task_lock:
                 self._failed_tasks += 1
-            logger.error(f"Task {task.task_id} failed after {task.max_retries} retries")  # TODO: Convert f-string to logging format
+            logger.error(
+                f"Task {task.task_id} failed after {task.max_retries} retries"
+            )  # TODO: Convert f-string to logging format
 
     async def _schedule_retry(self, task_id: str, delay: float) -> None:
         """Schedule a task retry after delay.

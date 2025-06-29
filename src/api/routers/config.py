@@ -145,7 +145,9 @@ async def reload_configuration(request: ReloadRequest) -> ReloadResponse:
         if not operation.success:
             # Return detailed error information but don't raise exception
             # This allows clients to get full operation details
-            logger.warning(f"Configuration reload failed: {operation.error_message}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Configuration reload failed: {operation.error_message}"
+            )  # TODO: Convert f-string to logging format
 
     except Exception as e:
         logger.exception("Unexpected error during configuration reload")

@@ -77,7 +77,9 @@ class TraceCorrelationManager:
             if tenant_id:
                 current_span.set_attribute("tenant.id", tenant_id)
 
-        logger.debug(f"Set request context: request_id={request_id}, user_id={user_id}")  # TODO: Convert f-string to logging format
+        logger.debug(
+            f"Set request context: request_id={request_id}, user_id={user_id}"
+        )  # TODO: Convert f-string to logging format
         return request_id
 
     def set_business_context(

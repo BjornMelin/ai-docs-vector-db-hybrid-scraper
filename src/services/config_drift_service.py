@@ -20,10 +20,6 @@ from src.config.drift_detection import (
 from src.services.observability.performance import get_performance_monitor
 
 
-if TYPE_CHECKING:
-    pass  # Remove unused import
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -191,7 +187,9 @@ class ConfigDriftService:
                                 "timestamp": snapshot.timestamp.isoformat(),
                             }
                         )
-                        logger.debug(f"Took snapshot for {source}")  # TODO: Convert f-string to logging format
+                        logger.debug(
+                            f"Took snapshot for {source}"
+                        )  # TODO: Convert f-string to logging format
 
                     except Exception as e:
                         error_msg = f"Failed to snapshot {source}: {e}"
@@ -338,12 +336,16 @@ class ConfigDriftService:
         """
         try:
             # Log remediation attempt
-            logger.info(f"Attempting auto-remediation for drift event {event.id}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Attempting auto-remediation for drift event {event.id}"
+            )  # TODO: Convert f-string to logging format
 
             # For now, just log the suggested remediation
             # In a full implementation, this would actually apply the changes
             if event.remediation_suggestion:
-                logger.info(f"Remediation suggestion: {event.remediation_suggestion}")  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"Remediation suggestion: {event.remediation_suggestion}"
+                )  # TODO: Convert f-string to logging format
 
             # Import here to avoid circular dependency
             from src.services.task_queue.tasks import create_task  # noqa: PLC0415

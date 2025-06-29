@@ -77,7 +77,9 @@ class MiddlewareManager:
         for middleware in reversed(middleware_stack):  # Reverse for proper order
             app.add_middleware(middleware.cls, **middleware.kwargs)
 
-        logger.info(f"Applied {len(middleware_stack)} middleware components")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Applied {len(middleware_stack)} middleware components"
+        )  # TODO: Convert f-string to logging format
 
 
 def get_middleware_manager(config=None) -> MiddlewareManager:

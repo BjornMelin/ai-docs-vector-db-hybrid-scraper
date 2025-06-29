@@ -628,20 +628,30 @@ def validate_all_configs(config_dir: str | Path) -> bool:
             with config_file.open() as f:
                 config = json.load(f)
 
-            logger.info(f"Validating configuration for {environment}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Validating configuration for {environment}"
+            )  # TODO: Convert f-string to logging format
             is_valid = validator.validate_config_schema(config, environment)
 
             if not is_valid:
-                logger.error(f"Validation failed for {environment}")  # TODO: Convert f-string to logging format
+                logger.error(
+                    f"Validation failed for {environment}"
+                )  # TODO: Convert f-string to logging format
                 summary = validator.get_validation_summary()
                 for _error in summary["errors"]:
-                    logger.error(f"  {_error['path']}")  # TODO: Convert f-string to logging format
+                    logger.error(
+                        f"  {_error['path']}"
+                    )  # TODO: Convert f-string to logging format
                 all_valid = False
             else:
-                logger.info(f"Configuration valid for {environment}")  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"Configuration valid for {environment}"
+                )  # TODO: Convert f-string to logging format
                 summary = validator.get_validation_summary()
                 for _warning in summary["warnings"]:
-                    logger.warning(f"  {_warning['path']}")  # TODO: Convert f-string to logging format
+                    logger.warning(
+                        f"  {_warning['path']}"
+                    )  # TODO: Convert f-string to logging format
 
         except Exception:
             logger.exception(f"Failed to validate {config_file}")

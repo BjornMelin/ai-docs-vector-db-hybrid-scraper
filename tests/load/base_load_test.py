@@ -291,7 +291,9 @@ def on_test_stop(_environment: Environment, **__kwargs):
 
     # Print summary
     summary = metrics_collector.get_summary()
-    logger.info(f"Performance summary: {json.dumps(summary, indent=2)}")  # TODO: Convert f-string to logging format
+    logger.info(
+        f"Performance summary: {json.dumps(summary, indent=2)}"
+    )  # TODO: Convert f-string to logging format
 
 
 @events.request.add_listener
@@ -328,7 +330,9 @@ def on_report_to_master(_client_id: str, data: dict[str, Any]):
 def on_worker_report(client_id: str, data: dict[str, Any]):
     """Handle worker reports in distributed mode."""
     if "custom_metrics" in data:
-        logger.info(f"Worker {client_id} metrics: {data['custom_metrics']}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Worker {client_id} metrics: {data['custom_metrics']}"
+        )  # TODO: Convert f-string to logging format
 
 
 def create_load_test_runner(host: str = "http://localhost:8000") -> Environment:

@@ -95,8 +95,7 @@ def enterprise_only(fallback_value: Any = None, log_access: bool = True):
         # Return appropriate wrapper based on whether function is async
         if asyncio.iscoroutinefunction(func):
             return async_wrapper  # type: ignore
-        else:
-            return sync_wrapper  # type: ignore
+        return sync_wrapper  # type: ignore
 
     return decorator
 
@@ -145,8 +144,7 @@ def conditional_feature(
         # Return appropriate wrapper based on whether function is async
         if asyncio.iscoroutinefunction(func):
             return async_wrapper  # type: ignore
-        else:
-            return sync_wrapper  # type: ignore
+        return sync_wrapper  # type: ignore
 
     return decorator
 
@@ -195,8 +193,7 @@ def service_required(
         # Return appropriate wrapper based on whether function is async
         if asyncio.iscoroutinefunction(func):
             return async_wrapper  # type: ignore
-        else:
-            return sync_wrapper  # type: ignore
+        return sync_wrapper  # type: ignore
 
     return decorator
 
@@ -217,22 +214,19 @@ def mode_adaptive(simple_implementation: F, enterprise_implementation: F):
         feature_flag = FeatureFlag()
         if feature_flag.is_enterprise_mode():
             return await enterprise_implementation(*args, **kwargs)
-        else:
-            return await simple_implementation(*args, **kwargs)
+        return await simple_implementation(*args, **kwargs)
 
     @wraps(enterprise_implementation)
     def sync_wrapper(*args, **kwargs):
         feature_flag = FeatureFlag()
         if feature_flag.is_enterprise_mode():
             return enterprise_implementation(*args, **kwargs)
-        else:
-            return simple_implementation(*args, **kwargs)
+        return simple_implementation(*args, **kwargs)
 
     # Return appropriate wrapper based on whether function is async
     if asyncio.iscoroutinefunction(enterprise_implementation):
         return async_wrapper
-    else:
-        return sync_wrapper
+    return sync_wrapper
 
 
 class ModeAwareFeatureManager:

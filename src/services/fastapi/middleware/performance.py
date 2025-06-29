@@ -197,7 +197,9 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
                 memory_info = self._process.memory_info()
                 return memory_info.rss / 1024 / 1024  # Convert to MB
         except Exception as e:
-            logger.warning(f"Failed to get memory usage: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Failed to get memory usage: {e}"
+            )  # TODO: Convert f-string to logging format
         return None
 
     def _record_metrics(self, metrics: RequestMetrics) -> None:
@@ -290,7 +292,9 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
                         "cpu_percent": cpu_percent,
                     }
                 except Exception as e:
-                    logger.warning(f"Failed to get system metrics: {e}")  # TODO: Convert f-string to logging format
+                    logger.warning(
+                        f"Failed to get system metrics: {e}"
+                    )  # TODO: Convert f-string to logging format
 
             return summary
 
@@ -421,7 +425,9 @@ async def optimized_lifespan(app):
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         logger.info("uvloop event loop policy installed for better performance")
     except Exception as e:
-        logger.warning(f"Failed to install uvloop: {e}")  # TODO: Convert f-string to logging format
+        logger.warning(
+            f"Failed to install uvloop: {e}"
+        )  # TODO: Convert f-string to logging format
 
     # Pre-warm critical services
     await _warm_services()
@@ -453,7 +459,9 @@ async def _warm_services():
             await embedding_manager.generate_single("warmup query")
             logger.info("Embedding service warmed up successfully")
         except Exception as e:
-            logger.warning(f"Failed to warm embedding service: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Failed to warm embedding service: {e}"
+            )  # TODO: Convert f-string to logging format
 
         # Warm vector database connection
         try:
@@ -462,7 +470,9 @@ async def _warm_services():
             await qdrant_client.get_collections()
             logger.info("Vector database connection warmed up successfully")
         except Exception as e:
-            logger.warning(f"Failed to warm vector database: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Failed to warm vector database: {e}"
+            )  # TODO: Convert f-string to logging format
 
         logger.info("Service warm-up completed")
 
@@ -483,7 +493,9 @@ async def _cleanup_services():
         logger.info("Service cleanup completed")
 
     except Exception as e:
-        logger.warning(f"Service cleanup failed: {e}")  # TODO: Convert f-string to logging format
+        logger.warning(
+            f"Service cleanup failed: {e}"
+        )  # TODO: Convert f-string to logging format
 
 
 class AdvancedPerformanceMiddleware(PerformanceMiddleware):

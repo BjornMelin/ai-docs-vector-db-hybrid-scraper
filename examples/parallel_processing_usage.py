@@ -86,17 +86,33 @@ async def display_system_status(parallel_system: Any):
 
     # System health
     health = status.get("system_health", {})
-    logger.info(f"🏥 Health Status: {health.get('status', 'unknown')}")  # TODO: Convert f-string to logging format
-    logger.info(f"⏱️  Uptime: {health.get('uptime_seconds', 0):.1f} seconds")  # TODO: Convert f-string to logging format
-    logger.info(f"📝 Total Requests: {health.get('total_requests', 0)}")  # TODO: Convert f-string to logging format
-    logger.info(f"❌ Error Rate: {health.get('error_rate', 0):.2%}")  # TODO: Convert f-string to logging format
+    logger.info(
+        f"🏥 Health Status: {health.get('status', 'unknown')}"
+    )  # TODO: Convert f-string to logging format
+    logger.info(
+        f"⏱️  Uptime: {health.get('uptime_seconds', 0):.1f} seconds"
+    )  # TODO: Convert f-string to logging format
+    logger.info(
+        f"📝 Total Requests: {health.get('total_requests', 0)}"
+    )  # TODO: Convert f-string to logging format
+    logger.info(
+        f"❌ Error Rate: {health.get('error_rate', 0):.2%}"
+    )  # TODO: Convert f-string to logging format
 
     # Performance metrics
     perf = status.get("performance_metrics", {})
-    logger.info(f"⚡ Avg Response Time: {perf.get('avg_response_time_ms', 0):.1f} ms")  # TODO: Convert f-string to logging format
-    logger.info(f"🔄 Throughput: {perf.get('throughput_rps', 0):.1f} req/sec")  # TODO: Convert f-string to logging format
-    logger.info(f"💾 Cache Hit Rate: {perf.get('cache_hit_rate', 0):.2%}")  # TODO: Convert f-string to logging format
-    logger.info(f"🧠 Memory Usage: {perf.get('memory_usage_mb', 0):.1f} MB")  # TODO: Convert f-string to logging format
+    logger.info(
+        f"⚡ Avg Response Time: {perf.get('avg_response_time_ms', 0):.1f} ms"
+    )  # TODO: Convert f-string to logging format
+    logger.info(
+        f"🔄 Throughput: {perf.get('throughput_rps', 0):.1f} req/sec"
+    )  # TODO: Convert f-string to logging format
+    logger.info(
+        f"💾 Cache Hit Rate: {perf.get('cache_hit_rate', 0):.2%}"
+    )  # TODO: Convert f-string to logging format
+    logger.info(
+        f"🧠 Memory Usage: {perf.get('memory_usage_mb', 0):.1f} MB"
+    )  # TODO: Convert f-string to logging format
 
     # Optimization status
     opt = status.get("optimization_status", {})
@@ -154,7 +170,9 @@ async def demonstrate_document_processing(parallel_system: Any):
         },
     ]
 
-    logger.info(f"📄 Processing {len(test_documents)} documents...")  # TODO: Convert f-string to logging format
+    logger.info(
+        f"📄 Processing {len(test_documents)} documents..."
+    )  # TODO: Convert f-string to logging format
 
     # Record start time for performance measurement
     start_time = time.time()
@@ -170,11 +188,15 @@ async def demonstrate_document_processing(parallel_system: Any):
     processing_time = time.time() - start_time
 
     # Display results
-    logger.info(f"✅ Processing completed in {processing_time:.2f} seconds")  # TODO: Convert f-string to logging format
+    logger.info(
+        f"✅ Processing completed in {processing_time:.2f} seconds"
+    )  # TODO: Convert f-string to logging format
 
     # Display processing statistics
     stats = results.get("processing_stats", {})
-    logger.info(f"📊 Documents processed: {stats.get('total_documents', 0)}")  # TODO: Convert f-string to logging format
+    logger.info(
+        f"📊 Documents processed: {stats.get('total_documents', 0)}"
+    )  # TODO: Convert f-string to logging format
     logger.info(
         f"⏱️  Total processing time: {stats.get('processing_time_ms', 0):.1f} ms"
     )
@@ -219,8 +241,12 @@ async def demonstrate_document_processing(parallel_system: Any):
             logger.info(
                 f"💾 Embedding Cache: {embed_cache.get('cache_hit_rate', 0):.2%} hit rate"
             )
-            logger.info(f"   Cache hits: {embed_cache.get('cache_hits', 0)}")  # TODO: Convert f-string to logging format
-            logger.info(f"   Cache misses: {embed_cache.get('cache_misses', 0)}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"   Cache hits: {embed_cache.get('cache_hits', 0)}"
+            )  # TODO: Convert f-string to logging format
+            logger.info(
+                f"   Cache misses: {embed_cache.get('cache_misses', 0)}"
+            )  # TODO: Convert f-string to logging format
 
 
 async def demonstrate_auto_optimization(parallel_system: Any):
@@ -263,8 +289,12 @@ async def display_final_metrics(parallel_system: Any):
     logger.info(
         f"🎯 Final Average Response Time: {perf.get('avg_response_time_ms', 0):.1f} ms"
     )
-    logger.info(f"🚀 Final Throughput: {perf.get('throughput_rps', 0):.1f} req/sec")  # TODO: Convert f-string to logging format
-    logger.info(f"💾 Final Cache Hit Rate: {perf.get('cache_hit_rate', 0):.2%}")  # TODO: Convert f-string to logging format
+    logger.info(
+        f"🚀 Final Throughput: {perf.get('throughput_rps', 0):.1f} req/sec"
+    )  # TODO: Convert f-string to logging format
+    logger.info(
+        f"💾 Final Cache Hit Rate: {perf.get('cache_hit_rate', 0):.2%}"
+    )  # TODO: Convert f-string to logging format
 
     # Achievement validation
     avg_response_time = perf.get("avg_response_time_ms", float("inf"))
@@ -285,7 +315,9 @@ async def display_final_metrics(parallel_system: Any):
     if cache_hit_rate > 0.8:  # 80% hit rate
         logger.info("✅ Target achieved: High cache hit rate (>80%)")
     else:
-        logger.info(f"⚠️  Cache optimization opportunity: {cache_hit_rate:.2%} hit rate")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"⚠️  Cache optimization opportunity: {cache_hit_rate:.2%} hit rate"
+        )  # TODO: Convert f-string to logging format
 
     # Component status
     logger.info("\n🏗️  Component Status:")
@@ -324,7 +356,9 @@ async def main():
         logger.info("✅ Comprehensive performance monitoring")
 
     except Exception as e:
-        logger.error(f"❌ Demonstration failed: {e}")  # TODO: Convert f-string to logging format
+        logger.error(
+            f"❌ Demonstration failed: {e}"
+        )  # TODO: Convert f-string to logging format
         raise
 
 

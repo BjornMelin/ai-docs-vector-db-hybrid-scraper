@@ -51,7 +51,9 @@ class ProductionMCPServer:
 
     def _signal_handler(self, signum: int, _frame) -> None:
         """Handle shutdown signals gracefully."""
-        logger.info(f"Received signal {signum}, initiating graceful shutdown...")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Received signal {signum}, initiating graceful shutdown..."
+        )  # TODO: Convert f-string to logging format
         # Store task reference to avoid RUF006 warning
         task = asyncio.create_task(self.shutdown())
         # Set task name for easier debugging

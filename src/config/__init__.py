@@ -93,7 +93,7 @@ _USE_MODERN_CONFIG = (
 # based on the AI_DOCS__USE_MODERN_CONFIG environment variable
 
 
-def get_config() -> Union[ModernConfig, LegacyConfig]:
+def get_config() -> ModernConfig | LegacyConfig:
     """Get configuration instance.
 
     Returns modern config by default, or legacy config if AI_DOCS__USE_MODERN_CONFIG=false.
@@ -103,17 +103,16 @@ def get_config() -> Union[ModernConfig, LegacyConfig]:
     """
     if _USE_MODERN_CONFIG:
         return get_modern_config()
-    else:
-        warnings.warn(
-            "Using legacy configuration system. Consider migrating to modern config. "
-            "Set AI_DOCS__USE_MODERN_CONFIG=true to use the new system.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return get_legacy_config()
+    warnings.warn(
+        "Using legacy configuration system. Consider migrating to modern config. "
+        "Set AI_DOCS__USE_MODERN_CONFIG=true to use the new system.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return get_legacy_config()
 
 
-def set_config(config: Union[ModernConfig, LegacyConfig]) -> None:
+def set_config(config: ModernConfig | LegacyConfig) -> None:
     """Set configuration instance.
 
     Args:
@@ -133,7 +132,7 @@ def reset_config() -> None:
         reset_legacy_config()
 
 
-def get_config_with_auto_detection() -> Union[ModernConfig, LegacyConfig]:
+def get_config_with_auto_detection() -> ModernConfig | LegacyConfig:
     """Get configuration with auto-detection.
 
     Returns:
@@ -141,8 +140,7 @@ def get_config_with_auto_detection() -> Union[ModernConfig, LegacyConfig]:
     """
     if _USE_MODERN_CONFIG:
         return get_modern_config_with_auto_detection()
-    else:
-        return get_legacy_config_with_auto_detection()
+    return get_legacy_config_with_auto_detection()
 
 
 # MIGRATION HELPER FUNCTIONS

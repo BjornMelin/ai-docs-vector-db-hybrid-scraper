@@ -62,7 +62,9 @@ def create_app(mode: ApplicationMode | None = None) -> FastAPI:
     # Add startup and shutdown events
     _configure_lifecycle_events(app)
 
-    logger.info(f"Created FastAPI app in {mode.value} mode")  # TODO: Convert f-string to logging format
+    logger.info(
+        f"Created FastAPI app in {mode.value} mode"
+    )  # TODO: Convert f-string to logging format
 
     return app
 
@@ -75,10 +77,9 @@ def _get_app_description(mode: ApplicationMode) -> str:
 
     if mode == ApplicationMode.SIMPLE:
         return f"{base_description} - Optimized for solo developers with minimal complexity"
-    elif mode == ApplicationMode.ENTERPRISE:
+    if mode == ApplicationMode.ENTERPRISE:
         return f"{base_description} - Full enterprise feature set with advanced capabilities"
-    else:
-        return base_description
+    return base_description
 
 
 def _configure_cors(app: FastAPI, mode: ApplicationMode) -> None:
@@ -89,9 +90,9 @@ def _configure_cors(app: FastAPI, mode: ApplicationMode) -> None:
             CORSMiddleware,
             allow_origins=[
                 "http://localhost:3000",
-                "http://localhost:8000", 
+                "http://localhost:8000",
                 "http://127.0.0.1:3000",
-                "http://127.0.0.1:8000"
+                "http://127.0.0.1:8000",
             ],
             allow_credentials=True,
             allow_methods=["GET", "POST"],
@@ -115,9 +116,13 @@ def _apply_middleware_stack(app: FastAPI, middleware_stack: list[str]) -> None:
     for middleware_name in middleware_stack:
         try:
             middleware_manager.apply_middleware(app, middleware_name)
-            logger.debug(f"Applied middleware: {middleware_name}")  # TODO: Convert f-string to logging format
+            logger.debug(
+                f"Applied middleware: {middleware_name}"
+            )  # TODO: Convert f-string to logging format
         except Exception as e:
-            logger.warning(f"Failed to apply middleware {middleware_name}: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Failed to apply middleware {middleware_name}: {e}"
+            )  # TODO: Convert f-string to logging format
 
 
 def _configure_routes(app: FastAPI, mode: ApplicationMode) -> None:
@@ -257,16 +262,15 @@ def _get_mode_features(mode: ApplicationMode) -> dict[str, Any]:
             "target_users": "solo developers",
             "complexity": "minimal",
         }
-    else:
-        return {
-            "advanced_monitoring": True,
-            "deployment_features": True,
-            "a_b_testing": True,
-            "comprehensive_observability": True,
-            "max_concurrent_crawls": 50,
-            "target_users": "enterprise teams",
-            "complexity": "full",
-        }
+    return {
+        "advanced_monitoring": True,
+        "deployment_features": True,
+        "a_b_testing": True,
+        "comprehensive_observability": True,
+        "max_concurrent_crawls": 50,
+        "target_users": "enterprise teams",
+        "complexity": "full",
+    }
 
 
 def _configure_lifecycle_events(app: FastAPI) -> None:
@@ -278,7 +282,9 @@ def _configure_lifecycle_events(app: FastAPI) -> None:
         mode = app.state.mode
         service_factory: ModeAwareServiceFactory = app.state.service_factory
 
-        logger.info(f"Starting application in {mode.value} mode")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Starting application in {mode.value} mode"
+        )  # TODO: Convert f-string to logging format
 
         # Register mode-specific services
         _register_mode_services(service_factory, mode)
@@ -286,7 +292,9 @@ def _configure_lifecycle_events(app: FastAPI) -> None:
         # Initialize critical services
         await _initialize_critical_services(service_factory)
 
-        logger.info(f"Application startup complete in {mode.value} mode")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Application startup complete in {mode.value} mode"
+        )  # TODO: Convert f-string to logging format
 
     @app.on_event("shutdown")
     async def shutdown_event():
@@ -325,7 +333,9 @@ def _register_mode_services(
         )
 
     except ImportError as e:
-        logger.warning(f"Some service implementations not available: {e}")  # TODO: Convert f-string to logging format
+        logger.warning(
+            f"Some service implementations not available: {e}"
+        )  # TODO: Convert f-string to logging format
 
     # Register universal services (work in both modes)
     try:
@@ -336,7 +346,9 @@ def _register_mode_services(
         factory.register_universal_service("vector_db_service", VectorDBService)
 
     except ImportError as e:
-        logger.warning(f"Universal services not available: {e}")  # TODO: Convert f-string to logging format
+        logger.warning(
+            f"Universal services not available: {e}"
+        )  # TODO: Convert f-string to logging format
 
 
 async def _initialize_critical_services(factory: ModeAwareServiceFactory) -> None:
@@ -352,9 +364,13 @@ async def _initialize_critical_services(factory: ModeAwareServiceFactory) -> Non
         try:
             service = await factory.get_service_optional(service_name)
             if service:
-                logger.info(f"Initialized critical service: {service_name}")  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"Initialized critical service: {service_name}"
+                )  # TODO: Convert f-string to logging format
             else:
-                logger.warning(f"Critical service not available: {service_name}")  # TODO: Convert f-string to logging format
+                logger.warning(
+                    f"Critical service not available: {service_name}"
+                )  # TODO: Convert f-string to logging format
         except Exception as e:
             logger.exception(
                 f"Failed to initialize critical service {service_name}: {e}"

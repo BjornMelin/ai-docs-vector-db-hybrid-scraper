@@ -269,7 +269,6 @@ class Config(BaseSettings):
                 self.performance.max_concurrent_crawls, 50
             )
             # Enterprise mode allows reranking if explicitly enabled
-            pass
 
         return self
 

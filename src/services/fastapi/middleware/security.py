@@ -328,7 +328,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 await self.redis_client.aclose()
                 logger.info("Redis connection closed")
             except Exception as e:
-                logger.warning(f"Error closing Redis connection: {e}")  # TODO: Convert f-string to logging format
+                logger.warning(
+                    f"Error closing Redis connection: {e}"
+                )  # TODO: Convert f-string to logging format
             finally:
                 self.redis_client = None
                 self._redis_healthy = False
@@ -376,7 +378,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             del self._rate_limit_storage[ip]
 
         if expired_ips:
-            logger.debug(f"Cleaned {len(expired_ips)} expired rate limit entries")  # TODO: Convert f-string to logging format
+            logger.debug(
+                f"Cleaned {len(expired_ips)} expired rate limit entries"
+            )  # TODO: Convert f-string to logging format
 
 
 class CSRFProtectionMiddleware(BaseHTTPMiddleware):

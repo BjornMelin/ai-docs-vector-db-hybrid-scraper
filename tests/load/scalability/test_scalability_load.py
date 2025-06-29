@@ -635,7 +635,9 @@ class TestScalabilityLoad:
                     }
                 )
 
-                logger.info(f"Expanded {pool_type} pool: {old_size} -> {pool['size']}")  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"Expanded {pool_type} pool: {old_size} -> {pool['size']}"
+                )  # TODO: Convert f-string to logging format
 
             def get_database_stats(self) -> dict:
                 """Get database scaling statistics."""

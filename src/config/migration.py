@@ -23,7 +23,7 @@ class ConfigMigrator:
     """Handles migration from legacy configuration to modern configuration."""
 
     def __init__(self):
-        self._mapping_cache: Dict[str, Any] | None = None
+        self._mapping_cache: dict[str, Any] | None = None
 
     def migrate_from_legacy(self, legacy_config: Any) -> ModernConfig:
         """Migrate from legacy configuration to modern configuration.
@@ -48,7 +48,7 @@ class ConfigMigrator:
             logger.warning(f"Migration failed, using defaults: {e}")
             return ModernConfig()
 
-    def _extract_legacy_data(self, legacy_config: Any) -> Dict[str, Any]:
+    def _extract_legacy_data(self, legacy_config: Any) -> dict[str, Any]:
         """Extract data from legacy configuration object.
 
         Args:
@@ -75,7 +75,7 @@ class ConfigMigrator:
 
         return data
 
-    def _transform_legacy_data(self, legacy_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _transform_legacy_data(self, legacy_data: dict[str, Any]) -> dict[str, Any]:
         """Transform legacy data to modern configuration format.
 
         Args:
@@ -103,7 +103,7 @@ class ConfigMigrator:
 
         return modern_data
 
-    def _get_field_mapping(self) -> Dict[str, str]:
+    def _get_field_mapping(self) -> dict[str, str]:
         """Get mapping from legacy field names to modern field names.
 
         Returns:
@@ -165,7 +165,7 @@ class ConfigMigrator:
 
         return self._mapping_cache
 
-    def _set_nested_value(self, data: Dict[str, Any], path: str, value: Any) -> None:
+    def _set_nested_value(self, data: dict[str, Any], path: str, value: Any) -> None:
         """Set a nested value in a dictionary using dot notation.
 
         Args:
@@ -184,7 +184,7 @@ class ConfigMigrator:
         current[keys[-1]] = value
 
     def _apply_special_transformations(
-        self, legacy_data: Dict[str, Any], modern_data: Dict[str, Any]
+        self, legacy_data: dict[str, Any], modern_data: dict[str, Any]
     ) -> None:
         """Apply special transformations that require custom logic.
 
@@ -260,7 +260,7 @@ class ConfigMigrator:
             if rerank_config:
                 modern_data["reranking"] = rerank_config
 
-    def _apply_migration_defaults(self, modern_data: Dict[str, Any]) -> None:
+    def _apply_migration_defaults(self, modern_data: dict[str, Any]) -> None:
         """Apply default values for migration.
 
         Args:
@@ -297,7 +297,7 @@ def migrate_legacy_config(legacy_config: Any) -> ModernConfig:
 
 def create_migration_compatibility_wrapper(
     modern_config: ModernConfig,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create a compatibility wrapper for legacy code.
 
     Args:

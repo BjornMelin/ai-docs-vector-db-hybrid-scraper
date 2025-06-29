@@ -39,7 +39,9 @@ class ExampleService:
         """Start the service with initial configuration."""
         self.config_version = config.version
         self.is_running = True
-        logger.info(f"{self.name} started with config version: {self.config_version}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"{self.name} started with config version: {self.config_version}"
+        )  # TODO: Convert f-string to logging format
 
     def update_config(self, old_config: Config, new_config: Config) -> bool:
         """Update service configuration."""
@@ -50,14 +52,18 @@ class ExampleService:
 
             # Simulate configuration validation
             if not new_config.app_name:
-                logger.error(f"{self.name} config validation failed: missing app_name")  # TODO: Convert f-string to logging format
+                logger.error(
+                    f"{self.name} config validation failed: missing app_name"
+                )  # TODO: Convert f-string to logging format
                 return False
 
             # Simulate configuration update with some processing time
             time.sleep(0.1)
 
             self.config_version = new_config.version
-            logger.info(f"{self.name} configuration updated successfully")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"{self.name} configuration updated successfully"
+            )  # TODO: Convert f-string to logging format
         except Exception:
             logger.exception(f"{self.name} configuration update failed")
             return False
@@ -118,13 +124,23 @@ async def demonstrate_config_reload():
     )
 
     logger.info("Manual reload completed:")
-    logger.info(f"  - Operation ID: {operation.operation_id}")  # TODO: Convert f-string to logging format
-    logger.info(f"  - Success: {operation.success}")  # TODO: Convert f-string to logging format
-    logger.info(f"  - Duration: {operation.total_duration_ms:.1f}ms")  # TODO: Convert f-string to logging format
-    logger.info(f"  - Services notified: {len(operation.services_notified)}")  # TODO: Convert f-string to logging format
+    logger.info(
+        f"  - Operation ID: {operation.operation_id}"
+    )  # TODO: Convert f-string to logging format
+    logger.info(
+        f"  - Success: {operation.success}"
+    )  # TODO: Convert f-string to logging format
+    logger.info(
+        f"  - Duration: {operation.total_duration_ms:.1f}ms"
+    )  # TODO: Convert f-string to logging format
+    logger.info(
+        f"  - Services notified: {len(operation.services_notified)}"
+    )  # TODO: Convert f-string to logging format
 
     if operation.validation_warnings:
-        logger.warning(f"  - Validation warnings: {operation.validation_warnings}")  # TODO: Convert f-string to logging format
+        logger.warning(
+            f"  - Validation warnings: {operation.validation_warnings}"
+        )  # TODO: Convert f-string to logging format
 
     # Demonstrate file watching
     logger.info("\n--- Demonstrating File Watching ---")
@@ -165,7 +181,9 @@ async def demonstrate_config_reload():
 
         # Check reload history
         history = file_reloader.get_reload_history(limit=5)
-        logger.info(f"File reload operations: {len(history)}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"File reload operations: {len(history)}"
+        )  # TODO: Convert f-string to logging format
         for op in history:
             logger.info(
                 f"  - {op.operation_id}: {op.status.value} ({op.trigger.value})"
@@ -194,10 +212,18 @@ async def demonstrate_config_reload():
     rollback_operation = await reloader.rollback_config()
 
     logger.info("Rollback completed:")
-    logger.info(f"  - Operation ID: {rollback_operation.operation_id}")  # TODO: Convert f-string to logging format
-    logger.info(f"  - Success: {rollback_operation.success}")  # TODO: Convert f-string to logging format
-    logger.info(f"  - Duration: {rollback_operation.total_duration_ms:.1f}ms")  # TODO: Convert f-string to logging format
-    logger.info(f"  - Status: {rollback_operation.status.value}")  # TODO: Convert f-string to logging format
+    logger.info(
+        f"  - Operation ID: {rollback_operation.operation_id}"
+    )  # TODO: Convert f-string to logging format
+    logger.info(
+        f"  - Success: {rollback_operation.success}"
+    )  # TODO: Convert f-string to logging format
+    logger.info(
+        f"  - Duration: {rollback_operation.total_duration_ms:.1f}ms"
+    )  # TODO: Convert f-string to logging format
+    logger.info(
+        f"  - Status: {rollback_operation.status.value}"
+    )  # TODO: Convert f-string to logging format
 
     # Show reload statistics
     logger.info("\n--- Configuration Reload Statistics ---")
@@ -235,9 +261,15 @@ async def demonstrate_api_integration():
     try:
         response = await reload_configuration(reload_request)
         logger.info("API reload response:")
-        logger.info(f"  - Operation ID: {response.operation_id}")  # TODO: Convert f-string to logging format
-        logger.info(f"  - Success: {response.success}")  # TODO: Convert f-string to logging format
-        logger.info(f"  - Duration: {response.total_duration_ms:.1f}ms")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  - Operation ID: {response.operation_id}"
+        )  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  - Success: {response.success}"
+        )  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  - Duration: {response.total_duration_ms:.1f}ms"
+        )  # TODO: Convert f-string to logging format
 
     except Exception:
         logger.exception("API reload failed")
@@ -246,8 +278,12 @@ async def demonstrate_api_integration():
     try:
         stats_response = await get_reload_stats()
         logger.info("API stats response:")
-        logger.info(f"  - Total operations: {stats_response.total_operations}")  # TODO: Convert f-string to logging format
-        logger.info(f"  - Success rate: {stats_response.success_rate:.2%}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  - Total operations: {stats_response.total_operations}"
+        )  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  - Success rate: {stats_response.success_rate:.2%}"
+        )  # TODO: Convert f-string to logging format
 
     except Exception:
         logger.exception("API stats failed")
@@ -256,7 +292,9 @@ async def demonstrate_api_integration():
     try:
         status_response = await get_config_status()
         logger.info("API status response:")
-        logger.info(f"  - Config hash: {status_response.get('current_config_hash')}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  - Config hash: {status_response.get('current_config_hash')}"
+        )  # TODO: Convert f-string to logging format
         logger.info(
             f"  - File watching: {status_response.get('file_watching_enabled')}"
         )

@@ -1,11 +1,10 @@
 """HTTP client provider."""
 
 import logging
+from typing import Any, Dict
 
 import aiohttp
 
-from typing import Dict
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -41,12 +40,14 @@ class HTTPClientProvider:
             self._healthy = True
             return True
         except Exception as e:
-            logger.warning(f"HTTP client health check failed: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"HTTP client health check failed: {e}"
+            )  # TODO: Convert f-string to logging format
             self._healthy = False
             return False
 
     async def get(
-        self, url: str, headers: Dict[str, str] | None = None, **kwargs
+        self, url: str, headers: dict[str, str] | None = None, **kwargs
     ) -> aiohttp.ClientResponse:
         """Make GET request.
 
@@ -70,8 +71,8 @@ class HTTPClientProvider:
         self,
         url: str,
         data: Any | None = None,
-        json: Dict[str, Any] | None = None,
-        headers: Dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
         **kwargs,
     ) -> aiohttp.ClientResponse:
         """Make POST request.
@@ -100,8 +101,8 @@ class HTTPClientProvider:
         self,
         url: str,
         data: Any | None = None,
-        json: Dict[str, Any] | None = None,
-        headers: Dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
         **kwargs,
     ) -> aiohttp.ClientResponse:
         """Make PUT request.
@@ -127,7 +128,7 @@ class HTTPClientProvider:
         )
 
     async def delete(
-        self, url: str, headers: Dict[str, str] | None = None, **kwargs
+        self, url: str, headers: dict[str, str] | None = None, **kwargs
     ) -> aiohttp.ClientResponse:
         """Make DELETE request.
 
@@ -148,7 +149,7 @@ class HTTPClientProvider:
         return await self.client.delete(url, headers=headers, **kwargs)
 
     async def request(
-        self, method: str, url: str, headers: Dict[str, str] | None = None, **kwargs
+        self, method: str, url: str, headers: dict[str, str] | None = None, **kwargs
     ) -> aiohttp.ClientResponse:
         """Make generic HTTP request.
 

@@ -54,7 +54,9 @@ class CrawlingManager:
             logger.info("CrawlingManager service initialized with 5-tier automation")
 
         except Exception as e:
-            logger.error(f"Failed to initialize CrawlingManager: {e}")  # TODO: Convert f-string to logging format
+            logger.error(
+                f"Failed to initialize CrawlingManager: {e}"
+            )  # TODO: Convert f-string to logging format
             raise CrawlServiceError(
                 f"Failed to initialize crawling manager: {e}"
             ) from e
@@ -98,7 +100,9 @@ class CrawlingManager:
         try:
             return await self._core_manager.scrape_url(url, preferred_provider)
         except Exception as e:
-            logger.error(f"URL scraping failed for {url}: {e}")  # TODO: Convert f-string to logging format
+            logger.error(
+                f"URL scraping failed for {url}: {e}"
+            )  # TODO: Convert f-string to logging format
             return {
                 "success": False,
                 "error": f"Scraping failed: {e}",
@@ -138,7 +142,9 @@ class CrawlingManager:
                 url, max_pages, preferred_provider
             )
         except Exception as e:
-            logger.error(f"Site crawling failed for {url}: {e}")  # TODO: Convert f-string to logging format
+            logger.error(
+                f"Site crawling failed for {url}: {e}"
+            )  # TODO: Convert f-string to logging format
             return {
                 "success": False,
                 "error": f"Site crawl failed: {e}",
@@ -165,7 +171,9 @@ class CrawlingManager:
         try:
             return await self._core_manager.get_recommended_tool(url)
         except Exception as e:
-            logger.warning(f"Tool recommendation failed for {url}: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Tool recommendation failed for {url}: {e}"
+            )  # TODO: Convert f-string to logging format
             return "crawl4ai"  # Default fallback
 
     async def map_url(
@@ -191,7 +199,9 @@ class CrawlingManager:
         try:
             return await self._core_manager.map_url(url, include_subdomains)
         except Exception as e:
-            logger.warning(f"URL mapping failed for {url}: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"URL mapping failed for {url}: {e}"
+            )  # TODO: Convert f-string to logging format
             return {
                 "success": False,
                 "error": f"URL mapping failed: {e}",
@@ -214,7 +224,9 @@ class CrawlingManager:
         try:
             return self._core_manager.get_metrics()
         except Exception as e:
-            logger.warning(f"Failed to get crawling metrics: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Failed to get crawling metrics: {e}"
+            )  # TODO: Convert f-string to logging format
             return {}
 
     def get_provider_info(self) -> dict[str, dict]:
@@ -232,7 +244,9 @@ class CrawlingManager:
         try:
             return self._core_manager.get_provider_info()
         except Exception as e:
-            logger.warning(f"Failed to get provider info: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Failed to get provider info: {e}"
+            )  # TODO: Convert f-string to logging format
             return {}
 
     def get_tier_metrics(self) -> dict[str, dict]:
@@ -250,7 +264,9 @@ class CrawlingManager:
         try:
             return self._core_manager.get_tier_metrics()
         except Exception as e:
-            logger.warning(f"Failed to get tier metrics: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Failed to get tier metrics: {e}"
+            )  # TODO: Convert f-string to logging format
             return {}
 
     async def get_status(self) -> dict[str, Any]:
@@ -272,7 +288,9 @@ class CrawlingManager:
                 status["metrics"] = self.get_metrics()
                 status["tier_metrics"] = self.get_tier_metrics()
             except Exception as e:
-                logger.warning(f"Failed to get crawling status: {e}")  # TODO: Convert f-string to logging format
+                logger.warning(
+                    f"Failed to get crawling status: {e}"
+                )  # TODO: Convert f-string to logging format
                 status["error"] = str(e)
 
         return status
@@ -340,7 +358,9 @@ class CrawlingManager:
             return extracted
 
         except Exception as e:
-            logger.error(f"Content extraction failed for {url}: {e}")  # TODO: Convert f-string to logging format
+            logger.error(
+                f"Content extraction failed for {url}: {e}"
+            )  # TODO: Convert f-string to logging format
             return {
                 "success": False,
                 "error": f"Content extraction failed: {e}",
@@ -399,7 +419,9 @@ class CrawlingManager:
             return processed_results
 
         except Exception as e:
-            logger.error(f"Bulk scraping failed: {e}")  # TODO: Convert f-string to logging format
+            logger.error(
+                f"Bulk scraping failed: {e}"
+            )  # TODO: Convert f-string to logging format
             # Return error results for all URLs
             return [
                 {

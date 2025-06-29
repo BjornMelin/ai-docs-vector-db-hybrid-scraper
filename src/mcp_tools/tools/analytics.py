@@ -70,7 +70,9 @@ def register_tools(mcp, client_manager: ClientManager):
                     await ctx.debug(f"Collected analytics for collection {collection}")
                 except Exception as e:
                     await ctx.warning(f"Failed to get analytics for {collection}: {e}")
-                    logger.warning(f"Failed to get analytics for {collection}: {e}")  # TODO: Convert f-string to logging format
+                    logger.warning(
+                        f"Failed to get analytics for {collection}: {e}"
+                    )  # TODO: Convert f-string to logging format
 
             # Get cache metrics
             if request.include_performance:

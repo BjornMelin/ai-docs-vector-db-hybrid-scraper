@@ -84,7 +84,9 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             )
 
         except Exception as e:
-            logger.warning(f"Failed to initialize request metrics: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Failed to initialize request metrics: {e}"
+            )  # TODO: Convert f-string to logging format
             self.meter = None
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
@@ -208,7 +210,9 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
                 span.set_attribute("http.request.content_type", content_type)
 
         except Exception as e:
-            logger.debug(f"Failed to add AI context: {e}")  # TODO: Convert f-string to logging format
+            logger.debug(
+                f"Failed to add AI context: {e}"
+            )  # TODO: Convert f-string to logging format
 
     def _record_request_metrics(
         self, request: Request, response: Response, start_time: float
@@ -245,7 +249,9 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             self.request_counter.add(1, attributes)
 
         except Exception as e:
-            logger.warning(f"Failed to record request metrics: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Failed to record request metrics: {e}"
+            )  # TODO: Convert f-string to logging format
 
     def _record_error_metrics(
         self, request: Request, error: Exception, start_time: float
@@ -273,4 +279,6 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             self.request_counter.add(1, attributes)
 
         except Exception as e:
-            logger.warning(f"Failed to record error metrics: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Failed to record error metrics: {e}"
+            )  # TODO: Convert f-string to logging format

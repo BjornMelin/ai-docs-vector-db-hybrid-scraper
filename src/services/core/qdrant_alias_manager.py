@@ -108,7 +108,9 @@ class QdrantAliasManager(BaseService):
             # Check if alias exists
             if await self.alias_exists(alias_name):
                 if not force:
-                    logger.warning(f"Alias {alias_name} already exists")  # TODO: Convert f-string to logging format
+                    logger.warning(
+                        f"Alias {alias_name} already exists"
+                    )  # TODO: Convert f-string to logging format
                     return False
 
                 # Delete existing alias
@@ -126,7 +128,9 @@ class QdrantAliasManager(BaseService):
                 ]
             )
 
-            logger.info(f"Created alias {alias_name} -> {collection_name}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Created alias {alias_name} -> {collection_name}"
+            )  # TODO: Convert f-string to logging format
 
         except Exception as e:
             logger.exception("Failed to create alias")
@@ -227,7 +231,9 @@ class QdrantAliasManager(BaseService):
                 ]
             )
 
-            logger.info(f"Deleted alias {alias_name}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Deleted alias {alias_name}"
+            )  # TODO: Convert f-string to logging format
 
         except Exception:
             logger.exception("Failed to delete alias")
@@ -302,7 +308,9 @@ class QdrantAliasManager(BaseService):
         # Check if any alias points to this collection
         aliases = await self.list_aliases()
         if collection_name in aliases.values():
-            logger.warning(f"Collection {collection_name} still has aliases")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Collection {collection_name} still has aliases"
+            )  # TODO: Convert f-string to logging format
             return
 
         # Schedule deletion after grace period
@@ -376,7 +384,9 @@ class QdrantAliasManager(BaseService):
                         field_type=field_schema.data_type,
                     )
 
-            logger.info(f"Cloned collection schema from {source} to {target}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Cloned collection schema from {source} to {target}"
+            )  # TODO: Convert f-string to logging format
 
         except Exception as e:
             logger.exception("Failed to clone collection schema")
@@ -443,14 +453,18 @@ class QdrantAliasManager(BaseService):
                 )
 
                 total_copied += len(records)
-                logger.debug(f"Copied {total_copied} points from {source} to {target}")  # TODO: Convert f-string to logging format
+                logger.debug(
+                    f"Copied {total_copied} points from {source} to {target}"
+                )  # TODO: Convert f-string to logging format
 
                 # Call progress callback if provided
                 if progress_callback:
                     try:
                         await progress_callback(total_copied, total_points)
                     except Exception as e:
-                        logger.warning(f"Progress callback failed: {e}")  # TODO: Convert f-string to logging format
+                        logger.warning(
+                            f"Progress callback failed: {e}"
+                        )  # TODO: Convert f-string to logging format
 
                 # Check limit
                 if limit and total_copied >= limit:
@@ -461,7 +475,9 @@ class QdrantAliasManager(BaseService):
                 if offset is None:
                     break
 
-            logger.info(f"Copied {total_copied} points from {source} to {target}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Copied {total_copied} points from {source} to {target}"
+            )  # TODO: Convert f-string to logging format
 
         except Exception as e:
             logger.exception("Failed to copy collection data")

@@ -52,8 +52,7 @@ class TaskQueueManager(BaseService):
         database = self.config.task_queue.redis_database
 
         # Handle different URL formats
-        if url.startswith("redis://"):
-            url = url[8:]  # Remove redis:// prefix
+        url = url.removeprefix("redis://")  # Remove redis:// prefix
 
         # Extract host and port
         if "@" in url:
@@ -141,7 +140,9 @@ class TaskQueueManager(BaseService):
                     )  # Just tracking enqueue for now
 
                 return job.job_id
-            logger.error(f"Failed to enqueue task {task_name}")  # TODO: Convert f-string to logging format
+            logger.error(
+                f"Failed to enqueue task {task_name}"
+            )  # TODO: Convert f-string to logging format
 
             # Record failure metrics
             if self.metrics_registry:
@@ -207,7 +208,9 @@ class TaskQueueManager(BaseService):
             job = await self._redis_pool.job(job_id)
             if job and job.status == "deferred":
                 await job.abort()
-                logger.info(f"Cancelled job {job_id}")  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"Cancelled job {job_id}"
+                )  # TODO: Convert f-string to logging format
                 return True
             return False
 

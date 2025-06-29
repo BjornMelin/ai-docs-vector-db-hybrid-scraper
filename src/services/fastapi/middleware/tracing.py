@@ -29,10 +29,10 @@ logger = logging.getLogger(__name__)
 
 def _safe_escape_for_logging(value: str | None) -> str | None:
     """Safely escape user input for logging to prevent XSS in log viewers.
-    
+
     Args:
         value: String value that may contain user input
-        
+
     Returns:
         HTML-escaped string or None if input was None
     """
@@ -172,7 +172,9 @@ class TracingMiddleware(BaseHTTPMiddleware):
             "correlation_id": correlation_id,
             "method": request.method,
             "path": request.url.path,
-            "query_params": _safe_escape_for_logging(str(request.query_params)) if request.query_params else None,
+            "query_params": _safe_escape_for_logging(str(request.query_params))
+            if request.query_params
+            else None,
             "client_ip": self._get_client_ip(request),
             "user_agent": _safe_escape_for_logging(request.headers.get("user-agent")),
             "content_type": request.headers.get("content-type"),

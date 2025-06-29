@@ -4,7 +4,6 @@ This module demonstrates modern property-based testing for AI/ML systems using
 Hypothesis, focusing on embedding operations and vector similarity.
 """
 
-
 import pytest
 from hypothesis import HealthCheck, assume, given, settings, strategies as st
 
@@ -53,7 +52,9 @@ class TestEmbeddingProperties:
         assert abs(sim1 - sim2) < 1e-10, "Cosine similarity must be symmetric"
 
         # Property: Similarity is bounded (with floating point tolerance)
-        assert -1.0001 <= sim1 <= 1.0001, f"Similarity {sim1} outside valid range [-1, 1]"
+        assert -1.0001 <= sim1 <= 1.0001, (
+            f"Similarity {sim1} outside valid range [-1, 1]"
+        )
 
         # Property: Self-similarity is 1 (for normalized vectors)
         self_sim = ModernAITestingUtils.calculate_cosine_similarity(emb1, emb1)

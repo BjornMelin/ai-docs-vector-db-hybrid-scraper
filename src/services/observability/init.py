@@ -7,51 +7,53 @@ service architecture while following OpenTelemetry best practices.
 import logging
 from typing import TYPE_CHECKING, Any
 
+
 # Optional OpenTelemetry imports - handled at runtime
 try:
+    from opentelemetry import metrics, trace
     from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
-    from opentelemetry import metrics, trace
+
     OPENTELEMETRY_AVAILABLE = True
 except ImportError:
     # Mock classes for when OpenTelemetry is not available
     class OTLPSpanExporter:
         def __init__(self, *args, **kwargs):
             pass
-    
+
     class MeterProvider:
         def __init__(self, *args, **kwargs):
             pass
-    
+
     class PeriodicExportingMetricReader:
         def __init__(self, *args, **kwargs):
             pass
-    
+
     class Resource:
         @staticmethod
         def create(*args, **kwargs):
             return None
-    
+
     class TracerProvider:
         def __init__(self, *args, **kwargs):
             pass
-    
+
     class BatchSpanProcessor:
         def __init__(self, *args, **kwargs):
             pass
-    
+
     class MockMetrics:
         def set_meter_provider(self, *args, **kwargs):
             pass
-    
+
     class MockTrace:
         def set_tracer_provider(self, *args, **kwargs):
             pass
-    
+
     metrics = MockMetrics()
     trace = MockTrace()
     OPENTELEMETRY_AVAILABLE = False
@@ -61,21 +63,23 @@ try:
     from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
         OTLPMetricExporter,
     )
-    from opentelemetry.sdk.trace.export import ConsoleSpanExporter
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    from opentelemetry.sdk.trace.export import ConsoleSpanExporter
 except ImportError:
+
     class OTLPMetricExporter:
         def __init__(self, *args, **kwargs):
             pass
-    
+
     class ConsoleSpanExporter:
         def __init__(self, *args, **kwargs):
             pass
-    
+
     class FastAPIInstrumentor:
         @staticmethod
         def instrument_app(*args, **kwargs):
             pass
+
 
 # Additional instrumentation imports - also optional
 try:
@@ -83,20 +87,22 @@ try:
     from opentelemetry.instrumentation.redis import RedisInstrumentor
     from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 except ImportError:
+
     class HTTPXClientInstrumentor:
         @staticmethod
         def instrument(*args, **kwargs):
             pass
-    
+
     class RedisInstrumentor:
         @staticmethod
         def instrument(*args, **kwargs):
             pass
-    
+
     class SQLAlchemyInstrumentor:
         @staticmethod
         def instrument(*args, **kwargs):
             pass
+
 
 if TYPE_CHECKING:
     from .config import ObservabilityConfig

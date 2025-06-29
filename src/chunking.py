@@ -186,7 +186,9 @@ class DocumentChunker:
                 # Create parser with the language
                 parser = Parser(language)
                 self.parsers[lang] = parser
-                self.logger.debug(f"Successfully loaded parser for '{lang}'")  # TODO: Convert f-string to logging format
+                self.logger.debug(
+                    f"Successfully loaded parser for '{lang}'"
+                )  # TODO: Convert f-string to logging format
 
             except Exception as e:
                 self.logger.warning(
@@ -901,7 +903,7 @@ class DocumentChunker:
                 return self._split_class_unit(
                     content, global_start, root_node, language
                 )
-            elif unit_type == "function":
+            if unit_type == "function":
                 return self._split_function_unit(
                     content, global_start, root_node, language
                 )
@@ -1017,24 +1019,23 @@ class DocumentChunker:
                     sub_chunk.metadata = {}
                 sub_chunk.metadata["parent_class"] = True
             return sub_chunks
-        else:
-            # Create single method chunk
-            return [
-                Chunk(
-                    content=method_content,
-                    start_pos=global_start + method["start_pos"],
-                    end_pos=global_start + method["end_pos"],
-                    chunk_index=0,
-                    chunk_type="code",
-                    language=language,
-                    has_code=True,
-                    metadata={
-                        "node_type": "method",
-                        "method_name": method.get("name", ""),
-                        "parent_type": "class",
-                    },
-                )
-            ]
+        # Create single method chunk
+        return [
+            Chunk(
+                content=method_content,
+                start_pos=global_start + method["start_pos"],
+                end_pos=global_start + method["end_pos"],
+                chunk_index=0,
+                chunk_type="code",
+                language=language,
+                has_code=True,
+                metadata={
+                    "node_type": "method",
+                    "method_name": method.get("name", ""),
+                    "parent_type": "class",
+                },
+            )
+        ]
 
     def _extract_class_methods(
         self, node: Any, content: str, language: str

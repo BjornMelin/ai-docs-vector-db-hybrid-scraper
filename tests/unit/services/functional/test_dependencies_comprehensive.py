@@ -68,7 +68,9 @@ class TestDependencyLifecycle:
         mock_config.cache.local_max_size = 1000
         mock_config.cache.local_max_memory_mb = 100
 
-        with patch("src.services.functional.dependencies.CacheManager") as MockCacheManager:
+        with patch(
+            "src.services.functional.dependencies.CacheManager"
+        ) as MockCacheManager:
             mock_instance = AsyncMock()
             MockCacheManager.return_value = mock_instance
 
@@ -76,7 +78,7 @@ class TestDependencyLifecycle:
             cache_generator = get_cache_client(mock_config)
             cache_client = await cache_generator.__anext__()
             assert cache_client == mock_instance
-            
+
             # Complete the generator to trigger cleanup
             try:
                 await cache_generator.__anext__()
@@ -112,7 +114,7 @@ class TestDependencyLifecycle:
             embedding_generator = get_embedding_client(mock_config, mock_client_manager)
             embedding_client = await embedding_generator.__anext__()
             assert embedding_client == mock_instance
-            
+
             # Complete the generator to trigger cleanup
             try:
                 await embedding_generator.__anext__()
@@ -139,7 +141,9 @@ class TestDependencyLifecycle:
         mock_config.vector_db = MagicMock()
         mock_config.vector_db.provider = "qdrant"
 
-        with patch("src.services.functional.dependencies.QdrantService") as MockQdrantService:
+        with patch(
+            "src.services.functional.dependencies.QdrantService"
+        ) as MockQdrantService:
             mock_instance = AsyncMock()
             MockQdrantService.return_value = mock_instance
 
@@ -147,7 +151,7 @@ class TestDependencyLifecycle:
             vector_db_generator = get_vector_db_client(mock_config)
             vector_db_client = await vector_db_generator.__anext__()
             assert vector_db_client == mock_instance
-            
+
             # Complete the generator to trigger cleanup
             try:
                 await vector_db_generator.__anext__()
@@ -170,7 +174,9 @@ class TestDependencyLifecycle:
         mock_config.crawling.timeout = 30
         mock_rate_limiter = MagicMock()
 
-        with patch("src.services.functional.dependencies.CrawlManager") as MockCrawlManager:
+        with patch(
+            "src.services.functional.dependencies.CrawlManager"
+        ) as MockCrawlManager:
             mock_instance = AsyncMock()
             MockCrawlManager.return_value = mock_instance
 
@@ -178,7 +184,7 @@ class TestDependencyLifecycle:
             crawling_generator = get_crawling_client(mock_config, mock_rate_limiter)
             crawling_client = await crawling_generator.__anext__()
             assert crawling_client == mock_instance
-            
+
             # Complete the generator to trigger cleanup
             try:
                 await crawling_generator.__anext__()

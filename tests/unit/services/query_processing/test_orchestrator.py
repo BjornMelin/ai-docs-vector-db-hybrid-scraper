@@ -122,7 +122,10 @@ class TestAdvancedSearchOrchestrator:
 
     def test_initialization(self, orchestrator):
         """Test orchestrator initialization."""
-        assert hasattr(orchestrator, "_initialized") is False or orchestrator._initialized is False
+        assert (
+            hasattr(orchestrator, "_initialized") is False
+            or orchestrator._initialized is False
+        )
         assert orchestrator.enable_performance_optimization is True
         assert orchestrator.cache_size == 100
         # Check that services are available via properties
@@ -239,9 +242,7 @@ class TestAdvancedSearchOrchestrator:
         assert response.processing_time_ms > 0
         # Federation should be attempted
 
-    async def test_rag_enabled(
-        self, initialized_orchestrator, advanced_sample_request
-    ):
+    async def test_rag_enabled(self, initialized_orchestrator, advanced_sample_request):
         """Test search with RAG answer generation enabled."""
         advanced_sample_request.enable_rag = True
 
@@ -325,7 +326,9 @@ class TestAdvancedSearchOrchestrator:
         assert isinstance(response2, AdvancedSearchResult)
         assert response2.cache_hit is True
 
-    async def test_stats_tracking(self, initialized_orchestrator, advanced_sample_request):
+    async def test_stats_tracking(
+        self, initialized_orchestrator, advanced_sample_request
+    ):
         """Test statistics tracking."""
         # Perform a search
         response = await initialized_orchestrator.search(advanced_sample_request)
@@ -433,6 +436,6 @@ class TestAdvancedSearchOrchestrator:
         """Test cache clearing functionality."""
         # Clear cache should work without error
         initialized_orchestrator.clear_cache()
-        
+
         # Cache should be empty after clearing
         assert len(initialized_orchestrator.cache) == 0

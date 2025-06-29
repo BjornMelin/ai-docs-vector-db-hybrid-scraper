@@ -9,15 +9,13 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict
 
 from src.config import Config
 from src.services.cache.modern import ModernCacheManager
 from src.services.circuit_breaker.modern import ModernCircuitBreakerManager
 from src.services.middleware.rate_limiting import ModernRateLimiter
 
-
-from typing import Dict
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -68,14 +66,14 @@ class LibraryMigrationManager:
         self.redis_url = redis_url
 
         # Performance tracking
-        self.performance_metrics: Dict[str, Any] = {
+        self.performance_metrics: dict[str, Any] = {
             "circuit_breaker": {"legacy": {}, "modern": {}},
             "cache": {"legacy": {}, "modern": {}},
             "rate_limiting": {"legacy": {}, "modern": {}},
         }
 
         # Migration state
-        self.migration_state: Dict[str, bool] = {
+        self.migration_state: dict[str, bool] = {
             "circuit_breaker_migrated": False,
             "cache_migrated": False,
             "rate_limiting_migrated": False,
@@ -85,7 +83,7 @@ class LibraryMigrationManager:
         self._modern_circuit_breaker: ModernCircuitBreakerManager | None = None
         self._modern_cache: ModernCacheManager | None = None
         self._modern_rate_limiter: ModernRateLimiter | None = None
-        self._legacy_services: Dict[str, Any] = {}
+        self._legacy_services: dict[str, Any] = {}
 
         logger.info(
             f"LibraryMigrationManager initialized with mode: {self.migration_config.mode.value}"
@@ -151,7 +149,9 @@ class LibraryMigrationManager:
             logger.info("Legacy services initialized successfully")
 
         except Exception as e:
-            logger.warning(f"Failed to initialize legacy services: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Failed to initialize legacy services: {e}"
+            )  # TODO: Convert f-string to logging format
             # Continue without legacy services if they fail
 
     async def _setup_monitoring(self) -> None:
@@ -209,15 +209,15 @@ class LibraryMigrationManager:
         if mode == MigrationMode.MODERN_ONLY or self.migration_state["cache_migrated"]:
             return self._modern_cache
 
-        elif mode == MigrationMode.LEGACY_ONLY:
+        if mode == MigrationMode.LEGACY_ONLY:
             return self._legacy_services.get("cache")
 
-        elif mode == MigrationMode.PARALLEL:
+        if mode == MigrationMode.PARALLEL:
             # Return modern but track both
             await self._track_parallel_performance("cache", "default")
             return self._modern_cache
 
-        elif mode == MigrationMode.GRADUAL:
+        if mode == MigrationMode.GRADUAL:
             # Gradual migration with feature flags
             use_modern = await self._should_use_modern("cache")
             if use_modern and self._modern_cache:
@@ -255,7 +255,9 @@ class LibraryMigrationManager:
         # Use modern if error rate is acceptable
         modern_error_rate = modern_metrics.get("error_rate", 0)
         if modern_error_rate > self.migration_config.rollback_threshold:
-            logger.warning(f"High error rate for modern {service}: {modern_error_rate}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"High error rate for modern {service}: {modern_error_rate}"
+            )  # TODO: Convert f-string to logging format
             return False
 
         # Use modern if performance is comparable or better
@@ -276,7 +278,6 @@ class LibraryMigrationManager:
         """
         # This would run both modern and legacy implementations
         # and compare their performance
-        pass
 
     async def _monitoring_loop(self) -> None:
         """Background monitoring loop for performance tracking."""
@@ -318,7 +319,7 @@ class LibraryMigrationManager:
                 )
                 self.migration_state[f"{service}_migrated"] = False
 
-    async def get_migration_status(self) -> Dict[str, Any]:
+    async def get_migration_status(self) -> dict[str, Any]:
         """Get current migration status and metrics.
 
         Returns:
@@ -353,9 +354,10 @@ class LibraryMigrationManager:
                     f"Forced migration of {service} to {'modern' if to_modern else 'legacy'}"
                 )
                 return True
-            else:
-                logger.error(f"Unknown service for migration: {service}")  # TODO: Convert f-string to logging format
-                return False
+            logger.error(
+                f"Unknown service for migration: {service}"
+            )  # TODO: Convert f-string to logging format
+            return False
         except Exception as e:
             logger.exception(f"Error forcing migration of {service}: {e}")
             return False

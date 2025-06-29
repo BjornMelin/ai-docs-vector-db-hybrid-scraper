@@ -405,7 +405,9 @@ class SecureConfigManager:
             self._encryption_keys = [fernet_key]
             self._current_key_version = 1
 
-            logger.info(f"Loaded {len(self._encryption_keys)} encryption keys")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Loaded {len(self._encryption_keys)} encryption keys"
+            )  # TODO: Convert f-string to logging format
 
         except Exception:
             logger.exception("Failed to load encryption keys")
@@ -605,7 +607,9 @@ class SecureConfigManager:
                 checksum_before,
             )
 
-            logger.debug(f"Configuration encrypted successfully: {config_path}")  # TODO: Convert f-string to logging format
+            logger.debug(
+                f"Configuration encrypted successfully: {config_path}"
+            )  # TODO: Convert f-string to logging format
 
         except Exception as e:
             logger.exception(f"Failed to encrypt configuration {config_path}")
@@ -651,7 +655,9 @@ class SecureConfigManager:
             # Check if configuration file exists
             config_file = self.config_dir / f"{validated_path}.enc"
             if not config_file.exists():
-                logger.warning(f"Configuration file not found: {config_path}")  # TODO: Convert f-string to logging format
+                logger.warning(
+                    f"Configuration file not found: {config_path}"
+                )  # TODO: Convert f-string to logging format
                 return None
 
             # Load encrypted configuration
@@ -688,7 +694,9 @@ class SecureConfigManager:
                 config_item.checksum,
             )
 
-            logger.debug(f"Configuration decrypted successfully: {config_path}")  # TODO: Convert f-string to logging format
+            logger.debug(
+                f"Configuration decrypted successfully: {config_path}"
+            )  # TODO: Convert f-string to logging format
 
         except Exception as e:
             logger.exception(f"Failed to decrypt configuration {config_path}")
@@ -805,7 +813,9 @@ class SecureConfigManager:
                     logger.exception(f"Failed to validate configuration {path}")
                     results[path] = False
 
-            logger.info(f"Configuration integrity validation completed: {results}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Configuration integrity validation completed: {results}"
+            )  # TODO: Convert f-string to logging format
 
         except Exception:
             logger.exception("Configuration integrity validation failed")
@@ -869,7 +879,9 @@ class SecureConfigManager:
                 True,
             )
 
-            logger.info(f"Configuration backup created successfully: {backup_path}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Configuration backup created successfully: {backup_path}"
+            )  # TODO: Convert f-string to logging format
 
         except Exception as e:
             logger.exception("Configuration backup failed")

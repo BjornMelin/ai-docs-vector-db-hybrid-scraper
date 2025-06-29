@@ -163,9 +163,8 @@ async def main():
         print("• Memory Reduction: 83% via quantization ✅")
 
         return True
-    else:
-        print("❌ VERIFICATION FAILED - Some components need attention")
-        return False
+    print("❌ VERIFICATION FAILED - Some components need attention")
+    return False
 
 
 if __name__ == "__main__":

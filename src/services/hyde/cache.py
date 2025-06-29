@@ -115,19 +115,24 @@ class HyDECache(BaseService):
                     # Direct embedding format
                     embedding = cached_data
                 else:
-                    logger.warning(f"Unexpected cache format for key {cache_key}")  # TODO: Convert f-string to logging format
+                    logger.warning(
+                        f"Unexpected cache format for key {cache_key}"
+                    )  # TODO: Convert f-string to logging format
                     self.cache_misses += 1
                     return None
 
-                logger.debug(f"Cache hit for HyDE embedding: {query}")  # TODO: Convert f-string to logging format
+                logger.debug(
+                    f"Cache hit for HyDE embedding: {query}"
+                )  # TODO: Convert f-string to logging format
                 return embedding
-            else:
-                self.cache_misses += 1
-                return None
+            self.cache_misses += 1
+            return None
 
         except Exception as e:
             self.cache_errors += 1
-            logger.warning(f"Cache get error for HyDE embedding: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Cache get error for HyDE embedding: {e}"
+            )  # TODO: Convert f-string to logging format
             return None
 
     async def set_hyde_embedding(
@@ -181,13 +186,17 @@ class HyDECache(BaseService):
 
             if success:
                 self.cache_sets += 1
-                logger.debug(f"Cached HyDE embedding for query: {query}")  # TODO: Convert f-string to logging format
+                logger.debug(
+                    f"Cached HyDE embedding for query: {query}"
+                )  # TODO: Convert f-string to logging format
 
             return success
 
         except Exception as e:
             self.cache_errors += 1
-            logger.warning(f"Cache set error for HyDE embedding: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Cache set error for HyDE embedding: {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
     async def get_hypothetical_documents(
@@ -214,15 +223,18 @@ class HyDECache(BaseService):
 
             if cached_docs is not None:
                 self.cache_hits += 1
-                logger.debug(f"Cache hit for hypothetical documents: {query}")  # TODO: Convert f-string to logging format
+                logger.debug(
+                    f"Cache hit for hypothetical documents: {query}"
+                )  # TODO: Convert f-string to logging format
                 return cached_docs
-            else:
-                self.cache_misses += 1
-                return None
+            self.cache_misses += 1
+            return None
 
         except Exception as e:
             self.cache_errors += 1
-            logger.warning(f"Cache get error for hypothetical documents: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Cache get error for hypothetical documents: {e}"
+            )  # TODO: Convert f-string to logging format
             return None
 
     async def set_hypothetical_documents(
@@ -268,13 +280,17 @@ class HyDECache(BaseService):
 
             if success:
                 self.cache_sets += 1
-                logger.debug(f"Cached hypothetical documents for query: {query}")  # TODO: Convert f-string to logging format
+                logger.debug(
+                    f"Cached hypothetical documents for query: {query}"
+                )  # TODO: Convert f-string to logging format
 
             return success
 
         except Exception as e:
             self.cache_errors += 1
-            logger.warning(f"Cache set error for hypothetical documents: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Cache set error for hypothetical documents: {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
     async def get_search_results(
@@ -301,15 +317,18 @@ class HyDECache(BaseService):
 
             if cached_results is not None:
                 self.cache_hits += 1
-                logger.debug(f"Cache hit for search results: {query}")  # TODO: Convert f-string to logging format
+                logger.debug(
+                    f"Cache hit for search results: {query}"
+                )  # TODO: Convert f-string to logging format
                 return cached_results
-            else:
-                self.cache_misses += 1
-                return None
+            self.cache_misses += 1
+            return None
 
         except Exception as e:
             self.cache_errors += 1
-            logger.warning(f"Cache get error for search results: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Cache get error for search results: {e}"
+            )  # TODO: Convert f-string to logging format
             return None
 
     async def set_search_results(
@@ -356,13 +375,17 @@ class HyDECache(BaseService):
 
             if success:
                 self.cache_sets += 1
-                logger.debug(f"Cached search results for query: {query}")  # TODO: Convert f-string to logging format
+                logger.debug(
+                    f"Cached search results for query: {query}"
+                )  # TODO: Convert f-string to logging format
 
             return success
 
         except Exception as e:
             self.cache_errors += 1
-            logger.warning(f"Cache set error for search results: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Cache set error for search results: {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
     async def warm_cache(
@@ -393,7 +416,9 @@ class HyDECache(BaseService):
                     results[query] = False  # Needs generation
 
             except Exception as e:
-                logger.warning(f"Cache warm-up error for query '{query}': {e}")  # TODO: Convert f-string to logging format
+                logger.warning(
+                    f"Cache warm-up error for query '{query}': {e}"
+                )  # TODO: Convert f-string to logging format
                 results[query] = False
 
         logger.info(
@@ -437,7 +462,9 @@ class HyDECache(BaseService):
             return success_count > 0
 
         except Exception as e:
-            logger.warning(f"Cache invalidation error for query '{query}': {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Cache invalidation error for query '{query}': {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
     def _get_embedding_cache_key(self, query: str, domain: str | None = None) -> str:

@@ -110,7 +110,9 @@ class DatabaseManager:
             collections = await self._qdrant_client.get_collections()
             return [col.name for col in collections.collections]
         except Exception as e:
-            logger.error(f"Failed to get collections: {e}")  # TODO: Convert f-string to logging format
+            logger.error(
+                f"Failed to get collections: {e}"
+            )  # TODO: Convert f-string to logging format
             raise APIError(f"Failed to get collections: {e}") from e
 
     async def store_embeddings(
@@ -135,7 +137,9 @@ class DatabaseManager:
             await self._qdrant_service.upsert_points(collection_name, points)
             return True
         except Exception as e:
-            logger.error(f"Failed to store embeddings: {e}")  # TODO: Convert f-string to logging format
+            logger.error(
+                f"Failed to store embeddings: {e}"
+            )  # TODO: Convert f-string to logging format
             raise APIError(f"Failed to store embeddings: {e}") from e
 
     async def search_similar(
@@ -171,7 +175,9 @@ class DatabaseManager:
             )
             return results
         except Exception as e:
-            logger.error(f"Failed to search vectors: {e}")  # TODO: Convert f-string to logging format
+            logger.error(
+                f"Failed to search vectors: {e}"
+            )  # TODO: Convert f-string to logging format
             raise APIError(f"Failed to search vectors: {e}") from e
 
     # Cache Operations
@@ -194,7 +200,9 @@ class DatabaseManager:
         try:
             return await self._cache_manager.get(key, cache_type, default)
         except Exception as e:
-            logger.warning(f"Cache get failed for {key}: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Cache get failed for {key}: {e}"
+            )  # TODO: Convert f-string to logging format
             return default
 
     async def cache_set(
@@ -221,7 +229,9 @@ class DatabaseManager:
         try:
             return await self._cache_manager.set(key, value, cache_type, ttl)
         except Exception as e:
-            logger.warning(f"Cache set failed for {key}: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Cache set failed for {key}: {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
     async def cache_delete(
@@ -242,7 +252,9 @@ class DatabaseManager:
         try:
             return await self._cache_manager.delete(key, cache_type)
         except Exception as e:
-            logger.warning(f"Cache delete failed for {key}: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Cache delete failed for {key}: {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
     # Redis Operations
@@ -259,7 +271,9 @@ class DatabaseManager:
             await self._redis_client.ping()
             return True
         except Exception as e:
-            logger.warning(f"Redis ping failed: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Redis ping failed: {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
     async def redis_set(self, key: str, value: str, ex: int | None = None) -> bool:
@@ -280,7 +294,9 @@ class DatabaseManager:
             await self._redis_client.set(key, value, ex=ex)
             return True
         except Exception as e:
-            logger.warning(f"Redis set failed for {key}: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Redis set failed for {key}: {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
     async def redis_get(self, key: str) -> str | None:
@@ -298,7 +314,9 @@ class DatabaseManager:
         try:
             return await self._redis_client.get(key)
         except Exception as e:
-            logger.warning(f"Redis get failed for {key}: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Redis get failed for {key}: {e}"
+            )  # TODO: Convert f-string to logging format
             return None
 
     # Status and Metrics

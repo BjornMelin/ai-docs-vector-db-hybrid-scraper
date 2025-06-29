@@ -14,8 +14,10 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+
 try:
     from pydantic_ai import Agent, RunContext
+
     PYDANTIC_AI_AVAILABLE = True
 except ImportError:
     # Graceful degradation when pydantic-ai is not available
@@ -26,43 +28,48 @@ except ImportError:
 from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
 
+
 logger = logging.getLogger(__name__)
 
 
 class AgentState(BaseModel):
     """Shared state across all agents in the system."""
-    
+
     session_id: str = Field(..., description="Unique session identifier")
-    user_id: Optional[str] = Field(None, description="User identifier for personalization")
-    conversation_history: List[Dict[str, Any]] = Field(
+    user_id: str | None = Field(None, description="User identifier for personalization")
+    conversation_history: list[dict[str, Any]] = Field(
         default_factory=list, description="History of interactions"
     )
-    knowledge_base: Dict[str, Any] = Field(
+    knowledge_base: dict[str, Any] = Field(
         default_factory=dict, description="Session-specific knowledge"
     )
-    performance_metrics: Dict[str, float] = Field(
+    performance_metrics: dict[str, float] = Field(
         default_factory=dict, description="Performance tracking metrics"
     )
-    tool_usage_stats: Dict[str, int] = Field(
+    tool_usage_stats: dict[str, int] = Field(
         default_factory=dict, description="Tool usage statistics"
     )
-    preferences: Dict[str, Any] = Field(
+    preferences: dict[str, Any] = Field(
         default_factory=dict, description="User or session preferences"
     )
-    
-    def add_interaction(self, role: str, content: str, metadata: Optional[Dict[str, Any]] = None) -> None:
+
+    def add_interaction(
+        self, role: str, content: str, metadata: dict[str, Any] | None = None
+    ) -> None:
         """Add an interaction to the conversation history."""
-        self.conversation_history.append({
-            "timestamp": datetime.now().isoformat(),
-            "role": role,
-            "content": content,
-            "metadata": metadata or {}
-        })
-        
-    def update_metrics(self, metrics: Dict[str, float]) -> None:
+        self.conversation_history.append(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "role": role,
+                "content": content,
+                "metadata": metadata or {},
+            }
+        )
+
+    def update_metrics(self, metrics: dict[str, float]) -> None:
         """Update performance metrics."""
         self.performance_metrics.update(metrics)
-        
+
     def increment_tool_usage(self, tool_name: str) -> None:
         """Increment usage count for a tool."""
         self.tool_usage_stats[tool_name] = self.tool_usage_stats.get(tool_name, 0) + 1
@@ -70,27 +77,27 @@ class AgentState(BaseModel):
 
 class BaseAgentDependencies(BaseModel):
     """Base dependencies injected into all agents."""
-    
+
     client_manager: Any = Field(..., description="ClientManager instance")
     config: Any = Field(..., description="Unified configuration")
     session_state: AgentState = Field(..., description="Session state")
-    
+
     class Config:
         arbitrary_types_allowed = True
 
 
 class BaseAgent(ABC):
     """Base class for all autonomous agents in the system."""
-    
+
     def __init__(
-        self, 
-        name: str, 
+        self,
+        name: str,
         model: str = "gpt-4",
         temperature: float = 0.1,
-        max_tokens: int = 1000
+        max_tokens: int = 1000,
     ):
         """Initialize the base agent.
-        
+
         Args:
             name: Agent name for identification
             model: LLM model to use
@@ -102,99 +109,100 @@ class BaseAgent(ABC):
         self.temperature = temperature
         self.max_tokens = max_tokens
         self._initialized = False
-        
+
         if not PYDANTIC_AI_AVAILABLE:
             logger.warning(
                 f"Pydantic-AI not available, agent {name} will use fallback mode"
             )
             self.agent = None
             return
-            
+
         # Initialize Pydantic-AI agent
         self.agent = Agent(
             model=model,
             system_prompt=self.get_system_prompt(),
-            deps_type=BaseAgentDependencies
+            deps_type=BaseAgentDependencies,
         )
-        
+
         # Performance tracking
         self.execution_count = 0
         self.total_execution_time = 0.0
         self.success_count = 0
         self.error_count = 0
-        
+
     @abstractmethod
     def get_system_prompt(self) -> str:
         """Define agent-specific system prompt.
-        
+
         Returns:
             System prompt string defining agent behavior and capabilities
         """
-        pass
-        
+
     @abstractmethod
     async def initialize_tools(self, deps: BaseAgentDependencies) -> None:
         """Initialize agent-specific tools.
-        
+
         Args:
             deps: Dependencies required for tool initialization
         """
-        pass
-        
+
     async def initialize(self, deps: BaseAgentDependencies) -> None:
         """Initialize the agent with dependencies.
-        
+
         Args:
             deps: Agent dependencies
         """
         if self._initialized:
             return
-            
+
         await self.initialize_tools(deps)
         self._initialized = True
         logger.info(f"Agent {self.name} initialized successfully")
-        
+
     async def execute(
-        self, 
-        task: str, 
+        self,
+        task: str,
         deps: BaseAgentDependencies,
-        context: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Execute a task using the agent.
-        
+
         Args:
             task: Task description or prompt
             deps: Agent dependencies
             context: Additional context for task execution
-            
+
         Returns:
             Task execution result
         """
         if not self._initialized:
             await self.initialize(deps)
-            
+
         start_time = time.time()
         self.execution_count += 1
-        
+
         try:
             # Fallback execution if Pydantic-AI not available
             if not PYDANTIC_AI_AVAILABLE or self.agent is None:
                 return await self._fallback_execute(task, deps, context)
-                
+
             # Execute using Pydantic-AI agent
             result = await self.agent.run(task, deps=deps)
-            
+
             # Track success
             self.success_count += 1
             execution_time = time.time() - start_time
             self.total_execution_time += execution_time
-            
+
             # Update session metrics
-            deps.session_state.update_metrics({
-                f"{self.name}_last_execution_time": execution_time,
-                f"{self.name}_success_rate": self.success_count / self.execution_count
-            })
-            
+            deps.session_state.update_metrics(
+                {
+                    f"{self.name}_last_execution_time": execution_time,
+                    f"{self.name}_success_rate": self.success_count
+                    / self.execution_count,
+                }
+            )
+
             # Add to conversation history
             deps.session_state.add_interaction(
                 role=f"agent_{self.name}",
@@ -202,65 +210,65 @@ class BaseAgent(ABC):
                 metadata={
                     "execution_time": execution_time,
                     "model": self.model,
-                    "context": context
-                }
+                    "context": context,
+                },
             )
-            
+
             return {
                 "success": True,
                 "result": result.data,
                 "metadata": {
                     "agent": self.name,
                     "execution_time": execution_time,
-                    "model": self.model
-                }
+                    "model": self.model,
+                },
             }
-            
+
         except Exception as e:
             self.error_count += 1
             execution_time = time.time() - start_time
             self.total_execution_time += execution_time
-            
+
             logger.error(f"Agent {self.name} execution failed: {e}", exc_info=True)
-            
+
             return {
                 "success": False,
                 "error": str(e),
                 "metadata": {
                     "agent": self.name,
                     "execution_time": execution_time,
-                    "error_type": type(e).__name__
-                }
+                    "error_type": type(e).__name__,
+                },
             }
-            
+
     async def _fallback_execute(
-        self, 
-        task: str, 
+        self,
+        task: str,
         deps: BaseAgentDependencies,
-        context: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Fallback execution when Pydantic-AI is not available.
-        
+
         Args:
             task: Task description
-            deps: Agent dependencies 
+            deps: Agent dependencies
             context: Additional context
-            
+
         Returns:
             Fallback execution result
         """
         logger.warning(f"Using fallback execution for agent {self.name}")
-        
+
         # Basic fallback logic - can be enhanced per agent type
         return {
             "result": f"Fallback response for task: {task}",
             "fallback_used": True,
-            "agent": self.name
+            "agent": self.name,
         }
-        
-    def get_performance_metrics(self) -> Dict[str, float]:
+
+    def get_performance_metrics(self) -> dict[str, float]:
         """Get agent performance metrics.
-        
+
         Returns:
             Performance metrics dictionary
         """
@@ -269,17 +277,17 @@ class BaseAgent(ABC):
                 "execution_count": 0,
                 "avg_execution_time": 0.0,
                 "success_rate": 0.0,
-                "error_rate": 0.0
+                "error_rate": 0.0,
             }
-            
+
         return {
             "execution_count": self.execution_count,
             "avg_execution_time": self.total_execution_time / self.execution_count,
             "success_rate": self.success_count / self.execution_count,
             "error_rate": self.error_count / self.execution_count,
-            "total_execution_time": self.total_execution_time
+            "total_execution_time": self.total_execution_time,
         }
-        
+
     async def reset_metrics(self) -> None:
         """Reset performance metrics."""
         self.execution_count = 0
@@ -291,56 +299,55 @@ class BaseAgent(ABC):
 
 class AgentRegistry:
     """Registry for managing multiple agents."""
-    
+
     def __init__(self):
-        self.agents: Dict[str, BaseAgent] = {}
-        
+        self.agents: dict[str, BaseAgent] = {}
+
     def register_agent(self, agent: BaseAgent) -> None:
         """Register an agent in the registry.
-        
+
         Args:
             agent: Agent to register
         """
         self.agents[agent.name] = agent
         logger.info(f"Agent {agent.name} registered")
-        
-    def get_agent(self, name: str) -> Optional[BaseAgent]:
+
+    def get_agent(self, name: str) -> BaseAgent | None:
         """Get an agent by name.
-        
+
         Args:
             name: Agent name
-            
+
         Returns:
             Agent instance or None if not found
         """
         return self.agents.get(name)
-        
-    def list_agents(self) -> List[str]:
+
+    def list_agents(self) -> list[str]:
         """List all registered agent names.
-        
+
         Returns:
             List of agent names
         """
         return list(self.agents.keys())
-        
+
     async def initialize_all(self, deps: BaseAgentDependencies) -> None:
         """Initialize all registered agents.
-        
+
         Args:
             deps: Dependencies for initialization
         """
         for agent in self.agents.values():
             await agent.initialize(deps)
-            
-    def get_all_metrics(self) -> Dict[str, Dict[str, float]]:
+
+    def get_all_metrics(self) -> dict[str, dict[str, float]]:
         """Get performance metrics for all agents.
-        
+
         Returns:
             Dictionary mapping agent names to their metrics
         """
         return {
-            name: agent.get_performance_metrics() 
-            for name, agent in self.agents.items()
+            name: agent.get_performance_metrics() for name, agent in self.agents.items()
         }
 
 
@@ -350,28 +357,23 @@ agent_registry = AgentRegistry()
 
 def create_agent_dependencies(
     client_manager: ClientManager,
-    session_id: Optional[str] = None,
-    user_id: Optional[str] = None
+    session_id: str | None = None,
+    user_id: str | None = None,
 ) -> BaseAgentDependencies:
     """Create agent dependencies with default values.
-    
+
     Args:
         client_manager: ClientManager instance
         session_id: Optional session ID
         user_id: Optional user ID
-        
+
     Returns:
         Configured agent dependencies
     """
     config = get_config()
-    
-    session_state = AgentState(
-        session_id=session_id or str(uuid4()),
-        user_id=user_id
-    )
-    
+
+    session_state = AgentState(session_id=session_id or str(uuid4()), user_id=user_id)
+
     return BaseAgentDependencies(
-        client_manager=client_manager,
-        config=config,
-        session_state=session_state
+        client_manager=client_manager, config=config, session_state=session_state
     )

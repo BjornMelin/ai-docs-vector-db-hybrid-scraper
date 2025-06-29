@@ -148,7 +148,9 @@ class TestBrowserUserJourneys:
                         break
                 except Exception as e:
                     # Try next selector pattern
-                    logger.debug(f"Selector pattern failed, trying next: {e}")  # TODO: Convert f-string to logging format
+                    logger.debug(
+                        f"Selector pattern failed, trying next: {e}"
+                    )  # TODO: Convert f-string to logging format
                     continue
 
             # If no search element found, create a simulated search scenario

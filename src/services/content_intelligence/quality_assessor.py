@@ -300,7 +300,9 @@ class QualityAssessor:
             return relevance_score
 
         except Exception as e:
-            logger.warning(f"Relevance assessment failed: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Relevance assessment failed: {e}"
+            )  # TODO: Convert f-string to logging format
             return 0.5
 
     def _assess_confidence(
@@ -397,7 +399,9 @@ class QualityAssessor:
                         days_old = (now - last_modified).days
                         return self._calculate_freshness_score(days_old)
                 except Exception as e:
-                    logger.debug(f"Failed to parse last_modified date: {e}")  # TODO: Convert f-string to logging format
+                    logger.debug(
+                        f"Failed to parse last_modified date: {e}"
+                    )  # TODO: Convert f-string to logging format
 
         # Try to extract dates from content
         date_patterns = [
@@ -689,7 +693,9 @@ class QualityAssessor:
             return max_similarity
 
         except Exception as e:
-            logger.warning(f"Duplicate similarity assessment failed: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Duplicate similarity assessment failed: {e}"
+            )  # TODO: Convert f-string to logging format
             return 0.0
 
     def _cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:

@@ -398,7 +398,9 @@ class TemporalFilter(BaseFilter):
             TemporalCriteria.model_validate(filter_criteria)
             return True
         except Exception as e:
-            self._logger.warning(f"Invalid temporal criteria: {e}")  # TODO: Convert f-string to logging format
+            self._logger.warning(
+                f"Invalid temporal criteria: {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
     def get_supported_operators(self) -> list[str]:

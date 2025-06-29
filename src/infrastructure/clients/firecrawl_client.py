@@ -3,13 +3,13 @@
 import logging
 from typing import Any, Optional
 
+
 try:
     from firecrawl import AsyncFirecrawlApp
 except ImportError:
     # Create a placeholder if firecrawl is not available
     class AsyncFirecrawlApp:
         pass
-
 
 
 logger = logging.getLogger(__name__)

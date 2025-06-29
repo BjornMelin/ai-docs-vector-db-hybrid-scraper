@@ -11,9 +11,6 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, Field
 
 
-if TYPE_CHECKING:
-    pass
-
 # Try to import config function - may not be available in all contexts
 try:
     from src.config import get_config
@@ -144,7 +141,9 @@ def get_observability_config() -> ObservabilityConfig:
         return ObservabilityConfig(**config_dict)
 
     except Exception as e:
-        logger.warning(f"Could not load from main config, using defaults: {e}")  # TODO: Convert f-string to logging format
+        logger.warning(
+            f"Could not load from main config, using defaults: {e}"
+        )  # TODO: Convert f-string to logging format
         return ObservabilityConfig()
 
 

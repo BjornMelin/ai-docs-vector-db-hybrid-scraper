@@ -134,7 +134,9 @@ class LoadTestUser:
         if start_delay > 0:
             await asyncio.sleep(start_delay)
 
-        logger.debug(f"User {self.user_id} starting session")  # TODO: Convert f-string to logging format
+        logger.debug(
+            f"User {self.user_id} starting session"
+        )  # TODO: Convert f-string to logging format
 
         session_start = time.time()
         requests_per_user = self.config.total_requests // self.config.concurrent_users
@@ -170,13 +172,17 @@ class LoadTestUser:
                 except TimeoutError:
                     self.failures += 1
                     self.errors.append("timeout")
-                    logger.debug(f"User {self.user_id}: Request timeout")  # TODO: Convert f-string to logging format
+                    logger.debug(
+                        f"User {self.user_id}: Request timeout"
+                    )  # TODO: Convert f-string to logging format
 
                 except Exception as e:
                     self.failures += 1
                     error_type = type(e).__name__
                     self.errors.append(error_type)
-                    logger.debug(f"User {self.user_id}: Request failed - {error_type}")  # TODO: Convert f-string to logging format
+                    logger.debug(
+                        f"User {self.user_id}: Request failed - {error_type}"
+                    )  # TODO: Convert f-string to logging format
 
                     if not self.config.retry_on_failure:
                         continue
@@ -458,7 +464,9 @@ class LoadTestRunner:
         stress_results = {}
 
         for user_count in range(step_size, max_users + 1, step_size):
-            logger.info(f"Stress test step: {user_count} users")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Stress test step: {user_count} users"
+            )  # TODO: Convert f-string to logging format
 
             load_config = LoadTestConfig(
                 concurrent_users=user_count,
@@ -477,7 +485,9 @@ class LoadTestRunner:
 
                 # Check if system is breaking down
                 if metrics.error_rate > 0.5 or metrics.p95_response_time_ms > 10000:
-                    logger.warning(f"System degradation detected at {user_count} users")  # TODO: Convert f-string to logging format
+                    logger.warning(
+                        f"System degradation detected at {user_count} users"
+                    )  # TODO: Convert f-string to logging format
                     break
 
             except Exception:

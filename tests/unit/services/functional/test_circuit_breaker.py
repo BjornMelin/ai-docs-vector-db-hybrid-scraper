@@ -301,8 +301,6 @@ class TestConcurrentAccess:
         config = CircuitBreakerConfig.simple_mode()
         breaker = CircuitBreaker(config)
 
-        import threading
-
         call_count = threading.local()
         counter_lock = threading.Lock()
         global_counter = 0

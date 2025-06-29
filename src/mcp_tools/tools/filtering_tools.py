@@ -187,7 +187,9 @@ async def temporal_filter_tool(
 
     except Exception as e:
         await ctx.error(f"Temporal filter search failed: {e!s}")
-        logger.error(f"Temporal filter error: {e}", exc_info=True)  # TODO: Convert f-string to logging format
+        logger.error(
+            f"Temporal filter error: {e}", exc_info=True
+        )  # TODO: Convert f-string to logging format
         raise
 
 
@@ -243,7 +245,9 @@ async def content_type_filter_tool(
 
     except Exception as e:
         await ctx.error(f"Content type filter search failed: {e!s}")
-        logger.error(f"Content type filter error: {e}", exc_info=True)  # TODO: Convert f-string to logging format
+        logger.error(
+            f"Content type filter error: {e}", exc_info=True
+        )  # TODO: Convert f-string to logging format
         raise
 
 
@@ -300,7 +304,9 @@ async def metadata_filter_tool(
 
     except Exception as e:
         await ctx.error(f"Metadata filter search failed: {e!s}")
-        logger.error(f"Metadata filter error: {e}", exc_info=True)  # TODO: Convert f-string to logging format
+        logger.error(
+            f"Metadata filter error: {e}", exc_info=True
+        )  # TODO: Convert f-string to logging format
         raise
 
 
@@ -358,7 +364,9 @@ async def similarity_filter_tool(
 
     except Exception as e:
         await ctx.error(f"Similarity filter search failed: {e!s}")
-        logger.error(f"Similarity filter error: {e}", exc_info=True)  # TODO: Convert f-string to logging format
+        logger.error(
+            f"Similarity filter error: {e}", exc_info=True
+        )  # TODO: Convert f-string to logging format
         raise
 
 
@@ -425,7 +433,9 @@ async def composite_filter_tool(
 
     except Exception as e:
         await ctx.error(f"Composite filter search failed: {e!s}")
-        logger.error(f"Composite filter error: {e}", exc_info=True)  # TODO: Convert f-string to logging format
+        logger.error(
+            f"Composite filter error: {e}", exc_info=True
+        )  # TODO: Convert f-string to logging format
         raise
 
 

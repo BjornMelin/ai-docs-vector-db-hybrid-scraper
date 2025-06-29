@@ -30,8 +30,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Optional, Union
 
-from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
 
 from ..core import Config as LegacyConfig
 from ..modern import ApplicationMode, Config as ModernConfig, Environment

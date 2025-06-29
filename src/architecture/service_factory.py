@@ -35,19 +35,13 @@ class ServiceProtocol(Protocol):
 class ServiceNotEnabledError(Exception):
     """Raised when trying to access a service not enabled in current mode."""
 
-    pass
-
 
 class ServiceNotFoundError(Exception):
     """Raised when trying to access a service that hasn't been registered."""
 
-    pass
-
 
 class ServiceInitializationError(Exception):
     """Raised when service initialization fails."""
-
-    pass
 
 
 class ModeAwareServiceFactory:
@@ -276,17 +270,14 @@ class BaseService(ABC):
     @abstractmethod
     async def initialize(self) -> None:
         """Initialize the service."""
-        pass
 
     @abstractmethod
     async def cleanup(self) -> None:
         """Clean up service resources."""
-        pass
 
     @abstractmethod
     def get_service_name(self) -> str:
         """Get the service name."""
-        pass
 
     def is_initialized(self) -> bool:
         """Check if service is initialized."""

@@ -186,7 +186,9 @@ class FastEmbedProvider(EmbeddingProvider):
                 else:
                     embeddings.append(list(embedding))
 
-            logger.debug(f"Generated {len(embeddings)} embeddings locally")  # TODO: Convert f-string to logging format
+            logger.debug(
+                f"Generated {len(embeddings)} embeddings locally"
+            )  # TODO: Convert f-string to logging format
             return embeddings
 
         except Exception as e:
@@ -217,7 +219,9 @@ class FastEmbedProvider(EmbeddingProvider):
             # Initialize sparse model if needed
             if self._sparse_model is None:
                 self._sparse_model = SparseTextEmbedding(self._sparse_model_name)
-                logger.info(f"Initialized sparse model: {self._sparse_model_name}")  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"Initialized sparse model: {self._sparse_model_name}"
+                )  # TODO: Convert f-string to logging format
 
             # Generate sparse embeddings
             sparse_embeddings = []

@@ -113,7 +113,7 @@ class AdaptiveCircuitBreaker:
                 return False
             return True
 
-        elif self.state.state == "half_open":
+        if self.state.state == "half_open":
             return self.state.success_count >= self.half_open_max_calls
 
         return False
@@ -340,10 +340,9 @@ class SelfHealingDatabaseManager:
             failure_rate = self.circuit_breaker.state.failure_rate
             if failure_rate < 0.1:
                 return HealthStatus.HEALTHY
-            elif failure_rate < 0.5:
+            if failure_rate < 0.5:
                 return HealthStatus.DEGRADED
-            else:
-                return HealthStatus.UNHEALTHY
+            return HealthStatus.UNHEALTHY
 
         except Exception:
             return HealthStatus.UNHEALTHY
@@ -534,13 +533,9 @@ class SelfHealingManager:
 class CircuitBreakerOpenError(Exception):
     """Raised when circuit breaker is open."""
 
-    pass
-
 
 class DatabaseNotAvailableError(Exception):
     """Raised when database is not available."""
-
-    pass
 
 
 # Global instance

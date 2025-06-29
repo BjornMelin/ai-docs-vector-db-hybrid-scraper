@@ -102,7 +102,9 @@ class FirecrawlProvider(BaseService, CrawlProvider):
 
             error_msg = str(e).lower()
             if "rate limit" in error_msg:
-                logger.warning(f"Firecrawl rate limit hit for {url}")  # TODO: Convert f-string to logging format
+                logger.warning(
+                    f"Firecrawl rate limit hit for {url}"
+                )  # TODO: Convert f-string to logging format
                 error_detail = "Rate limit exceeded. Please try again later."
             elif "invalid api key" in error_msg or "unauthorized" in error_msg:
                 logger.exception("Invalid Firecrawl API key")
@@ -110,7 +112,9 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                     "Invalid API key. Please check your Firecrawl configuration."
                 )
             elif "timeout" in error_msg:
-                logger.warning(f"Timeout while scraping {url}")  # TODO: Convert f-string to logging format
+                logger.warning(
+                    f"Timeout while scraping {url}"
+                )  # TODO: Convert f-string to logging format
                 error_detail = (
                     "Request timed out. The page may be too large or slow to load."
                 )
@@ -163,7 +167,9 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                 msg = "No crawl ID returned"
                 raise CrawlServiceError(msg)
 
-            logger.info(f"Started crawl job {crawl_id} for {url}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Started crawl job {crawl_id} for {url}"
+            )  # TODO: Convert f-string to logging format
 
             # Poll for completion
 

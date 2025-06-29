@@ -144,7 +144,7 @@ def visual_regression_config():
 
 
 @pytest.fixture
-def screenshot_manager():  # noqa: C901
+def screenshot_manager():
     """Screenshot capture and management utilities."""
 
     class ScreenshotManager:
@@ -406,7 +406,7 @@ def visual_comparator():
 
 
 @pytest.fixture
-def responsive_tester():  # noqa: C901
+def responsive_tester():
     """Responsive design testing utilities."""
 
     class ResponsiveTester:

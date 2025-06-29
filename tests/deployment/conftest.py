@@ -273,7 +273,7 @@ class DeploymentHealthChecker:
         self,
         endpoint: str,
         timeout: int = 60,
-        interval: int = 5,  # noqa: ASYNC109
+        interval: int = 5,
     ) -> bool:
         """Wait for an endpoint to become healthy."""
         start_time = asyncio.get_event_loop().time()

@@ -1,15 +1,16 @@
 """Tests for search analytics dashboard functionality."""
 
 import asyncio
-import pytest
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from src.services.analytics.search_dashboard import (
-    SearchAnalyticsDashboard,
-    QueryPattern,
     PerformanceMetric,
-    UserBehaviorInsight
+    QueryPattern,
+    SearchAnalyticsDashboard,
+    UserBehaviorInsight,
 )
 
 
@@ -29,7 +30,9 @@ def mock_config():
 @pytest.fixture
 def analytics_dashboard(mock_config):
     """Create analytics dashboard instance."""
-    with patch('src.services.analytics.search_dashboard.get_config', return_value=mock_config):
+    with patch(
+        "src.services.analytics.search_dashboard.get_config", return_value=mock_config
+    ):
         dashboard = SearchAnalyticsDashboard()
         return dashboard
 
@@ -66,9 +69,9 @@ class TestSearchAnalyticsDashboard:
             results_count=10,
             success=True,
             collection="documentation",
-            session_id="session456"
+            session_id="session456",
         )
-        
+
         # Verify query was tracked
         assert len(initialized_dashboard.query_history) == 1
         tracked_query = initialized_dashboard.query_history[0]
@@ -88,9 +91,9 @@ class TestSearchAnalyticsDashboard:
             cache_hit=False,
             collection="papers",
             session_id="session012",
-            model_used="text-embedding-3-large"
+            model_used="text-embedding-3-large",
         )
-        
+
         tracked_query = initialized_dashboard.query_history[0]
         assert tracked_query["features_used"] == ["query_expansion", "reranking"]
         assert tracked_query["cache_hit"] is False
@@ -101,23 +104,27 @@ class TestSearchAnalyticsDashboard:
         queries = [
             ("python programming", 150.0, 8, True),
             ("machine learning", 300.0, 12, True),
-            ("data science", 200.0, 6, False)
+            ("data science", 200.0, 6, False),
         ]
-        
+
         for query, processing_time, results_count, success in queries:
             await initialized_dashboard.track_query(
                 query=query,
                 processing_time_ms=processing_time,
                 results_count=results_count,
-                success=success
+                success=success,
             )
-        
+
         assert len(initialized_dashboard.query_history) == 3
-        
+
         # Test different success states
-        successful_queries = [q for q in initialized_dashboard.query_history if q["success"]]
-        failed_queries = [q for q in initialized_dashboard.query_history if not q["success"]]
-        
+        successful_queries = [
+            q for q in initialized_dashboard.query_history if q["success"]
+        ]
+        failed_queries = [
+            q for q in initialized_dashboard.query_history if not q["success"]
+        ]
+
         assert len(successful_queries) == 2
         assert len(failed_queries) == 1
 
@@ -125,18 +132,38 @@ class TestSearchAnalyticsDashboard:
         """Test query analytics retrieval."""
         # Add queries with similar patterns
         similar_queries = [
-            {"query": "what is machine learning", "processing_time_ms": 200.0, "success": True},
-            {"query": "what is deep learning", "processing_time_ms": 180.0, "success": True},
-            {"query": "what is neural networks", "processing_time_ms": 220.0, "success": True},
-            {"query": "how to implement tensorflow", "processing_time_ms": 300.0, "success": True},
-            {"query": "how to use pytorch", "processing_time_ms": 280.0, "success": True},
+            {
+                "query": "what is machine learning",
+                "processing_time_ms": 200.0,
+                "success": True,
+            },
+            {
+                "query": "what is deep learning",
+                "processing_time_ms": 180.0,
+                "success": True,
+            },
+            {
+                "query": "what is neural networks",
+                "processing_time_ms": 220.0,
+                "success": True,
+            },
+            {
+                "query": "how to implement tensorflow",
+                "processing_time_ms": 300.0,
+                "success": True,
+            },
+            {
+                "query": "how to use pytorch",
+                "processing_time_ms": 280.0,
+                "success": True,
+            },
         ]
-        
+
         for query_data in similar_queries:
             await initialized_dashboard.track_query(**query_data)
-        
+
         analytics = await initialized_dashboard.get_query_analytics()
-        
+
         assert "total_queries" in analytics
         assert analytics["total_queries"] == 5
 
@@ -144,17 +171,37 @@ class TestSearchAnalyticsDashboard:
         """Test realtime dashboard data."""
         # Add performance data
         queries = [
-            {"query": "test query 1", "processing_time_ms": 100.0, "success": True, "results_count": 5},
-            {"query": "test query 2", "processing_time_ms": 200.0, "success": True, "results_count": 10},
-            {"query": "test query 3", "processing_time_ms": 150.0, "success": False, "results_count": 0},
-            {"query": "test query 4", "processing_time_ms": 300.0, "success": True, "results_count": 8},
+            {
+                "query": "test query 1",
+                "processing_time_ms": 100.0,
+                "success": True,
+                "results_count": 5,
+            },
+            {
+                "query": "test query 2",
+                "processing_time_ms": 200.0,
+                "success": True,
+                "results_count": 10,
+            },
+            {
+                "query": "test query 3",
+                "processing_time_ms": 150.0,
+                "success": False,
+                "results_count": 0,
+            },
+            {
+                "query": "test query 4",
+                "processing_time_ms": 300.0,
+                "success": True,
+                "results_count": 8,
+            },
         ]
-        
+
         for query_data in queries:
             await initialized_dashboard.track_query(**query_data)
-        
+
         dashboard_data = await initialized_dashboard.get_realtime_dashboard()
-        
+
         assert "realtime_stats" in dashboard_data
         assert "query_patterns" in dashboard_data
         assert "performance_trends" in dashboard_data
@@ -165,17 +212,37 @@ class TestSearchAnalyticsDashboard:
         """Test optimization recommendation generation."""
         # Add user behavior data
         user_queries = [
-            {"query": "beginner tutorial", "user_id": "user1", "session_id": "sess1", "success": True},
-            {"query": "advanced concepts", "user_id": "user1", "session_id": "sess1", "success": True},
-            {"query": "quick reference", "user_id": "user2", "session_id": "sess2", "success": True},
-            {"query": "troubleshooting", "user_id": "user2", "session_id": "sess2", "success": False},
+            {
+                "query": "beginner tutorial",
+                "user_id": "user1",
+                "session_id": "sess1",
+                "success": True,
+            },
+            {
+                "query": "advanced concepts",
+                "user_id": "user1",
+                "session_id": "sess1",
+                "success": True,
+            },
+            {
+                "query": "quick reference",
+                "user_id": "user2",
+                "session_id": "sess2",
+                "success": True,
+            },
+            {
+                "query": "troubleshooting",
+                "user_id": "user2",
+                "session_id": "sess2",
+                "success": False,
+            },
         ]
-        
+
         for query_data in user_queries:
             await initialized_dashboard.track_query(**query_data)
-        
+
         recommendations = await initialized_dashboard.get_optimization_recommendations()
-        
+
         assert isinstance(recommendations, list)
         # Recommendations should be available
         assert len(recommendations) >= 0
@@ -184,19 +251,36 @@ class TestSearchAnalyticsDashboard:
         """Test tracking across multiple user sessions."""
         # Add queries across different sessions
         session_queries = [
-            {"query": "session 1 query 1", "session_id": "sess1", "user_id": "user1", "success": True},
-            {"query": "session 1 query 2", "session_id": "sess1", "user_id": "user1", "success": True},
-            {"query": "session 2 query 1", "session_id": "sess2", "user_id": "user2", "success": True},
+            {
+                "query": "session 1 query 1",
+                "session_id": "sess1",
+                "user_id": "user1",
+                "success": True,
+            },
+            {
+                "query": "session 1 query 2",
+                "session_id": "sess1",
+                "user_id": "user1",
+                "success": True,
+            },
+            {
+                "query": "session 2 query 1",
+                "session_id": "sess2",
+                "user_id": "user2",
+                "success": True,
+            },
         ]
-        
+
         for query_data in session_queries:
             await initialized_dashboard.track_query(**query_data)
-        
+
         analytics = await initialized_dashboard.get_query_analytics()
         assert analytics["total_queries"] == 3
-        
+
         # Test user-specific analytics
-        user1_analytics = await initialized_dashboard.get_query_analytics(user_id="user1")
+        user1_analytics = await initialized_dashboard.get_query_analytics(
+            user_id="user1"
+        )
         assert user1_analytics["total_queries"] == 2
 
     async def test_error_handling(self, initialized_dashboard):
@@ -204,23 +288,25 @@ class TestSearchAnalyticsDashboard:
         # Test methods with no data should not crash
         analytics = await initialized_dashboard.get_query_analytics()
         assert "message" in analytics  # Should return a message when no data
-        
+
         recommendations = await initialized_dashboard.get_optimization_recommendations()
         assert isinstance(recommendations, list)
 
     async def test_performance_tracking(self, initialized_dashboard):
         """Test performance metric tracking."""
         # Add query data
-        query_data = {"query": "performance test", "processing_time_ms": 100.0, "success": True}
+        query_data = {
+            "query": "performance test",
+            "processing_time_ms": 100.0,
+            "success": True,
+        }
         await initialized_dashboard.track_query(**query_data)
-        
+
         # Track a performance metric
         await initialized_dashboard.track_performance_metric(
-            metric_name="custom_metric",
-            value=0.85,
-            tags={"component": "test"}
+            metric_name="custom_metric", value=0.85, tags={"component": "test"}
         )
-        
+
         # Get dashboard data
         dashboard_data = await initialized_dashboard.get_realtime_dashboard()
         assert isinstance(dashboard_data, dict)
@@ -232,17 +318,18 @@ class TestSearchAnalyticsDashboard:
 
     async def test_concurrent_tracking(self, initialized_dashboard):
         """Test concurrent query tracking."""
+
         async def track_concurrent_query(i):
             query_data = {
                 "query": f"concurrent query {i}",
                 "processing_time_ms": 100.0,
-                "success": True
+                "success": True,
             }
             await initialized_dashboard.track_query(**query_data)
-        
+
         # Track multiple queries concurrently
         tasks = [track_concurrent_query(i) for i in range(5)]
         await asyncio.gather(*tasks)
-        
+
         # All queries should be tracked
         assert len(initialized_dashboard.query_history) == 5

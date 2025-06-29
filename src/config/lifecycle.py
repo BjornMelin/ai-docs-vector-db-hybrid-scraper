@@ -271,7 +271,9 @@ class ConfigurationLifecycleManager:
                 priority=priority,
                 async_callback=async_callback,
             )
-            logger.info(f"Registered configuration callback: {name}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Registered configuration callback: {name}"
+            )  # TODO: Convert f-string to logging format
 
     def unregister_service_callback(self, name: str) -> bool:
         """Unregister a service configuration callback.

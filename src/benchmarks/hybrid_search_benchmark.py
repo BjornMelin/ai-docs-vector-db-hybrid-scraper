@@ -224,7 +224,9 @@ class HybridSearchBenchmark:
 
         """
         start_time = time.time()
-        logger.info(f"Starting comprehensive benchmark: {self.benchmark_config.name}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Starting comprehensive benchmark: {self.benchmark_config.name}"
+        )  # TODO: Convert f-string to logging format
 
         results = BenchmarkResults(
             benchmark_name=self.benchmark_config.name,
@@ -288,10 +290,14 @@ class HybridSearchBenchmark:
             logger.info(
                 f"Benchmark completed in {results.duration_seconds:.2f} seconds"
             )
-            logger.info(f"Meets targets: {results.meets_targets}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Meets targets: {results.meets_targets}"
+            )  # TODO: Convert f-string to logging format
 
         except Exception as e:
-            logger.error(f"Benchmark failed: {e}", exc_info=True)  # TODO: Convert f-string to logging format
+            logger.error(
+                f"Benchmark failed: {e}", exc_info=True
+            )  # TODO: Convert f-string to logging format
             results.duration_seconds = time.time() - start_time
             results.failed_targets.append(f"Benchmark execution failed: {e!s}")
         else:
@@ -311,7 +317,9 @@ class HybridSearchBenchmark:
         load_results = {}
 
         for concurrent_users in self.benchmark_config.concurrent_users:
-            logger.info(f"Running load test with {concurrent_users} concurrent users")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Running load test with {concurrent_users} concurrent users"
+            )  # TODO: Convert f-string to logging format
 
             load_config = LoadTestConfig(
                 concurrent_users=concurrent_users,
@@ -381,7 +389,9 @@ class HybridSearchBenchmark:
                 total_predictions += 1
 
             except Exception as e:
-                logger.warning(f"Classification failed for query '{query_text}': {e}")  # TODO: Convert f-string to logging format
+                logger.warning(
+                    f"Classification failed for query '{query_text}': {e}"
+                )  # TODO: Convert f-string to logging format
                 total_predictions += 1
 
         return correct_predictions / max(total_predictions, 1)
@@ -422,7 +432,9 @@ class HybridSearchBenchmark:
                 total_selections += 1
 
             except Exception as e:
-                logger.warning(f"Model selection failed for query '{query_text}': {e}")  # TODO: Convert f-string to logging format
+                logger.warning(
+                    f"Model selection failed for query '{query_text}': {e}"
+                )  # TODO: Convert f-string to logging format
                 total_selections += 1
 
         return appropriate_selections / max(total_selections, 1)
@@ -450,7 +462,9 @@ class HybridSearchBenchmark:
                 total_fusions += 1
 
             except Exception as e:
-                logger.warning(f"Fusion tuning failed for query '{query.query}': {e}")  # TODO: Convert f-string to logging format
+                logger.warning(
+                    f"Fusion tuning failed for query '{query.query}': {e}"
+                )  # TODO: Convert f-string to logging format
                 total_fusions += 1
 
         return effective_fusions / max(total_fusions, 1)
@@ -572,6 +586,8 @@ class HybridSearchBenchmark:
         with html_file.open("w") as f:
             f.write(html_report)
 
-        logger.info(f"Results saved to {output_dir}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Results saved to {output_dir}"
+        )  # TODO: Convert f-string to logging format
         logger.info(f"JSON: {json_file}")  # TODO: Convert f-string to logging format
         logger.info(f"HTML: {html_file}")  # TODO: Convert f-string to logging format

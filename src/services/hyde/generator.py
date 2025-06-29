@@ -6,10 +6,6 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
-
-if TYPE_CHECKING:
-    pass  # Used only for external API compatibility
-
 from pydantic import BaseModel
 
 from src.infrastructure.client_manager import ClientManager
@@ -326,7 +322,9 @@ class HypotheticalDocumentGenerator(BaseService):
                 if len(document.strip()) >= self.config.min_generation_length:
                     documents.append(document)
             except Exception as e:
-                logger.warning(f"Failed to generate document: {e}")  # TODO: Convert f-string to logging format
+                logger.warning(
+                    f"Failed to generate document: {e}"
+                )  # TODO: Convert f-string to logging format
                 continue
 
         return documents
@@ -351,7 +349,9 @@ class HypotheticalDocumentGenerator(BaseService):
             logger.warning("Document generation timed out")
             return ""
         except Exception as e:
-            logger.warning(f"Failed to generate document: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Failed to generate document: {e}"
+            )  # TODO: Convert f-string to logging format
             return ""
 
     def _post_process_documents(self, documents: list[str], _query: str) -> list[str]:

@@ -5,6 +5,7 @@ import importlib
 import logging
 import time
 from datetime import timedelta
+from typing import Any
 
 from arq import func
 
@@ -13,15 +14,13 @@ from src.infrastructure.client_manager import ClientManager
 from src.services.core.qdrant_alias_manager import QdrantAliasManager
 
 
-from typing import Any
-
 logger = logging.getLogger(__name__)
 
 
 # Security whitelist for dynamic imports to prevent arbitrary code execution
 ALLOWED_PERSIST_MODULES = {
     "src.services.cache.manager",
-    "src.services.cache.dragonfly_cache", 
+    "src.services.cache.dragonfly_cache",
     "src.services.cache.embedding_cache",
     "src.services.cache.search_cache",
     "src.services.core.persistence",
@@ -30,7 +29,7 @@ ALLOWED_PERSIST_MODULES = {
 ALLOWED_PERSIST_FUNCTIONS = {
     "persist_to_disk",
     "persist_embeddings",
-    "persist_search_results", 
+    "persist_search_results",
     "persist_cache_data",
     "save_to_storage",
     "write_cache_backup",
@@ -39,23 +38,23 @@ ALLOWED_PERSIST_FUNCTIONS = {
 
 def _validate_dynamic_import(module_name: str, function_name: str) -> bool:
     """Validate that dynamic import parameters are from allowed whitelist.
-    
+
     Args:
         module_name: Module to import
         function_name: Function to call
-        
+
     Returns:
         True if both module and function are whitelisted
-        
+
     Raises:
         ValueError: If module or function is not whitelisted
     """
     if module_name not in ALLOWED_PERSIST_MODULES:
         raise ValueError(f"Module '{module_name}' not in security whitelist")
-    
+
     if function_name not in ALLOWED_PERSIST_FUNCTIONS:
         raise ValueError(f"Function '{function_name}' not in security whitelist")
-    
+
     return True
 
 
@@ -111,7 +110,9 @@ async def delete_collection(
 
             # Delete the collection
             await qdrant_client.delete_collection(collection_name)
-            logger.info(f"Successfully deleted collection {collection_name}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Successfully deleted collection {collection_name}"
+            )  # TODO: Convert f-string to logging format
 
             return {
                 "status": "success",
@@ -123,7 +124,9 @@ async def delete_collection(
             await client_manager.cleanup()
 
     except asyncio.CancelledError:
-        logger.info(f"Deletion of {collection_name} was cancelled")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Deletion of {collection_name} was cancelled"
+        )  # TODO: Convert f-string to logging format
         return {
             "status": "cancelled",
             "collection": collection_name,
@@ -164,7 +167,9 @@ async def persist_cache(
 
     """
     start_time = time.time()
-    logger.info(f"Starting delayed persistence for {key} (delay: {delay}s)")  # TODO: Convert f-string to logging format
+    logger.info(
+        f"Starting delayed persistence for {key} (delay: {delay}s)"
+    )  # TODO: Convert f-string to logging format
 
     try:
         # Wait for delay
@@ -192,7 +197,9 @@ async def persist_cache(
         else:
             persist_func(key, value)
 
-        logger.info(f"Successfully persisted data for {key}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Successfully persisted data for {key}"
+        )  # TODO: Convert f-string to logging format
 
         return {
             "status": "success",
@@ -330,7 +337,9 @@ async def config_drift_remediation(
 
     """
     start_time = time.time()
-    logger.info(f"Starting configuration drift remediation for event {event_id}")  # TODO: Convert f-string to logging format
+    logger.info(
+        f"Starting configuration drift remediation for event {event_id}"
+    )  # TODO: Convert f-string to logging format
 
     try:
         # Log the remediation attempt (actual implementation would apply changes)
@@ -348,7 +357,9 @@ async def config_drift_remediation(
 
         await asyncio.sleep(0.1)  # Simulate remediation work
 
-        logger.info(f"Configuration drift remediation completed for event {event_id}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Configuration drift remediation completed for event {event_id}"
+        )  # TODO: Convert f-string to logging format
 
         return {
             "status": "success",
@@ -455,7 +466,9 @@ async def create_task(
                 _delay=int(delay_seconds) if delay_seconds else None,
             )
 
-            logger.info(f"Successfully created task {task_name} with job ID {job_id}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Successfully created task {task_name} with job ID {job_id}"
+            )  # TODO: Convert f-string to logging format
             return job_id
 
         finally:

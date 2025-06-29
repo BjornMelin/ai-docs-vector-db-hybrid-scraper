@@ -213,6 +213,7 @@ class TestFileProcessing:
         # Test that files can be read
         for file_path in sample_batch_files:
             from pathlib import Path
+
             path_obj = Path(file_path)
             with path_obj.open() as f:
                 content = f.read()

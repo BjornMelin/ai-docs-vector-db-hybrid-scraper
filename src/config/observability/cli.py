@@ -16,7 +16,7 @@ Usage:
 import asyncio
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 
 import click
@@ -508,7 +508,7 @@ def report(ctx, output, detailed, output_format):
 
                 # Add report metadata
                 report_data["report_metadata"] = {
-                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "generated_at": datetime.now(UTC).isoformat(),
                     "detailed": detailed,
                     "automation_version": "1.0.0",
                 }

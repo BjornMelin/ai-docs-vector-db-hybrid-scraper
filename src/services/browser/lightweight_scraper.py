@@ -173,7 +173,9 @@ class LightweightScraper(BaseService):
                 analysis.size_estimate = head_analysis.get("size_estimate")
 
         except Exception as e:
-            logger.warning(f"Error analyzing URL {url}: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Error analyzing URL {url}: {e}"
+            )  # TODO: Convert f-string to logging format
             analysis.reasons.append(f"Analysis error: {e!s}")
 
         elapsed_ms = (time.time() - start_time) * 1000
@@ -309,7 +311,9 @@ class LightweightScraper(BaseService):
             return analysis
 
         except Exception as e:
-            logger.debug(f"HEAD request failed for {url}: {e}")  # TODO: Convert f-string to logging format
+            logger.debug(
+                f"HEAD request failed for {url}: {e}"
+            )  # TODO: Convert f-string to logging format
             return None
 
     async def scrape(self, url: str) -> ScrapedContent | None:
@@ -357,15 +361,21 @@ class LightweightScraper(BaseService):
             )
 
         except httpx.TimeoutException:
-            logger.debug(f"Timeout for {url}, may need browser automation")  # TODO: Convert f-string to logging format
+            logger.debug(
+                f"Timeout for {url}, may need browser automation"
+            )  # TODO: Convert f-string to logging format
             return None
         except httpx.HTTPStatusError as e:
             if e.response.status_code in [403, 429, 503]:
-                logger.debug(f"Anti-bot protection detected for {url}, escalating")  # TODO: Convert f-string to logging format
+                logger.debug(
+                    f"Anti-bot protection detected for {url}, escalating"
+                )  # TODO: Convert f-string to logging format
                 return None
             raise
         except Exception as e:
-            logger.warning(f"Error scraping {url}: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Error scraping {url}: {e}"
+            )  # TODO: Convert f-string to logging format
             return None
 
     def _extract_content(self, html: str, url: str) -> dict[str, Any]:

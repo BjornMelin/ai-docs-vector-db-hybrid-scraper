@@ -652,7 +652,9 @@ def _extract_config_source_info(span: trace.Span, args: tuple, kwargs: dict) -> 
 
     except Exception as e:
         # Don't fail the operation due to instrumentation issues
-        logger.debug(f"Failed to extract config source info: {e}")  # TODO: Convert f-string to logging format
+        logger.debug(
+            f"Failed to extract config source info: {e}"
+        )  # TODO: Convert f-string to logging format
 
 
 def _extract_config_content_metrics(span: trace.Span, result: Any) -> None:
@@ -705,7 +707,9 @@ def _extract_config_content_metrics(span: trace.Span, result: Any) -> None:
 
     except Exception as e:
         # Don't fail the operation due to instrumentation issues
-        logger.debug(f"Failed to extract config content metrics: {e}")  # TODO: Convert f-string to logging format
+        logger.debug(
+            f"Failed to extract config content metrics: {e}"
+        )  # TODO: Convert f-string to logging format
 
 
 def record_config_change(

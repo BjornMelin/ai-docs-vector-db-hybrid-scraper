@@ -10,6 +10,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.config import Config
+from src.config.enums import (
+    ABTestVariant,
+    ModelType,
+    OptimizationStrategy,
+    QueryType,
+)
 from src.models.vector_search import (
     ABTestConfig,
     FusionConfig,
@@ -21,20 +27,14 @@ from src.models.vector_search import (
     SearchParams,
 )
 from src.services.errors import QdrantServiceError
+from src.services.query_processing.models import (
+    QueryComplexity,
+)
 from src.services.query_processing.orchestrator import (
     SearchMode,
     SearchPipeline,
     SearchRequest as AdvancedSearchRequest,
     SearchResult as AdvancedSearchResult,
-)
-from src.services.query_processing.models import (
-    QueryComplexity,
-)
-from src.config.enums import (
-    ABTestVariant,
-    ModelType,
-    OptimizationStrategy,
-    QueryType,
 )
 from src.services.vector_db.hybrid_search import HybridSearchService
 

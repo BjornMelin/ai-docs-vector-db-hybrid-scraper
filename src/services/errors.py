@@ -597,7 +597,9 @@ class AdvancedCircuitBreaker:
         if self.metrics:
             self.metrics.reset()
 
-        logger.info(f"Circuit breaker '{self.service_name}' manually reset")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Circuit breaker '{self.service_name}' manually reset"
+        )  # TODO: Convert f-string to logging format
 
 
 class CircuitBreakerRegistry:

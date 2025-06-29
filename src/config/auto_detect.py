@@ -280,7 +280,9 @@ class EnvironmentDetector:
             return any(indicators)
 
         except Exception as e:
-            self.logger.debug(f"Container detection failed: {e}")  # TODO: Convert f-string to logging format
+            self.logger.debug(
+                f"Container detection failed: {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
     def _check_cgroup_container(self) -> bool:
@@ -309,7 +311,9 @@ class EnvironmentDetector:
             return any(k8s_indicators)
 
         except Exception as e:
-            self.logger.debug(f"Kubernetes detection failed: {e}")  # TODO: Convert f-string to logging format
+            self.logger.debug(
+                f"Kubernetes detection failed: {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
     async def _detect_cloud_provider(self) -> dict[str, Any]:
@@ -370,7 +374,9 @@ class EnvironmentDetector:
                 }
 
         except Exception as e:
-            self.logger.debug(f"AWS detection failed: {e}")  # TODO: Convert f-string to logging format
+            self.logger.debug(
+                f"AWS detection failed: {e}"
+            )  # TODO: Convert f-string to logging format
 
         return {}
 
@@ -394,7 +400,9 @@ class EnvironmentDetector:
                 }
 
         except Exception as e:
-            self.logger.debug(f"GCP detection failed: {e}")  # TODO: Convert f-string to logging format
+            self.logger.debug(
+                f"GCP detection failed: {e}"
+            )  # TODO: Convert f-string to logging format
 
         return {}
 
@@ -411,7 +419,9 @@ class EnvironmentDetector:
                 return {"provider": "azure", "region": response.text, "runtime": "vm"}
 
         except Exception as e:
-            self.logger.debug(f"Azure detection failed: {e}")  # TODO: Convert f-string to logging format
+            self.logger.debug(
+                f"Azure detection failed: {e}"
+            )  # TODO: Convert f-string to logging format
 
         return {}
 

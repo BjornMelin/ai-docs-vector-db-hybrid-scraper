@@ -3,6 +3,7 @@
 import logging
 from typing import Any
 
+
 try:
     import redis.asyncio as redis
 except ImportError:
@@ -10,6 +11,7 @@ except ImportError:
     class redis:
         class Redis:
             pass
+
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +44,9 @@ class RedisClientProvider:
             self._healthy = True
             return True
         except Exception as e:
-            logger.warning(f"Redis health check failed: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Redis health check failed: {e}"
+            )  # TODO: Convert f-string to logging format
             self._healthy = False
             return False
 

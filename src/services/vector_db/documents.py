@@ -192,7 +192,9 @@ class QdrantDocuments:
                     points_selector=models.PointIdsList(points=point_ids),
                     wait=True,
                 )
-                logger.info(f"Deleted {len(point_ids)} points by ID")  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"Deleted {len(point_ids)} points by ID"
+                )  # TODO: Convert f-string to logging format
             else:
                 # Delete by filter
                 filter_obj = build_filter(filter_condition)
@@ -244,7 +246,9 @@ class QdrantDocuments:
                     payload=payload,
                     wait=True,
                 )
-                logger.info(f"Replaced payload for point {point_id}")  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"Replaced payload for point {point_id}"
+                )  # TODO: Convert f-string to logging format
             else:
                 # Merge with existing payload
                 await self.client.set_payload(
@@ -253,7 +257,9 @@ class QdrantDocuments:
                     payload=payload,
                     wait=True,
                 )
-                logger.info(f"Updated payload for point {point_id}")  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"Updated payload for point {point_id}"
+                )  # TODO: Convert f-string to logging format
 
             return True
 
@@ -389,7 +395,9 @@ class QdrantDocuments:
                 wait=True,
             )
 
-            logger.info(f"Cleared all points from collection: {collection_name}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Cleared all points from collection: {collection_name}"
+            )  # TODO: Convert f-string to logging format
             return True
 
         except Exception as e:

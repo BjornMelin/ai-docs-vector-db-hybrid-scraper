@@ -128,7 +128,9 @@ def register_tools(mcp, client_manager: ClientManager):
                     except Exception as e:
                         if ctx:
                             await ctx.warning(f"Failed to process URL {url}: {e}")
-                        logger.warning(f"Failed to process URL {url}: {e}")  # TODO: Convert f-string to logging format
+                        logger.warning(
+                            f"Failed to process URL {url}: {e}"
+                        )  # TODO: Convert f-string to logging format
 
                 project["urls"] = request.urls
                 project["document_count"] = successful_count
@@ -534,7 +536,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 except Exception as e:
                     if ctx:
                         await ctx.warning(f"Failed to process URL {url}: {e}")
-                    logger.warning(f"Failed to process URL {url}: {e}")  # TODO: Convert f-string to logging format
+                    logger.warning(
+                        f"Failed to process URL {url}: {e}"
+                    )  # TODO: Convert f-string to logging format
 
             # Update project URLs
             updated_urls = list(existing_urls) + new_urls

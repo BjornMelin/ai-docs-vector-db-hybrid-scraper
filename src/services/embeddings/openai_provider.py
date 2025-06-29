@@ -113,7 +113,9 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 raise EmbeddingServiceError(msg)
 
             self._initialized = True
-            logger.info(f"OpenAI client initialized with model {self.model_name}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"OpenAI client initialized with model {self.model_name}"
+            )  # TODO: Convert f-string to logging format
         except Exception as e:
             msg = f"Failed to initialize OpenAI client: {e}"
             raise EmbeddingServiceError(msg) from e
@@ -339,7 +341,9 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 file_response.id, "/v1/embeddings", "24h"
             )
 
-            logger.info(f"Created batch job {batch_response.id} for {len(texts)} texts")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Created batch job {batch_response.id} for {len(texts)} texts"
+            )  # TODO: Convert f-string to logging format
             return batch_response.id
 
         except Exception as e:

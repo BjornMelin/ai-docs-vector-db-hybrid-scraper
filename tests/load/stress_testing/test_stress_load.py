@@ -86,7 +86,9 @@ class TestStressLoad:
                     avg_response_time > 3000 and breaking_point is None
                 ):
                     breaking_point = current_users
-                    logger.warning(f"Breaking point detected at {current_users} users")  # TODO: Convert f-string to logging format
+                    logger.warning(
+                        f"Breaking point detected at {current_users} users"
+                    )  # TODO: Convert f-string to logging format
 
         # Run stress test
         load_test_runner.run_load_test(
@@ -207,7 +209,9 @@ class TestStressLoad:
                 await services.call_service("cache")
             except Exception as e:
                 # Check if failure is cascading
-                logger.warning(f"Service failure: {e}")  # TODO: Convert f-string to logging format
+                logger.warning(
+                    f"Service failure: {e}"
+                )  # TODO: Convert f-string to logging format
             else:
                 await services.call_service("embedding")
                 await services.call_service("vector_db")

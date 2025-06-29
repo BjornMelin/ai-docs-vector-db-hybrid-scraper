@@ -280,7 +280,9 @@ class PlaywrightAdapter(BaseService):
                 result = await self._execute_action(page, action, i)
                 action_results.append(result)
             except Exception as e:
-                self.logger.warning(f"Action {i} failed")  # TODO: Convert f-string to logging format
+                self.logger.warning(
+                    f"Action {i} failed"
+                )  # TODO: Convert f-string to logging format
                 action_results.append(
                     {
                         "action_index": i,

@@ -88,11 +88,8 @@ class TestSecureConfig:
         # Create nested config objects directly to avoid pydantic settings path issues
         openai_config = OpenAIConfigSecure(api_key="sk-test123")
         firecrawl_config = FirecrawlConfigSecure(api_key="fc-test456")
-        
-        config = SecureConfig(
-            openai=openai_config,
-            firecrawl=firecrawl_config
-        )
+
+        config = SecureConfig(openai=openai_config, firecrawl=firecrawl_config)
 
         # Verify SecretStr is used
         assert isinstance(config.openai.api_key, SecretStr)
@@ -317,7 +314,7 @@ class TestMigration:
         new_manager = ConfigManager(
             config_file=old_reloader.config_source,
             enable_file_watching=old_reloader._file_watch_enabled,
-            enable_drift_detection=True
+            enable_drift_detection=True,
         )
 
         assert isinstance(new_manager, ConfigManager)

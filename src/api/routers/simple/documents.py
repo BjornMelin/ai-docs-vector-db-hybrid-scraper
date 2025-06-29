@@ -4,15 +4,13 @@ Simplified document management endpoints optimized for solo developers.
 """
 
 import logging
+from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from src.architecture.service_factory import get_service
 
-
-from typing import Dict
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +23,7 @@ class SimpleDocumentRequest(BaseModel):
     content: str = Field(
         ..., min_length=1, max_length=10000, description="Document content"
     )
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Document metadata"
     )
     collection_name: str = Field(default="documents", description="Collection name")
@@ -72,7 +70,7 @@ async def add_document(request: SimpleDocumentRequest) -> SimpleDocumentResponse
 async def get_document(
     document_id: str,
     collection_name: str = Query(default="documents", description="Collection name"),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Get a document by ID."""
     try:
         vector_db_service = await get_service("vector_db_service")
@@ -98,7 +96,7 @@ async def get_document(
 async def delete_document(
     document_id: str,
     collection_name: str = Query(default="documents", description="Collection name"),
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """Delete a document by ID."""
     try:
         vector_db_service = await get_service("vector_db_service")
@@ -125,7 +123,7 @@ async def list_documents(
     collection_name: str = Query(default="documents", description="Collection name"),
     limit: int = Query(default=10, ge=1, le=50, description="Maximum results"),
     offset: int = Query(default=0, ge=0, description="Offset for pagination"),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """List documents in a collection (simplified)."""
     try:
         vector_db_service = await get_service("vector_db_service")
@@ -149,7 +147,7 @@ async def list_documents(
 
 
 @router.get("/collections")
-async def list_collections() -> Dict[str, Any]:
+async def list_collections() -> dict[str, Any]:
     """List available collections."""
     try:
         vector_db_service = await get_service("vector_db_service")
@@ -167,7 +165,7 @@ async def list_collections() -> Dict[str, Any]:
 
 
 @router.get("/documents/health")
-async def documents_health() -> Dict[str, Any]:
+async def documents_health() -> dict[str, Any]:
     """Get documents service health status."""
     try:
         vector_db_service = await get_service("vector_db_service")

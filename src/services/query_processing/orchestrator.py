@@ -552,17 +552,21 @@ class SearchOrchestrator(BaseService):
     def get_stats(self) -> dict[str, Any]:
         """Get orchestrator statistics."""
         stats = self.stats.copy()
-        
+
         # Add RAG-specific metrics for portfolio showcase
-        if self._rag_generator and hasattr(self._rag_generator, 'get_metrics'):
+        if self._rag_generator and hasattr(self._rag_generator, "get_metrics"):
             rag_stats = self._rag_generator.get_metrics()
-            stats.update({
-                "rag_answers_generated": rag_stats.get("total_answers", 0),
-                "rag_avg_confidence": rag_stats.get("avg_confidence", 0.0),
-                "rag_avg_generation_time": rag_stats.get("avg_generation_time", 0.0),
-                "rag_success_rate": rag_stats.get("success_rate", 0.0),
-            })
-        
+            stats.update(
+                {
+                    "rag_answers_generated": rag_stats.get("total_answers", 0),
+                    "rag_avg_confidence": rag_stats.get("avg_confidence", 0.0),
+                    "rag_avg_generation_time": rag_stats.get(
+                        "avg_generation_time", 0.0
+                    ),
+                    "rag_success_rate": rag_stats.get("success_rate", 0.0),
+                }
+            )
+
         # Add feature utilization metrics for analytics dashboard
         feature_stats = {}
         if self.stats["total_searches"] > 0:
@@ -574,16 +578,19 @@ class SearchOrchestrator(BaseService):
                 "federation_usage": 0.2,
                 "rag_usage": 0.6,
             }
-        
-        stats.update({
-            "feature_utilization": feature_stats,
-            "performance_trends": {
-                "avg_latency_trend": "improving",  # Would be calculated from historical data
-                "cache_hit_rate": self.stats.get("cache_hits", 0) / max(self.stats.get("total_searches", 1), 1),
-                "error_rate": 0.02,  # Mock - would be calculated from error tracking
+
+        stats.update(
+            {
+                "feature_utilization": feature_stats,
+                "performance_trends": {
+                    "avg_latency_trend": "improving",  # Would be calculated from historical data
+                    "cache_hit_rate": self.stats.get("cache_hits", 0)
+                    / max(self.stats.get("total_searches", 1), 1),
+                    "error_rate": 0.02,  # Mock - would be calculated from error tracking
+                },
             }
-        })
-        
+        )
+
         return stats
 
     def clear_cache(self) -> None:

@@ -269,7 +269,7 @@ class TestMCPPerformanceBenchmarks:
         print(f"Total Time:            {metrics._total_time:.2f}s")
         print(f"Requests/Second:       {metrics.requests_per_second:.2f}")
         print(f"Success Rate:          {metrics.success_rate * 100:.1f}%")
-        print("")
+        print()
         print("Response Time (ms):")
         print(f"  Average:             {metrics.avg_response_time * 1000:.2f}")
         print(f"  Median:              {metrics.median_response_time * 1000:.2f}")
@@ -278,7 +278,7 @@ class TestMCPPerformanceBenchmarks:
         print(f"  Std Dev:             {metrics.std_dev_response_time * 1000:.2f}")
         print(f"  95th Percentile:     {metrics.p95_response_time * 1000:.2f}")
         print(f"  99th Percentile:     {metrics.p99_response_time * 1000:.2f}")
-        print("")
+        print()
         print(f"Memory Usage:          {metrics.memory_usage_mb:.2f} MB")
         print(f"{'=' * 60}\n")
 

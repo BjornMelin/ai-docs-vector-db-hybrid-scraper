@@ -7,7 +7,8 @@ following 2025 best practices.
 
 import asyncio
 import time
-from typing import Any, Dict, List, Optional, Tuple 
+from typing import Any, Dict, List, Optional, Tuple
+
 import httpx
 import numpy as np
 import pytest

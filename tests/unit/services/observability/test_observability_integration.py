@@ -233,7 +233,7 @@ class TestObservabilitySystemIntegration:
             except ConnectionError as e:
                 # Test error recording with correlation
                 from src.services.observability.correlation import (
-                    record_error,  # noqa: PLC0415
+                    record_error,
                 )
 
                 error_id = record_error(

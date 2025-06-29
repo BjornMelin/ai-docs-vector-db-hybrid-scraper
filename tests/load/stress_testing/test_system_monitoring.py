@@ -160,7 +160,9 @@ class SystemMonitor:
                 ]
 
             except Exception as e:
-                logger.warning(f"Error during monitoring: {e}")  # TODO: Convert f-string to logging format
+                logger.warning(
+                    f"Error during monitoring: {e}"
+                )  # TODO: Convert f-string to logging format
 
             time.sleep(self.collection_interval)
 
@@ -318,7 +320,9 @@ class SystemMonitor:
                 timestamp=timestamp,
             )
             self.performance_alerts.append(alert)
-            logger.warning(f"Performance alert: {message}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Performance alert: {message}"
+            )  # TODO: Convert f-string to logging format
 
     def get_metrics_summary(self) -> dict[str, Any]:
         """Get summary of collected metrics."""
@@ -549,7 +553,9 @@ class TestSystemMonitoring:
 
                     except Exception as e:
                         # Handle stress operation errors
-                        logger.warning(f"Stress operation failed: {e}")  # TODO: Convert f-string to logging format
+                        logger.warning(
+                            f"Stress operation failed: {e}"
+                        )  # TODO: Convert f-string to logging format
                         raise
                     else:
                         return {
@@ -592,7 +598,9 @@ class TestSystemMonitoring:
             pattern_results = []
 
             for pattern in stress_patterns:
-                logger.info(f"Running stress pattern: {pattern['name']}")  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"Running stress pattern: {pattern['name']}"
+                )  # TODO: Convert f-string to logging format
 
                 # Configure stress test
                 config = LoadTestConfig(
@@ -629,7 +637,9 @@ class TestSystemMonitoring:
                     }
                 )
 
-                logger.info(f"Completed stress pattern: {pattern['name']}")  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"Completed stress pattern: {pattern['name']}"
+                )  # TODO: Convert f-string to logging format
 
                 # Brief pause between patterns
                 await asyncio.sleep(5)
@@ -679,7 +689,9 @@ class TestSystemMonitoring:
             logger.info(
                 f"  - Total metrics collected: {final_metrics['_total_data_points']}"
             )
-            logger.info(f"  - Performance alerts: {final_metrics['_total_alerts']}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"  - Performance alerts: {final_metrics['_total_alerts']}"
+            )  # TODO: Convert f-string to logging format
             logger.info(
                 f"  - Peak CPU: {final_metrics['system_metrics']['cpu']['max']:.2f}%"
             )
@@ -855,7 +867,9 @@ class TestSystemMonitoring:
                 )
 
             logger.info("Performance degradation detected:")
-            logger.info(f"  - Degradation ratio: {degradation_ratio:.2f}x")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"  - Degradation ratio: {degradation_ratio:.2f}x"
+            )  # TODO: Convert f-string to logging format
             logger.info(
                 f"  - Initial response time: {first_sample['avg_response_time_ms']:.2f}ms"
             )

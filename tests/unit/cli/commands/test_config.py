@@ -57,7 +57,9 @@ class TestShowCommand:
         mock_config.embedding_provider = "openai"
         mock_config.crawl_provider = "firecrawl"
 
-        result = cli_runner.invoke(config, ["show", "--format", "table"], obj={"config": mock_config})
+        result = cli_runner.invoke(
+            config, ["show", "--format", "table"], obj={"config": mock_config}
+        )
 
         assert result.exit_code == 0
 

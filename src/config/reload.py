@@ -182,7 +182,9 @@ class ConfigReloader:
         """Setup signal handler for configuration reloading."""
 
         def signal_handler(signum: int, _frame) -> None:
-            logger.info(f"Received signal {signum}, triggering configuration reload")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Received signal {signum}, triggering configuration reload"
+            )  # TODO: Convert f-string to logging format
             # Store reference to prevent task from being garbage collected
             task = asyncio.create_task(self.reload_config(trigger=ReloadTrigger.SIGNAL))
             # Add done callback to handle any exceptions
@@ -201,7 +203,9 @@ class ConfigReloader:
                 f"Configuration reload signal handler setup for signal {self.signal_number}"
             )
         except (OSError, ValueError) as e:
-            logger.warning(f"Failed to setup signal handler: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Failed to setup signal handler: {e}"
+            )  # TODO: Convert f-string to logging format
 
     def set_current_config(self, config: Config) -> None:
         """Set the current configuration instance."""
@@ -269,7 +273,9 @@ class ConfigReloader:
         for i, listener in enumerate(self._change_listeners):
             if listener.name == name:
                 del self._change_listeners[i]
-                logger.info(f"Removed configuration change listener: {name}")  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"Removed configuration change listener: {name}"
+                )  # TODO: Convert f-string to logging format
                 return True
         return False
 
@@ -527,7 +533,9 @@ class ConfigReloader:
                     )
                 else:
                     operation.services_notified.append(f"{listener.name}:failed")
-                    logger.warning(f"Config listener {listener.name} returned failure")  # TODO: Convert f-string to logging format
+                    logger.warning(
+                        f"Config listener {listener.name} returned failure"
+                    )  # TODO: Convert f-string to logging format
 
             except TimeoutError:
                 operation.services_notified.append(f"{listener.name}:timeout")
@@ -693,7 +701,9 @@ class ConfigReloader:
                     f"Restored original signal handler for signal {self.signal_number}"
                 )
             except (OSError, ValueError) as e:
-                logger.warning(f"Failed to restore signal handler: {e}")  # TODO: Convert f-string to logging format
+                logger.warning(
+                    f"Failed to restore signal handler: {e}"
+                )  # TODO: Convert f-string to logging format
 
         # Shutdown thread pool executor
         self._executor.shutdown(wait=True)

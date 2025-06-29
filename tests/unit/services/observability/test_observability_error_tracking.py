@@ -484,7 +484,9 @@ class TestErrorMetrics:
                         _raise_timeout_error("Request timeout")
             except Exception as e:
                 # Errors are expected and tracked by observability system
-                logger.debug(f"Expected error for observability tracking: {e}")  # TODO: Convert f-string to logging format
+                logger.debug(
+                    f"Expected error for observability tracking: {e}"
+                )  # TODO: Convert f-string to logging format
 
         # AI tracker should have recorded error metrics
         # Verification would be implementation-specific

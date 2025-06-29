@@ -12,7 +12,6 @@ import click
 @click.group()
 def cli():
     """AI Docs Vector DB - Unified Development CLI"""
-    pass
 
 
 @cli.command()

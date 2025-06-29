@@ -2,13 +2,13 @@
 
 import logging
 
+
 try:
     from openai import AsyncOpenAI
 except ImportError:
     # Create a placeholder if openai is not available
     class AsyncOpenAI:
         pass
-
 
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,9 @@ class OpenAIClientProvider:
             self._healthy = True
             return True
         except Exception as e:
-            logger.warning(f"OpenAI health check failed: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"OpenAI health check failed: {e}"
+            )  # TODO: Convert f-string to logging format
             self._healthy = False
             return False
 

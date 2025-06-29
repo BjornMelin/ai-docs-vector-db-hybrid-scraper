@@ -9,10 +9,9 @@ from __future__ import annotations
 import math
 
 import pytest
-from hypothesis import HealthCheck, assume, given, settings
-from hypothesis import strategies as st
+from hypothesis import HealthCheck, assume, given, settings, strategies as st
 
-from tests.conftest import embedding_strategy, document_strategy
+from tests.conftest import document_strategy, embedding_strategy
 
 
 class TestEmbeddingPropertiesFixed:
@@ -22,22 +21,30 @@ class TestEmbeddingPropertiesFixed:
     @settings(
         max_examples=10,
         deadline=2000,
-        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example]
+        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example],
     )
     @pytest.mark.ai
     @pytest.mark.property
-    def test_embedding_dimension_consistency(self, embedding: list[float], ai_test_utilities):
+    def test_embedding_dimension_consistency(
+        self, embedding: list[float], ai_test_utilities
+    ):
         """Embeddings should have consistent properties regardless of dimension."""
         # Property: Valid embedding structure
         assert len(embedding) > 0, "Embedding must not be empty"
-        assert all(isinstance(x, (int, float)) for x in embedding), "All values must be numeric"
+        assert all(isinstance(x, (int, float)) for x in embedding), (
+            "All values must be numeric"
+        )
 
         # Property: No invalid values
-        assert not any(math.isnan(x) or math.isinf(x) for x in embedding), "No invalid values"
+        assert not any(math.isnan(x) or math.isinf(x) for x in embedding), (
+            "No invalid values"
+        )
 
         # Property: Reasonable magnitude for normalized vectors
         norm = sum(x**2 for x in embedding) ** 0.5
-        assert 0.8 <= norm <= 1.2, f"Norm {norm} outside reasonable range for normalized vector"
+        assert 0.8 <= norm <= 1.2, (
+            f"Norm {norm} outside reasonable range for normalized vector"
+        )
 
     @given(
         emb1=embedding_strategy(min_dim=256, max_dim=256, normalized=True),
@@ -46,11 +53,13 @@ class TestEmbeddingPropertiesFixed:
     @settings(
         max_examples=10,
         deadline=2000,
-        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example]
+        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example],
     )
     @pytest.mark.ai
     @pytest.mark.property
-    def test_cosine_similarity_properties(self, emb1: list[float], emb2: list[float], ai_test_utilities):
+    def test_cosine_similarity_properties(
+        self, emb1: list[float], emb2: list[float], ai_test_utilities
+    ):
         """Test mathematical properties of cosine similarity."""
         # Property: Similarity is symmetric
         sim1 = ai_test_utilities.calculate_cosine_similarity(emb1, emb2)
@@ -68,22 +77,26 @@ class TestEmbeddingPropertiesFixed:
         embeddings=st.lists(
             embedding_strategy(min_dim=128, max_dim=128, normalized=True),
             min_size=2,
-            max_size=5  # Reduced size for faster testing
+            max_size=5,  # Reduced size for faster testing
         )
     )
     @settings(
         max_examples=5,
         deadline=3000,
-        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example]
+        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example],
     )
     @pytest.mark.ai
     @pytest.mark.property
-    def test_embedding_batch_properties(self, embeddings: list[list[float]], ai_test_utilities):
+    def test_embedding_batch_properties(
+        self, embeddings: list[list[float]], ai_test_utilities
+    ):
         """Test properties that should hold for batches of embeddings."""
         # Property: All embeddings have same dimension
         if embeddings:
             dim = len(embeddings[0])
-            assert all(len(emb) == dim for emb in embeddings), "Inconsistent dimensions in batch"
+            assert all(len(emb) == dim for emb in embeddings), (
+                "Inconsistent dimensions in batch"
+            )
 
             # Property: All embeddings are valid
             for i, emb in enumerate(embeddings):
@@ -95,7 +108,9 @@ class TestEmbeddingPropertiesFixed:
             # Property: Similarities are within bounds
             for i in range(len(embeddings)):
                 for j in range(i + 1, len(embeddings)):
-                    sim = ai_test_utilities.calculate_cosine_similarity(embeddings[i], embeddings[j])
+                    sim = ai_test_utilities.calculate_cosine_similarity(
+                        embeddings[i], embeddings[j]
+                    )
                     assert -1.0 <= sim <= 1.0, f"Similarity between {i} and {j}: {sim}"
 
     @given(
@@ -105,7 +120,7 @@ class TestEmbeddingPropertiesFixed:
     @settings(
         max_examples=5,
         deadline=2000,
-        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example]
+        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example],
     )
     @pytest.mark.ai
     @pytest.mark.property
@@ -115,6 +130,7 @@ class TestEmbeddingPropertiesFixed:
         """Test that similarity degrades gracefully with noise addition."""
         # Add controlled noise
         import random
+
         random.seed(42)  # Deterministic for reproducibility
 
         noisy_embedding = []
@@ -129,11 +145,17 @@ class TestEmbeddingPropertiesFixed:
             noisy_embedding = [x / norm for x in noisy_embedding]
 
         # Calculate similarities
-        original_sim = ai_test_utilities.calculate_cosine_similarity(base_embedding, base_embedding)
-        noisy_sim = ai_test_utilities.calculate_cosine_similarity(base_embedding, noisy_embedding)
+        original_sim = ai_test_utilities.calculate_cosine_similarity(
+            base_embedding, base_embedding
+        )
+        noisy_sim = ai_test_utilities.calculate_cosine_similarity(
+            base_embedding, noisy_embedding
+        )
 
         # Property: Original similarity should be ~1
-        assert abs(original_sim - 1.0) < 1e-5, f"Original similarity {original_sim} should be ~1"
+        assert abs(original_sim - 1.0) < 1e-5, (
+            f"Original similarity {original_sim} should be ~1"
+        )
 
         # Property: Noisy similarity should be lower but still reasonable
         # Relaxed threshold based on noise scale
@@ -144,7 +166,9 @@ class TestEmbeddingPropertiesFixed:
         )
 
         # Property: Noisy similarity should be less than original
-        assert noisy_sim <= original_sim + 1e-5, "Noisy similarity should not exceed original"
+        assert noisy_sim <= original_sim + 1e-5, (
+            "Noisy similarity should not exceed original"
+        )
 
     @pytest.mark.ai
     def test_embedding_generation_reproducibility(self, ai_test_utilities):
@@ -155,26 +179,30 @@ class TestEmbeddingPropertiesFixed:
 
         # Property: Same input should produce same output
         assert len(embeddings1) == len(embeddings2)
-        for i, (emb1, emb2) in enumerate(zip(embeddings1, embeddings2)):
+        for i, (emb1, emb2) in enumerate(zip(embeddings1, embeddings2, strict=False)):
             assert len(emb1) == len(emb2), f"Dimension mismatch for embedding {i}"
-            for j, (val1, val2) in enumerate(zip(emb1, emb2)):
-                assert abs(val1 - val2) < 1e-10, f"Value mismatch at [{i}][{j}]: {val1} vs {val2}"
+            for j, (val1, val2) in enumerate(zip(emb1, emb2, strict=False)):
+                assert abs(val1 - val2) < 1e-10, (
+                    f"Value mismatch at [{i}][{j}]: {val1} vs {val2}"
+                )
 
     @given(
         embeddings=st.lists(
             embedding_strategy(min_dim=128, max_dim=128, normalized=True),
             min_size=3,
-            max_size=5
+            max_size=5,
         )
     )
     @settings(
         max_examples=5,
         deadline=2000,
-        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example]
+        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example],
     )
     @pytest.mark.ai
     @pytest.mark.property
-    def test_similarity_ranking_properties(self, embeddings: list[list[float]], ai_test_utilities):
+    def test_similarity_ranking_properties(
+        self, embeddings: list[list[float]], ai_test_utilities
+    ):
         """Test properties of similarity-based ranking."""
         if len(embeddings) < 3:
             return  # Skip if not enough embeddings
@@ -197,7 +225,9 @@ class TestEmbeddingPropertiesFixed:
 
         # Check that ranking is properly ordered
         for i in range(len(sorted_sims) - 1):
-            assert sorted_sims[i] >= sorted_sims[i + 1], "Similarity ranking inconsistent"
+            assert sorted_sims[i] >= sorted_sims[i + 1], (
+                "Similarity ranking inconsistent"
+            )
 
     @given(
         dimension=st.sampled_from([128, 256, 384]),  # Reduced dimension choices
@@ -206,7 +236,7 @@ class TestEmbeddingPropertiesFixed:
     @settings(
         max_examples=5,
         deadline=2000,
-        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example]
+        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example],
     )
     @pytest.mark.ai
     @pytest.mark.property
@@ -215,28 +245,32 @@ class TestEmbeddingPropertiesFixed:
     ):
         """Test properties of mock embedding API responses."""
         # Generate query vector
-        query_vector = ai_test_utilities.generate_test_embeddings(count=1, dim=dimension)[0]
+        query_vector = ai_test_utilities.generate_test_embeddings(
+            count=1, dim=dimension
+        )[0]
 
         # Create mock response (simplified version of create_mock_qdrant_response)
-        response = {
-            "result": []
-        }
+        response = {"result": []}
 
         for i in range(batch_size):
             score = max(0.0, 0.95 - (i * 0.05))  # Ensure non-negative scores
 
-            response["result"].append({
-                "id": f"doc_{i}",
-                "score": score,
-                "payload": {
-                    "text": f"Document {i} content with relevant information",
-                    "title": f"Document {i}",
-                    "url": f"https://example.com/doc_{i}",
-                    "chunk_index": i,
-                    "metadata": {"source": "test", "category": f"category_{i % 3}"},
-                },
-                "vector": ai_test_utilities.generate_test_embeddings(count=1, dim=dimension)[0],
-            })
+            response["result"].append(
+                {
+                    "id": f"doc_{i}",
+                    "score": score,
+                    "payload": {
+                        "text": f"Document {i} content with relevant information",
+                        "title": f"Document {i}",
+                        "url": f"https://example.com/doc_{i}",
+                        "chunk_index": i,
+                        "metadata": {"source": "test", "category": f"category_{i % 3}"},
+                    },
+                    "vector": ai_test_utilities.generate_test_embeddings(
+                        count=1, dim=dimension
+                    )[0],
+                }
+            )
 
         # Property: Response structure is valid
         assert "result" in response
@@ -272,9 +306,7 @@ class TestDocumentProcessingProperties:
 
     @given(document_text=document_strategy(min_length=20, max_length=200))
     @settings(
-        max_examples=10,
-        deadline=1000,
-        suppress_health_check=[HealthCheck.too_slow]
+        max_examples=10, deadline=1000, suppress_health_check=[HealthCheck.too_slow]
     )
     @pytest.mark.ai
     @pytest.mark.property
@@ -285,11 +317,15 @@ class TestDocumentProcessingProperties:
         assert len(processed) > 0, "Document should not be empty after processing"
 
         # Property: Document should have reasonable length
-        assert 10 <= len(processed) <= 1000, f"Document length {len(processed)} outside bounds"
+        assert 10 <= len(processed) <= 1000, (
+            f"Document length {len(processed)} outside bounds"
+        )
 
         # Property: Document should contain readable text
         word_count = len(processed.split())
-        assert word_count >= 2, f"Document should have at least 2 words, got {word_count}"
+        assert word_count >= 2, (
+            f"Document should have at least 2 words, got {word_count}"
+        )
 
         # Property: No extremely long words (potential encoding issues)
         words = processed.split()
@@ -298,15 +334,13 @@ class TestDocumentProcessingProperties:
 
     @given(
         documents=st.lists(
-            document_strategy(min_length=20, max_length=150),
-            min_size=2,
-            max_size=5
+            document_strategy(min_length=20, max_length=150), min_size=2, max_size=5
         )
     )
     @settings(
         max_examples=5,
         deadline=2000,
-        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example]
+        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example],
     )
     @pytest.mark.ai
     @pytest.mark.property
@@ -325,4 +359,6 @@ class TestDocumentProcessingProperties:
         # Property: Documents should be distinguishable
         unique_docs = set(processed_docs)
         # Allow some duplicates due to limited text generation
-        assert len(unique_docs) >= max(1, len(documents) // 2), "Documents should be somewhat unique"
+        assert len(unique_docs) >= max(1, len(documents) // 2), (
+            "Documents should be somewhat unique"
+        )

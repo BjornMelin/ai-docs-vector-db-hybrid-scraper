@@ -183,7 +183,9 @@ class RAGGenerator(BaseService):
             return result
 
         except Exception as e:
-            logger.error(f"Failed to generate RAG answer: {e}", exc_info=True)  # TODO: Convert f-string to logging format
+            logger.error(
+                f"Failed to generate RAG answer: {e}", exc_info=True
+            )  # TODO: Convert f-string to logging format
             msg = f"RAG generation failed: {e}"
             raise EmbeddingServiceError(msg) from e
 
@@ -337,7 +339,9 @@ class RAGGenerator(BaseService):
             msg = "Answer generation timed out"
             raise EmbeddingServiceError(msg) from None
         except Exception as e:
-            logger.warning(f"Failed to generate answer: {e}")  # TODO: Convert f-string to logging format
+            logger.warning(
+                f"Failed to generate answer: {e}"
+            )  # TODO: Convert f-string to logging format
             msg = f"Answer generation failed: {e}"
             raise EmbeddingServiceError(msg) from e
 

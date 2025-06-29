@@ -82,7 +82,9 @@ def demo_basic_encryption_operations():
 
         # Encrypt and store configurations
         for config_name, config_info in demo_configs.items():
-            logger.info(f"Encrypting configuration: {config_name}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Encrypting configuration: {config_name}"
+            )  # TODO: Convert f-string to logging format
 
             success = config_manager.encrypt_configuration(
                 config_path=config_name,
@@ -93,14 +95,20 @@ def demo_basic_encryption_operations():
             )
 
             if success:
-                logger.info(f"✓ Configuration {config_name} encrypted successfully")  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"✓ Configuration {config_name} encrypted successfully"
+                )  # TODO: Convert f-string to logging format
             else:
-                logger.error(f"✗ Failed to encrypt configuration {config_name}")  # TODO: Convert f-string to logging format
+                logger.error(
+                    f"✗ Failed to encrypt configuration {config_name}"
+                )  # TODO: Convert f-string to logging format
 
         # Decrypt and retrieve configurations
         logger.info("\nDecrypting configurations...")
         for config_name in demo_configs:
-            logger.info(f"Decrypting configuration: {config_name}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Decrypting configuration: {config_name}"
+            )  # TODO: Convert f-string to logging format
 
             decrypted_data = config_manager.decrypt_configuration(
                 config_path=config_name,
@@ -109,10 +117,16 @@ def demo_basic_encryption_operations():
             )
 
             if decrypted_data:
-                logger.info(f"✓ Configuration {config_name} decrypted successfully")  # TODO: Convert f-string to logging format
-                logger.info(f"  Data: {json.dumps(decrypted_data, indent=2)}")  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"✓ Configuration {config_name} decrypted successfully"
+                )  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"  Data: {json.dumps(decrypted_data, indent=2)}"
+                )  # TODO: Convert f-string to logging format
             else:
-                logger.error(f"✗ Failed to decrypt configuration {config_name}")  # TODO: Convert f-string to logging format
+                logger.error(
+                    f"✗ Failed to decrypt configuration {config_name}"
+                )  # TODO: Convert f-string to logging format
 
 
 def demo_integrity_validation():
@@ -149,7 +163,9 @@ def demo_integrity_validation():
 
         for config_path, is_valid in integrity_results.items():
             status = "✓ VALID" if is_valid else "✗ INVALID"
-            logger.info(f"  {config_path}: {status}")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"  {config_path}: {status}"
+            )  # TODO: Convert f-string to logging format
 
         # Demonstrate integrity validation for specific configuration
         specific_result = config_manager.validate_configuration_integrity(
@@ -157,7 +173,9 @@ def demo_integrity_validation():
             user_id="integrity_test_user",
         )
 
-        logger.info(f"Specific validation result: {specific_result}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Specific validation result: {specific_result}"
+        )  # TODO: Convert f-string to logging format
 
 
 def demo_audit_logging():
@@ -206,7 +224,9 @@ def demo_audit_logging():
 
         # Get all recent events
         all_events = config_manager.get_audit_events(limit=20)
-        logger.info(f"Total recent audit events: {len(all_events)}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Total recent audit events: {len(all_events)}"
+        )  # TODO: Convert f-string to logging format
 
         for event in all_events:
             logger.info(
@@ -222,13 +242,17 @@ def demo_audit_logging():
         encrypt_events = config_manager.get_audit_events(
             limit=10, operation_filter=ConfigOperationType.ENCRYPT
         )
-        logger.info(f"\nEncryption events: {len(encrypt_events)}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"\nEncryption events: {len(encrypt_events)}"
+        )  # TODO: Convert f-string to logging format
 
         # Filter events by user
         user_events = config_manager.get_audit_events(
             limit=10, user_filter="audit_demo_user"
         )
-        logger.info(f"Events by audit_demo_user: {len(user_events)}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Events by audit_demo_user: {len(user_events)}"
+        )  # TODO: Convert f-string to logging format
 
 
 def demo_backup_and_restore():
@@ -266,7 +290,9 @@ def demo_backup_and_restore():
 
         # Create backup
         backup_path = backup_dir / "config_backup.tar.gz"
-        logger.info(f"Creating backup at: {backup_path}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Creating backup at: {backup_path}"
+        )  # TODO: Convert f-string to logging format
 
         backup_success = config_manager.backup_configurations(
             backup_path=backup_path,
@@ -275,7 +301,9 @@ def demo_backup_and_restore():
 
         if backup_success:
             logger.info("✓ Backup created successfully")
-            logger.info(f"  Backup size: {backup_path.stat().st_size} bytes")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"  Backup size: {backup_path.stat().st_size} bytes"
+            )  # TODO: Convert f-string to logging format
         else:
             logger.error("✗ Backup failed")
 
@@ -303,15 +331,21 @@ def demo_security_monitoring_integration():
         logger.info(
             f"  Encryption Enabled: {security_status.get('encryption_enabled')}"
         )
-        logger.info(f"  Audit Enabled: {security_status.get('audit_enabled')}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  Audit Enabled: {security_status.get('audit_enabled')}"
+        )  # TODO: Convert f-string to logging format
         logger.info(
             f"  Integrity Checks: {security_status.get('integrity_checks_enabled')}"
         )
-        logger.info(f"  Backup Enabled: {security_status.get('backup_enabled')}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  Backup Enabled: {security_status.get('backup_enabled')}"
+        )  # TODO: Convert f-string to logging format
         logger.info(
             f"  Total Configurations: {security_status.get('total_configurations')}"
         )
-        logger.info(f"  Key Version: {security_status.get('key_version')}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"  Key Version: {security_status.get('key_version')}"
+        )  # TODO: Convert f-string to logging format
         logger.info(
             f"  Security Monitoring: {security_status.get('security_monitoring_integration')}"
         )
@@ -341,7 +375,9 @@ def demo_security_monitoring_integration():
         recent_events = config_manager.get_audit_events(limit=10)
         failed_events = [e for e in recent_events if not e.success]
 
-        logger.info(f"Recent failed operations detected: {len(failed_events)}")  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Recent failed operations detected: {len(failed_events)}"
+        )  # TODO: Convert f-string to logging format
         for event in failed_events:
             logger.warning(
                 f"  SECURITY ALERT: {event.operation.value} failed - "

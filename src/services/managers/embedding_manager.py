@@ -57,7 +57,9 @@ class EmbeddingManager:
             logger.info("EmbeddingManager service initialized")
 
         except Exception as e:
-            logger.error(f"Failed to initialize EmbeddingManager: {e}")  # TODO: Convert f-string to logging format
+            logger.error(
+                f"Failed to initialize EmbeddingManager: {e}"
+            )  # TODO: Convert f-string to logging format
             raise EmbeddingServiceError(
                 f"Failed to initialize embedding manager: {e}"
             ) from e
@@ -124,7 +126,9 @@ class EmbeddingManager:
                 generate_sparse=generate_sparse,
             )
         except Exception as e:
-            logger.error(f"Embedding generation failed: {e}")  # TODO: Convert f-string to logging format
+            logger.error(
+                f"Embedding generation failed: {e}"
+            )  # TODO: Convert f-string to logging format
             raise EmbeddingServiceError(f"Embedding generation failed: {e}") from e
 
     async def rerank_results(
@@ -148,7 +152,9 @@ class EmbeddingManager:
         try:
             return await self._core_manager.rerank_results(query, results)
         except Exception as e:
-            logger.error(f"Result reranking failed: {e}")  # TODO: Convert f-string to logging format
+            logger.error(
+                f"Result reranking failed: {e}"
+            )  # TODO: Convert f-string to logging format
             # Return original results on failure
             return results
 
@@ -321,7 +327,9 @@ class EmbeddingManager:
                 status["providers"] = self.get_provider_info()
                 status["usage"] = self.get_usage_report()
             except Exception as e:
-                logger.warning(f"Failed to get embedding status: {e}")  # TODO: Convert f-string to logging format
+                logger.warning(
+                    f"Failed to get embedding status: {e}"
+                )  # TODO: Convert f-string to logging format
                 status["error"] = str(e)
 
         return status

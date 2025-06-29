@@ -491,7 +491,9 @@ class SampleClass_{i}:
                     f"Completed {result.test_name}: {result.speedup_factor:.2f}x speedup"
                 )
             except Exception as e:
-                logger.error(f"Benchmark failed: {e}")  # TODO: Convert f-string to logging format
+                logger.error(
+                    f"Benchmark failed: {e}"
+                )  # TODO: Convert f-string to logging format
                 # Add failed result
                 results.append(
                     BenchmarkResult(

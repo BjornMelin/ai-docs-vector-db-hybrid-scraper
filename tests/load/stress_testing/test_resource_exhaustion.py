@@ -316,7 +316,9 @@ class TestResourceExhaustion:
                 cpu_percent = psutil.Process().cpu_percent()
                 if cpu_percent > 80:
                     cpu_saturation_detected = True
-                    logger.warning(f"High CPU usage detected: {cpu_percent:.2f}%")  # TODO: Convert f-string to logging format
+                    logger.warning(
+                        f"High CPU usage detected: {cpu_percent:.2f}%"
+                    )  # TODO: Convert f-string to logging format
 
                 await asyncio.sleep(0.01)  # Small async yield
 

@@ -135,10 +135,13 @@ class TestModernConfigurationWizard:
         wizard.console = rich_output_capturer.console
 
         # Mock profile manager with patch
-        with patch.object(wizard.profile_manager, 'list_profiles') as mock_list, \
-             patch.object(wizard.profile_manager, 'show_profiles_table') as mock_show, \
-             patch.object(wizard.profile_manager, 'show_profile_setup_instructions') as mock_instructions:
-            
+        with (
+            patch.object(wizard.profile_manager, "list_profiles") as mock_list,
+            patch.object(wizard.profile_manager, "show_profiles_table") as mock_show,
+            patch.object(
+                wizard.profile_manager, "show_profile_setup_instructions"
+            ) as mock_instructions,
+        ):
             mock_list.return_value = ["personal", "development"]
 
             # First attempt: user selects but then declines confirmation
@@ -162,9 +165,10 @@ class TestModernConfigurationWizard:
 
         # Mock template manager with patch
         template_data = {"qdrant": {"host": "localhost"}, "openai": {"model": "test"}}
-        with patch.object(wizard.template_manager, 'get_template') as mock_get, \
-             patch.object(wizard.template_manager, 'preview_template') as mock_preview:
-            
+        with (
+            patch.object(wizard.template_manager, "get_template") as mock_get,
+            patch.object(wizard.template_manager, "preview_template") as mock_preview,
+        ):
             mock_get.return_value = template_data
 
             with patch("src.cli.commands.setup.questionary") as mock_questionary:
@@ -175,19 +179,15 @@ class TestModernConfigurationWizard:
 
                 assert result == {}
                 mock_preview.assert_called_once_with("test-template")
-                rich_output_capturer.assert_contains(
-                    "🛠️ Customizing"
-                )
-                rich_output_capturer.assert_contains(
-                    "test-template"
-                )
+                rich_output_capturer.assert_contains("🛠️ Customizing")
+                rich_output_capturer.assert_contains("test-template")
 
     def test_customize_api_keys_openai_valid(self):
         """Test API key customization with valid OpenAI key."""
         wizard = ConfigurationWizard()
 
         # Mock validator with patch
-        with patch.object(wizard.validator, 'validate_api_key') as mock_validate:
+        with patch.object(wizard.validator, "validate_api_key") as mock_validate:
             mock_validate.return_value = (True, None)
 
             with patch("src.cli.commands.setup.questionary") as mock_questionary:
@@ -211,7 +211,7 @@ class TestModernConfigurationWizard:
         wizard.console = rich_output_capturer.console
 
         # Mock validator with patch
-        with patch.object(wizard.validator, 'validate_api_key') as mock_validate:
+        with patch.object(wizard.validator, "validate_api_key") as mock_validate:
             mock_validate.side_effect = [
                 (False, "Invalid key format"),
                 (True, None),
@@ -231,19 +231,26 @@ class TestModernConfigurationWizard:
                 result = wizard._customize_api_keys({})
 
                 assert result == {"openai": {"api_key": "sk-valid-key"}}
-                rich_output_capturer.assert_contains("Invalid API key: Invalid key format")
+                rich_output_capturer.assert_contains(
+                    "Invalid API key: Invalid key format"
+                )
 
     def test_customize_database_local_connection(self):
         """Test database customization for local Qdrant."""
         wizard = ConfigurationWizard()
 
         # Mock validator with patch
-        with patch.object(wizard.validator, 'validate_url') as mock_validate:
+        with patch.object(wizard.validator, "validate_url") as mock_validate:
             mock_validate.return_value = (True, None)
 
             with patch("src.cli.commands.setup.questionary") as mock_questionary:
-                mock_questionary.select.return_value.ask.return_value = "Custom host/port"
-                mock_questionary.text.return_value.ask.side_effect = ["localhost", "6333"]
+                mock_questionary.select.return_value.ask.return_value = (
+                    "Custom host/port"
+                )
+                mock_questionary.text.return_value.ask.side_effect = [
+                    "localhost",
+                    "6333",
+                ]
 
                 result = wizard._customize_database({})
 
@@ -254,20 +261,27 @@ class TestModernConfigurationWizard:
         wizard = ConfigurationWizard()
 
         # Mock validator with patch
-        with patch.object(wizard.validator, 'validate_url') as mock_validate:
+        with patch.object(wizard.validator, "validate_url") as mock_validate:
             mock_validate.return_value = (True, None)
 
             with patch("src.cli.commands.setup.questionary") as mock_questionary:
-                mock_questionary.select.return_value.ask.return_value = "Qdrant Cloud URL"
+                mock_questionary.select.return_value.ask.return_value = (
+                    "Qdrant Cloud URL"
+                )
                 mock_questionary.text.return_value.ask.return_value = (
                     "https://cloud.qdrant.io"
                 )
-                mock_questionary.password.return_value.ask.return_value = "cloud-api-key"
+                mock_questionary.password.return_value.ask.return_value = (
+                    "cloud-api-key"
+                )
 
                 result = wizard._customize_database({})
 
                 assert result == {
-                    "qdrant": {"url": "https://cloud.qdrant.io", "api_key": "cloud-api-key"}
+                    "qdrant": {
+                        "url": "https://cloud.qdrant.io",
+                        "api_key": "cloud-api-key",
+                    }
                 }
 
     def test_customize_performance_chunk_size(self):
@@ -328,10 +342,13 @@ class TestModernConfigurationWizard:
             temp_env_path = temp_env.name
 
         # Mock profile manager with patch
-        with patch.object(wizard.profile_manager, 'create_profile_config') as mock_create, \
-             patch.object(wizard.profile_manager, 'activate_profile') as mock_activate, \
-             patch.object(wizard.profile_manager, 'generate_env_file') as mock_gen_env:
-            
+        with (
+            patch.object(
+                wizard.profile_manager, "create_profile_config"
+            ) as mock_create,
+            patch.object(wizard.profile_manager, "activate_profile") as mock_activate,
+            patch.object(wizard.profile_manager, "generate_env_file") as mock_gen_env,
+        ):
             mock_create.return_value = Path(temp_profile_path)
             mock_activate.return_value = Path(temp_config_path)
             mock_gen_env.return_value = Path(temp_env_path)
@@ -358,7 +375,9 @@ class TestModernConfigurationWizard:
         wizard.console = rich_output_capturer.console
 
         # Mock profile manager to raise exception with patch
-        with patch.object(wizard.profile_manager, 'create_profile_config') as mock_create:
+        with patch.object(
+            wizard.profile_manager, "create_profile_config"
+        ) as mock_create:
             mock_create.side_effect = Exception("Save failed")
 
             with pytest.raises(Exception, match="Save failed"):
@@ -395,16 +414,23 @@ class TestModernConfigurationWizard:
         mock_save.return_value = Path(temp_path)
 
         # Mock profile manager and template manager with patch
-        with patch.object(wizard.profile_manager, 'profile_templates', {"personal": "personal-use"}), \
-             patch.object(wizard.template_manager, 'create_config_from_template') as mock_create, \
-             patch.object(wizard.validator, 'validate_and_show_errors') as mock_validate, \
-             patch.object(wizard.validator, 'show_validation_summary') as mock_summary:
-            
+        with (
+            patch.object(
+                wizard.profile_manager,
+                "profile_templates",
+                {"personal": "personal-use"},
+            ),
+            patch.object(
+                wizard.template_manager, "create_config_from_template"
+            ) as mock_create,
+            patch.object(wizard.validator, "validate_and_show_errors") as mock_validate,
+            patch.object(wizard.validator, "show_validation_summary") as mock_summary,
+        ):
             # Mock template manager
             config_mock = MagicMock()
             config_mock.model_dump.return_value = {"test": "config"}
             mock_create.return_value = config_mock
-            
+
             # Mock validator
             mock_validate.return_value = True
 
@@ -448,11 +474,16 @@ class TestModernConfigurationWizard:
         wizard.selected_profile = "test"
         config_mock = MagicMock()
         config_mock.model_dump.return_value = {}
-        
-        with patch.object(wizard.profile_manager, 'profile_templates', {"test": "test-template"}), \
-             patch.object(wizard.template_manager, 'create_config_from_template') as mock_create, \
-             patch.object(wizard.validator, 'validate_and_show_errors') as mock_validate:
-            
+
+        with (
+            patch.object(
+                wizard.profile_manager, "profile_templates", {"test": "test-template"}
+            ),
+            patch.object(
+                wizard.template_manager, "create_config_from_template"
+            ) as mock_create,
+            patch.object(wizard.validator, "validate_and_show_errors") as mock_validate,
+        ):
             mock_create.return_value = config_mock
             mock_validate.return_value = False
 
@@ -480,7 +511,9 @@ class TestModernConfigurationWizard:
             temp_path = temp_file.name
 
         # Mock profile_manager.profile_templates with patch
-        with patch.object(wizard.profile_manager, 'profile_templates', {"personal": "personal-use"}):
+        with patch.object(
+            wizard.profile_manager, "profile_templates", {"personal": "personal-use"}
+        ):
             wizard._show_success_message(Path(temp_path))
 
             rich_output_capturer.assert_panel_title("🚀 Template-Driven Setup Complete")

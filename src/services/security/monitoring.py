@@ -662,7 +662,7 @@ class SecurityMonitor:
             return json.dumps(
                 [e.to_dict() for e in relevant_events], indent=2, default=str
             )
-        elif format.lower() == "csv":
+        if format.lower() == "csv":
             # Simple CSV export
             lines = ["timestamp,event_type,severity,client_ip,endpoint,method"]
             for event in relevant_events:
@@ -671,8 +671,7 @@ class SecurityMonitor:
                     f"{event.severity.value},{event.client_ip},{event.endpoint},{event.method}"
                 )
             return "\n".join(lines)
-        else:
-            raise ValueError(f"Unsupported export format: {format}")
+        raise ValueError(f"Unsupported export format: {format}")
 
     def cleanup_old_data(self, days: int = 30) -> int:
         """Clean up old security data to manage memory usage.

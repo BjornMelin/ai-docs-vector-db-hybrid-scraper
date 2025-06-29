@@ -16,9 +16,8 @@ Features:
 import asyncio
 import logging
 import time
-
-
 from typing import Dict
+
 
 try:
     import redis.asyncio as redis
@@ -62,7 +61,7 @@ class DistributedRateLimiter:
         """
         self.security_config = security_config or SecurityConfig()
         self.redis_client: redis.Redis | None = None
-        self.local_cache: Dict[str, Dict[str, float]] = {}  # Fallback cache
+        self.local_cache: dict[str, dict[str, float]] = {}  # Fallback cache
         self._cache_lock = asyncio.Lock()
 
         # Initialize Redis client if available and URL provided
@@ -76,7 +75,9 @@ class DistributedRateLimiter:
                     retry_on_timeout=True,
                     health_check_interval=30,
                 )
-                logger.info(f"Redis rate limiter initialized: {redis_url}")  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"Redis rate limiter initialized: {redis_url}"
+                )  # TODO: Convert f-string to logging format
             except Exception as e:
                 logger.warning(
                     f"Failed to initialize Redis: {e}. Using local fallback only."
@@ -290,7 +291,9 @@ class DistributedRateLimiter:
                     "timestamp": current_time,
                 }
             except Exception as e:
-                logger.warning(f"Failed to get Redis rate limit status: {e}")  # TODO: Convert f-string to logging format
+                logger.warning(
+                    f"Failed to get Redis rate limit status: {e}"
+                )  # TODO: Convert f-string to logging format
 
         # Local fallback
         async with self._cache_lock:
@@ -327,13 +330,17 @@ class DistributedRateLimiter:
             if self.redis_client:
                 key = f"rate_limit:{identifier}:{window}"
                 await self.redis_client.delete(key)
-                logger.info(f"Reset Redis rate limit for {identifier}")  # TODO: Convert f-string to logging format
+                logger.info(
+                    f"Reset Redis rate limit for {identifier}"
+                )  # TODO: Convert f-string to logging format
 
             # Also reset local cache
             async with self._cache_lock:
                 if identifier in self.local_cache:
                     del self.local_cache[identifier]
-                    logger.info(f"Reset local rate limit for {identifier}")  # TODO: Convert f-string to logging format
+                    logger.info(
+                        f"Reset local rate limit for {identifier}"
+                    )  # TODO: Convert f-string to logging format
 
             return True
         except Exception as e:
@@ -382,7 +389,9 @@ class DistributedRateLimiter:
                 del self.local_cache[identifier]
 
         if cleanup_count > 0:
-            logger.info(f"Cleaned up {cleanup_count} expired rate limit entries")  # TODO: Convert f-string to logging format
+            logger.info(
+                f"Cleaned up {cleanup_count} expired rate limit entries"
+            )  # TODO: Convert f-string to logging format
 
         return cleanup_count
 
@@ -404,7 +413,9 @@ class DistributedRateLimiter:
                 await self.redis_client.ping()
                 status["redis_healthy"] = True
             except Exception as e:
-                logger.warning(f"Redis health check failed: {e}")  # TODO: Convert f-string to logging format
+                logger.warning(
+                    f"Redis health check failed: {e}"
+                )  # TODO: Convert f-string to logging format
                 status["redis_error"] = str(e)
 
         return status
@@ -416,4 +427,6 @@ class DistributedRateLimiter:
                 await self.redis_client.close()
                 logger.info("Redis connection closed")
             except Exception as e:
-                logger.warning(f"Error closing Redis connection: {e}")  # TODO: Convert f-string to logging format
+                logger.warning(
+                    f"Error closing Redis connection: {e}"
+                )  # TODO: Convert f-string to logging format

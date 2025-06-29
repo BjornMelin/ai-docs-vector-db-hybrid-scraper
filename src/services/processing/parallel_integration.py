@@ -257,7 +257,9 @@ class ParallelProcessingSystem:
             return results
 
         except Exception as e:
-            logger.error(f"Parallel document processing failed: {e}")  # TODO: Convert f-string to logging format
+            logger.error(
+                f"Parallel document processing failed: {e}"
+            )  # TODO: Convert f-string to logging format
             await self._update_system_metrics(
                 (time.time() - request_start) * 1000, success=False
             )
@@ -342,21 +344,19 @@ class ParallelProcessingSystem:
                 new_embeddings["cache_misses"] = len(uncached_texts)
 
                 return new_embeddings
-            else:
-                # All embeddings were cached
-                all_embeddings = [None] * len(texts)
-                for i, embedding in cached_embeddings:
-                    all_embeddings[i] = embedding
+            # All embeddings were cached
+            all_embeddings = [None] * len(texts)
+            for i, embedding in cached_embeddings:
+                all_embeddings[i] = embedding
 
-                return {
-                    "embeddings": all_embeddings,
-                    "cache_hits": len(cached_embeddings),
-                    "cache_misses": 0,
-                    "parallel_enabled": False,  # No generation needed
-                }
-        else:
-            # Generate embeddings without caching
-            return await self.parallel_embeddings.generate_embeddings_parallel(texts)
+            return {
+                "embeddings": all_embeddings,
+                "cache_hits": len(cached_embeddings),
+                "cache_misses": 0,
+                "parallel_enabled": False,  # No generation needed
+            }
+        # Generate embeddings without caching
+        return await self.parallel_embeddings.generate_embeddings_parallel(texts)
 
     async def _calculate_performance_metrics(
         self,
@@ -583,7 +583,9 @@ class ParallelProcessingSystem:
             logger.info("ParallelProcessingSystem cleanup completed")
 
         except Exception as e:
-            logger.error(f"Error during cleanup: {e}")  # TODO: Convert f-string to logging format
+            logger.error(
+                f"Error during cleanup: {e}"
+            )  # TODO: Convert f-string to logging format
 
 
 # Factory function for easy initialization

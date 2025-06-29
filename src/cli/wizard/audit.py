@@ -80,11 +80,15 @@ class ConfigAuditor:
 
     def log_validation_failure(self, errors: list[str]) -> None:
         """Log configuration validation failures."""
-        self.logger.warning(f"Validation failed - {len(errors)} errors: {errors}")  # TODO: Convert f-string to logging format
+        self.logger.warning(
+            f"Validation failed - {len(errors)} errors: {errors}"
+        )  # TODO: Convert f-string to logging format
 
     def log_security_event(self, event_type: str, details: str) -> None:
         """Log security-related events."""
-        self.logger.warning(f"Security event - {event_type}: {details}")  # TODO: Convert f-string to logging format
+        self.logger.warning(
+            f"Security event - {event_type}: {details}"
+        )  # TODO: Convert f-string to logging format
 
     def log_template_customization(
         self, template: str, section: str, changes: dict[str, Any]
@@ -213,4 +217,6 @@ class ConfigAuditor:
                 continue
 
         if deleted_count > 0:
-            self.logger.info(f"Cleaned up {deleted_count} old audit files")  # TODO: Convert f-string to logging format
+            self.logger.info(
+                f"Cleaned up {deleted_count} old audit files"
+            )  # TODO: Convert f-string to logging format
