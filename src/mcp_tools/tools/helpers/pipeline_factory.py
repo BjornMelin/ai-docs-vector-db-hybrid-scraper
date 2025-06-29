@@ -3,7 +3,7 @@
 import logging
 from typing import TYPE_CHECKING
 
-from src.services.query_processing.orchestrator import QueryProcessingOrchestrator
+from src.services.query_processing.orchestrator import SearchOrchestrator
 
 
 if TYPE_CHECKING:
@@ -54,7 +54,7 @@ class QueryProcessingPipelineFactory:
                     )
 
             # Create orchestrator
-            orchestrator = QueryProcessingOrchestrator(
+            orchestrator = SearchOrchestrator(
                 embedding_manager=embedding_manager,
                 qdrant_service=qdrant_service,
                 hyde_engine=hyde_engine,

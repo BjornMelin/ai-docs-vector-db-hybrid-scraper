@@ -12,7 +12,7 @@ from typing import Any, Callable, Optional, TypeVar
 
 from aiocache import Cache, cached, multi_cached
 from aiocache.serializers import PickleSerializer, JsonSerializer
-from aiocache.backends import RedisBackend
+from aiocache.backends.redis import RedisBackend
 
 from src.config import Config
 from src.config.enums import CacheType

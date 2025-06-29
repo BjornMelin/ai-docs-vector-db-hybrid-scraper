@@ -7,7 +7,7 @@ and integration with custom metadata schemas.
 
 import logging
 from enum import Enum
-from typing import Any
+from typing import Any, Union
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 from qdrant_client import models
@@ -103,7 +103,7 @@ class BooleanExpressionModel(BaseModel):
     """Boolean expression for combining multiple conditions."""
 
     operator: BooleanOperator = Field(..., description="Boolean operator")
-    conditions: list["BooleanExpressionModel" | FieldConditionModel] = Field(
+    conditions: list[Union["BooleanExpressionModel", FieldConditionModel]] = Field(
         default_factory=list, description="List of sub-conditions"
     )
 

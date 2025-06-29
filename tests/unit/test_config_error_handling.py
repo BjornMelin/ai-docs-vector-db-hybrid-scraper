@@ -16,7 +16,7 @@ from src.config.config_manager import (
 )
 from src.config.error_handling import (
     ConfigError,
-    ConfigFileWatcher,
+    ConfigFileWatchError,
     ConfigLoadError,
     ConfigValidationError,
     ErrorContext,

@@ -346,12 +346,18 @@ class TestServiceFactory:
         class TestService:
             pass
 
-        # Register service and add to enabled services
+        # Register service and check availability through service list modification
         factory.register_service("test_service", TestService, TestService)
-        factory.mode_config.enabled_services.append("test_service")
+        
+        # Create a copy of enabled services to avoid mutating the global config
+        original_services = factory.mode_config.enabled_services.copy()
+        factory.mode_config.enabled_services = original_services + ["test_service"]
 
         assert factory.is_service_available("test_service") is True
         assert factory.is_service_available("nonexistent_service") is False
+        
+        # Restore original services to avoid affecting other tests
+        factory.mode_config.enabled_services = original_services
 
     def test_get_available_services(self):
         """Test getting list of available services."""
@@ -364,12 +370,16 @@ class TestServiceFactory:
         factory.register_service("service1", TestService, TestService)
         factory.register_service("service2", TestService, TestService)
 
-        # Add to enabled services
-        factory.mode_config.enabled_services.extend(["service1", "service2"])
+        # Create a copy and add test services to avoid mutating the global config
+        original_services = factory.mode_config.enabled_services.copy()
+        factory.mode_config.enabled_services = original_services + ["service1", "service2"]
 
         available = factory.get_available_services()
         assert "service1" in available
         assert "service2" in available
+        
+        # Restore original services to avoid affecting other tests
+        factory.mode_config.enabled_services = original_services
 
     def test_get_service_status(self):
         """Test getting service status information."""
@@ -379,7 +389,10 @@ class TestServiceFactory:
             pass
 
         factory.register_service("test_service", TestService, TestService)
-        factory.mode_config.enabled_services.append("test_service")
+        
+        # Create a copy and add test service to avoid mutating the global config
+        original_services = factory.mode_config.enabled_services.copy()
+        factory.mode_config.enabled_services = original_services + ["test_service"]
 
         status = factory.get_service_status("test_service")
 
@@ -388,6 +401,9 @@ class TestServiceFactory:
         assert status["enabled"] is True
         assert status["initialized"] is False
         assert status["mode"] == "simple"
+        
+        # Restore original services to avoid affecting other tests
+        factory.mode_config.enabled_services = original_services
 
     def test_get_mode_info(self):
         """Test getting mode information."""

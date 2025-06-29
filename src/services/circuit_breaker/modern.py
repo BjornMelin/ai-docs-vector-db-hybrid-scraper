@@ -10,8 +10,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
-from purgatory import AsyncCircuitBreakerFactory
-from purgatory.storage import RedisStorage
+from purgatory import AsyncCircuitBreakerFactory, AsyncRedisUnitOfWork
 
 from src.config import Config
 
@@ -38,8 +37,8 @@ class ModernCircuitBreakerManager:
         self.redis_url = redis_url
         self.config = config
 
-        # Create Redis storage for distributed state
-        self.redis_storage = RedisStorage.from_url(redis_url)
+        # Create Redis unit of work for distributed state
+        self.redis_storage = AsyncRedisUnitOfWork.from_url(redis_url)
 
         # Get circuit breaker settings from config or use defaults
         if config and hasattr(config, "performance"):

@@ -41,7 +41,14 @@ class WorkerSettings:
     def get_redis_settings(cls) -> RedisSettings:
         """Get Redis settings from config."""
         config = get_config()
-        tq_config = config.task_queue
+        
+        # Get task queue config with fallback
+        if hasattr(config, 'task_queue'):
+            tq_config = config.task_queue
+        else:
+            # Fallback to default TaskQueueConfig if not available
+            from src.config.core import TaskQueueConfig
+            tq_config = TaskQueueConfig()
 
         # Parse redis URL
         url = tq_config.redis_url

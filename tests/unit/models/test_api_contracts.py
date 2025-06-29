@@ -2,7 +2,7 @@
 
 import pytest
 from pydantic import ValidationError
-from src.models.api_contracts import AdvancedSearchRequest
+from src.models.api_contracts import SearchRequest
 from src.models.api_contracts import AnalyticsRequest
 from src.models.api_contracts import AnalyticsResponse
 from src.models.api_contracts import BulkDocumentRequest
@@ -153,12 +153,12 @@ class TestSearchRequest:
         assert request.filters == filters
 
 
-class TestAdvancedSearchRequest:
-    """Test AdvancedSearchRequest model."""
+class TestSearchRequest:
+    """Test SearchRequest model."""
 
     def test_default_values(self):
         """Test default field values."""
-        request = AdvancedSearchRequest(query="test")
+        request = SearchRequest(query="test")
         assert request.query == "test"
         assert request.collection_name == "documents"
         assert request.search_strategy == "hybrid"
@@ -171,25 +171,25 @@ class TestAdvancedSearchRequest:
     def test_search_strategy_field(self):
         """Test search_strategy field."""
         # Any string is accepted as search strategy
-        request = AdvancedSearchRequest(query="test", search_strategy="dense")
+        request = SearchRequest(query="test", search_strategy="dense")
         assert request.search_strategy == "dense"
 
-        request = AdvancedSearchRequest(query="test", search_strategy="multi_stage")
+        request = SearchRequest(query="test", search_strategy="multi_stage")
         assert request.search_strategy == "multi_stage"
 
     def test_accuracy_level_field(self):
         """Test accuracy_level field."""
         # Any string is accepted as accuracy level
-        request = AdvancedSearchRequest(query="test", accuracy_level="fast")
+        request = SearchRequest(query="test", accuracy_level="fast")
         assert request.accuracy_level == "fast"
 
-        request = AdvancedSearchRequest(query="test", accuracy_level="exact")
+        request = SearchRequest(query="test", accuracy_level="exact")
         assert request.accuracy_level == "exact"
 
     def test_hyde_config_field(self):
         """Test hyde_config field accepts any dict."""
         hyde_config = {"temperature": 0.7, "max_tokens": 100}
-        request = AdvancedSearchRequest(query="test", hyde_config=hyde_config)
+        request = SearchRequest(query="test", hyde_config=hyde_config)
         assert request.hyde_config == hyde_config
 
 

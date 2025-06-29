@@ -2,6 +2,7 @@
 
 import asyncio
 import contextlib
+import threading
 
 import pytest
 
@@ -168,7 +169,8 @@ class TestCircuitBreaker:
                     await enterprise_breaker.call(failing_func)
                 else:
                     await enterprise_breaker.call(success_func)
-            except ValueError:
+            except (ValueError, CircuitBreakerError):
+                # Circuit may open partway through due to failure rate
                 pass
 
         # Should open due to high failure rate (53% > 40% threshold)
@@ -299,13 +301,21 @@ class TestConcurrentAccess:
         config = CircuitBreakerConfig.simple_mode()
         breaker = CircuitBreaker(config)
 
-        call_count = 0
+        import threading
+
+        call_count = threading.local()
+        counter_lock = threading.Lock()
+        global_counter = 0
 
         async def test_func():
-            nonlocal call_count
-            call_count += 1
+            nonlocal global_counter
+            # Use thread-safe counter to ensure unique IDs
+            with counter_lock:
+                unique_id = global_counter
+                global_counter += 1
+
             await asyncio.sleep(0.01)  # Simulate async work
-            return f"result_{call_count}"
+            return f"result_{unique_id}"
 
         # Run multiple concurrent operations
         tasks = [breaker.call(test_func) for _ in range(10)]
@@ -349,9 +359,9 @@ async def test_real_world_scenario():
         nonlocal failure_count
         await asyncio.sleep(0.001)  # Simulate network delay
 
-        # Simulate 30% failure rate
+        # Simulate 50% failure rate to exceed 40% threshold
         failure_count += 1
-        if failure_count % 3 == 0:
+        if failure_count % 2 == 0:
             msg = "Service unavailable"
             raise ConnectionError(msg)
         return "service_response"

@@ -7,6 +7,7 @@ the battle-tested slowapi library for distributed rate limiting with Redis.
 import logging
 
 from fastapi import FastAPI, HTTPException, Request, Response
+from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
@@ -14,7 +15,7 @@ from slowapi.util import get_remote_address
 from src.config import Config
 
 
-from typing import Any
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class ModernRateLimiter:
         self,
         app: FastAPI,
         redis_url: str = "redis://localhost:6379",
-        key_func: callable | None = None,
+        key_func: Callable | None = None,
         default_limits: list[str] | None = None,
         config: Config | None = None,
     ):

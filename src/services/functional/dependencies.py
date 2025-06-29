@@ -33,19 +33,14 @@ async def get_config() -> Config:
 
 
 # Client manager dependency with resource lifecycle
-async def get_client_manager(
-    config: Annotated[Config, Depends(get_config)],
-) -> AsyncGenerator[ClientManager]:
+async def get_client_manager() -> AsyncGenerator[ClientManager]:
     """Get ClientManager instance with proper lifecycle management.
-
-    Args:
-        config: Application configuration
 
     Yields:
         ClientManager: Initialized client manager
 
     """
-    client_manager = ClientManager(config)
+    client_manager = ClientManager()
     try:
         await client_manager.initialize()
         yield client_manager

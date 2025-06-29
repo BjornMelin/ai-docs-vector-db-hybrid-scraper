@@ -22,14 +22,19 @@ from src.models.vector_search import (
 )
 from src.services.errors import QdrantServiceError
 from src.services.query_processing.orchestrator import (
-    ABTestVariant,
-    AdvancedSearchResult,
-    ModelType,
-    OptimizationStrategy,
-    QueryComplexity,
-    QueryType,
     SearchMode,
     SearchPipeline,
+    SearchRequest as AdvancedSearchRequest,
+    SearchResult as AdvancedSearchResult,
+)
+from src.services.query_processing.models import (
+    QueryComplexity,
+)
+from src.config.enums import (
+    ABTestVariant,
+    ModelType,
+    OptimizationStrategy,
+    QueryType,
 )
 from src.services.vector_db.hybrid_search import HybridSearchService
 
@@ -572,7 +577,7 @@ class TestAdvancedHybridSearchService:
         ],
     )
     async def test_different_optimization_strategies(
-        self, service, sample_request, _optimization_strategy
+        self, service, sample_request, optimization_strategy
     ):
         """Test search with different optimization strategies."""
         with patch.object(service.model_selector, "select_optimal_model") as mock_model:

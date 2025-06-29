@@ -35,13 +35,15 @@ class FeatureFlag:
         """Check if running in enterprise mode."""
         from .modes import ApplicationMode
 
-        return self.current_mode == ApplicationMode.ENTERPRISE
+        # Use get_current_mode() to allow for runtime testing/mocking
+        return get_current_mode() == ApplicationMode.ENTERPRISE
 
     def is_simple_mode(self) -> bool:
         """Check if running in simple mode."""
         from .modes import ApplicationMode
 
-        return self.current_mode == ApplicationMode.SIMPLE
+        # Use get_current_mode() to allow for runtime testing/mocking
+        return get_current_mode() == ApplicationMode.SIMPLE
 
     def is_feature_enabled(self, feature_name: str) -> bool:
         """Check if a feature is enabled in the current mode."""

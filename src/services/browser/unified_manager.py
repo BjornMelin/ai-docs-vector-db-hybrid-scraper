@@ -173,7 +173,7 @@ class UnifiedBrowserManager(BaseService):
             if ClientManager is None:
                 _raise_client_manager_unavailable()
 
-            self._client_manager = ClientManager(self.config)
+            self._client_manager = ClientManager()
             await self._client_manager.initialize()
 
             # Get enhanced automation router (lazy-initialized in ClientManager)

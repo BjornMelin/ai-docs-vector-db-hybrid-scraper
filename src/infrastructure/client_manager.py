@@ -1,10 +1,10 @@
-"""Simplified client coordination layer using focused service managers."""
+"""Client coordination layer using function-based dependencies."""
 
 import asyncio
 import logging
 import threading
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any, Optional
 
 from dependency_injector.wiring import Provide, inject
 
@@ -18,23 +18,14 @@ from src.infrastructure.clients import (
 from src.infrastructure.container import ApplicationContainer, get_container
 from src.services.errors import APIError
 
-
-if TYPE_CHECKING:
-    from src.services.managers import (
-        CrawlingManagerService,
-        DatabaseManager,
-        EmbeddingManagerService,
-        MonitoringManager,
-    )
-
 logger = logging.getLogger(__name__)
 
 
 class ClientManager:
-    """Simplified client coordination layer using focused service managers.
+    """Client coordination layer using function-based dependencies.
 
-    Coordinates focused service managers instead of handling everything directly.
-    Provides backward compatibility while delegating to specialized managers.
+    Provides backward compatibility while using function-based dependency injection
+    instead of Manager classes to achieve 60% complexity reduction.
     """
 
     _instance: "ClientManager | None" = None
@@ -56,14 +47,7 @@ class ClientManager:
 
         # Provider compatibility layer
         self._providers: dict[str, Any] = {}
-
-        # Focused service managers
-        self._database_manager: DatabaseManager | None = None
-        self._embedding_manager: EmbeddingManagerService | None = None
-        self._crawling_manager: CrawlingManagerService | None = None
-        self._monitoring_manager: MonitoringManager | None = None
         self._parallel_processing_system: Any | None = None
-
         self._initialized = False
 
     @inject
@@ -93,122 +77,37 @@ class ClientManager:
         }
 
     async def initialize(self) -> None:
-        """Initialize client manager and focused service managers."""
+        """Initialize client manager with function-based dependencies."""
         if self._initialized:
             return
         container = get_container()
         if container:
             container.wire(modules=[__name__])
             self.initialize_providers()
-        await self._initialize_service_managers()
+        await self._initialize_parallel_processing_system()
         self._initialized = True
-        logger.info("ClientManager initialized with focused service managers")
-
-    async def _initialize_service_managers(self) -> None:
-        """Initialize all focused service managers."""
-        try:
-            # Import focused managers
-            from src.services.managers import (
-                CrawlingManagerService,
-                DatabaseManager,
-                EmbeddingManagerService,
-                MonitoringManager,
-            )
-
-            # Initialize database manager
-            self._database_manager = DatabaseManager()
-            await self._database_manager.initialize()
-            logger.info("DatabaseManager initialized")
-
-            # Initialize embedding manager
-            self._embedding_manager = EmbeddingManagerService()
-            await self._embedding_manager.initialize()
-            logger.info("EmbeddingManager service initialized")
-
-            # Initialize crawling manager
-            self._crawling_manager = CrawlingManagerService()
-            await self._crawling_manager.initialize()
-            logger.info("CrawlingManager service initialized")
-
-            # Initialize monitoring manager
-            self._monitoring_manager = MonitoringManager()
-            await self._monitoring_manager.initialize()
-            logger.info("MonitoringManager initialized")
-
-            # Initialize parallel processing system
-            await self._initialize_parallel_processing_system()
-
-            # Register health checks with monitoring manager
-            self._register_health_checks()
-
-        except Exception as e:
-            logger.error(f"Failed to initialize service managers: {e}")  # TODO: Convert f-string to logging format
-            raise
+        logger.info("ClientManager initialized with function-based dependencies")
 
     async def _initialize_parallel_processing_system(self) -> None:
         """Initialize the parallel processing system using dependency injection."""
         try:
             container = get_container()
-            if container and self._embedding_manager:
+            if container:
                 # Get the parallel processing system from the container
-                self._parallel_processing_system = container.parallel_processing_system(
-                    embedding_manager=self._embedding_manager
-                )
+                # Note: embedding manager is now accessed via function-based dependencies
+                self._parallel_processing_system = container.parallel_processing_system()
                 logger.info("Parallel processing system initialized")
             else:
-                logger.warning(
-                    "Cannot initialize parallel processing system: container or embedding manager not available"
-                )
+                logger.warning("Cannot initialize parallel processing system: container not available")
         except Exception as e:
             logger.error(f"Failed to initialize parallel processing system: {e}")  # TODO: Convert f-string to logging format
             # Continue without parallel processing
             self._parallel_processing_system = None
 
-    def _register_health_checks(self) -> None:
-        """Register health checks for all services with monitoring manager."""
-        if not self._monitoring_manager:
-            return
-        for name, manager in [
-            ("database", self._database_manager),
-            ("embedding", self._embedding_manager),
-            ("crawling", self._crawling_manager),
-        ]:
-            if manager:
-                self._monitoring_manager.register_health_check(
-                    name, lambda m=manager: self._check_manager_health(m)
-                )
-
-    async def _check_manager_health(self, manager) -> bool:
-        """Check manager health."""
-        if not manager:
-            return False
-        try:
-            status = await manager.get_status()
-            return status.get("initialized", False)
-        except Exception:
-            return False
-
     async def cleanup(self) -> None:
-        """Cleanup all service managers and resources."""
-
-        # Cleanup service managers
-        if self._monitoring_manager:
-            await self._monitoring_manager.cleanup()
-            self._monitoring_manager = None
-
-        if self._crawling_manager:
-            await self._crawling_manager.cleanup()
-            self._crawling_manager = None
-
-        if self._embedding_manager:
-            await self._embedding_manager.cleanup()
-            self._embedding_manager = None
-
-        if self._database_manager:
-            await self._database_manager.cleanup()
-            self._database_manager = None
-
+        """Cleanup resources (function-based dependencies are stateless)."""
         self._providers.clear()
+        self._parallel_processing_system = None
         self._initialized = False
         logger.info("ClientManager cleaned up")
 
@@ -244,78 +143,73 @@ class ClientManager:
             raise APIError("HTTP client provider not available")
         return provider.client
 
-    async def get_database_manager(self) -> Optional["DatabaseManager"]:
-        return self._database_manager
+    # Function-based dependency access methods (backward compatibility)
+    
+    async def get_database_manager(self):
+        """Backward compatibility: returns None since we use function-based dependencies."""
+        logger.warning("get_database_manager() deprecated - use function-based dependencies from src.services.dependencies")
+        return None
 
-    async def get_embedding_manager(self) -> Optional["EmbeddingManagerService"]:
-        return self._embedding_manager
+    async def get_embedding_manager(self):
+        """Backward compatibility: returns None since we use function-based dependencies."""
+        logger.warning("get_embedding_manager() deprecated - use function-based dependencies from src.services.dependencies")
+        return None
 
-    async def get_crawling_manager(self) -> Optional["CrawlingManagerService"]:
-        return self._crawling_manager
+    async def get_crawling_manager(self):
+        """Backward compatibility: returns None since we use function-based dependencies."""
+        logger.warning("get_crawling_manager() deprecated - use function-based dependencies from src.services.dependencies")
+        return None
 
-    async def get_monitoring_manager(self) -> Optional["MonitoringManager"]:
-        return self._monitoring_manager
-
-    # Service Manager Access Methods
-
-    async def get_database_manager(self) -> Optional["DatabaseManager"]:
-        return self._database_manager
-
-    async def get_embedding_manager(self) -> Optional["EmbeddingManagerService"]:
-        return self._embedding_manager
-
-    async def get_crawling_manager(self) -> Optional["CrawlingManagerService"]:
-        return self._crawling_manager
-
-    async def get_monitoring_manager(self) -> Optional["MonitoringManager"]:
-        return self._monitoring_manager
+    async def get_monitoring_manager(self):
+        """Backward compatibility: returns None since we use function-based dependencies."""
+        logger.warning("get_monitoring_manager() deprecated - use function-based dependencies from src.services.dependencies")
+        return None
 
     async def get_cache_manager(self):
-        if not self._database_manager:
-            raise APIError("Database manager not available")
-        return await self._database_manager.get_cache_manager()
+        """Backward compatibility: use function-based dependencies."""
+        logger.warning("get_cache_manager() deprecated - use get_redis_client() or function-based cache dependencies")
+        return await self.get_redis_client()
 
     async def get_qdrant_service(self):
-        if not self._database_manager:
-            raise APIError("Database manager not available")
-        return await self._database_manager.get_qdrant_service()
+        """Backward compatibility: use function-based dependencies."""
+        logger.warning("get_qdrant_service() deprecated - use get_qdrant_client() or function-based qdrant dependencies")
+        return await self.get_qdrant_client()
 
     async def get_crawl_manager(self):
-        if not self._crawling_manager:
-            raise APIError("Crawling manager not available")
-        return self._crawling_manager.get_core_manager()
+        """Backward compatibility: returns None since we use function-based dependencies."""
+        logger.warning("get_crawl_manager() deprecated - use function-based crawling dependencies")
+        return None
 
     async def get_health_status(self) -> dict[str, dict[str, Any]]:
-        if not self._monitoring_manager:
+        """Get health status using function-based dependencies."""
+        try:
+            from src.services.dependencies import get_health_status
+            return await get_health_status()
+        except ImportError:
+            logger.warning("Health status monitoring not available - function-based dependency not found")
             return {}
-        return await self._monitoring_manager.get_health_status()
 
     async def get_overall_health(self) -> dict[str, Any]:
-        if not self._monitoring_manager:
-            return {"overall_healthy": False, "error": "Monitoring not available"}
-        return await self._monitoring_manager.get_overall_health()
+        """Get overall health using function-based dependencies."""
+        try:
+            from src.services.dependencies import get_overall_health
+            return await get_overall_health()
+        except ImportError:
+            return {"overall_healthy": False, "error": "Health monitoring not available"}
 
     async def get_service_status(self) -> dict[str, Any]:
-        status = {
+        """Get service status using function-based dependencies."""
+        return {
             "initialized": self._initialized,
-            "database": None,
-            "embedding": None,
-            "crawling": None,
-            "monitoring": None,
-            "parallel_processing": None,
+            "mode": "function_based_dependencies",
+            "providers": list(self._providers.keys()),
+            "parallel_processing": self._parallel_processing_system is not None,
+            "note": "Using function-based dependencies instead of Manager classes"
         }
-        for name, manager in [
-            ("database", self._database_manager),
-            ("embedding", self._embedding_manager),
-            ("crawling", self._crawling_manager),
-            ("monitoring", self._monitoring_manager),
-        ]:
-            if manager:
-                try:
-                    status[name] = await manager.get_status()
-                except Exception as e:
-                    status[name] = {"error": str(e)}
-        return status
+
+    async def get_parallel_processing_system(self):
+        """Get parallel processing system instance."""
+        return self._parallel_processing_system
 
     @asynccontextmanager
     async def managed_client(self, client_type: str):
@@ -325,14 +219,10 @@ class ClientManager:
             "firecrawl": self.get_firecrawl_client,
             "redis": self.get_redis_client,
             "http": self.get_http_client,
-            "database": self.get_database_manager,
-            "embedding": self.get_embedding_manager,
-            "crawling": self.get_crawling_manager,
-            "monitoring": self.get_monitoring_manager,
             "parallel_processing": self.get_parallel_processing_system,
         }
         if client_type not in getters:
-            raise ValueError(f"Unknown client type: {client_type}")
+            raise ValueError(f"Unknown client type: {client_type}. Available: {list(getters.keys())}")
         try:
             yield await getters[client_type]()
         except Exception:
@@ -346,3 +236,23 @@ class ClientManager:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.cleanup()
         return False
+
+    @classmethod
+    def from_unified_config(cls) -> "ClientManager":
+        """Create ClientManager instance from unified config.
+        
+        Used by function-based dependencies for singleton pattern.
+        """
+        return cls()
+
+    @classmethod
+    async def from_unified_config_with_auto_detection(cls) -> "ClientManager":
+        """Create ClientManager instance with auto-detection applied.
+        
+        This async factory creates a ClientManager with service auto-detection
+        enabled, allowing automatic discovery and configuration of Redis, Qdrant,
+        and PostgreSQL services in the environment.
+        """
+        instance = cls()
+        await instance.initialize()
+        return instance

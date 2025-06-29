@@ -20,13 +20,12 @@ import json
 import logging
 from datetime import datetime, timezone
 
+from typing import Dict, List
+
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
 from .automation import (
-from typing import Dict
-from typing import List
-
     ConfigDrift,
     ConfigObservabilityAutomation,
     ConfigValidationResult,
