@@ -126,6 +126,10 @@ __all__ = [
     "FastAPIObservabilityMiddleware",
     # Core configuration
     "ObservabilityConfig",
+    # Configuration instrumentation
+    "ConfigAttributes",
+    "ConfigOperationType",
+    "ConfigPerformanceMonitor",
     # Metrics bridge
     "OpenTelemetryMetricsBridge",
     "PerformanceMetrics",
