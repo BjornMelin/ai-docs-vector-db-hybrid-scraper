@@ -6,7 +6,9 @@ Achieves 60% complexity reduction while maintaining full functionality.
 """
 
 import logging
+import time
 from collections.abc import AsyncGenerator
+from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Annotated, Any
 
@@ -14,7 +16,16 @@ from fastapi import Depends
 from pydantic import BaseModel
 
 from src.config import Config, get_config, get_config_with_auto_detection
+from src.config.auto_detect import AutoDetectedServices, DetectedEnvironment
+from src.config.enums import CacheType, Environment
 from src.infrastructure.client_manager import ClientManager
+from src.services.auto_detection import (
+    ConnectionPoolManager,
+    EnvironmentDetector,
+    HealthChecker,
+    ServiceDiscovery,
+)
+from src.services.embeddings.manager import QualityTier
 from src.services.errors import (
     CircuitBreakerRegistry,
     CrawlServiceError,
@@ -23,6 +34,8 @@ from src.services.errors import (
     circuit_breaker,
     tenacity_circuit_breaker,
 )
+from src.services.rag import RAGGenerator
+from src.services.rag.models import RAGRequest as InternalRAGRequest
 
 
 logger = logging.getLogger(__name__)
@@ -85,13 +98,9 @@ async def get_auto_detected_services(
     and environment information. Protected by circuit breaker for
     external metadata API failures.
     """
-    from src.config.auto_detect import AutoDetectedServices
-
     auto_detected = config.get_auto_detected_services()
     if auto_detected is None:
         # Return empty services if auto-detection wasn't performed
-        from src.config.auto_detect import DetectedEnvironment
-        from src.config.enums import Environment
 
         return AutoDetectedServices(
             environment=DetectedEnvironment(
@@ -167,7 +176,7 @@ async def get_auto_detection_health_checker(
     Provides health monitoring for auto-detected services.
     Protected by circuit breaker for service health check failures.
     """
-    from src.services.auto_detection import HealthChecker
+    # HealthChecker imported at top-level
 
     health_checker = HealthChecker(config.auto_detection)
 
@@ -195,7 +204,7 @@ async def get_auto_detection_connection_pools(
     Provides optimized connection pools for discovered services.
     Protected by circuit breaker for connection pool initialization failures.
     """
-    from src.services.auto_detection import ConnectionPoolManager
+    # ConnectionPoolManager imported at top-level
 
     pool_manager = ConnectionPoolManager(config.auto_detection)
 
@@ -247,10 +256,7 @@ async def perform_auto_detection(
     Protected by Tenacity-powered circuit breaker with retry logic.
     """
     try:
-        import time
-
-        from src.config.auto_detect import AutoDetectedServices
-        from src.services.auto_detection import EnvironmentDetector, ServiceDiscovery
+        # All imports moved to top-level
 
         start_time = time.time()
 
@@ -277,22 +283,21 @@ async def perform_auto_detection(
         detection_time_ms = (time.time() - start_time) * 1000
 
         # Format services for response
-        formatted_services = []
-        for service in services:
-            formatted_services.append(
-                {
-                    "service_name": service.service_name,
-                    "service_type": service.service_type,
-                    "host": service.host,
-                    "port": service.port,
-                    "is_available": service.is_available,
-                    "connection_string": service.connection_string,
-                    "version": service.version,
-                    "supports_pooling": service.supports_pooling,
-                    "detection_time_ms": service.detection_time_ms,
-                    "metadata": service.metadata,
-                }
-            )
+        formatted_services = [
+            {
+                "service_name": service.service_name,
+                "service_type": service.service_type,
+                "host": service.host,
+                "port": service.port,
+                "is_available": service.is_available,
+                "connection_string": service.connection_string,
+                "version": service.version,
+                "supports_pooling": service.supports_pooling,
+                "detection_time_ms": service.detection_time_ms,
+                "metadata": service.metadata,
+            }
+            for service in services
+        ]
 
         return AutoDetectionResponse(
             services_found=len(services),
@@ -304,7 +309,7 @@ async def perform_auto_detection(
         )
 
     except Exception as e:
-        logger.exception(f"Auto-detection failed: {e}")
+        logger.exception("Auto-detection failed")
         return AutoDetectionResponse(
             services_found=0,
             environment_type="unknown",
@@ -382,7 +387,7 @@ async def generate_embeddings(
     Protected by Tenacity-powered circuit breaker with exponential backoff.
     """
     try:
-        from src.services.embeddings.manager import QualityTier
+        # QualityTier imported at top-level
 
         # Convert string to enum if provided
         quality_tier = None
@@ -402,8 +407,9 @@ async def generate_embeddings(
         return EmbeddingResponse(**result)
 
     except Exception as e:
-        logger.exception(f"Embedding generation failed: {e}")
-        raise EmbeddingServiceError(f"Failed to generate embeddings: {e}") from e
+        logger.exception("Embedding generation failed")
+        msg = f"Failed to generate embeddings: {e}"
+        raise EmbeddingServiceError(msg) from e
 
 
 # Cache Service Dependencies
@@ -446,12 +452,12 @@ async def cache_get(
     Function-based replacement for CacheManager.get().
     """
     try:
-        from src.config.enums import CacheType
+        # CacheType imported at top-level
 
         cache_type_enum = CacheType(cache_type)
         return await cache_manager.get(key, cache_type_enum)
-    except Exception as e:
-        logger.exception(f"Cache get failed for key {key}: {e}")
+    except Exception:
+        logger.exception(f"Cache get failed for key {key}")
         return None
 
 
@@ -467,12 +473,12 @@ async def cache_set(
     Function-based replacement for CacheManager.set().
     """
     try:
-        from src.config.enums import CacheType
+        # CacheType imported at top-level
 
         cache_type_enum = CacheType(cache_type)
         return await cache_manager.set(key, value, cache_type_enum, ttl)
-    except Exception as e:
-        logger.exception(f"Cache set failed for key {key}: {e}")
+    except Exception:
+        logger.exception(f"Cache set failed for key {key}")
         return False
 
 
@@ -486,12 +492,12 @@ async def cache_delete(
     Function-based replacement for CacheManager.delete().
     """
     try:
-        from src.config.enums import CacheType
+        # CacheType imported at top-level
 
         cache_type_enum = CacheType(cache_type)
         return await cache_manager.delete(key, cache_type_enum)
-    except Exception as e:
-        logger.exception(f"Cache delete failed for key {key}: {e}")
+    except Exception:
+        logger.exception(f"Cache delete failed for key {key}")
         return False
 
 
@@ -565,8 +571,9 @@ async def scrape_url(
         )
         return CrawlResponse(**result)
     except Exception as e:
-        logger.exception(f"URL scraping failed for {request.url}: {e}")
-        raise CrawlServiceError(f"Failed to scrape URL: {e}") from e
+        logger.exception(f"URL scraping failed for {request.url}")
+        msg = f"Failed to scrape URL: {e}"
+        raise CrawlServiceError(msg) from e
 
 
 async def crawl_site(
@@ -583,10 +590,12 @@ async def crawl_site(
             max_pages=request.max_pages,
             preferred_provider=request.preferred_provider,
         )
-        return result
     except Exception as e:
-        logger.exception(f"Site crawling failed for {request.url}: {e}")
-        raise CrawlServiceError(f"Failed to crawl site: {e}") from e
+        logger.exception(f"Site crawling failed for {request.url}")
+        msg = f"Failed to crawl site: {e}"
+        raise CrawlServiceError(msg) from e
+    else:
+        return result
 
 
 # Task Queue Service Dependencies
@@ -629,10 +638,12 @@ async def enqueue_task(
             _queue_name=request.queue_name,
             **request.kwargs,
         )
-        return job_id
     except Exception as e:
-        logger.exception(f"Task enqueue failed for {request.task_name}: {e}")
-        raise TaskQueueServiceError(f"Failed to enqueue task: {e}") from e
+        logger.exception(f"Task enqueue failed for {request.task_name}")
+        msg = f"Failed to enqueue task: {e}"
+        raise TaskQueueServiceError(msg) from e
+    else:
+        return job_id
 
 
 async def get_task_status(
@@ -644,10 +655,12 @@ async def get_task_status(
     Function-based replacement for TaskQueueManager.get_job_status().
     """
     try:
-        return await task_manager.get_job_status(job_id)
+        status = await task_manager.get_job_status(job_id)
     except Exception as e:
-        logger.exception(f"Task status check failed for {job_id}: {e}")
+        logger.exception(f"Task status check failed for {job_id}")
         return {"status": "error", "message": str(e)}
+    else:
+        return status
 
 
 # Database Dependencies
@@ -774,7 +787,7 @@ async def get_rag_generator(
     Replaces RAGGenerator.initialize() pattern with dependency injection.
     Protected by circuit breaker for LLM API failures.
     """
-    from src.services.rag import RAGGenerator
+    # RAGGenerator imported at top-level
 
     generator = RAGGenerator(config.rag, client_manager)
     await generator.initialize()
@@ -803,7 +816,7 @@ async def generate_rag_answer(
     Protected by Tenacity-powered circuit breaker with exponential backoff.
     """
     try:
-        from src.services.rag.models import RAGRequest as InternalRAGRequest
+        # InternalRAGRequest imported at top-level
 
         # Convert external request to internal request
         internal_request = InternalRAGRequest(
@@ -860,8 +873,9 @@ async def generate_rag_answer(
         )
 
     except Exception as e:
-        logger.exception(f"RAG answer generation failed: {e}")
-        raise EmbeddingServiceError(f"Failed to generate RAG answer: {e}") from e
+        logger.exception("RAG answer generation failed")
+        msg = f"Failed to generate RAG answer: {e}"
+        raise EmbeddingServiceError(msg) from e
 
 
 async def get_rag_metrics(
@@ -872,10 +886,12 @@ async def get_rag_metrics(
     Function-based replacement for RAGGenerator.get_metrics().
     """
     try:
-        return rag_generator.get_metrics()
+        metrics = rag_generator.get_metrics()
     except Exception as e:
-        logger.exception(f"Failed to get RAG metrics: {e}")
+        logger.exception("Failed to get RAG metrics")
         return {"error": str(e)}
+    else:
+        return metrics
 
 
 async def clear_rag_cache(
@@ -887,13 +903,14 @@ async def clear_rag_cache(
     """
     try:
         rag_generator.clear_cache()
+    except Exception as e:
+        logger.exception("Failed to clear RAG cache")
+        return {"status": "error", "message": str(e)}
+    else:
         return {
             "status": "success",
             "message": "RAG answer cache cleared successfully",
         }
-    except Exception as e:
-        logger.exception(f"Failed to clear RAG cache: {e}")
-        return {"status": "error", "message": str(e)}
 
 
 # Browser Automation Dependencies
@@ -943,10 +960,10 @@ async def get_circuit_breaker_status() -> dict[str, Any]:
             1 for status in all_status.values() if status["state"] == "half_open"
         )
 
-        from datetime import datetime
+        # datetime imported at top-level
 
         return {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
             "summary": {
                 "total_circuits": total_circuits,
                 "open_circuits": open_circuits,
@@ -961,7 +978,7 @@ async def get_circuit_breaker_status() -> dict[str, Any]:
             "circuits": all_status,
         }
     except Exception as e:
-        logger.exception(f"Circuit breaker status check failed: {e}")
+        logger.exception("Circuit breaker status check failed")
         return {
             "error": str(e),
             "summary": {
@@ -983,6 +1000,7 @@ async def reset_circuit_breaker(service_name: str) -> dict[str, Any]:
 
     Returns:
         Reset operation result
+
     """
     try:
         breaker = CircuitBreakerRegistry.get(service_name)
@@ -1000,7 +1018,7 @@ async def reset_circuit_breaker(service_name: str) -> dict[str, Any]:
             "new_status": breaker.get_status(),
         }
     except Exception as e:
-        logger.exception(f"Failed to reset circuit breaker for {service_name}: {e}")
+        logger.exception(f"Failed to reset circuit breaker for {service_name}")
         return {
             "success": False,
             "error": str(e),
@@ -1012,6 +1030,7 @@ async def reset_all_circuit_breakers() -> dict[str, Any]:
 
     Returns:
         Reset operation results for all circuits
+
     """
     try:
         services = CircuitBreakerRegistry.get_services()
@@ -1033,7 +1052,7 @@ async def reset_all_circuit_breakers() -> dict[str, Any]:
             "results": results,
         }
     except Exception as e:
-        logger.exception(f"Failed to reset all circuit breakers: {e}")
+        logger.exception("Failed to reset all circuit breakers")
         return {
             "success": False,
             "error": str(e),
@@ -1054,16 +1073,16 @@ async def get_service_health() -> dict[str, Any]:
         # Add circuit breaker status
         circuit_status = await get_circuit_breaker_status()
 
-        from datetime import datetime
+        # datetime imported at top-level
 
         return {
             "status": "healthy",
             "services": health_status,
             "circuit_breakers": circuit_status,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
         }
     except Exception as e:
-        logger.exception(f"Health check failed: {e}")
+        logger.exception("Health check failed")
         return {
             "status": "unhealthy",
             "error": str(e),
@@ -1094,7 +1113,7 @@ async def get_auto_detected_service_health(
         # Get health trends
         trends = health_checker.get_health_trends()
 
-        from datetime import datetime
+        # datetime imported at top-level
 
         return {
             "status": "healthy"
@@ -1124,11 +1143,11 @@ async def get_auto_detected_service_health(
                 for result in health_summary.service_results
             },
             "trends": trends,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
         }
 
     except Exception as e:
-        logger.exception(f"Auto-detected service health check failed: {e}")
+        logger.exception("Auto-detected service health check failed")
         return {
             "status": "error",
             "error": str(e),
@@ -1159,7 +1178,7 @@ async def get_auto_detection_pool_metrics(
         # Get individual pool health metrics
         all_pool_health = pool_manager.get_all_pool_health()
 
-        from datetime import datetime
+        # datetime imported at top-level
 
         return {
             "status": "active",
@@ -1177,11 +1196,11 @@ async def get_auto_detection_pool_metrics(
                 }
                 for pool_name, pool_info in pool_stats["pools"].items()
             },
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
         }
 
     except Exception as e:
-        logger.exception(f"Auto-detection pool metrics failed: {e}")
+        logger.exception("Auto-detection pool metrics failed")
         return {
             "status": "error",
             "error": str(e),
@@ -1200,10 +1219,10 @@ async def get_auto_detection_summary(
     connection pools, and performance metrics.
     """
     try:
-        from datetime import datetime
+        # datetime imported at top-level
 
         summary = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
             "auto_detection": {},
             "service_health": {},
             "connection_pools": {},
@@ -1265,18 +1284,18 @@ async def get_auto_detection_summary(
         else:
             summary["overall_status"] = "unknown"
 
-        return summary
-
     except Exception as e:
-        logger.exception(f"Auto-detection summary failed: {e}")
+        logger.exception("Auto-detection summary failed")
         return {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
             "overall_status": "error",
             "error": str(e),
             "auto_detection": {},
             "service_health": {},
             "connection_pools": {},
         }
+    else:
+        return summary
 
 
 # Service Performance Metrics
@@ -1301,22 +1320,22 @@ async def get_service_metrics() -> dict[str, Any]:
             cache_manager = await client_manager.get_cache_manager()
             cache_stats = await cache_manager.get_performance_stats()
             metrics["cache_service"] = cache_stats
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Cache metrics unavailable", exc_info=e)
 
         # Get crawl metrics if available
         try:
             crawl_manager = await client_manager.get_crawl_manager()
             crawl_metrics = crawl_manager.get_tier_metrics()
             metrics["crawl_service"] = crawl_metrics
-        except Exception:
-            pass
-
-        return metrics
+        except Exception as e:
+            logger.debug("Crawl metrics unavailable", exc_info=e)
 
     except Exception as e:
-        logger.exception(f"Metrics collection failed: {e}")
+        logger.exception("Metrics collection failed")
         return {"error": str(e)}
+    else:
+        return metrics
 
 
 # Cleanup Function
@@ -1329,6 +1348,545 @@ async def cleanup_services() -> None:
         client_manager = get_client_manager()
         await client_manager.cleanup()
         logger.info("All services cleaned up successfully")
-    except Exception as e:
-        logger.exception(f"Service cleanup failed: {e}")
+    except Exception:
+        logger.exception("Service cleanup failed")
         raise
+
+
+# Legacy Manager Class Replacement Dependencies
+#
+# These function-based dependencies replace the 4 remaining Manager classes
+# (EmbeddingManager, DatabaseManager, CrawlingManager, MonitoringManager)
+# to complete the service layer flattening migration.
+
+
+# Direct Database Operations (replacing DatabaseManager)
+@circuit_breaker(
+    service_name="database_operations",
+    failure_threshold=3,
+    recovery_timeout=15.0,
+    enable_adaptive_timeout=True,
+)
+async def get_qdrant_collections(
+    qdrant_service: QdrantServiceDep,
+) -> list[str]:
+    """Get list of Qdrant collections.
+
+    Function-based replacement for DatabaseManager.get_collections().
+    Protected by circuit breaker for Qdrant database failures.
+    """
+    try:
+        collections = await qdrant_service.get_collections()
+        return [col.name for col in collections.collections]
+    except Exception as e:
+        logger.exception("Failed to get Qdrant collections")
+        msg = f"Failed to get collections: {e}"
+        raise EmbeddingServiceError(msg) from e
+
+
+async def store_qdrant_embeddings(
+    collection_name: str,
+    points: list[dict[str, Any]],
+    qdrant_service: QdrantServiceDep,
+) -> bool:
+    """Store embeddings in Qdrant collection.
+
+    Function-based replacement for DatabaseManager.store_embeddings().
+    """
+    try:
+        await qdrant_service.upsert_points(collection_name, points)
+        return True
+    except Exception as e:
+        logger.exception(f"Failed to store embeddings in {collection_name}")
+        msg = f"Failed to store embeddings: {e}"
+        raise EmbeddingServiceError(msg) from e
+
+
+async def search_qdrant_similar(
+    collection_name: str,
+    query_vector: list[float],
+    limit: int = 10,
+    filter_conditions: dict[str, Any] | None = None,
+    qdrant_service: QdrantServiceDep = None,
+) -> list[dict[str, Any]]:
+    """Search for similar vectors in Qdrant.
+
+    Function-based replacement for DatabaseManager.search_similar().
+    """
+    try:
+        results = await qdrant_service.search(
+            collection_name=collection_name,
+            query_vector=query_vector,
+            limit=limit,
+            filter_conditions=filter_conditions,
+        )
+        return results
+    except Exception as e:
+        logger.exception(f"Failed to search vectors in {collection_name}")
+        msg = f"Failed to search vectors: {e}"
+        raise EmbeddingServiceError(msg) from e
+
+
+# Direct Cache Operations (extending existing cache dependencies)
+async def redis_ping(
+    redis_client: AutoDetectedRedisDep = None,
+) -> bool:
+    """Check Redis connectivity.
+
+    Function-based replacement for DatabaseManager.redis_ping().
+    """
+    if not redis_client:
+        return False
+
+    try:
+        await redis_client.ping()
+        return True
+    except Exception as e:
+        logger.warning(f"Redis ping failed: {e}")
+        return False
+
+
+async def redis_set_value(
+    key: str,
+    value: str,
+    ex: int | None = None,
+    redis_client: AutoDetectedRedisDep = None,
+) -> bool:
+    """Set value in Redis.
+
+    Function-based replacement for DatabaseManager.redis_set().
+    """
+    if not redis_client:
+        return False
+
+    try:
+        await redis_client.set(key, value, ex=ex)
+        return True
+    except Exception as e:
+        logger.warning(f"Redis set failed for {key}: {e}")
+        return False
+
+
+async def redis_get_value(
+    key: str,
+    redis_client: AutoDetectedRedisDep = None,
+) -> str | None:
+    """Get value from Redis.
+
+    Function-based replacement for DatabaseManager.redis_get().
+    """
+    if not redis_client:
+        return None
+
+    try:
+        return await redis_client.get(key)
+    except Exception as e:
+        logger.warning(f"Redis get failed for {key}: {e}")
+        return None
+
+
+# Direct Crawling Operations (extending existing crawl dependencies)
+class BulkCrawlRequest(BaseModel):
+    """Pydantic model for bulk crawling requests."""
+
+    urls: list[str]
+    preferred_provider: str | None = None
+    max_concurrent: int = 5
+
+
+async def bulk_scrape_urls(
+    request: BulkCrawlRequest,
+    crawl_manager: CrawlManagerDep,
+) -> list[dict[str, Any]]:
+    """Scrape multiple URLs concurrently.
+
+    Function-based replacement for CrawlingManager.bulk_scrape().
+    """
+    try:
+        # Use the core manager's bulk functionality if available
+        if hasattr(crawl_manager, "bulk_scrape"):
+            results = await crawl_manager.bulk_scrape(
+                urls=request.urls,
+                preferred_provider=request.preferred_provider,
+                max_concurrent=request.max_concurrent,
+            )
+        else:
+            # Fallback to individual scraping
+            import asyncio
+
+            semaphore = asyncio.Semaphore(request.max_concurrent)
+
+            async def scrape_with_semaphore(url: str) -> dict[str, Any]:
+                async with semaphore:
+                    return await crawl_manager.scrape_url(
+                        url, request.preferred_provider
+                    )
+
+            tasks = [scrape_with_semaphore(url) for url in request.urls]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            # Convert exceptions to error results
+            processed_results = []
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
+                    processed_results.append(
+                        {
+                            "success": False,
+                            "error": f"Scraping failed: {result}",
+                            "url": request.urls[i],
+                            "content": "",
+                            "metadata": {},
+                        }
+                    )
+                else:
+                    processed_results.append(result)
+
+            results = processed_results
+
+        return results
+    except Exception as e:
+        logger.exception("Bulk scraping failed")
+        msg = f"Failed to scrape URLs: {e}"
+        raise CrawlServiceError(msg) from e
+
+
+async def get_crawl_recommended_tool(
+    url: str,
+    crawl_manager: CrawlManagerDep,
+) -> str:
+    """Get recommended tool for a URL based on performance metrics.
+
+    Function-based replacement for CrawlingManager.get_recommended_tool().
+    """
+    try:
+        return await crawl_manager.get_recommended_tool(url)
+    except Exception as e:
+        logger.warning(f"Tool recommendation failed for {url}: {e}")
+        return "crawl4ai"  # Default fallback
+
+
+async def map_website_urls(
+    url: str,
+    include_subdomains: bool = False,
+    crawl_manager: CrawlManagerDep = None,
+) -> dict[str, Any]:
+    """Map a website to get list of URLs.
+
+    Function-based replacement for CrawlingManager.map_url().
+    """
+    try:
+        return await crawl_manager.map_url(url, include_subdomains)
+    except Exception as e:
+        logger.warning(f"URL mapping failed for {url}: {e}")
+        return {
+            "success": False,
+            "error": f"URL mapping failed: {e}",
+            "urls": [],
+            "total": 0,
+        }
+
+
+async def get_crawl_tier_metrics(
+    crawl_manager: CrawlManagerDep,
+) -> dict[str, dict]:
+    """Get performance metrics for all crawling tiers.
+
+    Function-based replacement for CrawlingManager.get_tier_metrics().
+    """
+    try:
+        return crawl_manager.get_tier_metrics()
+    except Exception as e:
+        logger.warning(f"Failed to get tier metrics: {e}")
+        return {}
+
+
+# Direct Monitoring Operations (replacing MonitoringManager)
+class HealthCheckRequest(BaseModel):
+    """Pydantic model for health check registration."""
+
+    service_name: str
+    check_interval: int = 30
+
+
+class MetricRequest(BaseModel):
+    """Pydantic model for metric recording."""
+
+    metric_name: str
+    value: float
+    labels: dict[str, str] | None = None
+
+
+# Simple health check tracking without complex Manager state
+_health_checks: dict[str, dict[str, Any]] = {}
+
+
+async def register_health_check_function(
+    request: HealthCheckRequest,
+    check_function: callable,
+) -> dict[str, str]:
+    """Register a health check for a service.
+
+    Function-based replacement for MonitoringManager.register_health_check().
+    """
+    try:
+        _health_checks[request.service_name] = {
+            "check_function": check_function,
+            "check_interval": request.check_interval,
+            "last_check": time.time(),
+            "consecutive_failures": 0,
+            "last_error": None,
+            "state": "healthy",
+        }
+        logger.info(f"Registered health check for {request.service_name}")
+        return {
+            "status": "success",
+            "message": f"Health check registered for {request.service_name}",
+        }
+    except Exception as e:
+        logger.exception(f"Failed to register health check for {request.service_name}")
+        return {
+            "status": "error",
+            "message": str(e),
+        }
+
+
+async def check_service_health_function(service_name: str) -> bool:
+    """Check health of a specific service.
+
+    Function-based replacement for MonitoringManager.check_service_health().
+    """
+    if service_name not in _health_checks:
+        logger.warning(f"No health check registered for {service_name}")
+        return False
+
+    health = _health_checks[service_name]
+
+    try:
+        if health.get("check_function"):
+            is_healthy = await health["check_function"]()
+
+            health["last_check"] = time.time()
+            if is_healthy:
+                health["state"] = "healthy"
+                health["consecutive_failures"] = 0
+                health["last_error"] = None
+            else:
+                health["consecutive_failures"] = (
+                    health.get("consecutive_failures", 0) + 1
+                )
+                health["state"] = (
+                    "degraded" if health["consecutive_failures"] < 3 else "failed"
+                )
+                health["last_error"] = "Health check returned false"
+
+            return is_healthy
+    except Exception as e:
+        logger.error(f"Health check failed for {service_name}: {e}")
+        health["last_check"] = time.time()
+        health["last_error"] = str(e)
+        health["consecutive_failures"] = health.get("consecutive_failures", 0) + 1
+        health["state"] = "failed"
+        return False
+
+    return False
+
+
+async def get_all_health_status() -> dict[str, dict[str, Any]]:
+    """Get health status of all monitored services.
+
+    Function-based replacement for MonitoringManager.get_health_status().
+    """
+    status = {}
+
+    for service_name, health in _health_checks.items():
+        status[service_name] = {
+            "state": health.get("state", "unknown"),
+            "last_check": health.get("last_check", 0),
+            "last_error": health.get("last_error"),
+            "consecutive_failures": health.get("consecutive_failures", 0),
+            "is_healthy": health.get("state") == "healthy",
+        }
+
+    return status
+
+
+async def get_overall_health_summary() -> dict[str, Any]:
+    """Get overall system health summary.
+
+    Function-based replacement for MonitoringManager.get_overall_health().
+    """
+    health_status = await get_all_health_status()
+
+    total_services = len(health_status)
+    healthy_services = sum(
+        1 for status in health_status.values() if status["is_healthy"]
+    )
+    failed_services = sum(
+        1 for status in health_status.values() if status["state"] == "failed"
+    )
+
+    overall_healthy = failed_services == 0 and healthy_services == total_services
+
+    return {
+        "overall_healthy": overall_healthy,
+        "total_services": total_services,
+        "healthy_services": healthy_services,
+        "failed_services": failed_services,
+        "health_percentage": (healthy_services / max(total_services, 1)) * 100,
+        "services": health_status,
+    }
+
+
+# Performance tracking without complex Manager state
+async def track_operation_performance(
+    operation_name: str,
+    operation_func: callable,
+    *args,
+    **kwargs,
+) -> Any:
+    """Track performance of an operation.
+
+    Function-based replacement for MonitoringManager.track_performance().
+    """
+    start_time = time.time()
+
+    try:
+        result = await operation_func(*args, **kwargs)
+
+        # Record success metrics (could integrate with metrics system)
+        duration_ms = (time.time() - start_time) * 1000
+        logger.debug(f"Operation {operation_name} completed in {duration_ms:.2f}ms")
+
+        return result
+    except Exception as e:
+        # Record failure metrics
+        duration_ms = (time.time() - start_time) * 1000
+        logger.error(f"Operation {operation_name} failed in {duration_ms:.2f}ms: {e}")
+        raise
+
+
+# Direct Embedding Operations (extending existing embedding dependencies)
+class RerankerRequest(BaseModel):
+    """Pydantic model for reranking requests."""
+
+    query: str
+    results: list[dict[str, Any]]
+
+
+async def rerank_search_results(
+    request: RerankerRequest,
+    embedding_manager: EmbeddingManagerDep,
+) -> list[dict[str, Any]]:
+    """Rerank search results using BGE reranker.
+
+    Function-based replacement for EmbeddingManager.rerank_results().
+    """
+    try:
+        return await embedding_manager.rerank_results(request.query, request.results)
+    except Exception as e:
+        logger.error(f"Result reranking failed: {e}")
+        # Return original results on failure
+        return request.results
+
+
+async def estimate_embedding_cost(
+    texts: list[str],
+    provider_name: str | None = None,
+    embedding_manager: EmbeddingManagerDep = None,
+) -> dict[str, dict[str, float]]:
+    """Estimate embedding generation cost.
+
+    Function-based replacement for EmbeddingManager.estimate_cost().
+    """
+    try:
+        return embedding_manager.estimate_cost(texts, provider_name)
+    except Exception as e:
+        logger.exception("Cost estimation failed")
+        return {"error": {"message": str(e), "cost": 0.0}}
+
+
+async def get_embedding_provider_info(
+    embedding_manager: EmbeddingManagerDep,
+) -> dict[str, dict[str, Any]]:
+    """Get information about available embedding providers.
+
+    Function-based replacement for EmbeddingManager.get_provider_info().
+    """
+    try:
+        return embedding_manager.get_provider_info()
+    except Exception as e:
+        logger.exception("Provider info retrieval failed")
+        return {"error": {"message": str(e)}}
+
+
+async def get_optimal_embedding_provider(
+    text_length: int,
+    quality_required: bool = False,
+    budget_limit: float | None = None,
+    embedding_manager: EmbeddingManagerDep = None,
+) -> str:
+    """Select optimal provider based on constraints.
+
+    Function-based replacement for EmbeddingManager.get_optimal_provider().
+    """
+    try:
+        return await embedding_manager.get_optimal_provider(
+            text_length, quality_required, budget_limit
+        )
+    except Exception as e:
+        logger.exception("Optimal provider selection failed")
+        # Return reasonable default
+        return "fastembed" if text_length > 10000 else "openai"
+
+
+class TextAnalysisRequest(BaseModel):
+    """Pydantic model for text analysis requests."""
+
+    texts: list[str]
+
+
+async def analyze_text_characteristics(
+    request: TextAnalysisRequest,
+    embedding_manager: EmbeddingManagerDep,
+) -> dict[str, Any]:
+    """Analyze text characteristics for smart model selection.
+
+    Function-based replacement for EmbeddingManager.analyze_text_characteristics().
+    """
+    try:
+        analysis = embedding_manager.analyze_text_characteristics(request.texts)
+
+        # Convert TextAnalysis to dict for service boundary
+        return {
+            "total_length": analysis.total_length,
+            "avg_length": analysis.avg_length,
+            "complexity_score": analysis.complexity_score,
+            "estimated_tokens": analysis.estimated_tokens,
+            "text_type": analysis.text_type,
+            "requires_high_quality": analysis.requires_high_quality,
+        }
+    except Exception as e:
+        logger.exception("Text analysis failed")
+        return {
+            "total_length": sum(len(text) for text in request.texts),
+            "avg_length": sum(len(text) for text in request.texts) / len(request.texts),
+            "complexity_score": 0.5,
+            "estimated_tokens": sum(len(text.split()) for text in request.texts),
+            "text_type": "general",
+            "requires_high_quality": False,
+            "error": str(e),
+        }
+
+
+async def get_embedding_usage_report(
+    embedding_manager: EmbeddingManagerDep,
+) -> dict[str, Any]:
+    """Get comprehensive embedding usage report.
+
+    Function-based replacement for EmbeddingManager.get_usage_report().
+    """
+    try:
+        return embedding_manager.get_usage_report()
+    except Exception as e:
+        logger.exception("Usage report generation failed")
+        return {"error": str(e)}

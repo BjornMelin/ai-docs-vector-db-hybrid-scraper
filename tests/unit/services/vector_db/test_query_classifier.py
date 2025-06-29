@@ -28,7 +28,7 @@ class TestQueryClassifier:
         return QueryClassifier(mock_config)
 
     @pytest.mark.parametrize(
-        "query,expected_type",
+        ("query", "expected_type"),
         [
             # Code queries
             (
@@ -89,7 +89,7 @@ class TestQueryClassifier:
         assert result.confidence > 0.0
 
     @pytest.mark.parametrize(
-        "query,expected_complexity",
+        ("query", "expected_complexity"),
         [
             # Simple queries
             ("What is Python?", QueryComplexity.SIMPLE),
@@ -124,7 +124,7 @@ class TestQueryClassifier:
         assert result.complexity_level == expected_complexity
 
     @pytest.mark.parametrize(
-        "query,expected_domain",
+        ("query", "expected_domain"),
         [
             ("Python pandas dataframe operations", "programming"),
             (
@@ -150,7 +150,7 @@ class TestQueryClassifier:
         assert result.domain == expected_domain
 
     @pytest.mark.parametrize(
-        "query,expected_language",
+        ("query", "expected_language"),
         [
             ("Python list comprehension examples", "python"),
             (
@@ -380,7 +380,7 @@ class TestQueryClassifier:
         """Test error handling during classification."""
         # Mock an error in feature extraction
         original_extract = classifier._extract_features
-        classifier._extract_features = lambda x: None.__getattribute__("nonexistent")
+        classifier._extract_features = lambda _x: None.__getattribute__("nonexistent")
 
         try:
             result = await classifier.classify_query("test query")
@@ -403,7 +403,7 @@ class TestQueryClassifier:
         assert len(set(results)) == 1
 
     @pytest.mark.parametrize(
-        "query,expected_features",
+        ("query", "expected_features"),
         [
             (
                 "async def process_data():",

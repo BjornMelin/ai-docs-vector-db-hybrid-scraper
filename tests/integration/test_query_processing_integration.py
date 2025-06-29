@@ -1,5 +1,6 @@
 """Integration tests for the complete query processing system."""
 
+import asyncio
 from unittest.mock import AsyncMock
 
 import pytest
@@ -22,7 +23,7 @@ def mock_embedding_manager():
     """Create a mock embedding manager."""
     manager = AsyncMock()
 
-    def mock_generate_embeddings(texts, **kwargs):
+    def mock_generate_embeddings(texts, **__kwargs):
         """Generate mock embeddings that help with intent classification."""
         # Create different embeddings for different intent types
         embeddings = []
@@ -63,7 +64,7 @@ def mock_embedding_manager():
 
 
 @pytest.fixture
-def mock_qdrant_service():
+def _mock_qdrant_service():
     """Create a mock Qdrant service."""
     service = AsyncMock()
     service.filtered_search = AsyncMock(
@@ -126,7 +127,7 @@ def mock_hyde_engine():
 
 @pytest.fixture
 async def complete_pipeline(
-    mock_embedding_manager, mock_qdrant_service, mock_hyde_engine
+    _mock_embedding_manager, __mock_qdrant_service, _mock_hyde_engine
 ):
     """Create a complete query processing pipeline with all components."""
     # Create orchestrator with correct constructor parameters
@@ -164,7 +165,7 @@ class TestQueryProcessingIntegration:
 
         # Verify successful processing
         assert response.success is True
-        assert response.total_results >= 0  # May be 0 with mocked services
+        assert response._total_results >= 0  # May be 0 with mocked services
 
         # Verify processing components were used
         assert response.preprocessing_result is not None
@@ -173,7 +174,7 @@ class TestQueryProcessingIntegration:
         assert response.strategy_selection is not None
 
         # Verify timing information
-        assert response.total_processing_time_ms > 0
+        assert response._total_processing_time_ms > 0
         assert response.search_time_ms >= 0
 
     async def test_end_to_end_procedural_query(self, complete_pipeline):
@@ -362,11 +363,11 @@ class TestQueryProcessingIntegration:
         # Filters should be applied in search
 
     async def test_fallback_strategy_usage(
-        self, complete_pipeline, mock_qdrant_service
+        self, complete_pipeline, _mock_qdrant_service
     ):
         """Test fallback strategy when primary fails."""
         # Make primary search fail
-        mock_qdrant_service.filtered_search.side_effect = Exception(
+        _mock_qdrant_service.filtered_search.side_effect = Exception(
             "Primary search failed"
         )
 
@@ -450,7 +451,7 @@ class TestQueryProcessingIntegration:
 
         metrics = await complete_pipeline.get_metrics()
 
-        assert metrics["total_queries"] >= 4
+        assert metrics["_total_queries"] >= 4
         assert metrics["successful_queries"] >= 4
         assert metrics["average_processing_time"] > 0
         assert "strategy_usage" in metrics
@@ -511,7 +512,6 @@ class TestQueryProcessingIntegration:
 
     async def test_concurrent_processing_integration(self, complete_pipeline):
         """Test concurrent processing with integrated system."""
-        import asyncio
 
         requests = [
             QueryProcessingRequest(

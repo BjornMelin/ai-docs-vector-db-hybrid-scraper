@@ -6,17 +6,13 @@ monitoring reload operations, and accessing configuration status information.
 
 import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from ...config.reload import (
-    ReloadOperation,
-    ReloadTrigger,
-    get_config_reloader,
-)
-from ...services.observability.config_instrumentation import (
+from src.config.reload import ReloadOperation, ReloadTrigger, get_config_reloader
+from src.services.observability.config_instrumentation import (
     ConfigOperationType,
     instrument_config_operation,
 )
@@ -33,7 +29,7 @@ class ReloadRequest(BaseModel):
     force: bool = Field(
         default=False, description="Force reload even if no changes detected"
     )
-    config_source: Optional[str] = Field(
+    config_source: str | None = Field(
         default=None, description="Optional specific config source path"
     )
 
@@ -44,7 +40,7 @@ class ReloadResponse(BaseModel):
     operation_id: str
     status: str
     success: bool
-    message: Optional[str] = None
+    message: str | None = None
 
     # Timing information
     total_duration_ms: float
@@ -52,8 +48,8 @@ class ReloadResponse(BaseModel):
     apply_duration_ms: float
 
     # Change information
-    previous_config_hash: Optional[str] = None
-    new_config_hash: Optional[str] = None
+    previous_config_hash: str | None = None
+    new_config_hash: str | None = None
     changes_applied: list[str] = Field(default_factory=list)
     services_notified: list[str] = Field(default_factory=list)
 
@@ -80,13 +76,13 @@ class ReloadStatsResponse(BaseModel):
     average_duration_ms: float
     listeners_registered: int
     backups_available: int
-    current_config_hash: Optional[str] = None
+    current_config_hash: str | None = None
 
 
 class RollbackRequest(BaseModel):
     """Configuration rollback request."""
 
-    target_hash: Optional[str] = Field(
+    target_hash: str | None = Field(
         default=None, description="Specific config hash to rollback to"
     )
 
@@ -130,6 +126,7 @@ async def reload_configuration(request: ReloadRequest) -> ReloadResponse:
 
     Raises:
         HTTPException: If reload operation fails
+
     """
     try:
         reloader = get_config_reloader()
@@ -148,16 +145,26 @@ async def reload_configuration(request: ReloadRequest) -> ReloadResponse:
         if not operation.success:
             # Return detailed error information but don't raise exception
             # This allows clients to get full operation details
-            logger.warning(f"Configuration reload failed: {operation.error_message}")
-
-        return response
+            logger.warning(
+                f"Configuration reload failed: {operation.error_message}"
+            )  # TODO: Convert f-string to logging format
 
     except Exception as e:
         logger.exception("Unexpected error during configuration reload")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Configuration reload failed: {e!s}",
-        )
+        ) from e
+    else:
+        return response
+
+
+def _raise_rollback_error(operation: object) -> None:
+    """Raise HTTPException for failed rollback operation."""
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Configuration rollback failed: {operation.error_message}",
+    )
 
 
 @router.post("/rollback", response_model=ReloadResponse)
@@ -180,6 +187,7 @@ async def rollback_configuration(request: RollbackRequest) -> ReloadResponse:
 
     Raises:
         HTTPException: If rollback operation fails
+
     """
     try:
         reloader = get_config_reloader()
@@ -190,12 +198,7 @@ async def rollback_configuration(request: RollbackRequest) -> ReloadResponse:
         response = _operation_to_response(operation)
 
         if not operation.success:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Configuration rollback failed: {operation.error_message}",
-            )
-
-        return response
+            _raise_rollback_error(operation)
 
     except HTTPException:
         raise
@@ -204,7 +207,9 @@ async def rollback_configuration(request: RollbackRequest) -> ReloadResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Configuration rollback failed: {e!s}",
-        )
+        ) from e
+    else:
+        return response
 
 
 @router.get("/history", response_model=ReloadHistoryResponse)
@@ -223,6 +228,7 @@ async def get_reload_history(
 
     Returns:
         Historical reload operations
+
     """
     try:
         reloader = get_config_reloader()
@@ -241,7 +247,7 @@ async def get_reload_history(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve reload history: {e!s}",
-        )
+        ) from e
 
 
 @router.get("/stats", response_model=ReloadStatsResponse)
@@ -253,6 +259,7 @@ async def get_reload_stats() -> ReloadStatsResponse:
 
     Returns:
         Configuration reload statistics
+
     """
     try:
         reloader = get_config_reloader()
@@ -265,7 +272,7 @@ async def get_reload_stats() -> ReloadStatsResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve reload statistics: {e!s}",
-        )
+        ) from e
 
 
 @router.get("/status")
@@ -274,6 +281,7 @@ async def get_config_status() -> dict[str, Any]:
 
     Returns:
         Current configuration status including hash, listeners, and settings
+
     """
     try:
         reloader = get_config_reloader()
@@ -295,14 +303,14 @@ async def get_config_status() -> dict[str, Any]:
             },
         }
 
-        return status_info
-
     except Exception as e:
         logger.exception("Error retrieving configuration status")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve configuration status: {e!s}",
-        )
+        ) from e
+    else:
+        return status_info
 
 
 @router.post("/file-watch/enable")
@@ -321,6 +329,7 @@ async def enable_file_watching(
 
     Returns:
         File watching status
+
     """
     try:
         reloader = get_config_reloader()
@@ -338,7 +347,7 @@ async def enable_file_watching(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to enable file watching: {e!s}",
-        )
+        ) from e
 
 
 @router.post("/file-watch/disable")
@@ -347,22 +356,23 @@ async def disable_file_watching() -> dict[str, Any]:
 
     Returns:
         File watching status
+
     """
     try:
         reloader = get_config_reloader()
         await reloader.disable_file_watching()
-
-        return {
-            "file_watching_enabled": False,
-            "message": "Configuration file watching disabled",
-        }
 
     except Exception as e:
         logger.exception("Error disabling file watching")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to disable file watching: {e!s}",
-        )
+        ) from e
+    else:
+        return {
+            "file_watching_enabled": False,
+            "message": "Configuration file watching disabled",
+        }
 
 
 @router.get("/backups")
@@ -374,6 +384,7 @@ async def list_config_backups() -> dict[str, Any]:
 
     Returns:
         Available configuration backups
+
     """
     try:
         reloader = get_config_reloader()
@@ -406,4 +417,4 @@ async def list_config_backups() -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve configuration backups: {e!s}",
-        )
+        ) from e

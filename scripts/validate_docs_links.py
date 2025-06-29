@@ -12,7 +12,7 @@ Usage:
 """
 
 import argparse
-import json
+import json  # noqa: PLC0415
 import re
 import sys
 from pathlib import Path
@@ -87,7 +87,7 @@ class LinkValidator:
 
         except UnicodeDecodeError:
             print(f"Warning: Could not read {file_path} (encoding issue)")
-        except Exception as e:
+        except Exception:
             print(f"Warning: Error reading {file_path}: {e}")
 
         return links
@@ -185,7 +185,7 @@ class LinkValidator:
                             f"Fixed: {broken_link['file']}:{broken_link['line']} - {broken_link['link_path']} -> {fix}"
                         )
 
-                except Exception as e:
+                except Exception:
                     print(f"Could not fix {broken_link['file']}: {e}")
 
         return fixes_applied

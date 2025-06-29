@@ -14,6 +14,7 @@ import threading
 import time
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import psutil
@@ -180,7 +181,9 @@ class FailureInjector:
             "duration": duration,
         }
 
-        logger.warning(f"Injecting memory pressure: {pressure_mb}MB for {duration}s")
+        logger.warning(
+            f"Injecting memory pressure: {pressure_mb}MB for {duration}s"
+        )  # TODO: Convert f-string to logging format
 
         # Allocate memory to create pressure
         memory_hogs = []
@@ -221,7 +224,9 @@ class FailureInjector:
             "duration": duration,
         }
 
-        logger.warning(f"Injecting CPU saturation: {cpu_load:.1%} load for {duration}s")
+        logger.warning(
+            f"Injecting CPU saturation: {cpu_load:.1%} load for {duration}s"
+        )  # TODO: Convert f-string to logging format
 
         # CPU intensive work
         stop_cpu_work = threading.Event()
@@ -310,8 +315,8 @@ class FailureInjector:
                     # Brief pause
                     time.sleep(0.1)
 
-                except Exception as e:
-                    logger.warning(f"Disk I/O stress error: {e}")
+                except Exception:
+                    logger.warning("Disk I/O stress error")
                     break
 
         # Start I/O work in separate thread
@@ -326,7 +331,7 @@ class FailureInjector:
             # Clean up temporary files
             for temp_file_path in temp_files:
                 with suppress(OSError, FileNotFoundError):
-                    os.unlink(temp_file_path)
+                    Path(temp_file_path).unlink()
 
             if failure_id in self.active_failures:
                 del self.active_failures[failure_id]
@@ -346,7 +351,7 @@ class FailureInjector:
         return {
             "active_failures": len(self.active_failures),
             "active_types": list({f["type"] for f in self.active_failures.values()}),
-            "total_injected": len(self.failure_history),
+            "_total_injected": len(self.failure_history),
             "history": self.failure_history[-10:],  # Last 10 failures
         }
 
@@ -362,7 +367,7 @@ class StressTestOrchestrator:
 
     async def run_chaos_scenario(self, scenario: ChaosScenario) -> dict[str, Any]:
         """Run a chaos engineering scenario."""
-        logger.info(f"Starting chaos scenario: {scenario.name}")
+        logger.info("Starting chaos scenario")
 
         scenario_start = time.time()
         scenario_result = {
@@ -420,9 +425,9 @@ class StressTestOrchestrator:
                     "error": str(e),
                 }
             )
-            logger.exception(f"Chaos scenario {scenario.name} failed: {e}")
+            logger.exception("Chaos scenario {scenario.name} failed")
 
-        logger.info(f"Completed chaos scenario: {scenario.name}")
+        logger.info("Completed chaos scenario")
         return scenario_result
 
     async def run_multi_phase_stress_test(
@@ -494,10 +499,12 @@ class StressTestOrchestrator:
                         "error": str(e),
                     }
                 )
-                logger.exception(f"Stress test phase {i + 1} failed: {e}")
+                logger.exception("Stress test phase {i + 1} failed")
 
             phase_results.append(phase_result)
-            logger.info(f"Completed stress test phase {i + 1}")
+            logger.info(
+                f"Completed stress test phase {i + 1}"
+            )  # TODO: Convert f-string to logging format
 
         return phase_results
 
@@ -646,7 +653,7 @@ def stress_test_environment():
     # Log system information
     logger.info("Setting up stress testing environment")
     logger.info(
-        f"System: {psutil.cpu_count()} CPUs, {psutil.virtual_memory().total / (1024**3):.2f} GB RAM"
+        f"System: {psutil.cpu_count()} CPUs, {psutil.virtual_memory()._total / (1024**3):.2f} GB RAM"
     )
 
     # Check resource limits
@@ -659,11 +666,13 @@ def stress_test_environment():
 
             mem_limit = resource.getrlimit(resource.RLIMIT_AS)
             if mem_limit[0] != resource.RLIM_INFINITY:
-                logger.info(f"Memory limit: {mem_limit[0] / (1024**3):.2f} GB")
+                logger.info(
+                    f"Memory limit: {mem_limit[0] / (1024**3):.2f} GB"
+                )  # TODO: Convert f-string to logging format
             else:
                 logger.info("Memory limit: unlimited")
-        except Exception as e:
-            logger.warning(f"Could not check resource limits: {e}")
+        except Exception:
+            logger.warning("Could not check resource limits")
 
     yield
 

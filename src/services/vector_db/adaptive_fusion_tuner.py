@@ -8,8 +8,8 @@ import logging
 import time
 from typing import Any
 
-from ...config import Config
-from ...models.vector_search import QueryClassification
+from src.config import Config
+from src.models.vector_search import QueryClassification
 
 
 logger = logging.getLogger(__name__)
@@ -23,6 +23,7 @@ class AdaptiveFusionTuner:
 
         Args:
             config: Unified configuration
+
         """
         self.config = config
         self.performance_history: dict[str, dict[str, float]] = {}
@@ -44,7 +45,7 @@ class AdaptiveFusionTuner:
         self,
         query_classification: QueryClassification,
         historical_performance: dict[str, float] | None = None,
-        context: dict[str, Any] | None = None,
+        _context: dict[str, Any] | None = None,
     ) -> dict[str, float]:
         """Compute adaptive weights for hybrid search fusion.
 
@@ -55,6 +56,7 @@ class AdaptiveFusionTuner:
 
         Returns:
             Dictionary with 'dense' and 'sparse' weights that sum to 1.0
+
         """
         try:
             self.total_queries += 1
@@ -97,12 +99,16 @@ class AdaptiveFusionTuner:
 
             weights = {"dense": dense_weight, "sparse": sparse_weight}
 
-            logger.debug(f"Computed adaptive weights for {query_type}: {weights}")
+            logger.debug(
+                f"Computed adaptive weights for {query_type}: {weights}"
+            )  # TODO: Convert f-string to logging format
 
             return weights
 
         except Exception as e:
-            logger.error(f"Failed to compute adaptive weights: {e}", exc_info=True)
+            logger.error(
+                f"Failed to compute adaptive weights: {e}", exc_info=True
+            )  # TODO: Convert f-string to logging format
             # Return default balanced weights on error
             return {"dense": 0.7, "sparse": 0.3}
 
@@ -116,15 +122,14 @@ class AdaptiveFusionTuner:
         # Simpler queries benefit from dense search (semantic understanding)
         if complexity in ["complex", "high"]:
             return -0.1  # Favor sparse for complex queries
-        elif complexity in ["simple", "low"]:
+        if complexity in ["simple", "low"]:
             return 0.1  # Favor dense for simple queries
-        else:
-            return 0.0  # No adjustment for moderate complexity
+        return 0.0  # No adjustment for moderate complexity
 
     def _compute_performance_adjustment(
         self,
         historical_performance: dict[str, float],
-        query_classification: QueryClassification,
+        _query_classification: QueryClassification,
     ) -> float:
         """Compute adjustment based on historical performance."""
         try:
@@ -140,7 +145,9 @@ class AdaptiveFusionTuner:
             return adjustment
 
         except Exception as e:
-            logger.debug(f"Failed to compute performance adjustment: {e}")
+            logger.debug(
+                f"Failed to compute performance adjustment: {e}"
+            )  # TODO: Convert f-string to logging format
             return 0.0
 
     def _update_performance_history(
@@ -166,7 +173,9 @@ class AdaptiveFusionTuner:
             )
 
         except Exception as e:
-            logger.debug(f"Failed to update performance history: {e}")
+            logger.debug(
+                f"Failed to update performance history: {e}"
+            )  # TODO: Convert f-string to logging format
 
     def get_performance_stats(self) -> dict[str, Any]:
         """Get performance statistics for monitoring and debugging."""
@@ -194,7 +203,9 @@ class AdaptiveFusionTuner:
                 "performance_history_size": len(self.performance_history),
             }
         except Exception as e:
-            logger.error(f"Failed to get performance stats: {e}", exc_info=True)
+            logger.error(
+                f"Failed to get performance stats: {e}", exc_info=True
+            )  # TODO: Convert f-string to logging format
             return {
                 "total_queries": self.total_queries,
                 "successful_optimizations": self.successful_optimizations,

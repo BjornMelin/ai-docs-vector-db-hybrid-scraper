@@ -417,7 +417,7 @@ class TestBrowserUseAdapterScraping:
 
         assert result["success"] is False
         assert "Always fails" in result["error"]
-        assert mock_agent.run.call_count == 3  # max_retries = 3 total attempts
+        assert mock_agent.run.call_count == 3  # max_retries = 3 _total attempts
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
     @patch("src.services.browser.browser_use_adapter.Agent")

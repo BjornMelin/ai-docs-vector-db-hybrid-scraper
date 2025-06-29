@@ -7,6 +7,8 @@ with the server, following FastMCP 2.0 best practices.
 import logging
 from typing import TYPE_CHECKING
 
+from . import tools
+
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -25,9 +27,8 @@ async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") ->
     Args:
         mcp: The FastMCP server instance
         client_manager: The unified client manager for all services
-    """
-    from . import tools
 
+    """
     # Track registration for logging
     registered_tools = []
 
@@ -86,6 +87,16 @@ async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") ->
     logger.info("Registering content intelligence tools...")
     tools.content_intelligence.register_tools(mcp, client_manager)
     registered_tools.append("content_intelligence")
+
+    # Agentic RAG (NEW - Pydantic-AI based autonomous agents)
+    logger.info("Registering agentic RAG tools...")
+    try:
+        tools.agentic_rag.register_tools(mcp, client_manager)
+        registered_tools.append("agentic_rag")
+    except ImportError as e:
+        logger.warning(f"Agentic RAG tools not available (missing dependencies): {e}")
+    except Exception as e:
+        logger.error(f"Failed to register agentic RAG tools: {e}")
 
     logger.info(
         f"Successfully registered {len(registered_tools)} tool modules: {', '.join(registered_tools)}"

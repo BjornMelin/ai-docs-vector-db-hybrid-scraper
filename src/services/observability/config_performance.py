@@ -5,16 +5,14 @@ including load times, validation performance, auto-detection latency, and
 configuration change impact analysis.
 """
 
-import asyncio
 import logging
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from opentelemetry import metrics
-from opentelemetry.metrics import Counter, Histogram, UpDownCounter
 from opentelemetry.trace import get_current_span
 
 
@@ -31,8 +29,8 @@ class ConfigOperationMetrics:
     end_time: float
     duration_ms: float
     success: bool
-    error_type: Optional[str] = None
-    error_message: Optional[str] = None
+    error_type: str | None = None
+    error_message: str | None = None
 
     # Configuration-specific metrics
     config_size_bytes: int = 0
@@ -50,9 +48,9 @@ class ConfigOperationMetrics:
     memory_usage_mb: float = 0.0
 
     # Context
-    environment: Optional[str] = None
-    deployment_tier: Optional[str] = None
-    correlation_id: Optional[str] = None
+    environment: str | None = None
+    deployment_tier: str | None = None
+    correlation_id: str | None = None
 
 
 @dataclass
@@ -72,7 +70,7 @@ class ConfigPerformanceStats:
 
     # Error statistics
     error_rate: float = 0.0
-    common_errors: Dict[str, int] = field(default_factory=dict)
+    common_errors: dict[str, int] = field(default_factory=dict)
 
     # Configuration size statistics
     avg_config_size_bytes: float = 0.0
@@ -88,8 +86,8 @@ class ConfigPerformanceStats:
     avg_detection_confidence: float = 0.0
 
     # Time period
-    period_start: Optional[datetime] = None
-    period_end: Optional[datetime] = None
+    period_start: datetime | None = None
+    period_end: datetime | None = None
 
 
 class ConfigPerformanceMonitor:
@@ -100,13 +98,14 @@ class ConfigPerformanceMonitor:
 
         Args:
             max_history: Maximum number of operations to keep in history
+
         """
         self.max_history = max_history
         self.operation_history: deque[ConfigOperationMetrics] = deque(
             maxlen=max_history
         )
-        self.operation_counts: Dict[str, int] = defaultdict(int)
-        self.operation_durations: Dict[str, List[float]] = defaultdict(list)
+        self.operation_counts: dict[str, int] = defaultdict(int)
+        self.operation_durations: dict[str, list[float]] = defaultdict(list)
 
         # OpenTelemetry metrics
         self.meter = metrics.get_meter(__name__)
@@ -193,6 +192,7 @@ class ConfigPerformanceMonitor:
             duration_ms: Operation duration in milliseconds
             success: Whether the operation succeeded
             **kwargs: Additional metrics (config_size_bytes, sections_count, etc.)
+
         """
         # Create operation metrics
         metrics_data = ConfigOperationMetrics(
@@ -260,7 +260,7 @@ class ConfigPerformanceMonitor:
 
     def get_operation_stats(
         self,
-        operation_type: Optional[str] = None,
+        operation_type: str | None = None,
         time_window_hours: int = 24,
     ) -> ConfigPerformanceStats:
         """Get performance statistics for configuration operations.
@@ -271,6 +271,7 @@ class ConfigPerformanceMonitor:
 
         Returns:
             Performance statistics
+
         """
         cutoff_time = time.time() - (time_window_hours * 3600)
 
@@ -367,10 +368,10 @@ class ConfigPerformanceMonitor:
         # Time period
         if filtered_ops:
             stats.period_start = datetime.fromtimestamp(
-                min(op.start_time for op in filtered_ops)
+                min(op.start_time for op in filtered_ops), tz=UTC
             )
             stats.period_end = datetime.fromtimestamp(
-                max(op.end_time for op in filtered_ops)
+                max(op.end_time for op in filtered_ops), tz=UTC
             )
 
         return stats
@@ -379,7 +380,7 @@ class ConfigPerformanceMonitor:
         self,
         threshold_ms: float = 1000.0,
         limit: int = 10,
-    ) -> List[ConfigOperationMetrics]:
+    ) -> list[ConfigOperationMetrics]:
         """Get slowest configuration operations above threshold.
 
         Args:
@@ -388,6 +389,7 @@ class ConfigPerformanceMonitor:
 
         Returns:
             List of slow operations
+
         """
         slow_ops = [
             op for op in self.operation_history if op.duration_ms >= threshold_ms
@@ -401,7 +403,7 @@ class ConfigPerformanceMonitor:
     def get_error_summary(
         self,
         time_window_hours: int = 24,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get error summary for configuration operations.
 
         Args:
@@ -409,6 +411,7 @@ class ConfigPerformanceMonitor:
 
         Returns:
             Error summary with counts and patterns
+
         """
         cutoff_time = time.time() - (time_window_hours * 3600)
 
@@ -442,7 +445,9 @@ class ConfigPerformanceMonitor:
                     "operation_name": op.operation_name,
                     "error_type": op.error_type,
                     "error_message": op.error_message,
-                    "timestamp": datetime.fromtimestamp(op.end_time).isoformat(),
+                    "timestamp": datetime.fromtimestamp(
+                        op.end_time, tz=UTC
+                    ).isoformat(),
                     "duration_ms": op.duration_ms,
                 }
                 for op in recent_errors
@@ -455,17 +460,18 @@ class ConfigPerformanceMonitor:
         self.operation_counts.clear()
         self.operation_durations.clear()
 
-    def export_metrics_summary(self) -> Dict[str, Any]:
+    def export_metrics_summary(self) -> dict[str, Any]:
         """Export comprehensive metrics summary.
 
         Returns:
             Dictionary with all metrics and statistics
+
         """
         # Overall statistics
         overall_stats = self.get_operation_stats()
 
         # Per-operation-type statistics
-        operation_types = set(op.operation_type for op in self.operation_history)
+        operation_types = {op.operation_type for op in self.operation_history}
         per_type_stats = {
             op_type: self.get_operation_stats(operation_type=op_type)
             for op_type in operation_types
@@ -478,7 +484,7 @@ class ConfigPerformanceMonitor:
         slow_operations = self.get_slow_operations()
 
         return {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
             "total_operations": len(self.operation_history),
             "overall_stats": overall_stats.__dict__,
             "per_type_stats": {
@@ -490,7 +496,9 @@ class ConfigPerformanceMonitor:
                     "operation_type": op.operation_type,
                     "operation_name": op.operation_name,
                     "duration_ms": op.duration_ms,
-                    "timestamp": datetime.fromtimestamp(op.end_time).isoformat(),
+                    "timestamp": datetime.fromtimestamp(
+                        op.end_time, tz=UTC
+                    ).isoformat(),
                 }
                 for op in slow_operations
             ],
@@ -498,7 +506,7 @@ class ConfigPerformanceMonitor:
 
 
 # Global configuration performance monitor instance
-_config_performance_monitor: Optional[ConfigPerformanceMonitor] = None
+_config_performance_monitor: ConfigPerformanceMonitor | None = None
 
 
 def get_config_performance_monitor() -> ConfigPerformanceMonitor:
@@ -506,6 +514,7 @@ def get_config_performance_monitor() -> ConfigPerformanceMonitor:
 
     Returns:
         ConfigPerformanceMonitor instance
+
     """
     global _config_performance_monitor
     if _config_performance_monitor is None:
@@ -528,6 +537,7 @@ def record_config_operation(
         duration_ms: Operation duration in milliseconds
         success: Whether the operation succeeded
         **kwargs: Additional metrics
+
     """
     monitor = get_config_performance_monitor()
     monitor.record_operation(
@@ -540,7 +550,7 @@ def record_config_operation(
 
 
 def get_config_performance_stats(
-    operation_type: Optional[str] = None,
+    operation_type: str | None = None,
     time_window_hours: int = 24,
 ) -> ConfigPerformanceStats:
     """Get configuration performance statistics.
@@ -551,12 +561,13 @@ def get_config_performance_stats(
 
     Returns:
         Performance statistics
+
     """
     monitor = get_config_performance_monitor()
     return monitor.get_operation_stats(operation_type, time_window_hours)
 
 
-def get_config_error_summary(time_window_hours: int = 24) -> Dict[str, Any]:
+def get_config_error_summary(time_window_hours: int = 24) -> dict[str, Any]:
     """Get configuration error summary.
 
     Args:
@@ -564,6 +575,7 @@ def get_config_error_summary(time_window_hours: int = 24) -> Dict[str, Any]:
 
     Returns:
         Error summary
+
     """
     monitor = get_config_performance_monitor()
     return monitor.get_error_summary(time_window_hours)

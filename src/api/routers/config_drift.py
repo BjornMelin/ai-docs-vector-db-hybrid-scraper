@@ -5,19 +5,19 @@ system, view drift events, manage alerting, and trigger manual drift checks.
 """
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from ...config.core import get_config
-from ...services.config_drift_service import (
+from src.config.core import get_config
+from src.services.config_drift_service import (
+    get_drift_service,
     get_drift_service_status,
     run_manual_drift_detection,
-    get_drift_service,
 )
-from ...services.observability.performance import monitor_operation
+from src.services.observability.performance import monitor_operation
 
 
 logger = logging.getLogger(__name__)
@@ -29,9 +29,15 @@ class DriftServiceStatusResponse(BaseModel):
     """Response model for drift service status."""
 
     service_running: bool = Field(description="Whether the drift service is running")
-    drift_detection_enabled: bool = Field(description="Whether drift detection is enabled")
-    detector_initialized: bool = Field(description="Whether the detector is initialized")
-    monitored_paths_count: int = Field(description="Number of monitored configuration paths")
+    drift_detection_enabled: bool = Field(
+        description="Whether drift detection is enabled"
+    )
+    detector_initialized: bool = Field(
+        description="Whether the detector is initialized"
+    )
+    monitored_paths_count: int = Field(
+        description="Number of monitored configuration paths"
+    )
     config: dict[str, Any] = Field(description="Current drift detection configuration")
     drift_summary: dict[str, Any] | None = Field(
         default=None, description="Current drift status summary"
@@ -57,8 +63,12 @@ class DriftDetectionResponse(BaseModel):
 
     manual_detection: bool = Field(description="Whether this was a manual detection")
     timestamp: str = Field(description="Detection timestamp")
-    snapshot_results: dict[str, Any] = Field(description="Configuration snapshot results")
-    comparison_results: dict[str, Any] = Field(description="Configuration comparison results")
+    snapshot_results: dict[str, Any] = Field(
+        description="Configuration snapshot results"
+    )
+    comparison_results: dict[str, Any] = Field(
+        description="Configuration comparison results"
+    )
 
 
 class DriftEventResponse(BaseModel):
@@ -85,13 +95,13 @@ async def get_drift_status():
         with monitor_operation("api_config_drift_status", category="api"):
             status = await get_drift_service_status()
             return DriftServiceStatusResponse(**status)
-    
+
     except Exception as e:
-        logger.error(f"Failed to get drift service status: {e}")
+        logger.exception("Failed to get drift service status")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve drift service status: {str(e)}"
-        )
+            detail=f"Failed to retrieve drift service status: {e!s}",
+        ) from e
 
 
 @router.post(
@@ -100,29 +110,33 @@ async def get_drift_status():
     summary="Run manual configuration drift detection",
     description="Trigger manual configuration drift detection and return results",
 )
-async def run_drift_detection(request: DriftDetectionRequest = DriftDetectionRequest()):
+async def run_drift_detection(
+    _request: DriftDetectionRequest | None = None,
+):
     """Run manual configuration drift detection."""
+    if _request is None:
+        _request = DriftDetectionRequest()
     try:
         with monitor_operation("api_config_drift_detect", category="api"):
             logger.info("Starting manual configuration drift detection via API")
-            
+
             # Run manual detection
             results = await run_manual_drift_detection()
-            
+
             logger.info(
                 f"Manual drift detection completed - "
                 f"snapshots: {results['snapshot_results']['snapshots_taken']}, "
                 f"drift events: {len(results['comparison_results']['drift_events'])}"
             )
-            
+
             return DriftDetectionResponse(**results)
-    
+
     except Exception as e:
-        logger.error(f"Manual drift detection failed: {e}")
+        logger.exception("Manual drift detection failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to run drift detection: {str(e)}"
-        )
+            detail=f"Failed to run drift detection: {e!s}",
+        ) from e
 
 
 @router.get(
@@ -132,43 +146,42 @@ async def run_drift_detection(request: DriftDetectionRequest = DriftDetectionReq
     description="Retrieve recent configuration drift events with filtering options",
 )
 async def get_drift_events(
-    limit: int = 50,
-    severity: str | None = None,
-    source: str | None = None,
-    hours: int = 24,
+    _limit: int = 50,
+    _severity: str | None = None,
+    _source: str | None = None,
+    _hours: int = 24,
 ):
     """Get recent configuration drift events.
-    
+
     Args:
         limit: Maximum number of events to return
         severity: Filter by severity level (low, medium, high, critical)
         source: Filter by configuration source
         hours: Number of hours back to search
+
     """
     try:
         with monitor_operation("api_config_drift_events", category="api"):
             service = get_drift_service()
-            
+
             # Get drift summary which includes recent events
             summary = await service.get_service_status()
-            
+
             # For now, return the drift events from the last detection
             # In a full implementation, this would query a persistent store
             if "drift_summary" not in summary:
                 return []
-            
+
             # This is a simplified implementation
             # A full version would maintain a persistent event store
-            events = []
-            
-            return events
-    
+            return []
+
     except Exception as e:
-        logger.error(f"Failed to get drift events: {e}")
+        logger.exception("Failed to get drift events")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve drift events: {str(e)}"
-        )
+            detail=f"Failed to retrieve drift events: {e!s}",
+        ) from e
 
 
 @router.get(
@@ -182,11 +195,11 @@ async def get_drift_summary():
         with monitor_operation("api_config_drift_summary", category="api"):
             service = get_drift_service()
             status_info = await service.get_service_status()
-            
+
             # Extract drift summary if available
             drift_summary = status_info.get("drift_summary", {})
-            
-            summary = {
+
+            return {
                 "service_status": {
                     "running": status_info["service_running"],
                     "enabled": status_info["drift_detection_enabled"],
@@ -194,21 +207,31 @@ async def get_drift_summary():
                 },
                 "monitoring": {
                     "monitored_paths": status_info["monitored_paths_count"],
-                    "snapshot_interval_minutes": status_info["config"]["snapshot_interval_minutes"],
-                    "comparison_interval_minutes": status_info["config"]["comparison_interval_minutes"],
+                    "snapshot_interval_minutes": status_info["config"][
+                        "snapshot_interval_minutes"
+                    ],
+                    "comparison_interval_minutes": status_info["config"][
+                        "comparison_interval_minutes"
+                    ],
                 },
                 "drift_statistics": drift_summary,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
             }
-            
-            return summary
-    
+
     except Exception as e:
-        logger.error(f"Failed to get drift summary: {e}")
+        logger.exception("Failed to get drift summary")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve drift summary: {str(e)}"
-        )
+            detail=f"Failed to retrieve drift summary: {e!s}",
+        ) from e
+
+
+def _raise_service_unavailable():
+    msg = "Configuration drift service is not healthy"
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=msg,
+    )
 
 
 @router.get(
@@ -221,38 +244,36 @@ async def check_drift_health():
     try:
         with monitor_operation("api_config_drift_health", category="api"):
             status = await get_drift_service_status()
-            
+
             # Determine health based on service status
             healthy = (
-                status["service_running"] and
-                status["detector_initialized"] and
-                status["drift_detection_enabled"]
+                status["service_running"]
+                and status["detector_initialized"]
+                and status["drift_detection_enabled"]
             )
-            
+
             health_status = {
                 "healthy": healthy,
                 "service_running": status["service_running"],
                 "detector_initialized": status["detector_initialized"],
                 "drift_detection_enabled": status["drift_detection_enabled"],
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
             }
-            
+
             if not healthy:
-                raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="Configuration drift service is not healthy"
-                )
-            
+                _raise_service_unavailable()
+
             return health_status
-    
+
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Drift health check failed: {e}")
+        logger.exception("Drift health check failed")
+        msg = f"Health check failed: {e!s}"
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Health check failed: {str(e)}"
-        )
+            detail=msg,
+        ) from e
 
 
 @router.get(
@@ -265,7 +286,7 @@ async def get_drift_config():
     try:
         with monitor_operation("api_config_drift_config", category="api"):
             config = get_config()
-            
+
             drift_config = {
                 "enabled": config.drift_detection.enabled,
                 "snapshot_interval_minutes": config.drift_detection.snapshot_interval_minutes,
@@ -282,12 +303,12 @@ async def get_drift_config():
                     "performance_monitoring": config.drift_detection.use_performance_monitoring,
                 },
             }
-            
+
             return drift_config
-    
+
     except Exception as e:
-        logger.error(f"Failed to get drift config: {e}")
+        logger.exception("Failed to get drift config")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve drift configuration: {str(e)}"
-        )
+            detail=f"Failed to retrieve drift configuration: {e!s}",
+        ) from e

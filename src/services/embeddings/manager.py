@@ -1,5 +1,6 @@
 """Embedding manager with smart provider selection."""
 
+import json
 import logging
 import time
 from collections import defaultdict
@@ -14,17 +15,22 @@ try:
 except ImportError:
     FlagReranker = None
 
+try:
+    from src.services.cache import CacheManager
+except ImportError:
+    CacheManager = None
+
 from src.config import Config
 from src.models import ModelBenchmark
+from src.services.errors import EmbeddingServiceError
 
-from ..errors import EmbeddingServiceError
 from .base import EmbeddingProvider
 from .fastembed_provider import FastEmbedProvider
 from .openai_provider import OpenAIEmbeddingProvider
 
 
 if TYPE_CHECKING:
-    from ...infrastructure.client_manager import ClientManager
+    from src.infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +91,7 @@ class EmbeddingManager:
             client_manager: ClientManager instance for dependency injection
             budget_limit: Optional daily budget limit in USD
             rate_limiter: Optional RateLimitManager instance
+
         """
         self.config = config
         self.providers: dict[str, EmbeddingProvider] = {}
@@ -96,9 +103,7 @@ class EmbeddingManager:
 
         # Initialize cache manager if caching is enabled
         self.cache_manager: object | None = None
-        if config.cache.enable_caching:
-            from ..cache import CacheManager
-
+        if config.cache.enable_caching and CacheManager is not None:
             self.cache_manager = CacheManager(
                 dragonfly_url=config.cache.dragonfly_url,
                 enable_local_cache=config.cache.enable_local_cache,
@@ -125,9 +130,9 @@ class EmbeddingManager:
         if FlagReranker is not None:
             try:
                 self._reranker = FlagReranker(self._reranker_model, use_fp16=True)
-                logger.info(f"Initialized reranker: {self._reranker_model}")
-            except Exception as e:
-                logger.warning(f"Failed to initialize reranker: {e}")
+                logger.info("Initialized reranker")
+            except Exception:
+                logger.warning("Failed to initialize reranker")
 
     async def initialize(self) -> None:
         """Initialize available providers.
@@ -137,6 +142,7 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If no providers can be initialized
+
         """
         if self._initialized:
             return
@@ -156,8 +162,8 @@ class EmbeddingManager:
                 logger.info(
                     f"Initialized OpenAI provider with {self.config.openai.model}"
                 )
-            except Exception as e:
-                logger.warning(f"Failed to initialize OpenAI provider: {e}")
+            except Exception:
+                logger.warning("Failed to initialize OpenAI provider")
 
         # Initialize FastEmbed provider - always available for local embeddings
         try:
@@ -167,14 +173,15 @@ class EmbeddingManager:
             logger.info(
                 f"Initialized FastEmbed provider with {self.config.fastembed.model}"
             )
-        except Exception as e:
-            logger.warning(f"Failed to initialize FastEmbed provider: {e}")
+        except Exception:
+            logger.warning("Failed to initialize FastEmbed provider")
 
         if not self.providers:
-            raise EmbeddingServiceError(
+            msg = (
                 "No embedding providers available. "
                 "Please configure OpenAI API key or enable local embeddings."
             )
+            raise EmbeddingServiceError(msg)
 
         self._initialized = True
         logger.info(
@@ -190,9 +197,11 @@ class EmbeddingManager:
         for name, provider in self.providers.items():
             try:
                 await provider.cleanup()
-                logger.info(f"Cleaned up {name} provider")
-            except Exception as e:
-                logger.exception(f"Error cleaning up {name} provider: {e}")
+                logger.info(
+                    f"Cleaned up {name} provider"
+                )  # TODO: Convert f-string to logging format
+            except Exception:
+                logger.exception(f"Error cleaning up {name} provider")
 
         self.providers.clear()
         self._initialized = False
@@ -227,6 +236,7 @@ class EmbeddingManager:
                 - model_name: Name of the selected model
                 - estimated_cost: Estimated cost in USD
                 - reasoning: Human-readable explanation of selection
+
         """
         if auto_select and not provider_name:
             # Get smart recommendation
@@ -256,7 +266,7 @@ class EmbeddingManager:
             provider_name = recommendation["provider"]
             selected_model = recommendation["model"]
             estimated_cost = recommendation["estimated_cost"]
-            reasoning = f"Default smart selection: {recommendation['reasoning']}"
+            reasoning = "Default smart selection"
 
             logger.info(
                 f"Default smart selection: {provider_name}/{selected_model} "
@@ -286,14 +296,13 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If requested provider is not available
+
         """
         if provider_name:
             provider = self.providers.get(provider_name)
             if not provider:
-                raise EmbeddingServiceError(
-                    f"Provider '{provider_name}' not available. "
-                    f"Available: {list(self.providers.keys())}"
-                )
+                msg = f"Provider '{provider_name}' not available. Available"
+                raise EmbeddingServiceError(msg)
         elif quality_tier:
             preferred = self._tier_providers.get(quality_tier)
             provider = self.providers.get(preferred)
@@ -318,16 +327,16 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If budget constraint would be violated
+
         """
         budget_check = self.check_budget_constraints(estimated_cost)
         if not budget_check["within_budget"]:
-            raise EmbeddingServiceError(
-                f"Budget constraint violated: {budget_check['warnings'][0]}"
-            )
+            msg = "Budget constraint violated"
+            raise EmbeddingServiceError(msg)
 
         # Log warnings if any
-        for warning in budget_check["warnings"]:
-            logger.warning(f"Budget warning: {warning}")
+        for _warning in budget_check["warnings"]:
+            logger.warning("Budget warning")
 
     def _calculate_metrics_and_update_stats(
         self,
@@ -355,6 +364,7 @@ class EmbeddingManager:
                 - cost: Actual cost in USD
                 - tier_name: Name of quality tier used
                 - provider_key: Normalized provider name
+
         """
         end_time = time.time()
         latency_ms = (end_time - start_time) * 1000
@@ -411,9 +421,11 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If manager not initialized or provider fails
+
         """
         if not self._initialized:
-            raise EmbeddingServiceError("Manager not initialized")
+            msg = "Manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         if not texts:
             return {
@@ -481,7 +493,9 @@ class EmbeddingManager:
         # Validate budget constraints
         self._validate_budget_constraints(estimated_cost)
 
-        logger.info(f"Using {provider.__class__.__name__} for {len(texts)} texts")
+        logger.info(
+            f"Using {provider.__class__.__name__} for {len(texts)} texts"
+        )  # TODO: Convert f-string to logging format
 
         try:
             # Generate embeddings
@@ -495,9 +509,11 @@ class EmbeddingManager:
             if generate_sparse and hasattr(provider, "generate_sparse_embeddings"):
                 try:
                     sparse_embeddings = await provider.generate_sparse_embeddings(texts)
-                    logger.info(f"Generated {len(sparse_embeddings)} sparse embeddings")
-                except Exception as e:
-                    logger.warning(f"Failed to generate sparse embeddings: {e}")
+                    logger.info(
+                        f"Generated {len(sparse_embeddings)} sparse embeddings"
+                    )  # TODO: Convert f-string to logging format
+                except Exception:
+                    logger.warning("Failed to generate sparse embeddings")
                     # Continue with dense embeddings only
 
             # Calculate metrics and update statistics
@@ -517,8 +533,8 @@ class EmbeddingManager:
                             dimensions=len(embeddings[0]),
                         )
                         logger.info("Cached embedding for future use")
-                except Exception as e:
-                    logger.warning(f"Failed to cache embedding: {e}")
+                except Exception:
+                    logger.warning("Failed to cache embedding")
 
             result = {
                 "embeddings": embeddings,
@@ -537,9 +553,8 @@ class EmbeddingManager:
                 result["sparse_embeddings"] = sparse_embeddings
 
             return result
-
-        except Exception as e:
-            logger.exception(f"Embedding generation failed: {e}")
+        except Exception:
+            logger.exception("Embedding generation failed")
             raise
 
     async def rerank_results(
@@ -553,6 +568,7 @@ class EmbeddingManager:
 
         Returns:
             Reranked results sorted by relevance
+
         """
         if not self._reranker:
             logger.warning("Reranker not available, returning original results")
@@ -578,14 +594,15 @@ class EmbeddingManager:
 
             # Extract sorted results
             reranked = [result for result, _ in scored_results]
-
-            logger.info(f"Reranked {len(results)} results using {self._reranker_model}")
-            return reranked
-
-        except Exception as e:
-            logger.exception(f"Reranking failed: {e}")
+        except Exception:
+            logger.exception("Reranking failed")
             # Return original results on failure
             return results
+        else:
+            logger.info(
+                f"Reranked {len(results)} results using {self._reranker_model}"
+            )  # TODO: Convert f-string to logging format
+            return reranked
 
     def load_custom_benchmarks(self, benchmark_file: Path | str) -> None:
         """Load custom benchmark configuration from file.
@@ -600,12 +617,8 @@ class EmbeddingManager:
             FileNotFoundError: If benchmark file doesn't exist
             json.JSONDecodeError: If file contains invalid JSON
             pydantic.ValidationError: If data doesn't match expected schema
+
         """
-        import json
-        from pathlib import Path
-
-        from src.config import Config
-
         # Load and validate benchmark configuration
         benchmark_path = Path(benchmark_file)
         with benchmark_path.open() as f:
@@ -641,9 +654,11 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If manager not initialized
+
         """
         if not self._initialized:
-            raise EmbeddingServiceError("Manager not initialized")
+            msg = "Manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         # Simple token estimation (avg 4 chars per token)
         total_chars = sum(len(text) for text in texts)
@@ -676,6 +691,7 @@ class EmbeddingManager:
                 - dimensions: Embedding dimensions
                 - cost_per_token: Cost per token in USD
                 - max_tokens: Maximum tokens per request
+
         """
         info = {}
         for name, provider in self.providers.items():
@@ -705,9 +721,11 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If no provider meets constraints
+
         """
         if not self._initialized:
-            raise EmbeddingServiceError("Manager not initialized")
+            msg = "Manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         # Simple heuristic for provider selection
         estimated_tokens = text_length / 4
@@ -729,9 +747,8 @@ class EmbeddingManager:
             )
 
         if not candidates:
-            raise EmbeddingServiceError(
-                f"No provider available within budget {budget_limit}"
-            )
+            msg = f"No provider available within budget {budget_limit}"
+            raise EmbeddingServiceError(msg)
 
         # Sort by preference
         if quality_required and "openai" in self.providers:
@@ -761,6 +778,7 @@ class EmbeddingManager:
                 - estimated_tokens: Estimated token count
                 - text_type: Categorization ("code", "docs", "short", "long")
                 - requires_high_quality: Whether high quality embedding is recommended
+
         """
         if not texts:
             return TextAnalysis(
@@ -862,9 +880,11 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If no models meet constraints or manager not initialized
+
         """
         if not self._initialized:
-            raise EmbeddingServiceError("Manager not initialized")
+            msg = "Manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         # Get available models with their benchmarks
         candidates = []
@@ -903,10 +923,11 @@ class EmbeddingManager:
                     )
 
         if not candidates:
-            raise EmbeddingServiceError(
+            msg = (
                 f"No models available for constraints: max_cost={max_cost}, "
                 f"tokens={text_analysis.estimated_tokens}"
             )
+            raise EmbeddingServiceError(msg)
 
         # Sort by score (higher is better)
         candidates.sort(key=lambda x: x["score"], reverse=True)
@@ -947,6 +968,7 @@ class EmbeddingManager:
                 - Cost efficiency score (local models get max score)
                 - Quality tier bonuses/penalties
                 - Text type specific bonuses
+
         """
         score = 0.0
 
@@ -1016,7 +1038,7 @@ class EmbeddingManager:
         self,
         selection: dict[str, object],
         text_analysis: TextAnalysis,
-        quality_tier: QualityTier | None,
+        _quality_tier: QualityTier | None,
         speed_priority: bool,
     ) -> str:
         """Generate human-readable reasoning for selection.
@@ -1029,6 +1051,7 @@ class EmbeddingManager:
 
         Returns:
             str: Human-readable reasoning explaining the selection
+
         """
         benchmark = selection["benchmark"]
         reasons = []
@@ -1068,6 +1091,7 @@ class EmbeddingManager:
                 - daily_usage: Current daily cost
                 - estimated_total: Daily usage plus estimated cost
                 - budget_limit: Daily budget limit if set
+
         """
         result = {
             "within_budget": True,
@@ -1101,7 +1125,7 @@ class EmbeddingManager:
         return result
 
     def update_usage_stats(
-        self, provider: str, model: str, tokens: int, cost: float, tier: str
+        self, provider: str, _model: str, tokens: int, cost: float, tier: str
     ) -> None:
         """Update usage statistics.
 
@@ -1115,6 +1139,7 @@ class EmbeddingManager:
         Note:
             Daily cost is reset when a new day is detected based on the
             system date. All other statistics are cumulative.
+
         """
         self.usage_stats.total_requests += 1
         self.usage_stats.total_tokens += tokens
@@ -1138,6 +1163,7 @@ class EmbeddingManager:
                 - by_tier: Request counts by quality tier
                 - by_provider: Request counts by provider
                 - budget: Daily limit, usage, and remaining budget
+
         """
         total_cost = self.usage_stats.total_cost
         total_requests = self.usage_stats.total_requests

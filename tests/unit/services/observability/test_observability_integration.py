@@ -63,7 +63,7 @@ class TestObservabilitySystemIntegration:
 
             # Simulate LLM generation
             @instrument_function("llm_generation")
-            def generate_response(context, query):
+            def generate_response(context, _query):
                 return f"Based on {len(context)} documents: Machine learning is..."
 
             response = generate_response(["doc1", "doc2"], "What is ML?")
@@ -225,13 +225,16 @@ class TestObservabilitySystemIntegration:
                 # Simulate operation that fails
                 @instrument_function("failing_ai_operation")
                 def failing_embedding_call():
-                    raise ConnectionError("OpenAI API unavailable")
+                    msg = "OpenAI API unavailable"
+                    raise ConnectionError(msg)
 
                 failing_embedding_call()
 
             except ConnectionError as e:
                 # Test error recording with correlation
-                from src.services.observability.correlation import record_error
+                from src.services.observability.correlation import (
+                    record_error,
+                )
 
                 error_id = record_error(
                     error=e,
@@ -276,7 +279,7 @@ class TestObservabilitySystemIntegration:
 
                 # Async vector search
                 @instrument_function("async_vector_search")
-                async def async_search(embeddings):
+                async def async_search(_embeddings):
                     await asyncio.sleep(0.01)
                     return [{"id": "doc1", "score": 0.9}]
 
@@ -483,7 +486,7 @@ class TestObservabilityRealWorldScenarios:
                 llm_usage = Mock()
                 llm_usage.prompt_tokens = 150
                 llm_usage.completion_tokens = 200
-                llm_usage.total_tokens = 350
+                llm_usage._total_tokens = 350
 
                 llm_result["usage"] = llm_usage
                 llm_result["cost"] = 0.021
@@ -500,7 +503,7 @@ class TestObservabilityRealWorldScenarios:
                 )
                 pipeline_result["retrieval_time"] = 0.15
                 pipeline_result["generation_time"] = 1.2
-                pipeline_result["total_cost"] = 0.022
+                pipeline_result["_total_cost"] = 0.022
 
         # Verify complete pipeline was tracked
         assert request_id is not None
@@ -623,7 +626,7 @@ class TestObservabilityDataConsistency:
         meter.create_gauge.return_value = Mock()
 
         ai_tracker = get_ai_tracker()
-        total_cost = 0.0
+        _total_cost = 0.0
 
         # Track multiple AI operations
         operations = [
@@ -638,13 +641,13 @@ class TestObservabilityDataConsistency:
                     provider=provider, model=model, input_texts=["test"]
                 ) as result:
                     result["cost"] = cost
-                    total_cost += cost
+                    _total_cost += cost
             elif op_type == "llm_call":
                 with ai_tracker.track_llm_call(
                     provider=provider, model=model
                 ) as result:
                     result["cost"] = cost
-                    total_cost += cost
+                    _total_cost += cost
 
-        # Verify total cost is consistent (use approximate comparison for floating point)
-        assert abs(total_cost - 0.022) < 0.000001
+        # Verify _total cost is consistent (use approximate comparison for floating point)
+        assert abs(_total_cost - 0.022) < 0.000001

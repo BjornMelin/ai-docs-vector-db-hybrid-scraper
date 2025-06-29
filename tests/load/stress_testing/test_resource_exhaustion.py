@@ -8,7 +8,6 @@ network bandwidth, database connections, and file descriptors.
 import asyncio
 import gc
 import logging
-import os
 import resource
 import tempfile
 import threading
@@ -16,11 +15,16 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import psutil
 import pytest
 
-from ..conftest import LoadTestConfig, LoadTestType
+from tests.load.conftest import LoadTestConfig, LoadTestType
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
 
 
 logger = logging.getLogger(__name__)
@@ -110,10 +114,10 @@ class ResourceMonitor:
                 try:
                     net_io = psutil.net_io_counters()
                     if net_io:
-                        total_mb = (net_io.bytes_sent + net_io.bytes_recv) / (
+                        _total_mb = (net_io.bytes_sent + net_io.bytes_recv) / (
                             1024 * 1024
                         )
-                        self.metrics.network_io_mb.append(total_mb)
+                        self.metrics.network_io_mb.append(_total_mb)
                     else:
                         self.metrics.network_io_mb.append(0)
                 except (psutil.AccessDenied, AttributeError):
@@ -121,14 +125,14 @@ class ResourceMonitor:
 
                 # Garbage collection stats
                 gc_stats = gc.get_stats()
-                total_collections = sum(stat["collections"] for stat in gc_stats)
-                self.metrics.gc_collections.append(total_collections)
+                _total_collections = sum(stat["collections"] for stat in gc_stats)
+                self.metrics.gc_collections.append(_total_collections)
 
                 # Timestamp
                 self.metrics.timestamps.append(time.time())
 
-            except Exception as e:
-                logger.warning(f"Error collecting resource metrics: {e}")
+            except Exception:
+                logger.warning("Error collecting resource metrics")
 
             time.sleep(self.interval)
 
@@ -147,7 +151,7 @@ class ResourceMonitor:
             "peak_file_descriptors": max(self.metrics.file_descriptor_count)
             if self.metrics.file_descriptor_count
             else 0,
-            "total_network_io_mb": max(self.metrics.network_io_mb)
+            "_total_network_io_mb": max(self.metrics.network_io_mb)
             if self.metrics.network_io_mb
             else 0,
         }
@@ -196,7 +200,7 @@ class TestResourceExhaustion:
             large_documents = []
             memory_exhaustion_detected = False
 
-            async def process_large_document(size_mb: float = 10.0, **kwargs):
+            async def process_large_document(size_mb: float = 10.0, **__kwargs):
                 """Simulate processing of large documents."""
                 nonlocal memory_exhaustion_detected
 
@@ -228,9 +232,9 @@ class TestResourceExhaustion:
                         "embeddings_count": len(embeddings),
                     }
 
-                except MemoryError:
-                    memory_exhaustion_detected = True
-                    raise Exception("Memory exhausted during document processing")
+                except MemoryError as e:
+                    msg = "Memory exhausted during document processing"
+                    raise TestError(msg) from e
 
             # Configure stress test with large document processing
             config = LoadTestConfig(
@@ -262,14 +266,14 @@ class TestResourceExhaustion:
             assert peak_usage["peak_memory_mb"] > 512, (
                 f"Peak memory usage too low: {peak_usage['peak_memory_mb']} MB"
             )
-            assert result.metrics.total_requests > 0, "No requests were processed"
+            assert result.metrics._total_requests > 0, "No requests were processed"
 
             # Verify graceful degradation under memory pressure
             if result.metrics.failed_requests > 0:
                 memory_errors = sum(
                     1 for e in result.metrics.errors if "memory" in e.lower()
                 )
-                assert memory_errors < result.metrics.total_requests * 0.8, (
+                assert memory_errors < result.metrics._total_requests * 0.8, (
                     "Too many memory-related failures"
                 )
 
@@ -288,7 +292,7 @@ class TestResourceExhaustion:
         try:
             cpu_saturation_detected = False
 
-            async def cpu_intensive_embedding_generation(**kwargs):
+            async def cpu_intensive_embedding_generation(**__kwargs):
                 """Simulate CPU-intensive embedding generation."""
                 nonlocal cpu_saturation_detected
 
@@ -312,7 +316,9 @@ class TestResourceExhaustion:
                 cpu_percent = psutil.Process().cpu_percent()
                 if cpu_percent > 80:
                     cpu_saturation_detected = True
-                    logger.warning(f"High CPU usage detected: {cpu_percent:.2f}%")
+                    logger.warning(
+                        f"High CPU usage detected: {cpu_percent:.2f}%"
+                    )  # TODO: Convert f-string to logging format
 
                 await asyncio.sleep(0.01)  # Small async yield
 
@@ -372,12 +378,12 @@ class TestResourceExhaustion:
             network_stress_detected = False
             large_payload_responses = []
 
-            async def network_intensive_operation(**kwargs):
+            async def network_intensive_operation(**_kwargs):
                 """Simulate network-intensive operations with large payloads."""
                 nonlocal network_stress_detected
 
                 # Simulate large data transfer (API responses, document downloads)
-                payload_size_mb = kwargs.get("payload_size_mb", 5.0)
+                payload_size_mb = _kwargs.get("payload_size_mb", 5.0)
                 large_payload = bytearray(int(payload_size_mb * 1024 * 1024))
 
                 # Simulate network I/O delay
@@ -389,19 +395,19 @@ class TestResourceExhaustion:
                 large_payload_responses.append(large_payload)
 
                 # Check if we've accumulated enough data to stress network
-                total_data_mb = sum(len(p) for p in large_payload_responses) / (
+                _total_data_mb = sum(len(p) for p in large_payload_responses) / (
                     1024 * 1024
                 )
-                if total_data_mb > 100:  # 100MB total
+                if _total_data_mb > 100:  # 100MB _total
                     network_stress_detected = True
                     logger.warning(
-                        f"Network stress detected: {total_data_mb:.2f} MB transferred"
+                        f"Network stress detected: {_total_data_mb:.2f} MB transferred"
                     )
 
                 return {
                     "status": "transferred",
                     "payload_size_mb": payload_size_mb,
-                    "total_transferred_mb": total_data_mb,
+                    "_total_transferred_mb": _total_data_mb,
                     "network_delay": network_delay,
                 }
 
@@ -429,14 +435,14 @@ class TestResourceExhaustion:
 
             # Assertions
             assert network_stress_detected, "Network stress scenario was not triggered"
-            assert result.metrics.total_requests > 0, "No requests were processed"
+            assert result.metrics._total_requests > 0, "No requests were processed"
 
             # Verify network handling under stress
-            total_data_processed = sum(len(p) for p in large_payload_responses) / (
+            _total_data_processed = sum(len(p) for p in large_payload_responses) / (
                 1024 * 1024
             )
-            assert total_data_processed > 50, (
-                f"Insufficient data processed: {total_data_processed:.2f} MB"
+            assert _total_data_processed > 50, (
+                f"Insufficient data processed: {_total_data_processed:.2f} MB"
             )
 
         finally:
@@ -466,19 +472,20 @@ class TestResourceExhaustion:
                         self.connection_requests += 1
                         if self.active_connections >= self.max_connections:
                             self.pool_exhausted_count += 1
-                            raise Exception("Connection pool exhausted")
+                            msg = "Connection pool exhausted"
+                            raise TestError(msg)
 
                         self.active_connections += 1
                         return f"connection_{self.active_connections}"
 
-                async def release_connection(self, connection: str):
+                async def release_connection(self, _connection: str):
                     async with self._lock:
                         self.active_connections = max(0, self.active_connections - 1)
 
             pool = MockConnectionPool(max_connections=5)  # Small pool for testing
             pool_exhaustion_detected = False
 
-            async def database_intensive_operation(**kwargs):
+            async def database_intensive_operation(**_kwargs):
                 """Simulate database-intensive operations that require connections."""
                 nonlocal pool_exhaustion_detected
 
@@ -487,23 +494,23 @@ class TestResourceExhaustion:
                     connection = await pool.get_connection()
 
                     # Simulate database work (hold connection longer under stress)
-                    work_duration = kwargs.get("db_work_duration", 0.5)
+                    work_duration = _kwargs.get("db_work_duration", 0.5)
                     await asyncio.sleep(work_duration)
 
                     # Release connection
                     await pool.release_connection(connection)
-
-                    return {
-                        "status": "db_operation_complete",
-                        "connection": connection,
-                        "active_connections": pool.active_connections,
-                    }
 
                 except Exception as e:
                     if "pool exhausted" in str(e).lower():
                         pool_exhaustion_detected = True
                         logger.warning("Database connection pool exhausted")
                     raise
+                else:
+                    return {
+                        "status": "db_operation_complete",
+                        "connection": connection,
+                        "active_connections": pool.active_connections,
+                    }
 
             # Configure database stress test
             config = LoadTestConfig(
@@ -540,12 +547,10 @@ class TestResourceExhaustion:
             pool_errors = sum(
                 1 for e in result.metrics.errors if "pool exhausted" in e.lower()
             )
-            total_requests = result.metrics.total_requests
-            if total_requests > 0:
-                pool_error_rate = pool_errors / total_requests
-                assert pool_error_rate < 0.8, (
-                    f"Too many pool exhaustion errors: {pool_error_rate:.2%}"
-                )
+            _total_requests = result.metrics._total_requests
+            if _total_requests > 0:
+                pool_error_rate = pool_errors / _total_requests
+                assert pool_error_rate < 0.8, "Too many pool exhaustion errors"
 
         finally:
             monitor.stop_monitoring()
@@ -562,15 +567,15 @@ class TestResourceExhaustion:
                 fd_exhaustion_detected = False
                 open_files = []
 
-                async def file_intensive_operation(**kwargs):
+                async def file_intensive_operation(**__kwargs):
                     """Simulate operations that create many file descriptors."""
                     nonlocal fd_exhaustion_detected
 
                     try:
                         # Create temporary files to consume file descriptors
                         for _i in range(5):  # Try to open multiple files per request
-                            temp_file = tempfile.NamedTemporaryFile(delete=False)
-                            open_files.append(temp_file)
+                            with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                                open_files.append(temp_file)
 
                             # Write some data
                             temp_file.write(
@@ -591,10 +596,11 @@ class TestResourceExhaustion:
                         if "too many open files" in str(e).lower() or e.errno == 24:
                             fd_exhaustion_detected = True
                             logger.warning("File descriptor limit reached")
-                        raise Exception(f"File descriptor exhaustion: {e}")
+                        msg = "File descriptor exhaustion"
+                        raise TestError(msg) from e
 
-                    except Exception as e:
-                        logger.exception(f"Unexpected error in file operation: {e}")
+                    except Exception:
+                        logger.exception("Unexpected error in file operation")
                         raise
 
                 # Configure file descriptor stress test
@@ -631,7 +637,7 @@ class TestResourceExhaustion:
                         for e in result.metrics.errors
                         if "file descriptor" in e.lower()
                     )
-                    if result.metrics.total_requests > 0:
+                    if result.metrics._total_requests > 0:
                         assert fd_errors > 0, (
                             "Expected some file descriptor exhaustion errors"
                         )
@@ -641,7 +647,7 @@ class TestResourceExhaustion:
                     for temp_file in open_files:
                         try:
                             temp_file.close()
-                            os.unlink(temp_file.name)
+                            Path(temp_file.name).unlink()
                         except (OSError, AttributeError):
                             pass
                     open_files.clear()
@@ -667,7 +673,12 @@ class TestResourceExhaustion:
             cascading_failure_detected = False
             memory_hogs = []
 
-            async def multi_resource_operation(**kwargs):
+            def _raise_system_overload():
+                """Helper function to raise system overload error."""
+                msg = "System overload"
+                raise TestError(msg)
+
+            async def multi_resource_operation(**__kwargs):
                 """Operation that stresses multiple resources simultaneously."""
                 nonlocal cascading_failure_detected
 
@@ -712,12 +723,10 @@ class TestResourceExhaustion:
                     # Check for cascading failure (multiple resources stressed)
                     if len(active_failures) >= 2:
                         cascading_failure_detected = True
-                        logger.warning(f"Cascading failure detected: {active_failures}")
+                        logger.warning("Cascading failure detected")
                         # Simulate system instability
                         if len(active_failures) >= 3:
-                            raise Exception(
-                                f"System overload: {', '.join(active_failures)}"
-                            )
+                            self._raise_system_overload()
 
                     return {
                         "status": "multi_resource_complete",
@@ -727,12 +736,14 @@ class TestResourceExhaustion:
                         "cpu_result": cpu_result,
                     }
 
-                except TimeoutError:
+                except TimeoutError as e:
                     failure_types["cpu"] += 1
-                    raise Exception("CPU timeout during multi-resource operation")
-                except MemoryError:
+                    msg = "CPU timeout during multi-resource operation"
+                    raise TestError(msg) from e
+                except MemoryError as e:
                     failure_types["memory"] += 1
-                    raise Exception("Memory exhausted during multi-resource operation")
+                    msg = "Memory exhausted during multi-resource operation"
+                    raise TestError(msg) from e
                 except Exception as e:
                     # Count the failure type
                     error_msg = str(e).lower()
@@ -776,18 +787,16 @@ class TestResourceExhaustion:
             active_failure_types = sum(
                 1 for count in failure_types.values() if count > 0
             )
-            assert active_failure_types >= 2, (
-                f"Not enough resource types stressed: {failure_types}"
-            )
+            assert active_failure_types >= 2, "Not enough resource types stressed"
 
             # Verify peak resource usage
             assert peak_usage["peak_memory_mb"] > 100, "Insufficient memory stress"
             assert peak_usage["peak_cpu_percent"] > 30, "Insufficient CPU stress"
 
             # Verify system behavior under cascading failure
-            total_failures = sum(failure_types.values())
-            assert total_failures > 0, "No resource failures detected"
-            logger.info(f"Resource failure distribution: {failure_types}")
+            _total_failures = sum(failure_types.values())
+            assert _total_failures > 0, "No resource failures detected"
+            logger.info("Resource failure distribution")
 
         finally:
             monitor.stop_monitoring()

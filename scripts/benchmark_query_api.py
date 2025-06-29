@@ -6,7 +6,7 @@ This script demonstrates the enhanced search capabilities and optimizations
 implemented in issue #55.
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 
 from src.config import get_config
 from src.config.enums import FusionAlgorithm

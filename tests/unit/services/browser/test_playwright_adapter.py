@@ -76,7 +76,7 @@ class TestPlaywrightAdapterInit:
         assert adapter._available is False
 
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
-    def test_init_custom_browser_types(self, basic_config):
+    def test_init_custom_browser_types(self, _basic_config):
         """Test initialization with different browser types."""
         for browser in ["chromium", "firefox", "webkit"]:
             config = PlaywrightConfig(
@@ -570,7 +570,7 @@ class TestCapabilitiesAndHealth:
         adapter._initialized = True
 
         # Mock timeout
-        async def timeout_scrape(*args, **kwargs):
+        async def timeout_scrape(*_args, **__kwargs):
             await asyncio.sleep(20)  # Longer than timeout
 
         with patch.object(adapter, "scrape", side_effect=timeout_scrape):

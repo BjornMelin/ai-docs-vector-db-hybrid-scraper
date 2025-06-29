@@ -2,8 +2,8 @@ import typing
 """Specialized cache for search results with intelligent invalidation."""
 
 import hashlib
-import json
-import logging
+import json  # noqa: PLC0415
+import logging  # noqa: PLC0415
 from typing import Any
 
 from .dragonfly_cache import DragonflyCache
@@ -71,7 +71,7 @@ class SearchResultCache:
             logger.debug(f"Search cache miss for query: {query[:50]}...")
             return None
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Error retrieving search results from cache: {e}")
             return None
 
@@ -137,7 +137,7 @@ class SearchResultCache:
 
             return success
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Error caching search results: {e}")
             return False
 
@@ -175,7 +175,7 @@ class SearchResultCache:
 
             return 0
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Error invalidating collection cache: {e}")
             return 0
 
@@ -190,7 +190,7 @@ class SearchResultCache:
         """
         try:
             # Create hash pattern for query matching
-            pattern_hash = hashlib.md5(query_pattern.encode()).hexdigest()
+            pattern_hash = hashlib.sha256(query_pattern.encode()).hexdigest()
             pattern = f"search:*:{pattern_hash}*"
 
             keys = await self.cache.scan_keys(pattern)
@@ -206,7 +206,7 @@ class SearchResultCache:
 
             return 0
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Error invalidating query pattern cache: {e}")
             return 0
 
@@ -242,7 +242,7 @@ class SearchResultCache:
 
             return []
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Error getting popular queries: {e}")
             return []
 
@@ -271,7 +271,7 @@ class SearchResultCache:
 
             return 0
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Error cleaning up expired popularity: {e}")
             return 0
 
@@ -314,7 +314,7 @@ class SearchResultCache:
 
             return stats
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Error getting cache stats: {e}")
             return {"error": str(e)}
 
@@ -351,7 +351,7 @@ class SearchResultCache:
 
         # Combine all parameters
         key_data = f"{normalized_query}|{collection_name}|{sorted_filters}|{limit}|{search_type}|{sorted_params}"
-        key_hash = hashlib.md5(key_data.encode()).hexdigest()
+        key_hash = hashlib.sha256(key_data.encode()).hexdigest()
 
         return f"search:{collection_name}:{key_hash}"
 
@@ -365,11 +365,11 @@ class SearchResultCache:
             Number of times query was accessed
         """
         try:
-            key = f"popular:{hashlib.md5(query.encode()).hexdigest()}"
+            key = f"popular:{hashlib.sha256(query.encode()).hexdigest()}"
             count = await self.cache.get(key)
             return int(count) if count else 0
 
-        except Exception as e:
+        except Exception:
             logger.debug(f"Error getting query popularity: {e}")
             return 0
 
@@ -380,7 +380,7 @@ class SearchResultCache:
             query: Query text
         """
         try:
-            key = f"popular:{hashlib.md5(query.encode()).hexdigest()}"
+            key = f"popular:{hashlib.sha256(query.encode()).hexdigest()}"
 
             # Use atomic increment
             client = await self.cache.client
@@ -390,7 +390,7 @@ class SearchResultCache:
             if current == 1:
                 await client.expire(key, 86400)  # 24 hours
 
-        except Exception as e:
+        except Exception:
             logger.debug(f"Error tracking query popularity: {e}")
 
     async def warm_popular_searches(
@@ -431,7 +431,7 @@ class SearchResultCache:
                             warmed_count += 1
                             logger.debug(f"Warmed search cache for: {query[:50]}...")
 
-                    except Exception as e:
+                    except Exception:
                         logger.warning(f"Failed to warm search for '{query}': {e}")
 
             logger.info(
@@ -439,6 +439,6 @@ class SearchResultCache:
             )
             return warmed_count
 
-        except Exception as e:
+        except Exception:
             logger.error(f"Error in search cache warming: {e}")
             return warmed_count

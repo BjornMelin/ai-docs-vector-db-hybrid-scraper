@@ -1,12 +1,18 @@
 """Tests for MCP project management tools."""
 
+import json
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
+import yaml
+from pydantic import ValidationError
 
 # Import the actual enums before any mocking happens
 from src.config.enums import QualityTier, SearchStrategy
+from src.mcp_tools.models.requests import ProjectRequest
+from src.mcp_tools.models.responses import ProjectInfo
+from src.mcp_tools.tools.projects import register_tools
 
 
 if TYPE_CHECKING:
@@ -74,8 +80,6 @@ def mock_client_manager():
 @pytest.mark.asyncio
 async def test_project_tools_registration(mock_client_manager):
     """Test that project tools are properly registered."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -102,8 +106,6 @@ async def test_project_tools_registration(mock_client_manager):
 @pytest.mark.asyncio
 async def test_create_project_success(mock_client_manager, mock_context):
     """Test successful project creation."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -131,15 +133,11 @@ async def test_create_project_success(mock_client_manager, mock_context):
     register_tools(mock_mcp, mock_client_manager)
 
     # Test project creation
-    from src.mcp_tools.models.requests import ProjectRequest
-
     request = ProjectRequest(
         name="Test Project", description="A test project", quality_tier="balanced"
     )
 
     result = await registered_tools["create_project"](request, mock_context)
-
-    from src.mcp_tools.models.responses import ProjectInfo
 
     assert isinstance(result, ProjectInfo)
     assert result.name == "Test Project"
@@ -155,8 +153,6 @@ async def test_create_project_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_create_project_with_initial_urls(mock_client_manager, mock_context):
     """Test project creation with initial URLs."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -199,8 +195,6 @@ async def test_create_project_with_initial_urls(mock_client_manager, mock_contex
 
     register_tools(mock_mcp, mock_client_manager)
 
-    from src.mcp_tools.models.requests import ProjectRequest
-
     request = ProjectRequest(
         name="Docs Project",
         description="Documentation project",
@@ -221,10 +215,8 @@ async def test_create_project_with_initial_urls(mock_client_manager, mock_contex
 
 
 @pytest.mark.asyncio
-async def test_create_project_invalid_quality_tier(mock_client_manager, mock_context):
+async def test_create_project_invalid_quality_tier(mock_client_manager, _mock_context):
     """Test project creation with invalid quality tier."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -236,10 +228,6 @@ async def test_create_project_invalid_quality_tier(mock_client_manager, mock_con
     register_tools(mock_mcp, mock_client_manager)
 
     # Test with invalid quality tier
-    from pydantic import ValidationError
-
-    from src.mcp_tools.models.requests import ProjectRequest
-
     with pytest.raises(ValidationError):
         ProjectRequest(
             name="Test Project", description="Test", quality_tier="invalid_tier"
@@ -249,8 +237,6 @@ async def test_create_project_invalid_quality_tier(mock_client_manager, mock_con
 @pytest.mark.asyncio
 async def test_delete_project_success(mock_client_manager, mock_context):
     """Test successful project deletion."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -289,8 +275,6 @@ async def test_delete_project_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_delete_project_not_found(mock_client_manager, mock_context):
     """Test deletion of non-existent project."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -314,8 +298,6 @@ async def test_delete_project_not_found(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_update_project_description_success(mock_client_manager, mock_context):
     """Test successful project description update."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -354,8 +336,6 @@ async def test_update_project_description_success(mock_client_manager, mock_cont
 @pytest.mark.asyncio
 async def test_list_projects_success(mock_client_manager, mock_context):
     """Test successful project listing."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -398,8 +378,6 @@ async def test_list_projects_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_list_projects_all(mock_client_manager, mock_context):
     """Test listing all projects."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -431,8 +409,6 @@ async def test_list_projects_all(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_get_project_details_success(mock_client_manager, mock_context):
     """Test getting project details."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -470,8 +446,6 @@ async def test_get_project_details_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_get_project_details_not_found(mock_client_manager, mock_context):
     """Test getting details of non-existent project."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -498,8 +472,6 @@ async def test_get_project_details_not_found(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_add_project_urls_success(mock_client_manager, mock_context):
     """Test adding URLs to project."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -550,7 +522,7 @@ async def test_add_project_urls_success(mock_client_manager, mock_context):
 
     assert result["status"] == "urls_added"
     assert result["urls_added"] == len(new_urls)
-    assert result["total_urls"] == 3  # 1 existing + 2 new
+    assert result["_total_urls"] == 3  # 1 existing + 2 new
 
     # Verify processing
     assert crawling.crawl_url.call_count == len(new_urls)
@@ -560,8 +532,6 @@ async def test_add_project_urls_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_add_project_urls_duplicate_handling(mock_client_manager, mock_context):
     """Test adding duplicate URLs to project."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -605,14 +575,12 @@ async def test_add_project_urls_duplicate_handling(mock_client_manager, mock_con
 
     # Should only add the new URL
     assert result["urls_added"] == 1
-    assert result["total_urls"] == 2
+    assert result["_total_urls"] == 2
 
 
 @pytest.mark.asyncio
 async def test_export_project_success(mock_client_manager, mock_context):
     """Test successful project export."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -637,7 +605,7 @@ async def test_export_project_success(mock_client_manager, mock_context):
     register_tools(mock_mcp, mock_client_manager)
 
     # Test export
-    with patch("src.mcp_tools.tools.projects.json.dumps") as mock_json_dumps:
+    with patch.object(json, "dumps") as mock_json_dumps:
         mock_json_dumps.return_value = '{"project_data": "exported"}'
 
         result = await registered_tools["export_project"](
@@ -657,8 +625,6 @@ async def test_export_project_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_export_project_yaml_format(mock_client_manager, mock_context):
     """Test project export in YAML format."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -679,8 +645,8 @@ async def test_export_project_yaml_format(mock_client_manager, mock_context):
     register_tools(mock_mcp, mock_client_manager)
 
     # Test YAML export
-    with patch("src.mcp_tools.tools.projects.yaml") as mock_yaml:
-        mock_yaml.dump.return_value = "project_data: exported"
+    with patch.object(yaml, "dump") as mock_yaml_dump:
+        mock_yaml_dump.return_value = "project_data: exported"
 
         result = await registered_tools["export_project"](
             project_id="proj_123",
@@ -689,14 +655,12 @@ async def test_export_project_yaml_format(mock_client_manager, mock_context):
         )
 
         assert result["format"] == "yaml"
-        mock_yaml.dump.assert_called_once()
+        mock_yaml_dump.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_export_project_invalid_format(mock_client_manager, mock_context):
     """Test project export with invalid format."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -725,8 +689,6 @@ async def test_error_handling_collection_creation_failure(
     mock_client_manager, mock_context
 ):
     """Test error handling when collection creation fails."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -757,8 +719,6 @@ async def test_error_handling_collection_creation_failure(
 
         # Test that exception is propagated
         with pytest.raises(Exception, match="Collection creation failed"):
-            from src.mcp_tools.models.requests import ProjectRequest
-
             request = ProjectRequest(name="Test Project", quality_tier="balanced")
 
             await registered_tools["create_project"](request, mock_context)
@@ -770,8 +730,6 @@ async def test_error_handling_collection_creation_failure(
 @pytest.mark.asyncio
 async def test_without_context_parameter(mock_client_manager):
     """Test tools work without context parameter."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -799,8 +757,6 @@ async def test_without_context_parameter(mock_client_manager):
 @pytest.mark.asyncio
 async def test_quality_tier_enum_handling(mock_client_manager, mock_context):
     """Test handling of QualityTier enum values."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -824,8 +780,6 @@ async def test_quality_tier_enum_handling(mock_client_manager, mock_context):
     register_tools(mock_mcp, mock_client_manager)
 
     # Test with enum value
-    from src.mcp_tools.models.requests import ProjectRequest
-
     request = ProjectRequest(name="Test Project", quality_tier="premium")
 
     result = await registered_tools["create_project"](request, mock_context)
@@ -841,8 +795,6 @@ async def test_create_project_url_processing_failures(
     mock_client_manager, mock_context
 ):
     """Test project creation with URL processing failures."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -873,8 +825,6 @@ async def test_create_project_url_processing_failures(
     ]
 
     register_tools(mock_mcp, mock_client_manager)
-
-    from src.mcp_tools.models.requests import ProjectRequest
 
     request = ProjectRequest(
         name="Test Project",
@@ -908,8 +858,6 @@ async def test_list_projects_with_collection_stats_failure(
     mock_client_manager, mock_context
 ):
     """Test list_projects when collection stats retrieval fails."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -951,8 +899,6 @@ async def test_list_projects_with_collection_stats_failure(
 @pytest.mark.asyncio
 async def test_search_project_not_found(mock_client_manager, mock_context):
     """Test search_project with non-existent project."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -981,8 +927,6 @@ async def test_search_project_not_found(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_search_project_success(mock_client_manager, mock_context):
     """Test successful project search."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -1041,8 +985,6 @@ async def test_search_project_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_update_project_not_found(mock_client_manager, mock_context):
     """Test update_project with non-existent project."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -1071,8 +1013,6 @@ async def test_update_project_not_found(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_update_project_name_only(mock_client_manager, mock_context):
     """Test updating only project name."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -1109,8 +1049,6 @@ async def test_update_project_name_only(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_update_project_no_changes(mock_client_manager, mock_context):
     """Test update_project with no actual changes."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -1147,8 +1085,6 @@ async def test_delete_project_collection_deletion_failure(
     mock_client_manager, mock_context
 ):
     """Test delete_project when collection deletion fails."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -1193,8 +1129,6 @@ async def test_delete_project_without_collection_deletion(
     mock_client_manager, mock_context
 ):
     """Test delete_project without deleting collection."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -1233,8 +1167,6 @@ async def test_delete_project_without_collection_deletion(
 @pytest.mark.asyncio
 async def test_search_project_embedding_failure(mock_client_manager, mock_context):
     """Test search_project when embedding generation fails."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -1272,8 +1204,6 @@ async def test_search_project_embedding_failure(mock_client_manager, mock_contex
 @pytest.mark.asyncio
 async def test_search_project_qdrant_failure(mock_client_manager, mock_context):
     """Test search_project when Qdrant search fails."""
-    from src.mcp_tools.tools.projects import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 

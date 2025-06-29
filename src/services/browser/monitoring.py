@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 # Import monitoring registry for Prometheus integration
 try:
-    from ..monitoring.metrics import get_metrics_registry
+    from src.services.monitoring.metrics import get_metrics_registry
 
     MONITORING_AVAILABLE = True
 except ImportError:
@@ -143,6 +143,7 @@ class BrowserAutomationMonitor:
 
         Args:
             config: Monitoring configuration
+
         """
         self.config = config or MonitoringConfig()
 
@@ -172,8 +173,8 @@ class BrowserAutomationMonitor:
             try:
                 self.metrics_registry = get_metrics_registry()
                 logger.info("Browser monitoring Prometheus integration enabled")
-            except Exception as e:
-                logger.debug(f"Browser monitoring Prometheus integration disabled: {e}")
+            except Exception:
+                logger.debug("Browser monitoring Prometheus integration disabled")
 
         logger.info("BrowserAutomationMonitor initialized")
 
@@ -211,6 +212,7 @@ class BrowserAutomationMonitor:
             response_time_ms: Response time in milliseconds
             error_type: Type of error if failed
             cache_hit: Whether request was served from cache
+
         """
         async with self.metrics_lock:
             # Calculate current metrics for this tier
@@ -415,10 +417,10 @@ class BrowserAutomationMonitor:
         for handler in self.alert_handlers:
             try:
                 handler(alert)
-            except Exception as e:
-                logger.exception(f"Alert handler failed: {e}")
+            except Exception:
+                logger.exception("Alert handler failed")
 
-        logger.warning(f"Alert raised: {alert.message}")
+        logger.warning("Alert raised")
 
     async def _monitoring_loop(self):
         """Main monitoring loop that runs in background."""
@@ -435,8 +437,8 @@ class BrowserAutomationMonitor:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
-                logger.exception(f"Monitoring loop error: {e}")
+            except Exception:
+                logger.exception("Monitoring loop error")
                 await asyncio.sleep(5)  # Brief pause before retry
 
     async def _cleanup_old_data(self):
@@ -478,14 +480,14 @@ class BrowserAutomationMonitor:
                 await self._raise_alert(
                     alert_type=AlertType.TIER_FAILURE,
                     severity=AlertSeverity.CRITICAL,
-                    message=f"Unhealthy tiers detected: {', '.join(unhealthy_tiers)}",
+                    message="Unhealthy tiers detected",
                     metadata={"unhealthy_tiers": unhealthy_tiers},
                 )
             elif degraded_tiers:
                 await self._raise_alert(
                     alert_type=AlertType.PERFORMANCE_DEGRADATION,
                     severity=AlertSeverity.MEDIUM,
-                    message=f"Degraded performance in tiers: {', '.join(degraded_tiers)}",
+                    message="Degraded performance in tiers",
                     metadata={"degraded_tiers": degraded_tiers},
                 )
 
@@ -494,15 +496,17 @@ class BrowserAutomationMonitor:
 
         Args:
             handler: Function that takes an Alert object
+
         """
         self.alert_handlers.append(handler)
-        logger.info(f"Added alert handler: {handler.__name__}")
+        logger.info("Added alert handler")
 
     def get_system_health(self) -> dict[str, Any]:
         """Get overall system health status.
 
         Returns:
             Dictionary with system health information
+
         """
         total_tiers = len(self.health_status)
         healthy_tiers = sum(
@@ -549,6 +553,7 @@ class BrowserAutomationMonitor:
 
         Returns:
             List of performance metrics
+
         """
         cutoff_time = time.time() - (hours * 3600)
 
@@ -566,6 +571,7 @@ class BrowserAutomationMonitor:
 
         Returns:
             List of active alerts
+
         """
         alerts = [a for a in self.alerts if not a.resolved]
         if severity:
@@ -578,11 +584,12 @@ class BrowserAutomationMonitor:
 
         Args:
             alert_id: ID of alert to resolve
+
         """
         async with self.alerts_lock:
             for alert in self.alerts:
                 if alert.id == alert_id and not alert.resolved:
                     alert.resolved = True
                     alert.resolved_at = time.time()
-                    logger.info(f"Alert resolved: {alert_id}")
+                    logger.info("Alert resolved")
                     break

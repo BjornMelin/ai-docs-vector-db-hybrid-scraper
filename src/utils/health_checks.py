@@ -4,7 +4,25 @@ This module provides a unified interface for checking connectivity to all
 external services used by the AI Documentation Vector DB system.
 """
 
+import asyncio
+
+import httpx
+import redis
+from openai import OpenAI
+from qdrant_client import QdrantClient
+from qdrant_client.http.exceptions import UnexpectedResponse
+
 from src.config import Config
+
+
+class CustomError(Exception):
+    """Custom exception for this module."""
+
+
+def _raise_openai_client_unavailable() -> None:
+    """Raise CustomError for OpenAI client not available."""
+    msg = "OpenAI client not available"
+    raise CustomError(msg)
 
 
 class ServiceHealthChecker:
@@ -23,13 +41,11 @@ class ServiceHealthChecker:
                 - connected: Whether connection was successful
                 - error: Error message if connection failed
                 - details: Additional information (collections count, URL)
+
         """
         result = {"service": "qdrant", "connected": False, "error": None, "details": {}}
 
         try:
-            from qdrant_client import QdrantClient
-            from qdrant_client.http.exceptions import UnexpectedResponse
-
             client = QdrantClient(
                 url=config.qdrant.url, api_key=config.qdrant.api_key, timeout=5.0
             )
@@ -57,6 +73,7 @@ class ServiceHealthChecker:
 
         Returns:
             Dictionary with connection status and details
+
         """
         result = {
             "service": "dragonfly",
@@ -70,8 +87,6 @@ class ServiceHealthChecker:
             return result
 
         try:
-            import redis
-
             r = redis.from_url(config.cache.dragonfly_url, socket_connect_timeout=5)
             r.ping()
             result["connected"] = True
@@ -100,6 +115,7 @@ class ServiceHealthChecker:
                 - connected: Whether connection was successful
                 - error: Error message if connection failed or not configured
                 - details: Model info and available models count
+
         """
         result = {"service": "openai", "connected": False, "error": None, "details": {}}
 
@@ -112,12 +128,11 @@ class ServiceHealthChecker:
         try:
             if client_manager:
                 # Use modern service layer pattern through ClientManager
-                import asyncio
 
                 async def _check_async():
                     client = await client_manager.get_openai_client()
-                    if client is None:
-                        raise Exception("OpenAI client not available")
+                    if not client:
+                        _raise_openai_client_unavailable()
                     models = await client.models.list()
                     return list(models)
 
@@ -130,7 +145,6 @@ class ServiceHealthChecker:
                     loop.close()
             else:
                 # Fallback to direct client instantiation (legacy pattern)
-                from openai import OpenAI
 
                 client = OpenAI(api_key=config.openai.api_key, timeout=5.0)
                 models = list(client.models.list())
@@ -158,6 +172,7 @@ class ServiceHealthChecker:
                 - connected: Whether connection was successful
                 - error: Error message if connection failed or not configured
                 - details: API URL and credits remaining (if available)
+
         """
         result = {
             "service": "firecrawl",
@@ -173,8 +188,6 @@ class ServiceHealthChecker:
             return result
 
         try:
-            import httpx
-
             headers = {"Authorization": f"Bearer {config.firecrawl.api_key}"}
             response = httpx.get(
                 f"{config.firecrawl.api_url}/health", headers=headers, timeout=5.0
@@ -205,6 +218,7 @@ class ServiceHealthChecker:
         Returns:
             dict[str, dict[str, object]]: Service names mapped to health check results.
                 Each result contains service, connected, error, and details fields.
+
         """
         results = {}
 
@@ -237,6 +251,7 @@ class ServiceHealthChecker:
 
         Returns:
             Summary dictionary with overall status and individual service results
+
         """
         results = cls.perform_all_health_checks(config, client_manager)
 

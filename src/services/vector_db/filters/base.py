@@ -6,7 +6,7 @@ filtering operations in the vector database system.
 
 import logging
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -37,7 +37,8 @@ class FilterResult(BaseModel):
         "low", description="Expected performance impact (low, medium, high)"
     )
     applied_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Timestamp when filter was applied"
+        default_factory=lambda: datetime.now(UTC),
+        description="Timestamp when filter was applied",
     )
 
 
@@ -53,6 +54,7 @@ class BaseFilter(ABC):
         description: Detailed description of filter functionality
         enabled: Whether the filter is currently active
         priority: Priority level for filter application (higher = earlier)
+
     """
 
     def __init__(
@@ -69,6 +71,7 @@ class BaseFilter(ABC):
             description: Detailed description of filter functionality
             enabled: Whether the filter is currently active
             priority: Priority level for filter application
+
         """
         self.name = name
         self.description = description
@@ -97,8 +100,8 @@ class BaseFilter(ABC):
 
         Raises:
             FilterError: If filter application fails
+
         """
-        pass
 
     async def validate_criteria(self, filter_criteria: dict[str, Any]) -> bool:
         """Validate filter criteria before application.
@@ -112,6 +115,7 @@ class BaseFilter(ABC):
 
         Returns:
             True if criteria are valid, False otherwise
+
         """
         return bool(filter_criteria)
 
@@ -120,6 +124,7 @@ class BaseFilter(ABC):
 
         Returns:
             List of supported operator strings
+
         """
         return ["eq", "ne", "gt", "gte", "lt", "lte", "in", "nin"]
 
@@ -128,6 +133,7 @@ class BaseFilter(ABC):
 
         Returns:
             Dictionary containing filter metadata
+
         """
         return {
             "name": self.name,
@@ -141,18 +147,23 @@ class BaseFilter(ABC):
     def enable(self) -> None:
         """Enable this filter."""
         self.enabled = True
-        self._logger.info(f"Filter '{self.name}' enabled")
+        self._logger.info(
+            f"Filter '{self.name}' enabled"
+        )  # TODO: Convert f-string to logging format
 
     def disable(self) -> None:
         """Disable this filter."""
         self.enabled = False
-        self._logger.info(f"Filter '{self.name}' disabled")
+        self._logger.info(
+            f"Filter '{self.name}' disabled"
+        )  # TODO: Convert f-string to logging format
 
     def set_priority(self, priority: int) -> None:
         """Set the priority of this filter.
 
         Args:
             priority: New priority value (higher = earlier execution)
+
         """
         old_priority = self.priority
         self.priority = priority
@@ -192,6 +203,7 @@ class FilterError(Exception):
             filter_name: Name of the filter that failed
             filter_criteria: Filter criteria that caused the error
             underlying_error: Original exception that caused the error
+
         """
         super().__init__(message)
         self.filter_name = filter_name
@@ -203,13 +215,13 @@ class FilterError(Exception):
         parts = [super().__str__()]
 
         if self.filter_name:
-            parts.append(f"Filter: {self.filter_name}")
+            parts.append("Filter")
 
         if self.filter_criteria:
-            parts.append(f"Criteria: {self.filter_criteria}")
+            parts.append("Criteria")
 
         if self.underlying_error:
-            parts.append(f"Underlying error: {self.underlying_error}")
+            parts.append("Underlying error")
 
         return " | ".join(parts)
 
@@ -236,15 +248,15 @@ class FilterRegistry:
 
         Raises:
             ValueError: If filter_class is not a BaseFilter subclass
+
         """
         if not issubclass(filter_class, BaseFilter):
-            raise ValueError(
-                f"Filter class must inherit from BaseFilter: {filter_class}"
-            )
+            msg = "Filter class must inherit from BaseFilter"
+            raise ValueError(msg)
 
         filter_name = filter_class.__name__
         self._filters[filter_name] = filter_class
-        self._logger.info(f"Registered filter: {filter_name}")
+        self._logger.info("Registered filter")
 
     def get_filter_class(self, filter_name: str) -> type[BaseFilter] | None:
         """Get a registered filter class by name.
@@ -254,6 +266,7 @@ class FilterRegistry:
 
         Returns:
             Filter class if found, None otherwise
+
         """
         return self._filters.get(filter_name)
 
@@ -262,6 +275,7 @@ class FilterRegistry:
 
         Returns:
             List of registered filter names
+
         """
         return list(self._filters.keys())
 
@@ -274,16 +288,17 @@ class FilterRegistry:
 
         Returns:
             Filter instance if successful, None otherwise
+
         """
         filter_class = self.get_filter_class(filter_name)
         if filter_class:
             try:
                 return filter_class(**kwargs)
-            except Exception as e:
-                self._logger.exception(f"Failed to create filter {filter_name}: {e}")
+            except Exception:
+                self._logger.exception("Failed to create filter {filter_name}")
                 return None
 
-        self._logger.warning(f"Unknown filter type: {filter_name}")
+        self._logger.warning("Unknown filter type")
         return None
 
 

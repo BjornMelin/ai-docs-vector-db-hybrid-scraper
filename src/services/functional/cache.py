@@ -40,6 +40,7 @@ async def cache_get(
 
     Raises:
         HTTPException: If cache operation fails critically
+
     """
     try:
         if not cache_client:
@@ -49,16 +50,20 @@ async def cache_get(
         result = await cache_client.get(key, cache_type, default)
 
         if result != default:
-            logger.debug(f"Cache hit for key: {key}")
+            logger.debug(
+                f"Cache hit for key: {key}"
+            )  # TODO: Convert f-string to logging format
         else:
-            logger.debug(f"Cache miss for key: {key}")
+            logger.debug(
+                f"Cache miss for key: {key}"
+            )  # TODO: Convert f-string to logging format
 
-        return result
-
-    except Exception as e:
-        logger.exception(f"Cache get failed for key {key}: {e}")
+    except Exception:
+        logger.exception(f"Cache get failed for key {key}")
         # Return default on cache failure (graceful degradation)
         return default
+    else:
+        return result
 
 
 @circuit_breaker(CircuitBreakerConfig.simple_mode())
@@ -85,6 +90,7 @@ async def cache_set(
 
     Raises:
         HTTPException: If cache operation fails critically
+
     """
     try:
         if not cache_client:
@@ -94,16 +100,20 @@ async def cache_set(
         success = await cache_client.set(key, value, cache_type, ttl)
 
         if success:
-            logger.debug(f"Cache set successful for key: {key}")
+            logger.debug(
+                f"Cache set successful for key: {key}"
+            )  # TODO: Convert f-string to logging format
         else:
-            logger.warning(f"Cache set failed for key: {key}")
+            logger.warning(
+                f"Cache set failed for key: {key}"
+            )  # TODO: Convert f-string to logging format
 
-        return success
-
-    except Exception as e:
-        logger.exception(f"Cache set failed for key {key}: {e}")
+    except Exception:
+        logger.exception(f"Cache set failed for key {key}")
         # Don't raise exception for cache failures
         return False
+    else:
+        return success
 
 
 @circuit_breaker(CircuitBreakerConfig.simple_mode())
@@ -126,6 +136,7 @@ async def cache_delete(
 
     Raises:
         HTTPException: If cache operation fails critically
+
     """
     try:
         if not cache_client:
@@ -135,15 +146,19 @@ async def cache_delete(
         success = await cache_client.delete(key, cache_type)
 
         if success:
-            logger.debug(f"Cache delete successful for key: {key}")
+            logger.debug(
+                f"Cache delete successful for key: {key}"
+            )  # TODO: Convert f-string to logging format
         else:
-            logger.warning(f"Cache delete failed for key: {key}")
+            logger.warning(
+                f"Cache delete failed for key: {key}"
+            )  # TODO: Convert f-string to logging format
 
-        return success
-
-    except Exception as e:
-        logger.exception(f"Cache delete failed for key {key}: {e}")
+    except Exception:
+        logger.exception(f"Cache delete failed for key {key}")
         return False
+    else:
+        return success
 
 
 @circuit_breaker(CircuitBreakerConfig.simple_mode())
@@ -164,6 +179,7 @@ async def cache_clear(
 
     Raises:
         HTTPException: If cache operation fails critically
+
     """
     try:
         if not cache_client:
@@ -174,15 +190,19 @@ async def cache_clear(
 
         if success:
             scope = cache_type.value if cache_type else "all"
-            logger.info(f"Cache clear successful for scope: {scope}")
+            logger.info(
+                f"Cache clear successful for scope: {scope}"
+            )  # TODO: Convert f-string to logging format
         else:
-            logger.warning(f"Cache clear failed for cache_type: {cache_type}")
+            logger.warning(
+                f"Cache clear failed for cache_type: {cache_type}"
+            )  # TODO: Convert f-string to logging format
 
-        return success
-
-    except Exception as e:
-        logger.exception(f"Cache clear failed: {e}")
+    except Exception:
+        logger.exception("Cache clear failed")
         return False
+    else:
+        return success
 
 
 async def get_cache_stats(
@@ -200,6 +220,7 @@ async def get_cache_stats(
 
     Raises:
         HTTPException: If stats retrieval fails
+
     """
     try:
         if not cache_client:
@@ -209,16 +230,16 @@ async def get_cache_stats(
             }
 
         stats = await cache_client.get_stats()
-
         logger.debug("Retrieved cache statistics")
-        return stats
 
     except Exception as e:
-        logger.exception(f"Cache stats retrieval failed: {e}")
+        logger.exception("Cache stats retrieval failed")
         return {
             "manager": {"enabled_layers": []},
             "error": f"Stats retrieval failed: {e!s}",
         }
+    else:
+        return stats
 
 
 async def get_performance_stats(
@@ -236,19 +257,20 @@ async def get_performance_stats(
 
     Raises:
         HTTPException: If performance stats retrieval fails
+
     """
     try:
         if not cache_client:
             return {}
 
         stats = await cache_client.get_performance_stats()
-
         logger.debug("Retrieved cache performance statistics")
-        return stats
 
-    except Exception as e:
-        logger.exception(f"Cache performance stats retrieval failed: {e}")
+    except Exception:
+        logger.exception("Cache performance stats retrieval failed")
         return {}
+    else:
+        return stats
 
 
 # Specialized cache functions
@@ -270,6 +292,7 @@ async def cache_embedding(
 
     Returns:
         True if successfully cached
+
     """
     try:
         if not cache_client or not hasattr(cache_client, "embedding_cache"):
@@ -280,13 +303,16 @@ async def cache_embedding(
                 content_hash, model, embedding
             )
             if success:
-                logger.debug(f"Cached embedding for model {model}")
-            return success
+                logger.debug(
+                    f"Cached embedding for model {model}"
+                )  # TODO: Convert f-string to logging format
 
+    except Exception:
+        logger.exception("Embedding cache failed")
         return False
-
-    except Exception as e:
-        logger.exception(f"Embedding cache failed: {e}")
+    else:
+        if cache_client.embedding_cache:
+            return success
         return False
 
 
@@ -306,6 +332,7 @@ async def get_cached_embedding(
 
     Returns:
         Cached embedding vector or None if not found
+
     """
     try:
         if not cache_client or not hasattr(cache_client, "embedding_cache"):
@@ -316,13 +343,16 @@ async def get_cached_embedding(
                 content_hash, model
             )
             if embedding:
-                logger.debug(f"Retrieved cached embedding for model {model}")
-            return embedding
+                logger.debug(
+                    f"Retrieved cached embedding for model {model}"
+                )  # TODO: Convert f-string to logging format
 
+    except Exception:
+        logger.exception("Cached embedding retrieval failed")
         return None
-
-    except Exception as e:
-        logger.exception(f"Cached embedding retrieval failed: {e}")
+    else:
+        if cache_client.embedding_cache:
+            return embedding
         return None
 
 
@@ -346,6 +376,7 @@ async def cache_search_results(
 
     Returns:
         True if successfully cached
+
     """
     try:
         if not cache_client or not hasattr(cache_client, "search_cache"):
@@ -356,13 +387,16 @@ async def cache_search_results(
                 query_hash, collection, results, ttl
             )
             if success:
-                logger.debug(f"Cached search results for collection {collection}")
-            return success
+                logger.debug(
+                    f"Cached search results for collection {collection}"
+                )  # TODO: Convert f-string to logging format
 
+    except Exception:
+        logger.exception("Search results cache failed")
         return False
-
-    except Exception as e:
-        logger.exception(f"Search results cache failed: {e}")
+    else:
+        if cache_client.search_cache:
+            return success
         return False
 
 
@@ -382,6 +416,7 @@ async def get_cached_search_results(
 
     Returns:
         Cached search results or None if not found
+
     """
     try:
         if not cache_client or not hasattr(cache_client, "search_cache"):
@@ -395,12 +430,13 @@ async def get_cached_search_results(
                 logger.debug(
                     f"Retrieved cached search results for collection {collection}"
                 )
-            return results
 
+    except Exception:
+        logger.exception("Cached search results retrieval failed")
         return None
-
-    except Exception as e:
-        logger.exception(f"Cached search results retrieval failed: {e}")
+    else:
+        if cache_client.search_cache:
+            return results
         return None
 
 
@@ -419,6 +455,7 @@ async def bulk_cache_operations(
 
     Returns:
         Results summary with success/failure counts
+
     """
     try:
         if not cache_client:
@@ -480,13 +517,13 @@ async def bulk_cache_operations(
             f"{results['successful']}/{results['total']} successful"
         )
 
-        return results
-
     except Exception as e:
-        logger.exception(f"Bulk cache operations failed: {e}")
+        logger.exception("Bulk cache operations failed")
         return {
             "total": len(operations),
             "successful": 0,
             "failed": len(operations),
             "errors": [f"Bulk operation failed: {e!s}"],
         }
+    else:
+        return results

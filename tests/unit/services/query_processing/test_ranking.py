@@ -1,7 +1,7 @@
 """Comprehensive tests for the personalized ranking service."""
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 import pytest
@@ -133,7 +133,7 @@ class TestUserPreference:
             weight=0.8,
             confidence=0.9,
             learned_from=["click", "bookmark"],
-            last_updated=datetime.now(),
+            last_updated=datetime.now(tz=UTC),
         )
 
         assert preference.attribute == "content_type"
@@ -205,7 +205,7 @@ class TestInteractionEvent:
             session_id="session456",
             result_id="result789",
             interaction_type=InteractionType.CLICK,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=UTC),
             value=None,
             query="python tutorial",
             result_position=1,
@@ -370,7 +370,7 @@ class TestUserProfile:
         assert profile.interaction_velocity == 0.0
         assert profile.exploration_tendency == 0.5
         assert profile.quality_sensitivity == 0.5
-        assert profile.total_interactions == 0
+        assert profile._total_interactions == 0
         assert isinstance(profile.profile_created, datetime)
         assert isinstance(profile.last_updated, datetime)
         assert profile.confidence_score == 0.0
@@ -393,7 +393,7 @@ class TestUserProfile:
             interaction_velocity=2.5,
             exploration_tendency=0.7,
             quality_sensitivity=0.8,
-            total_interactions=150,
+            _total_interactions=150,
             confidence_score=0.9,
         )
 
@@ -407,7 +407,7 @@ class TestUserProfile:
         assert profile.interaction_velocity == 2.5
         assert profile.exploration_tendency == 0.7
         assert profile.quality_sensitivity == 0.8
-        assert profile.total_interactions == 150
+        assert profile._total_interactions == 150
         assert profile.confidence_score == 0.9
 
     def test_profile_validation_constraints(self):
@@ -419,7 +419,7 @@ class TestUserProfile:
             interaction_velocity=0.0,
             exploration_tendency=0.0,
             quality_sensitivity=1.0,
-            total_interactions=0,
+            _total_interactions=0,
             confidence_score=1.0,
         )
         assert profile.user_id == "user123"
@@ -444,7 +444,7 @@ class TestUserProfile:
             UserProfile(user_id="user123", quality_sensitivity=1.1)
 
         with pytest.raises(ValueError):
-            UserProfile(user_id="user123", total_interactions=-1)
+            UserProfile(user_id="user123", _total_interactions=-1)
 
         with pytest.raises(ValueError):
             UserProfile(user_id="user123", confidence_score=-0.1)
@@ -908,7 +908,7 @@ class TestPersonalizedRankingService:
         assert service.ranking_models == {}
 
         stats = service.get_performance_stats()
-        assert stats["total_rankings"] == 0
+        assert stats["_total_rankings"] == 0
         assert stats["avg_processing_time"] == 0.0
         assert stats["personalization_rate"] == 0.0
         assert stats["strategy_usage"] == {}
@@ -922,7 +922,7 @@ class TestPersonalizedRankingService:
 
         assert profile.user_id == "new_user"
         assert profile.preferences == []
-        assert profile.total_interactions == 0
+        assert profile._total_interactions == 0
         assert profile.confidence_score == 0.0
         assert "new_user" in service.user_profiles
 
@@ -931,14 +931,14 @@ class TestPersonalizedRankingService:
         """Test getting profile for existing user."""
         # Create initial profile
         profile1 = await service._get_user_profile("existing_user")
-        profile1.total_interactions = 10
+        profile1._total_interactions = 10
         profile1.confidence_score = 0.5
 
         # Get same profile again
         profile2 = await service._get_user_profile("existing_user")
 
         assert profile1 is profile2
-        assert profile2.total_interactions == 10
+        assert profile2._total_interactions == 10
         assert profile2.confidence_score == 0.5
 
     @pytest.mark.asyncio
@@ -973,23 +973,23 @@ class TestPersonalizedRankingService:
 
         # Insufficient confidence
         profile.confidence_score = 0.2
-        profile.total_interactions = 10
+        profile._total_interactions = 10
         assert not service._should_apply_personalization(profile, request)
 
         # Insufficient interactions
         profile.confidence_score = 0.5
-        profile.total_interactions = 3
+        profile._total_interactions = 3
         assert not service._should_apply_personalization(profile, request)
 
         # Default strategy
         profile.confidence_score = 0.5
-        profile.total_interactions = 10
+        profile._total_interactions = 10
         request.strategy = RankingStrategy.DEFAULT
         assert not service._should_apply_personalization(profile, request)
 
         # Should personalize
         profile.confidence_score = 0.5
-        profile.total_interactions = 10
+        profile._total_interactions = 10
         request.strategy = RankingStrategy.HYBRID
         assert service._should_apply_personalization(profile, request)
 
@@ -1026,7 +1026,7 @@ class TestPersonalizedRankingService:
         # Create user profile with sufficient data
         profile = UserProfile(
             user_id="user123",
-            total_interactions=20,
+            _total_interactions=20,
             confidence_score=0.8,
             preferred_result_types={"tutorial": 0.9, "documentation": 0.6},
         )
@@ -1047,7 +1047,7 @@ class TestPersonalizedRankingService:
         # Create user profile with content preferences (lower values to avoid exceeding 1.0)
         profile = UserProfile(
             user_id="user123",
-            total_interactions=20,
+            _total_interactions=20,
             confidence_score=0.8,
             preferred_result_types={"tutorial": 0.5, "documentation": 0.1},
         )
@@ -1084,7 +1084,7 @@ class TestPersonalizedRankingService:
 
         # Create user profile
         profile = UserProfile(
-            user_id="user123", total_interactions=20, confidence_score=0.8
+            user_id="user123", _total_interactions=20, confidence_score=0.8
         )
         service.user_profiles["user123"] = profile
 
@@ -1108,7 +1108,7 @@ class TestPersonalizedRankingService:
         # Create user profile with behavioral patterns
         profile = UserProfile(
             user_id="user123",
-            total_interactions=20,
+            _total_interactions=20,
             confidence_score=0.8,
             active_hours={9: 0.8, 14: 0.9},
             query_patterns={"python": 10, "flask": 5},
@@ -1134,7 +1134,7 @@ class TestPersonalizedRankingService:
 
         # Create user profile
         profile = UserProfile(
-            user_id="user123", total_interactions=20, confidence_score=0.8
+            user_id="user123", _total_interactions=20, confidence_score=0.8
         )
         service.user_profiles["user123"] = profile
 
@@ -1151,7 +1151,7 @@ class TestPersonalizedRankingService:
         # Create user profile
         profile = UserProfile(
             user_id="user123",
-            total_interactions=20,
+            _total_interactions=20,
             confidence_score=0.8,
             exploration_tendency=0.6,
             quality_sensitivity=0.8,
@@ -1169,7 +1169,7 @@ class TestPersonalizedRankingService:
         # Create user profile
         profile = UserProfile(
             user_id="user123",
-            total_interactions=20,
+            _total_interactions=20,
             confidence_score=0.8,
             preferred_result_types={"tutorial": 0.9},
             exploration_tendency=0.6,
@@ -1232,7 +1232,7 @@ class TestPersonalizedRankingService:
             session_id="session456",
             result_id="result789",
             interaction_type=InteractionType.CLICK,
-            timestamp=datetime.now()
+            timestamp=datetime.now(tz=UTC)
             - timedelta(days=40),  # Older than retention period
         )
 
@@ -1242,7 +1242,8 @@ class TestPersonalizedRankingService:
             session_id="session456",
             result_id="result790",
             interaction_type=InteractionType.VIEW,
-            timestamp=datetime.now() - timedelta(days=5),  # Within retention period
+            timestamp=datetime.now(tz=UTC)
+            - timedelta(days=5),  # Within retention period
         )
 
         # Add old interaction first
@@ -1270,7 +1271,7 @@ class TestPersonalizedRankingService:
                 result_id="result1",
                 interaction_type=InteractionType.CLICK,
                 query="python tutorial",
-                timestamp=datetime.now().replace(hour=9),
+                timestamp=datetime.now(tz=UTC).replace(hour=9),
             ),
             InteractionEvent(
                 user_id="user123",
@@ -1278,7 +1279,7 @@ class TestPersonalizedRankingService:
                 result_id="result2",
                 interaction_type=InteractionType.BOOKMARK,
                 query="flask guide",
-                timestamp=datetime.now().replace(hour=14),
+                timestamp=datetime.now(tz=UTC).replace(hour=14),
             ),
             InteractionEvent(
                 user_id="user123",
@@ -1286,7 +1287,7 @@ class TestPersonalizedRankingService:
                 result_id="result3",
                 interaction_type=InteractionType.RATING,
                 value=4.5,
-                timestamp=datetime.now().replace(hour=9),
+                timestamp=datetime.now(tz=UTC).replace(hour=9),
             ),
         ]
 
@@ -1297,7 +1298,7 @@ class TestPersonalizedRankingService:
         profile = service.user_profiles["user123"]
 
         # Check profile updates
-        assert profile.total_interactions == 3
+        assert profile._total_interactions == 3
         assert profile.confidence_score > 0.0
         assert 9 in profile.active_hours
         assert 14 in profile.active_hours
@@ -1591,41 +1592,41 @@ class TestPersonalizedRankingService:
     def test_freshness_boost_calculation(self, service):
         """Test freshness boost calculation."""
         # Very fresh content
-        fresh_result = {"published_date": datetime.now().isoformat()}
+        fresh_result = {"published_date": datetime.now(tz=UTC).isoformat()}
         boost = service._calculate_freshness_boost(fresh_result)
         assert boost == 0.1
 
         # Week-old content (exactly 7 days should still get the fresh boost)
         week_old_result = {
-            "published_date": (datetime.now() - timedelta(days=6)).isoformat()
+            "published_date": (datetime.now(tz=UTC) - timedelta(days=6)).isoformat()
         }
         boost = service._calculate_freshness_boost(week_old_result)
         assert boost == 0.1  # Still within 7 days
 
         # Content older than 7 days but within 30 days
         older_result = {
-            "published_date": (datetime.now() - timedelta(days=15)).isoformat()
+            "published_date": (datetime.now(tz=UTC) - timedelta(days=15)).isoformat()
         }
         boost = service._calculate_freshness_boost(older_result)
         assert boost == 0.05
 
         # Month-old content (exactly 30 days still gets 0.05)
         month_old_result = {
-            "published_date": (datetime.now() - timedelta(days=30)).isoformat()
+            "published_date": (datetime.now(tz=UTC) - timedelta(days=30)).isoformat()
         }
         boost = service._calculate_freshness_boost(month_old_result)
         assert boost == 0.05
 
         # 3-month-old content
         three_month_old_result = {
-            "published_date": (datetime.now() - timedelta(days=60)).isoformat()
+            "published_date": (datetime.now(tz=UTC) - timedelta(days=60)).isoformat()
         }
         boost = service._calculate_freshness_boost(three_month_old_result)
         assert boost == 0.02
 
         # Very old content
         old_result = {
-            "published_date": (datetime.now() - timedelta(days=200)).isoformat()
+            "published_date": (datetime.now(tz=UTC) - timedelta(days=200)).isoformat()
         }
         boost = service._calculate_freshness_boost(old_result)
         assert boost == 0.0
@@ -1639,7 +1640,7 @@ class TestPersonalizedRankingService:
         """Test ML ranking feature extraction."""
         profile = UserProfile(
             user_id="user123",
-            total_interactions=50,
+            _total_interactions=50,
             confidence_score=0.8,
             exploration_tendency=0.7,
             quality_sensitivity=0.9,
@@ -1666,7 +1667,7 @@ class TestPersonalizedRankingService:
 
         assert "original_score" in features
         assert features["original_score"] == 0.85
-        assert features["user_total_interactions"] == 50.0
+        assert features["user__total_interactions"] == 50.0
         assert features["user_profile_confidence"] == 0.8
         assert features["user_exploration_tendency"] == 0.7
         assert features["user_quality_sensitivity"] == 0.9
@@ -1753,7 +1754,7 @@ class TestPersonalizedRankingService:
     def test_performance_stats_updates(self, service):
         """Test performance statistics updates."""
         initial_stats = service.get_performance_stats()
-        assert initial_stats["total_rankings"] == 0
+        assert initial_stats["_total_rankings"] == 0
 
         # Update performance stats
         service._update_performance_stats(RankingStrategy.HYBRID, 150.0, True)
@@ -1761,7 +1762,7 @@ class TestPersonalizedRankingService:
         service._update_performance_stats(RankingStrategy.HYBRID, 200.0, True)
 
         stats = service.get_performance_stats()
-        assert stats["total_rankings"] == 3
+        assert stats["_total_rankings"] == 3
         assert stats["avg_processing_time"] == (150.0 + 50.0 + 200.0) / 3
         assert stats["personalization_rate"] == 2.0 / 3.0  # 2 personalized out of 3
         assert stats["strategy_usage"]["hybrid"] == 2
@@ -1793,7 +1794,7 @@ class TestPersonalizedRankingService:
         """Test error handling and fallback to default ranking."""
         # Create a user profile that would normally trigger personalization
         profile = UserProfile(
-            user_id="user123", total_interactions=20, confidence_score=0.8
+            user_id="user123", _total_interactions=20, confidence_score=0.8
         )
         service.user_profiles["user123"] = profile
 
@@ -1818,7 +1819,7 @@ class TestPersonalizedRankingService:
         # Create user profile
         profile = UserProfile(
             user_id="user123",
-            total_interactions=20,
+            _total_interactions=20,
             confidence_score=0.8,
             preferred_result_types={"tutorial": 0.9},
         )

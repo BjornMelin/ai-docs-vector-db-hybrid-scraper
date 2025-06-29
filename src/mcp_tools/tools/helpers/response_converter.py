@@ -2,7 +2,7 @@
 
 from uuid import uuid4
 
-from ...models.responses import (
+from src.mcp_tools.models.responses import (
     AdvancedQueryProcessingResponse,
     QueryIntentResult,
     QueryPreprocessingResult,

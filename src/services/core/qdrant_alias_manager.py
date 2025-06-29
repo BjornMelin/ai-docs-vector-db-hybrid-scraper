@@ -13,9 +13,8 @@ from qdrant_client.models import (
 )
 
 from src.config import Config
-
-from ..base import BaseService
-from ..errors import QdrantServiceError
+from src.services.base import BaseService
+from src.services.errors import QdrantServiceError
 
 
 logger = logging.getLogger(__name__)
@@ -40,6 +39,7 @@ class QdrantAliasManager(BaseService):
             config: Unified configuration
             client: Qdrant client instance
             task_queue_manager: Required task queue manager for background tasks
+
         """
         super().__init__(config)
         self.client = client
@@ -56,24 +56,25 @@ class QdrantAliasManager(BaseService):
 
         Raises:
             QdrantServiceError: If name is invalid
+
         """
         if not name:
-            raise QdrantServiceError(f"{name_type} cannot be empty")
+            msg = f"{name_type} cannot be empty"
+            raise QdrantServiceError(msg)
 
         if len(name) > MAX_NAME_LENGTH:
-            raise QdrantServiceError(
-                f"{name_type} '{name}' exceeds maximum length of {MAX_NAME_LENGTH}"
-            )
+            msg = f"{name_type} '{name}' exceeds maximum length of {MAX_NAME_LENGTH}"
+            raise QdrantServiceError(msg)
 
         if not VALID_NAME_PATTERN.match(name):
-            raise QdrantServiceError(
+            msg = (
                 f"{name_type} '{name}' contains invalid characters. "
                 "Only alphanumeric, underscore, and hyphen are allowed."
             )
+            raise QdrantServiceError(msg)
 
     async def initialize(self) -> None:
         """No-op as client is already initialized."""
-        pass
 
     async def cleanup(self) -> None:
         """Cleanup alias manager.
@@ -81,7 +82,6 @@ class QdrantAliasManager(BaseService):
         Note: Persistent task queue jobs continue running independently.
         """
         # No local cleanup needed as tasks are managed by task queue
-        pass
 
     async def create_alias(
         self, alias_name: str, collection_name: str, force: bool = False
@@ -98,6 +98,7 @@ class QdrantAliasManager(BaseService):
 
         Raises:
             QdrantServiceError: If operation fails
+
         """
         # Validate names
         self.validate_name(alias_name, "Alias name")
@@ -107,7 +108,9 @@ class QdrantAliasManager(BaseService):
             # Check if alias exists
             if await self.alias_exists(alias_name):
                 if not force:
-                    logger.warning(f"Alias {alias_name} already exists")
+                    logger.warning(
+                        f"Alias {alias_name} already exists"
+                    )  # TODO: Convert f-string to logging format
                     return False
 
                 # Delete existing alias
@@ -125,12 +128,16 @@ class QdrantAliasManager(BaseService):
                 ]
             )
 
-            logger.info(f"Created alias {alias_name} -> {collection_name}")
-            return True
+            logger.info(
+                f"Created alias {alias_name} -> {collection_name}"
+            )  # TODO: Convert f-string to logging format
 
         except Exception as e:
-            logger.exception(f"Failed to create alias: {e}")
-            raise QdrantServiceError(f"Failed to create alias: {e}") from e
+            logger.exception("Failed to create alias")
+            msg = f"Failed to create alias: {e}"
+            raise QdrantServiceError(msg) from e
+        else:
+            return True
 
     async def switch_alias(
         self, alias_name: str, new_collection: str, delete_old: bool = False
@@ -147,6 +154,7 @@ class QdrantAliasManager(BaseService):
 
         Raises:
             QdrantServiceError: If operation fails
+
         """
         # Validate names
         self.validate_name(alias_name, "Alias name")
@@ -194,11 +202,12 @@ class QdrantAliasManager(BaseService):
             if delete_old and old_collection:
                 await self.safe_delete_collection(old_collection)
 
-            return old_collection
-
         except Exception as e:
-            logger.exception(f"Failed to switch alias: {e}")
-            raise QdrantServiceError(f"Failed to switch alias: {e}") from e
+            logger.exception("Failed to switch alias")
+            msg = f"Failed to switch alias: {e}"
+            raise QdrantServiceError(msg) from e
+        else:
+            return old_collection
 
     async def delete_alias(self, alias_name: str) -> bool:
         """Delete an alias.
@@ -211,6 +220,7 @@ class QdrantAliasManager(BaseService):
 
         Raises:
             QdrantServiceError: If operation fails
+
         """
         try:
             await self.client.update_collection_aliases(
@@ -221,12 +231,15 @@ class QdrantAliasManager(BaseService):
                 ]
             )
 
-            logger.info(f"Deleted alias {alias_name}")
-            return True
+            logger.info(
+                f"Deleted alias {alias_name}"
+            )  # TODO: Convert f-string to logging format
 
-        except Exception as e:
-            logger.exception(f"Failed to delete alias: {e}")
+        except Exception:
+            logger.exception("Failed to delete alias")
             return False
+        else:
+            return True
 
     async def alias_exists(self, alias_name: str) -> bool:
         """Check if an alias exists.
@@ -236,6 +249,7 @@ class QdrantAliasManager(BaseService):
 
         Returns:
             True if alias exists
+
         """
         try:
             aliases = await self.client.get_aliases()
@@ -251,14 +265,16 @@ class QdrantAliasManager(BaseService):
 
         Returns:
             Collection name if alias exists, None otherwise
+
         """
         try:
             aliases = await self.client.get_aliases()
             for alias in aliases.aliases:
                 if alias.alias_name == alias_name:
                     return alias.collection_name
-            return None
         except Exception:
+            return None
+        else:
             return None
 
     async def list_aliases(self) -> dict[str, str]:
@@ -266,14 +282,15 @@ class QdrantAliasManager(BaseService):
 
         Returns:
             Dictionary mapping alias names to collection names
+
         """
         try:
             aliases = await self.client.get_aliases()
             return {
                 alias.alias_name: alias.collection_name for alias in aliases.aliases
             }
-        except Exception as e:
-            logger.exception(f"Failed to list aliases: {e}")
+        except Exception:
+            logger.exception("Failed to list aliases")
             return {}
 
     async def safe_delete_collection(
@@ -286,11 +303,14 @@ class QdrantAliasManager(BaseService):
         Args:
             collection_name: Name of collection to delete
             grace_period_minutes: Minutes to wait before deletion
+
         """
         # Check if any alias points to this collection
         aliases = await self.list_aliases()
         if collection_name in aliases.values():
-            logger.warning(f"Collection {collection_name} still has aliases")
+            logger.warning(
+                f"Collection {collection_name} still has aliases"
+            )  # TODO: Convert f-string to logging format
             return
 
         # Schedule deletion after grace period
@@ -300,10 +320,11 @@ class QdrantAliasManager(BaseService):
 
         # Task queue is required for persistent deletion scheduling
         if not self._task_queue_manager:
-            raise RuntimeError(
+            msg = (
                 "TaskQueueManager is required for safe collection deletion. "
                 "Initialize QdrantAliasManager with a TaskQueueManager instance."
             )
+            raise RuntimeError(msg)
 
         job_id = await self._task_queue_manager.enqueue(
             "delete_collection",
@@ -317,9 +338,8 @@ class QdrantAliasManager(BaseService):
                 f"Scheduled deletion of {collection_name} with job ID: {job_id}"
             )
         else:
-            raise RuntimeError(
-                f"Failed to schedule deletion of {collection_name} via task queue"
-            )
+            msg = f"Failed to schedule deletion of {collection_name} via task queue"
+            raise RuntimeError(msg)
 
     async def clone_collection_schema(self, source: str, target: str) -> bool:
         """Clone collection schema from source to target.
@@ -333,6 +353,7 @@ class QdrantAliasManager(BaseService):
 
         Raises:
             QdrantServiceError: If operation fails
+
         """
         try:
             # Get source collection info
@@ -363,12 +384,16 @@ class QdrantAliasManager(BaseService):
                         field_type=field_schema.data_type,
                     )
 
-            logger.info(f"Cloned collection schema from {source} to {target}")
-            return True
+            logger.info(
+                f"Cloned collection schema from {source} to {target}"
+            )  # TODO: Convert f-string to logging format
 
         except Exception as e:
-            logger.exception(f"Failed to clone collection schema: {e}")
-            raise QdrantServiceError(f"Failed to clone collection schema: {e}") from e
+            logger.exception("Failed to clone collection schema")
+            msg = f"Failed to clone collection schema: {e}"
+            raise QdrantServiceError(msg) from e
+        else:
+            return True
 
     async def copy_collection_data(
         self,
@@ -392,6 +417,7 @@ class QdrantAliasManager(BaseService):
 
         Raises:
             QdrantServiceError: If operation fails
+
         """
         # Validate names
         self.validate_name(source, "Source collection name")
@@ -427,14 +453,18 @@ class QdrantAliasManager(BaseService):
                 )
 
                 total_copied += len(records)
-                logger.debug(f"Copied {total_copied} points from {source} to {target}")
+                logger.debug(
+                    f"Copied {total_copied} points from {source} to {target}"
+                )  # TODO: Convert f-string to logging format
 
                 # Call progress callback if provided
                 if progress_callback:
                     try:
                         await progress_callback(total_copied, total_points)
                     except Exception as e:
-                        logger.warning(f"Progress callback failed: {e}")
+                        logger.warning(
+                            f"Progress callback failed: {e}"
+                        )  # TODO: Convert f-string to logging format
 
                 # Check limit
                 if limit and total_copied >= limit:
@@ -445,12 +475,16 @@ class QdrantAliasManager(BaseService):
                 if offset is None:
                     break
 
-            logger.info(f"Copied {total_copied} points from {source} to {target}")
-            return total_copied
+            logger.info(
+                f"Copied {total_copied} points from {source} to {target}"
+            )  # TODO: Convert f-string to logging format
 
         except Exception as e:
-            logger.exception(f"Failed to copy collection data: {e}")
-            raise QdrantServiceError(f"Failed to copy collection data: {e}") from e
+            logger.exception("Failed to copy collection data")
+            msg = f"Failed to copy collection data: {e}"
+            raise QdrantServiceError(msg) from e
+        else:
+            return total_copied
 
     async def validate_collection_compatibility(
         self, collection1: str, collection2: str
@@ -463,6 +497,7 @@ class QdrantAliasManager(BaseService):
 
         Returns:
             Tuple of (is_compatible, message)
+
         """
         try:
             # Get collection info
@@ -506,8 +541,8 @@ class QdrantAliasManager(BaseService):
             if (quant1 is None) != (quant2 is None):
                 return False, "Quantization configuration mismatch"
 
-            return True, "Collections are compatible"
-
         except Exception as e:
-            logger.exception(f"Failed to validate collection compatibility: {e}")
+            logger.exception("Failed to validate collection compatibility")
             return False, f"Validation error: {e!s}"
+        else:
+            return True, "Collections are compatible"

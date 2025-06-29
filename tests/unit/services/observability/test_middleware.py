@@ -108,7 +108,7 @@ class TestFastAPIObservabilityMiddleware:
         request.query_params = {}
 
         # Create mock response
-        async def mock_call_next(req):
+        async def mock_call_next(_req):
             response = MagicMock(spec=Response)
             response.status_code = 200
             return response
@@ -148,7 +148,7 @@ class TestFastAPIObservabilityMiddleware:
         request.query_params = {}
         request.state.correlation_id = "test-correlation-123"
 
-        async def mock_call_next(req):
+        async def mock_call_next(_req):
             response = MagicMock(spec=Response)
             response.status_code = 201
             return response
@@ -186,7 +186,7 @@ class TestFastAPIObservabilityMiddleware:
         request.headers.get.return_value = "test-agent"
         request.query_params = {"model": "text-embedding-3-small", "provider": "openai"}
 
-        async def mock_call_next(req):
+        async def mock_call_next(_req):
             response = MagicMock(spec=Response)
             response.status_code = 200
             return response
@@ -225,8 +225,9 @@ class TestFastAPIObservabilityMiddleware:
         request.headers.get.return_value = "test-agent"
         request.query_params = {}
 
-        async def mock_call_next(req):
-            raise ValueError("Test error")
+        async def mock_call_next(_req):
+            msg = "Test error"
+            raise ValueError(msg)
 
         with pytest.raises(ValueError, match="Test error"):
             await middleware.dispatch(request, mock_call_next)
@@ -261,7 +262,7 @@ class TestFastAPIObservabilityMiddleware:
         request.headers.get.return_value = "test-agent"
         request.query_params = {}
 
-        async def mock_call_next(req):
+        async def mock_call_next(_req):
             # Simulate some processing time
             await asyncio.sleep(0.001)
             response = MagicMock(spec=Response)
@@ -300,7 +301,7 @@ class TestFastAPIObservabilityMiddleware:
         request.headers.get.return_value = "test-agent"
         request.query_params = {}
 
-        async def mock_call_next(req):
+        async def mock_call_next(_req):
             response = MagicMock(spec=Response)
             response.status_code = 404
             return response

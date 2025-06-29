@@ -6,6 +6,7 @@ import pytest
 
 from src.mcp_tools.models.requests import SearchRequest
 from src.mcp_tools.models.responses import SearchResult
+from src.mcp_tools.tools.search import register_tools
 
 
 @pytest.fixture
@@ -35,10 +36,8 @@ def mock_client_manager():
 
 
 @pytest.mark.asyncio
-async def test_search_documents_tool_registration(mock_client_manager, mock_context):
+async def test_search_documents_tool_registration(mock_client_manager, _mock_context):
     """Test that search_documents tool is properly registered."""
-    from src.mcp_tools.tools.search import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -57,8 +56,6 @@ async def test_search_documents_tool_registration(mock_client_manager, mock_cont
 @pytest.mark.asyncio
 async def test_search_documents_basic(mock_client_manager, mock_context):
     """Test basic search_documents functionality."""
-    from src.mcp_tools.tools.search import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -116,8 +113,6 @@ async def test_search_documents_basic(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_search_similar_success(mock_client_manager, mock_context):
     """Test successful search_similar functionality."""
-    from src.mcp_tools.tools.search import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -211,8 +206,6 @@ async def test_search_similar_success(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_search_similar_document_not_found(mock_client_manager, mock_context):
     """Test search_similar when source document is not found."""
-    from src.mcp_tools.tools.search import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -245,8 +238,6 @@ async def test_search_similar_document_not_found(mock_client_manager, mock_conte
 @pytest.mark.asyncio
 async def test_search_similar_vector_formats(mock_client_manager, mock_context):
     """Test search_similar with different vector formats."""
-    from src.mcp_tools.tools.search import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -291,8 +282,6 @@ async def test_search_similar_vector_formats(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_search_similar_dict_vector_format(mock_client_manager, mock_context):
     """Test search_similar with dictionary vector format."""
-    from src.mcp_tools.tools.search import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -331,8 +320,6 @@ async def test_search_similar_dict_vector_format(mock_client_manager, mock_conte
 @pytest.mark.asyncio
 async def test_search_similar_exclude_self(mock_client_manager, mock_context):
     """Test that search_similar excludes the source document from results."""
-    from src.mcp_tools.tools.search import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -388,8 +375,6 @@ async def test_search_similar_exclude_self(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_search_similar_error_handling(mock_client_manager, mock_context):
     """Test error handling in search_similar."""
-    from src.mcp_tools.tools.search import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -418,8 +403,6 @@ async def test_search_similar_error_handling(mock_client_manager, mock_context):
 @pytest.mark.asyncio
 async def test_search_similar_without_context(mock_client_manager):
     """Test search_similar functionality without context parameter."""
-    from src.mcp_tools.tools.search import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -466,8 +449,6 @@ async def test_search_similar_without_context(mock_client_manager):
 @pytest.mark.asyncio
 async def test_search_similar_default_parameters(mock_client_manager, mock_context):
     """Test search_similar with default parameters."""
-    from src.mcp_tools.tools.search import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 

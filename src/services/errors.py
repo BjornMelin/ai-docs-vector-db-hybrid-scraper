@@ -23,10 +23,11 @@ Error Hierarchy:
 
 import asyncio
 import functools
+import inspect
 import logging
 import time
 from collections.abc import Callable
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, ClassVar, TypeVar
 
@@ -61,6 +62,7 @@ class BaseError(Exception):
             message: Human-readable error message
             error_code: Machine-readable error code for categorization
             context: Additional context information
+
         """
         self.message = message
         self.error_code = error_code or self.__class__.__name__
@@ -81,37 +83,25 @@ class BaseError(Exception):
 class ServiceError(BaseError):
     """Base class for service-layer errors."""
 
-    pass
-
 
 class QdrantServiceError(ServiceError):
     """Qdrant vector database errors."""
-
-    pass
 
 
 class EmbeddingServiceError(ServiceError):
     """Embedding service errors."""
 
-    pass
-
 
 class CrawlServiceError(ServiceError):
     """Web crawling service errors."""
-
-    pass
 
 
 class CacheServiceError(ServiceError):
     """Cache service errors."""
 
-    pass
-
 
 class TaskQueueServiceError(ServiceError):
     """Task queue service errors."""
-
-    pass
 
 
 # Validation Errors
@@ -133,19 +123,16 @@ class ValidationError(BaseError):
                     "input": error.get("input"),
                 },
             )
-        else:
-            return cls(
-                message="Multiple validation errors occurred",
-                error_code="validation_error",
-                context={"errors": errors},
-            )
+        return cls(
+            message="Multiple validation errors occurred",
+            error_code="validation_error",
+            context={"errors": errors},
+        )
 
 
 # MCP Server Errors (FastMCP pattern)
 class MCPError(BaseError):
     """Base MCP server error."""
-
-    pass
 
 
 class ToolError(MCPError):
@@ -154,16 +141,12 @@ class ToolError(MCPError):
     Following FastMCP pattern where ToolError contents are sent to clients.
     """
 
-    pass
-
 
 class ResourceError(MCPError):
     """MCP resource access error.
 
     Following FastMCP pattern where ResourceError contents are sent to clients.
     """
-
-    pass
 
 
 # API Integration Errors
@@ -185,8 +168,6 @@ class APIError(BaseError):
 class ExternalServiceError(APIError):
     """General external service error."""
 
-    pass
-
 
 class RateLimitError(ExternalServiceError):
     """Rate limiting error with retry information."""
@@ -205,6 +186,7 @@ class RateLimitError(ExternalServiceError):
             retry_after: Seconds to wait before retry
             error_code: Error code
             context: Additional context
+
         """
         super().__init__(message, 429, error_code, context)
         self.retry_after = retry_after
@@ -228,8 +210,6 @@ class NetworkError(ExternalServiceError):
 class ConfigurationError(BaseError):
     """Configuration or environment error."""
 
-    pass
-
 
 # Utility Functions and Decorators
 def safe_response(success: bool, **kwargs) -> dict[str, Any]:
@@ -241,6 +221,7 @@ def safe_response(success: bool, **kwargs) -> dict[str, Any]:
 
     Returns:
         Safe response dictionary with sanitized error messages
+
     """
     response = {"success": success, "timestamp": time.time()}
 
@@ -283,6 +264,7 @@ def retry_async(
 
     Returns:
         Decorated function
+
     """
 
     def decorator(func: F) -> F:
@@ -297,9 +279,7 @@ def retry_async(
                     last_exception = e
 
                     if attempt == max_attempts - 1:
-                        logger.exception(
-                            f"Final attempt failed for {func.__name__}: {e}"
-                        )
+                        logger.exception("Final attempt failed for {func.__name__}")
                         break
 
                     delay = min(base_delay * (backoff_factor**attempt), max_delay)
@@ -310,9 +290,9 @@ def retry_async(
                     )
 
                     await asyncio.sleep(delay)
-                except Exception as e:
+                except Exception:
                     # Non-retryable error
-                    logger.exception(f"Non-retryable error in {func.__name__}: {e}")
+                    logger.exception("Non-retryable error in {func.__name__}")
                     raise
 
             raise last_exception or Exception("All retry attempts failed")
@@ -341,7 +321,7 @@ class CircuitBreakerMetrics:
         self.circuit_closes = 0
         self.state_transitions = []
         self.response_times = []
-        self.last_reset = datetime.now()
+        self.last_reset = datetime.now(tz=UTC)
 
     def record_call(self, success: bool, response_time: float | None = None):
         """Record a service call."""
@@ -358,7 +338,7 @@ class CircuitBreakerMetrics:
         """Record a circuit state transition."""
         self.state_transitions.append(
             {
-                "timestamp": datetime.now(),
+                "timestamp": datetime.now(tz=UTC),
                 "from_state": old_state.value,
                 "to_state": new_state.value,
             }
@@ -432,7 +412,7 @@ class AdvancedCircuitBreaker:
         if not self.last_failure_time:
             return True
 
-        time_since_failure = datetime.now() - self.last_failure_time
+        time_since_failure = datetime.now(tz=UTC) - self.last_failure_time
         return time_since_failure.total_seconds() >= self.adaptive_timeout
 
     def _update_adaptive_timeout(self, success: bool):
@@ -479,22 +459,28 @@ class AdvancedCircuitBreaker:
             else:
                 wait_time = (
                     self.adaptive_timeout
-                    - (datetime.now() - self.last_failure_time).total_seconds()
+                    - (datetime.now(tz=UTC) - self.last_failure_time).total_seconds()
                     if self.last_failure_time
                     else self.adaptive_timeout
                 )
-                raise ExternalServiceError(
+                msg = (
                     f"Circuit breaker is OPEN for {self.service_name}. "
-                    f"Try again in {wait_time:.1f}s",
+                    f"Try again in {wait_time:.1f}s"
+                )
+                raise ExternalServiceError(
+                    msg,
                     context={"service": self.service_name, "state": self.state.value},
                 )
 
         # Check half-open call limit
         if self.state == CircuitState.HALF_OPEN:
             if self.half_open_calls >= self.half_open_max_calls:
-                raise ExternalServiceError(
+                msg = (
                     f"Circuit breaker is HALF_OPEN for {self.service_name}. "
-                    f"Maximum test calls ({self.half_open_max_calls}) exceeded.",
+                    f"Maximum test calls ({self.half_open_max_calls}) exceeded."
+                )
+                raise ExternalServiceError(
+                    msg,
                     context={"service": self.service_name, "state": self.state.value},
                 )
             self.half_open_calls += 1
@@ -528,7 +514,7 @@ class AdvancedCircuitBreaker:
 
     def _record_success(self, response_time: float):
         """Record a successful call."""
-        self.last_success_time = datetime.now()
+        self.last_success_time = datetime.now(tz=UTC)
         self._update_adaptive_timeout(success=True)
 
         if self.metrics:
@@ -548,10 +534,10 @@ class AdvancedCircuitBreaker:
                     f"Circuit breaker '{self.service_name}' failure count reset"
                 )
 
-    def _record_failure(self, exception: Exception, response_time: float):
+    def _record_failure(self, _exception: Exception, response_time: float):
         """Record a failed call."""
         self.failure_count += 1
-        self.last_failure_time = datetime.now()
+        self.last_failure_time = datetime.now(tz=UTC)
         self._update_adaptive_timeout(success=False)
 
         if self.metrics:
@@ -559,7 +545,7 @@ class AdvancedCircuitBreaker:
 
         logger.warning(
             f"Circuit breaker '{self.service_name}' failure "
-            f"{self.failure_count}/{self.failure_threshold}: {exception}"
+            "{self.failure_count}/{self.failure_threshold}"
         )
 
         # Check if we should open the circuit
@@ -611,7 +597,9 @@ class AdvancedCircuitBreaker:
         if self.metrics:
             self.metrics.reset()
 
-        logger.info(f"Circuit breaker '{self.service_name}' manually reset")
+        logger.info(
+            f"Circuit breaker '{self.service_name}' manually reset"
+        )  # TODO: Convert f-string to logging format
 
 
 class CircuitBreakerRegistry:
@@ -672,6 +660,7 @@ def circuit_breaker(
 
     Returns:
         Decorated function with circuit breaker protection
+
     """
 
     def decorator(func: F) -> F:
@@ -734,6 +723,7 @@ def tenacity_circuit_breaker(
 
     Returns:
         Decorated function with retry + circuit breaker protection
+
     """
 
     def decorator(func: F) -> F:
@@ -758,14 +748,15 @@ def tenacity_circuit_breaker(
             ):
                 wait_time = (
                     breaker.adaptive_timeout
-                    - (datetime.now() - breaker.last_failure_time).total_seconds()
+                    - (datetime.now(tz=UTC) - breaker.last_failure_time).total_seconds()
                     if breaker.last_failure_time
                     else breaker.adaptive_timeout
                 )
-                raise ExternalServiceError(
+                msg = (
                     f"Circuit breaker is OPEN for {service_name}. "
                     f"Try again in {wait_time:.1f}s"
                 )
+                raise ExternalServiceError(msg)
 
             # Use Tenacity for retries with circuit breaker integration
             async for attempt in AsyncRetrying(
@@ -788,7 +779,7 @@ def tenacity_circuit_breaker(
                         # Log retry attempt
                         logger.warning(
                             f"Tenacity retry attempt {attempt.retry_state.attempt_number}/"
-                            f"{max_attempts} failed for {service_name}: {e}"
+                            "{max_attempts} failed for {service_name}"
                         )
                         raise
 
@@ -802,7 +793,7 @@ def tenacity_circuit_breaker(
     return decorator
 
 
-def handle_mcp_errors[F: Callable[..., Any]](func: F) -> F:
+def handle_mcp_errors(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator to handle MCP tool errors safely.
 
     Following FastMCP patterns where ToolError and ResourceError
@@ -813,6 +804,7 @@ def handle_mcp_errors[F: Callable[..., Any]](func: F) -> F:
 
     Returns:
         Decorated function that returns safe responses
+
     """
 
     @functools.wraps(func)
@@ -824,7 +816,7 @@ def handle_mcp_errors[F: Callable[..., Any]](func: F) -> F:
             return safe_response(True, result=result)
         except (ToolError, ResourceError) as e:
             # These errors are meant to be sent to clients
-            logger.warning(f"MCP error in {func.__name__}: {e}")
+            logger.warning("MCP error in {func.__name__}")
             return safe_response(
                 False, error=str(e), error_type=e.error_code or "mcp_error"
             )
@@ -843,11 +835,11 @@ def handle_mcp_errors[F: Callable[..., Any]](func: F) -> F:
                 ConfigurationError: "configuration",
             }
             error_type = error_type_map.get(type(e), "general")
-            logger.warning(f"{error_type.capitalize()} error in {func.__name__}: {e}")
+            logger.warning("{error_type.capitalize()} error in {func.__name__}")
             return safe_response(False, error=str(e), error_type=error_type)
-        except Exception as e:
+        except Exception:
             # Mask internal errors for security
-            logger.error(f"Unexpected error in {func.__name__}: {e}", exc_info=True)
+            logger.error("Unexpected error in {func.__name__}", exc_info=True)
             return safe_response(
                 False, error="Internal server error", error_type="internal"
             )
@@ -863,13 +855,13 @@ def validate_input(**validators) -> Callable[[F], F]:
 
     Returns:
         Decorated function
+
     """
 
     def decorator(func: F) -> F:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             # Get function signature
-            import inspect
 
             sig = inspect.signature(func)
             bound_args = sig.bind(*args, **kwargs)
@@ -883,8 +875,9 @@ def validate_input(**validators) -> Callable[[F], F]:
                         validated_value = validator(value)
                         bound_args.arguments[param_name] = validated_value
                     except Exception as e:
+                        msg = "Invalid {param_name}"
                         raise ValidationError(
-                            f"Invalid {param_name}: {e}",
+                            msg,
                             error_code="invalid_input",
                             context={"field": param_name, "value": value},
                         ) from e
@@ -922,6 +915,7 @@ def create_validation_error(
 
     Returns:
         PydanticCustomError instance
+
     """
     return PydanticCustomError(
         error_type,

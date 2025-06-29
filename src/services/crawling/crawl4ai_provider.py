@@ -26,10 +26,10 @@ except ImportError:
     MEMORY_ADAPTIVE_AVAILABLE = False
 
 from src.config import Crawl4AIConfig
+from src.services.base import BaseService
+from src.services.errors import CrawlServiceError
+from src.services.utilities.rate_limiter import RateLimiter
 
-from ..base import BaseService
-from ..errors import CrawlServiceError
-from ..utilities.rate_limiter import RateLimiter
 from .base import CrawlProvider
 from .extractors import DocumentationExtractor, JavaScriptExecutor
 
@@ -155,8 +155,8 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                     self.logger.info(
                         "Using LXMLWebScrapingStrategy for enhanced performance"
                     )
-                except Exception as e:
-                    self.logger.warning(f"Could not set LXMLWebScrapingStrategy: {e}")
+                except Exception:
+                    self.logger.warning("Could not set LXMLWebScrapingStrategy")
 
             self._crawler = AsyncWebCrawler(config=crawler_config)
             await self._crawler.start()
@@ -177,7 +177,8 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             )
 
         except Exception as e:
-            raise CrawlServiceError(f"Failed to initialize Crawl4AI: {e}") from e
+            msg = "Failed to initialize Crawl4AI"
+            raise CrawlServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup Crawl4AI resources and Memory-Adaptive Dispatcher."""
@@ -186,17 +187,15 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             try:
                 await self.dispatcher.cleanup()
                 self.logger.info("MemoryAdaptiveDispatcher cleaned up")
-            except Exception as e:
-                self.logger.exception(
-                    f"Error cleaning up MemoryAdaptiveDispatcher: {e}"
-                )
+            except Exception:
+                self.logger.exception("Error cleaning up MemoryAdaptiveDispatcher")
 
         # Cleanup crawler
         if self._crawler:
             try:
                 await self._crawler.close()
-            except Exception as e:
-                self.logger.exception(f"Error closing crawler: {e}")
+            except Exception:
+                self.logger.exception("Error closing crawler")
             finally:
                 # Always reset state even if close() fails
                 self._crawler = None
@@ -207,7 +206,9 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                     if self.use_memory_dispatcher
                     else "with semaphore"
                 )
-                self.logger.info(f"Crawl4AI resources cleaned up {cleanup_info}")
+                self.logger.info(
+                    f"Crawl4AI resources cleaned up {cleanup_info}"
+                )  # TODO: Convert f-string to logging format
 
     def _create_extraction_strategy(self, extraction_type: str) -> object | None:
         """Create extraction strategy based on type.
@@ -217,12 +218,13 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
 
         Returns:
             Extraction strategy instance or None for markdown extraction
+
         """
         if extraction_type == "structured":
             return JsonCssExtractionStrategy(
                 schema=self.doc_extractor.create_extraction_schema()
             )
-        elif extraction_type == "llm":
+        if extraction_type == "llm":
             llm_config = LLMConfig(provider="ollama/llama2")
             return LLMExtractionStrategy(
                 llm_config=llm_config,
@@ -245,6 +247,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
 
         Returns:
             CrawlerRunConfig: Configured crawler run settings
+
         """
         return CrawlerRunConfig(
             word_count_threshold=10,
@@ -282,6 +285,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
 
         Returns:
             dict[str, object]: Formatted success result
+
         """
         structured_data = {}
         if result.extracted_content:
@@ -320,6 +324,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
 
         Returns:
             dict[str, object]: Formatted error result
+
         """
         # Get additional context for better error reporting
         rate_limit_status = "unknown"
@@ -340,7 +345,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             or "unknown",
         }
 
-        self.logger.error(f"Failed to scrape {url}: {error} | Context: {error_context}")
+        self.logger.error("Failed to scrape {url}: {error} | Context")
 
         return {
             "success": False,
@@ -355,7 +360,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
     async def scrape_url(
         self,
         url: str,
-        formats: list[str] | None = None,
+        _formats: list[str] | None = None,
         extraction_type: str = "markdown",
         wait_for: str | None = None,
         js_code: str | None = None,
@@ -380,9 +385,11 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 - structured_data: Structured extraction results
                 - error: Error message if failed
                 - stream_data: Streaming iterator if streaming enabled
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Provider not initialized")
+            msg = "Provider not initialized"
+            raise CrawlServiceError(msg)
 
         # Determine if streaming should be used
         enable_streaming = (
@@ -394,10 +401,9 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             return await self._scrape_with_dispatcher(
                 url, extraction_type, wait_for, js_code, enable_streaming
             )
-        else:
-            return await self._scrape_with_semaphore(
-                url, extraction_type, wait_for, js_code
-            )
+        return await self._scrape_with_semaphore(
+            url, extraction_type, wait_for, js_code
+        )
 
     async def _scrape_with_dispatcher(
         self,
@@ -427,21 +433,19 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 return await self._process_streaming_crawl(
                     url, run_config, extraction_type, None
                 )
-            else:
-                # Standard crawl
-                result = await self._crawler.arun(url=url, config=run_config)
+            # Standard crawl
+            result = await self._crawler.arun(url=url, config=run_config)
 
-                if result.success:
-                    success_result = self._build_success_result(
-                        url, result, extraction_type
-                    )
-                    success_result["metadata"]["dispatcher_stats"] = (
-                        self._get_dispatcher_stats()
-                    )
-                    return success_result
-                else:
-                    error_msg = getattr(result, "error_message", "Crawl failed")
-                    return self._build_error_result(url, error_msg, extraction_type)
+            if result.success:
+                success_result = self._build_success_result(
+                    url, result, extraction_type
+                )
+                success_result["metadata"]["dispatcher_stats"] = (
+                    self._get_dispatcher_stats()
+                )
+                return success_result
+            error_msg = getattr(result, "error_message", "Crawl failed")
+            return self._build_error_result(url, error_msg, extraction_type)
 
         except Exception as e:
             error_result = self._build_error_result(url, e, extraction_type)
@@ -476,9 +480,8 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
 
                 if result.success:
                     return self._build_success_result(url, result, extraction_type)
-                else:
-                    error_msg = getattr(result, "error_message", "Crawl failed")
-                    return self._build_error_result(url, error_msg, extraction_type)
+                error_msg = getattr(result, "error_message", "Crawl failed")
+                return self._build_error_result(url, error_msg, extraction_type)
 
             except Exception as e:
                 return self._build_error_result(url, e, extraction_type)
@@ -488,7 +491,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
         url: str,
         run_config: CrawlerRunConfig,
         extraction_type: str,
-        session: object | None,
+        _session: object | None,
     ) -> dict[str, object]:
         """Process crawl with streaming for real-time results."""
         try:
@@ -519,12 +522,11 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                     self._get_dispatcher_stats()
                 )
                 return success_result
-            else:
-                error_msg = "Streaming crawl failed to produce valid results"
-                return self._build_error_result(url, error_msg, extraction_type)
+            error_msg = "Streaming crawl failed to produce valid results"
+            return self._build_error_result(url, error_msg, extraction_type)
 
         except Exception as e:
-            self.logger.exception(f"Streaming crawl failed for {url}: {e}")
+            self.logger.exception("Streaming crawl failed for {url}")
             return self._build_error_result(url, e, extraction_type)
 
     def _get_dispatcher_stats(self) -> dict[str, object]:
@@ -547,7 +549,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
 
             return stats
         except Exception as e:
-            self.logger.warning(f"Could not get dispatcher stats: {e}")
+            self.logger.warning("Could not get dispatcher stats")
             return {"dispatcher_type": "memory_adaptive", "stats_error": str(e)}
 
     async def scrape_url_stream(
@@ -567,12 +569,15 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
 
         Yields:
             dict[str, object]: Streaming chunks of scrape results
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Provider not initialized")
+            msg = "Provider not initialized"
+            raise CrawlServiceError(msg)
 
         if not self.use_memory_dispatcher:
-            raise CrawlServiceError("Streaming requires Memory-Adaptive Dispatcher")
+            msg = "Streaming requires Memory-Adaptive Dispatcher"
+            raise CrawlServiceError(msg)
 
         try:
             # Get site-specific JavaScript if not provided
@@ -610,6 +615,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
 
         Returns:
             List of crawl results
+
         """
         tasks = [self.scrape_url(url, extraction_type=extraction_type) for url in urls]
 
@@ -622,7 +628,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
         for url, result in zip(urls, results, strict=False):
             if isinstance(result, Exception):
                 failed.append({"url": url, "error": str(result)})
-                self.logger.error(f"Failed to crawl {url}: {result}")
+                self.logger.error("Failed to crawl {url}")
             else:
                 successful.append(result)
 
@@ -637,7 +643,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
         self,
         url: str,
         max_pages: int = 50,
-        formats: list[str] | None = None,
+        _formats: list[str] | None = None,
     ) -> dict[str, object]:
         """Crawl entire site using recursive URL discovery.
 
@@ -648,9 +654,11 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
 
         Returns:
             Crawl result with all pages
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Provider not initialized")
+            msg = "Provider not initialized"
+            raise CrawlServiceError(msg)
 
         pages = []
         visited_urls = set()
@@ -710,7 +718,9 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                                 ):
                                     to_visit.append(link_url)
 
-                self.logger.info(f"Crawled {len(pages)}/{max_pages} pages from {url}")
+                self.logger.info(
+                    f"Crawled {len(pages)}/{max_pages} pages from {url}"
+                )  # TODO: Convert f-string to logging format
 
             return {
                 "success": True,
@@ -729,9 +739,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 "max_pages_target": max_pages,
             }
 
-            self.logger.exception(
-                f"Failed to crawl site {url}: {e} | Context: {error_context}"
-            )
+            self.logger.exception("Failed to crawl site {url}: {e} | Context")
             return {
                 "success": False,
                 "error": str(e),

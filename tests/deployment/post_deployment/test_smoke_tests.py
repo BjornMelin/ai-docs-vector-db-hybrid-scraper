@@ -21,7 +21,7 @@ class TestSmokeTests:
     async def test_api_endpoints_functional(
         self,
         deployment_environment: DeploymentEnvironment,
-        deployment_health_checker: DeploymentHealthChecker,
+        _deployment_health_checker: DeploymentHealthChecker,
     ):
         """Test that critical API endpoints are functional."""
         smoke_tester = APISmokeTestRunner()
@@ -75,7 +75,7 @@ class TestSmokeTests:
         assert smoke_results["overall_success"]
         assert (
             smoke_results["critical_endpoints_passed"]
-            == smoke_results["total_critical_endpoints"]
+            == smoke_results["_total_critical_endpoints"]
         )
 
         # Check individual endpoint results
@@ -194,7 +194,7 @@ class TestSmokeTests:
     @pytest.mark.smoke
     @pytest.mark.asyncio
     async def test_search_functionality(
-        self, deployment_environment: DeploymentEnvironment
+        self, _deployment_environment: DeploymentEnvironment
     ):
         """Test core search functionality end-to-end."""
         search_tester = SearchSmokeTestRunner()
@@ -329,7 +329,7 @@ class TestIntegrationSmoke:
     @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_cache_integration(
-        self, deployment_environment: DeploymentEnvironment
+        self, _deployment_environment: DeploymentEnvironment
     ):
         """Test cache integration with application services."""
         cache_integration_tester = CacheIntegrationSmokeTestRunner()
@@ -352,7 +352,7 @@ class TestIntegrationSmoke:
     @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_error_handling_and_resilience(
-        self, deployment_environment: DeploymentEnvironment
+        self, _deployment_environment: DeploymentEnvironment
     ):
         """Test error handling and system resilience."""
         resilience_tester = ResilienceSmokeTestRunner()
@@ -380,16 +380,16 @@ class APISmokeTestRunner:
     """Runner for API endpoint smoke tests."""
 
     async def run_endpoint_tests(
-        self, endpoints: list[dict[str, Any]], environment: DeploymentEnvironment
+        self, endpoints: list[dict[str, Any]], _environment: DeploymentEnvironment
     ) -> dict[str, Any]:
         """Run smoke tests on API endpoints."""
         endpoint_results = []
         critical_passed = 0
-        total_critical = 0
+        _total_critical = 0
 
         for endpoint in endpoints:
             if endpoint["critical"]:
-                total_critical += 1
+                _total_critical += 1
 
             # Simulate API call
             await asyncio.sleep(0.1)
@@ -410,10 +410,10 @@ class APISmokeTestRunner:
             endpoint_results.append(result)
 
         return {
-            "overall_success": critical_passed == total_critical,
+            "overall_success": critical_passed == _total_critical,
             "endpoint_results": endpoint_results,
             "critical_endpoints_passed": critical_passed,
-            "total_critical_endpoints": total_critical,
+            "_total_critical_endpoints": _total_critical,
         }
 
 
@@ -433,7 +433,7 @@ class DatabaseSmokeTestRunner:
         }
 
     async def test_crud_operations(
-        self, environment: DeploymentEnvironment
+        self, _environment: DeploymentEnvironment
     ) -> dict[str, Any]:
         """Test basic CRUD operations."""
         await asyncio.sleep(0.5)
@@ -473,7 +473,7 @@ class CacheSmokeTestRunner:
         }
 
     async def test_cache_operations(
-        self, environment: DeploymentEnvironment
+        self, _environment: DeploymentEnvironment
     ) -> dict[str, Any]:
         """Test cache operations."""
         await asyncio.sleep(0.3)
@@ -486,7 +486,7 @@ class CacheSmokeTestRunner:
         }
 
     async def test_cache_performance(
-        self, environment: DeploymentEnvironment
+        self, _environment: DeploymentEnvironment
     ) -> dict[str, Any]:
         """Test cache performance."""
         await asyncio.sleep(0.2)
@@ -514,7 +514,7 @@ class VectorDatabaseSmokeTestRunner:
         }
 
     async def test_vector_operations(
-        self, environment: DeploymentEnvironment
+        self, _environment: DeploymentEnvironment
     ) -> dict[str, Any]:
         """Test vector operations."""
         await asyncio.sleep(0.8)
@@ -589,7 +589,7 @@ class ConfigurationSmokeTestRunner:
         }
 
     def test_service_configurations(
-        self, environment: DeploymentEnvironment
+        self, _environment: DeploymentEnvironment
     ) -> dict[str, dict[str, Any]]:
         """Test service configurations."""
         services = {
@@ -617,7 +617,7 @@ class MonitoringSmokeTestRunner:
     """Runner for monitoring system smoke tests."""
 
     async def test_metrics_collection(
-        self, environment: DeploymentEnvironment
+        self, _environment: DeploymentEnvironment
     ) -> dict[str, Any]:
         """Test metrics collection."""
         await asyncio.sleep(0.3)
@@ -629,7 +629,7 @@ class MonitoringSmokeTestRunner:
         }
 
     async def test_alerting_system(
-        self, environment: DeploymentEnvironment
+        self, _environment: DeploymentEnvironment
     ) -> dict[str, Any]:
         """Test alerting system."""
         await asyncio.sleep(0.2)
@@ -641,7 +641,7 @@ class MonitoringSmokeTestRunner:
         }
 
     async def test_dashboard_availability(
-        self, environment: DeploymentEnvironment
+        self, _environment: DeploymentEnvironment
     ) -> dict[str, Any]:
         """Test dashboard availability."""
         await asyncio.sleep(0.4)
@@ -668,7 +668,7 @@ class EndToEndSmokeTestRunner:
             "document_id": "test-doc-123",
         }
 
-    async def test_search_workflow(self, document_id: str) -> dict[str, Any]:
+    async def test_search_workflow(self, _document_id: str) -> dict[str, Any]:
         """Test search workflow."""
         await asyncio.sleep(0.6)
 
@@ -679,7 +679,7 @@ class EndToEndSmokeTestRunner:
         }
 
     async def test_content_intelligence_workflow(
-        self, document_id: str
+        self, _document_id: str
     ) -> dict[str, Any]:
         """Test content intelligence workflow."""
         await asyncio.sleep(0.8)

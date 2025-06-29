@@ -4,6 +4,7 @@ This middleware provides request correlation IDs, distributed tracing support,
 and comprehensive request/response logging for production monitoring.
 """
 
+import html
 import logging
 import time
 import uuid
@@ -14,7 +15,30 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 
+try:
+    from opentelemetry import trace
+    from opentelemetry.trace import Status, StatusCode
+except ImportError:
+    trace = None
+    Status = None
+    StatusCode = None
+
+
 logger = logging.getLogger(__name__)
+
+
+def _safe_escape_for_logging(value: str | None) -> str | None:
+    """Safely escape user input for logging to prevent XSS in log viewers.
+
+    Args:
+        value: String value that may contain user input
+
+    Returns:
+        HTML-escaped string or None if input was None
+    """
+    if value is None:
+        return None
+    return html.escape(str(value))
 
 
 def get_correlation_id(request: Request) -> str:
@@ -25,6 +49,7 @@ def get_correlation_id(request: Request) -> str:
 
     Returns:
         Correlation ID string
+
     """
     # Check for existing correlation ID in headers
     correlation_id = request.headers.get("x-correlation-id")
@@ -74,6 +99,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
             log_request_body: Log request body content
             log_response_body: Log response body content
             max_body_size: Maximum body size to log (bytes)
+
         """
         super().__init__(app)
         self.enable_request_logging = enable_request_logging
@@ -140,14 +166,17 @@ class TracingMiddleware(BaseHTTPMiddleware):
         Args:
             request: HTTP request
             correlation_id: Request correlation ID
+
         """
         log_data = {
             "correlation_id": correlation_id,
             "method": request.method,
             "path": request.url.path,
-            "query_params": str(request.query_params) if request.query_params else None,
+            "query_params": _safe_escape_for_logging(str(request.query_params))
+            if request.query_params
+            else None,
             "client_ip": self._get_client_ip(request),
-            "user_agent": request.headers.get("user-agent"),
+            "user_agent": _safe_escape_for_logging(request.headers.get("user-agent")),
             "content_type": request.headers.get("content-type"),
             "content_length": request.headers.get("content-length"),
         }
@@ -157,9 +186,9 @@ class TracingMiddleware(BaseHTTPMiddleware):
             try:
                 body = await self._get_request_body(request)
                 if body:
-                    log_data["request_body"] = body
+                    log_data["request_body"] = _safe_escape_for_logging(body)
             except Exception as e:
-                log_data["request_body_error"] = str(e)
+                log_data["request_body_error"] = _safe_escape_for_logging(str(e))
 
         logger.info("Incoming request", extra=log_data)
 
@@ -177,6 +206,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
             response: HTTP response
             correlation_id: Request correlation ID
             duration: Request processing duration
+
         """
         log_data = {
             "correlation_id": correlation_id,
@@ -193,9 +223,9 @@ class TracingMiddleware(BaseHTTPMiddleware):
             try:
                 body = self._get_response_body(response)
                 if body:
-                    log_data["response_body"] = body
+                    log_data["response_body"] = _safe_escape_for_logging(body)
             except Exception as e:
-                log_data["response_body_error"] = str(e)
+                log_data["response_body_error"] = _safe_escape_for_logging(str(e))
 
         # Choose log level based on status code
         if 200 <= response.status_code < 400:
@@ -213,6 +243,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Request body as string or None
+
         """
         try:
             # Read body
@@ -247,6 +278,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Response body as string or None
+
         """
         try:
             if not hasattr(response, "body"):
@@ -283,6 +315,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Client IP address
+
         """
         # Check X-Forwarded-For header first
         forwarded_for = request.headers.get("x-forwarded-for")
@@ -314,14 +347,16 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
         Args:
             app: ASGI application
             service_name: Name of the service for tracing
+
         """
         super().__init__(app)
         self.service_name = service_name
 
         # Try to import OpenTelemetry
         try:
-            from opentelemetry import trace
-            from opentelemetry.trace import Status, StatusCode
+            if trace is None:
+                msg = "opentelemetry not available"
+                raise ImportError(msg)
 
             self.tracer = trace.get_tracer(__name__)
             self.Status = Status

@@ -5,7 +5,7 @@ Update Documentation Links After Restructuring
 Updates all internal documentation links based on the changes log from restructuring.
 """
 
-import json
+import json  # noqa: PLC0415
 import re
 from pathlib import Path
 
@@ -168,7 +168,7 @@ class LinkUpdater:
                     f"Updated {updates_made} links in {file_path.relative_to(self.docs_root)}"
                 )
 
-        except Exception as e:
+        except Exception:
             print(f"Error updating {file_path}: {e}")
 
         return updates_made

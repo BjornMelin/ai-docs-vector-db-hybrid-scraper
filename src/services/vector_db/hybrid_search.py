@@ -13,20 +13,20 @@ from typing import Any
 from qdrant_client import AsyncQdrantClient
 
 from src.config import ABTestVariant, Config, OptimizationStrategy
-
-from ...models.vector_search import (
-    AdvancedHybridSearchRequest,
-    AdvancedSearchResponse,
+from src.models.vector_search import (
+    HybridSearchRequest,
+    HybridSearchResponse,
     RetrievalMetrics,
     SearchResult,
 )
-from ..errors import QdrantServiceError
-from ..query_processing import (
+from src.services.errors import QdrantServiceError
+from src.services.query_processing import (
     AdvancedSearchOrchestrator,
     AdvancedSearchRequest,
     SearchMode,
     SearchPipeline,
 )
+
 from .adaptive_fusion_tuner import AdaptiveFusionTuner
 from .model_selector import ModelSelector
 from .query_classifier import QueryClassifier
@@ -37,10 +37,10 @@ from .splade_provider import SPLADEProvider
 logger = logging.getLogger(__name__)
 
 
-class AdvancedHybridSearchService:
-    """Backward compatibility wrapper for advanced hybrid search.
+class HybridSearchService:
+    """Backward compatibility wrapper for hybrid search.
 
-    This class provides the same interface as the old AdvancedHybridSearchService
+    This class provides the same interface as the old HybridSearchService
     but delegates to the new AdvancedSearchOrchestrator for actual search operations.
     """
 
@@ -56,6 +56,7 @@ class AdvancedHybridSearchService:
             client: Qdrant client instance
             config: Unified configuration
             qdrant_search: Base Qdrant search service
+
         """
         self.client = client
         self.config = config
@@ -92,16 +93,15 @@ class AdvancedHybridSearchService:
             if not self.enable_fallback:
                 raise
 
-    async def advanced_hybrid_search(
-        self, request: AdvancedHybridSearchRequest
-    ) -> AdvancedSearchResponse:
-        """Perform advanced hybrid search with ML optimization.
+    async def hybrid_search(self, request: HybridSearchRequest) -> HybridSearchResponse:
+        """Perform hybrid search with ML optimization.
 
         Args:
-            request: Advanced hybrid search request
+            request: Hybrid search request
 
         Returns:
-            AdvancedSearchResponse with results and optimization metadata
+            HybridSearchResponse with results and optimization metadata
+
         """
         start_time = time.time()
         query_id = str(uuid.uuid4())
@@ -171,7 +171,7 @@ class AdvancedHybridSearchService:
             orchestrator_result = await self.orchestrator.search(advanced_request)
 
             # Map orchestrator result to old response format
-            response = AdvancedSearchResponse(
+            response = HybridSearchResponse(
                 results=self._format_search_results(orchestrator_result.results),
                 retrieval_metrics=RetrievalMetrics(
                     query_vector_time_ms=orchestrator_result.search_metadata.get(
@@ -218,39 +218,35 @@ class AdvancedHybridSearchService:
             return response
 
         except Exception as e:
-            logger.error(f"Advanced hybrid search failed: {e}", exc_info=True)
+            logger.error(
+                f"Advanced hybrid search failed: {e}", exc_info=True
+            )  # TODO: Convert f-string to logging format
 
             # Fallback to basic search
             if self.enable_fallback:
                 return await self._perform_fallback_search(request, start_time, str(e))
-            else:
-                raise QdrantServiceError(f"Advanced hybrid search failed: {e}") from e
+            msg = f"Advanced hybrid search failed: {e}"
+            raise QdrantServiceError(msg) from e
 
-    def _determine_search_mode(
-        self, request: AdvancedHybridSearchRequest
-    ) -> SearchMode:
+    def _determine_search_mode(self, request: HybridSearchRequest) -> SearchMode:
         """Determine the appropriate search mode based on request features."""
         if request.enable_adaptive_fusion and request.enable_query_classification:
             return SearchMode.INTELLIGENT
-        elif request.enable_model_selection:
+        if request.enable_model_selection:
             return SearchMode.PERSONALIZED
-        elif request.enable_splade:
+        if request.enable_splade:
             return SearchMode.ENHANCED
-        else:
-            return SearchMode.SIMPLE
+        return SearchMode.SIMPLE
 
-    def _determine_pipeline(
-        self, request: AdvancedHybridSearchRequest
-    ) -> SearchPipeline:
+    def _determine_pipeline(self, request: HybridSearchRequest) -> SearchPipeline:
         """Determine the appropriate pipeline based on request configuration."""
         if request.enable_adaptive_fusion:
             return SearchPipeline.COMPREHENSIVE
-        elif request.fusion_config.algorithm.value == "dbsf":
+        if request.fusion_config.algorithm.value == "dbsf":
             return SearchPipeline.PRECISION
-        elif request.search_params.accuracy_level.value == "fast":
+        if request.search_params.accuracy_level.value == "fast":
             return SearchPipeline.FAST
-        else:
-            return SearchPipeline.BALANCED
+        return SearchPipeline.BALANCED
 
     async def _classify_query_with_timeout(
         self, query: str, context: dict[str, Any] | None
@@ -267,11 +263,13 @@ class AdvancedHybridSearchService:
             )
             return None
         except Exception as e:
-            logger.warning(f"Query classification failed: {e}")
+            logger.warning(
+                f"Query classification failed: {e}"
+            )  # TODO: Convert f-string to logging format
             return None
 
     async def _select_model_with_timeout(
-        self, query_classification: Any, request: AdvancedHybridSearchRequest
+        self, query_classification: Any, _request: HybridSearchRequest
     ) -> Any:
         """Select model with timeout protection."""
         try:
@@ -285,11 +283,13 @@ class AdvancedHybridSearchService:
             logger.warning("Model selection timed out, using default model")
             return None
         except Exception as e:
-            logger.warning(f"Model selection failed: {e}")
+            logger.warning(
+                f"Model selection failed: {e}"
+            )  # TODO: Convert f-string to logging format
             return None
 
     async def _generate_sparse_vector_with_timeout(
-        self, query: str, splade_config: Any
+        self, query: str, _splade_config: Any
     ) -> dict[int, float] | None:
         """Generate sparse vector with timeout protection."""
         try:
@@ -301,12 +301,12 @@ class AdvancedHybridSearchService:
             logger.warning("SPLADE generation timed out, skipping sparse vector")
             return None
         except Exception as e:
-            logger.warning(f"SPLADE generation failed: {e}")
+            logger.warning(
+                f"SPLADE generation failed: {e}"
+            )  # TODO: Convert f-string to logging format
             return None
 
-    def _assign_ab_test_variant(
-        self, request: AdvancedHybridSearchRequest
-    ) -> ABTestVariant:
+    def _assign_ab_test_variant(self, request: HybridSearchRequest) -> ABTestVariant:
         """Assign A/B test variant for the request."""
         if not request.ab_test_config or not request.user_id:
             return ABTestVariant.CONTROL
@@ -329,8 +329,8 @@ class AdvancedHybridSearchService:
         return ABTestVariant.CONTROL
 
     async def _perform_fallback_search(
-        self, request: AdvancedHybridSearchRequest, start_time: float, error_msg: str
-    ) -> AdvancedSearchResponse:
+        self, request: HybridSearchRequest, start_time: float, error_msg: str
+    ) -> HybridSearchResponse:
         """Perform fallback search when advanced features fail."""
         try:
             # Use simple search through orchestrator
@@ -347,7 +347,7 @@ class AdvancedHybridSearchService:
             result = await self.orchestrator.search(fallback_request)
 
             end_time = time.time()
-            return AdvancedSearchResponse(
+            return HybridSearchResponse(
                 results=self._format_search_results(result.results),
                 retrieval_metrics=RetrievalMetrics(
                     total_time_ms=(end_time - start_time) * 1000,
@@ -358,8 +358,10 @@ class AdvancedHybridSearchService:
             )
 
         except Exception as e:
-            logger.error(f"Fallback search also failed: {e}", exc_info=True)
-            return AdvancedSearchResponse(
+            logger.error(
+                f"Fallback search also failed: {e}", exc_info=True
+            )  # TODO: Convert f-string to logging format
+            return HybridSearchResponse(
                 results=[],
                 retrieval_metrics=RetrievalMetrics(
                     total_time_ms=(time.time() - start_time) * 1000,
@@ -387,8 +389,8 @@ class AdvancedHybridSearchService:
     async def _store_search_for_learning(
         self,
         query_id: str,
-        request: AdvancedHybridSearchRequest,
-        response: AdvancedSearchResponse,
+        request: HybridSearchRequest,
+        response: HybridSearchResponse,
     ) -> None:
         """Store search results for continuous learning."""
         try:
@@ -406,22 +408,30 @@ class AdvancedHybridSearchService:
                     performance_score,
                 )
 
-            logger.debug(f"Stored search data for learning: {query_id}")
+            logger.debug(
+                f"Stored search data for learning: {query_id}"
+            )  # TODO: Convert f-string to logging format
 
         except Exception as e:
-            logger.error(f"Failed to store search for learning: {e}", exc_info=True)
+            logger.error(
+                f"Failed to store search for learning: {e}", exc_info=True
+            )  # TODO: Convert f-string to logging format
 
     async def update_with_user_feedback(
-        self, query_id: str, user_feedback: dict[str, Any]
+        self, query_id: str, _user_feedback: dict[str, Any]
     ) -> None:
         """Update ML components with user feedback."""
         try:
             # This would update the adaptive fusion tuner and other components
             # with user feedback for continuous improvement
-            logger.debug(f"Processing user feedback for query {query_id}")
+            logger.debug(
+                f"Processing user feedback for query {query_id}"
+            )  # TODO: Convert f-string to logging format
 
         except Exception as e:
-            logger.error(f"Failed to process user feedback: {e}", exc_info=True)
+            logger.error(
+                f"Failed to process user feedback: {e}", exc_info=True
+            )  # TODO: Convert f-string to logging format
 
     def get_performance_statistics(self) -> dict[str, Any]:
         """Get performance statistics for monitoring."""

@@ -8,6 +8,7 @@ from src.mcp_tools.models.responses import (
     GenericDictResponse,
     ReindexCollectionResponse,
 )
+from src.mcp_tools.tools.payload_indexing import register_tools
 
 
 @pytest.fixture
@@ -56,15 +57,13 @@ def mock_index_stats():
             "word_count",
             "crawl_timestamp",
         ],
-        "total_points": 1000,
+        "_total_points": 1000,
     }
 
 
 @pytest.mark.asyncio
-async def test_payload_indexing_tools_registration(mock_client_manager, mock_context):
+async def test_payload_indexing_tools_registration(mock_client_manager, _mock_context):
     """Test that payload indexing tools are properly registered."""
-    from src.mcp_tools.tools.payload_indexing import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -87,8 +86,6 @@ async def test_create_payload_indexes_success(
     mock_client_manager, mock_context, mock_index_stats
 ):
     """Test successful payload index creation."""
-    from src.mcp_tools.tools.payload_indexing import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -133,7 +130,7 @@ async def test_create_payload_indexes_success(
             "word_count",
             "crawl_timestamp",
         ]
-        assert result.total_points == 1000
+        assert result._total_points == 1000
         assert hasattr(result, "request_id")
 
         # Verify services were called correctly
@@ -154,8 +151,6 @@ async def test_create_payload_indexes_collection_not_found(
     mock_client_manager, mock_context
 ):
     """Test payload index creation when collection doesn't exist."""
-    from src.mcp_tools.tools.payload_indexing import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -197,8 +192,6 @@ async def test_list_payload_indexes_success(
     mock_client_manager, mock_context, mock_index_stats
 ):
     """Test successful payload index listing."""
-    from src.mcp_tools.tools.payload_indexing import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -237,7 +230,7 @@ async def test_list_payload_indexes_success(
             "word_count",
             "crawl_timestamp",
         ]
-        assert result.total_points == 1000
+        assert result._total_points == 1000
 
         # Verify service was called correctly
         mock_client_manager.qdrant_service.get_payload_index_stats.assert_called_once_with(
@@ -253,8 +246,6 @@ async def test_reindex_collection_success(
     mock_client_manager, mock_context, mock_index_stats
 ):
     """Test successful collection reindexing."""
-    from src.mcp_tools.tools.payload_indexing import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -268,7 +259,7 @@ async def test_reindex_collection_success(
     stats_before = {
         "indexed_fields_count": 3,
         "indexed_fields": ["title", "url", "content"],
-        "total_points": 800,
+        "_total_points": 800,
     }
 
     stats_after = mock_index_stats  # More indexes after reindexing
@@ -309,7 +300,7 @@ async def test_reindex_collection_success(
             "word_count",
             "crawl_timestamp",
         ]
-        assert details["total_points"] == 1000
+        assert details["_total_points"] == 1000
         assert "request_id" in details
 
         # Verify services were called correctly
@@ -327,8 +318,6 @@ async def test_reindex_collection_success(
 @pytest.mark.asyncio
 async def test_benchmark_filtered_search_success(mock_client_manager, mock_context):
     """Test successful filtered search benchmarking."""
-    from src.mcp_tools.tools.payload_indexing import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -388,7 +377,7 @@ async def test_benchmark_filtered_search_success(mock_client_manager, mock_conte
         assert result.query == "test query"
         assert result.filters_applied == test_filters
         assert result.results_found == 2
-        assert result.total_points == 5000
+        assert result._total_points == 5000
         assert result.indexed_fields == ["site_name", "title", "category"]
         assert result.performance_estimate == "10-100x faster than unindexed"
         assert hasattr(result, "search_time_ms")
@@ -413,8 +402,6 @@ async def test_benchmark_filtered_search_success(mock_client_manager, mock_conte
 @pytest.mark.asyncio
 async def test_benchmark_filtered_search_no_indexes(mock_client_manager, mock_context):
     """Test filtered search benchmarking with no indexes."""
-    from src.mcp_tools.tools.payload_indexing import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -477,8 +464,6 @@ async def test_benchmark_filtered_search_default_query(
     mock_client_manager, mock_context
 ):
     """Test filtered search benchmarking with default query."""
-    from src.mcp_tools.tools.payload_indexing import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -531,8 +516,6 @@ async def test_benchmark_filtered_search_default_query(
 @pytest.mark.asyncio
 async def test_benchmark_filtered_search_without_context(mock_client_manager):
     """Test filtered search benchmarking without context parameter."""
-    from src.mcp_tools.tools.payload_indexing import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -581,8 +564,6 @@ async def test_benchmark_filtered_search_without_context(mock_client_manager):
 @pytest.mark.asyncio
 async def test_create_payload_indexes_error_handling(mock_client_manager, mock_context):
     """Test error handling in create_payload_indexes."""
-    from src.mcp_tools.tools.payload_indexing import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -617,8 +598,6 @@ async def test_create_payload_indexes_error_handling(mock_client_manager, mock_c
 @pytest.mark.asyncio
 async def test_list_payload_indexes_error_handling(mock_client_manager, mock_context):
     """Test error handling in list_payload_indexes."""
-    from src.mcp_tools.tools.payload_indexing import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -656,8 +635,6 @@ async def test_list_payload_indexes_error_handling(mock_client_manager, mock_con
 @pytest.mark.asyncio
 async def test_reindex_collection_error_handling(mock_client_manager, mock_context):
     """Test error handling in reindex_collection."""
-    from src.mcp_tools.tools.payload_indexing import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -697,8 +674,6 @@ async def test_benchmark_filtered_search_error_handling(
     mock_client_manager, mock_context
 ):
     """Test error handling in benchmark_filtered_search."""
-    from src.mcp_tools.tools.payload_indexing import register_tools
-
     mock_mcp = MagicMock()
     registered_tools = {}
 

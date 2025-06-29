@@ -633,7 +633,7 @@ class TestQdrantServiceIndexingAPI:
 
         expected_stats = {
             "indexes": {"url": {"count": 1000}, "title": {"count": 950}},
-            "total_indexes": 2,
+            "_total_indexes": 2,
         }
         qdrant_service._indexing.get_payload_index_stats = AsyncMock(
             return_value=expected_stats
@@ -725,7 +725,7 @@ class TestQdrantServiceHNSWOptimization:
         )
 
     def test_get_hnsw_configuration_info(
-        self, qdrant_service, mock_client_manager, mock_qdrant_client
+        self, qdrant_service, _mock_client_manager, _mock_qdrant_client
     ):
         """Test get HNSW configuration info delegation."""
         # Mock the collections instance for the validation check

@@ -1,7 +1,7 @@
 """Tests for local cache module."""
 
-import asyncio
-import time
+import asyncio  # noqa: PLC0415
+import time  # noqa: PLC0415
 
 import pytest
 from src.services.cache.local_cache import CacheEntry

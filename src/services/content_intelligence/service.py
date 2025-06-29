@@ -11,9 +11,9 @@ import time
 from typing import Any
 
 from src.config import Config
+from src.services.base import BaseService
+from src.services.errors import APIError
 
-from ..base import BaseService
-from ..errors import APIError
 from .classifiers import ContentClassifier
 from .metadata_extractor import MetadataExtractor
 from .models import (
@@ -23,6 +23,7 @@ from .models import (
     ContentAnalysisResponse,
     ContentClassification,
     ContentMetadata,
+    ContentType,
     EnrichedContent,
     QualityScore,
 )
@@ -52,6 +53,7 @@ class ContentIntelligenceService(BaseService):
             config: Unified configuration
             embedding_manager: Optional EmbeddingManager for semantic analysis
             cache_manager: Optional CacheManager for result caching
+
         """
         super().__init__(config)
         self.embedding_manager = embedding_manager
@@ -118,8 +120,9 @@ class ContentIntelligenceService(BaseService):
             logger.info("ContentIntelligenceService initialized successfully")
 
         except Exception as e:
-            logger.exception(f"Failed to initialize ContentIntelligenceService: {e}")
-            raise APIError(f"Content intelligence initialization failed: {e}") from e
+            logger.exception("Failed to initialize ContentIntelligenceService")
+            msg = f"Content intelligence initialization failed: {e}"
+            raise APIError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup all content intelligence components."""
@@ -131,8 +134,8 @@ class ContentIntelligenceService(BaseService):
             self._initialized = False
             logger.info("ContentIntelligenceService cleaned up successfully")
 
-        except Exception as e:
-            logger.exception(f"Error during ContentIntelligenceService cleanup: {e}")
+        except Exception:
+            logger.exception("Error during ContentIntelligenceService cleanup")
 
     async def analyze_content(
         self,
@@ -147,6 +150,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             ContentAnalysisResponse: Complete analysis results
+
         """
         self._validate_initialized()
         start_time = time.time()
@@ -186,7 +190,7 @@ class ContentIntelligenceService(BaseService):
             )
 
         except Exception as e:
-            logger.exception(f"Content analysis failed: {e}")
+            logger.exception("Content analysis failed")
             return ContentAnalysisResponse(
                 success=False,
                 error=f"Analysis failed: {e!s}",
@@ -211,6 +215,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             QualityScore: Comprehensive quality assessment
+
         """
         self._validate_initialized()
 
@@ -223,7 +228,7 @@ class ContentIntelligenceService(BaseService):
             )
 
         except Exception as e:
-            logger.exception(f"Quality assessment failed: {e}")
+            logger.exception("Quality assessment failed")
             # Return minimal quality score on failure
             return QualityScore(
                 overall_score=0.1,
@@ -249,6 +254,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             ContentClassification: Content type classification results
+
         """
         self._validate_initialized()
 
@@ -261,10 +267,8 @@ class ContentIntelligenceService(BaseService):
             )
 
         except Exception as e:
-            logger.exception(f"Content classification failed: {e}")
+            logger.exception("Content classification failed")
             # Return unknown classification on failure
-            from .models import ContentType
-
             return ContentClassification(
                 primary_type=ContentType.UNKNOWN,
                 secondary_types=[],
@@ -289,6 +293,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             ContentMetadata: Enriched metadata
+
         """
         self._validate_initialized()
 
@@ -300,8 +305,8 @@ class ContentIntelligenceService(BaseService):
                 extraction_metadata=extraction_metadata,
             )
 
-        except Exception as e:
-            logger.exception(f"Metadata extraction failed: {e}")
+        except Exception:
+            logger.exception("Metadata extraction failed")
             # Return minimal metadata on failure
             return ContentMetadata(
                 url=url,
@@ -324,6 +329,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             list[AdaptationRecommendation]: List of adaptation recommendations
+
         """
         self._validate_initialized()
 
@@ -360,14 +366,14 @@ class ContentIntelligenceService(BaseService):
 
             return recommendations[:5]  # Return top 5 recommendations
 
-        except Exception as e:
-            logger.exception(f"Adaptation recommendation failed: {e}")
+        except Exception:
+            logger.exception("Adaptation recommendation failed")
             return []
 
     async def _perform_analysis(
         self,
         request: ContentAnalysisRequest,
-        existing_content: list[str] | None = None,
+        _existing_content: list[str] | None = None,
     ) -> EnrichedContent:
         """Perform comprehensive content analysis.
 
@@ -377,6 +383,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             EnrichedContent: Complete analysis results
+
         """
         analysis_start = time.time()
 
@@ -414,7 +421,9 @@ class ContentIntelligenceService(BaseService):
                     )
                 )
             except Exception as e:
-                logger.warning(f"Content classification failed: {e}")
+                logger.warning(
+                    f"Content classification failed: {e}"
+                )  # TODO: Convert f-string to logging format
 
         # Perform quality assessment if enabled
         if request.enable_quality_assessment:
@@ -443,7 +452,9 @@ class ContentIntelligenceService(BaseService):
                 )
 
             except Exception as e:
-                logger.warning(f"Quality assessment failed: {e}")
+                logger.warning(
+                    f"Quality assessment failed: {e}"
+                )  # TODO: Convert f-string to logging format
 
         # Perform metadata extraction if enabled
         if request.enable_metadata_extraction:
@@ -454,7 +465,9 @@ class ContentIntelligenceService(BaseService):
                     raw_html=request.raw_html,
                 )
             except Exception as e:
-                logger.warning(f"Metadata extraction failed: {e}")
+                logger.warning(
+                    f"Metadata extraction failed: {e}"
+                )  # TODO: Convert f-string to logging format
 
         # Generate adaptation recommendations if enabled
         if request.enable_adaptations:
@@ -466,7 +479,9 @@ class ContentIntelligenceService(BaseService):
                     )
                 )
             except Exception as e:
-                logger.warning(f"Adaptation recommendations failed: {e}")
+                logger.warning(
+                    f"Adaptation recommendations failed: {e}"
+                )  # TODO: Convert f-string to logging format
 
         # Set processing metadata
         enriched_content.processing_time_ms = (time.time() - analysis_start) * 1000
@@ -482,7 +497,7 @@ class ContentIntelligenceService(BaseService):
     def _generate_quality_recommendations(
         self,
         quality_score: QualityScore,
-        url: str,
+        _url: str,
     ) -> list[AdaptationRecommendation]:
         """Generate recommendations based on quality assessment.
 
@@ -492,6 +507,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             list[AdaptationRecommendation]: Quality-based recommendations
+
         """
         recommendations = []
 
@@ -541,7 +557,7 @@ class ContentIntelligenceService(BaseService):
     def _generate_pattern_recommendations(
         self,
         content_patterns: list[str],
-        url: str,
+        _url: str,
     ) -> list[AdaptationRecommendation]:
         """Generate recommendations based on detected patterns.
 
@@ -551,6 +567,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             list[AdaptationRecommendation]: Pattern-based recommendations
+
         """
         recommendations = []
 
@@ -590,10 +607,11 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             str: Cache key for the request
+
         """
         # Create hash from content and key parameters
-        content_hash = hashlib.md5(request.content.encode()).hexdigest()
-        options_hash = hashlib.md5(
+        content_hash = hashlib.sha256(request.content.encode()).hexdigest()
+        options_hash = hashlib.sha256(
             f"{request.enable_classification}-{request.enable_quality_assessment}-"
             f"{request.enable_metadata_extraction}-{request.enable_adaptations}-"
             f"{request.confidence_threshold}".encode()
@@ -609,6 +627,7 @@ class ContentIntelligenceService(BaseService):
 
         Returns:
             EnrichedContent | None: Cached result if found
+
         """
         if not self.cache_manager:
             return None
@@ -618,7 +637,9 @@ class ContentIntelligenceService(BaseService):
             if cached_data:
                 return EnrichedContent.model_validate(cached_data)
         except Exception as e:
-            logger.warning(f"Cache retrieval failed: {e}")
+            logger.warning(
+                f"Cache retrieval failed: {e}"
+            )  # TODO: Convert f-string to logging format
 
         return None
 
@@ -628,6 +649,7 @@ class ContentIntelligenceService(BaseService):
         Args:
             cache_key: Cache key
             result: Analysis result to cache
+
         """
         if not self.cache_manager:
             return
@@ -640,13 +662,16 @@ class ContentIntelligenceService(BaseService):
                 ttl=3600,
             )
         except Exception as e:
-            logger.warning(f"Cache storage failed: {e}")
+            logger.warning(
+                f"Cache storage failed: {e}"
+            )  # TODO: Convert f-string to logging format
 
     def get_performance_metrics(self) -> dict[str, Any]:
         """Get performance metrics for the service.
 
         Returns:
             dict[str, Any]: Performance metrics
+
         """
         return {
             "total_analyses": self._analysis_count,
@@ -669,7 +694,3 @@ class ContentIntelligenceService(BaseService):
         self._total_processing_time = 0.0
         self._cache_hits = 0
         logger.info("Performance metrics reset")
-
-
-# Import statements for compatibility
-from .models import ContentType  # noqa: E402

@@ -1,10 +1,10 @@
 import typing
 """Local in-memory LRU cache implementation with TTL support."""
 
-import asyncio
-import logging
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
 import sys
-import time
+import time  # noqa: PLC0415
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any
@@ -56,7 +56,7 @@ class LocalCache(CacheInterface[Any]):
         self.default_ttl = default_ttl
         self.max_memory_bytes = int(max_memory_mb * 1024 * 1024)
 
-        self._cache: OrderedDict[str, CacheEntry] = OrderedDict()
+        self._cache: Ordereddict[str, CacheEntry] = OrderedDict()
         self._lock = asyncio.Lock()
         self._hits = 0
         self._misses = 0
@@ -69,7 +69,7 @@ class LocalCache(CacheInterface[Any]):
             try:
                 self.metrics_registry = get_metrics_registry()
                 logger.debug("Local cache monitoring enabled")
-            except Exception as e:
+            except Exception:
                 logger.debug(f"Local cache monitoring disabled: {e}")
 
     async def get(self, key: str) -> Any | None:

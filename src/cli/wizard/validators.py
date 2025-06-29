@@ -4,6 +4,7 @@ Provides immediate validation feedback during wizard interaction
 using Pydantic models and user-friendly error messages.
 """
 
+import json
 import re
 from pathlib import Path
 from typing import Any
@@ -35,6 +36,7 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message)
+
         """
         if not api_key:
             return False, "API key cannot be empty"
@@ -80,6 +82,7 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message)
+
         """
         if not url:
             return False, "URL cannot be empty"
@@ -103,6 +106,7 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message)
+
         """
         try:
             port_int = int(port)
@@ -129,6 +133,7 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message)
+
         """
         if not path:
             return False, "Path cannot be empty"
@@ -163,6 +168,7 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_messages)
+
         """
         errors = []
 
@@ -177,7 +183,6 @@ class WizardValidator:
             }
 
             Config(**validation_data)
-            return True, []
 
         except ValidationError as e:
             for error in e.errors():
@@ -187,6 +192,8 @@ class WizardValidator:
 
         except Exception as e:
             errors.append(f"Validation error: {e!s}")
+        else:
+            return True, []
 
         return False, errors
 
@@ -198,6 +205,7 @@ class WizardValidator:
 
         Returns:
             True if valid, False otherwise
+
         """
         is_valid, errors = self.validate_config_partial(config_data)
 
@@ -238,6 +246,7 @@ class WizardValidator:
 
         Returns:
             Dictionary of field -> suggested_fix
+
         """
         suggestions = {}
 
@@ -280,6 +289,7 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message)
+
         """
         return self.validate_path(path, must_exist=must_exist, must_be_dir=False)
 
@@ -294,12 +304,13 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message)
+
         """
         return self.validate_path(path, must_exist=must_exist, must_be_dir=True)
 
     def validate_json_string(
         self, json_str: str
-    ) -> tuple[bool, str | None, Dict | None]:
+    ) -> tuple[bool, str | None, dict | None]:
         """Validate JSON string.
 
         Args:
@@ -307,13 +318,12 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_message, parsed_data)
+
         """
         if not json_str:
             return False, "JSON string cannot be empty", None
 
         try:
-            import json
-
             parsed = json.loads(json_str)
             return True, None, parsed
         except json.JSONDecodeError as e:
@@ -324,6 +334,7 @@ class WizardValidator:
 
         Args:
             config: Validated configuration object
+
         """
         summary_text = Text()
         summary_text.append("✅ Configuration is valid!\n\n", style="bold green")
@@ -374,41 +385,10 @@ class WizardValidator:
 
         Returns:
             Tuple of (is_valid, error_messages)
+
         """
         # Merge template with customizations
         merged_data = {**template_data, **customizations}
 
         # Validate the merged configuration
         return self.validate_config_partial(merged_data)
-
-    def show_validation_summary(self, config: Config) -> None:
-        """Show a summary of the validated configuration.
-
-        Args:
-            config: Validated configuration object
-        """
-        summary_text = Text()
-        summary_text.append("✅ Configuration is valid!\n\n", style="bold green")
-
-        # Show key settings
-        key_settings = [
-            ("Environment", config.environment),
-            ("Embedding Provider", config.embedding_provider),
-            ("Crawl Provider", config.crawl_provider),
-            ("Debug Mode", config.debug),
-            ("Caching", config.cache.enable_caching),
-        ]
-
-        for label, value in key_settings:
-            summary_text.append(f"• {label}: ", style="cyan")
-            summary_text.append(f"{value}\n", style="")
-
-        summary_text.append("\n🎯 Ready to save configuration!", style="dim")
-
-        panel = Panel(
-            summary_text,
-            title="📋 Configuration Summary",
-            border_style="green",
-            padding=(1, 2),
-        )
-        console.print(panel)

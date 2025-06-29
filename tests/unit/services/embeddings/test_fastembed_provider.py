@@ -1,3 +1,12 @@
+import asyncio
+
+from src.services.embeddings.base import EmbeddingProvider
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+
 """Tests for services/embeddings/fastembed_provider.py - FastEmbed integration.
 
 This module tests the FastEmbed provider that provides local embedding model management,
@@ -629,7 +638,8 @@ class TestFastEmbedProviderIntegration:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                raise Exception("Temporary failure")
+                msg = "Temporary failure"
+                raise TestError(msg)
             # Success on second call
             return iter([np.array([0.1, 0.2, 0.3]) for _ in texts])
 
@@ -667,7 +677,6 @@ class TestFastEmbedProviderIntegration:
     @pytest.mark.asyncio
     async def test_concurrent_embedding_generation(self):
         """Test concurrent embedding generation."""
-        import asyncio
 
         provider = FastEmbedProvider()
         provider._initialized = True
@@ -690,7 +699,6 @@ class TestFastEmbedProviderIntegration:
 
     def test_provider_inheritance_and_interface(self):
         """Test provider properly implements base interface."""
-        from src.services.embeddings.base import EmbeddingProvider
 
         provider = FastEmbedProvider()
 

@@ -13,9 +13,9 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from ..config import Config
-from ..models.vector_search import AdvancedHybridSearchRequest
-from ..services.vector_db.hybrid_search import AdvancedHybridSearchService
+from src.config import Config
+from src.models.vector_search import HybridSearchRequest
+from src.services.vector_db.hybrid_search import HybridSearchService
 
 
 logger = logging.getLogger(__name__)
@@ -96,8 +96,8 @@ class LoadTestUser:
     def __init__(
         self,
         user_id: int,
-        search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        search_service: HybridSearchService,
+        test_queries: list[HybridSearchRequest],
         config: LoadTestConfig,
     ):
         """Initialize load test user.
@@ -107,6 +107,7 @@ class LoadTestUser:
             search_service: Search service to test
             test_queries: Pool of test queries
             config: Load test configuration
+
         """
         self.user_id = user_id
         self.search_service = search_service
@@ -128,11 +129,14 @@ class LoadTestUser:
 
         Returns:
             User session metrics
+
         """
         if start_delay > 0:
             await asyncio.sleep(start_delay)
 
-        logger.debug(f"User {self.user_id} starting session")
+        logger.debug(
+            f"User {self.user_id} starting session"
+        )  # TODO: Convert f-string to logging format
 
         session_start = time.time()
         requests_per_user = self.config.total_requests // self.config.concurrent_users
@@ -143,7 +147,9 @@ class LoadTestUser:
 
             try:
                 # Select random query
-                query = random.choice(self.test_queries).model_copy()
+                query = random.choice(
+                    self.test_queries
+                ).model_copy()  # Non-crypto random for load testing
                 query.user_id = f"load_test_user_{self.user_id}"
                 query.session_id = (
                     f"load_test_session_{self.user_id}_{int(time.time())}"
@@ -154,7 +160,7 @@ class LoadTestUser:
 
                 try:
                     await asyncio.wait_for(
-                        self.search_service.advanced_hybrid_search(query),
+                        self.search_service.hybrid_search(query),
                         timeout=self.config.request_timeout_seconds,
                     )
                     end_time = time.perf_counter()
@@ -166,13 +172,17 @@ class LoadTestUser:
                 except TimeoutError:
                     self.failures += 1
                     self.errors.append("timeout")
-                    logger.debug(f"User {self.user_id}: Request timeout")
+                    logger.debug(
+                        f"User {self.user_id}: Request timeout"
+                    )  # TODO: Convert f-string to logging format
 
                 except Exception as e:
                     self.failures += 1
                     error_type = type(e).__name__
                     self.errors.append(error_type)
-                    logger.debug(f"User {self.user_id}: Request failed - {error_type}")
+                    logger.debug(
+                        f"User {self.user_id}: Request failed - {error_type}"
+                    )  # TODO: Convert f-string to logging format
 
                     if not self.config.retry_on_failure:
                         continue
@@ -186,7 +196,7 @@ class LoadTestUser:
                             start_time = time.perf_counter()
 
                             await asyncio.wait_for(
-                                self.search_service.advanced_hybrid_search(query),
+                                self.search_service.hybrid_search(query),
                                 timeout=self.config.request_timeout_seconds,
                             )
                             end_time = time.perf_counter()
@@ -202,15 +212,15 @@ class LoadTestUser:
 
                 # Think time between requests
                 think_time = (
-                    random.randint(
+                    random.randint(  # Non-crypto random for load testing
                         self.config.think_time_min_ms, self.config.think_time_max_ms
                     )
                     / 1000.0
                 )
                 await asyncio.sleep(think_time)
 
-            except Exception as e:
-                logger.exception(f"User {self.user_id} session error: {e}")
+            except Exception:
+                logger.exception(f"User {self.user_id} session error")
                 self.failures += 1
                 break
 
@@ -234,13 +244,14 @@ class LoadTestRunner:
 
         Args:
             config: Unified configuration
+
         """
         self.config = config
 
     async def run_load_test(
         self,
-        search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        search_service: HybridSearchService,
+        test_queries: list[HybridSearchRequest],
         load_config: LoadTestConfig,
     ) -> LoadTestMetrics:
         """Run comprehensive load test.
@@ -252,6 +263,7 @@ class LoadTestRunner:
 
         Returns:
             Comprehensive load test metrics
+
         """
         logger.info(
             f"Starting load test: {load_config.concurrent_users} users, "
@@ -430,8 +442,8 @@ class LoadTestRunner:
 
     async def run_stress_test(
         self,
-        search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        search_service: HybridSearchService,
+        test_queries: list[HybridSearchRequest],
         max_users: int = 1000,
         step_size: int = 50,
         step_duration: int = 30,
@@ -447,11 +459,14 @@ class LoadTestRunner:
 
         Returns:
             Dictionary mapping user counts to metrics
+
         """
         stress_results = {}
 
         for user_count in range(step_size, max_users + 1, step_size):
-            logger.info(f"Stress test step: {user_count} users")
+            logger.info(
+                f"Stress test step: {user_count} users"
+            )  # TODO: Convert f-string to logging format
 
             load_config = LoadTestConfig(
                 concurrent_users=user_count,
@@ -470,19 +485,21 @@ class LoadTestRunner:
 
                 # Check if system is breaking down
                 if metrics.error_rate > 0.5 or metrics.p95_response_time_ms > 10000:
-                    logger.warning(f"System degradation detected at {user_count} users")
+                    logger.warning(
+                        f"System degradation detected at {user_count} users"
+                    )  # TODO: Convert f-string to logging format
                     break
 
-            except Exception as e:
-                logger.exception(f"Stress test failed at {user_count} users: {e}")
+            except Exception:
+                logger.exception(f"Stress test failed at {user_count} users")
                 break
 
         return stress_results
 
     async def run_endurance_test(
         self,
-        search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        search_service: HybridSearchService,
+        test_queries: list[HybridSearchRequest],
         duration_hours: float = 1.0,
         concurrent_users: int = 50,
     ) -> LoadTestMetrics:
@@ -496,6 +513,7 @@ class LoadTestRunner:
 
         Returns:
             Load test metrics for endurance test
+
         """
         duration_seconds = int(duration_hours * 3600)
 

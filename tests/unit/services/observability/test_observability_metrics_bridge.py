@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+import src.services.observability.metrics_bridge as bridge_module
 from src.services.observability.metrics_bridge import (
     OpenTelemetryMetricsBridge,
     get_metrics_bridge,
@@ -462,9 +463,9 @@ class TestOpenTelemetryMetricsBridge:
             def isinstance_side_effect(obj, type_class):
                 if obj is counter:
                     return "Counter" in str(type_class)
-                elif obj is histogram:
+                if obj is histogram:
                     return "Histogram" in str(type_class)
-                elif obj is gauge:
+                if obj is gauge:
                     return False  # Force hasattr check for gauges
                 return False
 
@@ -502,12 +503,12 @@ class TestOpenTelemetryMetricsBridge:
 
         # Test custom counter creation
         result_counter = bridge.create_custom_counter(
-            "custom_operations_total", "Total custom operations", "operations"
+            "custom_operations__total", "Total custom operations", "operations"
         )
 
         assert result_counter is not None
-        assert "custom_operations_total" in bridge._instruments
-        assert bridge._instruments["custom_operations_total"] is result_counter
+        assert "custom_operations__total" in bridge._instruments
+        assert bridge._instruments["custom_operations__total"] is result_counter
 
         # Test custom gauge creation
         result_gauge = bridge.create_custom_gauge(
@@ -581,7 +582,6 @@ class TestGlobalMetricsBridge:
     def test_get_metrics_bridge_not_initialized(self):
         """Test getting bridge when not initialized."""
         # Reset global instance
-        import src.services.observability.metrics_bridge as bridge_module
 
         bridge_module._metrics_bridge = None
 
@@ -749,18 +749,20 @@ class TestMetricsBridgeEdgeCases:
         }
 
         # Should handle instrument exceptions gracefully
-        with patch("src.services.observability.metrics_bridge.logger") as mock_logger:
-            with patch(
+        with (
+            patch("src.services.observability.metrics_bridge.logger") as mock_logger,
+            patch(
                 "src.services.observability.metrics_bridge.isinstance"
-            ) as mock_isinstance:
-                # Make isinstance return True for our failing counter
-                mock_isinstance.side_effect = (
-                    lambda obj, type_class: obj is failing_counter
-                    and "Counter" in str(type_class)
-                )
+            ) as mock_isinstance,
+        ):
+            # Make isinstance return True for our failing counter
+            mock_isinstance.side_effect = (
+                lambda obj, type_class: obj is failing_counter
+                and "Counter" in str(type_class)
+            )
 
-                bridge.record_batch_metrics(metrics_batch)
-                mock_logger.warning.assert_called()
+            bridge.record_batch_metrics(metrics_batch)
+            mock_logger.warning.assert_called()
 
     @patch("src.services.observability.metrics_bridge.metrics")
     def test_create_custom_histogram_with_boundaries(self, mock_metrics):

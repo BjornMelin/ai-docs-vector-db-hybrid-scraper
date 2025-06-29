@@ -6,13 +6,13 @@ performance impact on scraping operations. Useful for optimizing the
 balance between stealth and performance.
 """
 
-import asyncio
-import json
+import asyncio  # noqa: PLC0415
+import json  # noqa: PLC0415
 import statistics
 
 # Add src to path for imports
 import sys
-import time
+import time  # noqa: PLC0415
 from pathlib import Path
 from typing import Any
 
@@ -624,7 +624,7 @@ def main(output_dir: str, report: bool, iterations: int):
     except KeyboardInterrupt:
         click.echo("\n❌ Benchmark interrupted by user")
         sys.exit(1)
-    except Exception as e:
+    except Exception:
         click.echo(f"❌ Benchmark failed: {e}")
         sys.exit(1)
 

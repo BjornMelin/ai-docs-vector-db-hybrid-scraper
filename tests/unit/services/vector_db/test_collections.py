@@ -1,13 +1,14 @@
 """Tests for QdrantCollections service."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http.exceptions import ResponseHandlingException
 
 from src.config import Config
-from src.services.errors import QdrantServiceError
+from src.services.base import BaseService
+from src.services.errors import APIError, QdrantServiceError
 from src.services.vector_db.collections import QdrantCollections
 
 
@@ -125,7 +126,7 @@ class TestQdrantCollections:
 
         # Verify sparse vectors config was passed
         call_args = mock_client.create_collection.call_args
-        assert call_args.kwargs["sparse_vectors_config"] is not None
+        assert call_args._kwargs["sparse_vectors_config"] is not None
 
     async def test_create_collection_without_quantization(
         self, collections_service, mock_client
@@ -143,7 +144,7 @@ class TestQdrantCollections:
 
         # Verify quantization config is None
         call_args = mock_client.create_collection.call_args
-        assert call_args.kwargs["quantization_config"] is None
+        assert call_args._kwargs["quantization_config"] is None
 
     async def test_create_collection_invalid_distance(
         self, collections_service, mock_client
@@ -197,7 +198,7 @@ class TestQdrantCollections:
         assert result is True  # Should handle gracefully
 
     async def test_create_collection_payload_index_failure(
-        self, collections_service, mock_client, caplog
+        self, collections_service, mock_client, __caplog
     ):
         """Test collection creation with payload index creation failure."""
         mock_collections = MagicMock()
@@ -442,7 +443,6 @@ class TestQdrantCollections:
 
     async def test_validate_hnsw_configuration_error(self, collections_service):
         """Test HNSW configuration validation with error."""
-        from unittest.mock import PropertyMock
 
         mock_collection_info = MagicMock()
         # Create a property that raises an exception when accessed
@@ -497,7 +497,6 @@ class TestQdrantCollections:
 
     async def test_inheritance_from_base_service(self, collections_service):
         """Test that QdrantCollections inherits from BaseService."""
-        from src.services.base import BaseService
 
         assert isinstance(collections_service, BaseService)
 
@@ -505,8 +504,6 @@ class TestQdrantCollections:
         """Test validation when service is not initialized."""
         service = QdrantCollections(mock_config, mock_client)
         service._initialized = False
-
-        from src.services.errors import APIError
 
         with pytest.raises(APIError, match="not initialized"):
             await service.create_collection("test", 1536)

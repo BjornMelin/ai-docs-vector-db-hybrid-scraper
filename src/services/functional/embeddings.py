@@ -4,12 +4,14 @@ Transforms the complex EmbeddingManager class into pure functions with
 dependency injection. Maintains all functionality while improving testability.
 """
 
+import asyncio
 import logging
 from typing import Annotated, Any
 
 from fastapi import Depends, HTTPException
 
-from ..embeddings.manager import QualityTier, TextAnalysis
+from src.services.embeddings.manager import QualityTier, TextAnalysis
+
 from .circuit_breaker import CircuitBreakerConfig, circuit_breaker
 from .dependencies import get_embedding_client
 
@@ -48,13 +50,12 @@ async def generate_embeddings(
 
     Raises:
         HTTPException: If embedding generation fails
-    """
-    try:
-        if not embedding_client:
-            raise HTTPException(
-                status_code=500, detail="Embedding client not available"
-            )
 
+    """
+    if not embedding_client:
+        raise HTTPException(status_code=500, detail="Embedding client not available")
+
+    try:
         result = await embedding_client.generate_embeddings(
             texts=texts,
             quality_tier=quality_tier,
@@ -70,13 +71,13 @@ async def generate_embeddings(
             f"using {result.get('provider', 'unknown')} provider"
         )
 
-        return result
-
     except Exception as e:
-        logger.exception(f"Embedding generation failed: {e}")
+        logger.exception("Embedding generation failed")
         raise HTTPException(
             status_code=500, detail=f"Embedding generation failed: {e!s}"
-        )
+        ) from e
+    else:
+        return result
 
 
 @circuit_breaker(CircuitBreakerConfig.simple_mode())
@@ -99,6 +100,7 @@ async def rerank_results(
 
     Raises:
         HTTPException: If reranking fails
+
     """
     try:
         if not embedding_client:
@@ -106,14 +108,16 @@ async def rerank_results(
             return results
 
         reranked = await embedding_client.rerank_results(query, results)
+        logger.info(
+            f"Reranked {len(results)} results"
+        )  # TODO: Convert f-string to logging format
 
-        logger.info(f"Reranked {len(results)} results")
-        return reranked
-
-    except Exception as e:
-        logger.exception(f"Reranking failed: {e}")
+    except Exception:
+        logger.exception("Reranking failed")
         # Return original results on failure (graceful degradation)
         return results
+    else:
+        return reranked
 
 
 async def analyze_text_characteristics(
@@ -133,13 +137,12 @@ async def analyze_text_characteristics(
 
     Raises:
         HTTPException: If analysis fails
-    """
-    try:
-        if not embedding_client:
-            raise HTTPException(
-                status_code=500, detail="Embedding client not available"
-            )
 
+    """
+    if not embedding_client:
+        raise HTTPException(status_code=500, detail="Embedding client not available")
+
+    try:
         analysis = embedding_client.analyze_text_characteristics(texts)
 
         logger.debug(
@@ -148,18 +151,20 @@ async def analyze_text_characteristics(
             f"complexity={analysis.complexity_score:.2f}"
         )
 
-        return analysis
-
     except Exception as e:
-        logger.exception(f"Text analysis failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Text analysis failed: {e!s}")
+        logger.exception("Text analysis failed")
+        raise HTTPException(
+            status_code=500, detail=f"Text analysis failed: {e!s}"
+        ) from e
+    else:
+        return analysis
 
 
 async def estimate_embedding_cost(
     texts: list[str],
     provider_name: str | None = None,
     embedding_client: Annotated[object, Depends(get_embedding_client)] = None,
-) -> dict[str, Dict[str, float]]:
+) -> dict[str, dict[str, float]]:
     """Estimate embedding generation cost.
 
     Pure function replacement for EmbeddingManager.estimate_cost().
@@ -174,26 +179,29 @@ async def estimate_embedding_cost(
 
     Raises:
         HTTPException: If cost estimation fails
+
     """
+    if not embedding_client:
+        raise HTTPException(status_code=500, detail="Embedding client not available")
+
     try:
-        if not embedding_client:
-            raise HTTPException(
-                status_code=500, detail="Embedding client not available"
-            )
-
         costs = embedding_client.estimate_cost(texts, provider_name)
-
-        logger.debug(f"Estimated costs for {len(texts)} texts")
-        return costs
+        logger.debug(
+            f"Estimated costs for {len(texts)} texts"
+        )  # TODO: Convert f-string to logging format
 
     except Exception as e:
-        logger.exception(f"Cost estimation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Cost estimation failed: {e!s}")
+        logger.exception("Cost estimation failed")
+        raise HTTPException(
+            status_code=500, detail=f"Cost estimation failed: {e!s}"
+        ) from e
+    else:
+        return costs
 
 
 async def get_provider_info(
     embedding_client: Annotated[object, Depends(get_embedding_client)] = None,
-) -> dict[str, Dict[str, Any]]:
+) -> dict[str, dict[str, Any]]:
     """Get information about available embedding providers.
 
     Pure function replacement for EmbeddingManager.get_provider_info().
@@ -206,21 +214,24 @@ async def get_provider_info(
 
     Raises:
         HTTPException: If provider info retrieval fails
+
     """
     try:
         if not embedding_client:
             return {}
 
         info = embedding_client.get_provider_info()
-
-        logger.debug(f"Retrieved info for {len(info)} providers")
-        return info
+        logger.debug(
+            f"Retrieved info for {len(info)} providers"
+        )  # TODO: Convert f-string to logging format
 
     except Exception as e:
-        logger.exception(f"Provider info retrieval failed: {e}")
+        logger.exception("Provider info retrieval failed")
         raise HTTPException(
             status_code=500, detail=f"Provider info retrieval failed: {e!s}"
-        )
+        ) from e
+    else:
+        return info
 
 
 async def get_smart_recommendation(
@@ -246,13 +257,12 @@ async def get_smart_recommendation(
 
     Raises:
         HTTPException: If recommendation fails
-    """
-    try:
-        if not embedding_client:
-            raise HTTPException(
-                status_code=500, detail="Embedding client not available"
-            )
 
+    """
+    if not embedding_client:
+        raise HTTPException(status_code=500, detail="Embedding client not available")
+
+    try:
         # Analyze text characteristics
         text_analysis = await analyze_text_characteristics(texts, embedding_client)
 
@@ -269,13 +279,13 @@ async def get_smart_recommendation(
             f"(${recommendation['estimated_cost']:.4f}) - {recommendation['reasoning']}"
         )
 
-        return recommendation
-
     except Exception as e:
-        logger.exception(f"Smart recommendation failed: {e}")
+        logger.exception("Smart recommendation failed")
         raise HTTPException(
             status_code=500, detail=f"Smart recommendation failed: {e!s}"
-        )
+        ) from e
+    else:
+        return recommendation
 
 
 async def get_usage_report(
@@ -293,6 +303,7 @@ async def get_usage_report(
 
     Raises:
         HTTPException: If usage report retrieval fails
+
     """
     try:
         if not embedding_client:
@@ -304,21 +315,21 @@ async def get_usage_report(
             }
 
         report = embedding_client.get_usage_report()
-
         logger.debug("Retrieved usage report")
-        return report
 
     except Exception as e:
-        logger.exception(f"Usage report retrieval failed: {e}")
+        logger.exception("Usage report retrieval failed")
         raise HTTPException(
             status_code=500, detail=f"Usage report retrieval failed: {e!s}"
-        )
+        ) from e
+    else:
+        return report
 
 
 # Batch processing function (new functionality)
 @circuit_breaker(CircuitBreakerConfig.enterprise_mode())
 async def batch_generate_embeddings(
-    text_batches: list[List[str]],
+    text_batches: list[list[str]],
     quality_tier: QualityTier | None = None,
     max_parallel: int = 3,
     embedding_client: Annotated[object, Depends(get_embedding_client)] = None,
@@ -338,10 +349,9 @@ async def batch_generate_embeddings(
 
     Raises:
         HTTPException: If batch processing fails
+
     """
     try:
-        import asyncio
-
         semaphore = asyncio.Semaphore(max_parallel)
 
         async def process_batch(texts: list[str]) -> dict[str, Any]:
@@ -360,7 +370,9 @@ async def batch_generate_embeddings(
         processed_results = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                logger.error(f"Batch {i} failed: {result}")
+                logger.error(
+                    f"Batch {i} failed: {result}"
+                )  # TODO: Convert f-string to logging format
                 processed_results.append(
                     {
                         "success": False,
@@ -376,8 +388,10 @@ async def batch_generate_embeddings(
             f"{sum(1 for r in processed_results if r.get('success', True))} successes"
         )
 
-        return processed_results
-
     except Exception as e:
-        logger.exception(f"Batch embedding generation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Batch processing failed: {e!s}")
+        logger.exception("Batch embedding generation failed")
+        raise HTTPException(
+            status_code=500, detail=f"Batch processing failed: {e!s}"
+        ) from e
+    else:
+        return processed_results

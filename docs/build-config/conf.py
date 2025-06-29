@@ -1,6 +1,9 @@
-# Configuration file for the Sphinx documentation builder.
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+"""Sphinx documentation builder configuration.
+
+Configuration file for the Sphinx documentation builder.
+For the full list of built-in configuration values, see the documentation:
+https://www.sphinx-doc.org/en/master/usage/configuration.html
+"""
 
 import sys
 from pathlib import Path
@@ -81,7 +84,7 @@ intersphinx_mapping = {
     "qdrant": ("https://qdrant.tech/", None),
 }
 
-# Todo extension
+# TODO extension
 todo_include_todos = True
 
 # Mock imports for problematic dependencies

@@ -1,23 +1,23 @@
 """Comprehensive tests for chunking module to improve coverage.
 
-This module provides comprehensive test coverage for the EnhancedChunker class,
+This module provides comprehensive test coverage for the DocumentChunker class,
 following 2025 standardized patterns with proper type annotations, standardized
 assertions, and modern test patterns.
 """
 
 import pytest
 
-from src.chunking import EnhancedChunker
+from src.chunking import DocumentChunker
 from src.config.core import ChunkingConfig
 from src.config.enums import ChunkingStrategy
 from src.models.document_processing import Chunk, CodeBlock, CodeLanguage
 from tests.utils.assertion_helpers import assert_valid_document_chunk
 
 
-class TestEnhancedChunker:
-    """Test EnhancedChunker class functionality with standardized patterns.
+class TestDocumentChunker:
+    """Test DocumentChunker class functionality with standardized patterns.
 
-    This test class provides comprehensive coverage of the EnhancedChunker
+    This test class provides comprehensive coverage of the DocumentChunker
     functionality using modern pytest patterns, proper type annotations,
     and standardized assertion helpers.
     """
@@ -38,27 +38,27 @@ class TestEnhancedChunker:
         )
 
     @pytest.fixture
-    def chunker(self, chunker_config: ChunkingConfig) -> EnhancedChunker:
-        """Create an EnhancedChunker instance for testing.
+    def chunker(self, chunker_config: ChunkingConfig) -> DocumentChunker:
+        """Create an DocumentChunker instance for testing.
 
         Args:
             chunker_config: Configuration for the chunker
 
         Returns:
-            EnhancedChunker instance ready for testing
+            DocumentChunker instance ready for testing
         """
-        return EnhancedChunker(chunker_config)
+        return DocumentChunker(chunker_config)
 
     def test_chunker_initialization(self, chunker_config: ChunkingConfig) -> None:
-        """Test EnhancedChunker initialization.
+        """Test DocumentChunker initialization.
 
-        Verifies that the EnhancedChunker properly initializes with the provided
+        Verifies that the DocumentChunker properly initializes with the provided
         configuration and exposes the correct configuration properties.
 
         Args:
             chunker_config: Test configuration for the chunker
         """
-        chunker = EnhancedChunker(chunker_config)
+        chunker = DocumentChunker(chunker_config)
 
         assert chunker.config == chunker_config
         assert chunker.config.chunk_size == 1000
@@ -67,14 +67,14 @@ class TestEnhancedChunker:
         assert chunker.config.max_chunk_size == 2000
         assert isinstance(chunker.parsers, dict)
 
-    def test_initialize_parsers(self, chunker: EnhancedChunker) -> None:
+    def test_initialize_parsers(self, chunker: DocumentChunker) -> None:
         """Test parser initialization.
 
         Verifies that parser initialization completes without errors and
         creates the necessary parser infrastructure.
 
         Args:
-            chunker: EnhancedChunker instance for testing
+            chunker: DocumentChunker instance for testing
         """
         chunker._initialize_parsers()
 
@@ -82,7 +82,7 @@ class TestEnhancedChunker:
         assert True
 
     @pytest.mark.parametrize(
-        "url,expected_lang",
+        ("url", "expected_lang"),
         [
             ("test.py", "python"),
             ("test.js", "javascript"),
@@ -94,7 +94,7 @@ class TestEnhancedChunker:
         ],
     )
     def test_detect_language_from_url(
-        self, chunker: EnhancedChunker, url: str, expected_lang: str
+        self, chunker: DocumentChunker, url: str, expected_lang: str
     ) -> None:
         """Test language detection from URL using parametrized test cases.
 
@@ -102,21 +102,21 @@ class TestEnhancedChunker:
         based on file extensions in URLs.
 
         Args:
-            chunker: EnhancedChunker instance for testing
+            chunker: DocumentChunker instance for testing
             url: URL or filename to test
             expected_lang: Expected detected language
         """
         result = chunker._detect_language_from_url(url)
         assert result == expected_lang
 
-    def test_detect_language_from_code_fences(self, chunker: EnhancedChunker) -> None:
+    def test_detect_language_from_code_fences(self, chunker: DocumentChunker) -> None:
         """Test language detection from code fences.
 
         Verifies that the chunker correctly identifies programming languages
         from code fence markers in markdown-style content.
 
         Args:
-            chunker: EnhancedChunker instance for testing
+            chunker: DocumentChunker instance for testing
         """
         # Test Python code fence detection
         content_with_python = """
@@ -148,17 +148,17 @@ class TestEnhancedChunker:
         result = chunker._detect_language_from_code_fences(content_without_fences)
         assert result == "unknown"
 
-    def test_detect_language_from_patterns(self, chunker: EnhancedChunker) -> None:
+    def test_detect_language_from_patterns(self, chunker: DocumentChunker) -> None:
         """Test language detection from code patterns.
 
         Verifies that the chunker can identify programming languages
         based on syntax patterns and keywords in the content.
 
         Args:
-            chunker: EnhancedChunker instance for testing
+            chunker: DocumentChunker instance for testing
         """
         # Test Python pattern detection
-        python_code = """import os
+        python_code = """import os  # noqa: PLC0415
 from pathlib import Path
 
 def hello_world():
@@ -185,14 +185,14 @@ var anotherVar = "test";
         result = chunker._detect_language_from_patterns(plain_text)
         assert result == "unknown"
 
-    def test_detect_language(self, chunker: EnhancedChunker) -> None:
+    def test_detect_language(self, chunker: DocumentChunker) -> None:
         """Test overall language detection method.
 
         Verifies that the main language detection method properly combines
         URL hints, code fences, and pattern matching for accurate detection.
 
         Args:
-            chunker: EnhancedChunker instance for testing
+            chunker: DocumentChunker instance for testing
         """
         # Test with URL hint
         result = chunker._detect_language("def hello(): pass", "test.py")
@@ -213,14 +213,14 @@ var anotherVar = "test";
         result = chunker._detect_language("const test = () => { return true; }")
         assert result == "javascript"
 
-    def test_find_code_blocks(self, chunker: EnhancedChunker) -> None:
+    def test_find_code_blocks(self, chunker: DocumentChunker) -> None:
         """Test finding code blocks in content.
 
         Verifies that the chunker correctly identifies and extracts
         code blocks from mixed content with proper language detection.
 
         Args:
-            chunker: EnhancedChunker instance for testing
+            chunker: DocumentChunker instance for testing
         """
         content = """
         Here is some text.
@@ -249,14 +249,14 @@ var anotherVar = "test";
         assert code_blocks[1].language == CodeLanguage.JAVASCRIPT
         assert "function world()" in code_blocks[1].content
 
-    def test_basic_chunking(self, chunker: EnhancedChunker) -> None:
+    def test_basic_chunking(self, chunker: DocumentChunker) -> None:
         """Test basic chunking functionality.
 
         Verifies that basic chunking properly splits long text into
         appropriately sized chunks while respecting size constraints.
 
         Args:
-            chunker: EnhancedChunker instance for testing
+            chunker: DocumentChunker instance for testing
         """
         # Create a long text that needs chunking
         long_text = "This is a sentence. " * 100  # ~2000 characters
@@ -277,14 +277,14 @@ var anotherVar = "test";
             assert chunk.start_pos >= 0
             assert chunk.end_pos > chunk.start_pos
 
-    def test_chunk_content_with_text(self, chunker: EnhancedChunker) -> None:
+    def test_chunk_content_with_text(self, chunker: DocumentChunker) -> None:
         """Test chunk_content method with plain text.
 
         Verifies that the main chunking method properly processes plain
         text content and returns well-formed chunks.
 
         Args:
-            chunker: EnhancedChunker instance for testing
+            chunker: DocumentChunker instance for testing
         """
         text = "This is a simple text that should be chunked properly. " * 20
 
@@ -298,14 +298,14 @@ var anotherVar = "test";
         for chunk in chunks:
             assert_valid_document_chunk(chunk)
 
-    def test_chunk_content_with_code(self, chunker: EnhancedChunker) -> None:
+    def test_chunk_content_with_code(self, chunker: DocumentChunker) -> None:
         """Test chunk_content method with code content.
 
         Verifies that the chunker properly handles code content,
         respecting function boundaries and maintaining code structure.
 
         Args:
-            chunker: EnhancedChunker instance for testing
+            chunker: DocumentChunker instance for testing
         """
         python_code = """
         def function1():
@@ -342,14 +342,14 @@ var anotherVar = "test";
             if hasattr(chunk, "language"):
                 assert chunk.language in ["python", None]
 
-    def test_find_text_boundary(self, chunker: EnhancedChunker) -> None:
+    def test_find_text_boundary(self, chunker: DocumentChunker) -> None:
         """Test finding text boundaries for chunking.
 
         Verifies that the chunker correctly identifies appropriate
         text boundaries for splitting content.
 
         Args:
-            chunker: EnhancedChunker instance for testing
+            chunker: DocumentChunker instance for testing
         """
         text = "First sentence. Second sentence. Third sentence. Fourth sentence."
 
@@ -361,14 +361,14 @@ var anotherVar = "test";
         # Boundary should be at a sentence end
         assert text[boundary - 1] in ".!?" or text[boundary] == " "
 
-    def test_find_enhanced_boundary(self, chunker: EnhancedChunker) -> None:
+    def test_find_semantic_boundary(self, chunker: DocumentChunker) -> None:
         """Test finding enhanced boundaries in code.
 
         Verifies that the chunker can identify appropriate boundaries
         in code content, preferring function boundaries when possible.
 
         Args:
-            chunker: EnhancedChunker instance for testing
+            chunker: DocumentChunker instance for testing
         """
         code = """
         def function1():
@@ -388,14 +388,14 @@ var anotherVar = "test";
             "def",
         ]
 
-    def test_format_chunks(self, chunker: EnhancedChunker) -> None:
+    def test_format_chunks(self, chunker: DocumentChunker) -> None:
         """Test chunk formatting.
 
         Verifies that raw chunk data is properly formatted into
         structured Chunk objects with correct metadata.
 
         Args:
-            chunker: EnhancedChunker instance for testing
+            chunker: DocumentChunker instance for testing
         """
         raw_chunks = [
             ("First chunk content", 0, 20),
@@ -421,14 +421,14 @@ var anotherVar = "test";
             )
             assert chunk.chunk_index == i
 
-    def test_get_current_code_block(self, chunker: EnhancedChunker) -> None:
+    def test_get_current_code_block(self, chunker: DocumentChunker) -> None:
         """Test getting current code block at position.
 
         Verifies that the chunker correctly identifies which code block
         contains a given position in the content.
 
         Args:
-            chunker: EnhancedChunker instance for testing
+            chunker: DocumentChunker instance for testing
         """
         code_blocks = [
             CodeBlock(
@@ -447,14 +447,14 @@ var anotherVar = "test";
         current_block = chunker._get_current_code_block(code_blocks, 25)
         assert current_block is None
 
-    def test_get_next_code_block(self, chunker: EnhancedChunker) -> None:
+    def test_get_next_code_block(self, chunker: DocumentChunker) -> None:
         """Test getting next code block after position.
 
         Verifies that the chunker correctly finds the next code block
         that appears after a given position in the content.
 
         Args:
-            chunker: EnhancedChunker instance for testing
+            chunker: DocumentChunker instance for testing
         """
         code_blocks = [
             CodeBlock(
@@ -477,14 +477,14 @@ var anotherVar = "test";
         next_block = chunker._get_next_code_block(code_blocks, 50)
         assert next_block is None
 
-    def test_handle_code_block_as_chunk(self, chunker: EnhancedChunker) -> None:
+    def test_handle_code_block_as_chunk(self, chunker: DocumentChunker) -> None:
         """Test handling code blocks as chunks.
 
         Verifies that code blocks are properly converted into chunks
         and added to the chunk collection.
 
         Args:
-            chunker: EnhancedChunker instance for testing
+            chunker: DocumentChunker instance for testing
         """
         content = "Some text\n```python\ndef hello():\n    pass\n```\nMore text"
         chunks: list[Chunk] = []
@@ -513,7 +513,7 @@ var anotherVar = "test";
             )
 
 
-class TestEnhancedChunkerEdgeCases:
+class TestDocumentChunkerEdgeCases:
     """Test edge cases and error conditions with standardized patterns.
 
     This test class focuses on boundary conditions, error handling,
@@ -521,14 +521,14 @@ class TestEnhancedChunkerEdgeCases:
     """
 
     @pytest.fixture
-    def chunker(self) -> EnhancedChunker:
+    def chunker(self) -> DocumentChunker:
         """Create chunker with default config.
 
         Returns:
-            EnhancedChunker instance configured with default settings
+            DocumentChunker instance configured with default settings
         """
         config = ChunkingConfig()
-        return EnhancedChunker(config)
+        return DocumentChunker(config)
 
     def test_empty_content(self, chunker):
         """Test chunking empty content."""
@@ -606,7 +606,7 @@ class TestChunkingStrategies:
     def test_smart_chunking_strategy(self):
         """Test smart chunking strategy."""
         config = ChunkingConfig(strategy=ChunkingStrategy.ENHANCED)
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         code_content = """
         def function1():
@@ -624,7 +624,7 @@ class TestChunkingStrategies:
     def test_fixed_size_chunking_strategy(self):
         """Test fixed size chunking strategy."""
         config = ChunkingConfig(strategy=ChunkingStrategy.BASIC)
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         long_text = "This is a sentence. " * 100
 
@@ -638,7 +638,7 @@ class TestChunkingStrategies:
     def test_sentence_chunking_strategy(self):
         """Test sentence-based chunking strategy."""
         config = ChunkingConfig(strategy=ChunkingStrategy.AST_AWARE)
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         text = "First sentence. Second sentence. Third sentence. Fourth sentence."
 
@@ -652,7 +652,7 @@ class TestCodeLanguageDetection:
     @pytest.fixture
     def chunker(self):
         config = ChunkingConfig()
-        return EnhancedChunker(config)
+        return DocumentChunker(config)
 
     def test_python_detection(self, chunker):
         """Test Python code detection."""
@@ -725,7 +725,7 @@ class TestPerformanceAndLimits:
     def test_large_content_handling(self):
         """Test handling of large content."""
         config = ChunkingConfig(chunk_size=1000, max_chunk_size=2000)
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         # Create large content (10KB)
         large_content = "This is a test sentence. " * 400
@@ -738,16 +738,17 @@ class TestPerformanceAndLimits:
     def test_many_small_functions(self):
         """Test chunking content with many small functions."""
         config = ChunkingConfig()
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         # Generate many small functions
-        functions = []
-        for i in range(50):
-            functions.append(f"""
+        functions = [
+            f"""
 def function_{i}():
     '''Function number {i}'''
     return {i}
-""")
+"""
+            for i in range(50)
+        ]
 
         code_content = "\n".join(functions)
         chunks = chunker.chunk_content(code_content, "test.py")
@@ -758,7 +759,7 @@ def function_{i}():
     def test_deeply_nested_code(self):
         """Test chunking deeply nested code."""
         config = ChunkingConfig()
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         # Create deeply nested code
         nested_code = "if True:\n"
@@ -776,7 +777,7 @@ class TestChunkValidation:
     def test_chunk_properties(self):
         """Test that chunks have required properties."""
         config = ChunkingConfig()
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         content = "Test content for chunking validation."
         chunks = chunker.chunk_content(content, "test.txt")
@@ -793,7 +794,7 @@ class TestChunkValidation:
     def test_chunk_overlap_preservation(self):
         """Test that chunk overlap is preserved correctly."""
         config = ChunkingConfig(chunk_size=100, chunk_overlap=20)
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         # Create content that will definitely need multiple chunks
         content = "Word " * 50  # ~250 characters
@@ -823,7 +824,7 @@ class TestErrorHandling:
     def test_none_content(self):
         """Test handling of None content."""
         config = ChunkingConfig()
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         with pytest.raises((TypeError, AttributeError)):
             chunker.chunk_content(None, "test.txt")
@@ -831,7 +832,7 @@ class TestErrorHandling:
     def test_non_string_content(self):
         """Test handling of non-string content."""
         config = ChunkingConfig()
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         with pytest.raises((TypeError, AttributeError)):
             chunker.chunk_content(123, "test.txt")
@@ -839,7 +840,7 @@ class TestErrorHandling:
     def test_invalid_url(self):
         """Test handling of invalid URL."""
         config = ChunkingConfig()
-        chunker = EnhancedChunker(config)
+        chunker = DocumentChunker(config)
 
         # Should handle gracefully
         chunks = chunker.chunk_content("test content", None)

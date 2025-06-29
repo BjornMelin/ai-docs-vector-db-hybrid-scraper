@@ -4,8 +4,11 @@ import logging
 from typing import Any
 
 from src.config import Config
-
-from ..errors import CrawlServiceError
+from src.services.browser.unified_manager import (
+    UnifiedBrowserManager,
+    UnifiedScrapingRequest,
+)
+from src.services.errors import CrawlServiceError
 
 
 logger = logging.getLogger(__name__)
@@ -25,6 +28,7 @@ class CrawlManager:
         Args:
             config: Unified configuration with crawl provider settings
             rate_limiter: Optional RateLimitManager instance for rate limiting
+
         """
         self.config = config
         self.rate_limiter = rate_limiter
@@ -43,13 +47,12 @@ class CrawlManager:
 
         Raises:
             CrawlServiceError: If UnifiedBrowserManager initialization fails
+
         """
         if self._initialized:
             return
 
         try:
-            from ..browser.unified_manager import UnifiedBrowserManager
-
             self._unified_browser_manager = UnifiedBrowserManager(self.config)
             await self._unified_browser_manager.initialize()
 
@@ -57,8 +60,9 @@ class CrawlManager:
             logger.info("CrawlManager initialized with 5-tier UnifiedBrowserManager")
 
         except Exception as e:
-            logger.exception(f"Failed to initialize UnifiedBrowserManager: {e}")
-            raise CrawlServiceError(f"Failed to initialize crawl manager: {e}") from e
+            logger.exception("Failed to initialize UnifiedBrowserManager")
+            msg = "Failed to initialize crawl manager"
+            raise CrawlServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup the UnifiedBrowserManager."""
@@ -66,8 +70,8 @@ class CrawlManager:
             try:
                 await self._unified_browser_manager.cleanup()
                 logger.info("Cleaned up UnifiedBrowserManager")
-            except Exception as e:
-                logger.exception(f"Error cleaning up UnifiedBrowserManager: {e}")
+            except Exception:
+                logger.exception("Error cleaning up UnifiedBrowserManager")
 
             self._unified_browser_manager = None
 
@@ -102,14 +106,14 @@ class CrawlManager:
 
         Raises:
             CrawlServiceError: If manager not initialized
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Manager not initialized")
+            msg = "Manager not initialized"
+            raise CrawlServiceError(msg)
 
         try:
             # Create unified request
-            from ..browser.unified_manager import UnifiedScrapingRequest
-
             request = UnifiedScrapingRequest(
                 url=url,
                 tier=preferred_provider if preferred_provider else "auto",
@@ -135,11 +139,11 @@ class CrawlManager:
                 "failed_tiers": result.failed_tiers,
             }
 
-        except Exception as e:
-            logger.exception(f"UnifiedBrowserManager failed for {url}: {e}")
+        except Exception:
+            logger.exception("UnifiedBrowserManager failed for {url}")
             return {
                 "success": False,
-                "error": f"UnifiedBrowserManager error: {e!s}",
+                "error": "UnifiedBrowserManager error",
                 "content": "",
                 "url": url,
                 "title": "",
@@ -154,6 +158,7 @@ class CrawlManager:
 
         Returns:
             Dictionary with metrics for each tier including success rates and timing
+
         """
         if not self._unified_browser_manager:
             return {}
@@ -170,6 +175,7 @@ class CrawlManager:
 
         Returns:
             Recommended tool name based on UnifiedBrowserManager analysis
+
         """
         if not self._unified_browser_manager:
             return "crawl4ai"  # Default fallback
@@ -201,11 +207,15 @@ class CrawlManager:
 
         Raises:
             CrawlServiceError: If manager not initialized
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Manager not initialized")
+            msg = "Manager not initialized"
+            raise CrawlServiceError(msg)
 
-        logger.info(f"Starting site crawl of {url} with max {max_pages} pages")
+        logger.info(
+            f"Starting site crawl of {url} with max {max_pages} pages"
+        )  # TODO: Convert f-string to logging format
 
         try:
             # Simple site crawling implementation using AutomationRouter
@@ -255,9 +265,7 @@ class CrawlManager:
                                 ):
                                     urls_to_crawl.append(link_url)
                 else:
-                    logger.warning(
-                        f"Failed to scrape {current_url}: {result.get('error', 'Unknown error')}"
-                    )
+                    logger.warning("Failed to scrape {current_url}")
 
             return {
                 "success": len(pages) > 0,
@@ -267,11 +275,11 @@ class CrawlManager:
                 "error": None if pages else "No pages could be crawled",
             }
 
-        except Exception as e:
-            logger.exception(f"Site crawl failed for {url}: {e}")
+        except Exception:
+            logger.exception("Site crawl failed for {url}")
             return {
                 "success": False,
-                "error": f"Site crawl error: {e!s}",
+                "error": "Site crawl error",
                 "pages": [],
                 "total_pages": 0,
                 "provider": "none",
@@ -282,6 +290,7 @@ class CrawlManager:
 
         Returns:
             Tool information including tier assignments and metrics
+
         """
         if not self._unified_browser_manager:
             return {}
@@ -330,6 +339,7 @@ class CrawlManager:
 
         Returns:
             Tier performance metrics for all 5 tiers
+
         """
         if not self._unified_browser_manager:
             return {}
@@ -339,7 +349,7 @@ class CrawlManager:
         return {tier: metrics.dict() for tier, metrics in tier_metrics.items()}
 
     async def map_url(
-        self, url: str, include_subdomains: bool = False
+        self, _url: str, _include_subdomains: bool = False
     ) -> dict[str, object]:
         """Map a website to get list of URLs.
 
@@ -355,9 +365,11 @@ class CrawlManager:
                 - urls: List of discovered URLs
                 - total: Total number of URLs found
                 - error: Error message if mapping failed
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Manager not initialized")
+            msg = "Manager not initialized"
+            raise CrawlServiceError(msg)
 
         # URL mapping feature is not currently supported through AutomationRouter
         # This would require direct access to Firecrawl adapter

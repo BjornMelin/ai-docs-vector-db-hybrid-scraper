@@ -77,7 +77,7 @@ class TestModelSelector:
             assert isinstance(model_info["specializations"], list)
 
     @pytest.mark.parametrize(
-        "query_type,expected_models",
+        ("query_type", "expected_models"),
         [
             (QueryType.CODE, ["code-search-net", EmbeddingModel.NV_EMBED_V2.value]),
             (QueryType.MULTIMODAL, ["clip-vit-base-patch32"]),
@@ -110,7 +110,7 @@ class TestModelSelector:
                 assert expected_model in candidates
 
     @pytest.mark.parametrize(
-        "optimization_strategy,expected_weight_priority",
+        ("optimization_strategy", "expected_weight_priority"),
         [
             (OptimizationStrategy.QUALITY_OPTIMIZED, "quality_score"),
             (OptimizationStrategy.SPEED_OPTIMIZED, "latency_ms"),
@@ -227,9 +227,9 @@ class TestModelSelector:
     async def test_ensemble_weights_calculation(self, selector):
         """Test ensemble weights calculation."""
         scored_candidates = [
-            {"model_id": "model1", "total_score": 0.8},
-            {"model_id": "model2", "total_score": 0.6},
-            {"model_id": "model3", "total_score": 0.1},  # Below threshold
+            {"model_id": "model1", "_total_score": 0.8},
+            {"model_id": "model2", "_total_score": 0.6},
+            {"model_id": "model3", "_total_score": 0.1},  # Below threshold
         ]
 
         weights = selector._calculate_ensemble_weights(scored_candidates)
@@ -399,8 +399,9 @@ class TestModelSelector:
         # Mock an error in candidate selection
         original_method = selector._get_candidate_models
 
-        def raise_index_error(x):
-            raise IndexError("Test error")
+        def raise_index_error(_x):
+            msg = "Test error"
+            raise IndexError(msg)
 
         selector._get_candidate_models = raise_index_error
 
@@ -472,7 +473,7 @@ class TestModelSelector:
         """Test handling when no candidates are found."""
         # Mock empty candidates
         original_method = selector._get_candidate_models
-        selector._get_candidate_models = lambda x: []
+        selector._get_candidate_models = lambda _x: []
 
         try:
             selection = await selector.select_optimal_model(sample_query_classification)

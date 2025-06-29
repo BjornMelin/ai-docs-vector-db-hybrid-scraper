@@ -99,7 +99,7 @@ class TestQdrantSearch:
         # Should use single query without fusion when no sparse vector
         call_args = mock_client.query_points.call_args
         assert (
-            "prefetch" not in call_args.kwargs or call_args.kwargs["prefetch"] is None
+            "prefetch" not in call_args._kwargs or call_args._kwargs["prefetch"] is None
         )
 
     async def test_hybrid_search_fusion_dbsf(
@@ -122,7 +122,7 @@ class TestQdrantSearch:
 
         call_args = mock_client.query_points.call_args
         # Should use DBSF fusion
-        assert call_args.kwargs["query"].fusion == models.Fusion.DBSF
+        assert call_args._kwargs["query"].fusion == models.Fusion.DBSF
 
     async def test_hybrid_search_accuracy_levels(
         self, search_service, mock_client, sample_query_vector, mock_search_results
@@ -221,14 +221,16 @@ class TestQdrantSearch:
         assert result[0]["id"] == "point1"
         mock_client.query_points.assert_called_once()
 
-    async def test_multi_stage_search_empty_stages(self, search_service, mock_client):
+    async def test_multi_stage_search_empty_stages(self, search_service, _mock_client):
         """Test multi-stage search with empty stages."""
         with pytest.raises(ValueError, match="Stages list cannot be empty"):
             await search_service.multi_stage_search(
                 collection_name="test_collection", stages=[], limit=10
             )
 
-    async def test_multi_stage_search_invalid_stages(self, search_service, mock_client):
+    async def test_multi_stage_search_invalid_stages(
+        self, search_service, _mock_client
+    ):
         """Test multi-stage search with invalid stages."""
         # Test non-list stages
         with pytest.raises(ValueError, match="Stages must be a list"):
@@ -251,7 +253,7 @@ class TestQdrantSearch:
             )
 
     async def test_multi_stage_search_missing_vector_name(
-        self, search_service, mock_client
+        self, search_service, _mock_client
     ):
         """Test multi-stage search with missing vector_name."""
         stages = [{"query_vector": [0.1, 0.2], "limit": 10}]
@@ -261,7 +263,7 @@ class TestQdrantSearch:
                 collection_name="test_collection", stages=stages, limit=10
             )
 
-    async def test_multi_stage_search_missing_limit(self, search_service, mock_client):
+    async def test_multi_stage_search_missing_limit(self, search_service, _mock_client):
         """Test multi-stage search with missing limit."""
         stages = [{"query_vector": [0.1, 0.2], "vector_name": "dense"}]
 
@@ -334,7 +336,7 @@ class TestQdrantSearch:
         assert len(result) == 3
         assert result[0]["id"] == "point1"
 
-    async def test_filtered_search_invalid_vector(self, search_service, mock_client):
+    async def test_filtered_search_invalid_vector(self, search_service, _mock_client):
         """Test filtered search with invalid query vector."""
         # Test non-list vector
         with pytest.raises(ValueError, match="query_vector must be a list"):
@@ -358,7 +360,7 @@ class TestQdrantSearch:
                 filters={},
             )
 
-    async def test_filtered_search_invalid_filters(self, search_service, mock_client):
+    async def test_filtered_search_invalid_filters(self, search_service, _mock_client):
         """Test filtered search with invalid filters."""
         query_vector = [0.1] * 1536
 
@@ -437,7 +439,7 @@ class TestQdrantSearch:
 
         # Verify that numpy.mean was called implicitly through the averaging logic
         call_args = mock_client.query_points.call_args
-        prefetch_queries = call_args.kwargs.get("prefetch", [])
+        prefetch_queries = call_args._kwargs.get("prefetch", [])
 
         # Should have two prefetch queries (HyDE + original)
         assert len(prefetch_queries) == 2
@@ -456,7 +458,7 @@ class TestQdrantSearch:
         )
 
         call_args = mock_client.query_points.call_args
-        params = call_args.kwargs.get("params")
+        params = call_args._kwargs.get("params")
         assert params.hnsw_ef == 50  # Should match FAST accuracy
 
     async def test_vector_type_enum_handling(

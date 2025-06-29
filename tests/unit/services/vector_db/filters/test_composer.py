@@ -48,13 +48,14 @@ class MockFilter(BaseFilter):
         self.delay = delay
 
     async def apply(
-        self, filter_criteria: dict[str, Any], context: dict[str, Any] | None = None
+        self, _filter_criteria: dict[str, Any], _context: dict[str, Any] | None = None
     ) -> FilterResult:
         """Apply mock filter."""
         self.apply_called = True
 
         if self.should_fail:
-            raise FilterError("Mock filter error", filter_name=self.name)
+            msg = "Mock filter error"
+            raise FilterError(msg, filter_name=self.name)
 
         if self.delay > 0:
             await asyncio.sleep(self.delay)
@@ -720,7 +721,7 @@ class TestFilterComposer:
         assert result.filter_conditions is not None
 
     @pytest.mark.asyncio
-    async def test_empty_filter_list(self, composer):
+    async def test_empty_filter_list(self, _composer):
         """Test composition with empty filter list."""
         # Create a rule with no filters (should be invalid)
         with pytest.raises(ValueError):

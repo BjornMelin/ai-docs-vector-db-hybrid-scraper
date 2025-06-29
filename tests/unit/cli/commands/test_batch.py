@@ -4,8 +4,11 @@ This module tests batch processing operations including file processing,
 progress tracking, confirmations, and Rich console output.
 """
 
+from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import MagicMock
+
+from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from src.cli.commands.batch import batch, complete_collection_name
 
@@ -142,7 +145,6 @@ class TestProgressTracking:
 
     def test_progress_imports_available(self):
         """Test that progress tracking modules can be imported."""
-        from rich.progress import Progress, SpinnerColumn, TextColumn
 
         assert Progress is not None
         assert SpinnerColumn is not None
@@ -154,7 +156,6 @@ class TestBatchOperationQueue:
 
     def test_batch_module_structure(self):
         """Test that batch module has expected structure."""
-        from src.cli.commands.batch import batch
 
         assert batch is not None
         assert hasattr(batch, "commands")
@@ -191,7 +192,6 @@ class TestBatchIntegration:
 
     def test_batch_imports(self):
         """Test that batch module can be imported."""
-        from src.cli.commands.batch import batch, complete_collection_name
 
         assert batch is not None
         assert complete_collection_name is not None
@@ -212,7 +212,10 @@ class TestFileProcessing:
         """Test reading file content for processing."""
         # Test that files can be read
         for file_path in sample_batch_files:
-            with open(file_path) as f:
+            from pathlib import Path
+
+            path_obj = Path(file_path)
+            with path_obj.open() as f:
                 content = f.read()
                 assert len(content) > 0
                 assert "test content" in content.lower()
@@ -223,7 +226,6 @@ class TestDataStructures:
 
     def test_batch_operation_data_structure(self):
         """Test batch operation data structure."""
-        from dataclasses import dataclass
 
         # Test that we can create batch operation data structures
         @dataclass

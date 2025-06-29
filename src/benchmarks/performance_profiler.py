@@ -8,14 +8,14 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import psutil
 from pydantic import BaseModel, Field
 
-from ..models.vector_search import AdvancedHybridSearchRequest
-from ..services.vector_db.hybrid_search import AdvancedHybridSearchService
+from src.models.vector_search import HybridSearchRequest
+from src.services.vector_db.hybrid_search import AdvancedHybridSearchService
 
 
 logger = logging.getLogger(__name__)
@@ -88,6 +88,7 @@ class PerformanceProfiler:
 
         Args:
             sampling_interval: Time between resource samples in seconds
+
         """
         self.sampling_interval = sampling_interval
         self.resource_snapshots: list[ResourceSnapshot] = []
@@ -100,7 +101,7 @@ class PerformanceProfiler:
     async def profile_search_service(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        test_queries: list[HybridSearchRequest],
     ) -> dict[str, Any]:
         """Profile search service performance during query execution.
 
@@ -110,6 +111,7 @@ class PerformanceProfiler:
 
         Returns:
             Comprehensive profiling results
+
         """
         logger.info("Starting performance profiling session")
 
@@ -117,7 +119,7 @@ class PerformanceProfiler:
         profiling_task = asyncio.create_task(self._monitor_resources())
 
         start_time = time.time()
-        start_datetime = datetime.now()
+        start_datetime = datetime.now(tz=UTC)
 
         try:
             # Execute test queries while monitoring
@@ -129,7 +131,7 @@ class PerformanceProfiler:
             await profiling_task
 
         end_time = time.time()
-        end_datetime = datetime.now()
+        end_datetime = datetime.now(tz=UTC)
         duration = end_time - start_time
 
         # Analyze results
@@ -155,7 +157,7 @@ class PerformanceProfiler:
     async def _execute_profiled_queries(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        test_queries: list[HybridSearchRequest],
     ) -> None:
         """Execute queries while profiling is active."""
         # Execute a subset of queries for profiling
@@ -166,19 +168,19 @@ class PerformanceProfiler:
                 # Add some variety to the load
                 if i % 3 == 0:
                     # Concurrent execution for some queries
-                    tasks = [
-                        search_service.advanced_hybrid_search(query) for _ in range(2)
-                    ]
+                    tasks = [search_service.hybrid_search(query) for _ in range(2)]
                     await asyncio.gather(*tasks, return_exceptions=True)
                 else:
                     # Sequential execution
-                    await search_service.advanced_hybrid_search(query)
+                    await search_service.hybrid_search(query)
 
                 # Small delay between queries
                 await asyncio.sleep(0.1)
 
             except Exception as e:
-                logger.debug(f"Query execution failed during profiling: {e}")
+                logger.debug(
+                    f"Query execution failed during profiling: {e}"
+                )  # TODO: Convert f-string to logging format
 
     async def _monitor_resources(self) -> None:
         """Monitor system resources continuously."""
@@ -235,7 +237,9 @@ class PerformanceProfiler:
                 self.resource_snapshots.append(snapshot)
 
             except Exception as e:
-                logger.warning(f"Error collecting resource snapshot: {e}")
+                logger.warning(
+                    f"Error collecting resource snapshot: {e}"
+                )  # TODO: Convert f-string to logging format
 
             await asyncio.sleep(self.sampling_interval)
 
@@ -446,22 +450,18 @@ class PerformanceProfiler:
 
     def get_resource_timeline(self) -> list[dict[str, Any]]:
         """Get detailed resource usage timeline."""
-        timeline = []
-
-        for snapshot in self.resource_snapshots:
-            timeline.append(
-                {
-                    "timestamp": snapshot.timestamp,
-                    "cpu_percent": snapshot.cpu_percent,
-                    "memory_mb": snapshot.memory_mb,
-                    "memory_percent": snapshot.memory_percent,
-                    "threads": snapshot.active_threads,
-                    "disk_read_mb": snapshot.disk_io_read_mb,
-                    "disk_write_mb": snapshot.disk_io_write_mb,
-                }
-            )
-
-        return timeline
+        return [
+            {
+                "timestamp": snapshot.timestamp,
+                "cpu_percent": snapshot.cpu_percent,
+                "memory_mb": snapshot.memory_mb,
+                "memory_percent": snapshot.memory_percent,
+                "threads": snapshot.active_threads,
+                "disk_read_mb": snapshot.disk_io_read_mb,
+                "disk_write_mb": snapshot.disk_io_write_mb,
+            }
+            for snapshot in self.resource_snapshots
+        ]
 
     def clear_snapshots(self) -> None:
         """Clear collected resource snapshots."""

@@ -16,8 +16,7 @@ from bs4 import BeautifulSoup
 from pydantic import BaseModel, Field
 
 from src.config import Config
-
-from ..base import BaseService
+from src.services.base import BaseService
 
 
 logger = logging.getLogger(__name__)
@@ -70,6 +69,7 @@ class LightweightScraper(BaseService):
 
         Args:
             config: Unified configuration instance
+
         """
         super().__init__(config)
         self._client: httpx.AsyncClient | None = None
@@ -147,6 +147,7 @@ class LightweightScraper(BaseService):
 
         Returns:
             ContentAnalysis with decision and confidence score
+
         """
         start_time = time.time()
         analysis = ContentAnalysis(can_handle=False, confidence=0.0)
@@ -172,7 +173,9 @@ class LightweightScraper(BaseService):
                 analysis.size_estimate = head_analysis.get("size_estimate")
 
         except Exception as e:
-            logger.warning(f"Error analyzing URL {url}: {e}")
+            logger.warning(
+                f"Error analyzing URL {url}: {e}"
+            )  # TODO: Convert f-string to logging format
             analysis.reasons.append(f"Analysis error: {e!s}")
 
         elapsed_ms = (time.time() - start_time) * 1000
@@ -190,6 +193,7 @@ class LightweightScraper(BaseService):
 
         Returns:
             Confidence score (0.0 to 1.0)
+
         """
         parsed = urlparse(url)
         path = parsed.path.lower()
@@ -239,6 +243,7 @@ class LightweightScraper(BaseService):
 
         Returns:
             Dictionary with analysis results or None if failed
+
         """
         if not self._client:
             await self.initialize()
@@ -306,7 +311,9 @@ class LightweightScraper(BaseService):
             return analysis
 
         except Exception as e:
-            logger.debug(f"HEAD request failed for {url}: {e}")
+            logger.debug(
+                f"HEAD request failed for {url}: {e}"
+            )  # TODO: Convert f-string to logging format
             return None
 
     async def scrape(self, url: str) -> ScrapedContent | None:
@@ -317,6 +324,7 @@ class LightweightScraper(BaseService):
 
         Returns:
             ScrapedContent if successful, None if content should escalate to higher tier
+
         """
         start_time = time.time()
 
@@ -353,15 +361,21 @@ class LightweightScraper(BaseService):
             )
 
         except httpx.TimeoutException:
-            logger.debug(f"Timeout for {url}, may need browser automation")
+            logger.debug(
+                f"Timeout for {url}, may need browser automation"
+            )  # TODO: Convert f-string to logging format
             return None
         except httpx.HTTPStatusError as e:
             if e.response.status_code in [403, 429, 503]:
-                logger.debug(f"Anti-bot protection detected for {url}, escalating")
+                logger.debug(
+                    f"Anti-bot protection detected for {url}, escalating"
+                )  # TODO: Convert f-string to logging format
                 return None
             raise
         except Exception as e:
-            logger.warning(f"Error scraping {url}: {e}")
+            logger.warning(
+                f"Error scraping {url}: {e}"
+            )  # TODO: Convert f-string to logging format
             return None
 
     def _extract_content(self, html: str, url: str) -> dict[str, Any]:
@@ -373,6 +387,7 @@ class LightweightScraper(BaseService):
 
         Returns:
             Dictionary with extracted content
+
         """
         # Use lxml parser for maximum performance
         soup = BeautifulSoup(html, "lxml")
@@ -419,6 +434,7 @@ class LightweightScraper(BaseService):
 
         Returns:
             BeautifulSoup object with main content
+
         """
         # Try common content selectors in order of specificity
         selectors = [
@@ -457,6 +473,7 @@ class LightweightScraper(BaseService):
 
         Returns:
             List of heading dictionaries
+
         """
         headings = []
         for heading in content.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):
@@ -484,6 +501,7 @@ class LightweightScraper(BaseService):
 
         Returns:
             List of link dictionaries
+
         """
         links = []
         for link in content.find_all("a", href=True):
@@ -523,6 +541,7 @@ class LightweightScraper(BaseService):
 
         Returns:
             Cleaned text string
+
         """
         # Remove script and style elements
         for script in content(["script", "style", "noscript"]):
@@ -547,6 +566,7 @@ class LightweightScraper(BaseService):
 
         Returns:
             Dictionary with metadata
+
         """
         metadata = {}
 
@@ -572,6 +592,7 @@ class LightweightScraper(BaseService):
 
         Returns:
             True if content is sufficient, False to escalate
+
         """
         text_length = len(content["text"])
 

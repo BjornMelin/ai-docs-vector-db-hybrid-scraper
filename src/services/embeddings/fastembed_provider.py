@@ -12,8 +12,9 @@ except ImportError:
     TextEmbedding = None
     SparseTextEmbedding = None
 
-from ..errors import EmbeddingServiceError
-from ..monitoring.metrics import get_metrics_registry
+from src.services.errors import EmbeddingServiceError
+from src.services.monitoring.metrics import get_metrics_registry
+
 from .base import EmbeddingProvider
 
 
@@ -82,12 +83,14 @@ class FastEmbedProvider(EmbeddingProvider):
 
         Args:
             model_name: Name of the FastEmbed model
+
         """
         if model_name not in self.SUPPORTED_MODELS:
-            raise EmbeddingServiceError(
+            msg = (
                 f"Unsupported model: {model_name}. "
                 f"Supported models: {list(self.SUPPORTED_MODELS.keys())}"
             )
+            raise EmbeddingServiceError(msg)
 
         super().__init__(model_name)
         self._model: TextEmbedding | None = None
@@ -126,7 +129,8 @@ class FastEmbedProvider(EmbeddingProvider):
                 f"({self._description})"
             )
         except Exception as e:
-            raise EmbeddingServiceError(f"Failed to initialize FastEmbed: {e}") from e
+            msg = f"Failed to initialize FastEmbed: {e}"
+            raise EmbeddingServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup FastEmbed resources."""
@@ -145,6 +149,7 @@ class FastEmbedProvider(EmbeddingProvider):
 
         Returns:
             List of embedding vectors
+
         """
         # Monitor embedding generation
         if self.metrics_registry:
@@ -156,15 +161,15 @@ class FastEmbedProvider(EmbeddingProvider):
                 return await self._execute_embedding_generation(texts, batch_size)
 
             return await decorator(_monitored_generation)()
-        else:
-            return await self._execute_embedding_generation(texts, batch_size)
+        return await self._execute_embedding_generation(texts, batch_size)
 
     async def _execute_embedding_generation(
-        self, texts: list[str], batch_size: int | None = None
+        self, texts: list[str], _batch_size: int | None = None
     ) -> list[list[float]]:
         """Execute the actual embedding generation."""
         if not self._initialized:
-            raise EmbeddingServiceError("Provider not initialized")
+            msg = "Provider not initialized"
+            raise EmbeddingServiceError(msg)
 
         if not texts:
             return []
@@ -181,11 +186,14 @@ class FastEmbedProvider(EmbeddingProvider):
                 else:
                     embeddings.append(list(embedding))
 
-            logger.debug(f"Generated {len(embeddings)} embeddings locally")
+            logger.debug(
+                f"Generated {len(embeddings)} embeddings locally"
+            )  # TODO: Convert f-string to logging format
             return embeddings
 
         except Exception as e:
-            raise EmbeddingServiceError(f"Failed to generate embeddings: {e}") from e
+            msg = f"Failed to generate embeddings: {e}"
+            raise EmbeddingServiceError(msg) from e
 
     async def generate_sparse_embeddings(
         self, texts: list[str]
@@ -197,18 +205,23 @@ class FastEmbedProvider(EmbeddingProvider):
 
         Returns:
             List of sparse embeddings with indices and values
+
         """
         if not self._initialized:
-            raise EmbeddingServiceError("Provider not initialized")
+            msg = "Provider not initialized"
+            raise EmbeddingServiceError(msg)
 
         if SparseTextEmbedding is None:
-            raise EmbeddingServiceError("Sparse embedding support not available")
+            msg = "Sparse embedding support not available"
+            raise EmbeddingServiceError(msg)
 
         try:
             # Initialize sparse model if needed
             if self._sparse_model is None:
                 self._sparse_model = SparseTextEmbedding(self._sparse_model_name)
-                logger.info(f"Initialized sparse model: {self._sparse_model_name}")
+                logger.info(
+                    f"Initialized sparse model: {self._sparse_model_name}"
+                )  # TODO: Convert f-string to logging format
 
             # Generate sparse embeddings
             sparse_embeddings = []
@@ -221,9 +234,8 @@ class FastEmbedProvider(EmbeddingProvider):
 
             return sparse_embeddings
         except Exception as e:
-            raise EmbeddingServiceError(
-                f"Sparse embedding generation failed: {e}"
-            ) from e
+            msg = f"Sparse embedding generation failed: {e}"
+            raise EmbeddingServiceError(msg) from e
 
     @property
     def cost_per_token(self) -> float:
@@ -241,6 +253,7 @@ class FastEmbedProvider(EmbeddingProvider):
 
         Returns:
             List of model names
+
         """
         return list(cls.SUPPORTED_MODELS.keys())
 
@@ -253,7 +266,9 @@ class FastEmbedProvider(EmbeddingProvider):
 
         Returns:
             Model information dictionary
+
         """
         if model_name not in cls.SUPPORTED_MODELS:
-            raise ValueError(f"Unknown model: {model_name}")
+            msg = f"Unknown model: {model_name}"
+            raise ValueError(msg)
         return cls.SUPPORTED_MODELS[model_name]

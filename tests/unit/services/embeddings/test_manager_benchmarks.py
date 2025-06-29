@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.config import Config
-from src.services.embeddings.manager import EmbeddingManager
+from src.services.embeddings.manager import EmbeddingManager, TextAnalysis
 
 
 class TestEmbeddingManagerBenchmarks:
@@ -113,7 +113,7 @@ class TestEmbeddingManagerBenchmarks:
         }
 
         benchmark_file = tmp_path / "custom_benchmarks.json"
-        with open(benchmark_file, "w") as f:
+        with benchmark_file.open("w") as f:
             json.dump(custom_data, f)
 
         # Load custom benchmarks
@@ -160,7 +160,7 @@ class TestEmbeddingManagerBenchmarks:
 
         # Create file with invalid JSON
         benchmark_file = tmp_path / "invalid.json"
-        with open(benchmark_file, "w") as f:
+        with benchmark_file.open("w") as f:
             f.write("{ invalid json")
 
         with pytest.raises(json.JSONDecodeError):
@@ -181,7 +181,7 @@ class TestEmbeddingManagerBenchmarks:
 
         # Create file with invalid schema
         benchmark_file = tmp_path / "invalid_schema.json"
-        with open(benchmark_file, "w") as f:
+        with benchmark_file.open("w") as f:
             json.dump({"invalid": "schema"}, f)
 
         # Try to load invalid benchmarks
@@ -236,7 +236,7 @@ class TestEmbeddingManagerBenchmarks:
         }
 
         benchmark_file = tmp_path / "benchmarks.json"
-        with open(benchmark_file, "w") as f:
+        with benchmark_file.open("w") as f:
             json.dump(custom_data, f)
 
         # Load benchmarks
@@ -295,17 +295,16 @@ class TestEmbeddingManagerBenchmarks:
         }
 
         benchmark_file = tmp_path / "custom.json"
-        with open(benchmark_file, "w") as f:
+        with benchmark_file.open("w") as f:
             json.dump(custom_data, f)
 
         # Load benchmarks
         manager.load_custom_benchmarks(benchmark_file)
 
         # Create mock text analysis
-        from src.services.embeddings.manager import TextAnalysis
 
         text_analysis = TextAnalysis(
-            total_length=500,
+            _total_length=500,
             avg_length=100,
             complexity_score=0.5,
             estimated_tokens=125,

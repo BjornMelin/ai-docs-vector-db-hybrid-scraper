@@ -10,6 +10,7 @@ Run with: pytest tests/benchmarks/ --benchmark-only
 """
 
 import asyncio
+import logging
 
 import pytest
 from sqlalchemy import text
@@ -17,6 +18,9 @@ from sqlalchemy import text
 from src.config.core import Config
 from src.infrastructure.database import DatabaseManager, LoadMonitor, QueryMonitor
 from src.infrastructure.shared import CircuitBreaker
+
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -220,8 +224,11 @@ class TestDatabasePerformance:
                                 result = await session.execute(text("SELECT 1"))
                                 result.fetchone()
                                 query_count += 1
-                        except Exception:
-                            pass  # Count failures but continue
+                        except Exception as e:
+                            # Count failures but continue - expected during stress testing
+                            logger.debug(
+                                f"Query failed during stress test: {e}"
+                            )  # TODO: Convert f-string to logging format
 
                         # Small delay to prevent overwhelming
                         await asyncio.sleep(0.001)
@@ -230,8 +237,8 @@ class TestDatabasePerformance:
                 workers = [query_worker() for _ in range(5)]
                 await asyncio.gather(*workers)
 
-                total_time = asyncio.get_event_loop().time() - start_time
-                throughput_qps = query_count / total_time
+                _total_time = asyncio.get_event_loop().time() - start_time
+                throughput_qps = query_count / _total_time
 
                 return throughput_qps
 
@@ -276,8 +283,10 @@ class TestEnterpriseFeatures:
                     try:
                         async with database_manager.session() as session:
                             await session.execute(text("SELECT 1"))  # Simplified query
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug(
+                            f"Query pattern failed: {e}"
+                        )  # TODO: Convert f-string to logging format
 
                 # Get query performance summary
                 summary = await database_manager.query_monitor.get_performance_summary()

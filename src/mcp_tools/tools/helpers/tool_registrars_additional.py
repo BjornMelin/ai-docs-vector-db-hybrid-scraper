@@ -29,8 +29,7 @@ def register_pipeline_health_tool(mcp, factory: QueryProcessingPipelineFactory):
 
     @mcp.tool()
     async def get_processing_pipeline_health(ctx: Context) -> dict:
-        """
-        Get health status of the advanced query processing pipeline.
+        """Get health status of the advanced query processing pipeline.
 
         Returns detailed health information for all pipeline components including
         orchestrator, intent classifier, preprocessor, and strategy selector.
@@ -53,8 +52,8 @@ def register_pipeline_health_tool(mcp, factory: QueryProcessingPipelineFactory):
             return health_status
 
         except Exception as e:
-            await ctx.error(f"Pipeline health check {request_id} failed: {e}")
-            logger.exception(f"Pipeline health check failed: {e}")
+            await ctx.error("Pipeline health check {request_id} failed")
+            logger.exception("Pipeline health check failed")
             return {
                 "pipeline_healthy": False,
                 "error": str(e),
@@ -67,8 +66,7 @@ def register_pipeline_metrics_tool(mcp, factory: QueryProcessingPipelineFactory)
 
     @mcp.tool()
     async def get_processing_pipeline_metrics(ctx: Context) -> dict:
-        """
-        Get performance metrics from the advanced query processing pipeline.
+        """Get performance metrics from the advanced query processing pipeline.
 
         Returns comprehensive performance statistics including processing times,
         strategy usage, success rates, and fallback utilization.
@@ -88,8 +86,8 @@ def register_pipeline_metrics_tool(mcp, factory: QueryProcessingPipelineFactory)
             return metrics
 
         except Exception as e:
-            await ctx.error(f"Pipeline metrics collection {request_id} failed: {e}")
-            logger.exception(f"Pipeline metrics collection failed: {e}")
+            await ctx.error("Pipeline metrics collection {request_id} failed")
+            logger.exception("Pipeline metrics collection failed")
             return {"error": str(e), "metrics_available": False}
 
 
@@ -98,8 +96,7 @@ def register_pipeline_warmup_tool(mcp, factory: QueryProcessingPipelineFactory):
 
     @mcp.tool()
     async def warm_up_processing_pipeline(ctx: Context) -> dict:
-        """
-        Warm up the advanced query processing pipeline.
+        """Warm up the advanced query processing pipeline.
 
         Pre-loads models and caches by processing test queries to ensure
         optimal performance for subsequent real queries.
@@ -118,10 +115,10 @@ def register_pipeline_warmup_tool(mcp, factory: QueryProcessingPipelineFactory):
 
             return {"status": "success", "message": "Pipeline warmed up successfully"}
 
-        except Exception as e:
-            await ctx.warning(f"Pipeline warm-up {request_id} had issues: {e}")
-            logger.warning(f"Pipeline warm-up failed: {e}")
+        except Exception:
+            await ctx.warning("Pipeline warm-up {request_id} had issues")
+            logger.warning("Pipeline warm-up failed")
             return {
                 "status": "partial_success",
-                "message": f"Pipeline warm-up completed with issues: {e}",
+                "message": "Pipeline warm-up completed with issues",
             }

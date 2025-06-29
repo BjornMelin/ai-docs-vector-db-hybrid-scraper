@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Quick test to verify Crawl4AI is working before running full benchmark."""
 
-import asyncio
-import logging
-import time
+import asyncio  # noqa: PLC0415
+import logging  # noqa: PLC0415
+import time  # noqa: PLC0415
 
 from src.services.crawling.crawl4ai_provider import Crawl4AIProvider
 
@@ -49,7 +49,7 @@ async def test_crawl4ai():
 
         return result
 
-    except Exception as e:
+    except Exception:
         logger.error(f"Test failed: {e}", exc_info=True)
         if hasattr(provider, "cleanup"):
             await provider.cleanup()

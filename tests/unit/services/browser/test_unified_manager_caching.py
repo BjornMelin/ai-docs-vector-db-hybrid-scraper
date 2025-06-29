@@ -359,6 +359,6 @@ class TestUnifiedManagerCaching:
 
         # Verify metrics were updated
         metrics = unified_manager_with_cache._tier_metrics["crawl4ai"]
-        assert metrics.total_requests == 1
+        assert metrics._total_requests == 1
         assert metrics.successful_requests == 1
         assert metrics.success_rate == 1.0

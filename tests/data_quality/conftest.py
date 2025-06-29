@@ -10,7 +10,7 @@ import json
 import random
 import statistics
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -40,7 +40,7 @@ class DataQualityResult:
     rule_id: str
     status: str  # "pass", "fail", "warning"
     score: float  # 0.0 to 1.0
-    total_records: int
+    _total_records: int
     failed_records: int
     passed_records: int
     details: dict[str, Any] = field(default_factory=dict)
@@ -140,7 +140,7 @@ def data_quality_validator():
             self, data: list[dict[str, Any]], rule: DataQualityRule
         ) -> DataQualityResult:
             """Validate data completeness."""
-            total_records = len(data)
+            _total_records = len(data)
 
             if rule.field_name:
                 # Check specific field completeness
@@ -156,8 +156,8 @@ def data_quality_validator():
                     1 for record in data if not record or len(record) == 0
                 )
 
-            passed_records = total_records - failed_records
-            score = passed_records / max(total_records, 1)
+            passed_records = _total_records - failed_records
+            score = passed_records / max(_total_records, 1)
 
             status = "pass" if score >= (rule.threshold or 0.95) else "fail"
 
@@ -165,7 +165,7 @@ def data_quality_validator():
                 rule_id=rule.rule_id,
                 status=status,
                 score=score,
-                total_records=total_records,
+                _total_records=_total_records,
                 failed_records=failed_records,
                 passed_records=passed_records,
                 details={
@@ -179,7 +179,7 @@ def data_quality_validator():
             self, data: list[dict[str, Any]], rule: DataQualityRule
         ) -> DataQualityResult:
             """Validate data validity (format, type, pattern)."""
-            total_records = len(data)
+            _total_records = len(data)
             failed_records = 0
             validation_errors = []
 
@@ -212,34 +212,33 @@ def data_quality_validator():
                     if (
                         "min_value" in rule.reference_data
                         or "max_value" in rule.reference_data
-                    ):
-                        if isinstance(value, int | float):
-                            min_val = rule.reference_data.get("min_value")
-                            max_val = rule.reference_data.get("max_value")
+                    ) and isinstance(value, int | float):
+                        min_val = rule.reference_data.get("min_value")
+                        max_val = rule.reference_data.get("max_value")
 
-                            if min_val is not None and value < min_val:
-                                failed_records += 1
-                                validation_errors.append(
-                                    f"Value {value} below minimum {min_val}"
-                                )
-                                continue
+                        if min_val is not None and value < min_val:
+                            failed_records += 1
+                            validation_errors.append(
+                                f"Value {value} below minimum {min_val}"
+                            )
+                            continue
 
-                            if max_val is not None and value > max_val:
-                                failed_records += 1
-                                validation_errors.append(
-                                    f"Value {value} above maximum {max_val}"
-                                )
-                                continue
+                        if max_val is not None and value > max_val:
+                            failed_records += 1
+                            validation_errors.append(
+                                f"Value {value} above maximum {max_val}"
+                            )
+                            continue
 
-            passed_records = total_records - failed_records
-            score = passed_records / max(total_records, 1)
+            passed_records = _total_records - failed_records
+            score = passed_records / max(_total_records, 1)
             status = "pass" if score >= (rule.threshold or 0.98) else "fail"
 
             return DataQualityResult(
                 rule_id=rule.rule_id,
                 status=status,
                 score=score,
-                total_records=total_records,
+                _total_records=_total_records,
                 failed_records=failed_records,
                 passed_records=passed_records,
                 details={
@@ -254,7 +253,7 @@ def data_quality_validator():
             self, data: list[dict[str, Any]], rule: DataQualityRule
         ) -> DataQualityResult:
             """Validate data uniqueness."""
-            total_records = len(data)
+            _total_records = len(data)
 
             if rule.field_name:
                 # Check uniqueness of specific field
@@ -270,22 +269,22 @@ def data_quality_validator():
                 record_hashes = []
                 for record in data:
                     record_str = json.dumps(record, sort_keys=True)
-                    record_hash = hashlib.md5(record_str.encode()).hexdigest()
+                    record_hash = hashlib.sha256(record_str.encode()).hexdigest()
                     record_hashes.append(record_hash)
 
                 unique_hashes = set(record_hashes)
                 duplicates = len(record_hashes) - len(unique_hashes)
 
             failed_records = duplicates
-            passed_records = total_records - failed_records
-            score = passed_records / max(total_records, 1)
+            passed_records = _total_records - failed_records
+            score = passed_records / max(_total_records, 1)
             status = "pass" if score >= (rule.threshold or 0.99) else "fail"
 
             return DataQualityResult(
                 rule_id=rule.rule_id,
                 status=status,
                 score=score,
-                total_records=total_records,
+                _total_records=_total_records,
                 failed_records=failed_records,
                 passed_records=passed_records,
                 details={
@@ -299,7 +298,7 @@ def data_quality_validator():
             self, data: list[dict[str, Any]], rule: DataQualityRule
         ) -> DataQualityResult:
             """Validate data consistency across fields or records."""
-            total_records = len(data)
+            _total_records = len(data)
             failed_records = 0
             consistency_errors = []
 
@@ -336,15 +335,15 @@ def data_quality_validator():
                                         f"{field1} ({val1}) should be less than {field2} ({val2})"
                                     )
 
-            passed_records = total_records - failed_records
-            score = passed_records / max(total_records, 1)
+            passed_records = _total_records - failed_records
+            score = passed_records / max(_total_records, 1)
             status = "pass" if score >= (rule.threshold or 0.90) else "fail"
 
             return DataQualityResult(
                 rule_id=rule.rule_id,
                 status=status,
                 score=score,
-                total_records=total_records,
+                _total_records=_total_records,
                 failed_records=failed_records,
                 passed_records=passed_records,
                 details={
@@ -375,7 +374,7 @@ def data_quality_validator():
                         rule_id=rule.rule_id,
                         status="warning",
                         score=0.5,
-                        total_records=len(data),
+                        _total_records=len(data),
                         failed_records=0,
                         passed_records=len(data),
                         details={"message": f"Unknown rule type: {rule.rule_type}"},
@@ -393,7 +392,7 @@ def data_quality_validator():
             if not data:
                 return {"error": "No data provided for profiling"}
 
-            total_records = len(data)
+            _total_records = len(data)
 
             # Field analysis
             field_profiles = {}
@@ -401,12 +400,14 @@ def data_quality_validator():
             for record in data:
                 all_fields.update(record.keys())
 
-            for field in all_fields:
-                field_values = [record.get(field) for record in data if field in record]
+            for field_name in all_fields:
+                field_values = [
+                    record.get(field_name) for record in data if field_name in record
+                ]
                 non_null_values = [v for v in field_values if v is not None]
 
                 field_profile = {
-                    "total_count": len(field_values),
+                    "_total_count": len(field_values),
                     "non_null_count": len(non_null_values),
                     "null_count": len(field_values) - len(non_null_values),
                     "null_rate": (len(field_values) - len(non_null_values))
@@ -447,14 +448,14 @@ def data_quality_validator():
                     field_profile["max_length"] = max(lengths)
                     field_profile["avg_length"] = statistics.mean(lengths)
 
-                field_profiles[field] = field_profile
+                field_profiles[field_name] = field_profile
 
             # Overall dataset profile
             profile = {
                 "dataset_name": dataset_name,
-                "total_records": total_records,
-                "total_fields": len(all_fields),
-                "profiling_timestamp": datetime.now().isoformat(),
+                "_total_records": _total_records,
+                "_total_fields": len(all_fields),
+                "profiling_timestamp": datetime.now(tz=UTC).isoformat(),
                 "field_profiles": field_profiles,
                 "schema_consistency": {
                     "all_records_same_fields": all(
@@ -466,13 +467,13 @@ def data_quality_validator():
             }
 
             # Identify variable fields
-            for field in all_fields:
-                field_presence = sum(1 for record in data if field in record)
-                if field_presence < total_records:
+            for field_name in all_fields:
+                field_presence = sum(1 for record in data if field_name in record)
+                if field_presence < _total_records:
                     profile["schema_consistency"]["variable_fields"].append(
                         {
-                            "field": field,
-                            "presence_rate": field_presence / total_records,
+                            "field": field_name,
+                            "presence_rate": field_presence / _total_records,
                         }
                     )
 
@@ -534,7 +535,7 @@ def data_integrity_checker():
             return {
                 "check_id": check.check_id,
                 "check_type": "referential_integrity",
-                "total_records": len(data),
+                "_total_records": len(data),
                 "violations": len(violations),
                 "violation_rate": len(violations) / max(len(data), 1),
                 "details": violations[:10],  # First 10 violations
@@ -564,7 +565,7 @@ def data_integrity_checker():
                 "check_id": check.check_id,
                 "check_type": "domain_integrity",
                 "field_name": field_name,
-                "total_records": len(data),
+                "_total_records": len(data),
                 "violations": len(violations),
                 "violation_rate": len(violations) / max(len(data), 1),
                 "details": violations[:10],
@@ -601,7 +602,7 @@ def data_integrity_checker():
                 "check_type": "format_integrity",
                 "field_name": field_name,
                 "pattern": pattern,
-                "total_records": len(data),
+                "_total_records": len(data),
                 "violations": len(violations),
                 "violation_rate": len(violations) / max(len(data), 1),
                 "details": violations[:10],
@@ -667,9 +668,9 @@ def mock_data_generator():
                     "title": f"Document {i}",
                     "content": f"This is the content of document {i}. "
                     * random.randint(5, 20),
-                    "created_at": datetime.now()
+                    "created_at": datetime.now(tz=UTC)
                     - timedelta(days=random.randint(0, 365)),
-                    "updated_at": datetime.now()
+                    "updated_at": datetime.now(tz=UTC)
                     - timedelta(days=random.randint(0, 30)),
                     "collection": random.choice(
                         ["tech", "science", "business", "general"]
@@ -724,9 +725,9 @@ def mock_data_generator():
                     "email": f"user{i}@example.com",
                     "name": f"User {i}",
                     "role": random.choice(["admin", "user", "viewer"]),
-                    "created_at": datetime.now()
+                    "created_at": datetime.now(tz=UTC)
                     - timedelta(days=random.randint(30, 730)),
-                    "last_login": datetime.now()
+                    "last_login": datetime.now(tz=UTC)
                     - timedelta(days=random.randint(0, 30)),
                     "active": random.choice([True, False]),
                     "preferences": {

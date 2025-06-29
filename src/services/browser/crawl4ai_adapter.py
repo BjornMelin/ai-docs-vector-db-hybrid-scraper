@@ -6,10 +6,9 @@ import time
 from typing import Any
 
 from src.config import Crawl4AIConfig
-
-from ..base import BaseService
-from ..crawling.crawl4ai_provider import Crawl4AIProvider
-from ..errors import CrawlServiceError
+from src.services.base import BaseService
+from src.services.crawling.crawl4ai_provider import Crawl4AIProvider
+from src.services.errors import CrawlServiceError
 
 
 logger = logging.getLogger(__name__)
@@ -23,6 +22,7 @@ class Crawl4AIAdapter(BaseService):
 
         Args:
             config: Crawl4AI configuration model
+
         """
         super().__init__(config)
         self.config = config
@@ -45,9 +45,8 @@ class Crawl4AIAdapter(BaseService):
             self._initialized = True
             self.logger.info("Crawl4AI adapter initialized successfully")
         except Exception as e:
-            raise CrawlServiceError(
-                f"Failed to initialize Crawl4AI adapter: {e}"
-            ) from e
+            msg = "Failed to initialize Crawl4AI adapter"
+            raise CrawlServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup Crawl4AI resources."""
@@ -55,8 +54,8 @@ class Crawl4AIAdapter(BaseService):
             try:
                 await self._provider.cleanup()
                 self.logger.info("Crawl4AI adapter cleaned up")
-            except Exception as e:
-                self.logger.exception(f"Error cleaning up Crawl4AI adapter: {e}")
+            except Exception:
+                self.logger.exception("Error cleaning up Crawl4AI adapter")
             finally:
                 self._initialized = False
 
@@ -65,7 +64,7 @@ class Crawl4AIAdapter(BaseService):
         url: str,
         wait_for_selector: str | None = None,
         js_code: str | None = None,
-        timeout: int = 30000,
+        _timeout: int = 30000,
     ) -> dict[str, Any]:
         """Scrape URL using Crawl4AI.
 
@@ -77,9 +76,11 @@ class Crawl4AIAdapter(BaseService):
 
         Returns:
             Scraping result with standardized format
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Adapter not initialized")
+            msg = "Adapter not initialized"
+            raise CrawlServiceError(msg)
 
         start_time = time.time()
 
@@ -111,20 +112,19 @@ class Crawl4AIAdapter(BaseService):
                     "links": result.get("links", []),
                     "structured_data": result.get("structured_data", {}),
                 }
-            else:
-                return {
-                    "success": False,
-                    "url": url,
-                    "error": result.get("error", "Unknown Crawl4AI error"),
-                    "content": "",
-                    "metadata": {
-                        "extraction_method": "crawl4ai",
-                        "processing_time_ms": (time.time() - start_time) * 1000,
-                    },
-                }
+            return {
+                "success": False,
+                "url": url,
+                "error": result.get("error", "Unknown Crawl4AI error"),
+                "content": "",
+                "metadata": {
+                    "extraction_method": "crawl4ai",
+                    "processing_time_ms": (time.time() - start_time) * 1000,
+                },
+            }
 
         except Exception as e:
-            self.logger.exception(f"Crawl4AI adapter error for {url}: {e}")
+            self.logger.exception("Crawl4AI adapter error for {url}")
             return {
                 "success": False,
                 "url": url,
@@ -149,9 +149,11 @@ class Crawl4AIAdapter(BaseService):
 
         Returns:
             List of scraping results
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Adapter not initialized")
+            msg = "Adapter not initialized"
+            raise CrawlServiceError(msg)
 
         # Use provider's bulk crawling capability
         results = await self._provider.crawl_bulk(urls, extraction_type)
@@ -193,6 +195,7 @@ class Crawl4AIAdapter(BaseService):
 
         Returns:
             Capabilities dictionary
+
         """
         return {
             "name": "crawl4ai",
@@ -232,6 +235,7 @@ class Crawl4AIAdapter(BaseService):
 
         Returns:
             Health status dictionary
+
         """
         try:
             if not self._initialized:
@@ -267,11 +271,11 @@ class Crawl4AIAdapter(BaseService):
                 "message": "Health check timed out",
                 "response_time_ms": 10000,
             }
-        except Exception as e:
+        except Exception:
             return {
                 "healthy": False,
                 "status": "error",
-                "message": f"Health check failed: {e}",
+                "message": "Health check failed",
             }
 
     async def get_performance_metrics(self) -> dict[str, Any]:
@@ -279,6 +283,7 @@ class Crawl4AIAdapter(BaseService):
 
         Returns:
             Performance metrics dictionary
+
         """
         # Access provider's internal metrics if available
         if hasattr(self._provider, "metrics"):

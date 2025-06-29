@@ -7,6 +7,7 @@ spell correction, expansion, and context extraction for optimal query processing
 import logging
 import re
 import string
+import time
 from typing import Any
 
 from .models import QueryPreprocessingResult
@@ -143,11 +144,11 @@ class QueryPreprocessor:
 
         Raises:
             RuntimeError: If preprocessor not initialized
+
         """
         if not self._initialized:
-            raise RuntimeError("QueryPreprocessor not initialized")
-
-        import time
+            msg = "QueryPreprocessor not initialized"
+            raise RuntimeError(msg)
 
         start_time = time.time()
 

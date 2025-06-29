@@ -15,6 +15,7 @@ Tests include:
 """
 
 import asyncio
+import logging
 import random
 import time
 from dataclasses import dataclass
@@ -24,6 +25,9 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.config import Config
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -204,7 +208,8 @@ class TestNetworkPartitionTolerance:
             # Simulate packet loss based on partition probability
             if random.random() < partition.partition_probability:
                 failed_attempts.append({"node_id": node_id, "time": attempt_time})
-                raise ConnectionError(f"Network unreachable for {node_id}")
+                msg = f"Network unreachable for {node_id}"
+                raise ConnectionError(msg)
 
             return {"status": "connected", "node_id": node_id, "latency_ms": 250}
 
@@ -267,10 +272,10 @@ class TestNetworkPartitionTolerance:
 
         setup["cache_service"] = AsyncMock()
         setup["cache_service"].get.side_effect = (
-            lambda k: simulate_high_latency_response("get")
+            lambda _k: simulate_high_latency_response("get")
         )
         setup["cache_service"].set.side_effect = (
-            lambda k, v: simulate_high_latency_response("set")
+            lambda _k, _v: simulate_high_latency_response("set")
         )
 
         # Test operations under high latency
@@ -280,7 +285,8 @@ class TestNetworkPartitionTolerance:
         cache_operations = []
 
         async def perform_cache_operation_with_timeout(
-            operation: str, timeout: float = 1.0
+            operation: str,
+            timeout: float = 1.0,  # noqa: ASYNC109
         ):
             """Perform cache operation with timeout."""
             try:
@@ -346,8 +352,8 @@ class TestNetworkPartitionTolerance:
 
         # Mock quorum-based decision making
         class QuorumManager:
-            def __init__(self, total_nodes: int, quorum_size: int):
-                self.total_nodes = total_nodes
+            def __init__(self, _total_nodes: int, quorum_size: int):
+                self._total_nodes = _total_nodes
                 self.quorum_size = quorum_size
                 self.active_nodes = set()
 
@@ -367,7 +373,7 @@ class TestNetworkPartitionTolerance:
                 return None
 
         # Setup quorum manager
-        quorum_manager = QuorumManager(total_nodes=5, quorum_size=3)
+        quorum_manager = QuorumManager(_total_nodes=5, quorum_size=3)
         for node_id in service_nodes:
             quorum_manager.add_node(node_id)
 
@@ -647,7 +653,7 @@ class TestServiceDiscoveryAndRegistration:
                 self.request_counts = {}
                 self.response_times = {}
 
-            def round_robin(self, services: list[Dict]) -> Dict:
+            def round_robin(self, services: list[dict]) -> dict:
                 """Round-robin load balancing."""
                 if not services:
                     return None
@@ -666,7 +672,7 @@ class TestServiceDiscoveryAndRegistration:
 
                 return selected_service
 
-            def least_response_time(self, services: list[Dict]) -> Dict:
+            def least_response_time(self, services: list[dict]) -> dict:
                 """Least response time load balancing."""
                 if not services:
                     return None
@@ -745,7 +751,7 @@ class TestServiceDiscoveryAndRegistration:
                 if result:
                     return {"source": "primary", "services": result}
             except Exception:
-                pass
+                logger.debug("Exception suppressed during cleanup/testing")
 
             # Fallback to backup service discovery
             try:
@@ -817,12 +823,12 @@ class TestDistributedConfigurationManagement:
 
         # Mock configuration resolution
         class ConfigResolver:
-            def __init__(self, hierarchy: Dict):
+            def __init__(self, hierarchy: dict):
                 self.hierarchy = hierarchy
 
             def resolve_config(
                 self, service_name: str, environment: str = "production"
-            ) -> Dict:
+            ) -> dict:
                 """Resolve configuration with hierarchy precedence."""
                 resolved_config = {}
 
@@ -863,7 +869,7 @@ class TestDistributedConfigurationManagement:
         assert embedding_service_config["security.ssl_enabled"] is True
 
     @pytest.mark.asyncio
-    async def test_configuration_change_propagation(self, distributed_config_setup):
+    async def test_configuration_change_propagation(self, _distributed_config_setup):
         """Test configuration change propagation across services."""
 
         # Mock configuration change events
@@ -889,7 +895,7 @@ class TestDistributedConfigurationManagement:
         # Mock change notification system
         notified_services = []
 
-        async def notify_configuration_change(change: Dict):
+        async def notify_configuration_change(change: dict):
             """Notify services of configuration changes."""
             affected_services = change["affected_services"]
 
@@ -949,7 +955,9 @@ class TestDistributedConfigurationManagement:
         assert service_specific_notifications[0]["service"] == "vector_db"
 
     @pytest.mark.asyncio
-    async def test_configuration_consistency_validation(self, distributed_config_setup):
+    async def test_configuration_consistency_validation(
+        self, _distributed_config_setup
+    ):
         """Test configuration consistency validation across services."""
 
         # Mock configuration consistency rules
@@ -1087,9 +1095,8 @@ class TestCrossServiceAuthentication:
             ) -> str:
                 """Issue JWT token for service-to-service communication."""
                 if requesting_service not in self.service_keys:
-                    raise ValueError(
-                        f"Unknown requesting service: {requesting_service}"
-                    )
+                    msg = f"Unknown requesting service: {requesting_service}"
+                    raise ValueError(msg)
 
                 token_payload = {
                     "service_name": service_name,
@@ -1109,20 +1116,23 @@ class TestCrossServiceAuthentication:
 
             async def validate_service_token(
                 self, token: str, required_service: str
-            ) -> Dict:
+            ) -> dict:
                 """Validate JWT token for service access."""
                 if token not in self.issued_tokens:
-                    raise ValueError("Invalid token")
+                    msg = "Invalid token"
+                    raise ValueError(msg)
 
                 payload = self.issued_tokens[token]
 
                 # Check expiration
                 if time.time() > payload["expires_at"]:
-                    raise ValueError("Token expired")
+                    msg = "Token expired"
+                    raise ValueError(msg)
 
                 # Check service authorization
                 if payload["service_name"] != required_service:
-                    raise ValueError("Token not valid for requested service")
+                    msg = "Token not valid for requested service"
+                    raise ValueError(msg)
 
                 return payload
 
@@ -1259,7 +1269,7 @@ class TestCrossServiceAuthentication:
             def __init__(self):
                 self.audit_logs = []
 
-            async def log_access_attempt(self, event_type: str, details: Dict):
+            async def log_access_attempt(self, event_type: str, details: dict):
                 """Log security-related events."""
                 audit_entry = {
                     "timestamp": time.time(),
@@ -1270,7 +1280,7 @@ class TestCrossServiceAuthentication:
                 self.audit_logs.append(audit_entry)
                 return audit_entry["audit_id"]
 
-            def get_audit_logs(self, event_type: str | None = None) -> list[Dict]:
+            def get_audit_logs(self, event_type: str | None = None) -> list[dict]:
                 """Retrieve audit logs by event type."""
                 if event_type:
                     return [

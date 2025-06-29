@@ -1,5 +1,7 @@
 """Tests for HyDE configuration models."""
 
+from unittest.mock import Mock
+
 import pytest
 from pydantic import ValidationError
 
@@ -726,7 +728,6 @@ class TestHyDEConfigIntegration:
 
     def test_from_unified_config(self):
         """Test creating HyDEConfig from unified configuration."""
-        from unittest.mock import Mock
 
         # Mock unified HyDE config
         unified_config = Mock()

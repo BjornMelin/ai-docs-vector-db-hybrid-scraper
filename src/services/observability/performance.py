@@ -57,6 +57,7 @@ class PerformanceMonitor:
 
         Args:
             thresholds: Performance thresholds for alerting
+
         """
         self.thresholds = thresholds or PerformanceThresholds()
         self.tracer = get_tracer()
@@ -79,6 +80,7 @@ class PerformanceMonitor:
 
         Returns:
             Dictionary of system metrics
+
         """
         try:
             # CPU metrics
@@ -110,7 +112,9 @@ class PerformanceMonitor:
             }
 
         except Exception as e:
-            logger.warning(f"Failed to get system metrics: {e}")
+            logger.warning(
+                f"Failed to get system metrics: {e}"
+            )  # TODO: Convert f-string to logging format
             return {}
 
     @contextmanager
@@ -131,6 +135,7 @@ class PerformanceMonitor:
 
         Yields:
             Performance metrics dictionary for updating
+
         """
         start_time = time.time()
         self._get_system_metrics() if track_resources else {}
@@ -216,6 +221,7 @@ class PerformanceMonitor:
 
         Yields:
             Performance metrics dictionary for updating
+
         """
         start_time = time.time()
         self._get_system_metrics() if track_resources else {}
@@ -275,6 +281,7 @@ class PerformanceMonitor:
         Args:
             metrics: Performance metrics to record
             category: Operation category
+
         """
         # Add to operation history
         self._operation_history[metrics.operation_name].append(metrics)
@@ -315,7 +322,9 @@ class PerformanceMonitor:
                 )
 
         except Exception as e:
-            logger.warning(f"Failed to record performance metrics: {e}")
+            logger.warning(
+                f"Failed to record performance metrics: {e}"
+            )  # TODO: Convert f-string to logging format
 
     def _check_thresholds(self, metrics: PerformanceMetrics, span: trace.Span) -> None:
         """Check performance thresholds and create alerts.
@@ -323,6 +332,7 @@ class PerformanceMonitor:
         Args:
             metrics: Performance metrics to check
             span: Current span for recording alerts
+
         """
         alerts = []
 
@@ -380,6 +390,7 @@ class PerformanceMonitor:
 
         Returns:
             Dictionary of performance statistics
+
         """
         history = self._operation_history.get(operation_name, deque())
         if not history:
@@ -428,6 +439,7 @@ class PerformanceMonitor:
 
         Returns:
             System performance summary
+
         """
         current_metrics = self._get_system_metrics()
 
@@ -467,6 +479,7 @@ class PerformanceMonitor:
 
         Returns:
             Context manager for query monitoring
+
         """
         return self.monitor_operation(
             f"database_{query_type}", category="database", track_resources=True
@@ -481,6 +494,7 @@ class PerformanceMonitor:
 
         Returns:
             Context manager for API monitoring
+
         """
         return self.monitor_operation(
             f"api_{api_name}_{endpoint}", category="external_api", track_resources=False
@@ -495,6 +509,7 @@ class PerformanceMonitor:
 
         Returns:
             Context manager for AI inference monitoring
+
         """
         return self.monitor_operation(
             f"ai_inference_{provider}_{model_name}",
@@ -511,6 +526,7 @@ class PerformanceMonitor:
 
         Returns:
             Context manager for cache monitoring
+
         """
         return self.monitor_operation(
             f"cache_{cache_type}_{operation}", category="cache", track_resources=False
@@ -531,6 +547,7 @@ def initialize_performance_monitor(
 
     Returns:
         Initialized performance monitor
+
     """
     global _performance_monitor
     _performance_monitor = PerformanceMonitor(thresholds)
@@ -545,11 +562,11 @@ def get_performance_monitor() -> PerformanceMonitor:
 
     Raises:
         RuntimeError: If monitor not initialized
+
     """
     if _performance_monitor is None:
-        raise RuntimeError(
-            "Performance monitor not initialized. Call initialize_performance_monitor() first."
-        )
+        msg = "Performance monitor not initialized. Call initialize_performance_monitor() first."
+        raise RuntimeError(msg)
     return _performance_monitor
 
 

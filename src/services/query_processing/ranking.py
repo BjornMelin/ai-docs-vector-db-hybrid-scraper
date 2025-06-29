@@ -6,7 +6,8 @@ result rankings optimized for individual users and contexts.
 """
 
 import logging
-from datetime import datetime, timedelta
+import time
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -107,9 +108,11 @@ class InteractionEvent(BaseModel):
 
         if interaction_type == InteractionType.RATING:
             if v is not None and not (1.0 <= v <= 5.0):
-                raise ValueError("Rating must be between 1.0 and 5.0")
+                msg = "Rating must be between 1.0 and 5.0"
+                raise ValueError(msg)
         elif interaction_type == InteractionType.DWELL_TIME and v is not None and v < 0:
-            raise ValueError("Dwell time cannot be negative")
+            msg = "Dwell time cannot be negative"
+            raise ValueError(msg)
 
         return v
 
@@ -242,12 +245,14 @@ class PersonalizedRankingRequest(BaseModel):
     def validate_results_structure(cls, v):
         """Validate results have required fields."""
         if not v:
-            raise ValueError("Results list cannot be empty")
+            msg = "Results list cannot be empty"
+            raise ValueError(msg)
 
         required_fields = {"id", "title", "score"}
         for result in v:
             if not all(field in result for field in required_fields):
-                raise ValueError(f"Results must contain fields: {required_fields}")
+                msg = f"Results must contain fields: {required_fields}"
+                raise ValueError(msg)
 
         return v
 
@@ -303,6 +308,7 @@ class PersonalizedRankingService:
             enable_collaborative_filtering: Enable collaborative filtering features
             profile_cache_size: Size of user profile cache
             interaction_retention_days: Days to retain interaction data
+
         """
         self._logger = logging.getLogger(
             f"{self.__class__.__module__}.{self.__class__.__name__}"
@@ -344,9 +350,8 @@ class PersonalizedRankingService:
 
         Returns:
             PersonalizedRankingResult with reranked results and metadata
-        """
-        import time
 
+        """
         start_time = time.time()
 
         try:
@@ -415,7 +420,9 @@ class PersonalizedRankingService:
 
         except Exception as e:
             processing_time_ms = (time.time() - start_time) * 1000
-            self._logger.error(f"Personalized ranking failed: {e}", exc_info=True)
+            self._logger.error(
+                f"Personalized ranking failed: {e}", exc_info=True
+            )  # TODO: Convert f-string to logging format
 
             # Return fallback result with default ranking
             fallback_results = self._apply_default_ranking(request.results)
@@ -436,6 +443,7 @@ class PersonalizedRankingService:
 
         Args:
             interaction: User interaction event
+
         """
         try:
             if not self.enable_learning:
@@ -449,7 +457,7 @@ class PersonalizedRankingService:
             self.interaction_history[user_id].append(interaction)
 
             # Cleanup old interactions
-            cutoff_date = datetime.now() - timedelta(
+            cutoff_date = datetime.now(tz=UTC) - timedelta(
                 days=self.interaction_retention_days
             )
             self.interaction_history[user_id] = [
@@ -467,7 +475,9 @@ class PersonalizedRankingService:
             )
 
         except Exception as e:
-            self._logger.error(f"Failed to record interaction: {e}", exc_info=True)
+            self._logger.error(
+                f"Failed to record interaction: {e}", exc_info=True
+            )  # TODO: Convert f-string to logging format
 
     async def _get_user_profile(self, user_id: str) -> UserProfile:
         """Get or create user profile."""
@@ -516,18 +526,18 @@ class PersonalizedRankingService:
 
         if request.strategy == RankingStrategy.CONTENT_BASED:
             return await self._content_based_ranking(results, user_profile, request)
-        elif request.strategy == RankingStrategy.COLLABORATIVE_FILTERING:
+        if request.strategy == RankingStrategy.COLLABORATIVE_FILTERING:
             return await self._collaborative_filtering_ranking(
                 results, user_profile, request
             )
-        elif request.strategy == RankingStrategy.BEHAVIORAL:
+        if request.strategy == RankingStrategy.BEHAVIORAL:
             return await self._behavioral_ranking(results, user_profile, request)
-        elif request.strategy == RankingStrategy.CONTEXTUAL:
+        if request.strategy == RankingStrategy.CONTEXTUAL:
             return await self._contextual_ranking(results, user_profile, request)
-        elif request.strategy == RankingStrategy.LEARNING_TO_RANK:
+        if request.strategy == RankingStrategy.LEARNING_TO_RANK:
             return await self._learning_to_rank(results, user_profile, request)
-        else:  # HYBRID
-            return await self._hybrid_ranking(results, user_profile, request)
+        # HYBRID
+        return await self._hybrid_ranking(results, user_profile, request)
 
     async def _content_based_ranking(
         self,
@@ -891,13 +901,16 @@ class PersonalizedRankingService:
         return min(0.5, boost)  # Cap boost at 0.5
 
     def _calculate_behavioral_boost(
-        self, result: dict[str, Any], user_profile: UserProfile, context: dict[str, Any]
+        self,
+        result: dict[str, Any],
+        user_profile: UserProfile,
+        _context: dict[str, Any],
     ) -> float:
         """Calculate boost based on behavioral patterns."""
         boost = 0.0
 
         # Time-based preferences
-        current_hour = datetime.now().hour
+        current_hour = datetime.now(tz=UTC).hour
         if current_hour in user_profile.active_hours:
             time_preference = user_profile.active_hours[current_hour]
             boost += time_preference * 0.1
@@ -921,7 +934,10 @@ class PersonalizedRankingService:
         return min(0.4, boost)
 
     def _calculate_contextual_boost(
-        self, result: dict[str, Any], user_profile: UserProfile, context: dict[str, Any]
+        self,
+        result: dict[str, Any],
+        _user_profile: UserProfile,
+        context: dict[str, Any],
     ) -> float:
         """Calculate boost based on current context."""
         boost = 0.0
@@ -966,10 +982,9 @@ class PersonalizedRankingService:
         # Boost diverse content types
         if same_type_count <= 1:
             return 0.1
-        elif same_type_count == 2:
+        if same_type_count == 2:
             return 0.05
-        else:
-            return -0.05  # Slight penalty for over-represented types
+        return -0.05  # Slight penalty for over-represented types
 
     def _calculate_freshness_boost(self, result: dict[str, Any]) -> float:
         """Calculate freshness boost based on content age."""
@@ -978,17 +993,16 @@ class PersonalizedRankingService:
 
         try:
             published_date = datetime.fromisoformat(result["published_date"])
-            age_days = (datetime.now() - published_date).days
+            age_days = (datetime.now(tz=UTC) - published_date).days
 
             # Boost fresher content
             if age_days <= 7:
                 return 0.1
-            elif age_days <= 30:
+            if age_days <= 30:
                 return 0.05
-            elif age_days <= 90:
+            if age_days <= 90:
                 return 0.02
-            else:
-                return 0.0
+            return 0.0
         except (ValueError, TypeError):
             return 0.0
 
@@ -1074,7 +1088,7 @@ class PersonalizedRankingService:
         return features
 
     def _apply_ranking_model(
-        self, features: dict[str, float], user_profile: UserProfile
+        self, features: dict[str, float], _user_profile: UserProfile
     ) -> float:
         """Apply ML ranking model (simplified linear model)."""
         # Simplified linear model weights
@@ -1095,7 +1109,7 @@ class PersonalizedRankingService:
 
     def _get_time_preference_boost(self, user_profile: UserProfile) -> float:
         """Get boost based on time-of-day preferences."""
-        current_hour = datetime.now().hour
+        current_hour = datetime.now(tz=UTC).hour
         if current_hour in user_profile.active_hours:
             return user_profile.active_hours[current_hour] * 0.1
         return 0.0
@@ -1125,19 +1139,19 @@ class PersonalizedRankingService:
 
         return boost
 
-    def _get_temporal_context_boost(self, context: dict[str, Any]) -> float:
+    def _get_temporal_context_boost(self, _context: dict[str, Any]) -> float:
         """Get boost based on temporal context."""
         boost = 0.0
 
         # Time of day
-        hour = datetime.now().hour
+        hour = datetime.now(tz=UTC).hour
         if 9 <= hour <= 17:  # Business hours
             boost += 0.05
         elif 18 <= hour <= 22:  # Evening
             boost += 0.03
 
         # Day of week
-        weekday = datetime.now().weekday()
+        weekday = datetime.now(tz=UTC).weekday()
         if weekday < 5:  # Weekday
             boost += 0.02
 
@@ -1186,10 +1200,10 @@ class PersonalizedRankingService:
         # Update confidence score
         profile.confidence_score = min(1.0, profile.total_interactions / 50.0)
 
-        profile.last_updated = datetime.now()
+        profile.last_updated = datetime.now(tz=UTC)
 
     async def _build_profile_from_interactions(
-        self, profile: UserProfile, user_id: str
+        self, _profile: UserProfile, user_id: str
     ) -> None:
         """Build user profile from historical interactions."""
         if user_id not in self.interaction_history:
@@ -1207,14 +1221,12 @@ class PersonalizedRankingService:
         """Strengthen user preferences based on positive interaction."""
         # This is a simplified implementation
         # In production, would extract more sophisticated preferences
-        pass
 
     def _weaken_preferences(
         self, profile: UserProfile, interaction: InteractionEvent
     ) -> None:
         """Weaken user preferences based on negative interaction."""
         # This is a simplified implementation
-        pass
 
     def _calculate_diversity_score(self, results: list[RankedResult]) -> float:
         """Calculate diversity score for ranked results."""
@@ -1272,15 +1284,14 @@ class PersonalizedRankingService:
         return avg_position_change
 
     def _generate_content_explanation(
-        self, content_boost: float, user_profile: UserProfile
+        self, content_boost: float, _user_profile: UserProfile
     ) -> str:
         """Generate explanation for content-based ranking."""
         if content_boost > 0.2:
             return "Ranked higher based on your content preferences"
-        elif content_boost > 0.1:
+        if content_boost > 0.1:
             return "Slightly boosted to match your interests"
-        else:
-            return "Standard ranking applied"
+        return "Standard ranking applied"
 
     def _generate_hybrid_explanation(self, ranking_factors: dict[str, float]) -> str:
         """Generate explanation for hybrid ranking."""

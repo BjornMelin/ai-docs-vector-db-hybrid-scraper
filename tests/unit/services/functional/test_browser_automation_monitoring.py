@@ -1,3 +1,7 @@
+class TestError(Exception):
+    """Custom exception for this module."""
+
+
 """Tests for 5-tier browser automation health monitoring.
 
 This module tests the comprehensive browser automation monitoring system
@@ -25,15 +29,15 @@ class MockBrowserTier:
         self.memory_usage = 512.0  # MB
         self.active_sessions = 0
         self.max_sessions = 10
-        self.total_requests = 0
+        self._total_requests = 0
         self.failed_requests = 0
 
     async def health_check(self) -> dict[str, Any]:
         """Perform health check on tier."""
-        self.total_requests += 1
+        self._total_requests += 1
 
         # Simulate occasional failures
-        if self.total_requests % 20 == 0:
+        if self._total_requests % 20 == 0:
             self.failed_requests += 1
             self.is_healthy = False
             return {
@@ -56,10 +60,12 @@ class MockBrowserTier:
     async def execute_request(self, request_type: str) -> dict[str, Any]:
         """Execute browser automation request."""
         if not self.is_healthy:
-            raise Exception(f"Tier {self.name} is unhealthy")
+            msg = f"Tier {self.name} is unhealthy"
+            raise TestError(msg)
 
         if self.active_sessions >= self.max_sessions:
-            raise Exception(f"Tier {self.name} at capacity")
+            msg = f"Tier {self.name} at capacity"
+            raise TestError(msg)
 
         self.active_sessions += 1
         try:
@@ -86,9 +92,9 @@ class MockBrowserTier:
             "memory_usage_mb": self.memory_usage,
             "active_sessions": self.active_sessions,
             "max_sessions": self.max_sessions,
-            "total_requests": self.total_requests,
+            "_total_requests": self._total_requests,
             "failed_requests": self.failed_requests,
-            "error_rate": self.failed_requests / max(self.total_requests, 1),
+            "error_rate": self.failed_requests / max(self._total_requests, 1),
         }
 
 
@@ -135,12 +141,12 @@ class MockBrowserMonitoringSystem:
         healthy_tiers = sum(
             1 for result in health_results.values() if result["healthy"]
         )
-        total_tiers = len(self.tiers)
+        _total_tiers = len(self.tiers)
 
         return {
-            "overall_health": healthy_tiers / total_tiers,
+            "overall_health": healthy_tiers / _total_tiers,
             "healthy_tiers": healthy_tiers,
-            "total_tiers": total_tiers,
+            "_total_tiers": _total_tiers,
             "tier_health": health_results,
             "timestamp": time.time(),
         }
@@ -185,7 +191,8 @@ class MockBrowserMonitoringSystem:
                 continue
 
         # All tiers failed
-        raise Exception(f"All tiers failed. Last error: {last_error}")
+        msg = f"All tiers failed. Last error: {last_error}"
+        raise TestError(msg)
 
     def get_system_metrics(self) -> dict[str, Any]:
         """Get comprehensive system metrics."""
@@ -195,8 +202,8 @@ class MockBrowserMonitoringSystem:
             tier_metrics[tier_name] = tier.get_metrics()
 
         # Calculate aggregate metrics
-        total_sessions = sum(tier.active_sessions for tier in self.tiers.values())
-        total_capacity = sum(tier.max_sessions for tier in self.tiers.values())
+        _total_sessions = sum(tier.active_sessions for tier in self.tiers.values())
+        _total_capacity = sum(tier.max_sessions for tier in self.tiers.values())
         avg_response_time = sum(
             tier.response_time for tier in self.tiers.values()
         ) / len(self.tiers)
@@ -204,9 +211,9 @@ class MockBrowserMonitoringSystem:
         return {
             "tier_metrics": tier_metrics,
             "aggregate_metrics": {
-                "total_active_sessions": total_sessions,
-                "total_capacity": total_capacity,
-                "capacity_utilization": total_sessions / total_capacity,
+                "_total_active_sessions": _total_sessions,
+                "_total_capacity": _total_capacity,
+                "capacity_utilization": _total_sessions / _total_capacity,
                 "average_response_time_ms": avg_response_time,
                 "healthy_tier_count": sum(
                     1 for tier in self.tiers.values() if tier.is_healthy
@@ -285,10 +292,10 @@ class TestBrowserAutomationMonitoring:
 
         assert "overall_health" in health_report
         assert "healthy_tiers" in health_report
-        assert "total_tiers" in health_report
+        assert "_total_tiers" in health_report
         assert "tier_health" in health_report
 
-        assert health_report["total_tiers"] == 5
+        assert health_report["_total_tiers"] == 5
         assert health_report["healthy_tiers"] <= 5
         assert 0 <= health_report["overall_health"] <= 1
 
@@ -309,8 +316,8 @@ class TestBrowserAutomationMonitoring:
         lightweight_tier.max_sessions = 2
 
         # First two requests should succeed
-        asyncio.create_task(lightweight_tier.execute_request("test1"))
-        asyncio.create_task(lightweight_tier.execute_request("test2"))
+        _task1 = asyncio.create_task(lightweight_tier.execute_request("test1"))
+        _task2 = asyncio.create_task(lightweight_tier.execute_request("test2"))
 
         # Third request should fail due to capacity
         with pytest.raises(Exception, match="at capacity"):
@@ -370,13 +377,13 @@ class TestBrowserAutomationMonitoring:
         metrics = monitoring_system.get_system_metrics()
         aggregate = metrics["aggregate_metrics"]
 
-        assert "total_active_sessions" in aggregate
-        assert "total_capacity" in aggregate
+        assert "_total_active_sessions" in aggregate
+        assert "_total_capacity" in aggregate
         assert "capacity_utilization" in aggregate
         assert "average_response_time_ms" in aggregate
         assert "healthy_tier_count" in aggregate
 
-        assert aggregate["total_capacity"] == 100  # Sum of all max_sessions
+        assert aggregate["_total_capacity"] == 100  # Sum of all max_sessions
         assert 0 <= aggregate["capacity_utilization"] <= 1
 
     def test_performance_optimization_recommendations(self, monitoring_system):
@@ -404,7 +411,7 @@ class TestBrowserAutomationMonitoring:
             await lightweight.health_check()
 
         metrics = lightweight.get_metrics()
-        assert metrics["total_requests"] == 25
+        assert metrics["_total_requests"] == 25
         assert metrics["failed_requests"] > 0
         assert metrics["error_rate"] > 0
 
@@ -488,7 +495,7 @@ class TestAdvancedMonitoringFeatures:
             "success_rate": tier.success_rate,
             "cpu_usage": tier.cpu_usage,
             "memory_usage": tier.memory_usage,
-            "error_rate": tier.failed_requests / max(tier.total_requests, 1),
+            "error_rate": tier.failed_requests / max(tier._total_requests, 1),
         }
 
         # Simple health scoring algorithm

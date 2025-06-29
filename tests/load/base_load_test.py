@@ -10,10 +10,11 @@ import logging
 import os
 import random
 import time
-from typing import Any
+from typing import Any, ClassVar
 
 from locust import HttpUser, TaskSet, between, events, task
 from locust.env import Environment
+from locust.log import setup_logging
 
 
 logger = logging.getLogger(__name__)
@@ -164,7 +165,7 @@ class VectorDBUserBehavior(TaskSet):
 class VectorDBUser(HttpUser):
     """Simulated user for vector database load testing."""
 
-    tasks = [VectorDBUserBehavior]
+    tasks: ClassVar[list[type]] = [VectorDBUserBehavior]
     wait_time = between(1, 3)  # Wait 1-3 seconds between tasks
 
     def on_start(self):
@@ -246,7 +247,7 @@ class PerformanceMetricsCollector:
 
         return {
             "duration_seconds": duration,
-            "total_requests": len(response_times),
+            "_total_requests": len(response_times),
             "response_times": {
                 "min": min(response_times),
                 "max": max(response_times),
@@ -276,35 +277,37 @@ metrics_collector = PerformanceMetricsCollector()
 
 
 @events.test_start.add_listener
-def on_test_start(environment: Environment, **kwargs):
+def on_test_start(_environment: Environment, **__kwargs):
     """Handle test start event."""
     logger.info("Load test started")
     metrics_collector.start_collection()
 
 
 @events.test_stop.add_listener
-def on_test_stop(environment: Environment, **kwargs):
+def on_test_stop(_environment: Environment, **__kwargs):
     """Handle test stop event."""
     logger.info("Load test stopped")
     metrics_collector.stop_collection()
 
     # Print summary
     summary = metrics_collector.get_summary()
-    logger.info(f"Performance summary: {json.dumps(summary, indent=2)}")
+    logger.info(
+        f"Performance summary: {json.dumps(summary, indent=2)}"
+    )  # TODO: Convert f-string to logging format
 
 
 @events.request.add_listener
 def on_request(
-    request_type: str,
-    name: str,
+    _request_type: str,
+    _name: str,
     response_time: float,
-    response_length: int,
+    _response_length: int,
     response: Any,
-    context: dict[str, Any],
+    _context: dict[str, Any],
     exception: Exception | None,
-    start_time: float,
-    url: str,
-    **kwargs,
+    _start_time: float,
+    _url: str,
+    **__kwargs,
 ):
     """Handle request completion event."""
     metrics_collector.add_response_time(response_time)
@@ -315,7 +318,7 @@ def on_request(
 
 
 @events.report_to_master.add_listener
-def on_report_to_master(client_id: str, data: dict[str, Any]):
+def on_report_to_master(_client_id: str, data: dict[str, Any]):
     """Handle reporting to master in distributed mode."""
     # Add custom metrics to report
     data["custom_metrics"] = {
@@ -327,7 +330,9 @@ def on_report_to_master(client_id: str, data: dict[str, Any]):
 def on_worker_report(client_id: str, data: dict[str, Any]):
     """Handle worker reports in distributed mode."""
     if "custom_metrics" in data:
-        logger.info(f"Worker {client_id} metrics: {data['custom_metrics']}")
+        logger.info(
+            f"Worker {client_id} metrics: {data['custom_metrics']}"
+        )  # TODO: Convert f-string to logging format
 
 
 def create_load_test_runner(host: str = "http://localhost:8000") -> Environment:
@@ -339,8 +344,6 @@ def create_load_test_runner(host: str = "http://localhost:8000") -> Environment:
     Returns:
         Configured Locust environment
     """
-    from locust.env import Environment
-    from locust.log import setup_logging
 
     setup_logging("INFO", None)
 

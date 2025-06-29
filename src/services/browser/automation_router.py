@@ -8,9 +8,13 @@ from typing import Any, Literal
 from urllib.parse import urlparse
 
 from src.config import Config
+from src.services.base import BaseService
+from src.services.errors import CrawlServiceError
 
-from ..base import BaseService
-from ..errors import CrawlServiceError
+from .browser_use_adapter import BrowserUseAdapter
+from .crawl4ai_adapter import Crawl4AIAdapter
+from .lightweight_scraper import LightweightScraper
+from .playwright_adapter import PlaywrightAdapter
 
 
 logger = logging.getLogger(__name__)
@@ -32,6 +36,7 @@ class AutomationRouter(BaseService):
 
         Args:
             config: Unified configuration containing browser automation settings
+
         """
         super().__init__(config)
         self.config = config
@@ -84,6 +89,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Dictionary mapping tool names to lists of domains
+
         """
         try:
             # Get project root directory (3 levels up from this file)
@@ -91,16 +97,18 @@ class AutomationRouter(BaseService):
             config_file = project_root / "config" / "browser-routing-rules.json"
 
             if config_file.exists():
-                with open(config_file) as f:
+                with config_file.open() as f:
                     config = json.load(f)
                     routing_rules = config.get("routing_rules", {})
-                    logger.info(f"Loaded routing rules from {config_file}")
+                    logger.info(
+                        f"Loaded routing rules from {config_file}"
+                    )  # TODO: Convert f-string to logging format
                     return routing_rules
             else:
-                logger.warning(f"Routing rules file not found: {config_file}")
+                logger.warning("Routing rules file not found")
 
-        except Exception as e:
-            logger.exception(f"Failed to load routing rules: {e}")
+        except Exception:
+            logger.exception("Failed to load routing rules")
 
         # Fallback to default rules if loading fails
         return self._get_default_routing_rules()
@@ -110,6 +118,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Default routing rules dictionary
+
         """
         return {
             "browser_use": [
@@ -138,54 +147,45 @@ class AutomationRouter(BaseService):
         if self._initialized:
             return
 
-        # Import adapters dynamically to avoid circular imports
         # Initialize Tier 0: Lightweight HTTP scraper
         try:
-            from .lightweight_scraper import LightweightScraper
-
             adapter = LightweightScraper(self.config)
             await adapter.initialize()
             self._adapters["lightweight"] = adapter
             self.logger.info("Initialized Lightweight HTTP adapter")
 
-        except Exception as e:
-            self.logger.warning(f"Failed to initialize Lightweight adapter: {e}")
+        except Exception:
+            self.logger.warning("Failed to initialize Lightweight adapter")
 
         # Initialize Tier 1: Crawl4AI Basic
         try:
-            from .crawl4ai_adapter import Crawl4AIAdapter
-
             adapter = Crawl4AIAdapter(self.config.crawl4ai)
             await adapter.initialize()
             self._adapters["crawl4ai"] = adapter
             self.logger.info("Initialized Crawl4AI adapter")
 
-        except Exception as e:
-            self.logger.warning(f"Failed to initialize Crawl4AI adapter: {e}")
+        except Exception:
+            self.logger.warning("Failed to initialize Crawl4AI adapter")
 
         # Initialize Tier 2: BrowserUse (Enhanced)
         try:
-            from .browser_use_adapter import BrowserUseAdapter
-
             adapter = BrowserUseAdapter(self.config.browser_use)
             await adapter.initialize()
             self._adapters["browser_use"] = adapter
             self.logger.info("Initialized BrowserUse adapter")
 
-        except Exception as e:
-            self.logger.warning(f"Failed to initialize BrowserUse adapter: {e}")
+        except Exception:
+            self.logger.warning("Failed to initialize BrowserUse adapter")
 
         # Initialize Tier 3: Playwright
         try:
-            from .playwright_adapter import PlaywrightAdapter
-
             adapter = PlaywrightAdapter(self.config.playwright)
             await adapter.initialize()
             self._adapters["playwright"] = adapter
             self.logger.info("Initialized Playwright adapter")
 
-        except Exception as e:
-            self.logger.warning(f"Failed to initialize Playwright adapter: {e}")
+        except Exception:
+            self.logger.warning("Failed to initialize Playwright adapter")
 
         # TODO: Initialize Tier 4: Firecrawl adapter when available
         # try:
@@ -194,11 +194,12 @@ class AutomationRouter(BaseService):
         #     await adapter.initialize()
         #     self._adapters["firecrawl"] = adapter
         #     self.logger.info("Initialized Firecrawl adapter")
-        # except Exception as e:
-        #     self.logger.warning(f"Failed to initialize Firecrawl adapter: {e}")
+        # except Exception:
+        #     self.logger.warning("Failed to initialize Firecrawl adapter")
 
         if not self._adapters:
-            raise CrawlServiceError("No automation adapters available")
+            msg = "No automation adapters available"
+            raise CrawlServiceError(msg)
 
         self._initialized = True
         self.logger.info(
@@ -210,9 +211,11 @@ class AutomationRouter(BaseService):
         for name, adapter in self._adapters.items():
             try:
                 await adapter.cleanup()
-                self.logger.info(f"Cleaned up {name} adapter")
-            except Exception as e:
-                self.logger.exception(f"Error cleaning up {name} adapter: {e}")
+                self.logger.info(
+                    f"Cleaned up {name} adapter"
+                )  # TODO: Convert f-string to logging format
+            except Exception:
+                self.logger.exception(f"Error cleaning up {name} adapter")
 
         self._adapters.clear()
         self._initialized = False
@@ -231,7 +234,8 @@ class AutomationRouter(BaseService):
             "firecrawl",
         ]
         | None = None,
-        timeout: int = 30000,
+        *,
+        timeout: int = 30000,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Route scraping to appropriate tool based on URL and requirements.
 
@@ -247,9 +251,11 @@ class AutomationRouter(BaseService):
 
         Raises:
             CrawlServiceError: If router not initialized or all tools fail
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Router not initialized")
+            msg = "Router not initialized"
+            raise CrawlServiceError(msg)
 
         # Determine which tool to use
         if force_tool:
@@ -257,12 +263,15 @@ class AutomationRouter(BaseService):
                 "crawl4ai_enhanced",
                 "firecrawl",
             }:
-                raise CrawlServiceError(f"Forced tool '{force_tool}' not available")
+                msg = f"Forced tool '{force_tool}' not available"
+                raise CrawlServiceError(msg)
             tool = force_tool
         else:
             tool = await self._select_tool(url, interaction_required, custom_actions)
 
-        self.logger.info(f"Using {tool} for {url}")
+        self.logger.info(
+            f"Using {tool} for {url}"
+        )  # TODO: Convert f-string to logging format
 
         # Execute with selected tool
         start_time = time.time()
@@ -289,8 +298,8 @@ class AutomationRouter(BaseService):
             result["automation_time_ms"] = elapsed * 1000
             return result
 
-        except Exception as e:
-            self.logger.exception(f"{tool} failed for {url}: {e}")
+        except Exception:
+            self.logger.exception(f"{tool} failed for {url}")
             elapsed = time.time() - start_time
             self._update_metrics(tool, False, elapsed)
 
@@ -312,6 +321,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Tool name to use
+
         """
         domain = urlparse(url).netloc.lower()
 
@@ -330,8 +340,8 @@ class AutomationRouter(BaseService):
                 can_handle = await self._adapters["lightweight"].can_handle(url)
                 if can_handle:
                     return "lightweight"
-            except Exception as e:
-                self.logger.debug(f"Lightweight adapter can_handle check failed: {e}")
+            except Exception:
+                self.logger.debug("Lightweight adapter can_handle check failed")
 
         # Check for JavaScript-heavy patterns that need higher tiers
         js_patterns = ["spa", "react", "vue", "angular", "app", "dashboard", "console"]
@@ -402,7 +412,8 @@ class AutomationRouter(BaseService):
         self,
         url: str,
         custom_actions: list[dict] | None = None,
-        timeout: int = 30000,
+        *,
+        timeout: int = 30000,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Try scraping with Crawl4AI.
 
@@ -413,6 +424,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Scraping result
+
         """
         adapter = self._adapters["crawl4ai"]
 
@@ -434,7 +446,8 @@ class AutomationRouter(BaseService):
         self,
         url: str,
         custom_actions: list[dict] | None = None,
-        timeout: int = 30000,
+        *,
+        timeout: int = 30000,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Try scraping with browser-use AI.
 
@@ -445,6 +458,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Scraping result
+
         """
         adapter = self._adapters["browser_use"]
 
@@ -464,7 +478,8 @@ class AutomationRouter(BaseService):
         self,
         url: str,
         custom_actions: list[dict] | None = None,
-        timeout: int = 30000,
+        *,
+        timeout: int = 30000,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Try scraping with Playwright.
 
@@ -475,6 +490,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Scraping result
+
         """
         adapter = self._adapters["playwright"]
 
@@ -489,7 +505,7 @@ class AutomationRouter(BaseService):
         url: str,
         failed_tool: str,
         custom_actions: list[dict] | None,
-        timeout: int,
+        timeout: int,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Fallback to next tool in hierarchy.
 
@@ -501,6 +517,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Scraping result or error
+
         """
         # Define fallback order
         fallback_order = {
@@ -517,7 +534,9 @@ class AutomationRouter(BaseService):
 
         for fallback_tool in fallback_tools:
             try:
-                self.logger.info(f"Falling back to {fallback_tool} for {url}")
+                self.logger.info(
+                    f"Falling back to {fallback_tool} for {url}"
+                )  # TODO: Convert f-string to logging format
 
                 start_time = time.time()
 
@@ -537,8 +556,8 @@ class AutomationRouter(BaseService):
                 result["automation_time_ms"] = elapsed * 1000
                 return result
 
-            except Exception as e:
-                self.logger.exception(f"Fallback {fallback_tool} also failed: {e}")
+            except Exception:
+                self.logger.exception(f"Fallback {fallback_tool} also failed")
                 elapsed = time.time() - start_time
                 self._update_metrics(fallback_tool, False, elapsed)
                 continue
@@ -554,7 +573,7 @@ class AutomationRouter(BaseService):
             "failed_tools": [failed_tool, *fallback_tools],
         }
 
-    def _get_basic_js(self, url: str) -> str:
+    def _get_basic_js(self, _url: str) -> str:
         """Get basic JavaScript for common scenarios.
 
         Args:
@@ -562,6 +581,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             JavaScript code string
+
         """
         return """
         // Wait for content to load
@@ -593,6 +613,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             JavaScript code string
+
         """
         js_lines = []
 
@@ -631,6 +652,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Natural language task description
+
         """
         task_parts = []
 
@@ -663,8 +685,7 @@ class AutomationRouter(BaseService):
 
         if task_parts:
             return f"Navigate to the page, then {', '.join(task_parts)}, and finally extract all documentation content including code examples."
-        else:
-            return "Navigate to the page and extract all documentation content including code examples."
+        return "Navigate to the page and extract all documentation content including code examples."
 
     def _update_metrics(self, tool: str, success: bool, elapsed: float) -> None:
         """Update performance metrics for a tool.
@@ -673,6 +694,7 @@ class AutomationRouter(BaseService):
             tool: Tool name
             success: Whether the operation succeeded
             elapsed: Time elapsed in seconds
+
         """
         metrics = self.metrics[tool]
 
@@ -693,6 +715,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Dictionary with metrics for each tool including success rate
+
         """
         result = {}
 
@@ -719,6 +742,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Recommended tool name
+
         """
         # Get base recommendation from selection logic
         base_tool = await self._select_tool(url, False, None)
@@ -752,7 +776,8 @@ class AutomationRouter(BaseService):
     async def _try_lightweight(
         self,
         url: str,
-        timeout: int = 30000,
+        *,
+        timeout: int = 30000,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Try scraping with Lightweight HTTP tier.
 
@@ -762,6 +787,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Scraping result
+
         """
         adapter = self._adapters["lightweight"]
 
@@ -773,9 +799,8 @@ class AutomationRouter(BaseService):
 
         if scrape_result is None:
             # Escalate to higher tier
-            raise CrawlServiceError(
-                "Lightweight scraper returned None - content should escalate"
-            )
+            msg = "Lightweight scraper returned None - content should escalate"
+            raise CrawlServiceError(msg)
 
         # Convert LightweightScraper format to standard format
         return {
@@ -797,7 +822,8 @@ class AutomationRouter(BaseService):
         self,
         url: str,
         custom_actions: list[dict] | None = None,
-        timeout: int = 30000,
+        *,
+        timeout: int = 30000,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Try scraping with Crawl4AI Enhanced mode.
 
@@ -808,6 +834,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Scraping result
+
         """
         adapter = self._adapters["crawl4ai"]
 
@@ -823,8 +850,9 @@ class AutomationRouter(BaseService):
 
     async def _try_firecrawl(
         self,
-        url: str,
-        timeout: int = 30000,
+        _url: str,
+        *,
+        _timeout: int = 30000,
     ) -> dict[str, Any]:
         """Try scraping with Firecrawl API (Tier 4).
 
@@ -834,13 +862,15 @@ class AutomationRouter(BaseService):
 
         Returns:
             Scraping result
+
         """
         # TODO: Implement Firecrawl adapter
         # For now, return error indicating not available
-        raise CrawlServiceError("Firecrawl adapter not yet implemented")
+        msg = "Firecrawl adapter not yet implemented"
+        raise CrawlServiceError(msg)
 
     def _get_enhanced_js(
-        self, url: str, custom_actions: list[dict] | None = None
+        self, _url: str, custom_actions: list[dict] | None = None
     ) -> str:
         """Get enhanced JavaScript for Crawl4AI enhanced mode.
 
@@ -850,6 +880,7 @@ class AutomationRouter(BaseService):
 
         Returns:
             Enhanced JavaScript code
+
         """
         enhanced_js = """
         // Enhanced JavaScript for dynamic content

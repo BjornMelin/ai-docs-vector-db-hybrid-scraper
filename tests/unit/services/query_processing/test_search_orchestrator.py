@@ -146,7 +146,7 @@ class TestModels:
         """Test SearchResult model validation."""
         result = SearchResult(
             results=[{"id": "1", "content": "test"}],
-            total_results=1,
+            _total_results=1,
             query_processed="test query",
             processing_time_ms=500.0,
             expanded_query="expanded test query",
@@ -157,7 +157,7 @@ class TestModels:
         )
 
         assert len(result.results) == 1
-        assert result.total_results == 1
+        assert result._total_results == 1
         assert result.query_processed == "test query"
         assert result.processing_time_ms == 500.0
         assert result.expanded_query == "expanded test query"
@@ -170,13 +170,13 @@ class TestModels:
         """Test SearchResult default values."""
         result = SearchResult(
             results=[],
-            total_results=0,
+            _total_results=0,
             query_processed="test",
             processing_time_ms=100.0,
         )
 
         assert result.results == []
-        assert result.total_results == 0
+        assert result._total_results == 0
         assert result.expanded_query is None
         assert result.clusters is None
         assert result.features_used == []
@@ -199,7 +199,7 @@ class TestSearchOrchestrator:
 
         # Check stats initialization
         expected_stats = {
-            "total_searches": 0,
+            "_total_searches": 0,
             "avg_processing_time": 0.0,
             "cache_hits": 0,
             "cache_misses": 0,
@@ -304,7 +304,7 @@ class TestCoreSearchFunctionality:
         )
         assert result.processing_time_ms > 0
         assert len(result.results) <= basic_request.limit
-        assert result.total_results >= 0
+        assert result._total_results >= 0
         assert result.cache_hit is False
 
     async def test_search_with_mock_results(self, orchestrator, basic_request):
@@ -313,7 +313,7 @@ class TestCoreSearchFunctionality:
 
         # Should have mock results from _execute_search
         assert len(result.results) == basic_request.limit
-        assert result.total_results == 20  # Mock returns 20 total results
+        assert result._total_results == 20  # Mock returns 20 _total results
 
         # Check result structure
         first_result = result.results[0]
@@ -367,7 +367,7 @@ class TestCoreSearchFunctionality:
             # Should return minimal result on error
             assert isinstance(result, SearchResult)
             assert result.results == []
-            assert result.total_results == 0
+            assert result._total_results == 0
             assert result.query_processed == basic_request.query
             assert result.processing_time_ms > 0
 
@@ -799,7 +799,7 @@ class TestCachingFunctionality:
 
         # Results should be identical
         assert result1.query_processed == result2.query_processed
-        assert result1.total_results == result2.total_results
+        assert result1._total_results == result2._total_results
 
     async def test_cache_disabled(self, orchestrator):
         """Test search with caching disabled."""
@@ -861,7 +861,7 @@ class TestStatisticsAndPerformance:
     async def test_statistics_tracking(self, orchestrator, basic_request):
         """Test statistics are properly tracked."""
         initial_stats = orchestrator.get_stats()
-        assert initial_stats["total_searches"] == 0
+        assert initial_stats["_total_searches"] == 0
         assert initial_stats["avg_processing_time"] == 0.0
 
         # Perform searches
@@ -869,7 +869,7 @@ class TestStatisticsAndPerformance:
         await orchestrator.search(basic_request)
 
         stats = orchestrator.get_stats()
-        assert stats["total_searches"] == 2
+        assert stats["_total_searches"] == 2
         assert stats["avg_processing_time"] > 0
         assert stats["cache_hits"] == 1  # Second search hits cache
         assert stats["cache_misses"] == 1  # First search misses cache
@@ -884,7 +884,7 @@ class TestStatisticsAndPerformance:
             await orchestrator.search(request)
 
         stats = orchestrator.get_stats()
-        assert stats["total_searches"] == 3
+        assert stats["_total_searches"] == 3
         assert stats["avg_processing_time"] > 0
 
     def test_get_stats_returns_copy(self, orchestrator):
@@ -893,11 +893,11 @@ class TestStatisticsAndPerformance:
         stats2 = orchestrator.get_stats()
 
         # Modify one copy
-        stats1["total_searches"] = 999
+        stats1["_total_searches"] = 999
 
         # Other copy should be unchanged
-        assert stats2["total_searches"] != 999
-        assert orchestrator.stats["total_searches"] != 999
+        assert stats2["_total_searches"] != 999
+        assert orchestrator.stats["_total_searches"] != 999
 
 
 class TestUtilityMethods:
@@ -980,7 +980,7 @@ class TestEdgeCasesAndErrorHandling:
         assert isinstance(result, SearchResult)
         assert result.query_processed == long_query
 
-    async def test_zero_limit(self, orchestrator):
+    async def test_zero_limit(self, _orchestrator):
         """Test search with zero limit should fail validation."""
         with pytest.raises(ValueError):
             SearchRequest(query="test", limit=0)

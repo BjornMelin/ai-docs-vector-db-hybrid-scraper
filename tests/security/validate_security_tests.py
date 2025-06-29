@@ -22,7 +22,7 @@ def validate_test_file(file_path: Path) -> dict:
     }
 
     try:
-        with open(file_path) as f:
+        with file_path.open() as f:
             content = f.read()
 
         # Parse the AST
@@ -85,9 +85,9 @@ def validate_security_test_structure():
         "overall_valid": True,
         "categories": {},
         "summary": {
-            "total_files": 0,
+            "_total_files": 0,
             "valid_files": 0,
-            "total_tests": 0,
+            "_total_tests": 0,
             "categories_complete": 0,
         },
     }
@@ -107,10 +107,10 @@ def validate_security_test_structure():
                     file_results = validate_test_file(file_path)
                     category_results["files"][file_name] = file_results
 
-                    validation_results["summary"]["total_files"] += 1
+                    validation_results["summary"]["_total_files"] += 1
                     if file_results["valid"]:
                         validation_results["summary"]["valid_files"] += 1
-                    validation_results["summary"]["total_tests"] += file_results[
+                    validation_results["summary"]["_total_tests"] += file_results[
                         "test_count"
                     ]
                 else:
@@ -144,9 +144,9 @@ def print_validation_report(results: dict):
     # Summary
     summary = results["summary"]
     print(f"Overall Status: {'✅ VALID' if results['overall_valid'] else '❌ INVALID'}")
-    print(f"Total Test Files: {summary['total_files']}")
+    print(f"Total Test Files: {summary['_total_files']}")
     print(f"Valid Test Files: {summary['valid_files']}")
-    print(f"Total Test Functions: {summary['total_tests']}")
+    print(f"Total Test Functions: {summary['_total_tests']}")
     print(
         f"Complete Categories: {summary['categories_complete']}/{len(results['categories'])}"
     )

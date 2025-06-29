@@ -69,14 +69,14 @@ class TestAutomationRouterInit:
             assert "success" in router.metrics[tool]
             assert "failed" in router.metrics[tool]
             assert "avg_time" in router.metrics[tool]
-            assert "total_time" in router.metrics[tool]
+            assert "_total_time" in router.metrics[tool]
             assert router.metrics[tool]["success"] == 0
             assert router.metrics[tool]["failed"] == 0
 
     @patch("builtins.open", new_callable=mock_open)
     @patch("pathlib.Path.exists", return_value=True)
     def test_load_routing_rules_from_file(
-        self, mock_exists, mock_file, sample_routing_rules
+        self, _mock_exists, mock_file, sample_routing_rules
     ):
         """Test loading routing rules from file."""
         mock_file.return_value.read.return_value = json.dumps(sample_routing_rules)
@@ -87,7 +87,7 @@ class TestAutomationRouterInit:
             assert router.routing_rules == sample_routing_rules["routing_rules"]
 
     @patch("pathlib.Path.exists", return_value=False)
-    def test_load_routing_rules_file_not_found(self, mock_exists):
+    def test_load_routing_rules_file_not_found(self, _mock_exists):
         """Test routing rules fallback when file not found."""
         router = AutomationRouter(MagicMock())
 
@@ -98,7 +98,7 @@ class TestAutomationRouterInit:
 
     @patch("builtins.open", side_effect=Exception("File read error"))
     @patch("pathlib.Path.exists", return_value=True)
-    def test_load_routing_rules_file_error(self, mock_exists, mock_file):
+    def test_load_routing_rules_file_error(self, _mock_exists, _mock_file):
         """Test routing rules fallback on file error."""
         router = AutomationRouter(MagicMock())
 
@@ -618,7 +618,7 @@ class TestMetrics:
         metrics = router.metrics["crawl4ai"]
         assert metrics["success"] == 1
         assert metrics["failed"] == 0
-        assert metrics["total_time"] == 1.5
+        assert metrics["_total_time"] == 1.5
         assert metrics["avg_time"] == 1.5
 
     def test_update_metrics_failure(self, router):
@@ -628,7 +628,7 @@ class TestMetrics:
         metrics = router.metrics["crawl4ai"]
         assert metrics["success"] == 0
         assert metrics["failed"] == 1
-        assert metrics["total_time"] == 2.0
+        assert metrics["_total_time"] == 2.0
         assert metrics["avg_time"] == 2.0
 
     def test_update_metrics_multiple(self, router):
@@ -640,7 +640,7 @@ class TestMetrics:
         metrics = router.metrics["crawl4ai"]
         assert metrics["success"] == 2
         assert metrics["failed"] == 1
-        assert metrics["total_time"] == 6.0
+        assert metrics["_total_time"] == 6.0
         assert metrics["avg_time"] == 2.0
 
     def test_get_metrics(self, router):
@@ -655,7 +655,7 @@ class TestMetrics:
         assert crawl4ai_metrics["success"] == 1
         assert crawl4ai_metrics["failed"] == 1
         assert crawl4ai_metrics["success_rate"] == 0.5
-        assert crawl4ai_metrics["total_attempts"] == 2
+        assert crawl4ai_metrics["_total_attempts"] == 2
         assert crawl4ai_metrics["available"] is False  # No adapters in this test
 
     async def test_get_recommended_tool(self, router):

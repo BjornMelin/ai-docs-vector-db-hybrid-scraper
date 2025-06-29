@@ -15,6 +15,10 @@ from typing import Any
 import pytest
 
 
+class TestError(Exception):
+    """Custom exception for this module."""
+
+
 class RecoveryStage(Enum):
     """Recovery process stages."""
 
@@ -33,7 +37,7 @@ class RecoveryMetrics:
     isolation_time: float = 0.0
     recovery_time: float = 0.0
     validation_time: float = 0.0
-    total_recovery_time: float = 0.0
+    _total_recovery_time: float = 0.0
     data_consistency_score: float = 1.0
     service_availability_score: float = 1.0
     performance_degradation: float = 0.0
@@ -147,7 +151,8 @@ class TestRecoveryValidation:
                 current = await self.monitor_current_state()
 
                 if not self.baseline_state:
-                    raise Exception("No baseline state available for comparison")
+                    msg = "No baseline state available for comparison"
+                    raise TestError(msg)
 
                 validation_results = {
                     "services_recovered": True,
@@ -213,7 +218,8 @@ class TestRecoveryValidation:
             ) -> RecoveryMetrics:
                 """Execute recovery procedure."""
                 if failure_type not in self.recovery_procedures:
-                    raise Exception(f"No recovery procedure for {failure_type}")
+                    msg = f"No recovery procedure for {failure_type}"
+                    raise TestError(msg)
 
                 metrics = RecoveryMetrics()
                 start_time = time.time()
@@ -223,7 +229,7 @@ class TestRecoveryValidation:
                     procedure = self.recovery_procedures[failure_type]
                     recovery_result = await procedure(context or {})
 
-                    metrics.total_recovery_time = time.time() - start_time
+                    metrics._total_recovery_time = time.time() - start_time
 
                     # Extract metrics from recovery result
                     if isinstance(recovery_result, dict):
@@ -274,7 +280,7 @@ class TestRecoveryValidation:
         return RecoveryOrchestrator()
 
     async def test_service_failure_recovery(
-        self, system_monitor, recovery_orchestrator, resilience_validator
+        self, system_monitor, recovery_orchestrator, _resilience_validator
     ):
         """Test recovery from service failures."""
         # Capture baseline
@@ -303,7 +309,7 @@ class TestRecoveryValidation:
         assert "service_search_service_unhealthy" in failure_detection["failure_types"]
 
         # Define recovery procedure
-        async def search_service_recovery(context: dict[str, Any]) -> dict[str, Any]:
+        async def search_service_recovery(_context: dict[str, Any]) -> dict[str, Any]:
             """Recovery procedure for search service."""
             time.time()
 
@@ -355,7 +361,7 @@ class TestRecoveryValidation:
         metrics = await recovery_orchestrator.execute_recovery("service_failure")
 
         # Validate recovery metrics
-        assert metrics.total_recovery_time > 0
+        assert metrics._total_recovery_time > 0
         assert metrics.detection_time > 0
         assert metrics.isolation_time > 0
         assert metrics.recovery_time > 0
@@ -400,7 +406,7 @@ class TestRecoveryValidation:
         }
 
         # Define data recovery procedure
-        async def data_corruption_recovery(context: dict[str, Any]) -> dict[str, Any]:
+        async def data_corruption_recovery(_context: dict[str, Any]) -> dict[str, Any]:
             """Recovery procedure for data corruption."""
 
             # Step 1: Detect corruption
@@ -450,7 +456,7 @@ class TestRecoveryValidation:
 
         # Validate recovery
         assert metrics.data_consistency_score > 0.8  # Should recover most data
-        assert metrics.total_recovery_time < 5.0  # Should complete reasonably quickly
+        assert metrics._total_recovery_time < 5.0  # Should complete reasonably quickly
 
         # Verify data restoration
         final_state = await system_monitor.monitor_current_state()
@@ -486,7 +492,7 @@ class TestRecoveryValidation:
         )
 
         # Define cascade recovery procedure
-        async def cascade_failure_recovery(context: dict[str, Any]) -> dict[str, Any]:
+        async def cascade_failure_recovery(_context: dict[str, Any]) -> dict[str, Any]:
             """Recovery procedure for cascade failures."""
 
             # Step 1: Rapid detection
@@ -563,7 +569,7 @@ class TestRecoveryValidation:
 
         # Validate cascade recovery
         assert (
-            metrics.total_recovery_time < 10.0
+            metrics._total_recovery_time < 10.0
         )  # Should recover within reasonable time
         assert metrics.service_availability_score >= 0.7  # Reasonable availability
 
@@ -611,7 +617,7 @@ class TestRecoveryValidation:
         )
 
         # Define partial recovery procedure
-        async def partial_recovery(context: dict[str, Any]) -> dict[str, Any]:
+        async def partial_recovery(_context: dict[str, Any]) -> dict[str, Any]:
             """Recovery procedure that achieves partial recovery."""
 
             # Attempt recovery but some components remain degraded
@@ -659,14 +665,14 @@ class TestRecoveryValidation:
         assert final_state.performance_metrics["throughput"] > 0  # Still functional
 
     async def test_recovery_time_objectives(
-        self, system_monitor, recovery_orchestrator
+        self, _system_monitor, recovery_orchestrator
     ):
         """Test recovery time objectives (RTO) compliance."""
 
         # Define RTO requirements for different failure types
 
         # Mock fast recovery procedure
-        async def fast_recovery(context: dict[str, Any]) -> dict[str, Any]:
+        async def fast_recovery(_context: dict[str, Any]) -> dict[str, Any]:
             """Fast recovery procedure for RTO testing."""
             start_time = time.time()
 
@@ -678,14 +684,14 @@ class TestRecoveryValidation:
                 "isolation_time": 0.01,
                 "recovery_time": 0.02,
                 "validation_time": 0.01,
-                "total_time": time.time() - start_time,
+                "_total_time": time.time() - start_time,
                 "data_consistency": 1.0,
                 "availability": 0.95,
                 "degradation": 0.05,
             }
 
         # Mock slow recovery procedure
-        async def slow_recovery(context: dict[str, Any]) -> dict[str, Any]:
+        async def slow_recovery(_context: dict[str, Any]) -> dict[str, Any]:
             """Slow recovery procedure for RTO testing."""
             start_time = time.time()
 
@@ -697,7 +703,7 @@ class TestRecoveryValidation:
                 "isolation_time": 0.05,
                 "recovery_time": 0.1,
                 "validation_time": 0.05,
-                "total_time": time.time() - start_time,
+                "_total_time": time.time() - start_time,
                 "data_consistency": 1.0,
                 "availability": 0.9,
                 "degradation": 0.1,
@@ -709,8 +715,8 @@ class TestRecoveryValidation:
 
         # For testing, scale down RTO requirements
         test_rto = 0.1  # 100ms for testing
-        assert fast_metrics.total_recovery_time <= test_rto, (
-            f"Fast recovery should meet RTO: {fast_metrics.total_recovery_time} > {test_rto}"
+        assert fast_metrics._total_recovery_time <= test_rto, (
+            f"Fast recovery should meet RTO: {fast_metrics._total_recovery_time} > {test_rto}"
         )
 
         # Test slow recovery might exceed RTO
@@ -724,7 +730,7 @@ class TestRecoveryValidation:
         assert slow_metrics.service_availability_score >= 0.8
 
     async def test_recovery_point_objectives(
-        self, system_monitor, recovery_orchestrator
+        self, _system_monitor, recovery_orchestrator
     ):
         """Test recovery point objectives (RPO) compliance."""
 
@@ -749,11 +755,11 @@ class TestRecoveryValidation:
             ]
 
             # Calculate data loss
-            total_data_points = len(mock_data_timeline)
+            _total_data_points = len(mock_data_timeline)
             recovered_data_points = len(recoverable_data)
             data_recovery_ratio = (
-                recovered_data_points / total_data_points
-                if total_data_points > 0
+                recovered_data_points / _total_data_points
+                if _total_data_points > 0
                 else 0
             )
 
@@ -763,7 +769,7 @@ class TestRecoveryValidation:
                 "recovery_time": 0.05,
                 "validation_time": 0.02,
                 "data_consistency": data_recovery_ratio,
-                "data_points_lost": total_data_points - recovered_data_points,
+                "data_points_lost": _total_data_points - recovered_data_points,
                 "rpo_compliance": True,
                 "availability": 0.9,
                 "degradation": 0.1,
@@ -791,7 +797,7 @@ class TestRecoveryValidation:
         assert lenient_metrics.data_consistency_score >= 0.9  # 90%+ of data
 
     async def test_automated_recovery_validation(
-        self, system_monitor, recovery_orchestrator
+        self, system_monitor, _recovery_orchestrator
     ):
         """Test automated recovery validation and health checks."""
 
@@ -838,16 +844,19 @@ class TestRecoveryValidation:
                 if service.get("status") != "healthy"
             ]
             if unhealthy_services:
-                raise Exception(f"Unhealthy services: {unhealthy_services}")
+                msg = f"Unhealthy services: {unhealthy_services}"
+                raise TestError(msg)
             return {"healthy_services": len(state.services)}
 
         async def performance_check():
             """Check system performance is acceptable."""
             state = await system_monitor.monitor_current_state()
             if state.performance_metrics.get("error_rate", 0) > 0.1:
-                raise Exception("Error rate too high")
+                msg = "Error rate too high"
+                raise TestError(msg)
             if state.performance_metrics.get("latency_p95", 0) > 1.0:
-                raise Exception("Latency too high")
+                msg = "Latency too high"
+                raise TestError(msg)
             return {"performance": "acceptable"}
 
         async def data_integrity_check():
@@ -855,7 +864,8 @@ class TestRecoveryValidation:
             state = await system_monitor.monitor_current_state()
             docs = state.data_stores.get("vector_store", {}).get("documents", 0)
             if docs < 5000:  # Minimum acceptable data
-                raise Exception("Insufficient data available")
+                msg = "Insufficient data available"
+                raise TestError(msg)
             return {"documents": docs}
 
         validator.register_check("service_health", service_health_check)

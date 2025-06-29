@@ -11,7 +11,7 @@ from typing import Any
 from opentelemetry import metrics
 from opentelemetry.metrics import Counter, Histogram, UpDownCounter
 
-from ..monitoring.metrics import MetricsRegistry
+from src.services.monitoring.metrics import MetricsRegistry
 
 
 logger = logging.getLogger(__name__)
@@ -25,6 +25,7 @@ class OpenTelemetryMetricsBridge:
 
         Args:
             prometheus_registry: Existing Prometheus metrics registry
+
         """
         self.prometheus_registry = prometheus_registry
         self.meter = metrics.get_meter(__name__)
@@ -33,7 +34,6 @@ class OpenTelemetryMetricsBridge:
 
     def _setup_otel_metrics(self) -> None:
         """Set up OpenTelemetry metric instruments."""
-
         # AI/ML Operation Metrics
         self._instruments["ai_operation_duration"] = self.meter.create_histogram(
             "ai_operation_duration_ms",
@@ -150,6 +150,7 @@ class OpenTelemetryMetricsBridge:
             tokens_used: Number of tokens used
             cost_usd: Cost in USD
             success: Whether operation succeeded
+
         """
         labels = {
             "operation_type": operation_type,
@@ -169,11 +170,12 @@ class OpenTelemetryMetricsBridge:
             self._instruments["ai_cost"].add(cost_usd, labels)
 
         # Bridge to Prometheus if available
-        if self.prometheus_registry:
-            if hasattr(self.prometheus_registry, "record_embedding_cost") and cost_usd:
-                self.prometheus_registry.record_embedding_cost(
-                    provider, model, cost_usd
-                )
+        if (
+            self.prometheus_registry
+            and hasattr(self.prometheus_registry, "record_embedding_cost")
+            and cost_usd
+        ):
+            self.prometheus_registry.record_embedding_cost(provider, model, cost_usd)
 
     def record_vector_search(
         self,
@@ -193,6 +195,7 @@ class OpenTelemetryMetricsBridge:
             results_count: Number of results returned
             top_score: Top similarity score
             success: Whether search succeeded
+
         """
         labels = {
             "collection": collection,
@@ -208,19 +211,19 @@ class OpenTelemetryMetricsBridge:
             self._instruments["vector_search_quality"].record(top_score, labels)
 
         # Bridge to Prometheus if available
-        if self.prometheus_registry:
-            # Update Prometheus metrics if methods exist
-            if hasattr(self.prometheus_registry, "_metrics"):
-                try:
-                    status = "success" if success else "error"
-                    self.prometheus_registry._metrics["search_requests"].labels(
-                        collection=collection, status=status
-                    ).inc()
-                    self.prometheus_registry._metrics["search_duration"].labels(
-                        collection=collection, query_type=query_type
-                    ).observe(duration_ms / 1000)  # Convert to seconds for Prometheus
-                except Exception as e:
-                    logger.warning(f"Failed to update Prometheus metrics: {e}")
+        if self.prometheus_registry and hasattr(self.prometheus_registry, "_metrics"):
+            try:
+                status = "success" if success else "error"
+                self.prometheus_registry._metrics["search_requests"].labels(
+                    collection=collection, status=status
+                ).inc()
+                self.prometheus_registry._metrics["search_duration"].labels(
+                    collection=collection, query_type=query_type
+                ).observe(duration_ms / 1000)  # Convert to seconds for Prometheus
+            except Exception as e:
+                logger.warning(
+                    f"Failed to update Prometheus metrics: {e}"
+                )  # TODO: Convert f-string to logging format
 
     def record_cache_operation(
         self,
@@ -238,6 +241,7 @@ class OpenTelemetryMetricsBridge:
             duration_ms: Operation duration
             hit: Whether it was a cache hit
             cache_name: Cache instance name
+
         """
         labels = {
             "cache_type": cache_type,
@@ -275,6 +279,7 @@ class OpenTelemetryMetricsBridge:
             duration_ms: Request duration
             request_size_bytes: Request body size
             response_size_bytes: Response body size
+
         """
         labels = {
             "method": method,
@@ -306,6 +311,7 @@ class OpenTelemetryMetricsBridge:
             component: Component where error occurred
             severity: Error severity
             user_impact: Impact on user experience
+
         """
         labels = {
             "error_type": error_type,
@@ -323,6 +329,7 @@ class OpenTelemetryMetricsBridge:
         Args:
             operation_type: Type of operation
             delta: Change in concurrent operations (+1 for start, -1 for end)
+
         """
         labels = {"operation_type": operation_type}
         self._instruments["concurrent_operations"].add(delta, labels)
@@ -333,6 +340,7 @@ class OpenTelemetryMetricsBridge:
         Args:
             queue_type: Type of queue
             depth: Current queue depth
+
         """
         labels = {"queue_type": queue_type}
         self._instruments["queue_depth"].set(depth, labels)
@@ -343,6 +351,7 @@ class OpenTelemetryMetricsBridge:
         Args:
             service: Service name
             healthy: Whether service is healthy
+
         """
         labels = {"service": service}
         self._instruments["service_health"].set(1 if healthy else 0, labels)
@@ -357,6 +366,7 @@ class OpenTelemetryMetricsBridge:
         Args:
             dependency: Dependency name
             healthy: Whether dependency is healthy
+
         """
         labels = {"dependency": dependency}
         self._instruments["dependency_health"].set(1 if healthy else 0, labels)
@@ -370,6 +380,7 @@ class OpenTelemetryMetricsBridge:
 
         Args:
             metrics_batch: Dictionary of metrics to record
+
         """
         for metric_name, metric_data in metrics_batch.items():
             try:
@@ -386,7 +397,9 @@ class OpenTelemetryMetricsBridge:
                         instrument.set(value, labels)
 
             except Exception as e:
-                logger.warning(f"Failed to record metric {metric_name}: {e}")
+                logger.warning(
+                    f"Failed to record metric {metric_name}: {e}"
+                )  # TODO: Convert f-string to logging format
 
     def create_custom_counter(
         self, name: str, description: str, unit: str = ""
@@ -400,6 +413,7 @@ class OpenTelemetryMetricsBridge:
 
         Returns:
             OpenTelemetry Counter instrument
+
         """
         counter = self.meter.create_counter(name, description, unit)
         self._instruments[name] = counter
@@ -415,6 +429,7 @@ class OpenTelemetryMetricsBridge:
 
         Returns:
             OpenTelemetry Gauge instrument
+
         """
         gauge = self.meter.create_gauge(name, description, unit)
         self._instruments[name] = gauge
@@ -437,6 +452,7 @@ class OpenTelemetryMetricsBridge:
 
         Returns:
             OpenTelemetry Histogram instrument
+
         """
         if boundaries:
             histogram = self.meter.create_histogram(
@@ -456,6 +472,7 @@ class OpenTelemetryMetricsBridge:
 
         Returns:
             Metric instrument or None
+
         """
         return self._instruments.get(name)
 
@@ -474,6 +491,7 @@ def initialize_metrics_bridge(
 
     Returns:
         Initialized metrics bridge
+
     """
     global _metrics_bridge
     _metrics_bridge = OpenTelemetryMetricsBridge(prometheus_registry)
@@ -488,11 +506,11 @@ def get_metrics_bridge() -> OpenTelemetryMetricsBridge:
 
     Raises:
         RuntimeError: If bridge not initialized
+
     """
     if _metrics_bridge is None:
-        raise RuntimeError(
-            "Metrics bridge not initialized. Call initialize_metrics_bridge() first."
-        )
+        msg = "Metrics bridge not initialized. Call initialize_metrics_bridge() first."
+        raise RuntimeError(msg)
     return _metrics_bridge
 
 

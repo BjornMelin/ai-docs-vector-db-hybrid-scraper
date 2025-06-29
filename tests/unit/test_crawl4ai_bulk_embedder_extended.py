@@ -10,6 +10,10 @@ from src.crawl4ai_bulk_embedder import BulkEmbedder, ProcessingState, _async_mai
 from src.infrastructure.client_manager import ClientManager
 
 
+class TestError(Exception):
+    """Custom exception for this module."""
+
+
 @pytest.fixture
 def mock_config():
     """Create mock configuration."""
@@ -184,7 +188,7 @@ class TestBulkEmbedderExtended:
         mock_chunk_result = MagicMock()
         mock_chunk_result.chunks = []
 
-        with patch("src.crawl4ai_bulk_embedder.EnhancedChunker") as mock_chunker_class:
+        with patch("src.crawl4ai_bulk_embedder.DocumentChunker") as mock_chunker_class:
             mock_chunker = MagicMock()
             mock_chunker.chunk_text.return_value = mock_chunk_result
             mock_chunker_class.return_value = mock_chunker
@@ -219,7 +223,7 @@ class TestBulkEmbedderExtended:
                 progress=None,  # No progress tracking
             )
 
-            assert results["total"] == 15
+            assert results["_total"] == 15
             assert results["successful"] == 15
             # Should have saved state at least once (after 10 completions)
             assert mock_save.call_count >= 1
@@ -238,7 +242,8 @@ class TestBulkEmbedderExtended:
         # Mock process_url to raise exception
         async def mock_process(url):
             if "exception" in url:
-                raise Exception("Processing failed")
+                msg = "Processing failed"
+                raise TestError(msg)
             return {"url": url, "success": True, "chunks": 2, "error": None}
 
         with (
@@ -250,7 +255,7 @@ class TestBulkEmbedderExtended:
                 max_concurrent=2,
             )
 
-            assert results["total"] == 2
+            assert results["_total"] == 2
             # One should succeed, one should fail due to exception
             successful_count = sum(
                 1
@@ -295,11 +300,11 @@ class TestBulkEmbedderExtended:
             "https://example.com/404": "404 Not Found",
             "https://example.com/500": "500 Internal Server Error",
         }
-        embedder.state.total_chunks_processed = 10
-        embedder.state.total_embeddings_generated = 10
+        embedder.state._total_chunks_processed = 10
+        embedder.state._total_embeddings_generated = 10
 
         results = {
-            "total": 5,
+            "_total": 5,
             "successful": 3,
             "failed": 2,
             "results": [],

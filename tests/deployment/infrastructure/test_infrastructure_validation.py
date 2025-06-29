@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 
 from tests.deployment.conftest import DeploymentEnvironment
 
@@ -19,7 +20,7 @@ class TestInfrastructureAsCode:
 
     @pytest.mark.infrastructure
     def test_terraform_configuration_validation(
-        self, mock_infrastructure_config: dict[str, Any], temp_deployment_dir: Path
+        self, _mock_infrastructure_config: dict[str, Any], temp_deployment_dir: Path
     ):
         """Test Terraform configuration validation."""
         terraform_validator = TerraformValidator(temp_deployment_dir)
@@ -52,7 +53,7 @@ class TestInfrastructureAsCode:
 
         # Write Terraform configuration
         terraform_file = temp_deployment_dir / "main.tf.json"
-        with open(terraform_file, "w") as f:
+        with terraform_file.open("w") as f:
             json.dump(terraform_config, f, indent=2)
 
         # Validate configuration
@@ -104,9 +105,8 @@ class TestInfrastructureAsCode:
 
         # Write Docker Compose file
         compose_file = temp_deployment_dir / "docker-compose.yml"
-        import yaml
 
-        with open(compose_file, "w") as f:
+        with compose_file.open("w") as f:
             yaml.safe_dump(compose_config, f, default_flow_style=False)
 
         # Validate configuration
@@ -189,12 +189,10 @@ class TestInfrastructureAsCode:
         namespace_file = temp_deployment_dir / "namespace.yaml"
         deployment_file = temp_deployment_dir / "deployment.yaml"
 
-        import yaml
-
-        with open(namespace_file, "w") as f:
+        with namespace_file.open("w") as f:
             yaml.safe_dump(namespace_manifest, f, default_flow_style=False)
 
-        with open(deployment_file, "w") as f:
+        with deployment_file.open("w") as f:
             yaml.safe_dump(deployment_manifest, f, default_flow_style=False)
 
         # Validate manifests
@@ -501,7 +499,7 @@ class TestNetworkConfiguration:
     @pytest.mark.infrastructure
     @pytest.mark.asyncio
     async def test_service_connectivity(
-        self, deployment_environment: DeploymentEnvironment
+        self, _deployment_environment: DeploymentEnvironment
     ):
         """Test connectivity between services."""
         connectivity_tester = ConnectivityTester()
@@ -633,7 +631,7 @@ class TerraformValidator:
 
     def validate_configuration(self, terraform_file: Path) -> dict[str, Any]:
         """Validate Terraform configuration file."""
-        with open(terraform_file) as f:
+        with terraform_file.open() as f:
             config = json.load(f)
 
         # Validate basic structure
@@ -661,9 +659,8 @@ class DockerComposeValidator:
 
     def validate_configuration(self, compose_file: Path) -> dict[str, Any]:
         """Validate Docker Compose configuration."""
-        import yaml
 
-        with open(compose_file) as f:
+        with compose_file.open() as f:
             config = yaml.safe_load(f)
 
         # Validate version
@@ -695,13 +692,12 @@ class KubernetesValidator:
 
     def validate_manifests(self, manifest_files: list[Path]) -> dict[str, Any]:
         """Validate Kubernetes manifest files."""
-        import yaml
 
         manifests = []
         all_valid = True
 
         for manifest_file in manifest_files:
-            with open(manifest_file) as f:
+            with manifest_file.open() as f:
                 manifest = yaml.safe_load(f)
 
             manifest_validation = self._validate_single_manifest(manifest)
@@ -778,7 +774,7 @@ class ContainerProvisioner:
         return {
             "success": True,
             "provisioned_containers": provisioned_containers,
-            "total_containers": len(provisioned_containers),
+            "_total_containers": len(provisioned_containers),
         }
 
 
@@ -807,7 +803,7 @@ class StorageProvisioner:
         return {
             "success": True,
             "provisioned_volumes": provisioned_volumes,
-            "total_storage_gb": sum(v["size_gb"] for v in provisioned_volumes),
+            "_total_storage_gb": sum(v["size_gb"] for v in provisioned_volumes),
         }
 
 
@@ -933,7 +929,7 @@ class ConnectivityTester:
     """Tester for service connectivity."""
 
     async def test_connectivity(
-        self, services: dict[str, dict[str, Any]], expected_connections: list[tuple]
+        self, _services: dict[str, dict[str, Any]], expected_connections: list[tuple]
     ) -> dict[str, Any]:
         """Test connectivity between services."""
         successful_connections = []

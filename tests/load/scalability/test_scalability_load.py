@@ -7,6 +7,7 @@ vertical scaling, and auto-scaling capabilities of the system.
 import asyncio
 import logging
 import math
+import random
 import time
 
 import pytest
@@ -54,22 +55,22 @@ class TestScalabilityLoad:
         scaling_metrics = []
 
         @env.events.stats_reset.add_listener
-        def collect_scaling_metrics(**kwargs):
+        def collect_scaling_metrics(**__kwargs):
             """Collect metrics at each scaling stage."""
             stats = env.stats
-            if stats and stats.total.num_requests > 0:
+            if stats and stats._total.num_requests > 0:
                 current_users = env.runner.user_count if env.runner else 0
 
                 scaling_metrics.append(
                     {
                         "timestamp": time.time(),
                         "users": current_users,
-                        "requests": stats.total.num_requests,
-                        "failures": stats.total.num_failures,
-                        "avg_response_time": stats.total.avg_response_time,
-                        "rps": stats.total.current_rps,
+                        "requests": stats._total.num_requests,
+                        "failures": stats._total.num_failures,
+                        "avg_response_time": stats._total.avg_response_time,
+                        "rps": stats._total.current_rps,
                         "error_rate": (
-                            stats.total.num_failures / stats.total.num_requests
+                            stats._total.num_failures / stats._total.num_requests
                         )
                         * 100,
                     }
@@ -78,9 +79,9 @@ class TestScalabilityLoad:
         # Simulate horizontal scaling infrastructure
         scaling_simulator = HorizontalScalingSimulator()
 
-        async def horizontally_scaled_operation(**kwargs):
+        async def horizontally_scaled_operation(**_kwargs):
             """Operation that adapts to horizontal scaling."""
-            current_users = kwargs.get("concurrent_users", 50)
+            current_users = _kwargs.get("concurrent_users", 50)
 
             # Simulate scaling infrastructure response
             scaling_factor = scaling_simulator.get_scaling_factor(current_users)
@@ -181,7 +182,7 @@ class TestScalabilityLoad:
                 capacity = (self.cpu_cores * 0.6) + (self.memory_gb * 0.4)
                 return capacity
 
-            def get_scaling_stats(self) -> Dict:
+            def get_scaling_stats(self) -> dict:
                 """Get scaling statistics."""
                 if not self.resource_utilization:
                     return {"no_data": True}
@@ -204,13 +205,13 @@ class TestScalabilityLoad:
 
         vertical_scaler = VerticalScalingSimulator()
 
-        async def vertically_scaled_operation(**kwargs):
+        async def vertically_scaled_operation(**_kwargs):
             """Operation that benefits from vertical scaling."""
             # Simulate CPU and memory intensive work
-            workload_complexity = kwargs.get("workload_complexity", 1.0)
+            workload_complexity = _kwargs.get("workload_complexity", 1.0)
 
             # Check if we need to scale up based on load
-            current_users = kwargs.get("concurrent_users", 50)
+            current_users = _kwargs.get("concurrent_users", 50)
             if current_users > 200 and vertical_scaler.cpu_cores < 8:
                 vertical_scaler.scale_up(2.0, 1.5)
             elif current_users > 400 and vertical_scaler.cpu_cores < 16:
@@ -389,7 +390,7 @@ class TestScalabilityLoad:
                     self.current_instances * 1.0
                 )  # Each instance provides 1.0 capacity unit
 
-            def get_scaling_stats(self) -> Dict:
+            def get_scaling_stats(self) -> dict:
                 """Get auto-scaling statistics."""
                 if not self.scaling_decisions:
                     return {"no_scaling_events": True}
@@ -402,7 +403,7 @@ class TestScalabilityLoad:
                 ]
 
                 return {
-                    "total_scaling_events": len(self.scaling_decisions),
+                    "_total_scaling_events": len(self.scaling_decisions),
                     "scale_up_events": len(scale_up_events),
                     "scale_down_events": len(scale_down_events),
                     "current_instances": self.current_instances,
@@ -416,9 +417,9 @@ class TestScalabilityLoad:
 
         auto_scaler = AutoScalingManager()
 
-        async def auto_scaling_operation(**kwargs):
+        async def auto_scaling_operation(**_kwargs):
             """Operation that triggers auto-scaling based on load."""
-            current_users = kwargs.get("concurrent_users", 50)
+            current_users = _kwargs.get("concurrent_users", 50)
 
             # Simulate system load metrics
             base_cpu_per_user = 2.0  # 2% CPU per user
@@ -489,7 +490,7 @@ class TestScalabilityLoad:
         )
 
         # Assertions
-        assert scaling_stats["total_scaling_events"] > 5, (
+        assert scaling_stats["_total_scaling_events"] > 5, (
             "Insufficient auto-scaling activity"
         )
         assert scaling_stats["scale_up_events"] > 0, "No scale-up events detected"
@@ -554,7 +555,7 @@ class TestScalabilityLoad:
                     await asyncio.sleep(processing_time)
 
                     # Record performance metrics
-                    total_time = time.time() - query_start
+                    _total_time = time.time() - query_start
                     self.performance_metrics.append(
                         {
                             "timestamp": time.time(),
@@ -562,7 +563,7 @@ class TestScalabilityLoad:
                             "complexity": complexity,
                             "connection_wait": connection_wait,
                             "processing_time": processing_time,
-                            "total_time": total_time,
+                            "_total_time": _total_time,
                             "read_replicas": self.read_replicas,
                             "pool_utilization": pool["active"] / pool["size"],
                         }
@@ -634,9 +635,11 @@ class TestScalabilityLoad:
                     }
                 )
 
-                logger.info(f"Expanded {pool_type} pool: {old_size} -> {pool['size']}")
+                logger.info(
+                    f"Expanded {pool_type} pool: {old_size} -> {pool['size']}"
+                )  # TODO: Convert f-string to logging format
 
-            def get_database_stats(self) -> Dict:
+            def get_database_stats(self) -> dict:
                 """Get database scaling statistics."""
                 if not self.performance_metrics:
                     return {"no_data": True}
@@ -653,20 +656,20 @@ class TestScalabilityLoad:
                     "read_pool_size": self.connection_pools["read"]["size"],
                     "write_pool_size": self.connection_pools["write"]["size"],
                     "scaling_events": len(self.scaling_events),
-                    "avg_read_time": sum(m["total_time"] for m in read_metrics)
+                    "avg_read_time": sum(m["_total_time"] for m in read_metrics)
                     / len(read_metrics)
                     if read_metrics
                     else 0,
-                    "avg_write_time": sum(m["total_time"] for m in write_metrics)
+                    "avg_write_time": sum(m["_total_time"] for m in write_metrics)
                     / len(write_metrics)
                     if write_metrics
                     else 0,
-                    "total_queries": len(self.performance_metrics),
+                    "_total_queries": len(self.performance_metrics),
                 }
 
         db_scaler = DatabaseScalingSimulator()
 
-        async def database_scaling_operation(**kwargs):
+        async def database_scaling_operation(**__kwargs):
             """Operation that stresses database scaling."""
             # Mix of read/write operations with varying complexity
             operations = [
@@ -676,7 +679,6 @@ class TestScalabilityLoad:
             ]
 
             # Select operation based on probabilities
-            import random
 
             rand = random.random()
             cumulative = 0
@@ -733,8 +735,8 @@ class TestScalabilityLoad:
         )
 
     def _analyze_horizontal_scaling(
-        self, metrics: list[Dict], stages: list[LoadStage]
-    ) -> Dict:
+        self, metrics: list[dict], stages: list[LoadStage]
+    ) -> dict:
         """Analyze horizontal scaling performance."""
         if len(metrics) < len(stages):
             return {
@@ -818,8 +820,8 @@ class TestScalabilityLoad:
         }
 
     def _analyze_vertical_scaling(
-        self, scaling_events: list[Dict], resource_utilization: list[Dict]
-    ) -> Dict:
+        self, scaling_events: list[dict], resource_utilization: list[dict]
+    ) -> dict:
         """Analyze vertical scaling effectiveness."""
         if not scaling_events or not resource_utilization:
             return {"scaling_effectiveness": 0}
@@ -866,12 +868,12 @@ class TestScalabilityLoad:
         return {
             "scaling_effectiveness": avg_effectiveness,
             "scaling_events_analyzed": len(effectiveness_scores),
-            "total_scaling_events": len(scaling_events),
+            "_total_scaling_events": len(scaling_events),
         }
 
     def _analyze_auto_scaling(
-        self, scaling_decisions: list[Dict], metrics_history: list[Dict]
-    ) -> Dict:
+        self, scaling_decisions: list[dict], metrics_history: list[dict]
+    ) -> dict:
         """Analyze auto-scaling behavior and effectiveness."""
         if not scaling_decisions or not metrics_history:
             return {"scaling_responsiveness": 0, "resource_efficiency": 0}
@@ -933,8 +935,8 @@ class TestScalabilityLoad:
         }
 
     def _analyze_database_scaling(
-        self, scaling_events: list[Dict], performance_metrics: list[Dict]
-    ) -> Dict:
+        self, scaling_events: list[dict], performance_metrics: list[dict]
+    ) -> dict:
         """Analyze database scaling effectiveness."""
         if not performance_metrics:
             return {"read_scaling_effectiveness": 0, "connection_pool_efficiency": 0}
@@ -950,10 +952,10 @@ class TestScalabilityLoad:
             late_reads = read_metrics[-len(read_metrics) // 3 :]
 
             if early_reads and late_reads:
-                early_avg_time = sum(m["total_time"] for m in early_reads) / len(
+                early_avg_time = sum(m["_total_time"] for m in early_reads) / len(
                     early_reads
                 )
-                late_avg_time = sum(m["total_time"] for m in late_reads) / len(
+                late_avg_time = sum(m["_total_time"] for m in late_reads) / len(
                     late_reads
                 )
 
@@ -977,7 +979,7 @@ class TestScalabilityLoad:
             "read_scaling_effectiveness": read_scaling_effectiveness,
             "connection_pool_efficiency": connection_pool_efficiency,
             "avg_connection_wait_ms": avg_wait * 1000,
-            "total_scaling_events": len(scaling_events),
+            "_total_scaling_events": len(scaling_events),
         }
 
 

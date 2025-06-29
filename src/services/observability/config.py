@@ -6,9 +6,16 @@ and cost tracking that integrates seamlessly with the existing configuration.
 
 import logging
 from functools import lru_cache
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
+
+# Try to import config function - may not be available in all contexts
+try:
+    from src.config import get_config
+except ImportError:
+    get_config = None
 
 
 logger = logging.getLogger(__name__)
@@ -101,10 +108,13 @@ def get_observability_config() -> ObservabilityConfig:
 
     Returns:
         ObservabilityConfig instance with settings
+
     """
     try:
         # Try to get from main config if available
-        from src.config import get_config
+        if get_config is None:
+            msg = "Config system not available"
+            raise ImportError(msg)
 
         main_config = get_config()
 
@@ -131,7 +141,9 @@ def get_observability_config() -> ObservabilityConfig:
         return ObservabilityConfig(**config_dict)
 
     except Exception as e:
-        logger.warning(f"Could not load from main config, using defaults: {e}")
+        logger.warning(
+            f"Could not load from main config, using defaults: {e}"
+        )  # TODO: Convert f-string to logging format
         return ObservabilityConfig()
 
 
@@ -143,6 +155,7 @@ def get_resource_attributes(config: ObservabilityConfig) -> dict[str, str]:
 
     Returns:
         Dictionary of resource attributes
+
     """
     return {
         "service.name": config.service_name,

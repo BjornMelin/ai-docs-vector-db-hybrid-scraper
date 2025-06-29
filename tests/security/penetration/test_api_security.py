@@ -5,6 +5,7 @@ authentication bypass, authorization flaws, and injection attacks.
 """
 
 import asyncio
+import os
 import time
 from typing import Any
 
@@ -31,10 +32,10 @@ class TestAPISecurity:
                 self,
                 method: str,
                 endpoint: str,
-                headers: Dict = None,
+                headers: dict | None = None,
                 data: Any = None,
-                params: Dict = None,
-                cookies: Dict = None,
+                params: dict | None = None,
+                _cookies: dict | None = None,
             ) -> dict[str, Any]:
                 """Mock API request."""
                 # Simulate request
@@ -55,13 +56,12 @@ class TestAPISecurity:
                                 "Set-Cookie": "session=abc123; HttpOnly; Secure"
                             },
                         }
-                    else:
-                        return {
-                            "status_code": 401,
-                            "json": {"error": "Invalid credentials"},
-                        }
+                    return {
+                        "status_code": 401,
+                        "json": {"error": "Invalid credentials"},
+                    }
 
-                elif endpoint == "/api/search" and method == "GET":
+                if endpoint == "/api/search" and method == "GET":
                     auth_header = (headers or {}).get("Authorization")
                     if not auth_header or not auth_header.startswith("Bearer "):
                         return {
@@ -75,7 +75,7 @@ class TestAPISecurity:
                         "json": {"results": [f"Result for: {query}"], "count": 1},
                     }
 
-                elif endpoint == "/api/admin/users" and method == "GET":
+                if endpoint == "/api/admin/users" and method == "GET":
                     auth_header = (headers or {}).get("Authorization")
                     if auth_header != "Bearer admin_token":
                         return {
@@ -88,8 +88,7 @@ class TestAPISecurity:
                         "json": {"users": ["admin", "user1", "user2"]},
                     }
 
-                else:
-                    return {"status_code": 404, "json": {"error": "Endpoint not found"}}
+                return {"status_code": 404, "json": {"error": "Endpoint not found"}}
 
         return MockAPIClient()
 
@@ -173,7 +172,7 @@ class TestAPISecurity:
         """Test authorization bypass techniques."""
 
         # Get regular user token (simulated)
-        user_token = "user_token_123"
+        user_token = os.getenv("TEST_USER_TOKEN", "test_user_token_123")
 
         # Test privilege escalation attempts
         escalation_attempts = [

@@ -3,6 +3,7 @@
 Core configuration management functionality for V1 release.
 """
 
+import json
 from pathlib import Path
 
 import click
@@ -14,13 +15,18 @@ from rich.table import Table
 from src.config import Config
 
 
+try:
+    import yaml
+except ImportError:
+    yaml = None
+
+
 console = Console()
 
 
 @click.group()
 def config():
     """⚙️ Configuration management commands."""
-    pass
 
 
 @config.command()
@@ -52,14 +58,15 @@ def export(ctx: click.Context, output: str, format: str):
 
     try:
         if format == "json":
-            import json
-
-            with open(output_path, "w") as f:
+            with output_path.open("w") as f:
                 json.dump(config_obj.model_dump(), f, indent=2)
         elif format == "yaml":
-            import yaml
-
-            with open(output_path, "w") as f:
+            if yaml is None:
+                console.print(
+                    "❌ YAML support not available. Please install PyYAML", style="red"
+                )
+                return
+            with output_path.open("w") as f:
                 yaml.dump(config_obj.model_dump(), f, default_flow_style=False)
 
         console.print(f"✅ Configuration exported to {output_path}", style="green")
@@ -159,8 +166,6 @@ def _show_config_table(config_obj: Config):
 
 def _show_config_json(config_obj: Config):
     """Display configuration as JSON."""
-    import json
-
     config_json = json.dumps(config_obj.model_dump(), indent=2)
     syntax = Syntax(config_json, "json", theme="monokai", line_numbers=True)
 
@@ -174,7 +179,11 @@ def _show_config_json(config_obj: Config):
 
 def _show_config_yaml(config_obj: Config):
     """Display configuration as YAML."""
-    import yaml
+    if yaml is None:
+        console.print(
+            "❌ YAML support not available. Please install PyYAML", style="red"
+        )
+        return
 
     config_yaml = yaml.dump(config_obj.model_dump(), default_flow_style=False)
     syntax = Syntax(config_yaml, "yaml", theme="monokai", line_numbers=True)

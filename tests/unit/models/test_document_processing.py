@@ -1,6 +1,6 @@
 """Unit tests for document processing models."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from pydantic import ValidationError
@@ -101,7 +101,7 @@ class TestChunk:
             end_pos=4,
             chunk_index=0,
         )
-        assert chunk.total_chunks == 0
+        assert chunk._total_chunks == 0
         assert chunk.char_count == 0
         assert chunk.token_estimate == 0
         assert chunk.chunk_type == "text"
@@ -117,7 +117,7 @@ class TestChunk:
             start_pos=100,
             end_pos=121,
             chunk_index=2,
-            total_chunks=5,
+            _total_chunks=5,
             char_count=21,
             token_estimate=5,
             chunk_type="code",
@@ -125,7 +125,7 @@ class TestChunk:
             has_code=True,
             metadata=metadata,
         )
-        assert chunk.total_chunks == 5
+        assert chunk._total_chunks == 5
         assert chunk.char_count == 21
         assert chunk.token_estimate == 5
         assert chunk.chunk_type == "code"
@@ -148,9 +148,9 @@ class TestDocumentMetadata:
 
     def test_default_values(self):
         """Test default field values."""
-        before = datetime.now()
+        before = datetime.now(tz=timezone.utc)
         metadata = DocumentMetadata(url="https://example.com")
-        after = datetime.now()
+        after = datetime.now(tz=timezone.utc)
 
         assert metadata.title is None
         assert metadata.doc_type is None
@@ -165,13 +165,13 @@ class TestDocumentMetadata:
         assert metadata.has_code is False
         assert metadata.estimated_reading_time == 0
         assert metadata.chunking_strategy == ChunkingStrategy.ENHANCED
-        assert metadata.total_chunks == 0
+        assert metadata._total_chunks == 0
         assert metadata.processing_time_ms == 0.0
 
     def test_custom_values(self):
         """Test custom field values."""
-        crawled_at = datetime.now()
-        last_modified = datetime.now()
+        crawled_at = datetime.now(tz=timezone.utc)
+        last_modified = datetime.now(tz=timezone.utc)
         metadata = DocumentMetadata(
             title="Python Tutorial",
             url="https://example.com/tutorial.py",
@@ -187,7 +187,7 @@ class TestDocumentMetadata:
             has_code=True,
             estimated_reading_time=3,
             chunking_strategy=ChunkingStrategy.AST,
-            total_chunks=10,
+            _total_chunks=10,
             processing_time_ms=150.5,
         )
         assert metadata.title == "Python Tutorial"
@@ -203,7 +203,7 @@ class TestDocumentMetadata:
         assert metadata.has_code is True
         assert metadata.estimated_reading_time == 3
         assert metadata.chunking_strategy == ChunkingStrategy.AST
-        assert metadata.total_chunks == 10
+        assert metadata._total_chunks == 10
         assert metadata.processing_time_ms == 150.5
 
     def test_forbids_extra_fields(self):
@@ -401,8 +401,8 @@ class TestVectorMetrics:
     def test_default_values(self):
         """Test default field values."""
         metrics = VectorMetrics()
-        assert metrics.total_documents == 0
-        assert metrics.total_chunks == 0
+        assert metrics._total_documents == 0
+        assert metrics._total_chunks == 0
         assert metrics.successful_embeddings == 0
         assert metrics.failed_embeddings == 0
         assert metrics.processing_time == 0.0
@@ -412,16 +412,16 @@ class TestVectorMetrics:
     def test_custom_values(self):
         """Test custom metric values."""
         metrics = VectorMetrics(
-            total_documents=100,
-            total_chunks=500,
+            _total_documents=100,
+            _total_chunks=500,
             successful_embeddings=480,
             failed_embeddings=20,
             processing_time=300.5,
             tokens_processed=150000,
             avg_chunk_size=300.0,
         )
-        assert metrics.total_documents == 100
-        assert metrics.total_chunks == 500
+        assert metrics._total_documents == 100
+        assert metrics._total_chunks == 500
         assert metrics.successful_embeddings == 480
         assert metrics.failed_embeddings == 20
         assert metrics.processing_time == 300.5
@@ -435,44 +435,44 @@ class TestScrapingStats:
     def test_default_values(self):
         """Test default field values."""
         stats = ScrapingStats()
-        assert stats.total_processed == 0
+        assert stats._total_processed == 0
         assert stats.successful_embeddings == 0
         assert stats.failed_crawls == 0
-        assert stats.total_chunks == 0
+        assert stats._total_chunks == 0
         assert stats.unique_urls == 0
         assert stats.start_time is None
         assert stats.end_time is None
         assert stats.avg_processing_time == 0.0
         assert stats.docs_per_minute == 0.0
-        assert stats.total_size_mb == 0.0
+        assert stats._total_size_mb == 0.0
 
     def test_with_timing_data(self):
         """Test stats with timing data."""
-        start_time = datetime.now()
-        end_time = datetime.now()
+        start_time = datetime.now(tz=timezone.utc)
+        end_time = datetime.now(tz=timezone.utc)
 
         stats = ScrapingStats(
-            total_processed=50,
+            _total_processed=50,
             successful_embeddings=45,
             failed_crawls=5,
-            total_chunks=250,
+            _total_chunks=250,
             unique_urls=48,
             start_time=start_time,
             end_time=end_time,
             avg_processing_time=2.5,
             docs_per_minute=10.0,
-            total_size_mb=125.5,
+            _total_size_mb=125.5,
         )
-        assert stats.total_processed == 50
+        assert stats._total_processed == 50
         assert stats.successful_embeddings == 45
         assert stats.failed_crawls == 5
-        assert stats.total_chunks == 250
+        assert stats._total_chunks == 250
         assert stats.unique_urls == 48
         assert stats.start_time == start_time
         assert stats.end_time == end_time
         assert stats.avg_processing_time == 2.5
         assert stats.docs_per_minute == 10.0
-        assert stats.total_size_mb == 125.5
+        assert stats._total_size_mb == 125.5
 
 
 class TestContentFilter:
@@ -536,9 +536,9 @@ class TestDocumentBatch:
 
     def test_default_values(self):
         """Test default field values."""
-        before = datetime.now()
+        before = datetime.now(tz=timezone.utc)
         batch = DocumentBatch(id="batch123")
-        after = datetime.now()
+        after = datetime.now(tz=timezone.utc)
 
         assert batch.documents == []
         assert batch.batch_size == 0
@@ -546,7 +546,7 @@ class TestDocumentBatch:
         assert batch.status == "pending"
         assert batch.successful_count == 0
         assert batch.failed_count == 0
-        assert batch.total_chunks == 0
+        assert batch._total_chunks == 0
         assert batch.processing_time_ms == 0.0
 
     def test_with_documents(self):
@@ -572,7 +572,7 @@ class TestDocumentBatch:
             status="completed",
             successful_count=2,
             failed_count=0,
-            total_chunks=10,
+            _total_chunks=10,
             processing_time_ms=500.0,
         )
         assert len(batch.documents) == 2
@@ -580,7 +580,7 @@ class TestDocumentBatch:
         assert batch.status == "completed"
         assert batch.successful_count == 2
         assert batch.failed_count == 0
-        assert batch.total_chunks == 10
+        assert batch._total_chunks == 10
         assert batch.processing_time_ms == 500.0
 
     def test_partial_success_batch(self):
@@ -591,7 +591,7 @@ class TestDocumentBatch:
             status="partial_success",
             successful_count=7,
             failed_count=3,
-            total_chunks=35,
+            _total_chunks=35,
             processing_time_ms=1500.0,
         )
         assert batch.successful_count == 7

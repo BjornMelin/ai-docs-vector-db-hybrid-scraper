@@ -16,8 +16,8 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from ....security import MLSecurityValidator as SecurityValidator
-from ....services.query_processing.models import MatryoshkaDimension, SearchStrategy
+from src.security import MLSecurityValidator as SecurityValidator
+from src.services.query_processing.models import MatryoshkaDimension, SearchStrategy
 
 
 class QueryValidationHelper:

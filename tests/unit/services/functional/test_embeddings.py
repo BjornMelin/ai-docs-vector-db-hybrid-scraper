@@ -1,3 +1,7 @@
+class TestError(Exception):
+    """Custom exception for this module."""
+
+
 """Tests for function-based embedding service."""
 
 from unittest.mock import AsyncMock
@@ -135,7 +139,7 @@ class TestAnalyzeTextCharacteristics:
         """Test successful text analysis."""
         mock_client = AsyncMock()
         expected_analysis = TextAnalysis(
-            total_length=100,
+            _total_length=100,
             avg_length=50,
             complexity_score=0.7,
             estimated_tokens=25,
@@ -175,7 +179,7 @@ class TestEstimateEmbeddingCost:
             "openai": {
                 "estimated_tokens": 100,
                 "cost_per_token": 0.0001,
-                "total_cost": 0.01,
+                "_total_cost": 0.01,
             }
         }
         mock_client.estimate_cost.return_value = expected_costs
@@ -199,7 +203,7 @@ class TestBatchGenerateEmbeddings:
         mock_client = AsyncMock()
 
         # Mock successful responses for each batch
-        def mock_generate(texts, **kwargs):
+        def mock_generate(texts, **__kwargs):
             return {
                 "embeddings": [[0.1, 0.2, 0.3] for _ in texts],
                 "provider": "openai",
@@ -232,13 +236,15 @@ class TestBatchGenerateEmbeddings:
         # Mock one success and one failure
         call_count = 0
 
-        def mock_generate(texts, **kwargs):
+        def mock_generate(_texts, **__kwargs):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
                 return {"embeddings": [[0.1, 0.2]], "success": True}
-            else:
-                raise Exception("Provider error")
+                msg = "Provider error"
+                raise TestError(msg)
+                msg = "Provider error"
+                raise TestError(msg)
 
         mock_client.generate_embeddings.side_effect = mock_generate
 
@@ -302,7 +308,7 @@ def mock_embedding_client():
     }
     client.rerank_results.return_value = []
     client.analyze_text_characteristics.return_value = TextAnalysis(
-        total_length=10,
+        _total_length=10,
         avg_length=10,
         complexity_score=0.5,
         estimated_tokens=3,

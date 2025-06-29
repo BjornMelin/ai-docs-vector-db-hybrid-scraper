@@ -119,7 +119,7 @@ class TestScreenReaderCompliance:
         ]
         assert len(main_errors) > 0, "Should detect missing main landmark"
 
-    def test_heading_structure_hierarchy(self, screen_reader_validator):
+    def test_heading_structure_hierarchy(self, _screen_reader_validator):
         """Test proper heading hierarchy for screen readers."""
         # Good heading hierarchy
         good_headings_html = """
@@ -180,11 +180,13 @@ class TestScreenReaderCompliance:
                 issues.append("Page should start with h1")
 
             # Check for skipped levels
-            for i in range(1, len(heading_levels)):
-                if heading_levels[i] > heading_levels[i - 1] + 1:
-                    issues.append(
-                        f"Skipped heading level: h{heading_levels[i - 1]} to h{heading_levels[i]}"
-                    )
+            issues.extend(
+                [
+                    f"Skipped heading level: h{heading_levels[i - 1]} to h{heading_levels[i]}"
+                    for i in range(1, len(heading_levels))
+                    if heading_levels[i] > heading_levels[i - 1] + 1
+                ]
+            )
 
             return {
                 "levels": heading_levels,
@@ -328,7 +330,7 @@ class TestScreenReaderCompliance:
         assert result["compliant"], (
             f"Accessible form should be compliant: {result['issues']}"
         )
-        assert result["total_inputs"] > 0, "Should detect form inputs"
+        assert result["_total_inputs"] > 0, "Should detect form inputs"
 
         # Test inaccessible form
         result = screen_reader_validator.validate_form_accessibility(
@@ -350,7 +352,7 @@ class TestScreenReaderCompliance:
                 <details>
                     <summary>Table Description</summary>
                     <p>This table shows sales performance by employee including
-                       total sales, commission, and performance rating.</p>
+                       _total sales, commission, and performance rating.</p>
                 </details>
             </caption>
 
@@ -765,7 +767,7 @@ class TestScreenReaderCompliance:
         assert aria_label_count >= 3, "Should provide accessible labels"
 
     @pytest.mark.parametrize(
-        "role,expected_behavior",
+        ("role", "expected_behavior"),
         [
             ("button", "should be focusable and activatable"),
             ("link", "should navigate on activation"),
@@ -777,7 +779,7 @@ class TestScreenReaderCompliance:
             ("treeitem", "should expand/collapse tree node"),
         ],
     )
-    def test_widget_roles_screen_reader_behavior(self, role, expected_behavior):
+    def test_widget_roles_screen_reader_behavior(self, role, _expected_behavior):
         """Test ARIA widget roles for screen reader behavior."""
         # This test documents expected screen reader behavior for different roles
         widget_examples = {
@@ -887,17 +889,17 @@ class TestScreenReaderCompliance:
 
         # Calculate overall score
         compliant_tests = 0
-        total_tests = 0
+        _total_tests = 0
 
         if semantic_result["compliant"]:
             compliant_tests += 1
-        total_tests += 1
+        _total_tests += 1
 
         if form_result["compliant"]:
             compliant_tests += 1
-        total_tests += 1
+        _total_tests += 1
 
-        report["overall_score"] = compliant_tests / total_tests
+        report["overall_score"] = compliant_tests / _total_tests
 
         # Add recommendations
         if not semantic_result["compliant"]:

@@ -45,6 +45,7 @@ async def generate_answer(
 
     Raises:
         HTTPException: If RAG is not enabled or generation fails
+
     """
     # Check if RAG is enabled
     if not config.rag.enable_rag:
@@ -65,10 +66,10 @@ async def generate_answer(
         return response
 
     except Exception as e:
-        logger.exception(f"RAG answer generation failed: {e}")
+        logger.exception("RAG answer generation failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate RAG answer: {e!s}",
+            detail="Failed to generate RAG answer",
         ) from e
 
 
@@ -89,6 +90,7 @@ async def get_metrics(
 
     Raises:
         HTTPException: If metrics retrieval fails
+
     """
     try:
         metrics = await get_rag_metrics(rag_generator)
@@ -97,10 +99,10 @@ async def get_metrics(
             "metrics": metrics,
         }
     except Exception as e:
-        logger.exception(f"Failed to get RAG metrics: {e}")
+        logger.exception("Failed to get RAG metrics")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get RAG metrics: {e!s}",
+            detail="Failed to get RAG metrics",
         ) from e
 
 
@@ -121,15 +123,16 @@ async def clear_cache(
 
     Raises:
         HTTPException: If cache clearing fails
+
     """
     try:
         result = await clear_rag_cache(rag_generator)
         return result
     except Exception as e:
-        logger.exception(f"Failed to clear RAG cache: {e}")
+        logger.exception("Failed to clear RAG cache")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to clear RAG cache: {e!s}",
+            detail="Failed to clear RAG cache",
         ) from e
 
 
@@ -147,6 +150,7 @@ async def get_config(
 
     Returns:
         dict[str, Any]: RAG configuration details
+
     """
     return {
         "enabled": config.rag.enable_rag,
@@ -179,6 +183,7 @@ async def health_check(
 
     Returns:
         dict[str, Any]: Health check results
+
     """
     health_status = {
         "rag_enabled": config.rag.enable_rag,
@@ -201,6 +206,6 @@ async def health_check(
     except Exception as e:
         health_status["status"] = "unhealthy"
         health_status["error"] = str(e)
-        logger.warning(f"RAG health check failed: {e}")
+        logger.warning("RAG health check failed")
 
     return health_status

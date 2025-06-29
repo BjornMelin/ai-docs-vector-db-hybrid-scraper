@@ -28,6 +28,7 @@ class TierRateLimiter:
 
         Args:
             tier_configs: Dictionary mapping tier names to configurations
+
         """
         self.tier_configs = tier_configs
 
@@ -53,7 +54,7 @@ class TierRateLimiter:
         # Lock for thread safety
         self.lock = asyncio.Lock()
 
-    async def acquire(self, tier: str, timeout: float | None = None) -> bool:
+    async def acquire(self, tier: str, timeout: float | None = None) -> bool:  # noqa: ASYNC109
         """Acquire permission to make a request for a tier.
 
         Args:
@@ -62,14 +63,19 @@ class TierRateLimiter:
 
         Returns:
             True if permission granted, False if rate limited
+
         """
         if tier not in self.tier_configs:
-            logger.warning(f"Unknown tier {tier}, allowing request")
+            logger.warning(
+                f"Unknown tier {tier}, allowing request"
+            )  # TODO: Convert f-string to logging format
             return True
 
         config = self.tier_configs[tier]
         if not config.enabled:
-            logger.warning(f"Tier {tier} is disabled")
+            logger.warning(
+                f"Tier {tier} is disabled"
+            )  # TODO: Convert f-string to logging format
             return False
 
         # Check rate limit
@@ -112,6 +118,7 @@ class TierRateLimiter:
 
         Args:
             tier: Tier name
+
         """
         semaphore = self.tier_semaphores.get(tier)
         if semaphore:
@@ -129,6 +136,7 @@ class TierRateLimiter:
 
         Returns:
             True if within limit, False otherwise
+
         """
         config = self.tier_configs[tier]
         if (
@@ -157,6 +165,7 @@ class TierRateLimiter:
 
         Returns:
             Seconds to wait (0 if no wait needed)
+
         """
         config = self.tier_configs.get(tier)
         if not config or not hasattr(config, "requests_per_minute"):
@@ -184,6 +193,7 @@ class TierRateLimiter:
 
         Returns:
             Status information
+
         """
         if tier:
             return self._get_tier_status(tier)
@@ -207,6 +217,7 @@ class TierRateLimiter:
 
         Returns:
             Tier status information
+
         """
         config = self.tier_configs.get(tier)
         if not config:
@@ -238,10 +249,13 @@ class TierRateLimiter:
 
         Args:
             tier: Tier name
+
         """
         wait_time = self.get_wait_time(tier)
         if wait_time > 0:
-            logger.info(f"Rate limit reached for {tier}, waiting {wait_time:.1f}s")
+            logger.info(
+                f"Rate limit reached for {tier}, waiting {wait_time:.1f}s"
+            )  # TODO: Convert f-string to logging format
             await asyncio.sleep(wait_time)
 
     def reset_tier(self, tier: str) -> None:
@@ -249,11 +263,14 @@ class TierRateLimiter:
 
         Args:
             tier: Tier name
+
         """
         self.request_history[tier].clear()
         self.concurrent_requests[tier] = 0
         self.rate_limit_hits[tier] = 0
-        logger.info(f"Reset rate limiter for tier {tier}")
+        logger.info(
+            f"Reset rate limiter for tier {tier}"
+        )  # TODO: Convert f-string to logging format
 
     def reset_all(self) -> None:
         """Reset all rate limit tracking."""
@@ -275,6 +292,7 @@ class RateLimitContext:
             rate_limiter: Rate limiter instance
             tier: Tier name
             timeout: Timeout for acquiring permission
+
         """
         self.rate_limiter = rate_limiter
         self.tier = tier
@@ -286,6 +304,7 @@ class RateLimitContext:
 
         Returns:
             True if acquired, False if rate limited
+
         """
         self.acquired = await self.rate_limiter.acquire(self.tier, self.timeout)
         return self.acquired

@@ -4,8 +4,11 @@ Transforms the CrawlManager class into pure functions with dependency injection.
 Provides crawling operations with circuit breaker patterns.
 """
 
+import asyncio
 import logging
+import re
 from typing import Annotated, Any
+from urllib.parse import urlparse
 
 from fastapi import Depends, HTTPException
 
@@ -37,13 +40,14 @@ async def crawl_url(
 
     Raises:
         HTTPException: If crawling fails critically
+
     """
     try:
         if not crawling_client:
             raise HTTPException(status_code=500, detail="Crawling client not available")
 
         if not url:
-            raise HTTPException(status_code=400, detail="URL is required")
+            _raise_url_required()
 
         result = await crawling_client.scrape_url(
             url=url,
@@ -60,13 +64,13 @@ async def crawl_url(
                 f"Failed to crawl {url}: {result.get('error', 'Unknown error')}"
             )
 
-        return result
-
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"URL crawling failed for {url}: {e}")
-        raise HTTPException(status_code=500, detail=f"Crawling failed: {e!s}")
+        logger.exception(f"URL crawling failed for {url}")
+        raise HTTPException(status_code=500, detail=f"Crawling failed: {e!s}") from e
+    else:
+        return result
 
 
 @circuit_breaker(CircuitBreakerConfig.enterprise_mode())
@@ -91,18 +95,17 @@ async def crawl_site(
 
     Raises:
         HTTPException: If site crawling fails
+
     """
     try:
         if not crawling_client:
             raise HTTPException(status_code=500, detail="Crawling client not available")
 
         if not url:
-            raise HTTPException(status_code=400, detail="URL is required")
+            _raise_url_required()
 
         if max_pages <= 0 or max_pages > 1000:
-            raise HTTPException(
-                status_code=400, detail="max_pages must be between 1 and 1000"
-            )
+            _raise_invalid_max_pages()
 
         result = await crawling_client.crawl_site(
             url=url,
@@ -120,18 +123,20 @@ async def crawl_site(
                 f"Site crawl failed for {url}: {result.get('error', 'Unknown error')}"
             )
 
-        return result
-
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Site crawling failed for {url}: {e}")
-        raise HTTPException(status_code=500, detail=f"Site crawling failed: {e!s}")
+        logger.exception(f"Site crawling failed for {url}")
+        raise HTTPException(
+            status_code=500, detail=f"Site crawling failed: {e!s}"
+        ) from e
+    else:
+        return result
 
 
 async def get_crawl_metrics(
     crawling_client: Annotated[object, Depends(get_crawling_client)] = None,
-) -> dict[str, Dict]:
+) -> dict[str, dict]:
     """Get performance metrics for all crawling tiers.
 
     Pure function replacement for CrawlManager.get_metrics().
@@ -144,19 +149,22 @@ async def get_crawl_metrics(
 
     Raises:
         HTTPException: If metrics retrieval fails
+
     """
     try:
         if not crawling_client:
             return {}
 
         metrics = crawling_client.get_metrics()
+        logger.debug(
+            f"Retrieved crawl metrics for {len(metrics)} tiers"
+        )  # TODO: Convert f-string to logging format
 
-        logger.debug(f"Retrieved crawl metrics for {len(metrics)} tiers")
-        return metrics
-
-    except Exception as e:
-        logger.exception(f"Crawl metrics retrieval failed: {e}")
+    except Exception:
+        logger.exception("Crawl metrics retrieval failed")
         return {}
+    else:
+        return metrics
 
 
 async def get_recommended_tool(
@@ -176,29 +184,32 @@ async def get_recommended_tool(
 
     Raises:
         HTTPException: If tool recommendation fails
+
     """
     try:
         if not crawling_client:
             return "crawl4ai"  # Default fallback
 
         if not url:
-            raise HTTPException(status_code=400, detail="URL is required")
+            _raise_url_required()
 
         recommendation = await crawling_client.get_recommended_tool(url)
-
-        logger.debug(f"Recommended tool for {url}: {recommendation}")
-        return recommendation
+        logger.debug(
+            f"Recommended tool for {url}: {recommendation}"
+        )  # TODO: Convert f-string to logging format
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.exception(f"Tool recommendation failed for {url}: {e}")
+    except Exception:
+        logger.exception(f"Tool recommendation failed for {url}")
         return "crawl4ai"  # Graceful fallback
+    else:
+        return recommendation
 
 
 async def get_provider_info(
     crawling_client: Annotated[object, Depends(get_crawling_client)] = None,
-) -> dict[str, Dict]:
+) -> dict[str, dict]:
     """Get information about available automation tools in 5-tier system.
 
     Pure function replacement for CrawlManager.get_provider_info().
@@ -211,24 +222,27 @@ async def get_provider_info(
 
     Raises:
         HTTPException: If provider info retrieval fails
+
     """
     try:
         if not crawling_client:
             return {}
 
         info = crawling_client.get_provider_info()
+        logger.debug(
+            f"Retrieved provider info for {len(info)} tools"
+        )  # TODO: Convert f-string to logging format
 
-        logger.debug(f"Retrieved provider info for {len(info)} tools")
-        return info
-
-    except Exception as e:
-        logger.exception(f"Provider info retrieval failed: {e}")
+    except Exception:
+        logger.exception("Provider info retrieval failed")
         return {}
+    else:
+        return info
 
 
 async def get_tier_metrics(
     crawling_client: Annotated[object, Depends(get_crawling_client)] = None,
-) -> dict[str, Dict]:
+) -> dict[str, dict]:
     """Get performance metrics for each tier from UnifiedBrowserManager.
 
     Pure function replacement for CrawlManager.get_tier_metrics().
@@ -241,19 +255,22 @@ async def get_tier_metrics(
 
     Raises:
         HTTPException: If tier metrics retrieval fails
+
     """
     try:
         if not crawling_client:
             return {}
 
         metrics = crawling_client.get_tier_metrics()
+        logger.debug(
+            f"Retrieved tier metrics for {len(metrics)} tiers"
+        )  # TODO: Convert f-string to logging format
 
-        logger.debug(f"Retrieved tier metrics for {len(metrics)} tiers")
-        return metrics
-
-    except Exception as e:
-        logger.exception(f"Tier metrics retrieval failed: {e}")
+    except Exception:
+        logger.exception("Tier metrics retrieval failed")
         return {}
+    else:
+        return metrics
 
 
 # New function-based capabilities
@@ -279,17 +296,14 @@ async def batch_crawl_urls(
 
     Raises:
         HTTPException: If batch crawling fails
+
     """
     try:
-        import asyncio
-
         if not urls:
             return []
 
         if max_parallel <= 0 or max_parallel > 20:
-            raise HTTPException(
-                status_code=400, detail="max_parallel must be between 1 and 20"
-            )
+            _raise_invalid_max_parallel()
 
         semaphore = asyncio.Semaphore(max_parallel)
 
@@ -309,7 +323,9 @@ async def batch_crawl_urls(
         processed_results = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                logger.error(f"URL {urls[i]} failed: {result}")
+                logger.error(
+                    f"URL {urls[i]} failed: {result}"
+                )  # TODO: Convert f-string to logging format
                 processed_results.append(
                     {
                         "success": False,
@@ -328,13 +344,15 @@ async def batch_crawl_urls(
             f"using max {max_parallel} parallel operations"
         )
 
-        return processed_results
-
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Batch URL crawling failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Batch crawling failed: {e!s}")
+        logger.exception("Batch URL crawling failed")
+        raise HTTPException(
+            status_code=500, detail=f"Batch crawling failed: {e!s}"
+        ) from e
+    else:
+        return processed_results
 
 
 async def validate_url(url: str) -> dict[str, Any]:
@@ -347,11 +365,9 @@ async def validate_url(url: str) -> dict[str, Any]:
 
     Returns:
         Validation result with status and details
+
     """
     try:
-        import re
-        from urllib.parse import urlparse
-
         if not url:
             return {"valid": False, "error": "URL is required", "details": {}}
 
@@ -385,6 +401,10 @@ async def validate_url(url: str) -> dict[str, Any]:
                 "details": {"domain": parsed.netloc},
             }
 
+    except Exception as e:
+        logger.exception(f"URL validation failed for {url}")
+        return {"valid": False, "error": f"Validation error: {e!s}", "details": {}}
+    else:
         return {
             "valid": True,
             "details": {
@@ -395,10 +415,6 @@ async def validate_url(url: str) -> dict[str, Any]:
                 "fragment": parsed.fragment,
             },
         }
-
-    except Exception as e:
-        logger.exception(f"URL validation failed for {url}: {e}")
-        return {"valid": False, "error": f"Validation error: {e!s}", "details": {}}
 
 
 async def estimate_crawl_cost(
@@ -415,6 +431,7 @@ async def estimate_crawl_cost(
 
     Returns:
         Cost estimation with time and resource requirements
+
     """
     try:
         if not urls:
@@ -458,7 +475,7 @@ async def estimate_crawl_cost(
         }
 
     except Exception as e:
-        logger.exception(f"Crawl cost estimation failed: {e}")
+        logger.exception("Crawl cost estimation failed")
         return {
             "total_urls": len(urls),
             "estimated_time_minutes": 0,
@@ -466,3 +483,18 @@ async def estimate_crawl_cost(
             "resource_requirements": "unknown",
             "error": str(e),
         }
+
+
+def _raise_url_required() -> None:
+    """Raise HTTPException for missing URL."""
+    raise HTTPException(status_code=400, detail="URL is required")
+
+
+def _raise_invalid_max_pages() -> None:
+    """Raise HTTPException for invalid max_pages."""
+    raise HTTPException(status_code=400, detail="max_pages must be between 1 and 1000")
+
+
+def _raise_invalid_max_parallel() -> None:
+    """Raise HTTPException for invalid max_parallel."""
+    raise HTTPException(status_code=400, detail="max_parallel must be between 1 and 20")

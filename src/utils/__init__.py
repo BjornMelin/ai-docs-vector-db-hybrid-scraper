@@ -1,6 +1,3 @@
-import typing
-
-
 """Utilities package for the AI documentation vector database system."""
 
 # Re-export functions from parent utils.py and local imports module
@@ -25,13 +22,15 @@ if utils_path.exists():
     async_command = parent_utils.async_command
 else:
     # Fallback implementations
-    def async_to_sync_click(*args, **kwargs):
+    def async_to_sync_click(*_args, **_kwargs):
         """Fallback async_to_sync_click function."""
-        raise ImportError("async_to_sync_click not available")
+        msg = "async_to_sync_click not available"
+        raise ImportError(msg)
 
-    def async_command(*args, **kwargs):
+    def async_command(*_args, **_kwargs):
         """Fallback async_command function."""
-        raise ImportError("async_command not available")
+        msg = "async_command not available"
+        raise ImportError(msg)
 
 
 __all__ = [

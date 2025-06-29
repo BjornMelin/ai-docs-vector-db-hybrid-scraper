@@ -24,6 +24,10 @@ from src.mcp_tools.models.requests import (
 from tests.mocks.mock_tools import MockMCPServer, register_mock_tools
 
 
+class TestError(Exception):
+    """Custom exception for this module."""
+
+
 class TestMCPEdgeCases:
     """Test edge cases and error conditions for MCP server."""
 
@@ -36,8 +40,8 @@ class TestMCPEdgeCases:
         mock_vector_service = AsyncMock()
         client_manager.vector_service = mock_vector_service
 
-        mock_embedding_service = AsyncMock()
-        client_manager.embedding_service = mock_embedding_service
+        _mock_embedding_service = AsyncMock()
+        client_manager.embedding_service = _mock_embedding_service
 
         mock_crawling_service = AsyncMock()
         client_manager.crawling_service = mock_crawling_service
@@ -207,9 +211,10 @@ class TestMCPEdgeCases:
                 break
 
         # Simulate timeout
-        async def timeout_after_delay(*args, **kwargs):
+        async def timeout_after_delay(*_args, **__kwargs):
             await asyncio.sleep(10)  # Long delay
-            raise TimeoutError("Embedding generation timed out")
+            msg = "Embedding generation timed out"
+            raise TimeoutError(msg)
 
         mock_client_manager.embedding_service.generate_embeddings = timeout_after_delay
 
@@ -282,11 +287,12 @@ class TestMCPEdgeCases:
         # Simulate rate limiting
         call_count = 0
 
-        async def rate_limited_search(*args, **kwargs):
+        async def rate_limited_search(*_args, **__kwargs):
             nonlocal call_count
             call_count += 1
-            if call_count > 3:
-                raise Exception("Rate limit exceeded: 429 Too Many Requests")
+            if call_count > 3:  # Rate limit after 3 calls
+                msg = "Rate limit exceeded: 429 Too Many Requests"
+                raise TestError(msg)
             return [{"id": f"doc-{call_count}", "content": "Result", "score": 0.9}]
 
         mock_client_manager.vector_service.search_documents = rate_limited_search
@@ -424,11 +430,12 @@ class TestMCPEdgeCases:
         # Configure service to fail then succeed
         call_count = 0
 
-        async def flaky_search(*args, **kwargs):
+        async def flaky_search(*_args, **__kwargs):
             nonlocal call_count
             call_count += 1
             if call_count <= 2:
-                raise ConnectionError("Temporary connection failure")
+                msg = "Temporary connection failure"
+                raise ConnectionError(msg)
             return [{"id": "recovery-doc", "content": "Recovered", "score": 0.9}]
 
         mock_client_manager.vector_service.search_documents = flaky_search
@@ -564,13 +571,14 @@ class TestMCPEdgeCases:
                 break
 
         # Configure to fail on specific inputs
-        async def selective_failure(texts, **kwargs):
+        async def selective_failure(texts, **__kwargs):
             if any("fail" in text for text in texts):
-                raise Exception("Cannot process texts containing 'fail'")
+                msg = "Cannot process texts containing 'fail'"
+                raise TestError(msg)
             return {
                 "embeddings": [[0.1] * 384 for _ in texts],
                 "model": "test-model",
-                "total_tokens": len(texts) * 5,
+                "_total_tokens": len(texts) * 5,
             }
 
         mock_client_manager.embedding_service.generate_embeddings = selective_failure

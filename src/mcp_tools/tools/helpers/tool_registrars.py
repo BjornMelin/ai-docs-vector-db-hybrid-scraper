@@ -18,9 +18,16 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from ....services.query_processing.models import QueryProcessingRequest
-from ...models.requests import AdvancedQueryProcessingRequest, QueryAnalysisRequest
-from ...models.responses import AdvancedQueryProcessingResponse, QueryAnalysisResponse
+from src.mcp_tools.models.requests import (
+    AdvancedQueryProcessingRequest,
+    QueryAnalysisRequest,
+)
+from src.mcp_tools.models.responses import (
+    AdvancedQueryProcessingResponse,
+    QueryAnalysisResponse,
+)
+from src.services.query_processing.models import QueryProcessingRequest
+
 from .pipeline_factory import QueryProcessingPipelineFactory
 from .response_converter import ResponseConverter
 from .validation_helper import QueryValidationHelper
@@ -41,8 +48,7 @@ def register_advanced_query_processing_tool(
     async def advanced_query_processing(
         request: AdvancedQueryProcessingRequest, ctx: Context
     ) -> AdvancedQueryProcessingResponse:
-        """
-        Process queries using advanced intent classification and intelligent strategy selection.
+        """Process queries using advanced intent classification and intelligent strategy selection.
 
         Implements complete advanced query processing pipeline with:
         - 14 query intent categories (conceptual, procedural, factual, troubleshooting + 10 advanced)
@@ -117,7 +123,9 @@ def register_advanced_query_processing_tool(
 
         except Exception as e:
             await ctx.error(f"Advanced query processing {request_id} failed: {e}")
-            logger.error(f"Advanced query processing failed: {e}", exc_info=True)
+            logger.error(
+                f"Advanced query processing failed: {e}", exc_info=True
+            )  # TODO: Convert f-string to logging format
 
             # Return error response
             return AdvancedQueryProcessingResponse(
@@ -137,8 +145,7 @@ def register_query_analysis_tool(
     async def analyze_query(
         request: QueryAnalysisRequest, ctx: Context
     ) -> QueryAnalysisResponse:
-        """
-        Analyze query characteristics without executing search.
+        """Analyze query characteristics without executing search.
 
         Provides detailed analysis of query intent, complexity, and optimal processing
         strategies without performing the actual search. Useful for understanding
@@ -208,5 +215,7 @@ def register_query_analysis_tool(
 
         except Exception as e:
             await ctx.error(f"Query analysis {request_id} failed: {e}")
-            logger.error(f"Query analysis failed: {e}", exc_info=True)
+            logger.error(
+                f"Query analysis failed: {e}", exc_info=True
+            )  # TODO: Convert f-string to logging format
             raise

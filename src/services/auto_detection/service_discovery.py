@@ -9,12 +9,29 @@ Implements modern async service discovery patterns with:
 
 import asyncio
 import logging
+import os
 import time
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 import httpx
 from pydantic import BaseModel
+
+
+try:
+    import asyncpg
+except ImportError:
+    asyncpg = None
+
+try:
+    import redis.asyncio as redis
+except ImportError:
+    redis = None
+
+try:
+    from qdrant_client import AsyncQdrantClient
+except ImportError:
+    AsyncQdrantClient = None
 
 from src.config.auto_detect import AutoDetectionConfig, DetectedService
 from src.services.errors import circuit_breaker
@@ -158,7 +175,9 @@ class ServiceDiscovery:
                     return service
 
             except Exception as e:
-                self.logger.debug(f"Redis discovery failed for {host}:{port}: {e}")
+                self.logger.debug(
+                    f"Redis discovery failed for {host}:{port}: {e}"
+                )  # TODO: Convert f-string to logging format
                 continue
 
         return None
@@ -224,7 +243,9 @@ class ServiceDiscovery:
                     return service
 
             except Exception as e:
-                self.logger.debug(f"Qdrant discovery failed for {host}:{port}: {e}")
+                self.logger.debug(
+                    f"Qdrant discovery failed for {host}:{port}: {e}"
+                )  # TODO: Convert f-string to logging format
                 continue
 
         return None
@@ -279,13 +300,18 @@ class ServiceDiscovery:
                     return service
 
             except Exception as e:
-                self.logger.debug(f"PostgreSQL discovery failed for {host}:{port}: {e}")
+                self.logger.debug(
+                    f"PostgreSQL discovery failed for {host}:{port}: {e}"
+                )  # TODO: Convert f-string to logging format
                 continue
 
         return None
 
     async def _test_tcp_connection(
-        self, host: str, port: int, timeout: float = 5.0
+        self,
+        host: str,
+        port: int,
+        timeout: float = 5.0,  # timeout used in asyncio.wait_for  # noqa: ASYNC109
     ) -> bool:
         """Test basic TCP connectivity to a service.
 
@@ -307,7 +333,9 @@ class ServiceDiscovery:
     ) -> dict[str, Any] | None:
         """Test Redis connection and get server info using redis-py."""
         try:
-            import redis.asyncio as redis
+            if redis is None:
+                msg = "redis not available"
+                raise ImportError(msg)
 
             # Use redis-py for reliable connection testing
             client = redis.Redis(
@@ -337,7 +365,9 @@ class ServiceDiscovery:
             self.logger.warning("redis package not available for connection testing")
             return None
         except Exception as e:
-            self.logger.debug(f"Redis connection test failed: {e}")
+            self.logger.debug(
+                f"Redis connection test failed: {e}"
+            )  # TODO: Convert f-string to logging format
             return None
 
     async def _test_qdrant_connection(
@@ -345,7 +375,9 @@ class ServiceDiscovery:
     ) -> dict[str, Any] | None:
         """Test Qdrant connection using AsyncQdrantClient directly."""
         try:
-            from qdrant_client import AsyncQdrantClient
+            if AsyncQdrantClient is None:
+                msg = "qdrant_client not available"
+                raise ImportError(msg)
 
             # Use AsyncQdrantClient for native connection testing
             client = AsyncQdrantClient(url=f"http://{host}:{port}", timeout=3.0)
@@ -373,7 +405,9 @@ class ServiceDiscovery:
             )
             return None
         except Exception as e:
-            self.logger.debug(f"Qdrant connection test failed: {e}")
+            self.logger.debug(
+                f"Qdrant connection test failed: {e}"
+            )  # TODO: Convert f-string to logging format
             return None
 
     async def _test_qdrant_grpc_availability(self, host: str, port: int) -> bool:
@@ -394,7 +428,9 @@ class ServiceDiscovery:
     ) -> dict[str, Any] | None:
         """Test PostgreSQL connection using asyncpg directly."""
         try:
-            import asyncpg
+            if asyncpg is None:
+                msg = "asyncpg not available"
+                raise ImportError(msg)
 
             # Use asyncpg for native connection testing with common credentials
             connection_params = [
@@ -437,7 +473,10 @@ class ServiceDiscovery:
                         },
                     }
 
-                except (TimeoutError, Exception):
+                except (TimeoutError, Exception) as e:
+                    self.logger.debug(
+                        f"Database connection failed: {e}"
+                    )  # TODO: Convert f-string to logging format
                     continue  # Try next credential set
 
         except ImportError:
@@ -446,7 +485,9 @@ class ServiceDiscovery:
             )
             return None
         except Exception as e:
-            self.logger.debug(f"PostgreSQL connection test failed: {e}")
+            self.logger.debug(
+                f"PostgreSQL connection test failed: {e}"
+            )  # TODO: Convert f-string to logging format
 
         return None
 
@@ -455,7 +496,6 @@ class ServiceDiscovery:
         candidates = []
 
         # Check for Redis URL in environment
-        import os
 
         redis_url = os.getenv("REDIS_URL")
         if redis_url:
@@ -463,8 +503,10 @@ class ServiceDiscovery:
                 parsed = urlparse(redis_url)
                 if parsed.hostname and parsed.port:
                     candidates.append((parsed.hostname, parsed.port))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(
+                    f"Failed to parse Redis URL '{redis_url}': {e}"
+                )  # TODO: Convert f-string to logging format
 
         return candidates
 
@@ -524,7 +566,9 @@ class ServiceDiscovery:
         if service_type in self._discovery_cache:
             service, cache_time = self._discovery_cache[service_type]
             if time.time() - cache_time < self.config.cache_ttl_seconds:
-                self.logger.debug(f"Using cached {service_type} service")
+                self.logger.debug(
+                    f"Using cached {service_type} service"
+                )  # TODO: Convert f-string to logging format
                 return service
 
         return None

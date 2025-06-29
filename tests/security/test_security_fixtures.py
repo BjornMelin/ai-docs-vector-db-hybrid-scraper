@@ -28,7 +28,7 @@ class TestSecurityFixtures:
     def test_input_validator(self, input_validator):
         """Test input validation utilities."""
         assert input_validator is not None
-        assert hasattr(input_validator, "validate_user_input")
+        assert hasattr(input_validator, "validate__user_input")
         assert hasattr(input_validator, "sanitize_input")
 
     def test_penetration_tester(self, penetration_tester):

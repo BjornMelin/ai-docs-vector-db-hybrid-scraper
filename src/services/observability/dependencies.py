@@ -12,7 +12,14 @@ from fastapi import Depends
 
 from .config import ObservabilityConfig, get_observability_config
 from .init import initialize_observability, is_observability_enabled
-from .tracking import get_meter, get_tracer
+from .tracking import (
+    _NoOpMeter,
+    _NoOpTracer,
+    get_meter,
+    get_tracer,
+    record_ai_operation,
+    track_cost,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -32,6 +39,7 @@ def get_observability_service() -> dict[str, any]:
 
     Returns:
         Dictionary with observability service components
+
     """
     try:
         config = get_observability_config()
@@ -47,8 +55,8 @@ def get_observability_service() -> dict[str, any]:
             "enabled": is_observability_enabled(),
         }
 
-    except Exception as e:
-        logger.warning(f"Failed to initialize observability service: {e}")
+    except Exception:
+        logger.warning("Failed to initialize observability service")
         return {
             "config": ObservabilityConfig(),
             "tracer": None,
@@ -70,11 +78,10 @@ def get_ai_tracer(
 
     Returns:
         OpenTelemetry tracer or NoOp tracer
+
     """
     if observability_service["enabled"] and observability_service["tracer"]:
         return get_tracer("ai-operations")
-
-    from .tracking import _NoOpTracer
 
     return _NoOpTracer()
 
@@ -92,11 +99,10 @@ def get_service_meter(
 
     Returns:
         OpenTelemetry meter or NoOp meter
+
     """
     if observability_service["enabled"] and observability_service["meter"]:
         return get_meter("service-metrics")
-
-    from .tracking import _NoOpMeter
 
     return _NoOpMeter()
 
@@ -116,6 +122,7 @@ def create_span_context(
 
     Returns:
         Span context manager
+
     """
     return tracer.start_as_current_span(operation_name)
 
@@ -126,7 +133,7 @@ async def record_ai_operation_metrics(
     provider: str,
     success: bool,
     duration: float,
-    meter: ServiceMeterDep,
+    _meter: ServiceMeterDep,
     **kwargs,
 ) -> None:
     """Record metrics for AI operations using dependency injection.
@@ -138,10 +145,9 @@ async def record_ai_operation_metrics(
         duration: Operation duration in seconds
         meter: Service meter dependency
         **kwargs: Additional attributes
+
     """
     try:
-        from .tracking import record_ai_operation
-
         record_ai_operation(
             operation_type=operation_type,
             provider=provider,
@@ -150,15 +156,15 @@ async def record_ai_operation_metrics(
             **kwargs,
         )
 
-    except Exception as e:
-        logger.debug(f"Failed to record AI operation metrics: {e}")
+    except Exception:
+        logger.debug("Failed to record AI operation metrics")
 
 
 async def track_ai_cost_metrics(
     operation_type: str,
     provider: str,
     cost_usd: float,
-    meter: ServiceMeterDep,
+    _meter: ServiceMeterDep,
     **kwargs,
 ) -> None:
     """Track AI operation costs using dependency injection.
@@ -169,10 +175,9 @@ async def track_ai_cost_metrics(
         cost_usd: Cost in USD
         meter: Service meter dependency
         **kwargs: Additional attributes
+
     """
     try:
-        from .tracking import track_cost
-
         track_cost(
             operation_type=operation_type,
             provider=provider,
@@ -180,8 +185,8 @@ async def track_ai_cost_metrics(
             **kwargs,
         )
 
-    except Exception as e:
-        logger.debug(f"Failed to track AI cost metrics: {e}")
+    except Exception:
+        logger.debug("Failed to track AI cost metrics")
 
 
 # Health check for observability
@@ -195,6 +200,7 @@ async def get_observability_health(
 
     Returns:
         Health status dictionary
+
     """
     try:
         config = observability_service["config"]
@@ -220,7 +226,7 @@ async def get_observability_health(
         return health
 
     except Exception as e:
-        logger.exception(f"Failed to get observability health: {e}")
+        logger.exception("Failed to get observability health")
         return {
             "enabled": False,
             "status": "error",

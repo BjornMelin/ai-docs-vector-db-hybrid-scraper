@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 import numpy as np
 import pytest
 
-from src.services.errors import EmbeddingServiceError
+from src.services.errors import APIError, EmbeddingServiceError
 from src.services.hyde.cache import HyDECache
 from src.services.hyde.config import HyDEConfig
 from src.services.hyde.generator import GenerationResult
@@ -222,7 +222,6 @@ class TestHyDECache:
 
     async def test_get_hyde_embedding_not_initialized(self, cache):
         """Test getting HyDE embedding when not initialized."""
-        from src.services.errors import APIError
 
         with pytest.raises(APIError):
             await cache.get_hyde_embedding("test query")
@@ -612,7 +611,7 @@ class TestHyDECache:
         assert metrics["cache_misses"] == 2
         assert metrics["cache_sets"] == 5
         assert metrics["cache_errors"] == 1
-        assert metrics["total_requests"] == 10
+        assert metrics["_total_requests"] == 10
         assert metrics["hit_rate"] == 0.8
         assert metrics["error_rate"] == 0.1
 
@@ -624,7 +623,7 @@ class TestHyDECache:
         assert metrics["cache_misses"] == 0
         assert metrics["cache_sets"] == 0
         assert metrics["cache_errors"] == 0
-        assert metrics["total_requests"] == 0
+        assert metrics["_total_requests"] == 0
         assert metrics["hit_rate"] == 0.0
         assert metrics["error_rate"] == 0.0
 

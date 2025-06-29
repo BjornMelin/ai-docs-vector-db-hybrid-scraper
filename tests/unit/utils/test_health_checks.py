@@ -3,6 +3,7 @@
 from unittest.mock import Mock, patch
 
 import pytest
+from qdrant_client.http.exceptions import UnexpectedResponse
 
 from src.config import Config
 from src.utils.health_checks import ServiceHealthChecker
@@ -49,7 +50,6 @@ class TestServiceHealthChecker:
 
     def test_check_qdrant_connection_auth_failure(self, sample_config):
         """Test Qdrant connection check with authentication failure."""
-        from qdrant_client.http.exceptions import UnexpectedResponse
 
         with patch("qdrant_client.QdrantClient") as mock_client_class:
             mock_client = Mock()
@@ -191,7 +191,7 @@ class TestServiceHealthChecker:
             result = ServiceHealthChecker.get_connection_summary(sample_config)
 
             assert result["overall_status"] == "healthy"
-            assert result["total_services"] == 3
+            assert result["_total_services"] == 3
             assert result["connected_count"] == 3
             assert result["failed_count"] == 0
             assert result["connected_services"] == ["qdrant", "dragonfly", "openai"]
@@ -211,7 +211,7 @@ class TestServiceHealthChecker:
             result = ServiceHealthChecker.get_connection_summary(sample_config)
 
             assert result["overall_status"] == "unhealthy"
-            assert result["total_services"] == 3
+            assert result["_total_services"] == 3
             assert result["connected_count"] == 2
             assert result["failed_count"] == 1
             assert result["connected_services"] == ["qdrant", "openai"]

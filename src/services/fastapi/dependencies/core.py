@@ -7,6 +7,7 @@ configuration management, and other production services.
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import HTTPException, Request
@@ -41,6 +42,7 @@ class DependencyContainer:
 
         Args:
             config: Application configuration (loads default if None)
+
         """
         if self._initialized:
             return
@@ -64,8 +66,8 @@ class DependencyContainer:
             self._initialized = True
             logger.info("Dependency container initialized successfully")
 
-        except Exception as e:
-            logger.exception(f"Failed to initialize dependency container: {e}")
+        except Exception:
+            logger.exception("Failed to initialize dependency container")
             raise
 
     async def cleanup(self) -> None:
@@ -81,8 +83,8 @@ class DependencyContainer:
             self._initialized = False
             logger.info("Dependency container cleaned up")
 
-        except Exception as e:
-            logger.exception(f"Error during dependency cleanup: {e}")
+        except Exception:
+            logger.exception("Error during dependency cleanup")
 
     @property
     def is_initialized(self) -> bool:
@@ -93,35 +95,40 @@ class DependencyContainer:
     def config(self) -> Config:
         """Get configuration."""
         if not self._config:
-            raise RuntimeError("Dependency container not initialized")
+            msg = "Dependency container not initialized"
+            raise RuntimeError(msg)
         return self._config
 
     @property
     def vector_service(self) -> QdrantService:
         """Get vector database service."""
         if not self._vector_service:
-            raise RuntimeError("Vector service not initialized")
+            msg = "Vector service not initialized"
+            raise RuntimeError(msg)
         return self._vector_service
 
     @property
     def embedding_manager(self) -> Any:
         """Get embedding manager."""
         if not self._embedding_manager:
-            raise RuntimeError("Embedding manager not initialized")
+            msg = "Embedding manager not initialized"
+            raise RuntimeError(msg)
         return self._embedding_manager
 
     @property
     def cache_manager(self) -> Any:
         """Get cache manager."""
         if not self._cache_manager:
-            raise RuntimeError("Cache manager not initialized")
+            msg = "Cache manager not initialized"
+            raise RuntimeError(msg)
         return self._cache_manager
 
     @property
     def client_manager(self) -> ClientManager:
         """Get client manager."""
         if not self._client_manager:
-            raise RuntimeError("Client manager not initialized")
+            msg = "Client manager not initialized"
+            raise RuntimeError(msg)
         return self._client_manager
 
 
@@ -137,11 +144,11 @@ def get_container() -> DependencyContainer:
 
     Raises:
         RuntimeError: If container is not initialized
+
     """
     if _container is None:
-        raise RuntimeError(
-            "Dependency container not initialized. Call initialize_dependencies() first."
-        )
+        msg = "Dependency container not initialized. Call initialize_dependencies() first."
+        raise RuntimeError(msg)
     return _container
 
 
@@ -150,8 +157,9 @@ async def initialize_dependencies(config: Config | None = None) -> None:
 
     Args:
         config: Application configuration
+
     """
-    global _container  # noqa: PLW0603
+    global _container
     if _container is None:
         _container = DependencyContainer()
     await _container.initialize(config)
@@ -159,7 +167,7 @@ async def initialize_dependencies(config: Config | None = None) -> None:
 
 async def cleanup_dependencies() -> None:
     """Clean up the global dependency container."""
-    global _container  # noqa: PLW0603
+    global _container
     if _container:
         await _container.cleanup()
         _container = None
@@ -173,6 +181,7 @@ def get_config_dependency() -> Config:
 
     Returns:
         Configuration instance
+
     """
     return get_container().config
 
@@ -182,8 +191,17 @@ def get_fastapi_config() -> Config:
 
     Returns:
         Configuration instance
+
     """
     return get_config_dependency()
+
+
+def _raise_vector_service_unavailable() -> HTTPException:
+    """Helper to raise vector service unavailable exception."""
+    raise HTTPException(
+        status_code=HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Vector service not available",
+    )
 
 
 async def get_vector_service() -> QdrantService:
@@ -194,21 +212,28 @@ async def get_vector_service() -> QdrantService:
 
     Raises:
         HTTPException: If service is not available
+
     """
     try:
         container = get_container()
         if not container.is_initialized:
-            raise HTTPException(
-                status_code=HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Vector service not available",
-            )
-        return container.vector_service
-    except Exception as e:
-        logger.exception(f"Failed to get vector service: {e}")
+            _raise_vector_service_unavailable()
+        else:
+            return container.vector_service
+    except Exception:
+        logger.exception("Failed to get vector service")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Vector service not available",
-        ) from e
+        ) from None
+
+
+def _raise_embedding_service_unavailable() -> HTTPException:
+    """Helper to raise embedding service unavailable exception."""
+    raise HTTPException(
+        status_code=HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Embedding service not available",
+    )
 
 
 async def get_embedding_manager_legacy() -> Any:
@@ -219,21 +244,28 @@ async def get_embedding_manager_legacy() -> Any:
 
     Raises:
         HTTPException: If service is not available
+
     """
     try:
         container = get_container()
         if not container.is_initialized:
-            raise HTTPException(
-                status_code=HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Embedding service not available",
-            )
-        return container.embedding_manager
-    except Exception as e:
-        logger.exception(f"Failed to get embedding manager: {e}")
+            _raise_embedding_service_unavailable()
+        else:
+            return container.embedding_manager
+    except Exception:
+        logger.exception("Failed to get embedding manager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Embedding service not available",
-        ) from e
+        ) from None
+
+
+def _raise_cache_service_unavailable() -> HTTPException:
+    """Helper to raise cache service unavailable exception."""
+    raise HTTPException(
+        status_code=HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Cache service not available",
+    )
 
 
 async def get_cache_manager_legacy() -> Any:
@@ -244,21 +276,28 @@ async def get_cache_manager_legacy() -> Any:
 
     Raises:
         HTTPException: If service is not available
+
     """
     try:
         container = get_container()
         if not container.is_initialized:
-            raise HTTPException(
-                status_code=HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Cache service not available",
-            )
-        return container.cache_manager
-    except Exception as e:
-        logger.exception(f"Failed to get cache manager: {e}")
+            _raise_cache_service_unavailable()
+        else:
+            return container.cache_manager
+    except Exception:
+        logger.exception("Failed to get cache manager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Cache service not available",
-        ) from e
+        ) from None
+
+
+def _raise_client_manager_unavailable() -> HTTPException:
+    """Helper to raise client manager unavailable exception."""
+    raise HTTPException(
+        status_code=HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Client manager not available",
+    )
 
 
 def get_client_manager() -> ClientManager:
@@ -269,21 +308,20 @@ def get_client_manager() -> ClientManager:
 
     Raises:
         HTTPException: If service is not available
+
     """
     try:
         container = get_container()
         if not container.is_initialized:
-            raise HTTPException(
-                status_code=HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Client manager not available",
-            )
-        return container.client_manager
-    except Exception as e:
-        logger.exception(f"Failed to get client manager: {e}")
+            _raise_client_manager_unavailable()
+        else:
+            return container.client_manager
+    except Exception:
+        logger.exception("Failed to get client manager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Client manager not available",
-        ) from e
+        ) from None
 
 
 def get_correlation_id_dependency(request: Request) -> str:
@@ -294,6 +332,7 @@ def get_correlation_id_dependency(request: Request) -> str:
 
     Returns:
         Correlation ID string
+
     """
     return get_correlation_id(request)
 
@@ -306,6 +345,7 @@ async def database_session() -> AsyncGenerator[Any]:
 
     Yields:
         AsyncSession: SQLAlchemy async database session
+
     """
     client_manager = get_client_manager()
     db_manager = await client_manager.get_database_manager()
@@ -322,6 +362,7 @@ def get_request_context(request: Request) -> dict[str, Any]:
 
     Returns:
         Dictionary with request context data
+
     """
     return {
         "correlation_id": get_correlation_id(request),
@@ -340,6 +381,7 @@ class ServiceHealthChecker:
 
         Args:
             container: Dependency container to check
+
         """
         self.container = container
 
@@ -348,12 +390,11 @@ class ServiceHealthChecker:
 
         Returns:
             Health status dictionary
+
         """
         health = {"status": "healthy", "services": {}, "timestamp": None}
 
-        from datetime import datetime
-
-        health["timestamp"] = datetime.utcnow().isoformat()
+        health["timestamp"] = datetime.now(tz=UTC).isoformat()
 
         # Check container initialization
         if not self.container.is_initialized:
@@ -394,6 +435,7 @@ def get_health_checker() -> ServiceHealthChecker:
 
     Returns:
         Service health checker instance
+
     """
     return ServiceHealthChecker(get_container())
 

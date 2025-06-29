@@ -7,6 +7,7 @@ assertions, and modern test patterns.
 
 import json
 import os
+import time
 from unittest.mock import patch
 
 import pytest
@@ -478,19 +479,17 @@ class TestConfigPerformance:
 
     def test_config_creation_performance(self):
         """Test that Config creation is reasonably fast."""
-        import time
 
         start_time = time.perf_counter()
         for _ in range(10):  # Reduced from 100 for realistic testing
             Config()
         end_time = time.perf_counter()
 
-        total_time = end_time - start_time
-        assert total_time < 2.0  # Should create 10 configs reasonably fast
+        _total_time = end_time - start_time
+        assert _total_time < 2.0  # Should create 10 configs reasonably fast
 
     def test_config_access_performance(self):
         """Test that Config property access is fast."""
-        import time
 
         config = Config()
 
@@ -502,8 +501,8 @@ class TestConfigPerformance:
             _ = config.openai.api_key
         end_time = time.perf_counter()
 
-        total_time = end_time - start_time
-        assert total_time < 0.1  # Should access properties very quickly
+        _total_time = end_time - start_time
+        assert _total_time < 0.1  # Should access properties very quickly
 
 
 class TestEdgeCases:

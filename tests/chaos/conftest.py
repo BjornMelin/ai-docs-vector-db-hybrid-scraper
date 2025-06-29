@@ -17,6 +17,10 @@ from typing import Any
 import pytest
 
 
+class CustomError(Exception):
+    """Custom exception for this module."""
+
+
 class FailureType(Enum):
     """Types of failures that can be injected."""
 
@@ -113,7 +117,8 @@ def fault_injector():
             async def timeout_fault():
                 if random.random() < failure_rate:
                     await asyncio.sleep(timeout_seconds)
-                    raise TimeoutError(f"Simulated timeout for {target}")
+                    msg = f"Simulated timeout for {target}"
+                    raise TimeoutError(msg)
 
             self.active_faults[fault_id] = {
                 "type": FailureType.NETWORK_TIMEOUT,
@@ -132,7 +137,8 @@ def fault_injector():
 
             async def connection_fault():
                 if random.random() < failure_rate:
-                    raise ConnectionError(f"Simulated connection failure for {target}")
+                    msg = f"Simulated connection failure for {target}"
+                    raise ConnectionError(msg)
 
             self.active_faults[fault_id] = {
                 "type": FailureType.CONNECTION_REFUSED,
@@ -144,14 +150,16 @@ def fault_injector():
             return fault_id
 
         async def inject_service_unavailable(
-            self, target: str, failure_rate: float = 1.0
+            self, target: str, _failure_rate: float = 1.0
         ):
             """Inject service unavailable responses."""
             fault_id = f"service_unavailable_{target}_{time.time()}"
 
             async def service_fault():
-                if random.random() < failure_rate:
-                    raise Exception(f"Service {target} is temporarily unavailable")
+                msg = f"Service {target} is temporarily unavailable"
+                raise CustomError(msg)
+                msg = f"Service {target} is temporarily unavailable"
+                raise CustomError(msg)
 
             self.active_faults[fault_id] = {
                 "type": FailureType.SERVICE_UNAVAILABLE,
@@ -174,7 +182,8 @@ def fault_injector():
                         "Rate limit exceeded",
                         "Partial data corruption",
                     ]
-                    raise Exception(f"{random.choice(failure_types)} for {target}")
+                    msg = f"{random.choice(failure_types)} for {target}"
+                    raise CustomError(msg)
 
             self.active_faults[fault_id] = {
                 "type": FailureType.PARTIAL_FAILURE,
@@ -222,9 +231,8 @@ def fault_injector():
 
             async def memory_fault():
                 if random.random() < failure_rate:
-                    raise MemoryError(
-                        f"Simulated memory pressure ({pressure_level}) for {target}"
-                    )
+                    msg = f"Simulated memory pressure ({pressure_level}) for {target}"
+                    raise MemoryError(msg)
 
             self.active_faults[fault_id] = {
                 "type": FailureType.MEMORY_EXHAUSTION,
@@ -250,24 +258,25 @@ def fault_injector():
 
         @asynccontextmanager
         async def temporary_fault(
-            self, fault_type: str, target: str, duration_seconds: float, **kwargs
+            self, fault_type: str, target: str, duration_seconds: float, **_kwargs
         ):
             """Context manager for temporary fault injection."""
             # Inject fault based on type
             if fault_type == "network_timeout":
-                fault_id = await self.inject_network_timeout(target, **kwargs)
+                fault_id = await self.inject_network_timeout(target, **_kwargs)
             elif fault_type == "connection_failure":
-                fault_id = await self.inject_connection_failure(target, **kwargs)
+                fault_id = await self.inject_connection_failure(target, **_kwargs)
             elif fault_type == "service_unavailable":
-                fault_id = await self.inject_service_unavailable(target, **kwargs)
+                fault_id = await self.inject_service_unavailable(target, **_kwargs)
             elif fault_type == "partial_failure":
-                fault_id = await self.inject_partial_failure(target, **kwargs)
+                fault_id = await self.inject_partial_failure(target, **_kwargs)
             elif fault_type == "latency_spike":
-                fault_id = await self.inject_latency_spike(target, **kwargs)
+                fault_id = await self.inject_latency_spike(target, **_kwargs)
             elif fault_type == "memory_pressure":
-                fault_id = await self.inject_memory_pressure(target, **kwargs)
+                fault_id = await self.inject_memory_pressure(target, **_kwargs)
             else:
-                raise ValueError(f"Unknown fault type: {fault_type}")
+                msg = f"Unknown fault type: {fault_type}"
+                raise ValueError(msg)
 
             try:
                 # Let the fault run for the specified duration
@@ -348,7 +357,7 @@ def resilience_validator():
             """Validate retry behavior."""
             results = {
                 "retry_attempts": 0,
-                "total_time": 0.0,
+                "_total_time": 0.0,
                 "success_on_retry": False,
                 "backoff_respected": True,
             }
@@ -377,7 +386,7 @@ def resilience_validator():
                     if attempt < max_retries:
                         await asyncio.sleep(backoff_factor * (2**attempt))
 
-            results["total_time"] = time.time() - start_time
+            results["_total_time"] = time.time() - start_time
             return results
 
         async def validate_graceful_degradation(
@@ -513,14 +522,13 @@ def resilience_validator():
             """Convert resilience score to letter grade."""
             if score >= 90:
                 return "A"
-            elif score >= 80:
+            if score >= 80:
                 return "B"
-            elif score >= 70:
+            if score >= 70:
                 return "C"
-            elif score >= 60:
+            if score >= 60:
                 return "D"
-            else:
-                return "F"
+            return "F"
 
     return ResilienceValidator()
 
@@ -540,7 +548,7 @@ def chaos_experiment_runner():
             description: str,
             failure_type: FailureType,
             target_service: str,
-            **kwargs,
+            **_kwargs,
         ) -> ChaosExperiment:
             """Define a chaos experiment."""
             experiment = ChaosExperiment(
@@ -548,12 +556,12 @@ def chaos_experiment_runner():
                 description=description,
                 failure_type=failure_type,
                 target_service=target_service,
-                duration_seconds=kwargs.get("duration_seconds", 30.0),
-                failure_rate=kwargs.get("failure_rate", 1.0),
-                blast_radius=kwargs.get("blast_radius", "single"),
-                recovery_time_seconds=kwargs.get("recovery_time_seconds", 10.0),
-                success_criteria=kwargs.get("success_criteria", []),
-                rollback_strategy=kwargs.get("rollback_strategy", "immediate"),
+                duration_seconds=_kwargs.get("duration_seconds", 30.0),
+                failure_rate=_kwargs.get("failure_rate", 1.0),
+                blast_radius=_kwargs.get("blast_radius", "single"),
+                recovery_time_seconds=_kwargs.get("recovery_time_seconds", 10.0),
+                success_criteria=_kwargs.get("success_criteria", []),
+                rollback_strategy=_kwargs.get("rollback_strategy", "immediate"),
             )
 
             self.experiments.append(experiment)
@@ -652,7 +660,7 @@ def chaos_experiment_runner():
                     await target_system.simulate_memory_pressure()
 
         async def _stop_failure_injection(
-            self, experiment: ChaosExperiment, target_system: Any
+            self, _experiment: ChaosExperiment, target_system: Any
         ):
             """Stop failure injection."""
             if hasattr(target_system, "stop_failure_simulation"):
@@ -663,9 +671,10 @@ def chaos_experiment_runner():
             if hasattr(target_system, "health_check"):
                 try:
                     await target_system.health_check()
-                    return True
                 except Exception:
                     return False
+                else:
+                    return True
 
             # Default: assume recovered
             return True
@@ -701,17 +710,17 @@ def chaos_experiment_runner():
         ) -> dict[str, Any]:
             """Generate summary of experiment results."""
             if not results:
-                return {"total_experiments": 0}
+                return {"_total_experiments": 0}
 
             return {
-                "total_experiments": len(results),
+                "_total_experiments": len(results),
                 "successful_injections": sum(1 for r in results if r.failure_injected),
                 "successful_recoveries": sum(1 for r in results if r.system_recovered),
                 "average_recovery_time": sum(r.recovery_time for r in results)
                 / len(results),
                 "success_rate": sum(1 for r in results if all(r.success_criteria_met))
                 / len(results),
-                "total_errors": sum(len(r.errors) for r in results),
+                "_total_errors": sum(len(r.errors) for r in results),
             }
 
     return ChaosExperimentRunner()
@@ -728,7 +737,7 @@ def mock_resilient_service():
             self.failure_count = 0
             self.last_failure_time = 0
 
-        def simulate_network_timeout(self, duration: float):
+        def simulate_network_timeout(self, _duration: float):
             """Simulate network timeout."""
             self.failure_mode = "network_timeout"
             self.last_failure_time = time.time()
@@ -750,17 +759,21 @@ def mock_resilient_service():
         async def health_check(self):
             """Health check endpoint."""
             if self.failure_mode == "service_unavailable":
-                raise Exception("Service unavailable")
+                msg = "Service unavailable"
+                raise CustomError(msg)
             return {"status": "healthy"}
 
         async def process_request(self):
             """Process a request with potential failures."""
             if self.failure_mode == "network_timeout":
-                raise TimeoutError("Network timeout")
-            elif self.failure_mode == "service_unavailable":
-                raise Exception("Service unavailable")
-            elif self.failure_mode == "memory_pressure":
-                raise MemoryError("Out of memory")
+                msg = "Network timeout"
+                raise TimeoutError(msg)
+            if self.failure_mode == "service_unavailable":
+                msg = "Service unavailable"
+                raise CustomError(msg)
+            if self.failure_mode == "memory_pressure":
+                msg = "Out of memory"
+                raise MemoryError(msg)
 
             return {"status": "success", "data": "processed"}
 

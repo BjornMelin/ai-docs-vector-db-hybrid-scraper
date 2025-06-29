@@ -9,8 +9,8 @@ import httpx
 from bs4 import BeautifulSoup
 
 from src.config import Config  # LightweightScraperConfig not in simplified config
+from src.services.errors import CrawlServiceError
 
-from ..errors import CrawlServiceError
 from .base import CrawlProvider
 
 
@@ -38,6 +38,7 @@ class LightweightScraper(CrawlProvider):
         Args:
             config: Configuration for the lightweight scraper
             rate_limiter: Optional rate limiter instance
+
         """
         self.config = config
         self.rate_limiter = rate_limiter
@@ -81,19 +82,24 @@ class LightweightScraper(CrawlProvider):
 
         Returns:
             True if URL can be handled by lightweight tier
+
         """
         if not self.config.enable_lightweight_tier:
             return False
 
         # Check URL patterns first (fastest)
         if any(pattern.search(url) for pattern in self._simple_patterns):
-            logger.debug(f"URL {url} matches simple pattern")
+            logger.debug(
+                f"URL {url} matches simple pattern"
+            )  # TODO: Convert f-string to logging format
             return True
 
         # Check known simple sites
         domain = urlparse(url).netloc
         if domain in self.config.known_simple_sites:
-            logger.debug(f"URL {url} is from known simple site")
+            logger.debug(
+                f"URL {url} is from known simple site"
+            )  # TODO: Convert f-string to logging format
             return True
 
         # Perform HEAD request analysis if enabled
@@ -101,8 +107,8 @@ class LightweightScraper(CrawlProvider):
             try:
                 recommendation = await self._analyze_url(url)
                 return recommendation == TierRecommendation.LIGHTWEIGHT_OK
-            except Exception as e:
-                logger.debug(f"HEAD analysis failed for {url}: {e}")
+            except Exception:
+                logger.debug("HEAD analysis failed for {url}")
                 return False
 
         return False
@@ -115,9 +121,11 @@ class LightweightScraper(CrawlProvider):
 
         Returns:
             TierRecommendation constant
+
         """
         if not self._http_client:
-            raise CrawlServiceError("Scraper not initialized")
+            msg = "Scraper not initialized"
+            raise CrawlServiceError(msg)
 
         try:
             response = await self._http_client.head(
@@ -139,15 +147,15 @@ class LightweightScraper(CrawlProvider):
                 "x-angular",
             ]
             if any(header in response.headers for header in spa_headers):
-                logger.debug(f"SPA indicators found for {url}")
+                logger.debug(
+                    f"SPA indicators found for {url}"
+                )  # TODO: Convert f-string to logging format
                 return TierRecommendation.BROWSER_REQUIRED
 
             # Check response size
             content_length = int(response.headers.get("content-length", 0))
             if content_length > self.config.max_lightweight_size:
-                logger.debug(
-                    f"Content too large for lightweight tier: {content_length}"
-                )
+                logger.debug("Content too large for lightweight tier")
                 return TierRecommendation.STREAMING_REQUIRED
 
             # Check for JavaScript requirements in headers
@@ -159,10 +167,12 @@ class LightweightScraper(CrawlProvider):
             return TierRecommendation.LIGHTWEIGHT_OK
 
         except httpx.TimeoutException:
-            logger.debug(f"HEAD request timeout for {url}")
+            logger.debug(
+                f"HEAD request timeout for {url}"
+            )  # TODO: Convert f-string to logging format
             return TierRecommendation.BROWSER_REQUIRED
-        except Exception as e:
-            logger.debug(f"HEAD request failed for {url}: {e}")
+        except Exception:
+            logger.debug("HEAD request failed for {url}")
             return TierRecommendation.BROWSER_REQUIRED
 
     async def scrape_url(
@@ -176,9 +186,11 @@ class LightweightScraper(CrawlProvider):
 
         Returns:
             Scrape result with content and metadata, or None to escalate
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Scraper not initialized")
+            msg = "Scraper not initialized"
+            raise CrawlServiceError(msg)
 
         formats = formats or ["markdown"]
 
@@ -238,14 +250,14 @@ class LightweightScraper(CrawlProvider):
             return result
 
         except httpx.HTTPStatusError as e:
-            logger.warning(f"HTTP error scraping {url}: {e}")
+            logger.warning("HTTP error scraping {url}")
             return {
                 "success": False,
                 "error": f"HTTP {e.response.status_code}",
                 "should_escalate": e.response.status_code not in [404, 403, 401],
             }
         except Exception as e:
-            logger.exception(f"Error scraping {url} with lightweight tier: {e}")
+            logger.exception("Error scraping {url} with lightweight tier")
             return {
                 "success": False,
                 "error": str(e),
@@ -263,6 +275,7 @@ class LightweightScraper(CrawlProvider):
 
         Returns:
             Extracted content dictionary or None
+
         """
         # Remove script and style elements
         for element in soup(["script", "style", "noscript"]):
@@ -335,6 +348,7 @@ class LightweightScraper(CrawlProvider):
 
         Returns:
             Main content element or None
+
         """
         # Find all text-containing elements
         candidates = []
@@ -376,6 +390,7 @@ class LightweightScraper(CrawlProvider):
 
         Returns:
             Markdown formatted content
+
         """
         markdown_lines = []
 
@@ -444,9 +459,9 @@ class LightweightScraper(CrawlProvider):
 
     async def crawl_site(
         self,
-        url: str,
-        max_pages: int = 50,
-        formats: list[str] | None = None,
+        _url: str,
+        _max_pages: int = 50,
+        _formats: list[str] | None = None,
     ) -> dict[str, Any]:
         """Crawl an entire site (not implemented for lightweight tier).
 
@@ -460,6 +475,7 @@ class LightweightScraper(CrawlProvider):
 
         Returns:
             Error result indicating this tier doesn't support crawling
+
         """
         return {
             "success": False,

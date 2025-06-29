@@ -8,9 +8,9 @@ import logging
 from typing import TYPE_CHECKING
 
 from src.config import Config
+from src.services.base import BaseService
+from src.services.errors import QdrantServiceError
 
-from ..base import BaseService
-from ..errors import QdrantServiceError
 from .collections import QdrantCollections
 from .documents import QdrantDocuments
 from .indexing import QdrantIndexing
@@ -20,7 +20,7 @@ from .search import QdrantSearch
 # Removed search interceptor (over-engineered deployment infrastructure)
 
 if TYPE_CHECKING:
-    from ...infrastructure.client_manager import ClientManager
+    from src.infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +34,7 @@ class QdrantService(BaseService):
         Args:
             config: Unified configuration
             client_manager: ClientManager instance for dependency injection
+
         """
         super().__init__(config)
         self.config: Config = config
@@ -56,6 +57,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If initialization fails
+
         """
         if self._initialized:
             return
@@ -81,7 +83,8 @@ class QdrantService(BaseService):
 
         except Exception as e:
             self._initialized = False
-            raise QdrantServiceError(f"Failed to initialize QdrantService: {e}") from e
+            msg = f"Failed to initialize QdrantService: {e}"
+            raise QdrantServiceError(msg) from e
 
     async def _initialize_deployment_services(self) -> None:
         """Initialize deployment services based on configuration and feature flags.
@@ -178,6 +181,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If collection creation fails
+
         """
         self._validate_initialized()
 
@@ -217,6 +221,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If collection deletion fails
+
         """
         self._validate_initialized()
         return await self._collections.delete_collection(collection_name)
@@ -229,6 +234,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If listing collections fails
+
         """
         self._validate_initialized()
         return await self._collections.list_collections()
@@ -245,6 +251,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If listing collection details fails
+
         """
         self._validate_initialized()
         return await self._collections.list_collections_details()
@@ -265,6 +272,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If getting collection info fails
+
         """
         self._validate_initialized()
         return await self._collections.get_collection_info(collection_name)
@@ -280,6 +288,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If optimization trigger fails
+
         """
         self._validate_initialized()
         return await self._collections.trigger_collection_optimization(collection_name)
@@ -316,6 +325,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If search fails
+
         """
         self._validate_initialized()
 
@@ -391,6 +401,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If multi-stage search fails
+
         """
         self._validate_initialized()
 
@@ -464,6 +475,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If HyDE search fails
+
         """
         self._validate_initialized()
 
@@ -535,6 +547,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If filtered search fails
+
         """
         self._validate_initialized()
 
@@ -588,6 +601,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If index creation fails
+
         """
         self._validate_initialized()
         await self._indexing.create_payload_indexes(collection_name)
@@ -603,6 +617,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If listing indexes fails
+
         """
         self._validate_initialized()
         return await self._indexing.list_payload_indexes(collection_name)
@@ -616,6 +631,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If dropping index fails
+
         """
         self._validate_initialized()
         await self._indexing.drop_payload_index(collection_name, field_name)
@@ -628,6 +644,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If reindexing fails
+
         """
         self._validate_initialized()
         await self._indexing.reindex_collection(collection_name)
@@ -646,6 +663,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If getting stats fails
+
         """
         self._validate_initialized()
         return await self._indexing.get_payload_index_stats(collection_name)
@@ -664,6 +682,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If validation fails
+
         """
         self._validate_initialized()
         return await self._indexing.validate_index_health(collection_name)
@@ -682,6 +701,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If getting stats fails
+
         """
         self._validate_initialized()
         return await self._indexing.get_index_usage_stats(collection_name)
@@ -709,6 +729,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If upsert fails
+
         """
         self._validate_initialized()
         return await self._documents.upsert_points(
@@ -737,6 +758,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If retrieval fails
+
         """
         self._validate_initialized()
         return await self._documents.get_points(
@@ -764,6 +786,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If deletion fails
+
         """
         self._validate_initialized()
         return await self._documents.delete_points(
@@ -792,6 +815,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If update fails
+
         """
         self._validate_initialized()
         return await self._documents.update_point_payload(
@@ -819,6 +843,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If counting fails
+
         """
         self._validate_initialized()
         return await self._documents.count_points(
@@ -853,6 +878,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If scrolling fails
+
         """
         self._validate_initialized()
         return await self._documents.scroll_points(
@@ -875,6 +901,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If clearing fails
+
         """
         self._validate_initialized()
         return await self._documents.clear_collection(collection_name)
@@ -905,6 +932,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If collection creation fails
+
         """
         self._validate_initialized()
         return await self._collections.create_collection(
@@ -930,6 +958,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If getting configuration fails
+
         """
         self._validate_initialized()
         return self._collections.get_hnsw_configuration_info(collection_type)
@@ -939,8 +968,8 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If service is not initialized
+
         """
         if not self._initialized or not self._collections:
-            raise QdrantServiceError(
-                "Service not initialized. Call initialize() first."
-            )
+            msg = "Service not initialized. Call initialize() first."
+            raise QdrantServiceError(msg)

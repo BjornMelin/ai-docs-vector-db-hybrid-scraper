@@ -11,8 +11,7 @@ from typing import Any
 import numpy as np
 
 from src.config import Config
-
-from ...models.vector_search import SPLADEConfig
+from src.models.vector_search import SPLADEConfig
 
 
 logger = logging.getLogger(__name__)
@@ -27,6 +26,7 @@ class SPLADEProvider:
         Args:
             config: Unified configuration
             splade_config: SPLADE-specific configuration
+
         """
         self.config = config
         self.splade_config = splade_config or SPLADEConfig()
@@ -63,14 +63,13 @@ class SPLADEProvider:
 
             # For now, use fallback implementation
             logger.info("Using fallback SPLADE implementation")
-            pass
 
         except ImportError:
             logger.warning(
                 "Transformers library not available, using fallback sparse generation"
             )
-        except Exception as e:
-            logger.exception(f"Failed to load SPLADE model: {e}")
+        except Exception:
+            logger.exception("Failed to load SPLADE model")
             raise
 
     async def generate_sparse_vector(
@@ -84,6 +83,7 @@ class SPLADEProvider:
 
         Returns:
             Dictionary mapping token IDs to weights
+
         """
         # Check cache first
         cache_key = f"{text}_{normalize}"
@@ -108,8 +108,8 @@ class SPLADEProvider:
 
             return sparse_vector
 
-        except Exception as e:
-            logger.error(f"Sparse vector generation failed: {e}", exc_info=True)
+        except Exception:
+            logger.error("Sparse vector generation failed", exc_info=True)
             # Return empty sparse vector as fallback
             return {}
 

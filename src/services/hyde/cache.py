@@ -9,8 +9,9 @@ from typing import Any
 
 import numpy as np
 
-from ..base import BaseService
-from ..errors import EmbeddingServiceError
+from src.services.base import BaseService
+from src.services.errors import EmbeddingServiceError
+
 from .config import HyDEConfig
 from .generator import GenerationResult
 
@@ -27,6 +28,7 @@ class HyDECache(BaseService):
         Args:
             config: HyDE configuration
             cache_manager: DragonflyCache or compatible cache manager
+
         """
         super().__init__(config)
         self.config = config
@@ -59,7 +61,8 @@ class HyDECache(BaseService):
             test_value = await self.cache_manager.get(test_key)
 
             if test_value != "test_value":
-                raise EmbeddingServiceError("Cache test failed")
+                msg = "Cache test failed"
+                raise EmbeddingServiceError(msg)
 
             await self.cache_manager.delete(test_key)
 
@@ -67,7 +70,8 @@ class HyDECache(BaseService):
             logger.info("HyDE cache initialized")
 
         except Exception as e:
-            raise EmbeddingServiceError(f"Failed to initialize HyDE cache: {e}") from e
+            msg = f"Failed to initialize HyDE cache: {e}"
+            raise EmbeddingServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup cache resources."""
@@ -87,6 +91,7 @@ class HyDECache(BaseService):
 
         Returns:
             Cached embedding or None if not found
+
         """
         self._validate_initialized()
 
@@ -110,19 +115,24 @@ class HyDECache(BaseService):
                     # Direct embedding format
                     embedding = cached_data
                 else:
-                    logger.warning(f"Unexpected cache format for key {cache_key}")
+                    logger.warning(
+                        f"Unexpected cache format for key {cache_key}"
+                    )  # TODO: Convert f-string to logging format
                     self.cache_misses += 1
                     return None
 
-                logger.debug(f"Cache hit for HyDE embedding: {query}")
+                logger.debug(
+                    f"Cache hit for HyDE embedding: {query}"
+                )  # TODO: Convert f-string to logging format
                 return embedding
-            else:
-                self.cache_misses += 1
-                return None
+            self.cache_misses += 1
+            return None
 
         except Exception as e:
             self.cache_errors += 1
-            logger.warning(f"Cache get error for HyDE embedding: {e}")
+            logger.warning(
+                f"Cache get error for HyDE embedding: {e}"
+            )  # TODO: Convert f-string to logging format
             return None
 
     async def set_hyde_embedding(
@@ -144,6 +154,7 @@ class HyDECache(BaseService):
 
         Returns:
             True if cached successfully
+
         """
         self._validate_initialized()
 
@@ -175,13 +186,17 @@ class HyDECache(BaseService):
 
             if success:
                 self.cache_sets += 1
-                logger.debug(f"Cached HyDE embedding for query: {query}")
+                logger.debug(
+                    f"Cached HyDE embedding for query: {query}"
+                )  # TODO: Convert f-string to logging format
 
             return success
 
         except Exception as e:
             self.cache_errors += 1
-            logger.warning(f"Cache set error for HyDE embedding: {e}")
+            logger.warning(
+                f"Cache set error for HyDE embedding: {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
     async def get_hypothetical_documents(
@@ -195,6 +210,7 @@ class HyDECache(BaseService):
 
         Returns:
             Cached documents or None if not found
+
         """
         if not self.config.cache_hypothetical_docs:
             return None
@@ -207,15 +223,18 @@ class HyDECache(BaseService):
 
             if cached_docs is not None:
                 self.cache_hits += 1
-                logger.debug(f"Cache hit for hypothetical documents: {query}")
+                logger.debug(
+                    f"Cache hit for hypothetical documents: {query}"
+                )  # TODO: Convert f-string to logging format
                 return cached_docs
-            else:
-                self.cache_misses += 1
-                return None
+            self.cache_misses += 1
+            return None
 
         except Exception as e:
             self.cache_errors += 1
-            logger.warning(f"Cache get error for hypothetical documents: {e}")
+            logger.warning(
+                f"Cache get error for hypothetical documents: {e}"
+            )  # TODO: Convert f-string to logging format
             return None
 
     async def set_hypothetical_documents(
@@ -235,6 +254,7 @@ class HyDECache(BaseService):
 
         Returns:
             True if cached successfully
+
         """
         if not self.config.cache_hypothetical_docs:
             return True
@@ -260,13 +280,17 @@ class HyDECache(BaseService):
 
             if success:
                 self.cache_sets += 1
-                logger.debug(f"Cached hypothetical documents for query: {query}")
+                logger.debug(
+                    f"Cached hypothetical documents for query: {query}"
+                )  # TODO: Convert f-string to logging format
 
             return success
 
         except Exception as e:
             self.cache_errors += 1
-            logger.warning(f"Cache set error for hypothetical documents: {e}")
+            logger.warning(
+                f"Cache set error for hypothetical documents: {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
     async def get_search_results(
@@ -281,6 +305,7 @@ class HyDECache(BaseService):
 
         Returns:
             Cached results or None if not found
+
         """
         self._validate_initialized()
 
@@ -292,15 +317,18 @@ class HyDECache(BaseService):
 
             if cached_results is not None:
                 self.cache_hits += 1
-                logger.debug(f"Cache hit for search results: {query}")
+                logger.debug(
+                    f"Cache hit for search results: {query}"
+                )  # TODO: Convert f-string to logging format
                 return cached_results
-            else:
-                self.cache_misses += 1
-                return None
+            self.cache_misses += 1
+            return None
 
         except Exception as e:
             self.cache_errors += 1
-            logger.warning(f"Cache get error for search results: {e}")
+            logger.warning(
+                f"Cache get error for search results: {e}"
+            )  # TODO: Convert f-string to logging format
             return None
 
     async def set_search_results(
@@ -322,6 +350,7 @@ class HyDECache(BaseService):
 
         Returns:
             True if cached successfully
+
         """
         self._validate_initialized()
 
@@ -346,13 +375,17 @@ class HyDECache(BaseService):
 
             if success:
                 self.cache_sets += 1
-                logger.debug(f"Cached search results for query: {query}")
+                logger.debug(
+                    f"Cached search results for query: {query}"
+                )  # TODO: Convert f-string to logging format
 
             return success
 
         except Exception as e:
             self.cache_errors += 1
-            logger.warning(f"Cache set error for search results: {e}")
+            logger.warning(
+                f"Cache set error for search results: {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
     async def warm_cache(
@@ -366,6 +399,7 @@ class HyDECache(BaseService):
 
         Returns:
             Dictionary mapping queries to warm-up success status
+
         """
         self._validate_initialized()
 
@@ -382,7 +416,9 @@ class HyDECache(BaseService):
                     results[query] = False  # Needs generation
 
             except Exception as e:
-                logger.warning(f"Cache warm-up error for query '{query}': {e}")
+                logger.warning(
+                    f"Cache warm-up error for query '{query}': {e}"
+                )  # TODO: Convert f-string to logging format
                 results[query] = False
 
         logger.info(
@@ -400,6 +436,7 @@ class HyDECache(BaseService):
 
         Returns:
             True if invalidation was successful
+
         """
         self._validate_initialized()
 
@@ -425,19 +462,21 @@ class HyDECache(BaseService):
             return success_count > 0
 
         except Exception as e:
-            logger.warning(f"Cache invalidation error for query '{query}': {e}")
+            logger.warning(
+                f"Cache invalidation error for query '{query}': {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
     def _get_embedding_cache_key(self, query: str, domain: str | None = None) -> str:
         """Generate cache key for HyDE embedding."""
         key_data = f"{query}:{domain or 'general'}"
-        key_hash = hashlib.md5(key_data.encode()).hexdigest()
+        key_hash = hashlib.sha256(key_data.encode()).hexdigest()
         return f"{self.embedding_prefix}:{key_hash}"
 
     def _get_documents_cache_key(self, query: str, domain: str | None = None) -> str:
         """Generate cache key for hypothetical documents."""
         key_data = f"{query}:{domain or 'general'}"
-        key_hash = hashlib.md5(key_data.encode()).hexdigest()
+        key_hash = hashlib.sha256(key_data.encode()).hexdigest()
         return f"{self.documents_prefix}:{key_hash}"
 
     def _get_results_cache_key(
@@ -447,7 +486,7 @@ class HyDECache(BaseService):
         # Create deterministic key from parameters
         params_str = json.dumps(search_params, sort_keys=True)
         key_data = f"{query}:{collection_name}:{params_str}"
-        key_hash = hashlib.md5(key_data.encode()).hexdigest()
+        key_hash = hashlib.sha256(key_data.encode()).hexdigest()
         return f"{self.results_prefix}:{key_hash}"
 
     def get_cache_metrics(self) -> dict[str, Any]:

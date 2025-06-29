@@ -1,5 +1,6 @@
 """Tests for crawling base module."""
 
+import inspect
 from abc import ABC
 from typing import Any
 
@@ -90,17 +91,17 @@ class TestCrawlProvider:
             """Concrete implementation for testing."""
 
             async def scrape_url(
-                self, url: str, formats: list[str] | None = None
+                self, url: str, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 return {"success": True, "url": url, "content": "test"}
 
             async def crawl_site(
                 self,
-                url: str,
-                max_pages: int = 50,
-                formats: list[str] | None = None,
+                _url: str,
+                _max_pages: int = 50,
+                _formats: list[str] | None = None,
             ) -> dict[str, Any]:
-                return {"success": True, "pages": [], "total": 0}
+                return {"success": True, "pages": [], "_total": 0}
 
             async def initialize(self) -> None:
                 pass
@@ -137,7 +138,7 @@ class TestCrawlProvider:
                 self,
                 url: str,
                 max_pages: int = 50,
-                formats: list[str] | None = None,
+                _formats: list[str] | None = None,
             ) -> dict[str, Any]:
                 pages = [
                     {"url": f"{url}/page{i}", "content": f"Page {i}"}
@@ -146,7 +147,7 @@ class TestCrawlProvider:
                 return {
                     "success": True,
                     "pages": pages,
-                    "total": len(pages),
+                    "_total": len(pages),
                     "max_pages": max_pages,
                 }
 
@@ -176,7 +177,7 @@ class TestCrawlProvider:
         # Test crawl_site
         result = await provider.crawl_site("https://example.com", max_pages=2)
         assert result["success"] is True
-        assert result["total"] == 2
+        assert result["_total"] == 2
         assert len(result["pages"]) == 2
         assert result["max_pages"] == 2
 
@@ -201,7 +202,7 @@ class TestCrawlProvider:
         # Missing scrape_url
         class IncompleteProvider1(CrawlProvider):
             async def crawl_site(
-                self, url: str, max_pages: int = 50, formats: list[str] | None = None
+                self, _url: str, _max_pages: int = 50, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 return {}
 
@@ -217,7 +218,7 @@ class TestCrawlProvider:
         # Missing crawl_site
         class IncompleteProvider2(CrawlProvider):
             async def scrape_url(
-                self, url: str, formats: list[str] | None = None
+                self, _url: str, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 return {}
 
@@ -233,12 +234,12 @@ class TestCrawlProvider:
         # Missing initialize
         class IncompleteProvider3(CrawlProvider):
             async def scrape_url(
-                self, url: str, formats: list[str] | None = None
+                self, _url: str, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 return {}
 
             async def crawl_site(
-                self, url: str, max_pages: int = 50, formats: list[str] | None = None
+                self, _url: str, _max_pages: int = 50, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 return {}
 
@@ -251,12 +252,12 @@ class TestCrawlProvider:
         # Missing cleanup
         class IncompleteProvider4(CrawlProvider):
             async def scrape_url(
-                self, url: str, formats: list[str] | None = None
+                self, _url: str, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 return {}
 
             async def crawl_site(
-                self, url: str, max_pages: int = 50, formats: list[str] | None = None
+                self, _url: str, _max_pages: int = 50, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 return {}
 
@@ -269,7 +270,6 @@ class TestCrawlProvider:
     def test_method_parameter_defaults(self):
         """Test default parameter values are correctly defined."""
         # Check crawl_site default parameters
-        import inspect
 
         sig = inspect.signature(CrawlProvider.crawl_site)
 
@@ -296,18 +296,20 @@ class TestCrawlProvider:
                 self.operations.append("initialize")
 
             async def scrape_url(
-                self, url: str, formats: list[str] | None = None
+                self, url: str, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 if self.state != "initialized":
-                    raise RuntimeError("Provider not initialized")
+                    msg = "Provider not initialized"
+                    raise RuntimeError(msg)
                 self.operations.append(f"scrape_{url}")
                 return {"success": True, "url": url}
 
             async def crawl_site(
-                self, url: str, max_pages: int = 50, formats: list[str] | None = None
+                self, url: str, _max_pages: int = 50, _formats: list[str] | None = None
             ) -> dict[str, Any]:
                 if self.state != "initialized":
-                    raise RuntimeError("Provider not initialized")
+                    msg = "Provider not initialized"
+                    raise RuntimeError(msg)
                 self.operations.append(f"crawl_{url}")
                 return {"success": True, "pages": []}
 

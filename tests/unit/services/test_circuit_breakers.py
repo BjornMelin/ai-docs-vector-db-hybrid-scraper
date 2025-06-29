@@ -9,11 +9,17 @@ This module tests the advanced circuit breaker implementation including:
 """
 
 import asyncio
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
+from src.services.dependencies import (
+    get_circuit_breaker_status,
+    get_service_health,
+    reset_all_circuit_breakers,
+    reset_circuit_breaker,
+)
 from src.services.errors import (
     AdvancedCircuitBreaker,
     CircuitBreakerRegistry,
@@ -63,7 +69,8 @@ class TestAdvancedCircuitBreaker:
         breaker = AdvancedCircuitBreaker("test_service", failure_threshold=3)
 
         async def failing_function():
-            raise ExternalServiceError("Service unavailable")
+            msg = "Service unavailable"
+            raise ExternalServiceError(msg)
 
         # Execute failing calls
         for i in range(3):
@@ -85,7 +92,8 @@ class TestAdvancedCircuitBreaker:
         )
 
         async def failing_function():
-            raise ExternalServiceError("Service unavailable")
+            msg = "Service unavailable"
+            raise ExternalServiceError(msg)
 
         # Open the circuit
         for _ in range(2):
@@ -106,7 +114,8 @@ class TestAdvancedCircuitBreaker:
         )
 
         async def failing_function():
-            raise ExternalServiceError("Service unavailable")
+            msg = "Service unavailable"
+            raise ExternalServiceError(msg)
 
         async def successful_function():
             return "success"
@@ -135,7 +144,8 @@ class TestAdvancedCircuitBreaker:
         )
 
         async def failing_function():
-            raise ExternalServiceError("Service unavailable")
+            msg = "Service unavailable"
+            raise ExternalServiceError(msg)
 
         async def successful_function():
             return "success"
@@ -164,7 +174,8 @@ class TestAdvancedCircuitBreaker:
         )
 
         async def failing_function():
-            raise ExternalServiceError("Service unavailable")
+            msg = "Service unavailable"
+            raise ExternalServiceError(msg)
 
         # Open the circuit
         for _ in range(2):
@@ -210,7 +221,7 @@ class TestAdvancedCircuitBreaker:
         breaker.metrics.record_call(success=False, response_time=0.5)
         breaker.metrics.record_call(success=True, response_time=0.2)
 
-        assert breaker.metrics.total_calls == 3
+        assert breaker.metrics._total_calls == 3
         assert breaker.metrics.success_calls == 2
         assert breaker.metrics.failure_calls == 1
         assert abs(breaker.metrics.get_success_rate() - 66.67) < 0.01
@@ -228,7 +239,7 @@ class TestAdvancedCircuitBreaker:
         assert status["state"] == "closed"
         assert status["failure_count"] == 0
         assert status["failure_threshold"] == 5
-        assert "total_calls" in status
+        assert "_total_calls" in status
         assert "success_rate" in status
 
     def test_manual_reset(self):
@@ -238,7 +249,7 @@ class TestAdvancedCircuitBreaker:
         # Simulate failures and open circuit
         breaker.failure_count = 3
         breaker._change_state(CircuitState.OPEN)
-        breaker.last_failure_time = datetime.now()
+        breaker.last_failure_time = datetime.now(tz=UTC)
 
         assert breaker.state == CircuitState.OPEN
 
@@ -290,7 +301,8 @@ class TestCircuitBreakerDecorators:
             nonlocal call_count
             call_count += 1
             if should_fail:
-                raise ExternalServiceError("Test error")
+                msg = "Test error"
+                raise ExternalServiceError(msg)
             return f"call_{call_count}"
 
         # Successful calls
@@ -320,7 +332,8 @@ class TestCircuitBreakerDecorators:
             nonlocal call_count
             call_count += 1
             if should_fail:
-                raise ExternalServiceError("Test error")
+                msg = "Test error"
+                raise ExternalServiceError(msg)
             return f"call_{call_count}"
 
         # Test successful call
@@ -346,9 +359,10 @@ class TestCircuitBreakerDecorators:
         )
         async def test_function(exception_type="retryable"):
             if exception_type == "retryable":
-                raise ExternalServiceError("Retryable error")
-            else:
-                raise ValueError("Non-retryable error")
+                msg = "Retryable error"
+                raise ExternalServiceError(msg)
+            msg = "Non-retryable error"
+            raise ValueError(msg)
 
         # Non-retryable exceptions should not affect circuit state
         with pytest.raises(ValueError):
@@ -365,11 +379,6 @@ class TestCircuitBreakerIntegration:
     @pytest.mark.asyncio
     async def test_service_dependency_protection(self):
         """Test that service dependencies are protected by circuit breakers."""
-        from src.services.dependencies import (
-            get_circuit_breaker_status,
-            reset_all_circuit_breakers,
-            reset_circuit_breaker,
-        )
 
         # Test circuit breaker status endpoint
         status = await get_circuit_breaker_status()
@@ -390,7 +399,6 @@ class TestCircuitBreakerIntegration:
     @pytest.mark.asyncio
     async def test_health_check_includes_circuit_breakers(self):
         """Test that health checks include circuit breaker information."""
-        from src.services.dependencies import get_service_health
 
         with patch("src.services.dependencies.get_client_manager") as mock_get_client:
             mock_client = Mock()

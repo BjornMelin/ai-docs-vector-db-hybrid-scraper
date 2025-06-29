@@ -11,6 +11,10 @@ from src.services.browser.crawl4ai_adapter import Crawl4AIAdapter
 from src.services.errors import CrawlServiceError
 
 
+class TestError(Exception):
+    """Custom exception for this module."""
+
+
 @pytest.fixture
 def basic_crawl4ai_config():
     """Basic Crawl4AI configuration."""
@@ -149,7 +153,7 @@ class TestCrawl4AIAdapterInitialization:
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
     async def test_cleanup_no_provider(
-        self, mock_provider_class, basic_crawl4ai_config
+        self, _mock_provider_class, basic_crawl4ai_config
     ):
         """Test cleanup when provider is None."""
         adapter = Crawl4AIAdapter(basic_crawl4ai_config)
@@ -643,7 +647,7 @@ class TestCrawl4AIAdapterHealthCheck:
         adapter._initialized = True
 
         # Mock timeout
-        async def timeout_scrape(*args, **kwargs):
+        async def timeout_scrape(*_args, **__kwargs):
             await asyncio.sleep(15)  # Longer than timeout
 
         with patch.object(adapter, "scrape", side_effect=timeout_scrape):
@@ -685,7 +689,7 @@ class TestCrawl4AIAdapterPerformanceMetrics:
         """Test getting performance metrics when provider has metrics."""
         mock_provider = AsyncMock()
         mock_provider.metrics = {
-            "total_requests": 100,
+            "_total_requests": 100,
             "successful_requests": 95,
             "failed_requests": 5,
             "avg_response_time": 0.5,
@@ -699,7 +703,7 @@ class TestCrawl4AIAdapterPerformanceMetrics:
         metrics = await adapter.get_performance_metrics()
 
         assert metrics == mock_provider.metrics
-        assert metrics["total_requests"] == 100
+        assert metrics["_total_requests"] == 100
         assert metrics["successful_requests"] == 95
         assert metrics["avg_response_time"] == 0.5
 
@@ -720,7 +724,7 @@ class TestCrawl4AIAdapterPerformanceMetrics:
 
         # Should return default metrics
         expected_defaults = {
-            "total_requests": 0,
+            "_total_requests": 0,
             "successful_requests": 0,
             "failed_requests": 0,
             "avg_response_time": 0.0,
@@ -742,7 +746,7 @@ class TestCrawl4AIAdapterTimeTracking:
         mock_provider = AsyncMock()
 
         # Add delay to provider call
-        async def delayed_scrape(*args, **kwargs):
+        async def delayed_scrape(*_args, **__kwargs):
             await asyncio.sleep(0.1)  # 100ms delay
             return {"success": True, "content": "test"}
 
@@ -775,9 +779,11 @@ class TestCrawl4AIAdapterTimeTracking:
         mock_provider = AsyncMock()
 
         # Add delay before failure
-        async def delayed_failure(*args, **kwargs):
-            await asyncio.sleep(0.1)
-            raise Exception("Provider failed")
+        async def delayed_failure(*_args, **__kwargs):
+            msg = "Provider failed"
+            raise TestError(msg)
+            msg = "Provider failed"
+            raise TestError(msg)
 
         mock_provider.scrape_url = delayed_failure
         mock_provider_class.return_value = mock_provider
@@ -919,9 +925,9 @@ class TestCrawl4AIAdapterIntegration:
         assert health["healthy"] is True
 
         # Performance metrics
-        mock_provider.metrics = {"total_requests": 3}
+        mock_provider.metrics = {"_total_requests": 3}
         metrics = await adapter.get_performance_metrics()
-        assert metrics["total_requests"] == 3
+        assert metrics["_total_requests"] == 3
 
         # Capabilities
         capabilities = adapter.get_capabilities()
@@ -955,7 +961,7 @@ class TestCrawl4AIAdapterIntegration:
         assert result["success"] is False  # Should handle gracefully
 
         # Test scenario 2: Provider timeout
-        async def timeout_provider(*args, **kwargs):
+        async def timeout_provider(*_args, **__kwargs):
             await asyncio.sleep(2)
             return {"success": True, "content": "delayed"}
 
@@ -980,7 +986,7 @@ class TestCrawl4AIAdapterIntegration:
         mock_provider = AsyncMock()
 
         # Simulate varying response times
-        async def variable_response(url, **kwargs):
+        async def variable_response(url, **__kwargs):
             delay = 0.1 if "slow" in url else 0.01
             await asyncio.sleep(delay)
             return {"success": True, "content": f"Content for {url}"}

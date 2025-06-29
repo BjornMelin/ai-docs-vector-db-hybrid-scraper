@@ -97,17 +97,15 @@ class NetworkPartitionSimulator:
         return to_node in self.communication_matrix.get(from_node, set())
 
     async def send_message(
-        self, from_node: str, to_node: str, message: dict[str, Any]
+        self, from_node: str, to_node: str, _message: dict[str, Any]
     ) -> bool:
         """Send message between nodes if they can communicate."""
         if await self.can_communicate(from_node, to_node):
             # Simulate network latency
             await asyncio.sleep(0.001)
             return True
-        else:
-            raise ConnectionError(
-                f"Cannot send message from {from_node} to {to_node} - network partition"
-            )
+        msg = f"Cannot send message from {from_node} to {to_node} - network partition"
+        raise ConnectionError(msg)
 
     def get_reachable_nodes(self, node_id: str) -> set[str]:
         """Get set of nodes reachable from given node."""
@@ -181,7 +179,7 @@ class TestNetworkPartitions:
 
         return simulator
 
-    async def test_simple_network_partition(self, network_simulator, fault_injector):
+    async def test_simple_network_partition(self, network_simulator, _fault_injector):
         """Test basic network partition scenario."""
         # Verify initial connectivity
         assert await network_simulator.can_communicate("node_1", "node_3")
@@ -230,13 +228,13 @@ class TestNetworkPartitions:
             async def elect_leader(self, candidate_node: str) -> dict[str, Any]:
                 """Elect leader using majority consensus."""
                 candidate_votes = 0
-                total_nodes = 0
+                _total_nodes = 0
                 reachable_nodes = self.network.get_reachable_nodes(candidate_node)
                 reachable_nodes.add(candidate_node)
 
                 # Count votes from reachable nodes
                 for node_id in reachable_nodes:
-                    total_nodes += 1
+                    _total_nodes += 1
                     try:
                         # Simulate vote request
                         await self.network.send_message(
@@ -345,8 +343,8 @@ class TestNetworkPartitions:
                 reachable_nodes.add(initiator_node)
 
                 # Calculate quorum requirement
-                total_nodes = len(self.network.nodes)
-                quorum_size = (total_nodes // 2) + 1
+                _total_nodes = len(self.network.nodes)
+                quorum_size = (_total_nodes // 2) + 1
 
                 # Attempt to write to reachable nodes
                 successful_writes = 0
@@ -382,8 +380,8 @@ class TestNetworkPartitions:
                 reachable_nodes = self.network.get_reachable_nodes(initiator_node)
                 reachable_nodes.add(initiator_node)
 
-                total_nodes = len(self.network.nodes)
-                quorum_size = (total_nodes // 2) + 1
+                _total_nodes = len(self.network.nodes)
+                quorum_size = (_total_nodes // 2) + 1
 
                 # Read from reachable nodes
                 read_values = {}
@@ -453,7 +451,9 @@ class TestNetworkPartitions:
         assert not minority_write["write_successful"]
         assert minority_write["successful_writes"] < minority_write["quorum_required"]
 
-    async def test_network_partition_detection(self, network_simulator, fault_injector):
+    async def test_network_partition_detection(
+        self, network_simulator, _fault_injector
+    ):
         """Test network partition detection mechanisms."""
 
         class PartitionDetector:
@@ -491,7 +491,7 @@ class TestNetworkPartitions:
                 return {
                     "successful_heartbeats": successful_heartbeats,
                     "failed_heartbeats": failed_heartbeats,
-                    "total_nodes": len(self.network.nodes) - 1,
+                    "_total_nodes": len(self.network.nodes) - 1,
                 }
 
             async def detect_partitions(
@@ -592,7 +592,7 @@ class TestNetworkPartitions:
                 all_operations = {}
                 conflicts = []
 
-                for node_id, operations in self.node_data.items():
+                for operations in self.node_data.values():
                     for op_id, op_data in operations.items():
                         if op_id in all_operations:
                             # Potential conflict
@@ -627,7 +627,7 @@ class TestNetworkPartitions:
 
                 return {
                     "sync_successful": True,
-                    "total_operations": len(resolved_operations),
+                    "_total_operations": len(resolved_operations),
                     "conflicts_detected": len(conflicts),
                     "conflicts": conflicts,
                     "merged_vector_clock": merged_vector_clock,
@@ -715,7 +715,7 @@ class TestNetworkPartitions:
         # Synchronize after healing
         sync_result = await recovery_manager.sync_after_partition_heal()
         assert sync_result["sync_successful"]
-        assert sync_result["total_operations"] >= 4  # At least 4 operations recorded
+        assert sync_result["_total_operations"] >= 4  # At least 4 operations recorded
 
         # Repair inconsistencies
         repair_result = await recovery_manager.repair_inconsistencies()
@@ -836,7 +836,7 @@ class TestNetworkPartitions:
                         key_read_history[key] = []
                     key_read_history[key].append(read_op)
 
-                for key, reads in key_read_history.items():
+                for reads in key_read_history.values():
                     reads.sort(key=lambda r: r["timestamp"])
                     for i in range(1, len(reads)):
                         current_read = reads[i]
@@ -855,8 +855,8 @@ class TestNetworkPartitions:
                 return {
                     "consistency_violations": len(violations),
                     "violations": violations,
-                    "total_operations": len(self.operations_log),
-                    "total_reads": len(self.reads_log),
+                    "_total_operations": len(self.operations_log),
+                    "_total_reads": len(self.reads_log),
                 }
 
         checker = ConsistencyChecker(network_simulator)
@@ -884,5 +884,5 @@ class TestNetworkPartitions:
 
         consistency_result = checker.check_consistency()
         # Should have minimal violations if partition handling is correct
-        assert consistency_result["total_operations"] >= 3
-        assert consistency_result["total_reads"] >= 1
+        assert consistency_result["_total_operations"] >= 3
+        assert consistency_result["_total_reads"] >= 1

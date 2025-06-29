@@ -12,6 +12,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from click.shell_completion import CompletionItem
 from click.testing import CliRunner
 from rich.console import Console
 
@@ -206,7 +207,6 @@ def sample_batch_files(tmp_path):
 @pytest.fixture
 def mock_completion_items():
     """Mock completion items for auto-completion testing."""
-    from click.shell_completion import CompletionItem
 
     return [
         CompletionItem("collection1", help="Collection: collection1"),
@@ -246,7 +246,6 @@ def rich_output_capturer():
 
         def get_plain_output(self) -> str:
             """Get output without ANSI escape codes."""
-            from rich.console import Console
 
             plain_console = Console(file=StringIO(), no_color=True, width=80)
             plain_console.file.write(self.get_output())
@@ -451,7 +450,7 @@ def mock_wizard_components():
         "production",
     ]
     components["profile_manager"].create_profile_config.return_value = Path(
-        "/tmp/config.json"
+        "/tmp/config.json"  # test temp path
     )
 
     components["validator"].validate_api_key.return_value = (True, None)

@@ -5,12 +5,16 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.services.embeddings.manager import EmbeddingManager
-from src.services.errors import EmbeddingServiceError, QdrantServiceError
+from src.services.errors import APIError, EmbeddingServiceError, QdrantServiceError
 from src.services.hyde.cache import HyDECache
 from src.services.hyde.config import HyDEConfig, HyDEMetricsConfig, HyDEPromptConfig
 from src.services.hyde.engine import HyDEQueryEngine
 from src.services.hyde.generator import GenerationResult, HypotheticalDocumentGenerator
 from src.services.vector_db.service import QdrantService
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
 
 
 class TestHyDEQueryEngine:
@@ -63,7 +67,7 @@ class TestHyDEQueryEngine:
         return manager
 
     @pytest.fixture
-    def mock_qdrant_service(self):
+    def _mock_qdrant_service(self):
         """Create mock Qdrant service."""
         service = MagicMock(spec=QdrantService)
         service.initialize = AsyncMock()
@@ -92,7 +96,7 @@ class TestHyDEQueryEngine:
         prompt_config,
         metrics_config,
         mock_embedding_manager,
-        mock_qdrant_service,
+        _mock_qdrant_service,
         mock_cache_manager,
         mock_llm_client,
     ):
@@ -102,7 +106,7 @@ class TestHyDEQueryEngine:
             prompt_config=prompt_config,
             metrics_config=metrics_config,
             embedding_manager=mock_embedding_manager,
-            qdrant_service=mock_qdrant_service,
+            qdrant_service=_mock_qdrant_service,
             cache_manager=mock_cache_manager,
             llm_client=mock_llm_client,
         )
@@ -113,7 +117,7 @@ class TestHyDEQueryEngine:
         prompt_config,
         metrics_config,
         mock_embedding_manager,
-        mock_qdrant_service,
+        _mock_qdrant_service,
         mock_cache_manager,
         mock_llm_client,
     ):
@@ -123,7 +127,7 @@ class TestHyDEQueryEngine:
             prompt_config=prompt_config,
             metrics_config=metrics_config,
             embedding_manager=mock_embedding_manager,
-            qdrant_service=mock_qdrant_service,
+            qdrant_service=_mock_qdrant_service,
             cache_manager=mock_cache_manager,
             llm_client=mock_llm_client,
         )
@@ -132,7 +136,7 @@ class TestHyDEQueryEngine:
         assert engine.prompt_config == prompt_config
         assert engine.metrics_config == metrics_config
         assert engine.embedding_manager == mock_embedding_manager
-        assert engine.qdrant_service == mock_qdrant_service
+        assert engine.qdrant_service == _mock_qdrant_service
         assert engine._initialized is False
 
         # Check components are created
@@ -141,7 +145,7 @@ class TestHyDEQueryEngine:
 
         # Check metrics initialization
         assert engine.search_count == 0
-        assert engine.total_search_time == 0.0
+        assert engine._total_search_time == 0.0
         assert engine.cache_hit_count == 0
         assert engine.generation_count == 0
         assert engine.fallback_count == 0
@@ -149,7 +153,7 @@ class TestHyDEQueryEngine:
         assert engine.treatment_group_searches == 0
 
     async def test_initialize_success(
-        self, engine, mock_embedding_manager, mock_qdrant_service
+        self, engine, _mock_embedding_manager, _mock_qdrant_service
     ):
         """Test successful engine initialization."""
         # Mock successful initialization of components
@@ -175,12 +179,12 @@ class TestHyDEQueryEngine:
         assert engine._initialized is True
 
     async def test_initialize_qdrant_service_no_initialize(
-        self, engine, mock_qdrant_service
+        self, engine, _mock_qdrant_service
     ):
         """Test initialization when Qdrant service has no initialize method."""
         engine.generator.initialize = AsyncMock()
         engine.cache.initialize = AsyncMock()
-        del mock_qdrant_service.initialize
+        del _mock_qdrant_service.initialize
 
         await engine.initialize()
 
@@ -234,7 +238,7 @@ class TestHyDEQueryEngine:
         assert engine._initialized is False
 
     async def test_enhanced_search_hyde_disabled(
-        self, engine, mock_qdrant_service, mock_embedding_manager
+        self, engine, _mock_qdrant_service, mock_embedding_manager
     ):
         """Test enhanced search when HyDE is disabled."""
         engine._initialized = True
@@ -245,16 +249,16 @@ class TestHyDEQueryEngine:
             "embeddings": [[0.1, 0.2, 0.3]]
         }
         mock_results = [{"id": "doc1", "score": 0.9}]
-        mock_qdrant_service.filtered_search.return_value = mock_results
+        _mock_qdrant_service.filtered_search.return_value = mock_results
 
         results = await engine.enhanced_search("test query")
 
         assert results == mock_results
         assert engine.fallback_count == 0  # Not counted as fallback when disabled
-        mock_qdrant_service.filtered_search.assert_called_once()
+        _mock_qdrant_service.filtered_search.assert_called_once()
 
     async def test_enhanced_search_success_with_cache_hit(
-        self, engine, mock_embedding_manager
+        self, engine, _mock_embedding_manager
     ):
         """Test successful enhanced search with cache hit."""
         engine._initialized = True
@@ -270,7 +274,7 @@ class TestHyDEQueryEngine:
         assert engine.search_count == 1
 
     async def test_enhanced_search_success_cache_miss(
-        self, engine, mock_embedding_manager, mock_qdrant_service
+        self, engine, mock_embedding_manager, _mock_qdrant_service
     ):
         """Test successful enhanced search with cache miss."""
         engine._initialized = True
@@ -288,7 +292,7 @@ class TestHyDEQueryEngine:
 
         # Mock search results
         mock_results = [{"id": "doc1", "score": 0.9}]
-        mock_qdrant_service.hyde_search.return_value = mock_results
+        _mock_qdrant_service.hyde_search.return_value = mock_results
 
         # Mock cache operations
         engine.cache.set_search_results = AsyncMock()
@@ -298,11 +302,11 @@ class TestHyDEQueryEngine:
         assert results == mock_results
         assert engine.search_count == 1
         assert engine.cache_hit_count == 0
-        mock_qdrant_service.hyde_search.assert_called_once()
+        _mock_qdrant_service.hyde_search.assert_called_once()
         engine.cache.set_search_results.assert_called_once()
 
     async def test_enhanced_search_with_reranking(
-        self, engine, mock_embedding_manager, mock_qdrant_service
+        self, engine, mock_embedding_manager, _mock_qdrant_service
     ):
         """Test enhanced search with reranking enabled."""
         engine._initialized = True
@@ -316,7 +320,7 @@ class TestHyDEQueryEngine:
         }
 
         initial_results = [{"id": "doc1", "score": 0.8}, {"id": "doc2", "score": 0.7}]
-        mock_qdrant_service.hyde_search.return_value = initial_results
+        _mock_qdrant_service.hyde_search.return_value = initial_results
 
         # Mock reranking
         reranked_results = [{"id": "doc2", "score": 0.9}, {"id": "doc1", "score": 0.6}]
@@ -332,7 +336,7 @@ class TestHyDEQueryEngine:
         )
 
     async def test_enhanced_search_reranking_not_available(
-        self, engine, mock_embedding_manager, mock_qdrant_service
+        self, engine, mock_embedding_manager, _mock_qdrant_service
     ):
         """Test enhanced search when reranking is not available."""
         engine._initialized = True
@@ -349,7 +353,7 @@ class TestHyDEQueryEngine:
         del mock_embedding_manager.rerank_results
 
         initial_results = [{"id": "doc1", "score": 0.8}]
-        mock_qdrant_service.hyde_search.return_value = initial_results
+        _mock_qdrant_service.hyde_search.return_value = initial_results
         engine.cache.set_search_results = AsyncMock()
 
         results = await engine.enhanced_search("test query", use_cache=False)
@@ -357,7 +361,7 @@ class TestHyDEQueryEngine:
         assert results == initial_results  # Should return original results
 
     async def test_enhanced_search_reranking_error(
-        self, engine, mock_embedding_manager, mock_qdrant_service
+        self, engine, mock_embedding_manager, _mock_qdrant_service
     ):
         """Test enhanced search when reranking fails."""
         engine._initialized = True
@@ -371,7 +375,7 @@ class TestHyDEQueryEngine:
         }
 
         initial_results = [{"id": "doc1", "score": 0.8}]
-        mock_qdrant_service.hyde_search.return_value = initial_results
+        _mock_qdrant_service.hyde_search.return_value = initial_results
 
         # Mock reranking error
         mock_embedding_manager.rerank_results.side_effect = Exception("Reranking error")
@@ -383,7 +387,7 @@ class TestHyDEQueryEngine:
         assert results == initial_results  # Should return original results on error
 
     async def test_enhanced_search_fallback_on_error(
-        self, engine, mock_embedding_manager, mock_qdrant_service
+        self, engine, mock_embedding_manager, _mock_qdrant_service
     ):
         """Test enhanced search falls back on HyDE error."""
         engine._initialized = True
@@ -399,13 +403,13 @@ class TestHyDEQueryEngine:
             "embeddings": [[0.1, 0.2, 0.3]]
         }
         fallback_results = [{"id": "fallback_doc", "score": 0.7}]
-        mock_qdrant_service.filtered_search.return_value = fallback_results
+        _mock_qdrant_service.filtered_search.return_value = fallback_results
 
         results = await engine.enhanced_search("test query")
 
         assert results == fallback_results
         assert engine.fallback_count == 1
-        mock_qdrant_service.filtered_search.assert_called_once()
+        _mock_qdrant_service.filtered_search.assert_called_once()
 
     async def test_enhanced_search_error_no_fallback(self, engine):
         """Test enhanced search error when fallback is disabled."""
@@ -424,7 +428,6 @@ class TestHyDEQueryEngine:
 
     async def test_enhanced_search_not_initialized(self, engine):
         """Test enhanced search when not initialized."""
-        from src.services.errors import APIError
 
         with pytest.raises(APIError):
             await engine.enhanced_search("test query")
@@ -559,7 +562,7 @@ class TestHyDEQueryEngine:
 
         assert "Failed to generate query embedding" in str(exc_info.value)
 
-    async def test_perform_hyde_search_success(self, engine, mock_qdrant_service):
+    async def test_perform_hyde_search_success(self, engine, _mock_qdrant_service):
         """Test successful HyDE search execution."""
         engine._initialized = True
 
@@ -567,7 +570,7 @@ class TestHyDEQueryEngine:
         hyde_embedding = [0.4, 0.5, 0.6]
         mock_results = [{"id": "doc1", "score": 0.9}]
 
-        mock_qdrant_service.hyde_search.return_value = mock_results
+        _mock_qdrant_service.hyde_search.return_value = mock_results
 
         results = await engine._perform_hyde_search(
             query_embedding=query_embedding,
@@ -579,7 +582,7 @@ class TestHyDEQueryEngine:
         )
 
         assert results == mock_results
-        mock_qdrant_service.hyde_search.assert_called_once_with(
+        _mock_qdrant_service.hyde_search.assert_called_once_with(
             collection_name="documents",
             query="HyDE search",
             query_embedding=query_embedding,
@@ -589,11 +592,11 @@ class TestHyDEQueryEngine:
             search_accuracy="balanced",
         )
 
-    async def test_perform_hyde_search_error(self, engine, mock_qdrant_service):
+    async def test_perform_hyde_search_error(self, engine, _mock_qdrant_service):
         """Test HyDE search execution error."""
         engine._initialized = True
 
-        mock_qdrant_service.hyde_search.side_effect = Exception("Search error")
+        _mock_qdrant_service.hyde_search.side_effect = Exception("Search error")
 
         with pytest.raises(QdrantServiceError) as exc_info:
             await engine._perform_hyde_search(
@@ -608,7 +611,7 @@ class TestHyDEQueryEngine:
         assert "HyDE search execution failed" in str(exc_info.value)
 
     async def test_fallback_search_success(
-        self, engine, mock_embedding_manager, mock_qdrant_service
+        self, engine, mock_embedding_manager, _mock_qdrant_service
     ):
         """Test successful fallback search."""
         engine._initialized = True
@@ -620,7 +623,7 @@ class TestHyDEQueryEngine:
 
         # Mock search results
         mock_results = [{"id": "doc1", "score": 0.8}]
-        mock_qdrant_service.filtered_search.return_value = mock_results
+        _mock_qdrant_service.filtered_search.return_value = mock_results
 
         results = await engine._fallback_search(
             query="test query",
@@ -631,7 +634,7 @@ class TestHyDEQueryEngine:
         )
 
         assert results == mock_results
-        mock_qdrant_service.filtered_search.assert_called_once_with(
+        _mock_qdrant_service.filtered_search.assert_called_once_with(
             collection_name="documents",
             query_vector=[0.1, 0.2, 0.3],
             filters={"type": "doc"},
@@ -640,7 +643,7 @@ class TestHyDEQueryEngine:
         )
 
     async def test_fallback_search_error(
-        self, engine, mock_embedding_manager, mock_qdrant_service
+        self, engine, mock_embedding_manager, _mock_qdrant_service
     ):
         """Test fallback search error."""
         engine._initialized = True
@@ -648,7 +651,7 @@ class TestHyDEQueryEngine:
         mock_embedding_manager.generate_embeddings.return_value = {
             "embeddings": [[0.1, 0.2, 0.3]]
         }
-        mock_qdrant_service.filtered_search.side_effect = Exception("Search error")
+        _mock_qdrant_service.filtered_search.side_effect = Exception("Search error")
 
         with pytest.raises(EmbeddingServiceError) as exc_info:
             await engine._fallback_search(
@@ -682,7 +685,7 @@ class TestHyDEQueryEngine:
         assert result1 == result2
 
     async def test_enhanced_search_ab_testing_control(
-        self, engine, mock_embedding_manager, mock_qdrant_service
+        self, engine, mock_embedding_manager, _mock_qdrant_service
     ):
         """Test enhanced search with A/B testing - control group."""
         engine._initialized = True
@@ -696,17 +699,17 @@ class TestHyDEQueryEngine:
             "embeddings": [[0.1, 0.2, 0.3]]
         }
         mock_results = [{"id": "doc1", "score": 0.8}]
-        mock_qdrant_service.filtered_search.return_value = mock_results
+        _mock_qdrant_service.filtered_search.return_value = mock_results
 
         results = await engine.enhanced_search("test query")
 
         assert results == mock_results
         assert engine.control_group_searches == 1
         assert engine.treatment_group_searches == 0
-        mock_qdrant_service.filtered_search.assert_called_once()
+        _mock_qdrant_service.filtered_search.assert_called_once()
 
     async def test_enhanced_search_ab_testing_treatment(
-        self, engine, mock_embedding_manager, mock_qdrant_service
+        self, engine, mock_embedding_manager, _mock_qdrant_service
     ):
         """Test enhanced search with A/B testing - treatment group."""
         engine._initialized = True
@@ -728,7 +731,7 @@ class TestHyDEQueryEngine:
 
         # Mock search results
         mock_results = [{"id": "doc1", "score": 0.9}]
-        mock_qdrant_service.hyde_search.return_value = mock_results
+        _mock_qdrant_service.hyde_search.return_value = mock_results
 
         engine.cache.set_search_results = AsyncMock()
 
@@ -737,14 +740,14 @@ class TestHyDEQueryEngine:
         assert results == mock_results
         assert engine.control_group_searches == 0
         assert engine.treatment_group_searches == 1
-        mock_qdrant_service.hyde_search.assert_called_once()
+        _mock_qdrant_service.hyde_search.assert_called_once()
 
     async def test_batch_search_success(self, engine):
         """Test successful batch search."""
         engine._initialized = True
 
         # Mock enhanced_search
-        async def mock_enhanced_search(query, **kwargs):
+        async def mock_enhanced_search(query, **__kwargs):
             return [{"id": f"doc_{query}", "score": 0.8}]
 
         engine.enhanced_search = AsyncMock(side_effect=mock_enhanced_search)
@@ -764,9 +767,10 @@ class TestHyDEQueryEngine:
         engine._initialized = True
 
         # Mock enhanced_search with some errors
-        async def mock_enhanced_search(query, **kwargs):
-            if "error" in query:
-                raise Exception("Search error")
+        async def mock_enhanced_search(query, **__kwargs):
+            if query == "error_query":
+                msg = "Search error"
+                raise TestError(msg)
             return [{"id": f"doc_{query}", "score": 0.8}]
 
         engine.enhanced_search = AsyncMock(side_effect=mock_enhanced_search)
@@ -781,7 +785,6 @@ class TestHyDEQueryEngine:
 
     async def test_batch_search_not_initialized(self, engine):
         """Test batch search when not initialized."""
-        from src.services.errors import APIError
 
         with pytest.raises(APIError):
             await engine.batch_search(["query1", "query2"])
@@ -790,7 +793,7 @@ class TestHyDEQueryEngine:
         """Test performance metrics calculation."""
         # Set some test values
         engine.search_count = 10
-        engine.total_search_time = 20.0
+        engine._total_search_time = 20.0
         engine.cache_hit_count = 3
         engine.fallback_count = 2
         engine.control_group_searches = 4
@@ -802,7 +805,7 @@ class TestHyDEQueryEngine:
 
         metrics = engine.get_performance_metrics()
 
-        assert metrics["search_performance"]["total_searches"] == 10
+        assert metrics["search_performance"]["_total_searches"] == 10
         assert metrics["search_performance"]["avg_search_time"] == 2.0
         assert metrics["search_performance"]["cache_hit_rate"] == 0.3
         assert metrics["search_performance"]["fallback_rate"] == 0.2
@@ -835,7 +838,7 @@ class TestHyDEQueryEngine:
         assert "ab_testing" in metrics
         assert metrics["ab_testing"]["control_group_searches"] == 3
         assert metrics["ab_testing"]["treatment_group_searches"] == 7
-        assert metrics["ab_testing"]["total_ab_searches"] == 10
+        assert metrics["ab_testing"]["_total_ab_searches"] == 10
         assert metrics["ab_testing"]["treatment_percentage"] == 0.7
 
     def test_get_performance_metrics_zero_searches(self, engine):
@@ -845,7 +848,7 @@ class TestHyDEQueryEngine:
 
         metrics = engine.get_performance_metrics()
 
-        assert metrics["search_performance"]["total_searches"] == 0
+        assert metrics["search_performance"]["_total_searches"] == 0
         assert metrics["search_performance"]["avg_search_time"] == 0.0
         assert metrics["search_performance"]["cache_hit_rate"] == 0.0
         assert metrics["search_performance"]["fallback_rate"] == 0.0
@@ -854,7 +857,7 @@ class TestHyDEQueryEngine:
         """Test resetting performance metrics."""
         # Set some test values
         engine.search_count = 10
-        engine.total_search_time = 20.0
+        engine._total_search_time = 20.0
         engine.cache_hit_count = 3
         engine.generation_count = 5
         engine.fallback_count = 2
@@ -867,7 +870,7 @@ class TestHyDEQueryEngine:
         engine.reset_metrics()
 
         assert engine.search_count == 0
-        assert engine.total_search_time == 0.0
+        assert engine._total_search_time == 0.0
         assert engine.cache_hit_count == 0
         assert engine.generation_count == 0
         assert engine.fallback_count == 0

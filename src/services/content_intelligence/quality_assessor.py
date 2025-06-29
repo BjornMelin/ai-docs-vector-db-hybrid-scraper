@@ -6,8 +6,9 @@ readability, and duplicate detection with similarity thresholds.
 """
 
 import logging
+import math
 import re
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from .models import QualityScore
@@ -24,6 +25,7 @@ class QualityAssessor:
 
         Args:
             embedding_manager: Optional EmbeddingManager for semantic similarity
+
         """
         self.embedding_manager = embedding_manager
         self._initialized = False
@@ -100,6 +102,7 @@ class QualityAssessor:
 
         Returns:
             QualityScore: Comprehensive quality assessment
+
         """
         if not self._initialized:
             await self.initialize()
@@ -173,6 +176,7 @@ class QualityAssessor:
 
         Returns:
             float: Completeness score (0-1)
+
         """
         if not content.strip():
             return 0.0
@@ -252,6 +256,7 @@ class QualityAssessor:
 
         Returns:
             float: Relevance score (0-1)
+
         """
         if not query_context:
             return 0.5  # Neutral score when no context provided
@@ -295,7 +300,9 @@ class QualityAssessor:
             return relevance_score
 
         except Exception as e:
-            logger.warning(f"Relevance assessment failed: {e}")
+            logger.warning(
+                f"Relevance assessment failed: {e}"
+            )  # TODO: Convert f-string to logging format
             return 0.5
 
     def _assess_confidence(
@@ -309,6 +316,7 @@ class QualityAssessor:
 
         Returns:
             float: Confidence score (0-1)
+
         """
         base_confidence = 0.7  # Start with reasonable baseline
 
@@ -363,8 +371,9 @@ class QualityAssessor:
 
         Returns:
             float: Freshness score (0-1)
+
         """
-        now = datetime.now()
+        now = datetime.now(tz=UTC)
 
         # Try to extract date from metadata first
         if extraction_metadata:
@@ -379,7 +388,9 @@ class QualityAssessor:
                             "%Y-%m-%d %H:%M:%S",
                         ]:
                             try:
-                                mod_date = datetime.strptime(last_modified[:19], fmt)
+                                mod_date = datetime.strptime(
+                                    last_modified[:19], fmt
+                                ).replace(tzinfo=UTC)
                                 days_old = (now - mod_date).days
                                 return self._calculate_freshness_score(days_old)
                             except ValueError:
@@ -388,7 +399,9 @@ class QualityAssessor:
                         days_old = (now - last_modified).days
                         return self._calculate_freshness_score(days_old)
                 except Exception as e:
-                    logger.debug(f"Failed to parse last_modified date: {e}")
+                    logger.debug(
+                        f"Failed to parse last_modified date: {e}"
+                    )  # TODO: Convert f-string to logging format
 
         # Try to extract dates from content
         date_patterns = [
@@ -404,7 +417,9 @@ class QualityAssessor:
             for match in matches:
                 try:
                     date_str = match.replace("/", "-")
-                    parsed_date = datetime.strptime(date_str, "%Y-%m-%d")
+                    parsed_date = datetime.strptime(date_str, "%Y-%m-%d").replace(
+                        tzinfo=UTC
+                    )
                     if not latest_date or parsed_date > latest_date:
                         latest_date = parsed_date
                 except ValueError:
@@ -440,12 +455,13 @@ class QualityAssessor:
 
         Returns:
             float: Freshness score (0-1)
+
         """
         if days_old < 0:
             return 1.0  # Future dates (edge case)
-        elif days_old <= self._quality_config["freshness_days_excellent"]:
+        if days_old <= self._quality_config["freshness_days_excellent"]:
             return 1.0
-        elif days_old <= self._quality_config["freshness_days_good"]:
+        if days_old <= self._quality_config["freshness_days_good"]:
             return (
                 0.8
                 - (days_old - self._quality_config["freshness_days_excellent"])
@@ -455,7 +471,7 @@ class QualityAssessor:
                 )
                 * 0.3
             )
-        elif days_old <= self._quality_config["freshness_days_poor"]:
+        if days_old <= self._quality_config["freshness_days_poor"]:
             return (
                 0.5
                 - (days_old - self._quality_config["freshness_days_good"])
@@ -465,12 +481,10 @@ class QualityAssessor:
                 )
                 * 0.3
             )
-        else:
-            return max(
-                0.1,
-                0.2
-                - (days_old - self._quality_config["freshness_days_poor"]) / 365 * 0.1,
-            )
+        return max(
+            0.1,
+            0.2 - (days_old - self._quality_config["freshness_days_poor"]) / 365 * 0.1,
+        )
 
     def _assess_structure_quality(self, content: str) -> float:
         """Assess content structure and organization quality.
@@ -480,6 +494,7 @@ class QualityAssessor:
 
         Returns:
             float: Structure quality score (0-1)
+
         """
         if not content.strip():
             return 0.0
@@ -542,6 +557,7 @@ class QualityAssessor:
 
         Returns:
             float: Readability score (0-1)
+
         """
         if not content.strip():
             return 0.0
@@ -632,6 +648,7 @@ class QualityAssessor:
 
         Returns:
             float: Maximum similarity score (0-1, where 1 means identical)
+
         """
         if not existing_content:
             return 0.0
@@ -676,7 +693,9 @@ class QualityAssessor:
             return max_similarity
 
         except Exception as e:
-            logger.warning(f"Duplicate similarity assessment failed: {e}")
+            logger.warning(
+                f"Duplicate similarity assessment failed: {e}"
+            )  # TODO: Convert f-string to logging format
             return 0.0
 
     def _cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:
@@ -688,10 +707,9 @@ class QualityAssessor:
 
         Returns:
             float: Cosine similarity between vectors
+
         """
         try:
-            import math
-
             dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=False))
             magnitude1 = math.sqrt(sum(a * a for a in vec1))
             magnitude2 = math.sqrt(sum(a * a for a in vec2))
@@ -722,6 +740,7 @@ class QualityAssessor:
 
         Returns:
             list[str]: List of identified quality issues
+
         """
         issues = []
 
@@ -786,6 +805,7 @@ class QualityAssessor:
 
         Returns:
             list[str]: List of improvement suggestions
+
         """
         suggestions = []
 

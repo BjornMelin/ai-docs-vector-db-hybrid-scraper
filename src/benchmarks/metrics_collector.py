@@ -13,7 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from ..config import Config
+from src.config import Config
 
 
 logger = logging.getLogger(__name__)
@@ -54,6 +54,7 @@ class MetricsCollector:
         Args:
             config: Unified configuration
             max_points: Maximum metric points to keep in memory
+
         """
         self.config = config
         self.max_points = max_points
@@ -89,6 +90,7 @@ class MetricsCollector:
 
         Returns:
             Collection summary with aggregated metrics
+
         """
         self.collection_active = False
         collection_duration = time.time() - (self.collection_start_time or time.time())
@@ -120,6 +122,7 @@ class MetricsCollector:
             labels: Optional labels for the metric
             source: Source component that generated the metric
             timestamp: Optional timestamp (uses current time if not provided)
+
         """
         if not self.collection_active:
             return
@@ -159,6 +162,7 @@ class MetricsCollector:
             latency_ms: Latency in milliseconds
             labels: Optional labels
             source: Source component
+
         """
         metric_name = f"{operation}_latency_ms"
         self.record_metric(metric_name, latency_ms, labels, source)
@@ -177,6 +181,7 @@ class MetricsCollector:
             requests_per_second: Throughput in requests per second
             labels: Optional labels
             source: Source component
+
         """
         metric_name = f"{operation}_throughput_qps"
         self.record_metric(metric_name, requests_per_second, labels, source)
@@ -195,6 +200,7 @@ class MetricsCollector:
             error_rate: Error rate (0.0 - 1.0)
             labels: Optional labels
             source: Source component
+
         """
         metric_name = f"{operation}_error_rate"
         self.record_metric(metric_name, error_rate, labels, source)
@@ -215,6 +221,7 @@ class MetricsCollector:
             unit: Unit of measurement
             labels: Optional labels
             source: Source component
+
         """
         metric_name = f"{resource_type}_usage_{unit}"
         self.record_metric(metric_name, usage_value, labels, source)
@@ -235,6 +242,7 @@ class MetricsCollector:
             metric_type: Type of metric (gauge, counter, histogram)
             labels: Optional labels
             source: Source component
+
         """
         # Add metric type to labels
         if labels is None:
@@ -251,6 +259,7 @@ class MetricsCollector:
 
         Returns:
             Metric summary or None if metric not found
+
         """
         points = [p for p in self.metric_points if p.metric_name == metric_name]
 
@@ -278,6 +287,7 @@ class MetricsCollector:
 
         Returns:
             Dictionary mapping metric names to summaries
+
         """
         metric_names = {p.metric_name for p in self.metric_points}
         summaries = {}
@@ -294,6 +304,7 @@ class MetricsCollector:
 
         Returns:
             Summary of collected metrics and analysis
+
         """
         summaries = await self.get_all_metric_summaries()
 
@@ -336,6 +347,7 @@ class MetricsCollector:
 
         Returns:
             Real-time metrics for the window
+
         """
         if window not in self.real_time_windows:
             return {}
@@ -368,6 +380,7 @@ class MetricsCollector:
 
         Returns:
             Prometheus-formatted metrics string
+
         """
         prometheus_lines = []
 
@@ -403,6 +416,7 @@ class MetricsCollector:
 
         Returns:
             JSON-formatted metrics string
+
         """
         export_data = {
             "timestamp": time.time(),
@@ -528,6 +542,7 @@ class MetricsCollector:
 
         Returns:
             Current status information
+
         """
         return {
             "collection_active": self.collection_active,

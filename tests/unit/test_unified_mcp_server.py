@@ -1,10 +1,16 @@
 """Unit tests for unified_mcp_server module."""
 
+import logging
 import os
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastmcp import FastMCP
+
+from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.tool_registry import register_all_tools
+from src.services.logging_config import configure_logging
 
 
 # Mock problematic imports before importing the module
@@ -19,8 +25,10 @@ sys.modules["src.services"] = MagicMock()
 sys.modules["src.services.vector_db"] = MagicMock()
 sys.modules["src.services.vector_db.search"] = MagicMock()
 
-# This is intentionally after mocks due to import dependencies
 from src import unified_mcp_server  # noqa: E402
+
+
+logger = logging.getLogger(__name__)
 
 
 class TestValidateStreamingConfig:
@@ -263,7 +271,7 @@ class TestValidateConfiguration:
         mock_get_config.return_value = mock_config
 
         # Mock streaming validation to add errors
-        def add_streaming_errors(errors, warnings):
+        def add_streaming_errors(errors, _warnings):
             errors.append("Streaming error")
 
         mock_validate_streaming.side_effect = add_streaming_errors
@@ -296,7 +304,7 @@ class TestLifespanContextManager:
         mock_update_cache_metrics,
         mock_update_system_metrics,
         mock_health_checks,
-        mock_setup_monitoring,
+        _mock_setup_monitoring,
         mock_init_monitoring,
         mock_get_config,
         mock_register_tools,
@@ -321,13 +329,13 @@ class TestLifespanContextManager:
         mock_init_monitoring.return_value = (mock_metrics_registry, mock_health_manager)
 
         # Mock async monitoring tasks to return coroutines
-        async def mock_health_task(*args, **kwargs):
+        async def mock_health_task(*args, **_kwargs):
             pass
 
-        async def mock_system_metrics(*args, **kwargs):
+        async def mock_system_metrics(*args, **_kwargs):
             pass
 
-        async def mock_cache_metrics(*args, **kwargs):
+        async def mock_cache_metrics(*args, **_kwargs):
             pass
 
         mock_health_checks.return_value = mock_health_task()
@@ -335,7 +343,7 @@ class TestLifespanContextManager:
         mock_update_cache_metrics.return_value = mock_cache_metrics()
 
         # Make register_all_tools async
-        async def mock_register(*args, **kwargs):
+        async def mock_register(*_args, **__kwargs):
             return True
 
         mock_register_tools.side_effect = mock_register
@@ -374,7 +382,7 @@ class TestLifespanContextManager:
     @patch("src.unified_mcp_server.ClientManager")
     @patch("src.config.get_config")
     async def test_lifespan_client_manager_initialization_failure(
-        self, mock_get_config, mock_client_manager_class, mock_validate_config
+        self, mock_get_config, mock_client_manager_class, _mock_validate_config
     ):
         """Test lifespan with client manager initialization failure."""
         # Mock config
@@ -394,6 +402,7 @@ class TestLifespanContextManager:
         mock_client_manager.cleanup.assert_called_once()
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("_mock_validate_config")
     @patch("src.unified_mcp_server.validate_configuration")
     @patch("src.unified_mcp_server.ClientManager")
     @patch("src.unified_mcp_server.register_all_tools")
@@ -408,12 +417,11 @@ class TestLifespanContextManager:
         mock_update_cache_metrics,
         mock_update_system_metrics,
         mock_health_checks,
-        mock_setup_monitoring,
+        _mock_setup_monitoring,
         mock_init_monitoring,
         mock_get_config,
         mock_register_tools,
         mock_client_manager_class,
-        mock_validate_config,
     ):
         """Test that cleanup is called even when exception occurs during operation."""
         # Mock config
@@ -432,13 +440,13 @@ class TestLifespanContextManager:
         mock_init_monitoring.return_value = (mock_metrics_registry, mock_health_manager)
 
         # Mock async monitoring tasks to return coroutines
-        async def mock_health_task(*args, **kwargs):
+        async def mock_health_task(*args, **_kwargs):
             pass
 
-        async def mock_system_metrics(*args, **kwargs):
+        async def mock_system_metrics(*args, **_kwargs):
             pass
 
-        async def mock_cache_metrics(*args, **kwargs):
+        async def mock_cache_metrics(*args, **_kwargs):
             pass
 
         mock_health_checks.return_value = mock_health_task()
@@ -446,7 +454,7 @@ class TestLifespanContextManager:
         mock_update_cache_metrics.return_value = mock_cache_metrics()
 
         # Make register_all_tools async
-        async def mock_register(*args, **kwargs):
+        async def mock_register(*_args, **__kwargs):
             return True
 
         mock_register_tools.side_effect = mock_register
@@ -454,7 +462,8 @@ class TestLifespanContextManager:
         try:
             async with unified_mcp_server.lifespan():
                 # Simulate an exception during operation
-                raise RuntimeError("Operation failed")
+                msg = "Operation failed"
+                raise RuntimeError(msg)  # noqa: TRY301
         except RuntimeError:
             pass
 
@@ -462,6 +471,7 @@ class TestLifespanContextManager:
         mock_client_manager.cleanup.assert_called_once()
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("_mock_validate_config")
     @patch("src.unified_mcp_server.validate_configuration")
     @patch("src.unified_mcp_server.ClientManager")
     @patch("src.unified_mcp_server.register_all_tools")
@@ -471,7 +481,6 @@ class TestLifespanContextManager:
         mock_get_config,
         mock_register_tools,
         mock_client_manager_class,
-        mock_validate_config,
     ):
         """Test that cleanup exceptions are handled gracefully."""
         # Mock config
@@ -484,7 +493,7 @@ class TestLifespanContextManager:
         mock_client_manager_class.return_value = mock_client_manager
 
         # Make register_all_tools async
-        async def mock_register(*args, **kwargs):
+        async def mock_register(*_args, **__kwargs):
             return True
 
         mock_register_tools.side_effect = mock_register
@@ -497,12 +506,11 @@ class TestLifespanContextManager:
         mock_client_manager.cleanup.assert_called_once()
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("_mock_register_tools", "_mock_client_manager_class")
     @patch("src.unified_mcp_server.validate_configuration")
     @patch("src.unified_mcp_server.ClientManager")
     @patch("src.unified_mcp_server.register_all_tools")
-    async def test_lifespan_without_client_manager(
-        self, mock_register_tools, mock_client_manager_class, mock_validate_config
-    ):
+    async def test_lifespan_without_client_manager(self, mock_validate_config):
         """Test lifespan cleanup when client manager was not created."""
         # Simulate failure before client manager creation
         mock_validate_config.side_effect = Exception("Early failure")
@@ -510,8 +518,11 @@ class TestLifespanContextManager:
         try:
             async with unified_mcp_server.lifespan():
                 pass
-        except Exception:
-            pass
+        except Exception as e:
+            # Exception expected during lifespan test
+            logger.debug(
+                f"Expected lifespan test exception: {e}"
+            )  # TODO: Convert f-string to logging format
 
         # Should not attempt to cleanup non-existent client manager
         # (No assertion needed as exception would be raised if cleanup was called incorrectly)
@@ -560,13 +571,11 @@ class TestServerConfiguration:
     def test_logging_configuration(self):
         """Test that logging is configured on import."""
         # Since we mocked the import, we just verify the mock exists
-        import sys
 
         assert "src.services.logging_config" in sys.modules
 
     def test_sys_path_setup(self):
         """Test that sys path is properly configured."""
-        import sys
 
         # The path should be in sys.path (added during import)
         # We can't assert exact position due to import order
@@ -579,9 +588,6 @@ class TestImportAndModuleStructure:
     def test_all_required_imports(self):
         """Test that all required modules can be imported."""
         # These imports should work without errors
-        from src.infrastructure.client_manager import ClientManager
-        from src.mcp_tools.tool_registry import register_all_tools
-        from src.services.logging_config import configure_logging
 
         assert ClientManager is not None
         assert register_all_tools is not None
@@ -589,7 +595,6 @@ class TestImportAndModuleStructure:
 
     def test_fastmcp_import(self):
         """Test that FastMCP can be imported."""
-        from fastmcp import FastMCP
 
         assert FastMCP is not None
 

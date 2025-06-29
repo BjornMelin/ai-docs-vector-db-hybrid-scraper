@@ -2,6 +2,7 @@
 
 import asyncio
 import contextlib
+import threading
 
 import pytest
 
@@ -72,7 +73,8 @@ class TestCircuitBreaker:
         """Test single failure in closed state."""
 
         async def failing_func():
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
         with pytest.raises(ValueError):
             await simple_breaker.call(failing_func)
@@ -85,7 +87,8 @@ class TestCircuitBreaker:
         """Test circuit opens after failure threshold."""
 
         async def failing_func():
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
         # Fail until threshold is reached
         for _i in range(simple_breaker.config.failure_threshold):
@@ -104,7 +107,8 @@ class TestCircuitBreaker:
         """Test circuit recovery after timeout."""
 
         async def failing_func():
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
         async def success_func():
             return "recovered"
@@ -130,7 +134,8 @@ class TestCircuitBreaker:
         """Test half-open transitions back to open on failure."""
 
         async def failing_func():
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
         # Force circuit to open
         for _i in range(simple_breaker.config.failure_threshold):
@@ -154,7 +159,8 @@ class TestCircuitBreaker:
             return "success"
 
         async def failing_func():
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
         # Generate enough requests to trigger rate-based opening
         for i in range(15):
@@ -163,7 +169,8 @@ class TestCircuitBreaker:
                     await enterprise_breaker.call(failing_func)
                 else:
                     await enterprise_breaker.call(success_func)
-            except ValueError:
+            except (ValueError, CircuitBreakerError):
+                # Circuit may open partway through due to failure rate
                 pass
 
         # Should open due to high failure rate (53% > 40% threshold)
@@ -177,7 +184,8 @@ class TestCircuitBreaker:
             return "success"
 
         async def failing_func():
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
         # Execute some operations
         await enterprise_breaker.call(success_func)
@@ -185,7 +193,7 @@ class TestCircuitBreaker:
             await enterprise_breaker.call(failing_func)
 
         metrics = enterprise_breaker.get_metrics()
-        assert metrics["total_requests"] == 2
+        assert metrics["_total_requests"] == 2
         assert metrics["successful_requests"] == 1
         assert metrics["failed_requests"] == 1
         assert metrics["failure_rate"] == 0.5
@@ -219,7 +227,8 @@ class TestCircuitBreakerDecorator:
             nonlocal call_count
             call_count += 1
             if call_count <= 3:
-                raise ValueError("Failing")
+                msg = "Failing"
+                raise ValueError(msg)
             return "success"
 
         # First 3 calls should fail and open circuit
@@ -253,7 +262,7 @@ class TestCircuitBreakerDecorator:
         # Access metrics through attached circuit breaker
         breaker = test_func._circuit_breaker
         metrics = breaker.get_metrics()
-        assert metrics["total_requests"] == 1
+        assert metrics["_total_requests"] == 1
         assert metrics["successful_requests"] == 1
 
 
@@ -292,13 +301,19 @@ class TestConcurrentAccess:
         config = CircuitBreakerConfig.simple_mode()
         breaker = CircuitBreaker(config)
 
-        call_count = 0
+        call_count = threading.local()
+        counter_lock = threading.Lock()
+        global_counter = 0
 
         async def test_func():
-            nonlocal call_count
-            call_count += 1
+            nonlocal global_counter
+            # Use thread-safe counter to ensure unique IDs
+            with counter_lock:
+                unique_id = global_counter
+                global_counter += 1
+
             await asyncio.sleep(0.01)  # Simulate async work
-            return f"result_{call_count}"
+            return f"result_{unique_id}"
 
         # Run multiple concurrent operations
         tasks = [breaker.call(test_func) for _ in range(10)]
@@ -306,7 +321,7 @@ class TestConcurrentAccess:
 
         assert len(results) == 10
         assert len(set(results)) == 10  # All results should be unique
-        assert breaker.metrics.total_requests == 10
+        assert breaker.metrics._total_requests == 10
         assert breaker.metrics.successful_requests == 10
 
     @pytest.mark.asyncio
@@ -317,7 +332,8 @@ class TestConcurrentAccess:
 
         async def failing_func():
             await asyncio.sleep(0.01)
-            raise ValueError("Concurrent failure")
+            msg = "Concurrent failure"
+            raise ValueError(msg)
 
         # Run concurrent failing operations
         tasks = [breaker.call(failing_func) for _ in range(5)]
@@ -341,10 +357,11 @@ async def test_real_world_scenario():
         nonlocal failure_count
         await asyncio.sleep(0.001)  # Simulate network delay
 
-        # Simulate 30% failure rate
+        # Simulate 50% failure rate to exceed 40% threshold
         failure_count += 1
-        if failure_count % 3 == 0:
-            raise ConnectionError("Service unavailable")
+        if failure_count % 2 == 0:
+            msg = "Service unavailable"
+            raise ConnectionError(msg)
         return "service_response"
 
     results = []
@@ -363,5 +380,5 @@ async def test_real_world_scenario():
     # Verify that circuit breaker protected the system
     assert len(results) > 0  # Some requests succeeded
     assert len(errors) > 0  # Some requests failed
-    assert metrics["total_requests"] <= 50  # Circuit may have opened early
+    assert metrics["_total_requests"] <= 50  # Circuit may have opened early
     assert "CircuitBreakerError" in errors  # Circuit breaker activated

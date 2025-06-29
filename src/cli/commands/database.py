@@ -5,6 +5,7 @@ indicators, beautiful table displays, and interactive features.
 """
 
 import asyncio
+import json
 from typing import Any
 
 import click
@@ -13,6 +14,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Confirm
+from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 
@@ -20,11 +22,19 @@ from src.infrastructure.client_manager import ClientManager
 from src.manage_vector_db import VectorDBManager
 
 
+class CollectionCreationError(Exception):
+    """Exception raised when collection creation fails."""
+
+
+class CollectionDeletionError(Exception):
+    """Exception raised when collection deletion fails."""
+
+
 console = Console()
 
 
 def complete_collection_name(
-    ctx: click.Context, param: click.Parameter, incomplete: str
+    ctx: click.Context, _param: click.Parameter, incomplete: str
 ) -> list[CompletionItem]:
     """Auto-complete collection names from the database."""
     try:
@@ -63,7 +73,6 @@ def database():
     Manage your Qdrant vector database collections with Rich progress
     indicators, beautiful table displays, and interactive features.
     """
-    pass
 
 
 @database.command("list")
@@ -169,10 +178,6 @@ def _display_collections_table(collections: list[dict[str, Any]], rich_cli):
 
 def _display_collections_json(collections: list[dict[str, Any]], rich_cli):
     """Display collections as JSON."""
-    import json
-
-    from rich.syntax import Syntax
-
     json_str = json.dumps(collections, indent=2, default=str)
     syntax = Syntax(json_str, "json", theme="monokai", line_numbers=True)
 
@@ -180,6 +185,33 @@ def _display_collections_json(collections: list[dict[str, Any]], rich_cli):
         syntax, title="Collections (JSON)", title_align="left", border_style="blue"
     )
     rich_cli.console.print(panel)
+
+
+def _abort_collection_exists(collection_name: str, rich_cli) -> None:
+    """Helper function to abort when collection already exists."""
+    rich_cli.show_error(
+        f"Collection '{collection_name}' already exists",
+        "Use --force to overwrite",
+    )
+    raise click.Abort() from None
+
+
+def _abort_collection_creation_failed() -> None:
+    """Helper function to abort when collection creation fails."""
+    msg = "Collection creation failed"
+    raise CollectionCreationError(msg)
+
+
+def _abort_collection_deletion_failed() -> None:
+    """Helper function to abort when collection deletion fails."""
+    msg = "Collection deletion failed"
+    raise CollectionDeletionError(msg)
+
+
+def _abort_collection_not_found(collection_name: str, rich_cli) -> None:
+    """Helper function to abort when collection is not found."""
+    rich_cli.show_error(f"Collection '{collection_name}' not found")
+    raise click.Abort() from None
 
 
 @database.command("create")
@@ -233,11 +265,7 @@ def create_collection(
             if not force:
                 existing_collections = asyncio.run(db_manager.list_collections())
                 if collection_name in existing_collections:
-                    rich_cli.show_error(
-                        f"Collection '{collection_name}' already exists",
-                        "Use --force to overwrite",
-                    )
-                    raise click.Abort() from None
+                    _abort_collection_exists(collection_name, rich_cli)
 
             # Delete existing if force
             if force and collection_name in asyncio.run(db_manager.list_collections()):
@@ -257,7 +285,7 @@ def create_collection(
             asyncio.run(db_manager.cleanup())
 
             if not success:
-                raise Exception("Collection creation failed")
+                _abort_collection_creation_failed()
 
         except Exception as e:
             rich_cli.show_error("Failed to create collection", str(e))
@@ -311,7 +339,7 @@ def delete_collection(ctx: click.Context, collection_name: str, yes: bool):
             asyncio.run(db_manager.cleanup())
 
             if not success:
-                raise Exception("Collection deletion failed")
+                _abort_collection_deletion_failed()
 
         except Exception as e:
             rich_cli.show_error("Failed to delete collection", str(e))
@@ -344,8 +372,7 @@ def collection_info(ctx: click.Context, collection_name: str):
             asyncio.run(db_manager.cleanup())
 
             if not info:
-                rich_cli.show_error(f"Collection '{collection_name}' not found")
-                raise click.Abort() from None
+                _abort_collection_not_found(collection_name, rich_cli)
 
             # Convert to expected format
             info_dict = {

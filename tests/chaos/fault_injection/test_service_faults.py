@@ -5,12 +5,26 @@ against service failures, resource exhaustion, and degraded performance.
 """
 
 import asyncio
+import random
 import time
+from collections import Counter
 from typing import Any
 
 import pytest
 
 from tests.chaos.conftest import FailureType
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
+
+
+class AuthenticationError(Exception):
+    """Custom authentication error for testing."""
+
+
+class RateLimitError(Exception):
+    """Custom rate limit error for testing."""
 
 
 @pytest.mark.chaos
@@ -19,7 +33,7 @@ class TestServiceFaultInjection:
     """Test service-level fault injection scenarios."""
 
     async def test_service_unavailable_injection(
-        self, fault_injector, mock_resilient_service
+        self, fault_injector, _mock_resilient_service
     ):
         """Test service unavailable fault injection."""
         # Inject service unavailable fault
@@ -64,7 +78,7 @@ class TestServiceFaultInjection:
             fault_injector.remove_fault(fault_id)
 
     async def test_database_connection_failure(
-        self, fault_injector, resilience_validator
+        self, _fault_injector, _resilience_validator
     ):
         """Test database connection failure scenarios."""
         # Mock database service
@@ -76,16 +90,15 @@ class TestServiceFaultInjection:
             db_connection_count += 1
 
             if db_connection_count > max_connections:
-                raise Exception("Database connection pool exhausted")
+                msg = "Database connection pool exhausted"
+                raise ConnectionError(msg)
 
             # Simulate database operation
             await asyncio.sleep(0.01)
             return {"result": "database_data"}
 
         # Test connection pool exhaustion
-        tasks = []
-        for _i in range(5):  # Exceed max connections
-            tasks.append(database_operation())
+        tasks = [database_operation() for _i in range(5)]  # Exceed max connections
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -96,7 +109,7 @@ class TestServiceFaultInjection:
         assert len(failures) > 0, "Expected some database connection failures"
         assert len(successes) <= max_connections, "Too many successful connections"
 
-    async def test_authentication_service_failure(self, fault_injector):
+    async def test_authentication_service_failure(self, _fault_injector):
         """Test authentication service failure scenarios."""
         auth_failure_modes = [
             "token_expired",
@@ -107,31 +120,35 @@ class TestServiceFaultInjection:
 
         for failure_mode in auth_failure_modes:
 
-            async def auth_operation():
-                if failure_mode == "token_expired":
-                    raise Exception("Authentication token has expired")
-                elif failure_mode == "invalid_credentials":
-                    raise Exception("Invalid authentication credentials")
-                elif failure_mode == "auth_service_down":
-                    raise ConnectionError("Authentication service unavailable")
-                elif failure_mode == "rate_limit_exceeded":
-                    raise Exception("Authentication rate limit exceeded")
+            async def auth_operation(mode=failure_mode):
+                if mode == "token_expired":
+                    msg = "Authentication token has expired"
+                    raise AuthenticationError(msg)
+                if mode == "invalid_credentials":
+                    msg = "Invalid authentication credentials"
+                    raise AuthenticationError(msg)
+                if mode == "auth_service_down":
+                    msg = "Authentication service unavailable"
+                    raise ConnectionError(msg)
+                if mode == "rate_limit_exceeded":
+                    msg = "Authentication rate limit exceeded"
+                    raise AuthenticationError(msg)
 
             # Test each failure mode
-            with pytest.raises(Exception):
+            with pytest.raises((AuthenticationError, ConnectionError)):
                 await auth_operation()
 
-    async def test_cache_service_failures(self, fault_injector, resilience_validator):
+    async def test_cache_service_failures(self, _fault_injector, _resilience_validator):
         """Test cache service failure scenarios."""
         cache_hit_count = 0
         cache_failure_rate = 0.3
 
         async def cache_get(key: str):
             nonlocal cache_hit_count
-            import random
 
             if random.random() < cache_failure_rate:
-                raise Exception("Cache service temporarily unavailable")
+                msg = "Cache service temporarily unavailable"
+                raise ConnectionError(msg)
 
             cache_hit_count += 1
             return f"cached_value_for_{key}"
@@ -160,7 +177,7 @@ class TestServiceFaultInjection:
             result.startswith(("cached_value", "db_value")) for result in results
         )
 
-    async def test_api_rate_limiting_failure(self, fault_injector):
+    async def test_api_rate_limiting_failure(self, _fault_injector):
         """Test API rate limiting scenarios."""
         request_count = 0
         rate_limit = 5  # requests per second
@@ -178,7 +195,8 @@ class TestServiceFaultInjection:
             request_count += 1
 
             if request_count > rate_limit:
-                raise Exception("API rate limit exceeded - too many requests")
+                msg = "API rate limit exceeded - too many requests"
+                raise RateLimitError(msg)
 
             return {"status": "success", "data": "api_response"}
 
@@ -191,11 +209,8 @@ class TestServiceFaultInjection:
             try:
                 await rate_limited_api_call()
                 successes += 1
-            except Exception as e:
-                if "rate limit exceeded" in str(e):
-                    failures += 1
-                else:
-                    raise
+            except RateLimitError:
+                failures += 1
 
         assert successes <= rate_limit, (
             f"Too many successes: {successes} > {rate_limit}"
@@ -203,7 +218,7 @@ class TestServiceFaultInjection:
         assert failures > 0, "Expected some rate limit failures"
 
     async def test_microservice_cascade_failure(
-        self, fault_injector, resilience_validator
+        self, _fault_injector, _resilience_validator
     ):
         """Test cascade failure prevention in microservices."""
         # Service dependency chain: A -> B -> C
@@ -214,28 +229,32 @@ class TestServiceFaultInjection:
             nonlocal service_c_failures
             service_c_failures += 1
             if service_c_failures > 2:
-                raise Exception("Service C is overloaded")
+                msg = "Service C is overloaded"
+                raise TestError(msg)
             return {"service": "C", "data": "service_c_data"}
 
         async def service_b():
             nonlocal service_b_failures
             try:
                 result_c = await service_c()
-                return {"service": "B", "dependency": result_c}
             except Exception:
                 service_b_failures += 1
                 # Circuit breaker: fail fast after dependency failure
                 if service_b_failures > 1:
-                    raise Exception("Service B circuit breaker open")
+                    msg = "Service B circuit breaker open"
+                    raise TestError(msg) from None
                 raise
+            else:
+                return {"service": "B", "dependency": result_c}
 
         async def service_a():
             try:
                 result_b = await service_b()
-                return {"service": "A", "dependency": result_b}
             except Exception:
                 # Fallback mechanism
                 return {"service": "A", "dependency": None, "fallback": True}
+            else:
+                return {"service": "A", "dependency": result_b}
 
         # Test cascade failure prevention
         results = []
@@ -248,13 +267,11 @@ class TestServiceFaultInjection:
         fallback_results = [r for r in results if r.get("fallback")]
         assert len(fallback_results) > 0, "Expected some fallback responses"
 
-    async def test_data_corruption_simulation(self, fault_injector):
+    async def test_data_corruption_simulation(self, _fault_injector):
         """Test data corruption scenarios."""
         corruption_rate = 0.2
 
         async def data_processing_service(data: dict[str, Any]):
-            import random
-
             # Simulate data corruption
             if random.random() < corruption_rate:
                 # Corrupt the data
@@ -272,7 +289,8 @@ class TestServiceFaultInjection:
         async def data_validator(data: dict[str, Any]):
             # Validate data integrity
             if data.get("checksum_invalid"):
-                raise ValueError("Data integrity check failed")
+                msg = "Data integrity check failed"
+                raise ValueError(msg)
             return data
 
         # Test data processing with validation
@@ -293,7 +311,7 @@ class TestServiceFaultInjection:
         assert successful_processing > 0, "Expected some successful processing"
 
     async def test_partial_service_degradation(
-        self, fault_injector, resilience_validator
+        self, _fault_injector, _resilience_validator
     ):
         """Test partial service degradation scenarios."""
         service_health = "healthy"  # healthy, degraded, critical
@@ -307,7 +325,7 @@ class TestServiceFaultInjection:
                     "features": ["feature_a", "feature_b", "feature_c"],
                     "response_time": "normal",
                 }
-            elif service_health == "degraded":
+            if service_health == "degraded":
                 # Reduced functionality
                 await asyncio.sleep(0.05)  # Slower response
                 return {
@@ -315,8 +333,9 @@ class TestServiceFaultInjection:
                     "features": ["feature_a"],  # Only core features
                     "response_time": "slow",
                 }
-            else:  # critical
-                raise Exception("Service in critical state")
+            # critical
+            msg = "Service in critical state"
+            raise TestError(msg)
 
         # Test healthy state
         result = await adaptive_service()
@@ -335,7 +354,7 @@ class TestServiceFaultInjection:
         with pytest.raises(Exception, match="Service in critical state"):
             await adaptive_service()
 
-    async def test_service_startup_failure(self, fault_injector):
+    async def test_service_startup_failure(self, _fault_injector):
         """Test service startup failure scenarios."""
         startup_attempts = 0
         max_startup_attempts = 3
@@ -346,7 +365,8 @@ class TestServiceFaultInjection:
 
             if startup_attempts < max_startup_attempts:
                 # Simulate startup failure
-                raise Exception(f"Service startup failed (attempt {startup_attempts})")
+                msg = f"Service startup failed (attempt {startup_attempts})"
+                raise TestError(msg)
 
             # Successful startup
             return {"status": "started", "attempts": startup_attempts}
@@ -355,12 +375,13 @@ class TestServiceFaultInjection:
             for attempt in range(5):  # Try up to 5 times
                 try:
                     result = await service_startup()
-                    return result
                 except Exception:
                     if attempt < 4:  # Not the last attempt
                         await asyncio.sleep(0.01)  # Brief delay before retry
                         continue
                     raise
+                else:
+                    return result
 
         # Test service startup with retries
         result = await service_manager()
@@ -368,7 +389,7 @@ class TestServiceFaultInjection:
         assert result["attempts"] == max_startup_attempts
 
     async def test_service_dependency_timeout(
-        self, fault_injector, resilience_validator
+        self, _fault_injector, _resilience_validator
     ):
         """Test service dependency timeout scenarios."""
 
@@ -381,7 +402,6 @@ class TestServiceFaultInjection:
             try:
                 # Set timeout for dependency call
                 result = await asyncio.wait_for(slow_dependency_service(), timeout=0.1)
-                return {"status": "success", "dependency": result}
             except TimeoutError:
                 # Handle timeout gracefully
                 return {
@@ -390,6 +410,8 @@ class TestServiceFaultInjection:
                     "timeout": True,
                     "fallback_used": True,
                 }
+            else:
+                return {"status": "success", "dependency": result}
 
         # Test timeout handling
         result = await main_service_with_timeout()
@@ -403,7 +425,7 @@ class TestServiceFaultInjection:
 class TestAdvancedServiceFaults:
     """Test advanced service fault scenarios."""
 
-    async def test_split_brain_scenario(self, fault_injector):
+    async def test_split_brain_scenario(self, _fault_injector):
         """Test split-brain scenario prevention."""
         # Simulate distributed system with leader election
         leader = "node_a"
@@ -412,12 +434,14 @@ class TestAdvancedServiceFaults:
         async def elect_leader(node: str):
             nonlocal leader
 
-            if network_partition and node in ["node_b", "node_c"]:
-                # Simulate partition: nodes B and C can't communicate with A
-                if leader == "node_a":
-                    # Potential split-brain: elect new leader
-                    leader = "node_b"
-                    return {"leader": "node_b", "warning": "potential_split_brain"}
+            if (
+                network_partition
+                and node in ["node_b", "node_c"]
+                and leader == "node_a"
+            ):
+                # Potential split-brain: elect new leader
+                leader = "node_b"
+                return {"leader": "node_b", "warning": "potential_split_brain"}
 
             return {"leader": leader, "status": "normal"}
 
@@ -431,7 +455,7 @@ class TestAdvancedServiceFaults:
         result = await elect_leader("node_b")
         assert "split_brain" in result.get("warning", "")
 
-    async def test_resource_starvation(self, fault_injector):
+    async def test_resource_starvation(self, _fault_injector):
         """Test resource starvation scenarios."""
         # Simulate resource pools
         cpu_pool = {"available": 100, "used": 0}
@@ -443,7 +467,8 @@ class TestAdvancedServiceFaults:
                 cpu_pool["used"] + cpu_required > cpu_pool["available"]
                 or memory_pool["used"] + memory_required > memory_pool["available"]
             ):
-                raise Exception("Insufficient resources - operation rejected")
+                msg = "Insufficient resources - operation rejected"
+                raise TestError(msg)
 
             # Allocate resources
             cpu_pool["used"] += cpu_required
@@ -481,7 +506,7 @@ class TestAdvancedServiceFaults:
         errors = [r for r in results if "error" in r]
         assert len(errors) > 0, "Expected resource exhaustion errors"
 
-    async def test_deadlock_detection(self, fault_injector):
+    async def test_deadlock_detection(self, _fault_injector):
         """Test deadlock detection and prevention."""
         # Simulate resource locks
         lock_a = asyncio.Lock()
@@ -518,7 +543,7 @@ class TestAdvancedServiceFaults:
         deadlock_detected = any(r.get("status") == "deadlock_detected" for r in results)
         assert deadlock_detected, "Deadlock detection should have been triggered"
 
-    async def test_byzantine_fault_tolerance(self, fault_injector):
+    async def test_byzantine_fault_tolerance(self, _fault_injector):
         """Test Byzantine fault tolerance scenarios."""
         # Simulate distributed consensus with Byzantine nodes
         nodes = {
@@ -533,8 +558,6 @@ class TestAdvancedServiceFaults:
             values = [node["value"] for node in nodes.values()]
 
             # Simple majority consensus
-            from collections import Counter
-
             value_counts = Counter(values)
             consensus_value, count = value_counts.most_common(1)[0]
 
@@ -545,8 +568,7 @@ class TestAdvancedServiceFaults:
                     "value": consensus_value,
                     "agreement_count": count,
                 }
-            else:
-                return {"consensus": False, "reason": "no_majority"}
+            return {"consensus": False, "reason": "no_majority"}
 
         # Test consensus with Byzantine node
         result = await consensus_algorithm()
@@ -554,9 +576,8 @@ class TestAdvancedServiceFaults:
         assert result["value"] == 42  # Correct value despite Byzantine node
         assert result["agreement_count"] >= 4  # 4 out of 5 nodes agree
 
-    async def test_jitter_injection(self, fault_injector):
+    async def test_jitter_injection(self, _fault_injector):
         """Test jitter injection for timing-based chaos."""
-        import random
 
         async def timing_sensitive_operation():
             # Add random jitter

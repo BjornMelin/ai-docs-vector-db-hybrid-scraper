@@ -1,7 +1,7 @@
 import typing
 """Cache warming functionality - V2 feature placeholder."""
 
-import logging
+import logging  # noqa: PLC0415
 from typing import Any
 
 logger = logging.getLogger(__name__)

@@ -4,12 +4,19 @@ Consolidated configuration system following KISS principles and Pydantic best pr
 All configuration models in one place for V1 release.
 """
 
+import json
+import logging
+import os
+import tomllib
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+import yaml
 from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Services imported at runtime to avoid circular imports
 from .auto_detect import AutoDetectedServices, AutoDetectionConfig
 from .enums import (
     ChunkingStrategy,
@@ -67,7 +74,8 @@ class OpenAIConfig(BaseModel):
     @classmethod
     def validate_api_key(cls, v: str | None) -> str | None:
         if v and not v.startswith("sk-"):
-            raise ValueError("OpenAI API key must start with 'sk-'")
+            msg = "OpenAI API key must start with 'sk-'"
+            raise ValueError(msg)
         return v
 
 
@@ -91,7 +99,8 @@ class FirecrawlConfig(BaseModel):
     @classmethod
     def validate_api_key(cls, v: str | None) -> str | None:
         if v and not v.startswith("fc-"):
-            raise ValueError("Firecrawl API key must start with 'fc-'")
+            msg = "Firecrawl API key must start with 'fc-'"
+            raise ValueError(msg)
         return v
 
 
@@ -125,11 +134,14 @@ class ChunkingConfig(BaseModel):
     @model_validator(mode="after")
     def validate_chunk_sizes(self) -> "ChunkingConfig":
         if self.chunk_overlap >= self.chunk_size:
-            raise ValueError("chunk_overlap must be less than chunk_size")
+            msg = "chunk_overlap must be less than chunk_size"
+            raise ValueError(msg)
         if self.min_chunk_size > self.chunk_size:
-            raise ValueError("min_chunk_size must be <= chunk_size")
+            msg = "min_chunk_size must be <= chunk_size"
+            raise ValueError(msg)
         if self.max_chunk_size < self.chunk_size:
-            raise ValueError("max_chunk_size must be >= chunk_size")
+            msg = "max_chunk_size must be >= chunk_size"
+            raise ValueError(msg)
         return self
 
 
@@ -333,6 +345,65 @@ class TaskQueueConfig(BaseModel):
     default_queue_name: str = Field(default="default", description="Default queue name")
 
 
+class AgenticConfig(BaseModel):
+    """Agentic AI configuration for autonomous agents."""
+
+    enable_agentic_mode: bool = Field(
+        False, description="Enable autonomous agentic processing"
+    )
+    pydantic_ai_available: bool = Field(
+        False, description="Whether Pydantic-AI is available"
+    )
+
+    # Agent behavior configuration
+    orchestrator_model: str = Field("gpt-4", description="Model for query orchestrator")
+    specialist_model: str = Field("gpt-4", description="Model for specialist agents")
+    tool_selector_model: str = Field(
+        "gpt-3.5-turbo", description="Model for tool selection"
+    )
+
+    # Performance and optimization
+    enable_adaptive_learning: bool = Field(
+        True, description="Enable agent learning from interactions"
+    )
+    enable_intelligent_caching: bool = Field(
+        True, description="Enable semantic caching"
+    )
+    enable_performance_optimization: bool = Field(
+        True, description="Enable autonomous performance tuning"
+    )
+
+    # Tool composition settings
+    max_tool_chain_length: int = Field(
+        5, ge=1, le=10, description="Maximum tools in a chain"
+    )
+    tool_selection_confidence_threshold: float = Field(
+        0.7, ge=0.0, le=1.0, description="Tool selection confidence threshold"
+    )
+    parallel_execution_enabled: bool = Field(
+        True, description="Enable parallel tool execution where possible"
+    )
+
+    # Agent coordination
+    max_agent_coordination_depth: int = Field(
+        3, ge=1, le=10, description="Maximum agent delegation depth"
+    )
+    agent_communication_timeout_seconds: float = Field(
+        10.0, gt=0.0, le=60.0, description="Agent communication timeout"
+    )
+
+    # Fallback behavior
+    fallback_to_traditional_rag: bool = Field(
+        True, description="Fallback to traditional RAG if agents fail"
+    )
+    agentic_mode_percentage: float = Field(
+        0.1,
+        ge=0.0,
+        le=1.0,
+        description="Percentage of requests using agentic mode (gradual rollout)",
+    )
+
+
 class RAGConfig(BaseModel):
     """RAG (Retrieval-Augmented Generation) configuration."""
 
@@ -374,6 +445,11 @@ class RAGConfig(BaseModel):
     cache_ttl_seconds: int = Field(default=3600, gt=0, description="Cache TTL")
     parallel_processing: bool = Field(
         default=True, description="Enable parallel processing"
+    )
+
+    # Agentic RAG configuration
+    agentic: AgenticConfig = Field(
+        default_factory=AgenticConfig, description="Agentic AI configuration"
     )
 
 
@@ -420,14 +496,16 @@ class DeploymentConfig(BaseModel):
     def validate_tier(cls, v: str) -> str:
         valid_tiers = {"personal", "professional", "enterprise"}
         if v.lower() not in valid_tiers:
-            raise ValueError(f"Tier must be one of {valid_tiers}")
+            msg = f"Tier must be one of {valid_tiers}"
+            raise ValueError(msg)
         return v.lower()
 
     @field_validator("flagsmith_api_key")
     @classmethod
     def validate_flagsmith_key(cls, v: str | None) -> str | None:
-        if v and not (v.startswith("fs_") or v.startswith("env_")):
-            raise ValueError("Flagsmith API key must start with 'fs_' or 'env_'")
+        if v and not (v.startswith(("fs_", "env_"))):
+            msg = "Flagsmith API key must start with 'fs_' or 'env_'"
+            raise ValueError(msg)
         return v
 
 
@@ -435,14 +513,19 @@ class DriftDetectionConfig(BaseModel):
     """Configuration drift detection settings."""
 
     # Core drift detection settings
-    enabled: bool = Field(default=True, description="Enable configuration drift detection")
+    enabled: bool = Field(
+        default=True, description="Enable configuration drift detection"
+    )
     snapshot_interval_minutes: int = Field(
-        default=15, gt=0, le=1440, description="Interval between configuration snapshots"
+        default=15,
+        gt=0,
+        le=1440,
+        description="Interval between configuration snapshots",
     )
     comparison_interval_minutes: int = Field(
         default=5, gt=0, le=60, description="Interval between drift comparisons"
     )
-    
+
     # Monitoring configuration
     monitored_paths: list[str] = Field(
         default_factory=lambda: [
@@ -453,7 +536,7 @@ class DriftDetectionConfig(BaseModel):
             "docker-compose.yml",
             "docker-compose.yaml",
         ],
-        description="Paths to monitor for configuration drift"
+        description="Paths to monitor for configuration drift",
     )
     excluded_paths: list[str] = Field(
         default_factory=lambda: [
@@ -463,18 +546,18 @@ class DriftDetectionConfig(BaseModel):
             "**/cache/",
             "**/tmp/",
         ],
-        description="Paths to exclude from drift monitoring"
+        description="Paths to exclude from drift monitoring",
     )
-    
+
     # Alerting configuration
     alert_on_severity: list[str] = Field(
         default_factory=lambda: ["high", "critical"],
-        description="Drift severity levels that trigger alerts"
+        description="Drift severity levels that trigger alerts",
     )
     max_alerts_per_hour: int = Field(
         default=10, gt=0, description="Maximum alerts per hour to prevent spam"
     )
-    
+
     # Data retention
     snapshot_retention_days: int = Field(
         default=30, gt=0, description="Days to retain configuration snapshots"
@@ -482,7 +565,7 @@ class DriftDetectionConfig(BaseModel):
     events_retention_days: int = Field(
         default=90, gt=0, description="Days to retain drift events"
     )
-    
+
     # Integration settings
     integrate_with_task20_anomaly: bool = Field(
         default=True, description="Integrate with existing Task 20 anomaly detection"
@@ -490,7 +573,7 @@ class DriftDetectionConfig(BaseModel):
     use_performance_monitoring: bool = Field(
         default=True, description="Use existing performance monitoring infrastructure"
     )
-    
+
     # Auto-remediation
     enable_auto_remediation: bool = Field(
         default=False, description="Enable automatic drift remediation for safe changes"
@@ -568,14 +651,14 @@ class Config(BaseSettings):
             self.embedding_provider == EmbeddingProvider.OPENAI
             and not self.openai.api_key
         ):
-            raise ValueError(
-                "OpenAI API key required when using OpenAI embedding provider"
-            )
+            msg = "OpenAI API key required when using OpenAI embedding provider"
+            raise ValueError(msg)
         if (
             self.crawl_provider == CrawlProvider.FIRECRAWL
             and not self.firecrawl.api_key
         ):
-            raise ValueError("Firecrawl API key required when using Firecrawl provider")
+            msg = "Firecrawl API key required when using Firecrawl provider"
+            raise ValueError(msg)
         return self
 
     @model_validator(mode="after")
@@ -600,10 +683,8 @@ class Config(BaseSettings):
 
         Returns:
             Updated Config instance
-        """
-        import os
-        from copy import deepcopy
 
+        """
         # Create a copy to avoid mutating the original
         updated_config = deepcopy(self)
 
@@ -652,13 +733,18 @@ class Config(BaseSettings):
 
         Returns:
             Updated Config instance with auto-detected services applied
+
         """
         if not self.auto_detection.enabled:
             return self
 
-        from ..services.auto_detection import EnvironmentDetector, ServiceDiscovery
-
         try:
+            # Import services at runtime to avoid circular imports
+            from src.services.auto_detection import (
+                EnvironmentDetector,
+                ServiceDiscovery,
+            )
+
             # Detect environment
             env_detector = EnvironmentDetector(self.auto_detection)
             detected_env = await env_detector.detect()
@@ -681,15 +767,16 @@ class Config(BaseSettings):
             # Store auto-detection results for inspection
             updated_config._auto_detected_services = auto_detected
 
-            return updated_config
-
         except Exception as e:
             # Log error but don't fail configuration loading
-            import logging
 
             logger = logging.getLogger(__name__)
-            logger.warning(f"Auto-detection failed, using manual configuration: {e}")
+            logger.warning(
+                f"Auto-detection failed, using manual configuration: {e}"
+            )  # TODO: Convert f-string to logging format
             return self
+        else:
+            return updated_config
 
     def get_auto_detected_services(self) -> AutoDetectedServices | None:
         """Get auto-detected services if available."""
@@ -710,25 +797,19 @@ class Config(BaseSettings):
         """Load configuration from a specific file."""
         config_path = Path(config_path)
         if config_path.suffix == ".json":
-            import json
-
-            with open(config_path) as f:
+            with config_path.open() as f:
                 data = json.load(f)
             return cls(**data)
-        elif config_path.suffix in [".yaml", ".yml"]:
-            import yaml
-
-            with open(config_path) as f:
+        if config_path.suffix in [".yaml", ".yml"]:
+            with config_path.open() as f:
                 data = yaml.safe_load(f)
             return cls(**data)
-        elif config_path.suffix == ".toml":
-            import tomllib
-
-            with open(config_path, "rb") as f:
+        if config_path.suffix == ".toml":
+            with config_path.open("rb") as f:
                 data = tomllib.load(f)
             return cls(**data)
-        else:
-            raise ValueError(f"Unsupported config file format: {config_path.suffix}")
+        msg = f"Unsupported config file format: {config_path.suffix}"
+        raise ValueError(msg)
 
 
 # Singleton pattern
@@ -737,7 +818,7 @@ _config: Config | None = None
 
 def get_config() -> Config:
     """Get the global configuration instance."""
-    global _config  # noqa: PLW0603
+    global _config
     if _config is None:
         _config = Config()
     return _config
@@ -751,8 +832,9 @@ async def get_config_with_auto_detection() -> Config:
 
     Returns:
         Config instance with auto-detected services applied
+
     """
-    global _config  # noqa: PLW0603
+    global _config
     if _config is None:
         base_config = Config()
         _config = await base_config.auto_detect_and_apply_services()
@@ -761,13 +843,13 @@ async def get_config_with_auto_detection() -> Config:
 
 def set_config(config: Config) -> None:
     """Set the global configuration instance."""
-    global _config  # noqa: PLW0603
+    global _config
     _config = config
 
 
 def reset_config() -> None:
     """Reset the global configuration instance."""
-    global _config  # noqa: PLW0603
+    global _config
     _config = None
 
 
@@ -782,6 +864,7 @@ async def load_config_with_auto_detection(
 
     Returns:
         Loaded and potentially auto-detected configuration
+
     """
     config = Config.load_from_file(config_path) if config_path else Config()
 

@@ -164,8 +164,8 @@ class TestAdvancedQueryProcessingTool:
                 "title": "Test Doc",
             }
         ]
-        self.mock_response.total_results = 1
-        self.mock_response.total_processing_time_ms = 150.5
+        self.mock_response._total_results = 1
+        self.mock_response._total_processing_time_ms = 150.5
         self.mock_response.search_time_ms = 120.0
         self.mock_response.strategy_selection_time_ms = 30.5
         self.mock_response.confidence_score = 0.88
@@ -256,7 +256,7 @@ class TestAdvancedQueryProcessingTool:
             # Verify response
             assert isinstance(response, AdvancedQueryProcessingResponse)
             assert response.success is True
-            assert response.total_results == 1
+            assert response._total_results == 1
             assert len(response.results) == 1
             assert response.results[0].content == "Sample content"
             assert response.confidence_score == 0.88
@@ -404,7 +404,7 @@ class TestAdvancedQueryProcessingTool:
             # Verify error response
             assert isinstance(response, AdvancedQueryProcessingResponse)
             assert response.success is False
-            assert response.total_results == 0
+            assert response._total_results == 0
             assert len(response.results) == 0
             assert "Pipeline initialization failed" in response.error
 
@@ -608,7 +608,7 @@ class TestPipelineMetricsTool:
         # Mock the pipeline and its methods
         self.mock_pipeline = AsyncMock()
         self.mock_metrics = {
-            "total_queries_processed": 1250,
+            "_total_queries_processed": 1250,
             "average_processing_time_ms": 185.5,
             "strategy_usage": {
                 "semantic": 450,
@@ -638,7 +638,7 @@ class TestPipelineMetricsTool:
 
             # Verify response
             assert isinstance(response, dict)
-            assert response["total_queries_processed"] == 1250
+            assert response["_total_queries_processed"] == 1250
             assert response["average_processing_time_ms"] == 185.5
             assert "strategy_usage" in response
             assert response["success_rate"] == 0.97

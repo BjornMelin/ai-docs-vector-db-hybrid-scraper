@@ -10,10 +10,11 @@ import logging
 import os
 import random
 import time
-from typing import Any
+from typing import Any, ClassVar
 
 from locust import HttpUser, TaskSet, between, events, task
 from locust.env import Environment
+from locust.log import setup_logging
 
 
 logger = logging.getLogger(__name__)
@@ -76,7 +77,7 @@ class VectorDBSearchBehavior(TaskSet):
                 else:
                     response.failure("No search results returned")
             else:
-                response.failure(f"Search failed: {response.text}")
+                response.failure("Search failed")
 
     @task(2)
     def search_similar(self):
@@ -102,7 +103,7 @@ class VectorDBSearchBehavior(TaskSet):
                 # Document not found - not a failure for load testing
                 response.success()
             else:
-                response.failure(f"Similar search failed: {response.text}")
+                response.failure("Similar search failed")
 
     @task(1)
     def advanced_search(self):
@@ -136,7 +137,7 @@ class VectorDBSearchBehavior(TaskSet):
             if response.status_code == 200:
                 response.success()
             else:
-                response.failure(f"Advanced search failed: {response.text}")
+                response.failure("Advanced search failed")
 
     def _track_search_quality(self, data: dict[str, Any]):
         """Track search quality metrics."""
@@ -204,7 +205,7 @@ class VectorDBDocumentBehavior(TaskSet):
                 # Document already exists - not a failure
                 response.success()
             else:
-                response.failure(f"Document addition failed: {response.text}")
+                response.failure("Document addition failed")
 
     @task(1)
     def update_document(self):
@@ -233,7 +234,7 @@ class VectorDBDocumentBehavior(TaskSet):
                 # Document not found - create it
                 self.add_document()
             else:
-                response.failure(f"Document update failed: {response.text}")
+                response.failure("Document update failed")
 
     @task(1)
     def delete_document(self):
@@ -256,7 +257,7 @@ class VectorDBDocumentBehavior(TaskSet):
                 # Document not found - not a failure for load testing
                 response.success()
             else:
-                response.failure(f"Document deletion failed: {response.text}")
+                response.failure("Document deletion failed")
 
 
 class VectorDBEmbeddingBehavior(TaskSet):
@@ -311,7 +312,7 @@ class VectorDBEmbeddingBehavior(TaskSet):
                 else:
                     response.failure("No embeddings returned")
             else:
-                response.failure(f"Embedding generation failed: {response.text}")
+                response.failure("Embedding generation failed")
 
     @task(2)
     def batch_generate_embeddings(self):
@@ -338,7 +339,7 @@ class VectorDBEmbeddingBehavior(TaskSet):
                 else:
                     response.failure("Batch embedding count mismatch")
             else:
-                response.failure(f"Batch embedding generation failed: {response.text}")
+                response.failure("Batch embedding generation failed")
 
     def _track_embedding_metrics(self, data: dict[str, Any]):
         """Track embedding generation metrics."""
@@ -358,7 +359,7 @@ class VectorDBEmbeddingBehavior(TaskSet):
 class VectorDBUser(HttpUser):
     """Simulated user for vector database load testing."""
 
-    tasks = {
+    tasks: ClassVar[dict[type, int]] = {
         VectorDBSearchBehavior: 60,  # 60% search operations
         VectorDBDocumentBehavior: 25,  # 25% document operations
         VectorDBEmbeddingBehavior: 15,  # 15% embedding operations
@@ -391,9 +392,11 @@ class VectorDBUser(HttpUser):
     def on_stop(self):
         """Cleanup user session."""
         session_duration = time.time() - self.start_time
-        logger.info(f"User session completed. Duration: {session_duration:.2f}s")
-        logger.info(f"Search operations: {len(self.search_metrics)}")
-        logger.info(f"Embedding operations: {len(self.embedding_metrics)}")
+        logger.info(
+            f"User session completed. Duration: {session_duration:.2f}s"
+        )  # TODO: Convert f-string to logging format
+        logger.info("Search operations")
+        logger.info("Embedding operations")
 
 
 class AdminUser(HttpUser):
@@ -422,7 +425,7 @@ class AdminUser(HttpUser):
             if response.status_code == 200:
                 response.success()
             else:
-                response.failure(f"Health check failed: {response.text}")
+                response.failure("Health check failed")
 
     @task(2)
     def get_analytics(self):
@@ -435,7 +438,7 @@ class AdminUser(HttpUser):
             if response.status_code == 200:
                 response.success()
             else:
-                response.failure(f"Analytics failed: {response.text}")
+                response.failure("Analytics failed")
 
     @task(1)
     def cache_operations(self):
@@ -451,7 +454,7 @@ class AdminUser(HttpUser):
             if response.status_code in [200, 202]:
                 response.success()
             else:
-                response.failure(f"{operation} failed: {response.text}")
+                response.failure("{operation} failed")
 
 
 class LoadTestMetricsCollector:
@@ -517,7 +520,7 @@ class LoadTestMetricsCollector:
 
         # Calculate percentiles
         response_times_sorted = sorted(response_times)
-        total_requests = len(response_times_sorted)
+        _total_requests = len(response_times_sorted)
 
         def percentile(data: list[float], p: int) -> float:
             if not data:
@@ -528,13 +531,13 @@ class LoadTestMetricsCollector:
         # Performance analysis
         summary = {
             "test_duration_seconds": test_duration,
-            "total_requests": total_requests,
+            "_total_requests": _total_requests,
             "successful_requests": len(successful_requests),
             "failed_requests": len(failed_requests),
-            "error_rate_percent": (len(failed_requests) / total_requests) * 100
-            if total_requests > 0
+            "error_rate_percent": (len(failed_requests) / _total_requests) * 100
+            if _total_requests > 0
             else 0,
-            "throughput_rps": total_requests / test_duration
+            "throughput_rps": _total_requests / test_duration
             if test_duration > 0
             else 0,
             "response_times_ms": {
@@ -576,14 +579,13 @@ class LoadTestMetricsCollector:
         # Convert to grade
         if score >= 90:
             return "A"
-        elif score >= 80:
+        if score >= 80:
             return "B"
-        elif score >= 70:
+        if score >= 70:
             return "C"
-        elif score >= 60:
+        if score >= 60:
             return "D"
-        else:
-            return "F"
+        return "F"
 
     def _check_thresholds(self) -> list[str]:
         """Check performance threshold violations."""
@@ -629,21 +631,21 @@ metrics_collector = LoadTestMetricsCollector()
 
 
 @events.test_start.add_listener
-def on_test_start(environment: Environment, **kwargs):
+def on_test_start(_environment: Environment, **__kwargs):
     """Handle test start event."""
     logger.info("Locust load test started")
     metrics_collector.start_test()
 
 
 @events.test_stop.add_listener
-def on_test_stop(environment: Environment, **kwargs):
+def on_test_stop(environment: Environment, **__kwargs):
     """Handle test stop event."""
     logger.info("Locust load test stopped")
     metrics_collector.stop_test()
 
     # Generate final report
     summary = metrics_collector.get_performance_summary()
-    logger.info(f"Performance summary: {json.dumps(summary, indent=2)}")
+    logger.info("Performance summary")
 
     # Save detailed report
     save_load_test_report(summary, environment)
@@ -655,10 +657,10 @@ def on_request(
     name: str,
     response_time: float,
     response_length: int,
-    response: Any,
-    context: dict[str, Any],
+    _response: Any,
+    _context: dict[str, Any],
     exception: Exception | None,
-    **kwargs,
+    **__kwargs,
 ):
     """Handle request completion event."""
     metrics_collector.add_request_metric(
@@ -682,40 +684,40 @@ def save_load_test_report(summary: dict[str, Any], environment: Environment):
         },
         "performance_summary": summary,
         "locust_stats": {
-            "total_requests": environment.stats.total.num_requests,
-            "total_failures": environment.stats.total.num_failures,
-            "average_response_time": environment.stats.total.avg_response_time,
-            "requests_per_second": environment.stats.total.current_rps,
+            "_total_requests": environment.stats._total.num_requests,
+            "_total_failures": environment.stats._total.num_failures,
+            "average_response_time": environment.stats._total.avg_response_time,
+            "requests_per_second": environment.stats._total.current_rps,
         }
         if environment.stats
         else {},
     }
 
     try:
-        with open(report_file, "w") as f:
+        with report_file.open("w") as f:
             json.dump(full_report, f, indent=2)
-        logger.info(f"Load test report saved to {report_file}")
-    except Exception as e:
-        logger.exception(f"Failed to save load test report: {e}")
+        logger.info(
+            f"Load test report saved to {report_file}"
+        )  # TODO: Convert f-string to logging format
+    except Exception:
+        logger.exception("Failed to save load test report")
 
 
 def create_load_test_environment(
     host: str = "http://localhost:8000",
-    user_classes: List | None = None,
-    **kwargs,
+    user_classes: list | None = None,
+    **_kwargs,
 ) -> Environment:
     """Create a Locust environment for programmatic testing.
 
     Args:
         host: Target host URL
         user_classes: List of user classes to use
-        **kwargs: Additional environment parameters
+        **_kwargs: Additional environment parameters
 
     Returns:
         Configured Locust environment
     """
-    from locust.env import Environment
-    from locust.log import setup_logging
 
     setup_logging("INFO", None)
 
@@ -723,6 +725,6 @@ def create_load_test_environment(
         user_classes = [VectorDBUser, AdminUser]
 
     # Create environment
-    env = Environment(user_classes=user_classes, host=host, **kwargs)
+    env = Environment(user_classes=user_classes, host=host, **_kwargs)
 
     return env

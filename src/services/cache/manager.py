@@ -1,9 +1,9 @@
 import typing
 """Simplified cache manager using DragonflyDB with specialized cache layers."""
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import hashlib
-import logging
+import logging  # noqa: PLC0415
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -113,7 +113,7 @@ class CacheManager:
             try:
                 self.metrics_registry = get_metrics_registry()
                 logger.info("Cache monitoring enabled with Prometheus integration")
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Failed to initialize cache monitoring: {e}")
 
         logger.info(
@@ -244,8 +244,8 @@ class CacheManager:
                             "distributed", cache_type.value
                         )
                     return value
-
-            # Cache miss
+        except Exception:
+            logger.error(f"Cache get error for key {cache_key}: {e}")
             if self._metrics:
                 latency = (asyncio.get_event_loop().time() - start_time) * 1000
                 self._metrics.record_miss(cache_type.value, latency)
@@ -254,9 +254,8 @@ class CacheManager:
             if self.metrics_registry:
                 self.metrics_registry.record_cache_miss(cache_type.value)
             return default
-
-        except Exception as e:
-            logger.error(f"Cache get error for key {cache_key}: {e}")
+        else:
+            # Cache miss
             if self._metrics:
                 latency = (asyncio.get_event_loop().time() - start_time) * 1000
                 self._metrics.record_miss(cache_type.value, latency)
@@ -325,19 +324,18 @@ class CacheManager:
                 success = await self._distributed_cache.set(
                     cache_key, value, ttl=effective_ttl
                 )
-
-            if self._metrics:
-                latency = (asyncio.get_event_loop().time() - start_time) * 1000
-                self._metrics.record_set(cache_type.value, latency, success)
-
-            return success
-
-        except Exception as e:
+        except Exception:
             logger.error(f"Cache set error for key {cache_key}: {e}")
             if self._metrics:
                 latency = (asyncio.get_event_loop().time() - start_time) * 1000
                 self._metrics.record_set(cache_type.value, latency, False)
             return False
+        else:
+            if self._metrics:
+                latency = (asyncio.get_event_loop().time() - start_time) * 1000
+                self._metrics.record_set(cache_type.value, latency, success)
+
+            return success
 
     async def delete(self, key: str, cache_type: CacheType = CacheType.CRAWL) -> bool:
         """Delete value from both cache layers.
@@ -360,12 +358,11 @@ class CacheManager:
             # Delete from L2 cache
             if self._distributed_cache:
                 success = await self._distributed_cache.delete(cache_key)
-
-            return success
-
-        except Exception as e:
+        except Exception:
             logger.error(f"Cache delete error for key {cache_key}: {e}")
             return False
+        else:
+            return success
 
     async def clear(self, cache_type: CacheType | None = None) -> bool:
         """Clear cache layers.
@@ -394,12 +391,11 @@ class CacheManager:
                     await self._local_cache.clear()
                 if self._distributed_cache:
                     await self._distributed_cache.clear()
-
-            return True
-
-        except Exception as e:
+        except Exception:
             logger.error(f"Cache clear error: {e}")
             return False
+        else:
+            return True
 
     async def get_stats(self) -> dict[str, object]:
         """Get comprehensive cache statistics.
@@ -460,7 +456,7 @@ class CacheManager:
             if self._distributed_cache:
                 await self._distributed_cache.close()
             logger.info("Cache manager closed successfully")
-        except Exception as e:
+        except Exception:
             logger.error(f"Error closing cache manager: {e}")
 
     def _get_cache_key(self, key: str, cache_type: CacheType) -> str:
@@ -473,8 +469,8 @@ class CacheManager:
         Returns:
             Formatted cache key
         """
-        # Create content-based hash for consistent keys
-        key_hash = hashlib.md5(key.encode()).hexdigest()[:12]
+        # Create content-based hash for consistent keys (using SHA256 for security)
+        key_hash = hashlib.sha256(key.encode()).hexdigest()[:12]
         return f"{self.key_prefix}{cache_type.value}:{key_hash}"
 
     # Direct access methods for specialized caches

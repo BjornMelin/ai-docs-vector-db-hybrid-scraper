@@ -7,7 +7,7 @@ post-deployment, disaster recovery, and blue-green deployment tests.
 
 import asyncio
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -246,7 +246,7 @@ class TestDeploymentReporting:
         )
 
         assert metrics_result["metrics_collected"]
-        assert metrics_result["total_metrics"] > 0
+        assert metrics_result["_total_metrics"] > 0
 
         # Verify essential metrics
         metrics = metrics_result["metrics"]
@@ -293,7 +293,7 @@ class DeploymentTestOrchestrator:
         self, test_config: dict[str, Any], deployment_config: DeploymentTestConfig
     ) -> dict[str, Any]:
         """Execute comprehensive deployment test."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(tz=UTC)
 
         category_results = {}
         failed_categories = []
@@ -334,8 +334,8 @@ class DeploymentTestOrchestrator:
                     "critical_issues": 0,  # Optional
                 }
 
-        end_time = datetime.utcnow()
-        duration = (end_time - start_time).total_seconds()
+        end_time = datetime.now(tz=UTC)
+        duration = (end_time - start_time)._total_seconds()
 
         return {
             "overall_success": overall_success,
@@ -348,7 +348,7 @@ class DeploymentTestOrchestrator:
         }
 
     async def _execute_environment_tests(
-        self, config: DeploymentTestConfig
+        self, _config: DeploymentTestConfig
     ) -> dict[str, Any]:
         """Execute environment validation tests."""
         await asyncio.sleep(2)
@@ -362,7 +362,7 @@ class DeploymentTestOrchestrator:
         }
 
     async def _execute_pipeline_tests(
-        self, config: DeploymentTestConfig
+        self, _config: DeploymentTestConfig
     ) -> dict[str, Any]:
         """Execute pipeline validation tests."""
         await asyncio.sleep(3)
@@ -376,7 +376,7 @@ class DeploymentTestOrchestrator:
         }
 
     async def _execute_infrastructure_tests(
-        self, config: DeploymentTestConfig
+        self, _config: DeploymentTestConfig
     ) -> dict[str, Any]:
         """Execute infrastructure validation tests."""
         await asyncio.sleep(4)
@@ -390,7 +390,7 @@ class DeploymentTestOrchestrator:
         }
 
     async def _execute_post_deployment_tests(
-        self, config: DeploymentTestConfig
+        self, _config: DeploymentTestConfig
     ) -> dict[str, Any]:
         """Execute post-deployment validation tests."""
         await asyncio.sleep(2)
@@ -404,7 +404,7 @@ class DeploymentTestOrchestrator:
         }
 
     async def _execute_blue_green_tests(
-        self, config: DeploymentTestConfig
+        self, _config: DeploymentTestConfig
     ) -> dict[str, Any]:
         """Execute blue-green deployment tests."""
         await asyncio.sleep(3)
@@ -418,7 +418,7 @@ class DeploymentTestOrchestrator:
         }
 
     async def _execute_disaster_recovery_tests(
-        self, config: DeploymentTestConfig
+        self, _config: DeploymentTestConfig
     ) -> dict[str, Any]:
         """Execute disaster recovery tests."""
         await asyncio.sleep(5)
@@ -443,24 +443,24 @@ class DeploymentReadinessAssessor:
     ) -> dict[str, Any]:
         """Assess deployment readiness."""
         check_results = {}
-        total_score = 0
+        _total_score = 0
         max_score = 0
 
         # Execute critical checks
         for check in config["critical_checks"]:
             check_result = await self._execute_readiness_check(check, critical=True)
             check_results[check] = check_result
-            total_score += check_result["score"]
+            _total_score += check_result["score"]
             max_score += 1.0
 
         # Execute optional checks
         for check in config.get("optional_checks", []):
             check_result = await self._execute_readiness_check(check, critical=False)
             check_results[check] = check_result
-            total_score += check_result["score"] * 0.5  # Weighted lower
+            _total_score += check_result["score"] * 0.5  # Weighted lower
             max_score += 0.5
 
-        overall_score = total_score / max_score if max_score > 0 else 0
+        overall_score = _total_score / max_score if max_score > 0 else 0
         critical_checks_passed = all(
             check_results[check]["passed"] for check in config["critical_checks"]
         )
@@ -516,7 +516,7 @@ class DeploymentRollbackTester:
         }
 
     async def _test_rollback_scenario(
-        self, scenario: str, config: dict[str, Any]
+        self, scenario: str, _config: dict[str, Any]
     ) -> dict[str, Any]:
         """Test individual rollback scenario."""
         # Simulate rollback time based on scenario complexity
@@ -581,7 +581,7 @@ class DeploymentTestReportGenerator:
         """Generate deployment test report."""
         report_content = {
             "report_metadata": {
-                "generated_at": datetime.utcnow().isoformat(),
+                "generated_at": datetime.now(tz=UTC).isoformat(),
                 "environment": config["environment"],
                 "report_version": "1.0",
             },
@@ -593,7 +593,7 @@ class DeploymentTestReportGenerator:
                 "infrastructure": "cloud",
             },
             "test_execution_summary": {
-                "total_tests": 77,
+                "_total_tests": 77,
                 "tests_passed": 75,
                 "tests_failed": 2,
                 "success_rate": 0.97,
@@ -613,7 +613,7 @@ class DeploymentTestReportGenerator:
 
         # Write report to file
         report_file = self.work_dir / f"deployment_report_{config['environment']}.json"
-        with open(report_file, "w") as f:
+        with report_file.open("w") as f:
             json.dump(report_content, f, indent=2)
 
         return {
@@ -659,7 +659,7 @@ class DeploymentMetricsCollector:
 
         return {
             "metrics_collected": True,
-            "total_metrics": len(base_metrics),
+            "_total_metrics": len(base_metrics),
             "metrics": base_metrics,
-            "collection_timestamp": datetime.utcnow().isoformat(),
+            "collection_timestamp": datetime.now(tz=UTC).isoformat(),
         }

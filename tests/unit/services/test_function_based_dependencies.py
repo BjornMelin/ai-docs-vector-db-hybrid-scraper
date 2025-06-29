@@ -5,14 +5,19 @@ provides equivalent functionality to the original Manager classes
 while achieving the target 60% complexity reduction.
 """
 
+from inspect import signature
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import FastAPI
 
 from src.services.dependencies import (
+    CacheManagerDep,
+    ConfigDep,
     CrawlRequest,
     CrawlResponse,
-    EmbeddingRequest,  # Pydantic Models
+    EmbeddingManagerDep,
+    EmbeddingRequest,
     EmbeddingResponse,
     TaskRequest,
     cache_delete,
@@ -20,9 +25,9 @@ from src.services.dependencies import (
     cache_set,
     crawl_site,
     enqueue_task,
-    generate_embeddings,  # Service Functions
+    generate_embeddings,
     get_cache_manager,
-    get_client_manager,  # Core Dependencies
+    get_client_manager,
     get_embedding_manager,
     get_service_health,
     get_service_metrics,
@@ -178,8 +183,8 @@ class TestEmbeddingFunctions:
 
         mock_embedding_manager.generate_embeddings.assert_called_once()
         call_args = mock_embedding_manager.generate_embeddings.call_args
-        assert call_args.kwargs["texts"] == request.texts
-        assert call_args.kwargs["auto_select"] == request.auto_select
+        assert call_args._kwargs["texts"] == request.texts
+        assert call_args._kwargs["auto_select"] == request.auto_select
 
     @pytest.mark.asyncio
     async def test_generate_embeddings_error(self, mock_embedding_manager):
@@ -306,7 +311,7 @@ class TestCrawlFunctions:
                 {"url": "https://example.com", "content": "Page 1"},
                 {"url": "https://example.com/page2", "content": "Page 2"},
             ],
-            "total_pages": 2,
+            "_total_pages": 2,
             "provider": "crawl4ai",
             "error": None,
         }
@@ -317,7 +322,7 @@ class TestCrawlFunctions:
 
         assert result["success"] is True
         assert len(result["pages"]) == 2
-        assert result["total_pages"] == 2
+        assert result["_total_pages"] == 2
 
         mock_crawl_manager.crawl_site.assert_called_once_with(
             url=request.url,
@@ -335,7 +340,7 @@ class TestTaskQueueFunctions:
         request = TaskRequest(
             task_name="test_task",
             args=["arg1", "arg2"],
-            kwargs={"key": "value"},
+            _kwargs={"key": "value"},
             delay=60,
         )
 
@@ -350,7 +355,7 @@ class TestTaskQueueFunctions:
             *request.args,
             _delay=request.delay,
             _queue_name=request.queue_name,
-            **request.kwargs,
+            **request._kwargs,
         )
 
     @pytest.mark.asyncio
@@ -485,18 +490,18 @@ class TestPydanticModels:
         request = TaskRequest(
             task_name="process_data",
             args=[1, 2, 3],
-            kwargs={"param": "value"},
+            _kwargs={"param": "value"},
             delay=120,
         )
         assert request.task_name == "process_data"
         assert request.args == [1, 2, 3]
-        assert request.kwargs == {"param": "value"}
+        assert request._kwargs == {"param": "value"}
         assert request.delay == 120
 
         # Test defaults
         minimal_request = TaskRequest(task_name="simple_task")
         assert minimal_request.args == []
-        assert minimal_request.kwargs == {}
+        assert minimal_request._kwargs == {}
         assert minimal_request.delay is None
 
 
@@ -506,7 +511,6 @@ class TestComplexityReduction:
     def test_function_signature_simplicity(self):
         """Test that function signatures are simpler than class methods."""
         # Function-based approach has simple, focused signatures
-        from inspect import signature
 
         # Check generate_embeddings function signature
         sig = signature(generate_embeddings)
@@ -521,7 +525,6 @@ class TestComplexityReduction:
     def test_dependency_injection_clarity(self):
         """Test that dependency injection is explicit and clear."""
         # All dependencies are explicitly typed with Annotated
-        from src.services.dependencies import CacheManagerDep, EmbeddingManagerDep
 
         # Dependencies use clear naming convention
         assert str(EmbeddingManagerDep).startswith("typing.Annotated")
@@ -530,11 +533,6 @@ class TestComplexityReduction:
     def test_error_handling_consistency(self):
         """Test that error handling is consistent across functions."""
         # All service functions use consistent error types
-        from src.services.errors import (
-            CrawlServiceError,
-            EmbeddingServiceError,
-            TaskQueueServiceError,
-        )
 
         # Error classes follow consistent naming pattern
         error_classes = [
@@ -556,11 +554,8 @@ class TestIntegrationWithFastAPI:
     @pytest.mark.asyncio
     async def test_fastapi_dependency_resolution(self):
         """Test that FastAPI can resolve dependencies correctly."""
-        from fastapi import FastAPI
 
         app = FastAPI()
-
-        from src.services.dependencies import ConfigDep
 
         @app.get("/test-config")
         async def test_config_endpoint(config: ConfigDep):
@@ -572,7 +567,6 @@ class TestIntegrationWithFastAPI:
 
     def test_pydantic_integration(self):
         """Test that Pydantic models integrate well with FastAPI."""
-        from fastapi import FastAPI
 
         app = FastAPI()
 
@@ -585,7 +579,6 @@ class TestIntegrationWithFastAPI:
 
     def test_response_model_integration(self):
         """Test that response models work with FastAPI."""
-        from fastapi import FastAPI
 
         app = FastAPI()
 

@@ -22,7 +22,7 @@ import tracemalloc
 from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -35,7 +35,7 @@ class PerformanceMetrics:
     memory_current_mb: float = 0.0
     cpu_percent: float = 0.0
     operation_name: str = ""
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(tz=UTC).isoformat())
     additional_metrics: dict[str, Any] = field(default_factory=dict)
 
 
@@ -194,10 +194,10 @@ def measure_execution_time(func: Callable | None = None, *, name: str | None = N
         if asyncio.iscoroutinefunction(f):
 
             @functools.wraps(f)
-            async def async_wrapper(*args, **kwargs):
+            async def async_wrapper(*args, **_kwargs):
                 start_time = time.perf_counter()
                 try:
-                    result = await f(*args, **kwargs)
+                    result = await f(*args, **_kwargs)
                     return result
                 finally:
                     end_time = time.perf_counter()
@@ -210,40 +210,38 @@ def measure_execution_time(func: Callable | None = None, *, name: str | None = N
                         {
                             "operation": operation_name,
                             "execution_time": execution_time,
-                            "timestamp": datetime.utcnow().isoformat(),
+                            "timestamp": datetime.now(tz=UTC).isoformat(),
                         }
                     )
 
             return async_wrapper
-        else:
 
-            @functools.wraps(f)
-            def sync_wrapper(*args, **kwargs):
-                start_time = time.perf_counter()
-                try:
-                    result = f(*args, **kwargs)
-                    return result
-                finally:
-                    end_time = time.perf_counter()
-                    execution_time = end_time - start_time
+        @functools.wraps(f)
+        def sync_wrapper(*args, **_kwargs):
+            start_time = time.perf_counter()
+            try:
+                result = f(*args, **_kwargs)
+                return result
+            finally:
+                end_time = time.perf_counter()
+                execution_time = end_time - start_time
 
-                    # Store measurement in function attribute
-                    if not hasattr(f, "_performance_measurements"):
-                        f._performance_measurements = []
-                    f._performance_measurements.append(
-                        {
-                            "operation": operation_name,
-                            "execution_time": execution_time,
-                            "timestamp": datetime.utcnow().isoformat(),
-                        }
-                    )
+                # Store measurement in function attribute
+                if not hasattr(f, "_performance_measurements"):
+                    f._performance_measurements = []
+                f._performance_measurements.append(
+                    {
+                        "operation": operation_name,
+                        "execution_time": execution_time,
+                        "timestamp": datetime.now(tz=UTC).isoformat(),
+                    }
+                )
 
-            return sync_wrapper
+        return sync_wrapper
 
     if func is None:
         return decorator
-    else:
-        return decorator(func)
+    return decorator(func)
 
 
 def memory_profiler(func: Callable | None = None, *, detailed: bool = False):
@@ -261,12 +259,12 @@ def memory_profiler(func: Callable | None = None, *, detailed: bool = False):
         if asyncio.iscoroutinefunction(f):
 
             @functools.wraps(f)
-            async def async_wrapper(*args, **kwargs):
+            async def async_wrapper(*args, **_kwargs):
                 tracemalloc.start()
                 gc.collect()
 
                 try:
-                    result = await f(*args, **kwargs)
+                    result = await f(*args, **_kwargs)
                     return result
                 finally:
                     current, peak = tracemalloc.get_traced_memory()
@@ -275,7 +273,7 @@ def memory_profiler(func: Callable | None = None, *, detailed: bool = False):
                         "operation": f.__name__,
                         "memory_current_mb": current / 1024 / 1024,
                         "memory_peak_mb": peak / 1024 / 1024,
-                        "timestamp": datetime.utcnow().isoformat(),
+                        "timestamp": datetime.now(tz=UTC).isoformat(),
                     }
 
                     if detailed:
@@ -294,47 +292,45 @@ def memory_profiler(func: Callable | None = None, *, detailed: bool = False):
                     f._memory_measurements.append(memory_info)
 
             return async_wrapper
-        else:
 
-            @functools.wraps(f)
-            def sync_wrapper(*args, **kwargs):
-                tracemalloc.start()
-                gc.collect()
+        @functools.wraps(f)
+        def sync_wrapper(*args, **_kwargs):
+            tracemalloc.start()
+            gc.collect()
 
-                try:
-                    result = f(*args, **kwargs)
-                    return result
-                finally:
-                    current, peak = tracemalloc.get_traced_memory()
+            try:
+                result = f(*args, **_kwargs)
+                return result
+            finally:
+                current, peak = tracemalloc.get_traced_memory()
 
-                    memory_info = {
-                        "operation": f.__name__,
-                        "memory_current_mb": current / 1024 / 1024,
-                        "memory_peak_mb": peak / 1024 / 1024,
-                        "timestamp": datetime.utcnow().isoformat(),
-                    }
+                memory_info = {
+                    "operation": f.__name__,
+                    "memory_current_mb": current / 1024 / 1024,
+                    "memory_peak_mb": peak / 1024 / 1024,
+                    "timestamp": datetime.now(tz=UTC).isoformat(),
+                }
 
-                    if detailed:
-                        snapshot = tracemalloc.take_snapshot()
-                        top_stats = snapshot.statistics("lineno")[:10]
-                        memory_info["top_allocations"] = [
-                            f"{stat.traceback.format()}: {stat.size_diff / 1024:.1f} KB"
-                            for stat in top_stats
-                        ]
+                if detailed:
+                    snapshot = tracemalloc.take_snapshot()
+                    top_stats = snapshot.statistics("lineno")[:10]
+                    memory_info["top_allocations"] = [
+                        f"{stat.traceback.format()}: {stat.size_diff / 1024:.1f} KB"
+                        for stat in top_stats
+                    ]
 
-                    tracemalloc.stop()
+                tracemalloc.stop()
 
-                    # Store measurement in function attribute
-                    if not hasattr(f, "_memory_measurements"):
-                        f._memory_measurements = []
-                    f._memory_measurements.append(memory_info)
+                # Store measurement in function attribute
+                if not hasattr(f, "_memory_measurements"):
+                    f._memory_measurements = []
+                f._memory_measurements.append(memory_info)
 
-            return sync_wrapper
+        return sync_wrapper
 
     if func is None:
         return decorator
-    else:
-        return decorator(func)
+    return decorator(func)
 
 
 @dataclass
@@ -343,7 +339,7 @@ class BenchmarkResult:
 
     name: str
     iterations: int
-    total_time: float
+    _total_time: float
     avg_time: float
     min_time: float
     max_time: float
@@ -370,7 +366,7 @@ class BenchmarkSuite:
         name: str | None = None,
         iterations: int = 100,
         *args,
-        **kwargs,
+        **_kwargs,
     ) -> BenchmarkResult:
         """Benchmark a function's performance.
 
@@ -379,7 +375,7 @@ class BenchmarkSuite:
             name: Name for the benchmark
             iterations: Number of iterations to run
             *args: Arguments to pass to function
-            **kwargs: Keyword arguments to pass to function
+            **_kwargs: Keyword arguments to pass to function
 
         Returns:
             Benchmark results
@@ -389,9 +385,9 @@ class BenchmarkSuite:
         # Warmup runs
         for _ in range(self.warmup_iterations):
             if asyncio.iscoroutinefunction(func):
-                asyncio.run(func(*args, **kwargs))
+                asyncio.run(func(*args, **_kwargs))
             else:
-                func(*args, **kwargs)
+                func(*args, **_kwargs)
 
         # Measured runs
         execution_times = []
@@ -401,9 +397,9 @@ class BenchmarkSuite:
             start_time = time.perf_counter()
 
             if asyncio.iscoroutinefunction(func):
-                asyncio.run(func(*args, **kwargs))
+                asyncio.run(func(*args, **_kwargs))
             else:
-                func(*args, **kwargs)
+                func(*args, **_kwargs)
 
             end_time = time.perf_counter()
             execution_times.append(end_time - start_time)
@@ -412,8 +408,8 @@ class BenchmarkSuite:
         tracemalloc.stop()
 
         # Calculate statistics
-        total_time = sum(execution_times)
-        avg_time = total_time / iterations
+        _total_time = sum(execution_times)
+        avg_time = _total_time / iterations
         min_time = min(execution_times)
         max_time = max(execution_times)
         std_dev = statistics.stdev(execution_times) if len(execution_times) > 1 else 0.0
@@ -422,7 +418,7 @@ class BenchmarkSuite:
         result = BenchmarkResult(
             name=benchmark_name,
             iterations=iterations,
-            total_time=total_time,
+            _total_time=_total_time,
             avg_time=avg_time,
             min_time=min_time,
             max_time=max_time,
@@ -440,7 +436,7 @@ class BenchmarkSuite:
         names: list[str] | None = None,
         iterations: int = 100,
         *args,
-        **kwargs,
+        **_kwargs,
     ) -> dict[str, Any]:
         """Compare performance of multiple functions.
 
@@ -449,7 +445,7 @@ class BenchmarkSuite:
             names: Optional names for the functions
             iterations: Number of iterations per function
             *args: Arguments to pass to functions
-            **kwargs: Keyword arguments to pass to functions
+            **_kwargs: Keyword arguments to pass to functions
 
         Returns:
             Comparison results
@@ -459,7 +455,7 @@ class BenchmarkSuite:
 
         results = []
         for func, name in zip(functions, names, strict=False):
-            result = self.benchmark_function(func, name, iterations, *args, **kwargs)
+            result = self.benchmark_function(func, name, iterations, *args, **_kwargs)
             results.append(result)
 
         # Find fastest and slowest
@@ -489,7 +485,7 @@ class BenchmarkSuite:
             return {"message": "No benchmarks run yet"}
 
         return {
-            "total_benchmarks": len(self.results),
+            "_total_benchmarks": len(self.results),
             "benchmarks": [
                 {
                     "name": r.name,
@@ -513,13 +509,13 @@ class BenchmarkSuite:
 
 
 # Utility functions for quick performance checks
-def time_function(func: Callable, *args, **kwargs) -> float:
+def time_function(func: Callable, *args, **_kwargs) -> float:
     """Time a single function execution.
 
     Args:
         func: Function to time
         *args: Arguments to pass to function
-        **kwargs: Keyword arguments to pass to function
+        **_kwargs: Keyword arguments to pass to function
 
     Returns:
         Execution time in seconds
@@ -527,20 +523,20 @@ def time_function(func: Callable, *args, **kwargs) -> float:
     start_time = time.perf_counter()
 
     if asyncio.iscoroutinefunction(func):
-        asyncio.run(func(*args, **kwargs))
+        asyncio.run(func(*args, **_kwargs))
     else:
-        func(*args, **kwargs)
+        func(*args, **_kwargs)
 
     return time.perf_counter() - start_time
 
 
-def profile_memory_usage(func: Callable, *args, **kwargs) -> dict[str, float]:
+def profile_memory_usage(func: Callable, *args, **_kwargs) -> dict[str, float]:
     """Profile memory usage of a function.
 
     Args:
         func: Function to profile
         *args: Arguments to pass to function
-        **kwargs: Keyword arguments to pass to function
+        **_kwargs: Keyword arguments to pass to function
 
     Returns:
         Dictionary with memory usage statistics
@@ -549,9 +545,9 @@ def profile_memory_usage(func: Callable, *args, **kwargs) -> dict[str, float]:
     gc.collect()
 
     if asyncio.iscoroutinefunction(func):
-        asyncio.run(func(*args, **kwargs))
+        asyncio.run(func(*args, **_kwargs))
     else:
-        func(*args, **kwargs)
+        func(*args, **_kwargs)
 
     current, peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()

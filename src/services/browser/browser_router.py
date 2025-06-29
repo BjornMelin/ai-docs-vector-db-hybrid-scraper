@@ -16,13 +16,14 @@ from typing import Any
 from urllib.parse import urlparse
 
 from src.config import Config
+from src.services.errors import CrawlServiceError
 
-from ..errors import CrawlServiceError
 from .automation_router import AutomationRouter
 from .tier_config import (
     PerformanceHistoryEntry,
     TierConfiguration,
     TierPerformanceAnalysis,
+    create_default_routing_config,
 )
 from .tier_rate_limiter import RateLimitContext, TierRateLimiter
 
@@ -87,7 +88,6 @@ class EnhancedAutomationRouter(AutomationRouter):
         super().__init__(config)
 
         # Load enhanced configuration
-        from .tier_config import create_default_routing_config
 
         self.routing_config = create_default_routing_config()
 
@@ -116,11 +116,12 @@ class EnhancedAutomationRouter(AutomationRouter):
         interaction_required: bool = False,
         custom_actions: list[dict] | None = None,
         force_tool: str | None = None,
-        timeout: int = 30000,
+        timeout: int = 30000,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Enhanced scraping with performance tracking and intelligent routing."""
         if not self._initialized:
-            raise CrawlServiceError("Router not initialized")
+            msg = "Router not initialized"
+            raise CrawlServiceError(msg)
 
         domain = urlparse(url).netloc.lower()
         start_time = time.time()
@@ -131,19 +132,24 @@ class EnhancedAutomationRouter(AutomationRouter):
                 "crawl4ai_enhanced",
                 "firecrawl",
             ]:
-                raise CrawlServiceError(f"Forced tool '{force_tool}' not available")
+                msg = f"Forced tool '{force_tool}' not available"
+                raise CrawlServiceError(msg)
             selected_tier = force_tool
         else:
             selected_tier = await self._enhanced_select_tier(
                 url, domain, interaction_required, custom_actions
             )
 
-        logger.info(f"Enhanced router selected {selected_tier} for {url}")
+        logger.info(
+            f"Enhanced router selected {selected_tier} for {url}"
+        )  # TODO: Convert f-string to logging format
 
         # Check circuit breaker
         breaker = self.circuit_breakers.get(selected_tier)
         if breaker and not breaker.can_attempt():
-            logger.warning(f"Circuit breaker open for {selected_tier}, using fallback")
+            logger.warning(
+                f"Circuit breaker open for {selected_tier}, using fallback"
+            )  # TODO: Convert f-string to logging format
             # Get first available fallback tier
             tier_config = self.routing_config.tier_configs.get(selected_tier)
             if tier_config and tier_config.fallback_tiers:
@@ -156,13 +162,11 @@ class EnhancedAutomationRouter(AutomationRouter):
                         break
                 else:
                     # No available fallback, will fail
-                    raise CrawlServiceError(
-                        f"Circuit breaker open for {selected_tier} and no fallbacks available"
-                    )
+                    msg = f"Circuit breaker open for {selected_tier} and no fallbacks available"
+                    raise CrawlServiceError(msg)
             else:
-                raise CrawlServiceError(
-                    f"Circuit breaker open for {selected_tier} with no fallback configured"
-                )
+                msg = f"Circuit breaker open for {selected_tier} with no fallback configured"
+                raise CrawlServiceError(msg)
 
         # Execute scraping with rate limiting
         try:
@@ -209,7 +213,7 @@ class EnhancedAutomationRouter(AutomationRouter):
 
         except Exception as e:
             elapsed = time.time() - start_time
-            logger.exception(f"{selected_tier} failed for {url}: {e}")
+            logger.exception("{selected_tier} failed for {url}")
 
             # Record failure
             await self._record_performance(
@@ -377,7 +381,7 @@ class EnhancedAutomationRouter(AutomationRouter):
         domain: str,
         failed_tier: str,
         custom_actions: list[dict] | None,
-        timeout: int,
+        timeout: int,  # noqa: ASYNC109
         error_message: str,
     ) -> dict[str, Any]:
         """Intelligent fallback with performance awareness."""
@@ -405,11 +409,15 @@ class EnhancedAutomationRouter(AutomationRouter):
             # Check circuit breaker
             breaker = self.circuit_breakers.get(fallback_tier)
             if breaker and not breaker.can_attempt():
-                logger.debug(f"Skipping {fallback_tier} due to open circuit breaker")
+                logger.debug(
+                    f"Skipping {fallback_tier} due to open circuit breaker"
+                )  # TODO: Convert f-string to logging format
                 continue
 
             try:
-                logger.info(f"Intelligent fallback to {fallback_tier} for {url}")
+                logger.info(
+                    f"Intelligent fallback to {fallback_tier} for {url}"
+                )  # TODO: Convert f-string to logging format
                 start_time = time.time()
 
                 result = await self._execute_tier_scraping(
@@ -439,7 +447,7 @@ class EnhancedAutomationRouter(AutomationRouter):
 
             except Exception as e:
                 elapsed = time.time() - start_time
-                logger.exception(f"Fallback {fallback_tier} also failed: {e}")
+                logger.exception("Fallback {fallback_tier} also failed")
 
                 # Record failure
                 await self._record_performance(
@@ -460,7 +468,7 @@ class EnhancedAutomationRouter(AutomationRouter):
         # All tiers failed
         return {
             "success": False,
-            "error": f"All tiers failed for {url}. Original error: {error_message}",
+            "error": "All tiers failed for {url}. Original error",
             "content": "",
             "metadata": {},
             "url": url,
@@ -471,7 +479,7 @@ class EnhancedAutomationRouter(AutomationRouter):
 
     async def _build_intelligent_fallback_order(
         self,
-        failed_tier: str,
+        _failed_tier: str,
         tier_config: TierConfiguration,
         domain: str,
         error_message: str,
@@ -532,24 +540,24 @@ class EnhancedAutomationRouter(AutomationRouter):
         tier: str,
         url: str,
         custom_actions: list[dict] | None,
-        timeout: int,
+        timeout: int,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Execute scraping for a specific tier."""
         # Use parent class methods for actual execution
         if tier == "lightweight":
             return await self._try_lightweight(url, timeout)
-        elif tier == "crawl4ai":
+        if tier == "crawl4ai":
             return await self._try_crawl4ai(url, custom_actions, timeout)
-        elif tier == "crawl4ai_enhanced":
+        if tier == "crawl4ai_enhanced":
             return await self._try_crawl4ai_enhanced(url, custom_actions, timeout)
-        elif tier == "browser_use":
+        if tier == "browser_use":
             return await self._try_browser_use(url, custom_actions, timeout)
-        elif tier == "playwright":
+        if tier == "playwright":
             return await self._try_playwright(url, custom_actions, timeout)
-        elif tier == "firecrawl":
+        if tier == "firecrawl":
             return await self._try_firecrawl(url, timeout)
-        else:
-            raise CrawlServiceError(f"Unknown tier: {tier}")
+        msg = "Unknown tier"
+        raise CrawlServiceError(msg)
 
     async def _record_performance(
         self,

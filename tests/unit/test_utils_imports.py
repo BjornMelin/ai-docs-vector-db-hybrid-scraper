@@ -227,20 +227,21 @@ class TestResolveImports:
 
         @resolve_imports()
         def failing_function():
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
         with pytest.raises(ValueError, match="Test error"):
             failing_function()
 
-    def test_decorator_with_args_and_kwargs(self):
+    def test_decorator_with_args_and__kwargs(self):
         """Test decorator with various argument patterns."""
 
         @resolve_imports()
-        def test_function(*args, **kwargs):
-            return f"args: {args}, kwargs: {kwargs}"
+        def test_function(*args, **_kwargs):
+            return f"args: {args}, _kwargs: {_kwargs}"
 
         result = test_function(1, 2, 3, x="a", y="b")
-        assert result == "args: (1, 2, 3), kwargs: {'x': 'a', 'y': 'b'}"
+        assert result == "args: (1, 2, 3), _kwargs: {'x': 'a', 'y': 'b'}"
 
     def test_decorator_can_be_used_multiple_times(self):
         """Test that the decorator can be applied to multiple functions."""
@@ -260,8 +261,8 @@ class TestResolveImports:
         """Test that resolve_imports works with other decorators."""
 
         def other_decorator(func):
-            def wrapper(*args, **kwargs):
-                result = func(*args, **kwargs)
+            def wrapper(*args, **_kwargs):
+                result = func(*args, **_kwargs)
                 return f"decorated: {result}"
 
             return wrapper

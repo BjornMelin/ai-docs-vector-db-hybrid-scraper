@@ -6,6 +6,9 @@ class and all its health check methods.
 
 from unittest.mock import Mock, patch
 
+import redis
+from qdrant_client.http.exceptions import UnexpectedResponse
+
 from src.config import Config
 from src.config.enums import CrawlProvider, EmbeddingProvider
 from src.utils.health_checks import ServiceHealthChecker
@@ -45,8 +48,6 @@ class TestQdrantHealthCheck:
         """Test Qdrant authentication failure."""
         config = Config()
 
-        from qdrant_client.http.exceptions import UnexpectedResponse
-
         with patch("qdrant_client.QdrantClient") as mock_client_class:
             mock_client_class.side_effect = UnexpectedResponse(
                 status_code=401, reason_phrase="Unauthorized", content="", headers={}
@@ -61,8 +62,6 @@ class TestQdrantHealthCheck:
     def test_qdrant_http_error(self):
         """Test Qdrant HTTP error responses."""
         config = Config()
-
-        from qdrant_client.http.exceptions import UnexpectedResponse
 
         with patch("qdrant_client.QdrantClient") as mock_client_class:
             mock_client_class.side_effect = UnexpectedResponse(
@@ -132,8 +131,6 @@ class TestDragonflyHealthCheck:
         """Test DragonflyDB connection error."""
         config = Config()
         config.cache.enable_dragonfly_cache = True
-
-        import redis
 
         with patch("redis.from_url") as mock_redis:
             mock_redis.side_effect = redis.ConnectionError("Connection refused")
@@ -396,7 +393,7 @@ class TestAllHealthChecks:
             summary = ServiceHealthChecker.get_connection_summary(config)
 
             assert summary["overall_status"] == "healthy"
-            assert summary["total_services"] == 3
+            assert summary["_total_services"] == 3
             assert summary["connected_count"] == 3
             assert summary["failed_count"] == 0
             assert set(summary["connected_services"]) == {
@@ -423,7 +420,7 @@ class TestAllHealthChecks:
             summary = ServiceHealthChecker.get_connection_summary(config)
 
             assert summary["overall_status"] == "unhealthy"
-            assert summary["total_services"] == 3
+            assert summary["_total_services"] == 3
             assert summary["connected_count"] == 1
             assert summary["failed_count"] == 2
             assert summary["connected_services"] == ["qdrant"]
@@ -443,7 +440,7 @@ class TestAllHealthChecks:
             summary = ServiceHealthChecker.get_connection_summary(config)
 
             assert summary["overall_status"] == "unhealthy"
-            assert summary["total_services"] == 1
+            assert summary["_total_services"] == 1
             assert summary["connected_count"] == 0
             assert summary["failed_count"] == 1
             assert summary["connected_services"] == []

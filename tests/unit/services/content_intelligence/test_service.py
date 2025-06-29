@@ -19,8 +19,6 @@ class TestContentIntelligenceService:
     def test_service_module_structure(self):
         """Test that service module imports correctly."""
         # Just verify we can import the class without errors
-        from src.services.content_intelligence.service import (
-            ContentIntelligenceService as CIService,
-        )
+        CIService = ContentIntelligenceService
 
         assert CIService is ContentIntelligenceService

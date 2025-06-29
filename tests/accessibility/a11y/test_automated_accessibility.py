@@ -887,7 +887,7 @@ class TestAutomatedAccessibilityTools:
                         [r for r in pa11y_result if r["type"] == "warning"]
                     ),
                     "notices": len([r for r in pa11y_result if r["type"] == "notice"]),
-                    "total_issues": len(pa11y_result),
+                    "_total_issues": len(pa11y_result),
                 },
                 "lighthouse": {
                     "version": lighthouse_result["lighthouseVersion"],
@@ -980,11 +980,11 @@ class TestAutomatedAccessibilityTools:
         )
 
         # Calculate score (inverse of violations, normalized)
-        total_tests = len(violations) + len(passes)
-        if total_tests == 0:
+        _total_tests = len(violations) + len(passes)
+        if _total_tests == 0:
             return 1.0
 
-        return max(0.0, 1.0 - (violation_score / total_tests))
+        return max(0.0, 1.0 - (violation_score / _total_tests))
 
     def _consolidate_issues(
         self,
@@ -993,40 +993,38 @@ class TestAutomatedAccessibilityTools:
         lighthouse_result: dict[str, Any],
     ) -> list[dict[str, Any]]:
         """Consolidate issues from multiple testing tools."""
-        consolidated = []
-
         # Process axe violations
-        for violation in axe_result["violations"]:
-            consolidated.append(
-                {
-                    "tool": "axe-core",
-                    "id": violation["id"],
-                    "impact": violation["impact"],
-                    "description": violation["description"],
-                    "help_url": violation.get("helpUrl"),
-                    "wcag_tags": [
-                        tag
-                        for tag in violation.get("tags", [])
-                        if tag.startswith("wcag")
-                    ],
-                    "affected_elements": len(violation.get("nodes", [])),
-                }
-            )
+        axe_violations = [
+            {
+                "tool": "axe-core",
+                "id": violation["id"],
+                "impact": violation["impact"],
+                "description": violation["description"],
+                "help_url": violation.get("helpUrl"),
+                "wcag_tags": [
+                    tag for tag in violation.get("tags", []) if tag.startswith("wcag")
+                ],
+                "affected_elements": len(violation.get("nodes", [])),
+            }
+            for violation in axe_result["violations"]
+        ]
 
         # Process pa11y errors
-        for error in pa11y_result:
-            if error["type"] == "error":
-                consolidated.append(
-                    {
-                        "tool": "pa11y",
-                        "id": error["code"],
-                        "impact": "error",
-                        "description": error["message"],
-                        "help_url": None,
-                        "wcag_tags": [error["code"]] if "WCAG" in error["code"] else [],
-                        "affected_elements": 1,
-                    }
-                )
+        pa11y_violations = [
+            {
+                "tool": "pa11y",
+                "id": error["code"],
+                "impact": "error",
+                "description": error["message"],
+                "help_url": None,
+                "wcag_tags": [error["code"]] if "WCAG" in error["code"] else [],
+                "affected_elements": 1,
+            }
+            for error in pa11y_result
+            if error["type"] == "error"
+        ]
+
+        consolidated = axe_violations + pa11y_violations
 
         # Process Lighthouse failing audits
         for audit_id, audit in lighthouse_result["audits"].items():
@@ -1063,51 +1061,51 @@ class TestAutomatedAccessibilityTools:
             e for e in pa11y_result if e["type"] == "error" and level in e["code"]
         ]
 
-        total_issues = len(level_violations) + len(level_pa11y_errors)
+        _total_issues = len(level_violations) + len(level_pa11y_errors)
 
         return {
-            "compliant": total_issues == 0,
-            "violations": total_issues,
+            "compliant": _total_issues == 0,
+            "violations": _total_issues,
             "level": level,
-            "percentage": 100.0 if total_issues == 0 else 0.0,
+            "percentage": 100.0 if _total_issues == 0 else 0.0,
         }
 
     def _generate_priority_fixes(
         self,
         axe_result: dict[str, Any],
         pa11y_result: list[dict[str, Any]],
-        lighthouse_result: dict[str, Any],
+        _lighthouse_result: dict[str, Any],
     ) -> list[dict[str, Any]]:
         """Generate prioritized list of accessibility fixes."""
-        fixes = []
-
         # Critical axe violations
         critical_violations = [
             v for v in axe_result["violations"] if v["impact"] == "critical"
         ]
-        for violation in critical_violations:
-            fixes.append(
-                {
-                    "priority": "critical",
-                    "issue": violation["description"],
-                    "affected_elements": len(violation.get("nodes", [])),
-                    "tool": "axe-core",
-                    "help_url": violation.get("helpUrl"),
-                }
-            )
+        critical_fixes = [
+            {
+                "priority": "critical",
+                "issue": violation["description"],
+                "affected_elements": len(violation.get("nodes", [])),
+                "tool": "axe-core",
+                "help_url": violation.get("helpUrl"),
+            }
+            for violation in critical_violations
+        ]
 
         # Pa11y errors
         pa11y_errors = [e for e in pa11y_result if e["type"] == "error"]
-        for error in pa11y_errors[:3]:  # Top 3 errors
-            fixes.append(
-                {
-                    "priority": "high",
-                    "issue": error["message"],
-                    "affected_elements": 1,
-                    "tool": "pa11y",
-                    "help_url": None,
-                }
-            )
+        pa11y_fixes = [
+            {
+                "priority": "high",
+                "issue": error["message"],
+                "affected_elements": 1,
+                "tool": "pa11y",
+                "help_url": None,
+            }
+            for error in pa11y_errors[:3]  # Top 3 errors
+        ]
+
+        fixes = critical_fixes + pa11y_fixes
 
         # Sort by priority and impact
         priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
@@ -1236,8 +1234,8 @@ class TestAccessibilityTestingWorkflow:
         # Mock accessibility test results for documentation
         test_results = {
             "summary": {
-                "total_pages_tested": 12,
-                "total_issues_found": 23,
+                "_total_pages_tested": 12,
+                "_total_issues_found": 23,
                 "critical_issues": 2,
                 "serious_issues": 8,
                 "moderate_issues": 10,
@@ -1268,8 +1266,8 @@ class TestAccessibilityTestingWorkflow:
         documentation = {
             "title": "Accessibility Testing Report",
             "executive_summary": f"""
-                Tested {test_results["summary"]["total_pages_tested"]} pages and found
-                {test_results["summary"]["total_issues_found"]} accessibility issues.
+                Tested {test_results["summary"]["_total_pages_tested"]} pages and found
+                {test_results["summary"]["_total_issues_found"]} accessibility issues.
                 Overall accessibility score: {test_results["summary"]["overall_score"]:.1%}.
 
                 Critical issues requiring immediate attention: {test_results["summary"]["critical_issues"]}
@@ -1305,7 +1303,7 @@ class TestAccessibilityTestingWorkflow:
 
         # Verify content quality
         assert (
-            str(test_results["summary"]["total_pages_tested"])
+            str(test_results["summary"]["_total_pages_tested"])
             in documentation["executive_summary"]
         )
         assert len(documentation["key_findings"]) >= 3

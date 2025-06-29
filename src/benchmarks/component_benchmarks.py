@@ -11,9 +11,9 @@ import time
 
 from pydantic import BaseModel, Field
 
-from ..config import Config
-from ..models.vector_search import AdvancedHybridSearchRequest
-from ..services.vector_db.hybrid_search import AdvancedHybridSearchService
+from src.config import Config
+from src.models.vector_search import HybridSearchRequest
+from src.services.vector_db.hybrid_search import AdvancedHybridSearchService
 
 
 logger = logging.getLogger(__name__)
@@ -54,13 +54,14 @@ class ComponentBenchmarks:
 
         Args:
             config: Unified configuration
+
         """
         self.config = config
 
     async def run_all_component_benchmarks(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        test_queries: list[HybridSearchRequest],
     ) -> dict[str, ComponentBenchmarkResult]:
         """Run benchmarks for all components.
 
@@ -70,6 +71,7 @@ class ComponentBenchmarks:
 
         Returns:
             Dictionary mapping component names to benchmark results
+
         """
         results = {}
 
@@ -108,7 +110,7 @@ class ComponentBenchmarks:
         return results
 
     async def benchmark_query_classifier(
-        self, query_classifier, test_queries: list[AdvancedHybridSearchRequest]
+        self, query_classifier, test_queries: list[HybridSearchRequest]
     ) -> ComponentBenchmarkResult:
         """Benchmark query classifier performance."""
         latencies = []
@@ -127,8 +129,8 @@ class ComponentBenchmarks:
                 latencies.append(latency_ms)
                 successes += 1
 
-            except Exception as e:
-                logger.debug(f"Query classification failed: {e}")
+            except (ValueError, RuntimeError, OSError) as e:
+                logger.debug("Query classification failed: %s", e)
                 failures += 1
 
         end_time = time.time()
@@ -153,7 +155,7 @@ class ComponentBenchmarks:
         self,
         model_selector,
         query_classifier,
-        test_queries: list[AdvancedHybridSearchRequest],
+        test_queries: list[HybridSearchRequest],
     ) -> ComponentBenchmarkResult:
         """Benchmark model selector performance."""
         latencies = []
@@ -175,8 +177,8 @@ class ComponentBenchmarks:
                 latencies.append(latency_ms)
                 successes += 1
 
-            except Exception as e:
-                logger.debug(f"Model selection failed: {e}")
+            except (ValueError, RuntimeError, OSError) as e:
+                logger.debug("Model selection failed: %s", e)
                 failures += 1
 
         end_time = time.time()
@@ -201,7 +203,7 @@ class ComponentBenchmarks:
         self,
         fusion_tuner,
         query_classifier,
-        test_queries: list[AdvancedHybridSearchRequest],
+        test_queries: list[HybridSearchRequest],
     ) -> ComponentBenchmarkResult:
         """Benchmark adaptive fusion tuner performance."""
         latencies = []
@@ -225,8 +227,8 @@ class ComponentBenchmarks:
                 latencies.append(latency_ms)
                 successes += 1
 
-            except Exception as e:
-                logger.debug(f"Adaptive fusion failed: {e}")
+            except (ValueError, RuntimeError, OSError) as e:
+                logger.debug("Adaptive fusion failed: %s", e)
                 failures += 1
 
         end_time = time.time()
@@ -248,7 +250,7 @@ class ComponentBenchmarks:
         )
 
     async def benchmark_splade_provider(
-        self, splade_provider, test_queries: list[AdvancedHybridSearchRequest]
+        self, splade_provider, test_queries: list[HybridSearchRequest]
     ) -> ComponentBenchmarkResult:
         """Benchmark SPLADE provider performance."""
         latencies = []
@@ -267,8 +269,8 @@ class ComponentBenchmarks:
                 latencies.append(latency_ms)
                 successes += 1
 
-            except Exception as e:
-                logger.debug(f"SPLADE generation failed: {e}")
+            except (ValueError, RuntimeError, OSError) as e:
+                logger.debug("SPLADE generation failed: %s", e)
                 failures += 1
 
         end_time = time.time()
@@ -292,7 +294,7 @@ class ComponentBenchmarks:
     async def benchmark_end_to_end_search(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        test_queries: list[HybridSearchRequest],
     ) -> ComponentBenchmarkResult:
         """Benchmark end-to-end search performance."""
         latencies = []
@@ -304,15 +306,15 @@ class ComponentBenchmarks:
         for query in test_queries[:10]:  # Use small subset for full end-to-end
             try:
                 start = time.perf_counter()
-                await search_service.advanced_hybrid_search(query)
+                await search_service.hybrid_search(query)
                 end = time.perf_counter()
 
                 latency_ms = (end - start) * 1000
                 latencies.append(latency_ms)
                 successes += 1
 
-            except Exception as e:
-                logger.debug(f"End-to-end search failed: {e}")
+            except (ValueError, RuntimeError, OSError) as e:
+                logger.debug("End-to-end search failed: %s", e)
                 failures += 1
 
         end_time = time.time()
@@ -346,7 +348,7 @@ class ComponentBenchmarks:
     async def benchmark_cache_performance(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        test_queries: list[HybridSearchRequest],
     ) -> dict[str, float]:
         """Benchmark cache performance specifically."""
         cache_metrics = {}
@@ -363,8 +365,11 @@ class ComponentBenchmarks:
                 await search_service.splade_provider.generate_sparse_vector(query.query)
                 end = time.perf_counter()
                 cold_latencies.append((end - start) * 1000)
-            except Exception:
-                pass
+            except (ValueError, RuntimeError, OSError) as e:
+                logger.warning(
+                    "SPLADE cold run failed for query '%s': %s", query.query, e
+                )
+                continue
 
         # Second run (warm cache) - same queries
         warm_latencies = []
@@ -374,8 +379,11 @@ class ComponentBenchmarks:
                 await search_service.splade_provider.generate_sparse_vector(query.query)
                 end = time.perf_counter()
                 warm_latencies.append((end - start) * 1000)
-            except Exception:
-                pass
+            except (ValueError, RuntimeError, OSError) as e:
+                logger.warning(
+                    "SPLADE warm run failed for query '%s': %s", query.query, e
+                )
+                continue
 
         if cold_latencies and warm_latencies:
             cache_metrics["cold_avg_latency_ms"] = statistics.mean(cold_latencies)
@@ -394,7 +402,7 @@ class ComponentBenchmarks:
     async def benchmark_concurrent_component_access(
         self,
         search_service: AdvancedHybridSearchService,
-        test_queries: list[AdvancedHybridSearchRequest],
+        test_queries: list[HybridSearchRequest],
     ) -> dict[str, ComponentBenchmarkResult]:
         """Benchmark components under concurrent access."""
         concurrent_results = {}

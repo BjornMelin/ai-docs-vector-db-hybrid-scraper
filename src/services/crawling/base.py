@@ -19,8 +19,8 @@ class CrawlProvider(ABC):
 
         Returns:
             Scrape result with content and metadata
+
         """
-        pass
 
     @abstractmethod
     async def crawl_site(
@@ -38,15 +38,13 @@ class CrawlProvider(ABC):
 
         Returns:
             Crawl result with pages and metadata
+
         """
-        pass
 
     @abstractmethod
     async def initialize(self) -> None:
         """Initialize the provider."""
-        pass
 
     @abstractmethod
     async def cleanup(self) -> None:
         """Cleanup provider resources."""
-        pass

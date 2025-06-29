@@ -5,9 +5,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.infrastructure.client_manager import ClientManager
-from src.services.errors import EmbeddingServiceError
+from src.services.errors import APIError, EmbeddingServiceError
 from src.services.hyde.config import HyDEConfig, HyDEPromptConfig
 from src.services.hyde.generator import GenerationResult, HypotheticalDocumentGenerator
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
 
 
 class TestGenerationResult:
@@ -141,9 +145,9 @@ class TestHypotheticalDocumentGenerator:
 
         # Check metrics tracking initialization
         assert generator.generation_count == 0
-        assert generator.total_generation_time == 0.0
-        assert generator.total_tokens_used == 0
-        assert generator.total_cost == 0.0
+        assert generator._total_generation_time == 0.0
+        assert generator._total_tokens_used == 0
+        assert generator._total_cost == 0.0
 
     def test_init_without_client_manager(self, hyde_config, prompt_config):
         """Test generator initialization without client manager."""
@@ -337,7 +341,7 @@ class TestHypotheticalDocumentGenerator:
             assert "test query" in variation
 
     async def test_generate_single_document_success(
-        self, generator, mock_client_manager
+        self, generator, _mock_client_manager
     ):
         """Test successful single document generation."""
         generator._initialized = True
@@ -358,7 +362,7 @@ class TestHypotheticalDocumentGenerator:
         mock_llm_client.chat.completions.create.assert_called_once()
 
     async def test_generate_single_document_timeout(
-        self, generator, mock_client_manager
+        self, generator, _mock_client_manager
     ):
         """Test document generation timeout."""
         generator._initialized = True
@@ -372,7 +376,9 @@ class TestHypotheticalDocumentGenerator:
 
         assert result == ""  # Returns empty string on timeout
 
-    async def test_generate_single_document_error(self, generator, mock_client_manager):
+    async def test_generate_single_document_error(
+        self, generator, _mock_client_manager
+    ):
         """Test document generation error handling."""
         generator._initialized = True
 
@@ -387,7 +393,7 @@ class TestHypotheticalDocumentGenerator:
 
         assert result == ""  # Returns empty string on error
 
-    async def test_generate_parallel(self, generator, mock_client_manager):
+    async def test_generate_parallel(self, generator, _mock_client_manager):
         """Test parallel document generation."""
         generator._initialized = True
         generator.config.max_concurrent_generations = 2
@@ -406,18 +412,18 @@ class TestHypotheticalDocumentGenerator:
         assert len(documents) == 3
         assert all("Document for:" in doc for doc in documents)
 
-    async def test_generate_parallel_with_errors(self, generator, mock_client_manager):
+    async def test_generate_parallel_with_errors(self, generator, _mock_client_manager):
         """Test parallel generation with some errors."""
         generator._initialized = True
         generator.config.min_generation_length = 5
 
         async def mock_generate_single(prompt):
             if "error" in prompt:
-                raise Exception("Generation error")
-            elif "short" in prompt:
+                msg = "Generation error"
+                raise TestError(msg)
+            if "short" in prompt:
                 return "abc"  # Too short
-            else:
-                return "Valid document content here"
+            return "Valid document content here"
 
         generator._generate_single_document = AsyncMock(
             side_effect=mock_generate_single
@@ -435,16 +441,16 @@ class TestHypotheticalDocumentGenerator:
         assert len(documents) == 2
         assert all("Valid document content" in doc for doc in documents)
 
-    async def test_generate_sequential(self, generator, mock_client_manager):
+    async def test_generate_sequential(self, generator, _mock_client_manager):
         """Test sequential document generation."""
         generator._initialized = True
         generator.config.min_generation_length = 5
 
         async def mock_generate_single(prompt):
             if "error" in prompt:
-                raise Exception("Generation error")
-            else:
-                return f"Document for: {prompt}"
+                msg = "Generation error"
+                raise TestError(msg)
+            return f"Document for: {prompt}"
 
         generator._generate_single_document = AsyncMock(
             side_effect=mock_generate_single
@@ -549,7 +555,7 @@ class TestHypotheticalDocumentGenerator:
         identical = ["same content", "same content"]
         assert generator._calculate_diversity_score(identical) == 0.0
 
-    async def test_generate_documents_success(self, generator, mock_client_manager):
+    async def test_generate_documents_success(self, generator, _mock_client_manager):
         """Test successful document generation."""
         generator._initialized = True
 
@@ -571,7 +577,7 @@ class TestHypotheticalDocumentGenerator:
         assert result.diversity_score >= 0
 
     async def test_generate_documents_sequential_mode(
-        self, generator, mock_client_manager
+        self, generator, _mock_client_manager
     ):
         """Test document generation in sequential mode."""
         generator._initialized = True
@@ -591,14 +597,13 @@ class TestHypotheticalDocumentGenerator:
 
     async def test_generate_documents_not_initialized(self, generator):
         """Test document generation when not initialized."""
-        from src.services.errors import APIError
 
         with pytest.raises(APIError) as exc_info:
             await generator.generate_documents("test query")
 
         assert "not initialized" in str(exc_info.value).lower()
 
-    async def test_generate_documents_failure(self, generator, mock_client_manager):
+    async def test_generate_documents_failure(self, generator, _mock_client_manager):
         """Test document generation failure handling."""
         generator._initialized = True
 
@@ -615,17 +620,17 @@ class TestHypotheticalDocumentGenerator:
         """Test metrics retrieval."""
         # Set some test values
         generator.generation_count = 5
-        generator.total_generation_time = 10.0
-        generator.total_tokens_used = 500
-        generator.total_cost = 0.05
+        generator._total_generation_time = 10.0
+        generator._total_tokens_used = 500
+        generator._total_cost = 0.05
 
         metrics = generator.get_metrics()
 
         assert metrics["generation_count"] == 5
-        assert metrics["total_generation_time"] == 10.0
+        assert metrics["_total_generation_time"] == 10.0
         assert metrics["avg_generation_time"] == 2.0
-        assert metrics["total_tokens_used"] == 500
-        assert metrics["total_cost"] == 0.05
+        assert metrics["_total_tokens_used"] == 500
+        assert metrics["_total_cost"] == 0.05
         assert metrics["avg_cost_per_generation"] == 0.01
 
     def test_get_metrics_zero_generations(self, generator):
@@ -633,10 +638,10 @@ class TestHypotheticalDocumentGenerator:
         metrics = generator.get_metrics()
 
         assert metrics["generation_count"] == 0
-        assert metrics["total_generation_time"] == 0.0
+        assert metrics["_total_generation_time"] == 0.0
         assert metrics["avg_generation_time"] == 0.0
-        assert metrics["total_tokens_used"] == 0
-        assert metrics["total_cost"] == 0.0
+        assert metrics["_total_tokens_used"] == 0
+        assert metrics["_total_cost"] == 0.0
         assert metrics["avg_cost_per_generation"] == 0.0
 
     def test_model_pricing_coverage(self, generator):

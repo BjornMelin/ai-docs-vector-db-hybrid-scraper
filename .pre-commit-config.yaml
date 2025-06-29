@@ -97,6 +97,22 @@ repos:
         pass_filenames: false
         stages: [commit]
 
+      - id: update-docs
+        name: Update documentation
+        entry: python scripts/docs_automation.py --skip-validation --build-only
+        language: system
+        files: '^(docs/|README\.md|mkdocs\.yml)'
+        pass_filenames: false
+        stages: [commit]
+
+      - id: validate-config
+        name: Validate configuration
+        entry: python scripts/validate_config.py
+        language: system
+        files: '^(\.env.*|pyproject\.toml|src/config/)'
+        pass_filenames: false
+        stages: [commit]
+
 # Configuration for pre-commit
 default_stages: [commit]
 fail_fast: false

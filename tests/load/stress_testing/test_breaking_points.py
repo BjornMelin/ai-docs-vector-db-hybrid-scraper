@@ -7,15 +7,20 @@ analysis with recovery time measurement.
 
 import asyncio
 import logging
+import random
 import statistics
 import time
 from dataclasses import dataclass, field
 
 import pytest
 
-from ..base_load_test import create_load_test_runner
-from ..conftest import LoadTestConfig, LoadTestType
-from ..load_profiles import SpikeLoadProfile
+from tests.load.base_load_test import create_load_test_runner
+from tests.load.conftest import LoadTestConfig, LoadTestType
+from tests.load.load_profiles import SpikeLoadProfile
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
 
 
 logger = logging.getLogger(__name__)
@@ -207,7 +212,7 @@ class TestBreakingPoints:
                 self.base_latency = 0.1
                 self.error_threshold = 300  # Start failing after 300 users
 
-            async def process_request(self, current_users: int = 0, **kwargs):
+            async def process_request(self, current_users: int = 0, **__kwargs):
                 # Increase latency based on load
                 load_factor = max(1.0, current_users / 100)
                 latency = self.base_latency * load_factor
@@ -217,8 +222,9 @@ class TestBreakingPoints:
                     0, (current_users - self.error_threshold) / 1000
                 )
 
-                if error_probability > 0 and time.time() % 1.0 < error_probability:
-                    raise Exception(f"Service overloaded at {current_users} users")
+                if random.random() < error_probability:
+                    msg = f"Service overloaded at {current_users} users"
+                    raise TestError(msg)
 
                 await asyncio.sleep(latency)
 
@@ -263,7 +269,7 @@ class TestBreakingPoints:
                 # Calculate metrics for this step
                 error_rate = (
                     result.metrics.failed_requests
-                    / max(result.metrics.total_requests, 1)
+                    / max(result.metrics._total_requests, 1)
                 ) * 100
                 avg_response_time = (
                     statistics.mean(result.metrics.response_times) * 1000
@@ -298,11 +304,13 @@ class TestBreakingPoints:
 
                 # Stop if we've clearly hit the breaking point
                 if error_rate > 25 and avg_response_time > 5000:
-                    logger.warning(f"Breaking point reached at step {i + 1}")
+                    logger.warning(
+                        f"Breaking point reached at step {i + 1}"
+                    )  # TODO: Convert f-string to logging format
                     break
 
-            except Exception as e:
-                logger.exception(f"Step {i + 1} failed: {e}")
+            except Exception:
+                logger.exception("Step {i + 1} failed")
                 # Add failure point
                 point = PerformancePoint(
                     users=step["users"],
@@ -339,8 +347,10 @@ class TestBreakingPoints:
         logger.info(
             f"Breaking point identified: {breaking_point.breaking_point_users} users"
         )
-        logger.info(f"Maximum stable load: {breaking_point.max_stable_users} users")
-        logger.info(f"Graceful degradation: {breaking_point.graceful_degradation}")
+        logger.info(
+            f"Maximum stable load: {breaking_point.max_stable_users} users"
+        )  # TODO: Convert f-string to logging format
+        logger.info("Graceful degradation")
 
     @pytest.mark.stress
     async def test_sudden_spike_breaking_point(self, load_test_runner):
@@ -361,7 +371,7 @@ class TestBreakingPoints:
                 self.spike_penalty = 2.0
                 self.users_history = []
 
-            async def process_request(self, current_users: int = 0, **kwargs):
+            async def process_request(self, current_users: int = 0, **__kwargs):
                 self.users_history.append(current_users)
 
                 # Detect spike (rapid increase in users)
@@ -387,7 +397,8 @@ class TestBreakingPoints:
                 # Higher error rate during spikes
                 spike_error_rate = max(0, (current_users - 300) / 2000)
                 if spike_error_rate > 0 and time.time() % 1.0 < spike_error_rate:
-                    raise Exception(f"Spike overload at {current_users} users")
+                    msg = f"Spike overload at {current_users} users"
+                    raise TestError(msg)
 
                 await asyncio.sleep(min(latency, 5.0))  # Cap at 5s
 
@@ -404,7 +415,7 @@ class TestBreakingPoints:
         spike_results = []
 
         for scenario in spike_scenarios:
-            logger.info(f"Testing spike scenario: {scenario['name']}")
+            logger.info("Testing spike scenario")
 
             # Create spike profile
             spike_profile = SpikeLoadProfile(
@@ -447,7 +458,7 @@ class TestBreakingPoints:
                 # Analyze spike handling
                 error_rate = (
                     result.metrics.failed_requests
-                    / max(result.metrics.total_requests, 1)
+                    / max(result.metrics._total_requests, 1)
                 ) * 100
                 avg_response_time = (
                     statistics.mean(result.metrics.response_times) * 1000
@@ -482,8 +493,8 @@ class TestBreakingPoints:
                     f"Spike {scenario['name']}: {error_rate:.2f}% errors, {avg_response_time:.2f}ms response time"
                 )
 
-            except Exception as e:
-                logger.exception(f"Spike scenario {scenario['name']} failed: {e}")
+            except Exception:
+                logger.exception("Spike scenario {scenario['name']} failed")
                 # Record failure
                 spike_results.append(
                     {
@@ -510,15 +521,15 @@ class TestBreakingPoints:
 
         # Verify spike handling capability
         handled_spikes = sum(1 for r in spike_results if r["spike_handled"])
-        total_spikes = len(spike_results)
-        spike_success_rate = handled_spikes / total_spikes
+        _total_spikes = len(spike_results)
+        spike_success_rate = handled_spikes / _total_spikes
 
-        assert spike_success_rate > 0.3, (
-            f"System handled too few spikes: {spike_success_rate:.2%}"
-        )
+        assert spike_success_rate > 0.3, "System handled too few spikes"
 
-        logger.info(f"Maximum handled spike: {max_handled_spike} users")
-        logger.info(f"Spike success rate: {spike_success_rate:.2%}")
+        logger.info(
+            f"Maximum handled spike: {max_handled_spike} users"
+        )  # TODO: Convert f-string to logging format
+        logger.info("Spike success rate")
 
     @pytest.mark.stress
     async def test_recovery_time_measurement(self, load_test_runner):
@@ -533,7 +544,7 @@ class TestBreakingPoints:
                 self.recovery_factor = 1.0
                 self.base_latency = 0.1
 
-            async def process_request(self, phase: str = "normal", **kwargs):
+            async def process_request(self, phase: str = "normal", **__kwargs):
                 current_time = time.time()
 
                 if phase == "overload":
@@ -543,7 +554,8 @@ class TestBreakingPoints:
                     # High latency and errors during overload
                     latency = self.base_latency * 10
                     if time.time() % 1.0 < 0.3:  # 30% error rate
-                        raise Exception("System overloaded")
+                        msg = "System overloaded"
+                        raise TestError(msg)
 
                 elif phase == "recovery" and self.overload_start:
                     # Gradual recovery based on time since overload
@@ -556,7 +568,8 @@ class TestBreakingPoints:
                     error_probability = self.recovery_factor * 0.1  # Decreasing errors
 
                     if time.time() % 1.0 < error_probability:
-                        raise Exception("System still recovering")
+                        msg = "System still recovering"
+                        raise TestError(msg)
 
                 else:
                     # Normal operation
@@ -587,7 +600,7 @@ class TestBreakingPoints:
         recovery_complete_time = None
 
         for phase_config in test_phases:
-            logger.info(f"Running recovery test phase: {phase_config['name']}")
+            logger.info("Running recovery test phase")
 
             if phase_config["name"] == "recovery":
                 recovery_start_time = time.time()
@@ -617,7 +630,7 @@ class TestBreakingPoints:
 
             # Calculate phase metrics
             error_rate = (
-                result.metrics.failed_requests / max(result.metrics.total_requests, 1)
+                result.metrics.failed_requests / max(result.metrics._total_requests, 1)
             ) * 100
             avg_response_time = (
                 statistics.mean(result.metrics.response_times) * 1000
@@ -641,10 +654,9 @@ class TestBreakingPoints:
                 phase_config["name"] == "recovery"
                 and error_rate < 5.0
                 and avg_response_time < 500
-            ):
-                if recovery_complete_time is None:
-                    recovery_complete_time = time.time()
-                    logger.info("System recovery completed")
+            ) and recovery_complete_time is None:
+                recovery_complete_time = time.time()
+                logger.info("System recovery completed")
 
             logger.info(
                 f"Phase {phase_config['name']}: {error_rate:.2f}% errors, "
@@ -698,9 +710,7 @@ class TestBreakingPoints:
             if recovery_performance["throughput"] > 0
             else 0
         )
-        assert recovery_efficiency > 0.7, (
-            f"Poor recovery efficiency: {recovery_efficiency:.2%}"
-        )
+        assert recovery_efficiency > 0.7, "Poor recovery efficiency"
 
         # Verify error rate recovery
         assert (
@@ -712,7 +722,7 @@ class TestBreakingPoints:
             if recovery_time
             else "Recovery time not measured"
         )
-        logger.info(f"Recovery efficiency: {recovery_efficiency:.2%}")
+        logger.info("Recovery efficiency")
         logger.info(
             f"Baseline vs Recovery - Errors: {baseline_performance['error_rate']:.2f}% -> {recovery_performance['error_rate']:.2f}%"
         )

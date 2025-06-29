@@ -418,7 +418,7 @@ class TestResultClusteringResult:
         result = ResultClusteringResult(
             clusters=[sample_cluster],
             method_used=ClusteringMethod.HDBSCAN,
-            total_results=5,
+            _total_results=5,
             clustered_results=1,
             outlier_count=4,
             cluster_count=1,
@@ -428,7 +428,7 @@ class TestResultClusteringResult:
         assert result.clusters == [sample_cluster]
         assert result.outliers == []
         assert result.method_used == ClusteringMethod.HDBSCAN
-        assert result.total_results == 5
+        assert result._total_results == 5
         assert result.clustered_results == 1
         assert result.outlier_count == 4
         assert result.cluster_count == 1
@@ -447,7 +447,7 @@ class TestResultClusteringResult:
             clusters=[sample_cluster],
             outliers=[sample_outlier],
             method_used=ClusteringMethod.HDBSCAN,
-            total_results=5,
+            _total_results=5,
             clustered_results=1,
             outlier_count=1,
             cluster_count=1,
@@ -472,7 +472,7 @@ class TestResultClusteringResult:
         result = ResultClusteringResult(
             clusters=[sample_cluster],
             method_used=ClusteringMethod.HDBSCAN,
-            total_results=1,
+            _total_results=1,
             clustered_results=1,
             outlier_count=0,
             cluster_count=1,
@@ -486,7 +486,7 @@ class TestResultClusteringResult:
             ResultClusteringResult(
                 clusters=[sample_cluster],
                 method_used=ClusteringMethod.HDBSCAN,
-                total_results=1,
+                _total_results=1,
                 clustered_results=1,
                 outlier_count=0,
                 cluster_count=1,
@@ -953,7 +953,7 @@ class TestResultClusteringService:
         result = ResultClusteringResult(
             clusters=[],
             method_used=ClusteringMethod.KMEANS,
-            total_results=10,
+            _total_results=10,
             clustered_results=0,
             outlier_count=10,
             cluster_count=0,
@@ -971,13 +971,13 @@ class TestResultClusteringService:
     def test_performance_stats_update(self, clustering_service):
         """Test performance statistics update."""
         initial_stats = clustering_service.get_performance_stats()
-        assert initial_stats["total_clusterings"] == 0
+        assert initial_stats["_total_clusterings"] == 0
 
         # Update stats
         clustering_service._update_performance_stats(ClusteringMethod.KMEANS, 150.0)
 
         updated_stats = clustering_service.get_performance_stats()
-        assert updated_stats["total_clusterings"] == 1
+        assert updated_stats["_total_clusterings"] == 1
         assert updated_stats["avg_processing_time"] == 150.0
         assert updated_stats["method_usage"]["kmeans"] == 1
 
@@ -987,7 +987,7 @@ class TestResultClusteringService:
         result = ResultClusteringResult(
             clusters=[],
             method_used=ClusteringMethod.KMEANS,
-            total_results=5,
+            _total_results=5,
             clustered_results=0,
             outlier_count=5,
             cluster_count=0,
@@ -1022,7 +1022,7 @@ class TestResultClusteringService:
 
         assert isinstance(result, ResultClusteringResult)
         assert result.method_used == ClusteringMethod.KMEANS
-        assert result.total_results == 10
+        assert result._total_results == 10
         assert result.processing_time_ms > 0
         assert result.cache_hit is False
 
@@ -1033,7 +1033,7 @@ class TestResultClusteringService:
         cached_result = ResultClusteringResult(
             clusters=[],
             method_used=ClusteringMethod.KMEANS,
-            total_results=10,
+            _total_results=10,
             clustered_results=0,
             outlier_count=10,
             cluster_count=0,

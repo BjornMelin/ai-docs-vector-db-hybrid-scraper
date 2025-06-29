@@ -59,6 +59,7 @@ class JavaScriptExecutor:
 
         Returns:
             JavaScript code as string or None if no specific pattern available
+
         """
         domain = urlparse(url).netloc
 
@@ -126,6 +127,7 @@ class DocumentationExtractor:
 
         Returns:
             Dictionary containing CSS selectors for structured extraction
+
         """
         schemas = {
             "api_reference": {

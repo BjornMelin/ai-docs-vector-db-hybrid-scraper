@@ -5,10 +5,13 @@ boolean logic operations (AND, OR, NOT), filter orchestration, performance optim
 and intelligent result merging for complex filtering scenarios.
 """
 
+import asyncio
 import logging
+import time
 from enum import Enum
 from typing import Any
 
+from cachetools import LRUCache
 from pydantic import BaseModel, Field, field_validator
 from qdrant_client import models
 
@@ -60,11 +63,13 @@ class CompositionRule(BaseModel):
 
         if operator == CompositionOperator.NOT:
             if len(v) != 1:
-                raise ValueError("NOT operator requires exactly one filter")
+                msg = "NOT operator requires exactly one filter"
+                raise ValueError(msg)
         elif (
             operator in [CompositionOperator.AND, CompositionOperator.OR] and len(v) < 2
         ):
-            raise ValueError(f"{operator} operator requires at least two filters")
+            msg = f"{operator} operator requires at least two filters"
+            raise ValueError(msg)
 
         return v
 
@@ -135,6 +140,7 @@ class FilterComposer(BaseFilter):
         description: str = "Compose multiple filters using boolean logic and optimization",
         enabled: bool = True,
         priority: int = 50,
+        max_cache_size: int = 1000,
     ):
         """Initialize filter composer.
 
@@ -143,13 +149,16 @@ class FilterComposer(BaseFilter):
             description: Filter description
             enabled: Whether filter is enabled
             priority: Filter priority (higher = earlier execution)
+            max_cache_size: Maximum number of items in execution cache
+
         """
         super().__init__(name, description, enabled, priority)
 
-        # Execution tracking
-        self.execution_cache = {}
+        # Execution tracking with LRU cache to prevent memory leaks
+        self.execution_cache = LRUCache(maxsize=max_cache_size)
         self.performance_stats = {}
         self.optimization_enabled = True
+        self.max_cache_size = max_cache_size
 
         # Filter execution strategies
         self.execution_strategies = {
@@ -172,6 +181,7 @@ class FilterComposer(BaseFilter):
 
         Raises:
             FilterError: If filter composition fails
+
         """
         try:
             # Validate and parse criteria
@@ -213,7 +223,7 @@ class FilterComposer(BaseFilter):
             )
 
         except Exception as e:
-            error_msg = f"Failed to apply filter composition: {e}"
+            error_msg = "Failed to apply filter composition"
             self._logger.error(error_msg, exc_info=True)
             raise FilterError(
                 error_msg,
@@ -226,8 +236,6 @@ class FilterComposer(BaseFilter):
         self, criteria: FilterCompositionCriteria, context: dict[str, Any] | None = None
     ) -> CompositionResult:
         """Execute the filter composition based on criteria."""
-        import time
-
         start_time = time.time()
 
         # Get execution strategy
@@ -298,8 +306,6 @@ class FilterComposer(BaseFilter):
         criteria: FilterCompositionCriteria,
     ) -> dict[str, FilterResult]:
         """Execute filters in parallel."""
-        import asyncio
-
         results = {}
 
         # Create tasks for all filters
@@ -335,16 +341,19 @@ class FilterComposer(BaseFilter):
                     try:
                         result = await task
                         results[name] = result
-                    except Exception as e:
-                        self._logger.exception(f"Filter {name} failed: {e}")
+                    except Exception:
+                        self._logger.exception("Filter {name} failed")
                         if criteria.fail_fast:
                             raise
                 else:
-                    self._logger.warning(f"Filter {name} timed out")
+                    self._logger.warning(
+                        f"Filter {name} timed out"
+                    )  # TODO: Convert f-string to logging format
 
         except TimeoutError as e:
             self._logger.exception("Filter composition timed out")
-            raise FilterError("Filter composition execution timed out") from e
+            msg = "Filter composition execution timed out"
+            raise FilterError(msg) from e
 
         return results
 
@@ -368,13 +377,12 @@ class FilterComposer(BaseFilter):
                     and not result.filter_conditions
                     and criteria.fail_fast
                 ):
-                    raise FilterError(
-                        f"Required filter {filter_ref.filter_instance.name} failed"
-                    )
+                    msg = f"Required filter {filter_ref.filter_instance.name} failed"
+                    raise FilterError(msg)
 
-            except Exception as e:
+            except Exception:
                 self._logger.exception(
-                    f"Filter {filter_ref.filter_instance.name} failed: {e}"
+                    "Filter {filter_ref.filter_instance.name} failed"
                 )
                 if criteria.fail_fast and filter_ref.required:
                     raise
@@ -441,10 +449,11 @@ class FilterComposer(BaseFilter):
 
         except Exception as e:
             self._logger.exception(
-                f"Filter {filter_ref.filter_instance.name} execution failed: {e}"
+                "Filter {filter_ref.filter_instance.name} execution failed"
             )
+            msg = f"Filter {filter_ref.filter_instance.name} failed"
             raise FilterError(
-                f"Filter {filter_ref.filter_instance.name} failed",
+                msg,
                 filter_name=filter_ref.filter_instance.name,
                 filter_criteria=filter_ref.criteria,
                 underlying_error=e,
@@ -501,7 +510,7 @@ class FilterComposer(BaseFilter):
 
         if operator == CompositionOperator.AND:
             return self._create_and_filter(conditions)
-        elif operator == CompositionOperator.OR:
+        if operator == CompositionOperator.OR:
             return models.Filter(should=conditions)
 
         return None
@@ -531,10 +540,10 @@ class FilterComposer(BaseFilter):
         )
 
         # Recursively optimize nested rules
-        optimized_nested = []
-        if rule.nested_rules:
-            for nested_rule in rule.nested_rules:
-                optimized_nested.append(self._optimize_composition_order(nested_rule))
+        optimized_nested = [
+            self._optimize_composition_order(nested_rule)
+            for nested_rule in (rule.nested_rules or [])
+        ]
 
         return CompositionRule(
             operator=rule.operator,
@@ -589,29 +598,25 @@ class FilterComposer(BaseFilter):
                     total_weight += filter_ref.weight
 
             return weighted_confidence / total_weight if total_weight > 0 else 0.0
-        else:
-            # Simple average
-            confidences = [
-                result.confidence_score for result in filter_results.values()
-            ]
-            return sum(confidences) / len(confidences)
+        # Simple average
+        confidences = [result.confidence_score for result in filter_results.values()]
+        return sum(confidences) / len(confidences)
 
     def _estimate_composition_performance(self, result: CompositionResult) -> str:
         """Estimate performance impact of the composition."""
         if result.total_execution_time_ms > 2000:
             return "high"
-        elif result.total_execution_time_ms > 500:
+        if result.total_execution_time_ms > 500:
             return "medium"
-        else:
-            return "low"
+        return "low"
 
     async def validate_criteria(self, filter_criteria: dict[str, Any]) -> bool:
         """Validate filter composition criteria."""
         try:
             FilterCompositionCriteria.model_validate(filter_criteria)
             return True
-        except Exception as e:
-            self._logger.warning(f"Invalid composition criteria: {e}")
+        except Exception:
+            self._logger.warning("Invalid composition criteria")
             return False
 
     def get_supported_operators(self) -> list[str]:
@@ -634,6 +639,7 @@ class FilterComposer(BaseFilter):
 
         Returns:
             Dictionary suitable for FilterCompositionCriteria
+
         """
         filter_refs = []
         for filter_instance, criteria in filters:
@@ -663,6 +669,7 @@ class FilterComposer(BaseFilter):
 
         Returns:
             Human-readable explanation string
+
         """
 
         def explain_rule(rule: CompositionRule, indent: int = 0) -> str:
@@ -698,6 +705,40 @@ class FilterComposer(BaseFilter):
             settings.append("weighted confidence")
 
         if settings:
-            base_explanation += f"\nSettings: {', '.join(settings)}"
+            base_explanation += "\nSettings"
 
         return base_explanation
+
+    def get_cache_stats(self) -> dict[str, Any]:
+        """Get execution cache statistics.
+
+        Returns:
+            Dictionary with cache statistics
+
+        """
+        return {
+            "enabled": True,
+            "current_size": len(self.execution_cache),
+            "max_size": self.max_cache_size,
+            "cache_type": "LRUCache",
+        }
+
+    def clear_execution_cache(self) -> None:
+        """Clear the execution cache to free memory."""
+        cache_size = len(self.execution_cache)
+        self.execution_cache.clear()
+        logger.info(
+            f"Cleared execution cache ({cache_size} items)"
+        )  # TODO: Convert f-string to logging format
+
+    def cleanup(self) -> None:
+        """Cleanup resources and clear caches."""
+        logger.info("Starting filter composer cleanup")
+
+        # Clear execution cache
+        self.clear_execution_cache()
+
+        # Clear performance stats
+        self.performance_stats.clear()
+
+        logger.info("Filter composer cleanup completed")

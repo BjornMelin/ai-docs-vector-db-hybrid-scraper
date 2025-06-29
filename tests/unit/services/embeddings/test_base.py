@@ -4,6 +4,7 @@ This module tests the abstract base embedding provider interface that defines
 common patterns for embedding provider lifecycle and configuration.
 """
 
+import asyncio
 from abc import ABCMeta
 
 import pytest
@@ -15,9 +16,9 @@ from src.services.errors import EmbeddingServiceError
 class ConcreteEmbeddingProvider(EmbeddingProvider):
     """Concrete implementation of EmbeddingProvider for testing."""
 
-    def __init__(self, model_name: str = "test-model", **kwargs):
+    def __init__(self, model_name: str = "test-model", **_kwargs):
         """Initialize concrete provider."""
-        super().__init__(model_name, **kwargs)
+        super().__init__(model_name, **_kwargs)
         self.init_called = False
         self.cleanup_called = False
         self.init_error = None
@@ -39,7 +40,7 @@ class ConcreteEmbeddingProvider(EmbeddingProvider):
         self.cleanup_called = True
 
     async def generate_embeddings(
-        self, texts: list[str], batch_size: int | None = None
+        self, texts: list[str], _batch_size: int | None = None
     ) -> list[list[float]]:
         """Generate test embeddings."""
         if self.embedding_error:
@@ -117,8 +118,8 @@ class TestConcreteEmbeddingProvider:
         assert provider.model_name == "test-model"
         assert provider.dimensions == 3
 
-    def test_concrete_provider_with_kwargs(self):
-        """Test concrete provider initialization with additional kwargs."""
+    def test_concrete_provider_with__kwargs(self):
+        """Test concrete provider initialization with additional _kwargs."""
         provider = ConcreteEmbeddingProvider(
             "custom-model", custom_param="test_value", another_param=42
         )
@@ -391,8 +392,8 @@ class TestProviderIntegration:
         assert isinstance(max_tokens, int)
 
         # Relationship check (cost should be reasonable for token limit)
-        total_cost_for_max = cost * max_tokens
-        assert total_cost_for_max > 0
+        _total_cost_for_max = cost * max_tokens
+        assert _total_cost_for_max > 0
 
     @pytest.mark.asyncio
     async def test_provider_error_recovery(self):
@@ -414,7 +415,6 @@ class TestProviderIntegration:
     @pytest.mark.asyncio
     async def test_concurrent_provider_usage(self):
         """Test concurrent usage of provider."""
-        import asyncio
 
         provider = ConcreteEmbeddingProvider()
 

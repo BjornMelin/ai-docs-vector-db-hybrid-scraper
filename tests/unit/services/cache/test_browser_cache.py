@@ -1,8 +1,8 @@
 """Comprehensive tests for browser caching functionality."""
 
-import asyncio
-import json
-import time
+import asyncio  # noqa: PLC0415
+import json  # noqa: PLC0415
+import time  # noqa: PLC0415
 from unittest.mock import AsyncMock
 from unittest.mock import patch
 
@@ -324,14 +324,14 @@ class TestBrowserCache:
         assert stats["misses"] == 5
         assert stats["sets"] == 8
         assert stats["evictions"] == 2
-        assert stats["total_requests"] == 15
+        assert stats["_total_requests"] == 15
         assert stats["hit_rate"] == 10 / 15
 
     def test_get_stats_no_requests(self, browser_cache):
         """Test cache statistics with no requests."""
         stats = browser_cache.get_stats()
 
-        assert stats["total_requests"] == 0
+        assert stats["_total_requests"] == 0
         assert stats["hit_rate"] == 0.0
 
     @patch("src.services.cache.browser_cache.logger")

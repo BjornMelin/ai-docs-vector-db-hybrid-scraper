@@ -447,8 +447,8 @@ class ABTestConfig(BaseModel):
     )
 
 
-class AdvancedHybridSearchRequest(BaseModel):
-    """Request for advanced hybrid search with adaptive optimization."""
+class HybridSearchRequest(BaseModel):
+    """Request for hybrid search with adaptive optimization."""
 
     collection_name: str = Field(..., description="Target collection")
     query: str = Field(..., description="Search query text")
@@ -484,8 +484,8 @@ class AdvancedHybridSearchRequest(BaseModel):
     score_threshold: float = Field(0.0, description="Minimum score threshold")
 
 
-class AdvancedSearchResponse(BaseModel):
-    """Response from advanced hybrid search with optimization metadata."""
+class HybridSearchResponse(BaseModel):
+    """Response from hybrid search with optimization metadata."""
 
     results: list[SearchResult] = Field(
         default_factory=list, description="Search results"
@@ -631,8 +631,8 @@ class SimilarityThresholdCriteria(BaseModel):
     )
 
 
-class EnhancedFilteredSearchRequest(BaseModel):
-    """Enhanced filtered search request with advanced filtering capabilities."""
+class FilteredSearchRequest(BaseModel):
+    """Filtered search request with advanced filtering capabilities."""
 
     collection_name: str = Field(..., description="Target collection")
     query_vector: list[float] = Field(..., description="Query vector")
@@ -677,8 +677,8 @@ class EnhancedFilteredSearchRequest(BaseModel):
     )
 
 
-class EnhancedSearchResult(BaseModel):
-    """Enhanced search result with filtering and processing metadata."""
+class FilteredSearchResult(BaseModel):
+    """Filtered search result with filtering and processing metadata."""
 
     id: str = Field(..., description="Document ID")
     score: float = Field(..., description="Relevance score")
@@ -712,11 +712,11 @@ class EnhancedSearchResult(BaseModel):
     )
 
 
-class EnhancedSearchResponse(BaseModel):
-    """Enhanced search response with comprehensive metadata."""
+class FilteredSearchResponse(BaseModel):
+    """Filtered search response with comprehensive metadata."""
 
-    results: list[EnhancedSearchResult] = Field(
-        default_factory=list, description="Enhanced search results"
+    results: list[FilteredSearchResult] = Field(
+        default_factory=list, description="Filtered search results"
     )
     total_count: int = Field(0, description="Total matching documents")
 
@@ -866,15 +866,14 @@ __all__ = [
     "ABTestConfig",
     "AdaptiveFusionWeights",
     "AdaptiveSearchParams",
-    "AdvancedHybridSearchRequest",
-    "AdvancedSearchResponse",
+    "HybridSearchRequest",
+    "HybridSearchResponse",
     "CollectionStats",
     "ContentTypeSearchCriteria",
     "EffectivenessScore",
-    "EnhancedFilteredSearchRequest",
-    "EnhancedSearchResponse",
-    "EnhancedSearchResult",
     "FilteredSearchRequest",
+    "FilteredSearchResponse", 
+    "FilteredSearchResult",
     "FusionConfig",
     "HyDESearchRequest",
     "HybridSearchRequest",

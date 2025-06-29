@@ -3,6 +3,8 @@
 import logging
 from typing import TYPE_CHECKING
 
+from src.services.query_processing.orchestrator import SearchOrchestrator
+
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -17,8 +19,8 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from ....infrastructure.client_manager import ClientManager
-from ....services.query_processing.pipeline import QueryProcessingPipeline
+from src.infrastructure.client_manager import ClientManager
+from src.services.query_processing.pipeline import QueryProcessingPipeline
 
 
 logger = logging.getLogger(__name__)
@@ -52,11 +54,7 @@ class QueryProcessingPipelineFactory:
                     )
 
             # Create orchestrator
-            from ....services.query_processing.orchestrator import (
-                QueryProcessingOrchestrator,
-            )
-
-            orchestrator = QueryProcessingOrchestrator(
+            orchestrator = SearchOrchestrator(
                 embedding_manager=embedding_manager,
                 qdrant_service=qdrant_service,
                 hyde_engine=hyde_engine,
@@ -69,8 +67,8 @@ class QueryProcessingPipelineFactory:
 
             return pipeline
 
-        except Exception as e:
+        except Exception:
             if ctx:
-                await ctx.error(f"Failed to initialize query processing pipeline: {e}")
-            logger.exception(f"Pipeline initialization failed: {e}")
+                await ctx.error("Failed to initialize query processing pipeline")
+            logger.exception("Pipeline initialization failed")
             raise

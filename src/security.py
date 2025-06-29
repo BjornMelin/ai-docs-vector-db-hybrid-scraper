@@ -2,8 +2,8 @@
 """Security utilities for MCP server with unified configuration integration."""
 
 import logging
-import os
 import re
+from pathlib import Path
 from typing import ClassVar
 from urllib.parse import urlparse
 
@@ -15,8 +15,6 @@ logger = logging.getLogger(__name__)
 
 class SecurityError(Exception):
     """Security-related error."""
-
-    pass
 
 
 class SecurityValidator:
@@ -46,6 +44,7 @@ class SecurityValidator:
 
         Args:
             security_config: Security configuration. If None, loads from unified config.
+
         """
         self.config = security_config or get_config().security
         logger.info(
@@ -68,25 +67,30 @@ class SecurityValidator:
 
         Raises:
             SecurityError: If URL is potentially dangerous
+
         """
         if not url or not isinstance(url, str):
-            raise SecurityError("URL must be a non-empty string")
+            msg = "URL must be a non-empty string"
+            raise SecurityError(msg)
 
         # Parse URL
         try:
             parsed = urlparse(url.strip())
         except Exception as e:
-            raise SecurityError(f"Invalid URL format: {e}") from e
+            msg = f"Invalid URL format: {e}"
+            raise SecurityError(msg) from e
 
         # Check scheme
         if parsed.scheme.lower() not in self.ALLOWED_SCHEMES:
-            raise SecurityError(f"URL scheme '{parsed.scheme}' not allowed")
+            msg = f"URL scheme '{parsed.scheme}' not allowed"
+            raise SecurityError(msg)
 
         # Check against blocked domains from config
         domain = parsed.netloc.lower()
         for blocked in self.config.blocked_domains:
             if blocked.lower() in domain:
-                raise SecurityError(f"Domain '{domain}' is blocked")
+                msg = f"Domain '{domain}' is blocked"
+                raise SecurityError(msg)
 
         # Check against allowed domains if configured
         if self.config.allowed_domains:
@@ -96,17 +100,20 @@ class SecurityValidator:
                     domain_allowed = True
                     break
             if not domain_allowed:
-                raise SecurityError(f"Domain '{domain}' not in allowed list")
+                msg = f"Domain '{domain}' not in allowed list"
+                raise SecurityError(msg)
 
         # Check for dangerous patterns
         url_lower = url.lower()
         for pattern in self.DANGEROUS_PATTERNS:
             if re.search(pattern, url_lower):
-                raise SecurityError(f"URL contains dangerous pattern: {pattern}")
+                msg = f"URL contains dangerous pattern: {pattern}"
+                raise SecurityError(msg)
 
         # Basic length check
         if len(url) > 2048:
-            raise SecurityError("URL too long (max 2048 characters)")
+            msg = "URL too long (max 2048 characters)"
+            raise SecurityError(msg)
 
         return url.strip()
 
@@ -127,23 +134,26 @@ class SecurityValidator:
 
         Raises:
             SecurityError: If name is invalid
+
         """
         if not name or not isinstance(name, str):
-            raise SecurityError("Collection name must be a non-empty string")
+            msg = "Collection name must be a non-empty string"
+            raise SecurityError(msg)
 
         # Strip and check length
         name = name.strip()
         if len(name) < 1:
-            raise SecurityError("Collection name cannot be empty")
+            msg = "Collection name cannot be empty"
+            raise SecurityError(msg)
 
         if len(name) > 64:
-            raise SecurityError("Collection name too long (max 64 characters)")
+            msg = "Collection name too long (max 64 characters)"
+            raise SecurityError(msg)
 
         # Check for valid characters (alphanumeric, underscore, hyphen)
         if not re.match(r"^[a-zA-Z0-9_-]+$", name):
-            raise SecurityError(
-                "Collection name can only contain letters, numbers, underscore, and hyphen"
-            )
+            msg = "Collection name can only contain letters, numbers, underscore, and hyphen"
+            raise SecurityError(msg)
 
         return name
 
@@ -158,19 +168,23 @@ class SecurityValidator:
 
         Raises:
             SecurityError: If query is invalid
+
         """
         if not query or not isinstance(query, str):
-            raise SecurityError("Query must be a non-empty string")
+            msg = "Query must be a non-empty string"
+            raise SecurityError(msg)
 
         # Strip and check length
         query = query.strip()
         if len(query) < 1:
-            raise SecurityError("Query cannot be empty")
+            msg = "Query cannot be empty"
+            raise SecurityError(msg)
 
         # Check max query length from config or use default
         max_length = getattr(self.config, "max_query_length", 1000)
         if len(query) > max_length:
-            raise SecurityError(f"Query too long (max {max_length} characters)")
+            msg = f"Query too long (max {max_length} characters)"
+            raise SecurityError(msg)
 
         # Remove potentially dangerous characters
         query = re.sub(r'[<>"\']', "", query)
@@ -185,12 +199,13 @@ class SecurityValidator:
 
         Returns:
             Sanitized filename
+
         """
         if not filename or not isinstance(filename, str):
             return "safe_filename"
 
         # Remove path traversal attempts
-        filename = os.path.basename(filename.strip())
+        filename = Path(filename.strip()).name
 
         # Remove dangerous characters
         filename = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", filename)
@@ -236,6 +251,7 @@ class APIKeyValidator:
 
         Returns:
             Masked API key
+
         """
         if not api_key or len(api_key) < 8:
             return "*" * 12

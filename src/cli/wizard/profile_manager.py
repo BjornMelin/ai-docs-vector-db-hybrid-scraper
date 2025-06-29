@@ -4,6 +4,7 @@ Handles profile-specific configuration operations, including
 profile switching, environment-specific settings, and template mapping.
 """
 
+import json
 import shutil
 from pathlib import Path
 
@@ -26,6 +27,7 @@ class ProfileManager:
 
         Args:
             config_dir: Directory for storing profile configurations
+
         """
         self.config_dir = config_dir or Path("config")
         self.profiles_dir = self.config_dir / "profiles"
@@ -160,10 +162,12 @@ class ProfileManager:
 
         Raises:
             ValueError: If profile not found
+
         """
         template_name = self.profile_templates.get(profile_name)
         if not template_name:
-            raise ValueError(f"Profile '{profile_name}' not found")
+            msg = f"Profile '{profile_name}' not found"
+            raise ValueError(msg)
 
         # Create config from template
         config = self.template_manager.create_config_from_template(
@@ -177,9 +181,7 @@ class ProfileManager:
         # Save configuration
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_path, "w") as f:
-            import json
-
+        with output_path.open("w") as f:
             json.dump(config.model_dump(), f, indent=2)
 
         return output_path
@@ -195,6 +197,7 @@ class ProfileManager:
 
         Returns:
             Path to activated configuration file
+
         """
         if target_path is None:
             target_path = Path("config.json")
@@ -218,6 +221,7 @@ class ProfileManager:
 
         Returns:
             Dictionary of environment variable overrides
+
         """
         # Profile-specific environment recommendations
         env_overrides = {
@@ -268,6 +272,7 @@ class ProfileManager:
 
         Returns:
             Path to generated .env file
+
         """
         if output_path is None:
             output_path = Path(f".env.{profile_name}")
@@ -297,7 +302,7 @@ class ProfileManager:
         )
 
         # Write .env file
-        with open(output_path, "w") as f:
+        with output_path.open("w") as f:
             f.write("\n".join(env_content))
 
         return output_path

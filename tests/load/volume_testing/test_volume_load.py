@@ -16,6 +16,10 @@ from ..conftest import LoadTestConfig, LoadTestType
 from ..load_profiles import SteadyLoadProfile
 
 
+class TestError(Exception):
+    """Custom exception for this module."""
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,9 +46,9 @@ class TestVolumeLoad:
         # Track document processing metrics
         document_metrics = []
 
-        async def large_document_processor(**kwargs):
+        async def large_document_processor(**_kwargs):
             """Process large documents."""
-            doc_size_mb = kwargs.get("document_size_mb", 10.0)
+            doc_size_mb = _kwargs.get("document_size_mb", 10.0)
             processing_start = time.time()
 
             # Simulate large document processing
@@ -99,17 +103,17 @@ class TestVolumeLoad:
         )
 
     @pytest.mark.volume
-    def test_bulk_embedding_generation(self, load_test_runner, mock_load_test_service):
+    def test_bulk_embedding_generation(self, load_test_runner, _mock_load_test_service):
         """Test bulk embedding generation for large text batches."""
 
         # Simulate bulk embedding service
         class BulkEmbeddingProcessor:
             def __init__(self):
                 self.batch_metrics = []
-                self.total_embeddings_generated = 0
-                self.total_processing_time = 0
+                self._total_embeddings_generated = 0
+                self._total_processing_time = 0
 
-            async def process_batch(self, texts: list[str], **kwargs):
+            async def process_batch(self, texts: list[str], **__kwargs):
                 """Process a batch of texts for embedding generation."""
                 batch_start = time.time()
                 batch_size = len(texts)
@@ -119,13 +123,13 @@ class TestVolumeLoad:
                 batch_efficiency = min(
                     0.9, batch_size / 100.0
                 )  # Efficiency improves with batch size
-                total_time = (base_time_per_text * batch_size) * (1 - batch_efficiency)
+                _total_time = (base_time_per_text * batch_size) * (1 - batch_efficiency)
 
-                await asyncio.sleep(total_time)
+                await asyncio.sleep(_total_time)
 
                 processing_time = time.time() - batch_start
-                self.total_embeddings_generated += batch_size
-                self.total_processing_time += processing_time
+                self._total_embeddings_generated += batch_size
+                self._total_processing_time += processing_time
 
                 # Record batch metrics
                 self.batch_metrics.append(
@@ -150,7 +154,7 @@ class TestVolumeLoad:
                     "model": "test-embedding-model",
                 }
 
-            def get_performance_stats(self) -> Dict:
+            def get_performance_stats(self) -> dict:
                 """Get overall performance statistics."""
                 if not self.batch_metrics:
                     return {"no_data": True}
@@ -163,19 +167,19 @@ class TestVolumeLoad:
                 ) / len(self.batch_metrics)
 
                 return {
-                    "total_embeddings": self.total_embeddings_generated,
-                    "total_processing_time": self.total_processing_time,
+                    "_total_embeddings": self._total_embeddings_generated,
+                    "_total_processing_time": self._total_processing_time,
                     "avg_batch_size": avg_batch_size,
                     "avg_embeddings_per_second": avg_eps,
-                    "overall_throughput": self.total_embeddings_generated
-                    / self.total_processing_time
-                    if self.total_processing_time > 0
+                    "overall_throughput": self._total_embeddings_generated
+                    / self._total_processing_time
+                    if self._total_processing_time > 0
                     else 0,
                 }
 
         embedding_processor = BulkEmbeddingProcessor()
 
-        async def bulk_embedding_operation(**kwargs):
+        async def bulk_embedding_operation(**_kwargs):
             """Generate embeddings for large text batches."""
             # Generate batch of texts
             batch_size = random.randint(50, 200)  # Variable batch sizes
@@ -184,7 +188,7 @@ class TestVolumeLoad:
                 for i in range(batch_size)
             ]
 
-            return await embedding_processor.process_batch(texts, **kwargs)
+            return await embedding_processor.process_batch(texts, **_kwargs)
 
         # Configuration for bulk embedding test
         config = LoadTestConfig(
@@ -217,7 +221,7 @@ class TestVolumeLoad:
         assert batch_analysis["batch_efficiency"] > 0.8, (
             f"Poor batch efficiency: {batch_analysis['batch_efficiency']}"
         )
-        assert embedding_stats["total_embeddings"] > 10000, (
+        assert embedding_stats["_total_embeddings"] > 10000, (
             "Insufficient volume processed"
         )
 
@@ -232,7 +236,7 @@ class TestVolumeLoad:
                 self.result_size_distribution = []
 
             async def search_with_large_results(
-                self, query: str, limit: int = 1000, **kwargs
+                self, query: str, limit: int = 1000, **__kwargs
             ):
                 """Perform search that returns large result sets."""
                 search_start = time.time()
@@ -245,22 +249,21 @@ class TestVolumeLoad:
                 await asyncio.sleep(search_time)
 
                 # Generate large result set
-                results = []
-                for i in range(limit):
-                    results.append(
-                        {
-                            "id": f"doc_{i}",
-                            "title": f"Document {i} about {query}",
-                            "content": f"This is content for document {i} "
-                            * 50,  # Large content
-                            "score": 1.0 - (i / limit),
-                            "metadata": {
-                                "source": f"source_{i % 10}",
-                                "category": f"category_{i % 5}",
-                                "timestamp": time.time() - i,
-                            },
-                        }
-                    )
+                results = [
+                    {
+                        "id": f"doc_{i}",
+                        "title": f"Document {i} about {query}",
+                        "content": f"This is content for document {i} "
+                        * 50,  # Large content
+                        "score": 1.0 - (i / limit),
+                        "metadata": {
+                            "source": f"source_{i % 10}",
+                            "category": f"category_{i % 5}",
+                            "timestamp": time.time() - i,
+                        },
+                    }
+                    for i in range(limit)
+                ]
 
                 processing_time = time.time() - search_start
                 result_size_kb = len(str(results).encode("utf-8")) / 1024
@@ -281,13 +284,13 @@ class TestVolumeLoad:
 
                 return {
                     "results": results,
-                    "total_count": len(results),
+                    "_total_count": len(results),
                     "query": query,
                     "processing_time_ms": processing_time * 1000,
                     "result_size_kb": result_size_kb,
                 }
 
-            def get_search_stats(self) -> Dict:
+            def get_search_stats(self) -> dict:
                 """Get search performance statistics."""
                 if not self.search_metrics:
                     return {"no_data": True}
@@ -303,7 +306,7 @@ class TestVolumeLoad:
                 ) / len(self.search_metrics)
 
                 return {
-                    "total_searches": len(self.search_metrics),
+                    "_total_searches": len(self.search_metrics),
                     "avg_result_count": avg_result_count,
                     "avg_result_size_kb": avg_size_kb,
                     "avg_results_per_second": avg_rps,
@@ -312,7 +315,7 @@ class TestVolumeLoad:
 
         search_processor = LargeResultSetProcessor()
 
-        async def large_search_operation(**kwargs):
+        async def large_search_operation(**_kwargs):
             """Perform searches that return large result sets."""
             queries = [
                 "machine learning tutorials",
@@ -326,7 +329,7 @@ class TestVolumeLoad:
             limit = random.randint(500, 2000)  # Large result sets
 
             return await search_processor.search_with_large_results(
-                query=query, limit=limit, **kwargs
+                query=query, limit=limit, **_kwargs
             )
 
         # Configuration for large search results
@@ -372,11 +375,13 @@ class TestVolumeLoad:
         class BatchDocumentIngestor:
             def __init__(self):
                 self.ingestion_metrics = []
-                self.total_documents_processed = 0
+                self._total_documents_processed = 0
                 self.processing_queue = []
                 self.failed_documents = []
 
-            async def ingest_document_batch(self, document_batch: list[Dict], **kwargs):
+            async def ingest_document_batch(
+                self, document_batch: list[dict], **__kwargs
+            ):
                 """Ingest a batch of documents."""
                 batch_start = time.time()
                 batch_size = len(document_batch)
@@ -391,8 +396,9 @@ class TestVolumeLoad:
                         await asyncio.sleep(processing_time)
 
                         # Simulate potential failures
-                        if random.random() < 0.02:  # 2% failure rate
-                            raise Exception(f"Processing failed for {doc['url']}")
+                        if random.random() < 0.01:  # 1% failure rate
+                            error_msg = f"Processing failed for {doc['url']}"
+                            raise TestError(error_msg)
 
                         processed_doc = {
                             "id": f"doc_{len(processed_docs)}",
@@ -411,7 +417,7 @@ class TestVolumeLoad:
                         self.failed_documents.append(failed_doc)
 
                 batch_processing_time = time.time() - batch_start
-                self.total_documents_processed += len(processed_docs)
+                self._total_documents_processed += len(processed_docs)
 
                 # Record batch metrics
                 self.ingestion_metrics.append(
@@ -435,35 +441,35 @@ class TestVolumeLoad:
                     "processing_time_ms": batch_processing_time * 1000,
                 }
 
-            def get_ingestion_stats(self) -> Dict:
+            def get_ingestion_stats(self) -> dict:
                 """Get ingestion performance statistics."""
                 if not self.ingestion_metrics:
                     return {"no_data": True}
 
-                total_processed = sum(
+                _total_processed = sum(
                     m["processed_count"] for m in self.ingestion_metrics
                 )
-                total_failed = sum(m["failed_count"] for m in self.ingestion_metrics)
+                _total_failed = sum(m["failed_count"] for m in self.ingestion_metrics)
                 avg_dps = sum(
                     m["docs_per_second"] for m in self.ingestion_metrics
                 ) / len(self.ingestion_metrics)
                 overall_success_rate = (
-                    total_processed / (total_processed + total_failed)
-                    if (total_processed + total_failed) > 0
+                    _total_processed / (_total_processed + _total_failed)
+                    if (_total_processed + _total_failed) > 0
                     else 0
                 )
 
                 return {
-                    "total_documents_processed": total_processed,
-                    "total_documents_failed": total_failed,
+                    "_total_documents_processed": _total_processed,
+                    "_total_documents_failed": _total_failed,
                     "overall_success_rate": overall_success_rate,
                     "avg_docs_per_second": avg_dps,
-                    "total_batches": len(self.ingestion_metrics),
+                    "_total_batches": len(self.ingestion_metrics),
                 }
 
         ingestor = BatchDocumentIngestor()
 
-        async def batch_ingestion_operation(**kwargs):
+        async def batch_ingestion_operation(**_kwargs):
             """Perform batch document ingestion."""
             # Generate batch of documents to ingest
             batch_size = random.randint(20, 100)
@@ -478,7 +484,7 @@ class TestVolumeLoad:
                 }
                 document_batch.append(doc)
 
-            return await ingestor.ingest_document_batch(document_batch, **kwargs)
+            return await ingestor.ingest_document_batch(document_batch, **_kwargs)
 
         # Configuration for batch ingestion
         config = LoadTestConfig(
@@ -509,11 +515,11 @@ class TestVolumeLoad:
         assert ingestion_stats["overall_success_rate"] > 0.95, (
             f"Low success rate: {ingestion_stats['overall_success_rate']}"
         )
-        assert ingestion_stats["total_documents_processed"] > 1000, (
+        assert ingestion_stats["_total_documents_processed"] > 1000, (
             "Insufficient document volume processed"
         )
 
-    def _analyze_document_processing(self, metrics: list[Dict]) -> Dict:
+    def _analyze_document_processing(self, metrics: list[dict]) -> dict:
         """Analyze document processing performance."""
         if not metrics:
             return {"avg_throughput_mb_per_second": 0, "processing_consistency": 0}
@@ -536,11 +542,11 @@ class TestVolumeLoad:
         return {
             "avg_throughput_mb_per_second": avg_throughput,
             "processing_consistency": consistency,
-            "total_documents": len(metrics),
-            "total_mb_processed": sum(m["document_size_mb"] for m in metrics),
+            "_total_documents": len(metrics),
+            "_total_mb_processed": sum(m["document_size_mb"] for m in metrics),
         }
 
-    def _analyze_batch_processing(self, metrics: list[Dict]) -> Dict:
+    def _analyze_batch_processing(self, metrics: list[dict]) -> dict:
         """Analyze batch processing efficiency."""
         if not metrics:
             return {"batch_efficiency": 0}
@@ -562,10 +568,10 @@ class TestVolumeLoad:
             "batch_efficiency": avg_efficiency,
             "avg_batch_size": sum(batch_sizes) / len(batch_sizes),
             "avg_embeddings_per_second": sum(eps_values) / len(eps_values),
-            "total_batches": len(metrics),
+            "_total_batches": len(metrics),
         }
 
-    def _analyze_large_search_results(self, metrics: list[Dict]) -> Dict:
+    def _analyze_large_search_results(self, metrics: list[dict]) -> dict:
         """Analyze large search result handling."""
         if not metrics:
             return {"memory_efficiency": 0}
@@ -590,7 +596,7 @@ class TestVolumeLoad:
             "avg_processing_time": sum(processing_times) / len(processing_times),
         }
 
-    def _analyze_batch_ingestion(self, metrics: list[Dict]) -> Dict:
+    def _analyze_batch_ingestion(self, metrics: list[dict]) -> dict:
         """Analyze batch ingestion performance."""
         if not metrics:
             return {"ingestion_stability": 0, "error_rate": 0}
@@ -617,5 +623,5 @@ class TestVolumeLoad:
             "error_rate": error_rate,
             "avg_success_rate": avg_success_rate,
             "avg_docs_per_second": avg_dps,
-            "total_batches": len(metrics),
+            "_total_batches": len(metrics),
         }

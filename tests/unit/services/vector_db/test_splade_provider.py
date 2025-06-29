@@ -4,6 +4,7 @@ This module contains comprehensive tests for the SPLADEProvider
 including sparse vector generation, tokenization, and caching.
 """
 
+import math
 from unittest.mock import MagicMock
 
 import pytest
@@ -110,7 +111,6 @@ class TestSPLADEProvider:
         assert normalized != unnormalized
 
         # Check that normalized vector has L2 norm ≈ 1
-        import math
 
         norm = math.sqrt(sum(weight**2 for weight in normalized.values()))
         assert abs(norm - 1.0) < 0.1  # Allow some tolerance
@@ -214,7 +214,7 @@ class TestSPLADEProvider:
 
     async def test_token_id_generation(self, provider):
         """Test token ID generation and consistency."""
-        token = "python"
+        token = "python"  # Test token, not a password
 
         # Should return consistent IDs
         id1 = provider._get_token_id(token)
@@ -226,7 +226,7 @@ class TestSPLADEProvider:
 
     async def test_unknown_token_handling(self, provider):
         """Test handling of unknown tokens."""
-        unknown_token = "veryunusualtoken12345"
+        unknown_token = "veryunusualtoken12345"  # Test token, not a password
 
         token_id = provider._get_token_id(unknown_token)
 
@@ -335,7 +335,7 @@ class TestSPLADEProvider:
     async def test_token_info_retrieval(self, provider):
         """Test token information retrieval."""
         # Add a token to vocabulary
-        token = "testtoken"
+        token = "testtoken"  # Test token, not a password
         token_id = provider._get_token_id(token)
 
         info = provider.get_token_info(token_id)
@@ -382,7 +382,7 @@ class TestSPLADEProvider:
         """Test error handling during sparse vector generation."""
         # Mock an error in the fallback generation
         original_method = provider._generate_with_fallback
-        provider._generate_with_fallback = lambda x: None.__getattribute__("error")
+        provider._generate_with_fallback = lambda _x: None.__getattribute__("error")
 
         try:
             vector = await provider.generate_sparse_vector("test")
@@ -404,7 +404,7 @@ class TestSPLADEProvider:
         assert normalized == zero_vector
 
     @pytest.mark.parametrize(
-        "text,expected_features",
+        ("text", "expected_features"),
         [
             ("async def process():", ["async", "def", "process"]),
             ("import numpy as np", ["import", "numpy", "np"]),

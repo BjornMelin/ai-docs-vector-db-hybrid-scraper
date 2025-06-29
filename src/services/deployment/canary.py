@@ -11,7 +11,7 @@ import asyncio
 import contextlib
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -78,7 +78,7 @@ class CanaryMetrics(BaseModel):
 
     # Timestamps
     stage_start_time: datetime = Field(
-        default_factory=datetime.utcnow, description="Stage start time"
+        default_factory=lambda: datetime.now(UTC), description="Stage start time"
     )
     next_stage_time: datetime | None = Field(
         default=None, description="Next stage promotion time"
@@ -87,7 +87,7 @@ class CanaryMetrics(BaseModel):
     @property
     def stage_duration_minutes(self) -> float:
         """Calculate current stage duration in minutes."""
-        return (datetime.utcnow() - self.stage_start_time).total_seconds() / 60.0
+        return (datetime.now(tz=UTC) - self.stage_start_time).total_seconds() / 60.0
 
 
 @dataclass
@@ -118,20 +118,22 @@ class CanaryConfig:
     def __post_init__(self):
         """Validate canary configuration."""
         if not 0 < self.initial_traffic_percentage <= 100:
-            raise ValueError("Initial traffic percentage must be 0-100")
+            msg = "Initial traffic percentage must be 0-100"
+            raise ValueError(msg)
         if self.max_error_rate < 0:
-            raise ValueError("Max error rate must be non-negative")
+            msg = "Max error rate must be non-negative"
+            raise ValueError(msg)
         if self.min_success_rate < 0 or self.min_success_rate > 100:
-            raise ValueError("Min success rate must be 0-100")
+            msg = "Min success rate must be 0-100"
+            raise ValueError(msg)
 
     @property
     def traffic_stages(self) -> list[float]:
         """Get traffic progression stages."""
         if self.custom_traffic_stages:
             return sorted(self.custom_traffic_stages)
-        else:
-            # Default progressive rollout: 5% -> 25% -> 50% -> 75% -> 100%
-            return [5.0, 25.0, 50.0, 75.0, 100.0]
+        # Default progressive rollout: 5% -> 25% -> 50% -> 75% -> 100%
+        return [5.0, 25.0, 50.0, 75.0, 100.0]
 
     def to_deployment_config(self) -> DeploymentConfig:
         """Convert to base deployment configuration."""
@@ -162,6 +164,7 @@ class CanaryDeployment:
             qdrant_service: Qdrant service for data storage
             cache_manager: Cache manager for metrics caching
             feature_flag_manager: Optional feature flag manager
+
         """
         self.qdrant_service = qdrant_service
         self.cache_manager = cache_manager
@@ -198,8 +201,8 @@ class CanaryDeployment:
             self._initialized = True
             logger.info("Canary deployment manager initialized successfully")
 
-        except Exception as e:
-            logger.exception("Failed to initialize canary deployment manager: %s", e)
+        except Exception:
+            logger.exception("Failed to initialize canary deployment manager")
             self._initialized = False
             raise
 
@@ -215,6 +218,7 @@ class CanaryDeployment:
         Raises:
             ValueError: If configuration is invalid
             RuntimeError: If deployment with same ID already exists
+
         """
         if not self._initialized:
             await self.initialize()
@@ -223,9 +227,8 @@ class CanaryDeployment:
         config.__post_init__()
 
         if config.deployment_id in self._active_deployments:
-            raise RuntimeError(
-                f"Canary deployment {config.deployment_id} already exists"
-            )
+            msg = f"Canary deployment {config.deployment_id} already exists"
+            raise RuntimeError(msg)
 
         # Initialize deployment
         self._active_deployments[config.deployment_id] = config
@@ -262,6 +265,7 @@ class CanaryDeployment:
 
         Returns:
             dict[str, Any]: Deployment status and metrics
+
         """
         if deployment_id not in self._active_deployments:
             return {"error": "Deployment not found"}
@@ -296,6 +300,7 @@ class CanaryDeployment:
 
         Returns:
             bool: True if promotion was successful
+
         """
         if deployment_id not in self._active_deployments:
             return False
@@ -339,8 +344,8 @@ class CanaryDeployment:
 
             # Update metrics
             metrics.canary_traffic_percentage = next_percentage
-            metrics.stage_start_time = datetime.utcnow()
-            metrics.next_stage_time = datetime.utcnow() + timedelta(
+            metrics.stage_start_time = datetime.now(tz=UTC)
+            metrics.next_stage_time = datetime.now(tz=UTC) + timedelta(
                 minutes=config.stage_duration_minutes
             )
             metrics.success_criteria_met = False  # Reset for new stage
@@ -367,8 +372,8 @@ class CanaryDeployment:
             )
             return True
 
-        except Exception as e:
-            logger.exception("Failed to promote canary %s: %s", deployment_id, e)
+        except Exception:
+            logger.exception("Failed to promote canary %s", deployment_id)
             self._deployment_status[deployment_id] = CanaryStatus.FAILED
             return False
 
@@ -381,6 +386,7 @@ class CanaryDeployment:
 
         Returns:
             bool: True if rollback was successful
+
         """
         if deployment_id not in self._active_deployments:
             return False
@@ -405,8 +411,8 @@ class CanaryDeployment:
             )
             return True
 
-        except Exception as e:
-            logger.exception("Failed to rollback canary %s: %s", deployment_id, e)
+        except Exception:
+            logger.exception("Failed to rollback canary %s", deployment_id)
             self._deployment_status[deployment_id] = CanaryStatus.FAILED
             return False
 
@@ -418,6 +424,7 @@ class CanaryDeployment:
 
         Returns:
             bool: True if paused successfully
+
         """
         if deployment_id not in self._active_deployments:
             return False
@@ -439,6 +446,7 @@ class CanaryDeployment:
 
         Returns:
             bool: True if resumed successfully
+
         """
         if deployment_id not in self._active_deployments:
             return False
@@ -498,19 +506,16 @@ class CanaryDeployment:
                             # Complete deployment
                             await self._complete_canary_deployment(deployment_id)
                             break
-                        else:
-                            # Promote to next stage
-                            await self.promote_canary(deployment_id)
+                        # Promote to next stage
+                        await self.promote_canary(deployment_id)
 
                 # Wait before next check
                 await asyncio.sleep(config.health_check_interval_seconds)
 
         except asyncio.CancelledError:
             logger.info("Monitoring cancelled for canary deployment: %s", deployment_id)
-        except Exception as e:
-            logger.exception(
-                "Error monitoring canary deployment %s: %s", deployment_id, e
-            )
+        except Exception:
+            logger.exception("Error monitoring canary deployment %s", deployment_id)
             self._deployment_status[deployment_id] = CanaryStatus.FAILED
 
     async def _update_deployment_metrics(self, deployment_id: str) -> None:
@@ -552,10 +557,8 @@ class CanaryDeployment:
             metrics.canary_requests += int(total_requests * traffic_percentage)
             metrics.stable_requests += int(total_requests * (1 - traffic_percentage))
 
-        except Exception as e:
-            logger.exception(
-                "Error updating metrics for canary %s: %s", deployment_id, e
-            )
+        except Exception:
+            logger.exception("Error updating metrics for canary %s", deployment_id)
 
     async def _evaluate_success_criteria(self, deployment_id: str) -> bool:
         """Evaluate if canary deployment meets success criteria."""
@@ -584,9 +587,9 @@ class CanaryDeployment:
             # Check minimum monitoring duration
             return metrics.stage_duration_minutes >= config.monitoring_window_minutes
 
-        except Exception as e:
+        except Exception:
             logger.exception(
-                "Error evaluating success criteria for canary %s: %s", deployment_id, e
+                "Error evaluating success criteria for canary %s", deployment_id
             )
             return False
 
@@ -631,9 +634,9 @@ class CanaryDeployment:
 
             return False
 
-        except Exception as e:
+        except Exception:
             logger.exception(
-                "Error checking rollback conditions for canary %s: %s", deployment_id, e
+                "Error checking rollback conditions for canary %s", deployment_id
             )
             return False
 
@@ -657,10 +660,8 @@ class CanaryDeployment:
                 stable_percentage,
             )
 
-        except Exception as e:
-            logger.exception(
-                "Failed to update traffic split for %s: %s", deployment_id, e
-            )
+        except Exception:
+            logger.exception("Failed to update traffic split for %s", deployment_id)
             raise
 
     async def _complete_canary_deployment(
@@ -690,10 +691,8 @@ class CanaryDeployment:
                 self._cleanup_deployment(deployment_id, delay_seconds=3600)
             )  # 1 hour
 
-        except Exception as e:
-            logger.exception(
-                "Error completing canary deployment %s: %s", deployment_id, e
-            )
+        except Exception:
+            logger.exception("Error completing canary deployment %s", deployment_id)
 
     async def _cleanup_deployment(self, deployment_id: str, delay_seconds: int) -> None:
         """Clean up completed deployment after delay."""
@@ -707,20 +706,16 @@ class CanaryDeployment:
 
             logger.info("Cleaned up canary deployment: %s", deployment_id)
 
-        except Exception as e:
-            logger.exception(
-                "Error cleaning up canary deployment %s: %s", deployment_id, e
-            )
+        except Exception:
+            logger.exception("Error cleaning up canary deployment %s", deployment_id)
 
     async def _load_active_deployments(self) -> None:
         """Load active canary deployments from storage."""
         # In production, load from database/storage
-        pass
 
     async def _persist_deployment_state(self, deployment_id: str) -> None:
         """Persist deployment state to storage."""
         # In production, save to database/storage
-        pass
 
     async def cleanup(self) -> None:
         """Cleanup canary deployment manager resources."""

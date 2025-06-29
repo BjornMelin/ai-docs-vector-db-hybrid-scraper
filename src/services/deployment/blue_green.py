@@ -11,7 +11,7 @@ import asyncio
 import contextlib
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -105,6 +105,7 @@ class BlueGreenDeployment:
             qdrant_service: Qdrant service for data storage
             cache_manager: Cache manager for state management
             feature_flag_manager: Optional feature flag manager
+
         """
         self.qdrant_service = qdrant_service
         self.cache_manager = cache_manager
@@ -148,10 +149,8 @@ class BlueGreenDeployment:
             self._initialized = True
             logger.info("Blue-green deployment manager initialized successfully")
 
-        except Exception as e:
-            logger.exception(
-                "Failed to initialize blue-green deployment manager: %s", e
-            )
+        except Exception:
+            logger.exception("Failed to initialize blue-green deployment manager")
             self._initialized = False
             raise
 
@@ -166,6 +165,7 @@ class BlueGreenDeployment:
 
         Raises:
             RuntimeError: If deployment is already in progress
+
         """
         if not self._initialized:
             await self.initialize()
@@ -175,9 +175,8 @@ class BlueGreenDeployment:
             BlueGreenStatus.COMPLETED,
             BlueGreenStatus.FAILED,
         ):
-            raise RuntimeError(
-                f"Deployment already in progress: {self._deployment_status}"
-            )
+            msg = f"Deployment already in progress: {self._deployment_status}"
+            raise RuntimeError(msg)
 
         self._current_deployment = config
         self._deployment_status = BlueGreenStatus.PREPARING
@@ -193,6 +192,7 @@ class BlueGreenDeployment:
 
         Returns:
             dict[str, Any]: Current status including environments and deployment info
+
         """
         return {
             "status": self._deployment_status.value,
@@ -219,6 +219,7 @@ class BlueGreenDeployment:
 
         Returns:
             bool: True if switch was successful
+
         """
         if not self._initialized:
             await self.initialize()
@@ -261,8 +262,8 @@ class BlueGreenDeployment:
             )
             return True
 
-        except Exception as e:
-            logger.exception("Failed to switch environments: %s", e)
+        except Exception:
+            logger.exception("Failed to switch environments")
             self._deployment_status = BlueGreenStatus.FAILED
             return False
 
@@ -271,6 +272,7 @@ class BlueGreenDeployment:
 
         Returns:
             bool: True if rollback was successful
+
         """
         if not self._initialized:
             await self.initialize()
@@ -286,12 +288,11 @@ class BlueGreenDeployment:
             if success:
                 logger.info("Rollback completed successfully")
                 return True
-            else:
-                logger.error("Rollback failed")
-                return False
+            logger.error("Rollback failed")
+            return False
 
-        except Exception as e:
-            logger.exception("Error during rollback: %s", e)
+        except Exception:
+            logger.exception("Error during rollback")
             self._deployment_status = BlueGreenStatus.FAILED
             return False
 
@@ -300,6 +301,7 @@ class BlueGreenDeployment:
 
         Returns:
             dict[str, DeploymentMetrics]: Metrics for blue and green environments
+
         """
         metrics = {}
 
@@ -319,7 +321,7 @@ class BlueGreenDeployment:
                     if env.health
                     else 0.0,
                     error_rate=env.health.error_rate if env.health else 0.0,
-                    created_at=env.last_deployment or datetime.utcnow(),
+                    created_at=env.last_deployment or datetime.now(tz=UTC),
                 )
 
         return metrics
@@ -369,8 +371,8 @@ class BlueGreenDeployment:
             else:
                 logger.info("Automatic switch disabled, manual intervention required")
 
-        except Exception as e:
-            logger.exception("Deployment failed: %s", e)
+        except Exception:
+            logger.exception("Deployment failed")
             self._deployment_status = BlueGreenStatus.FAILED
 
             # Automatic rollback on failure
@@ -385,11 +387,11 @@ class BlueGreenDeployment:
             # Update environment metadata
             env.deployment_id = config.deployment_id
             env.version = config.target_version
-            env.last_deployment = datetime.utcnow()
+            env.last_deployment = datetime.now(tz=UTC)
             env.metadata.update(
                 {
                     "deployment_config": config.__dict__,
-                    "deployment_start": datetime.utcnow().isoformat(),
+                    "deployment_start": datetime.now(tz=UTC).isoformat(),
                 }
             )
 
@@ -406,8 +408,8 @@ class BlueGreenDeployment:
                 "Deployed version %s to %s environment", config.target_version, env.name
             )
 
-        except Exception as e:
-            logger.exception("Failed to deploy to %s environment: %s", env.name, e)
+        except Exception:
+            logger.exception("Failed to deploy to %s environment", env.name)
             raise
 
     async def _perform_health_checks(
@@ -426,7 +428,7 @@ class BlueGreenDeployment:
                     error_rate=0.0,
                     success_count=100,
                     error_count=0,
-                    last_check=datetime.utcnow(),
+                    last_check=datetime.now(tz=UTC),
                     details={"environment": env.name, "version": env.version},
                 )
 
@@ -456,7 +458,7 @@ class BlueGreenDeployment:
             error_rate=100.0,
             success_count=0,
             error_count=config.health_check_retries,
-            last_check=datetime.utcnow(),
+            last_check=datetime.now(tz=UTC),
         )
 
         return False
@@ -477,8 +479,8 @@ class BlueGreenDeployment:
 
             logger.info("Traffic switch completed")
 
-        except Exception as e:
-            logger.exception("Failed to switch traffic: %s", e)
+        except Exception:
+            logger.exception("Failed to switch traffic")
             raise
 
     async def _health_check_loop(self) -> None:
@@ -494,8 +496,8 @@ class BlueGreenDeployment:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
-                logger.exception("Error in health check loop: %s", e)
+            except Exception:
+                logger.exception("Error in health check loop")
                 await asyncio.sleep(30)
 
     async def _check_environment_health(self, env: BlueGreenEnvironment) -> None:
@@ -504,22 +506,18 @@ class BlueGreenDeployment:
             # In production, perform actual health checks
             # For now, maintain existing health status
             if env.health:
-                env.health.last_check = datetime.utcnow()
+                env.health.last_check = datetime.now(tz=UTC)
 
-        except Exception as e:
-            logger.exception(
-                "Error checking health for %s environment: %s", env.name, e
-            )
+        except Exception:
+            logger.exception("Error checking health for %s environment", env.name)
 
     async def _load_environment_state(self) -> None:
         """Load environment state from storage."""
         # In production, load from database/storage
-        pass
 
     async def _persist_environment_state(self) -> None:
         """Persist environment state to storage."""
         # In production, save to database/storage
-        pass
 
     async def cleanup(self) -> None:
         """Cleanup blue-green deployment manager resources."""

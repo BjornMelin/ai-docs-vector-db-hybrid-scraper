@@ -7,6 +7,7 @@ improve search recall and relevance.
 
 import logging
 import re
+import time
 from enum import Enum
 from typing import Any
 
@@ -71,7 +72,8 @@ class ExpandedTerm(BaseModel):
     def validate_term_format(cls, v):
         """Validate term format."""
         if not v or not v.strip():
-            raise ValueError("Term cannot be empty")
+            msg = "Term cannot be empty"
+            raise ValueError(msg)
         return v.strip().lower()
 
 
@@ -168,6 +170,7 @@ class QueryExpansionService:
             enable_semantic_expansion: Enable semantic similarity expansion
             enable_domain_expansion: Enable domain-specific expansion
             cache_size: Size of expansion cache
+
         """
         self._logger = logging.getLogger(
             f"{self.__class__.__module__}.{self.__class__.__name__}"
@@ -208,9 +211,8 @@ class QueryExpansionService:
 
         Returns:
             QueryExpansionResult with expanded terms and metadata
-        """
-        import time
 
+        """
         start_time = time.time()
 
         try:
@@ -283,7 +285,9 @@ class QueryExpansionService:
 
         except Exception as e:
             processing_time_ms = (time.time() - start_time) * 1000
-            self._logger.error(f"Query expansion failed: {e}", exc_info=True)
+            self._logger.error(
+                f"Query expansion failed: {e}", exc_info=True
+            )  # TODO: Convert f-string to logging format
 
             # Return fallback result
             return QueryExpansionResult(
@@ -539,7 +543,7 @@ class QueryExpansionService:
 
         return query
 
-    def _extract_key_terms(self, query: str, context: dict[str, Any]) -> list[str]:
+    def _extract_key_terms(self, query: str, _context: dict[str, Any]) -> list[str]:
         """Extract key terms from the query for expansion."""
         # Simple term extraction - in production would use NLP
         words = query.split()
@@ -578,10 +582,7 @@ class QueryExpansionService:
             "should",
         }
 
-        key_terms = []
-        for word in words:
-            if len(word) > 2 and word not in stop_words:
-                key_terms.append(word)
+        key_terms = [word for word in words if len(word) > 2 and word not in stop_words]
 
         # Remove duplicates while preserving order
         seen = set()
@@ -637,7 +638,7 @@ class QueryExpansionService:
         self,
         original_query: str,
         expanded_terms: list[ExpandedTerm],
-        request: QueryExpansionRequest,
+        _request: QueryExpansionRequest,
     ) -> str:
         """Build the final expanded query."""
         if not expanded_terms:
@@ -667,7 +668,7 @@ class QueryExpansionService:
         return expanded_query
 
     def _calculate_expansion_confidence(
-        self, expanded_terms: list[ExpandedTerm], request: QueryExpansionRequest
+        self, expanded_terms: list[ExpandedTerm], _request: QueryExpansionRequest
     ) -> float:
         """Calculate overall expansion confidence."""
         if not expanded_terms:
@@ -757,7 +758,7 @@ class QueryExpansionService:
         return list(set(synonyms))  # Remove duplicates
 
     def _get_semantically_related_terms(
-        self, term: str, context: dict[str, Any]
+        self, term: str, _context: dict[str, Any]
     ) -> list[tuple[str, float]]:
         """Get semantically related terms using embeddings."""
         # Simplified implementation - in production would use actual embeddings
@@ -776,7 +777,7 @@ class QueryExpansionService:
         return related_terms
 
     def _get_context_specific_terms(
-        self, term: str, domain_hints: list[str], user_intent: str
+        self, term: str, domain_hints: list[str], _user_intent: str
     ) -> list[str]:
         """Get context-specific term expansions."""
         context_terms = []
@@ -803,15 +804,17 @@ class QueryExpansionService:
             domain in self.domain_vocabularies
             and term in self.domain_vocabularies[domain]
         ):
-            for related_term in self.domain_vocabularies[domain][term]:
-                domain_terms.append(
-                    (related_term, 0.8)
-                )  # High relevance for domain terms
+            domain_terms.extend(
+                [
+                    (related_term, 0.8)  # High relevance for domain terms
+                    for related_term in self.domain_vocabularies[domain][term]
+                ]
+            )
 
         return domain_terms
 
     def _get_learned_expansions(
-        self, term: str, context: dict[str, Any]
+        self, term: str, _context: dict[str, Any]
     ) -> list[tuple[str, float]]:
         """Get expansions based on learned patterns."""
         # Simplified implementation - would use actual ML model
@@ -824,7 +827,7 @@ class QueryExpansionService:
 
         return learned_terms
 
-    def _calculate_synonym_confidence(self, original: str, synonym: str) -> float:
+    def _calculate_synonym_confidence(self, _original: str, _synonym: str) -> float:
         """Calculate confidence for synonym relationships."""
         # Simple confidence calculation - in production would be more sophisticated
         base_confidence = 0.7
@@ -849,7 +852,7 @@ class QueryExpansionService:
         return relevance
 
     def _calculate_context_confidence(
-        self, original: str, context_term: str, context: dict[str, Any]
+        self, _original: str, context_term: str, context: dict[str, Any]
     ) -> float:
         """Calculate confidence for context-based expansion."""
         base_confidence = 0.6

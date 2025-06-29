@@ -13,6 +13,10 @@ import pytest
 from tests.chaos.conftest import FailureType
 
 
+class TestError(Exception):
+    """Custom exception for this module."""
+
+
 @pytest.mark.chaos
 @pytest.mark.fault_injection
 @pytest.mark.network_chaos
@@ -20,14 +24,15 @@ class TestNetworkFaultInjection:
     """Test network fault injection scenarios."""
 
     async def test_network_timeout_injection(
-        self, fault_injector, resilience_validator, mock_resilient_service
+        self, fault_injector, _resilience_validator, _mock_resilient_service
     ):
         """Test network timeout fault injection."""
 
         # Create a service that will timeout
         async def timeout_service():
             await asyncio.sleep(0.1)  # Simulate normal operation
-            raise TimeoutError("Simulated timeout")
+            msg = "Simulated timeout"
+            raise TimeoutError(msg)
 
         # Inject network timeout fault
         fault_id = await fault_injector.inject_network_timeout(
@@ -51,7 +56,7 @@ class TestNetworkFaultInjection:
         assert len(fault_injector.get_fault_history()) == 1
 
     async def test_connection_failure_injection(
-        self, fault_injector, mock_resilient_service
+        self, fault_injector, _mock_resilient_service
     ):
         """Test connection failure injection."""
         # Inject connection failure
@@ -71,7 +76,7 @@ class TestNetworkFaultInjection:
         # Clean up
         fault_injector.remove_fault(fault_id)
 
-    async def test_partial_network_failure(self, fault_injector, resilience_validator):
+    async def test_partial_network_failure(self, fault_injector, _resilience_validator):
         """Test partial network failure with intermittent connectivity."""
         # Inject partial failure (70% success rate)
         fault_id = await fault_injector.inject_partial_failure(
@@ -81,9 +86,9 @@ class TestNetworkFaultInjection:
         # Test multiple requests to verify partial failure behavior
         successes = 0
         failures = 0
-        total_requests = 100
+        _total_requests = 100
 
-        for _ in range(total_requests):
+        for _ in range(_total_requests):
             try:
                 await fault_injector.get_active_faults()[fault_id]["fault_func"]()
                 successes += 1
@@ -95,7 +100,7 @@ class TestNetworkFaultInjection:
         assert successes > 0, "No successes detected in partial failure test"
 
         # Success rate should be roughly around 70% (with some tolerance)
-        actual_success_rate = successes / total_requests
+        actual_success_rate = successes / _total_requests
         assert 0.6 <= actual_success_rate <= 0.8, (
             f"Success rate {actual_success_rate} outside expected range"
         )
@@ -133,12 +138,12 @@ class TestNetworkFaultInjection:
             ("latency_spike", {"latency_seconds": 0.05}),
         ]
 
-        for fault_type, kwargs in fault_types:
+        for fault_type, _kwargs in fault_types:
             async with fault_injector.temporary_fault(
                 fault_type=fault_type,
                 target="test_service",
                 duration_seconds=0.1,
-                **kwargs,
+                **_kwargs,
             ) as fault_id:
                 # Verify fault is active during context
                 assert fault_id in fault_injector.get_active_faults()
@@ -150,7 +155,7 @@ class TestNetworkFaultInjection:
                     "connection_failure",
                     "service_unavailable",
                 ]:
-                    with pytest.raises(Exception):
+                    with pytest.raises((TimeoutError, ConnectionError, RuntimeError)):
                         await active_fault["fault_func"]()
                 else:  # latency_spike
                     start_time = time.time()
@@ -199,7 +204,7 @@ class TestNetworkFaultInjection:
                 FailureType.NETWORK_TIMEOUT,
                 FailureType.CONNECTION_REFUSED,
             ]:
-                with pytest.raises(Exception):
+                with pytest.raises((TimeoutError, ConnectionError, RuntimeError)):
                     await fault["fault_func"]()
             else:  # latency spike
                 start_time = time.time()
@@ -215,7 +220,7 @@ class TestNetworkFaultInjection:
         assert len(fault_injector.get_fault_history()) == 3
 
     async def test_network_fault_with_circuit_breaker(
-        self, fault_injector, resilience_validator
+        self, _fault_injector, resilience_validator
     ):
         """Test network fault injection with circuit breaker validation."""
         failure_count = 0
@@ -227,10 +232,13 @@ class TestNetworkFaultInjection:
 
             # Simulate circuit breaker after 3 failures
             if failure_count >= 3:
-                circuit_breaker_triggered = True
-                raise Exception("Circuit breaker open")
+                msg = "Circuit breaker open"
+                raise TestError(msg)
+                msg = "Circuit breaker open"
+                raise TestError(msg)
 
-            raise ConnectionError("Network failure")
+            msg = "Network failure"
+            raise ConnectionError(msg)
 
         # Validate circuit breaker behavior
         result = await resilience_validator.validate_circuit_breaker(
@@ -255,15 +263,15 @@ class TestNetworkFaultInjection:
 
         # Test multiple requests
         failures = 0
-        total_requests = 50
+        _total_requests = 50
 
-        for _ in range(total_requests):
+        for _ in range(_total_requests):
             try:
                 await fault_injector.get_active_faults()[fault_id]["fault_func"]()
             except Exception:
                 failures += 1
 
-        actual_failure_rate = failures / total_requests
+        actual_failure_rate = failures / _total_requests
 
         # Allow 20% tolerance for randomness
         expected_min = max(0, failure_rate - 0.2)
@@ -294,7 +302,7 @@ class TestNetworkChaosWithRealServices:
         return service
 
     @pytest.fixture
-    def mock_embedding_service(self):
+    def _mock_embedding_service(self):
         """Mock embedding service."""
         service = AsyncMock()
         service.embed_text = AsyncMock(return_value=[0.1, 0.2, 0.3])
@@ -302,7 +310,7 @@ class TestNetworkChaosWithRealServices:
         return service
 
     async def test_vector_db_connection_failure_scenario(
-        self, fault_injector, resilience_validator, mock_vector_db_service
+        self, _fault_injector, resilience_validator, mock_vector_db_service
     ):
         """Test vector database connection failure and recovery."""
         # Simulate connection failure
@@ -331,7 +339,7 @@ class TestNetworkChaosWithRealServices:
         assert result["fallback_successful"], "Fallback should succeed"
 
     async def test_embedding_service_timeout_with_retry(
-        self, fault_injector, resilience_validator, mock_embedding_service
+        self, _fault_injector, resilience_validator, __mock_embedding_service
     ):
         """Test embedding service timeout with retry mechanism."""
         call_count = 0
@@ -342,7 +350,8 @@ class TestNetworkChaosWithRealServices:
 
             # Fail first 2 attempts, succeed on 3rd
             if call_count <= 2:
-                raise TimeoutError("Embedding service timeout")
+                msg = "Embedding service timeout"
+                raise TimeoutError(msg)
 
             return [0.1, 0.2, 0.3]
 
@@ -361,20 +370,20 @@ class TestNetworkChaosWithRealServices:
 
     async def test_cascade_failure_prevention(
         self,
-        fault_injector,
+        _fault_injector,
         resilience_validator,
         mock_vector_db_service,
-        mock_embedding_service,
+        _mock_embedding_service,
     ):
         """Test cascade failure prevention mechanisms."""
         # Simulate primary service failure
         mock_vector_db_service.search.side_effect = Exception("Vector DB overloaded")
 
         # Ensure dependent service doesn't fail due to cascade
-        mock_embedding_service.embed_text.return_value = [0.1, 0.2, 0.3]
+        _mock_embedding_service.embed_text.return_value = [0.1, 0.2, 0.3]
 
         # Test that embedding service remains healthy even when vector DB fails
-        embedding_result = await mock_embedding_service.embed_text("test query")
+        embedding_result = await _mock_embedding_service.embed_text("test query")
         assert embedding_result == [0.1, 0.2, 0.3], (
             "Embedding service should remain functional"
         )
@@ -388,9 +397,11 @@ class TestNetworkChaosWithRealServices:
 
             # After 3 failures, circuit breaker should open
             if failure_count > 3:
-                raise Exception("Circuit breaker open - preventing cascade")
+                msg = "Circuit breaker open - preventing cascade"
+                raise TestError(msg)
 
-            raise Exception("Vector DB failure")
+            msg = "Vector DB failure"
+            raise TestError(msg)
 
         # Validate circuit breaker prevents cascade
         circuit_result = await resilience_validator.validate_circuit_breaker(
@@ -404,7 +415,7 @@ class TestNetworkChaosWithRealServices:
         )
 
     async def test_network_partition_simulation(
-        self, fault_injector, resilience_validator
+        self, _fault_injector, _resilience_validator
     ):
         """Test network partition simulation and split-brain prevention."""
         # Simulate network partition between services
@@ -412,12 +423,14 @@ class TestNetworkChaosWithRealServices:
 
         async def service_a_operation():
             if partition_active:
-                raise ConnectionError("Network partition - cannot reach service B")
+                msg = "Network partition - cannot reach service B"
+                raise ConnectionError(msg)
             return {"status": "success", "service": "A"}
 
         async def service_b_operation():
             if partition_active:
-                raise ConnectionError("Network partition - cannot reach service A")
+                msg = "Network partition - cannot reach service A"
+                raise ConnectionError(msg)
             return {"status": "success", "service": "B"}
 
         # Test that both services detect partition
@@ -437,7 +450,7 @@ class TestNetworkChaosWithRealServices:
         assert result_a["status"] == "success"
         assert result_b["status"] == "success"
 
-    async def test_bandwidth_limitation_simulation(self, fault_injector):
+    async def test_bandwidth_limitation_simulation(self, _fault_injector):
         """Test bandwidth limitation simulation."""
 
         # Simulate bandwidth limitation by adding delays
@@ -461,13 +474,14 @@ class TestNetworkChaosWithRealServices:
         )
         assert result["transferred"] == "10MB"
 
-    async def test_dns_failure_simulation(self, fault_injector):
+    async def test_dns_failure_simulation(self, _fault_injector):
         """Test DNS failure simulation."""
         dns_failure_active = True
 
         async def dns_dependent_operation(hostname: str):
             if dns_failure_active and hostname not in ["localhost", "127.0.0.1"]:
-                raise Exception(f"DNS resolution failed for {hostname}")
+                msg = f"DNS resolution failed for {hostname}"
+                raise TestError(msg)
 
             return {"resolved": True, "hostname": hostname}
 

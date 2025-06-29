@@ -14,6 +14,7 @@ from src.services.observability.dependencies import (
     record_ai_operation_metrics,
     track_ai_cost_metrics,
 )
+from src.services.observability.tracking import _NoOpMeter, _NoOpTracer
 
 
 class TestObservabilityDependencies:
@@ -108,7 +109,6 @@ class TestObservabilityDependencies:
 
         assert service["enabled"] is False
         # When disabled, we get NoOp implementations, not None
-        from src.services.observability.tracking import _NoOpMeter, _NoOpTracer
 
         assert isinstance(service["tracer"], _NoOpTracer)
         assert isinstance(service["meter"], _NoOpMeter)
@@ -153,7 +153,6 @@ class TestObservabilityDependencies:
         tracer = get_ai_tracer(observability_service)
 
         # Should return NoOp tracer
-        from src.services.observability.tracking import _NoOpTracer
 
         assert isinstance(tracer, _NoOpTracer)
 
@@ -165,8 +164,6 @@ class TestObservabilityDependencies:
         }
 
         tracer = get_ai_tracer(observability_service)
-
-        from src.services.observability.tracking import _NoOpTracer
 
         assert isinstance(tracer, _NoOpTracer)
 
@@ -194,8 +191,6 @@ class TestObservabilityDependencies:
         }
 
         meter = get_service_meter(observability_service)
-
-        from src.services.observability.tracking import _NoOpMeter
 
         assert isinstance(meter, _NoOpMeter)
 

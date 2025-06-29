@@ -10,6 +10,7 @@ Tests the integration between different service layers including:
 
 import asyncio
 import contextlib
+import logging
 import time
 from unittest.mock import AsyncMock, MagicMock
 
@@ -21,6 +22,13 @@ from src.services.functional.circuit_breaker import (
     CircuitBreakerConfig,
     create_circuit_breaker,
 )
+
+
+logger = logging.getLogger(__name__)
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
 
 
 class TestEmbeddingCacheIntegration:
@@ -770,7 +778,8 @@ class TestCircuitBreakerCoordination:
 
         # Mock service operations
         async def embedding_operation():
-            raise ConnectionError("Embedding service down")
+            msg = "Embedding service down"
+            raise ConnectionError(msg)
 
         async def vector_db_operation():
             return {"status": "success", "data": "vector_result"}
@@ -833,7 +842,8 @@ class TestCircuitBreakerCoordination:
 
         # Mock services
         async def primary_service():
-            raise Exception("Primary service overloaded")
+            msg = "Primary service overloaded"
+            raise TestError(msg)
 
         async def fallback_service():
             return {"status": "fallback_success", "data": "fallback_data"}
@@ -914,7 +924,8 @@ class TestCircuitBreakerCoordination:
 
         async def degraded_operation():
             await asyncio.sleep(0.05)  # Slow
-            raise Exception("Service degraded")
+            msg = "Service degraded"
+            raise TestError(msg)
 
         # Test calls to different services
         healthy_result = await monitor.call_service_with_protection(
@@ -926,8 +937,11 @@ class TestCircuitBreakerCoordination:
             await monitor.call_service_with_protection(
                 "vector_db_service", degraded_operation
             )
-        except Exception:
-            pass  # Expected failure
+        except Exception as e:
+            # Expected failure - testing degraded service behavior
+            logger.debug(
+                f"Expected degraded service failure: {e}"
+            )  # TODO: Convert f-string to logging format
 
         # Verify different circuit breaker configurations
         embedding_cb = monitor.circuit_breakers["embedding_service"]

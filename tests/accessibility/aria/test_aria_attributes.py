@@ -900,7 +900,7 @@ class TestAriaAttributeCompliance:
         assert 'aria-multiselectable="true"' in state_management_html
 
     @pytest.mark.parametrize(
-        "role,required_attrs,optional_attrs",
+        ("role", "required_attrs", "optional_attrs"),
         [
             ("button", [], ["aria-pressed", "aria-expanded"]),
             ("checkbox", ["aria-checked"], ["aria-required", "aria-invalid"]),
@@ -935,7 +935,7 @@ class TestAriaAttributeCompliance:
             ),
         ],
     )
-    def test_role_attribute_requirements(self, role, required_attrs, optional_attrs):
+    def test_role_attribute_requirements(self, required_attrs, optional_attrs):
         """Test that ARIA roles have required and appropriate optional attributes."""
         # This test documents the attribute requirements for different roles
         # In a real implementation, this would validate actual HTML
@@ -1113,12 +1113,12 @@ class TestAriaAttributeCompliance:
             aria_report["compliance_score"] = 1.0
         else:
             # Calculate based on severity of issues
-            total_issues = len(result["issues"])
+            _total_issues = len(result["issues"])
             error_issues = len(
                 [i for i in result["issues"] if i.get("severity") == "error"]
             )
             aria_report["compliance_score"] = max(
-                0.0, 1.0 - (error_issues / max(total_issues, 1))
+                0.0, 1.0 - (error_issues / max(_total_issues, 1))
             )
 
         # Add recommendations

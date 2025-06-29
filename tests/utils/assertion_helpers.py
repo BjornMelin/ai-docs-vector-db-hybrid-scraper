@@ -9,11 +9,17 @@ import asyncio
 import json
 import time
 from collections.abc import Callable
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, TypeVar
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
+
+try:
+    import jsonschema
+except ImportError:
+    jsonschema = None
 
 
 T = TypeVar("T")
@@ -82,7 +88,7 @@ def assert_error_response(
 def assert_pagination_response(
     response: dict[str, Any],
     items_key: str = "items",
-    total_key: str = "total",
+    _total_key: str = "_total",
     page_key: str = "page",
     per_page_key: str = "per_page",
 ) -> None:
@@ -91,7 +97,7 @@ def assert_pagination_response(
     Args:
         response: The response dictionary to validate
         items_key: Key name for items array (default: "items")
-        total_key: Key name for total count (default: "total")
+        _total_key: Key name for _total count (default: "_total")
         page_key: Key name for current page (default: "page")
         per_page_key: Key name for items per page (default: "per_page")
     """
@@ -100,20 +106,20 @@ def assert_pagination_response(
     )
 
     # Check required pagination fields
-    required_fields = [items_key, total_key, page_key, per_page_key]
+    required_fields = [items_key, _total_key, page_key, per_page_key]
     missing_fields = [field for field in required_fields if field not in response]
     assert not missing_fields, f"Missing pagination fields: {missing_fields}"
 
     # Validate field types and values
     assert isinstance(response[items_key], list), f"'{items_key}' must be a list"
-    assert isinstance(response[total_key], int), f"'{total_key}' must be an integer"
+    assert isinstance(response[_total_key], int), f"'{_total_key}' must be an integer"
     assert isinstance(response[page_key], int), f"'{page_key}' must be an integer"
     assert isinstance(response[per_page_key], int), (
         f"'{per_page_key}' must be an integer"
     )
 
     # Validate logical constraints
-    assert response[total_key] >= 0, "Total count cannot be negative"
+    assert response[_total_key] >= 0, "Total count cannot be negative"
     assert response[page_key] >= 1, "Page number must be at least 1"
     assert response[per_page_key] >= 1, "Per page count must be at least 1"
     assert len(response[items_key]) <= response[per_page_key], (
@@ -243,7 +249,7 @@ class AssertionHelpers:
             timestamp: Timestamp to validate (ISO string, datetime, or Unix timestamp)
             max_age_seconds: Maximum age in seconds (default: 60.0)
         """
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
 
         if isinstance(timestamp, str):
             # Parse ISO format timestamp
@@ -255,11 +261,11 @@ class AssertionHelpers:
             timestamp_dt = timestamp
         elif isinstance(timestamp, int | float):
             # Unix timestamp
-            timestamp_dt = datetime.utcfromtimestamp(timestamp)
+            timestamp_dt = datetime.fromtimestamp(timestamp, tz=UTC)
         else:
             pytest.fail(f"Unsupported timestamp type: {type(timestamp)}")
 
-        age_seconds = (now - timestamp_dt).total_seconds()
+        age_seconds = (now - timestamp_dt)._total_seconds()
         assert age_seconds <= max_age_seconds, (
             f"Timestamp is {age_seconds:.1f}s old, exceeds limit of {max_age_seconds}s"
         )
@@ -323,9 +329,8 @@ def assert_error_response_standardized(
     """
     assert isinstance(response, dict), "Response must be a dictionary"
     assert response.get("success") is False, "Response should indicate failure"
-    assert "error" in response and response["error"] is not None, (
-        "Response should contain error information"
-    )
+    assert "error" in response, "Response should contain error key"
+    assert response["error"] is not None, "Response error should not be None"
 
     error = response["error"]
 
@@ -477,7 +482,8 @@ def assert_mock_called_with_pattern(
 
     for i, expected_call in enumerate(expected_calls):
         if i >= len(actual_calls):
-            raise AssertionError(f"Missing expected call {i + 1}: {expected_call}")
+            msg = f"Missing expected call {i + 1}: {expected_call}"
+            raise AssertionError(msg)
 
         actual_call = actual_calls[i]
 
@@ -491,14 +497,14 @@ def assert_mock_called_with_pattern(
             )
 
         # Validate keyword arguments
-        if "kwargs" in expected_call:
-            actual_kwargs = actual_call[1] if len(actual_call) > 1 else {}
-            expected_kwargs = expected_call["kwargs"]
-            for key, value in expected_kwargs.items():
-                assert key in actual_kwargs, f"Call {i + 1} missing kwarg: {key}"
-                assert actual_kwargs[key] == value, (
+        if "_kwargs" in expected_call:
+            actual__kwargs = actual_call[1] if len(actual_call) > 1 else {}
+            expected__kwargs = expected_call["_kwargs"]
+            for key, value in expected__kwargs.items():
+                assert key in actual__kwargs, f"Call {i + 1} missing kwarg: {key}"
+                assert actual__kwargs[key] == value, (
                     f"Call {i + 1} kwarg {key} mismatch. Expected: {value}, "
-                    f"Got: {actual_kwargs[key]}"
+                    f"Got: {actual__kwargs[key]}"
                 )
 
 
@@ -522,11 +528,13 @@ async def assert_async_operation_completes(
     """
     try:
         result = await asyncio.wait_for(async_operation(), timeout=timeout_seconds)
-        return result
-    except TimeoutError:
-        raise AssertionError(f"{operation_name} timed out after {timeout_seconds}s")
+        return result  # noqa: TRY300
+    except TimeoutError as e:
+        msg = f"{operation_name} timed out after {timeout_seconds}s"
+        raise AssertionError(msg) from e
     except Exception as e:
-        raise AssertionError(f"{operation_name} failed with error: {e}")
+        msg = f"{operation_name} failed with error: {e}"
+        raise AssertionError(msg) from e
 
 
 def assert_collection_has_size(
@@ -552,7 +560,7 @@ def assert_collection_has_size(
 
 
 def assert_all_items_have_type(
-    collection: list[Any], expected_type: type[T], collection_name: str = "Collection"
+    collection: list[Any], expected_type: type, collection_name: str = "Collection"
 ) -> None:
     """Assert that all items in collection have expected type.
 
@@ -671,11 +679,7 @@ def assert_contract_compliance(
     Raises:
         AssertionError: If response doesn't match schema
     """
-    try:
-        import jsonschema
-
-        jsonschema.validate(actual_response, expected_schema)
-    except ImportError:
+    if jsonschema is None:
         # Fallback validation if jsonschema not available
         if strict_mode:
             required_fields = expected_schema.get("required", [])
@@ -683,8 +687,12 @@ def assert_contract_compliance(
                 assert field in actual_response, (
                     f"Response missing required field: {field}"
                 )
-    except jsonschema.ValidationError as e:
-        raise AssertionError(f"Response doesn't match contract schema: {e.message}")
+    else:
+        try:
+            jsonschema.validate(actual_response, expected_schema)
+        except jsonschema.ValidationError as e:
+            msg = f"Response doesn't match contract schema: {e.message}"
+            raise AssertionError(msg) from e
 
 
 # Performance timing decorator
@@ -692,26 +700,25 @@ def time_execution(func: Callable) -> Callable:
     """Decorator to time function execution for performance assertions."""
     if asyncio.iscoroutinefunction(func):
 
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args, **_kwargs):
             start_time = time.perf_counter()
-            result = await func(*args, **kwargs)
+            result = await func(*args, **_kwargs)
             execution_time = time.perf_counter() - start_time
             return result, execution_time
 
         return async_wrapper
-    else:
 
-        def sync_wrapper(*args, **kwargs):
-            start_time = time.perf_counter()
-            result = func(*args, **kwargs)
-            execution_time = time.perf_counter() - start_time
-            return result, execution_time
+    def sync_wrapper(*args, **_kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **_kwargs)
+        execution_time = time.perf_counter() - start_time
+        return result, execution_time
 
-        return sync_wrapper
+    return sync_wrapper
 
 
 # Context manager for resource assertion
-class assert_resource_cleanup:
+class AssertResourceCleanup:
     """Context manager to assert proper resource cleanup."""
 
     def __init__(

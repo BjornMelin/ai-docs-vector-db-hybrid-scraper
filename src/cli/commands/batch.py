@@ -31,7 +31,7 @@ console = Console()
 
 
 def complete_collection_name(
-    ctx: click.Context, param: click.Parameter, incomplete: str
+    ctx: click.Context, _param: click.Parameter, incomplete: str
 ) -> list[CompletionItem]:
     """Auto-complete collection names from the database."""
     try:
@@ -82,6 +82,7 @@ class OperationQueue:
     """Manages a queue of batch operations with Rich visualization."""
 
     def __init__(self):
+        """Initialize operation queue with Rich console for visualization."""
         self.operations: list[BatchOperation] = []
         self.console = Console()
 
@@ -157,7 +158,6 @@ def batch():
     Perform bulk operations on collections, documents, and configurations
     with Rich progress visualization and operation queuing.
     """
-    pass
 
 
 @batch.command("index-documents")
@@ -181,7 +181,7 @@ def index_documents(
     collection_name: str,
     documents: tuple,
     batch_size: int,
-    parallel: int,
+    _parallel: int,
     dry_run: bool,
 ):
     """Batch index documents into a collection.
@@ -300,7 +300,7 @@ def _show_indexing_preview(
 @click.option("--force", is_flag=True, help="Recreate collections if they exist")
 @click.pass_context
 def create_collections(
-    ctx: click.Context, collections: tuple, dimension: int, distance: str, force: bool
+    ctx: click.Context, collections: tuple, dimension: int, distance: str, _force: bool
 ):
     """Create multiple collections in batch."""
     config = ctx.obj["config"]

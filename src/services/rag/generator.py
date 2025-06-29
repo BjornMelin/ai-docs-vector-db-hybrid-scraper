@@ -10,9 +10,10 @@ import logging
 import time
 from typing import Any
 
-from ...infrastructure.client_manager import ClientManager
-from ..base import BaseService
-from ..errors import EmbeddingServiceError
+from src.infrastructure.client_manager import ClientManager
+from src.services.base import BaseService
+from src.services.errors import EmbeddingServiceError
+
 from .models import AnswerMetrics, RAGConfig, RAGRequest, RAGResult, SourceAttribution
 
 
@@ -40,6 +41,7 @@ class RAGGenerator(BaseService):
         Args:
             config: RAG configuration
             client_manager: Optional client manager (will create one if not provided)
+
         """
         super().__init__(config)
         self.config = config
@@ -76,7 +78,8 @@ class RAGGenerator(BaseService):
             self._llm_client = await self.client_manager.get_openai_client()
 
             if not self._llm_client:
-                raise EmbeddingServiceError("OpenAI client not available for RAG")
+                msg = "OpenAI client not available for RAG"
+                raise EmbeddingServiceError(msg)
 
             # Test LLM connection
             await self._llm_client.models.list()
@@ -85,9 +88,8 @@ class RAGGenerator(BaseService):
             logger.info("RAG generator initialized")
 
         except Exception as e:
-            raise EmbeddingServiceError(
-                f"Failed to initialize RAG generator: {e}"
-            ) from e
+            msg = f"Failed to initialize RAG generator: {e}"
+            raise EmbeddingServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup generator resources."""
@@ -109,6 +111,7 @@ class RAGGenerator(BaseService):
 
         Raises:
             EmbeddingServiceError: If generation fails or LLM unavailable
+
         """
         self._validate_initialized()
 
@@ -123,8 +126,7 @@ class RAGGenerator(BaseService):
                     cached_result = self._answer_cache[cache_key]
                     cached_result.cached = True
                     return cached_result
-                else:
-                    self.cache_misses += 1
+                self.cache_misses += 1
 
             # Process and filter search results
             processed_results = self._process_search_results(request)
@@ -181,8 +183,11 @@ class RAGGenerator(BaseService):
             return result
 
         except Exception as e:
-            logger.error(f"Failed to generate RAG answer: {e}", exc_info=True)
-            raise EmbeddingServiceError(f"RAG generation failed: {e}") from e
+            logger.error(
+                f"Failed to generate RAG answer: {e}", exc_info=True
+            )  # TODO: Convert f-string to logging format
+            msg = f"RAG generation failed: {e}"
+            raise EmbeddingServiceError(msg) from e
 
     def _process_search_results(self, request: RAGRequest) -> list[dict[str, Any]]:
         """Process and filter search results for context building."""
@@ -290,7 +295,6 @@ class RAGGenerator(BaseService):
         self, request: RAGRequest, context: str
     ) -> tuple[str, list[str] | None]:
         """Generate answer using LLM with the provided context."""
-
         # Build system prompt
         system_prompt = self._build_system_prompt(request)
 
@@ -332,10 +336,14 @@ class RAGGenerator(BaseService):
 
         except TimeoutError:
             logger.warning("RAG answer generation timed out")
-            raise EmbeddingServiceError("Answer generation timed out") from None
+            msg = "Answer generation timed out"
+            raise EmbeddingServiceError(msg) from None
         except Exception as e:
-            logger.warning(f"Failed to generate answer: {e}")
-            raise EmbeddingServiceError(f"Answer generation failed: {e}") from e
+            logger.warning(
+                f"Failed to generate answer: {e}"
+            )  # TODO: Convert f-string to logging format
+            msg = f"Answer generation failed: {e}"
+            raise EmbeddingServiceError(msg) from e
 
     def _build_system_prompt(self, request: RAGRequest) -> str:
         """Build system prompt for RAG answer generation."""
@@ -369,7 +377,7 @@ Based on the above information, please answer the following question:
 Provide a clear, accurate answer based solely on the information provided above."""
 
     def _calculate_confidence(
-        self, answer: str, context_info: dict[str, Any], request: RAGRequest
+        self, answer: str, context_info: dict[str, Any], _request: RAGRequest
     ) -> float:
         """Calculate confidence score for the generated answer."""
         confidence = 0.8  # Base confidence
@@ -454,7 +462,7 @@ Provide a clear, accurate answer based solely on the information provided above.
 
         return cost
 
-    def _generate_follow_up_questions(self, answer: str, query: str) -> list[str]:
+    def _generate_follow_up_questions(self, answer: str, _query: str) -> list[str]:
         """Generate relevant follow-up questions based on the answer."""
         # Simple rule-based follow-up generation for V1
         follow_ups = []
@@ -518,7 +526,7 @@ Provide a clear, accurate answer based solely on the information provided above.
         key_parts.extend(result_ids)
 
         cache_string = "|".join(key_parts)
-        return hashlib.md5(cache_string.encode()).hexdigest()
+        return hashlib.sha256(cache_string.encode()).hexdigest()
 
     def _cache_result(self, cache_key: str, result: RAGResult) -> None:
         """Cache result with TTL management."""

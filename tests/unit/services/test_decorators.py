@@ -44,7 +44,8 @@ class TestRetryAsync:
             nonlocal call_count
             call_count += 1
             if call_count < 3:
-                raise ValueError("Temporary error")
+                msg = "Temporary error"
+                raise ValueError(msg)
             return "success"
 
         @retry_async(max_attempts=3, base_delay=0.01)  # Fast for testing
@@ -75,7 +76,8 @@ class TestRetryAsync:
 
         @retry_async(max_attempts=3, exceptions=(ValueError,))
         async def test_func():
-            raise TypeError("Non-retryable error")
+            msg = "Non-retryable error"
+            raise TypeError(msg)
 
         with pytest.raises(TypeError, match="Non-retryable error"):
             await test_func()
@@ -97,7 +99,8 @@ class TestRetryAsync:
 
             @retry_async(max_attempts=3, base_delay=1.0, backoff_factor=2.0)
             async def test_func():
-                raise ValueError("Test error")
+                msg = "Test error"
+                raise ValueError(msg)
 
             with pytest.raises(ValueError):
                 await test_func()
@@ -126,7 +129,8 @@ class TestRetryAsync:
                 max_attempts=4, base_delay=10.0, max_delay=15.0, backoff_factor=2.0
             )
             async def test_func():
-                raise ValueError("Test error")
+                msg = "Test error"
+                raise ValueError(msg)
 
             with pytest.raises(ValueError):
                 await test_func()
@@ -160,7 +164,8 @@ class TestCircuitBreaker:
 
         @circuit_breaker(failure_threshold=2, recovery_timeout=0.1)
         async def test_func():
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
         # First two failures should pass through
         with pytest.raises(ValueError):
@@ -181,7 +186,8 @@ class TestCircuitBreaker:
             nonlocal call_count
             call_count += 1
             if call_count <= 2:
-                raise ValueError("Initial failures")
+                msg = "Initial failures"
+                raise ValueError(msg)
             return "recovered"
 
         @circuit_breaker(failure_threshold=2, recovery_timeout=0.05)
@@ -211,7 +217,8 @@ class TestCircuitBreaker:
 
         @circuit_breaker(failure_threshold=1, recovery_timeout=0.05)
         async def test_func():
-            raise ValueError("Still failing")
+            msg = "Still failing"
+            raise ValueError(msg)
 
         # Trigger circuit opening
         with pytest.raises(ValueError):
@@ -250,7 +257,8 @@ class TestHandleMCPErrors:
 
         @handle_mcp_errors
         async def test_func():
-            raise ToolError("Tool execution failed", error_code="tool_error")
+            msg = "Tool execution failed"
+            raise ToolError(msg, error_code="tool_error")
 
         result = await test_func()
         assert result["success"] is False
@@ -263,7 +271,8 @@ class TestHandleMCPErrors:
 
         @handle_mcp_errors
         async def test_func():
-            raise ResourceError("Resource not found", error_code="not_found")
+            msg = "Resource not found"
+            raise ResourceError(msg, error_code="not_found")
 
         result = await test_func()
         assert result["success"] is False
@@ -276,7 +285,8 @@ class TestHandleMCPErrors:
 
         @handle_mcp_errors
         async def test_func():
-            raise ValidationError("Invalid input", error_code="validation_failed")
+            msg = "Invalid input"
+            raise ValidationError(msg, error_code="validation_failed")
 
         result = await test_func()
         assert result["success"] is False
@@ -289,7 +299,8 @@ class TestHandleMCPErrors:
 
         @handle_mcp_errors
         async def test_func():
-            raise RateLimitError("Rate limit exceeded", retry_after=60.0)
+            msg = "Rate limit exceeded"
+            raise RateLimitError(msg, retry_after=60.0)
 
         result = await test_func()
         assert result["success"] is False
@@ -302,7 +313,8 @@ class TestHandleMCPErrors:
 
         @handle_mcp_errors
         async def test_func():
-            raise RuntimeError("Unexpected error")
+            msg = "Unexpected error"
+            raise RuntimeError(msg)
 
         result = await test_func()
         assert result["success"] is False
@@ -332,7 +344,8 @@ class TestValidateInput:
 
         def validate_number(value):
             if not isinstance(value, int | float):
-                raise ValueError("Must be a number")
+                msg = "Must be a number"
+                raise ValueError(msg)
             return float(value)
 
         @validate_input(num=validate_number)
@@ -348,7 +361,8 @@ class TestValidateInput:
 
         def validate_positive(value):
             if value <= 0:
-                raise ValueError("Must be positive")
+                msg = "Must be positive"
+                raise ValueError(msg)
             return value
 
         @validate_input(num=validate_positive)
@@ -364,7 +378,8 @@ class TestValidateInput:
 
         def validate_string(value):
             if not isinstance(value, str):
-                raise ValueError("Must be string")
+                msg = "Must be string"
+                raise ValueError(msg)
             return value.strip()
 
         def validate_number(value):
@@ -463,7 +478,8 @@ class TestRateLimiter:
         # Next call should provide retry_after
         try:
             await limiter.acquire()
-            raise AssertionError("Should have raised RateLimitError")
+            msg = "Should have raised RateLimitError"
+            raise AssertionError(msg)
         except RateLimitError as e:
             assert hasattr(e, "retry_after")
             assert e.retry_after > 0

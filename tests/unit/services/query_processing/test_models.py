@@ -249,15 +249,15 @@ class TestQueryProcessingResponse:
         response = QueryProcessingResponse(
             success=True,
             results=[{"id": "1", "content": "test", "score": 0.9}],
-            total_results=1,
-            total_processing_time_ms=150.5,
+            _total_results=1,
+            _total_processing_time_ms=150.5,
             confidence_score=0.85,
             quality_score=0.9,
         )
 
         assert response.success is True
         assert len(response.results) == 1
-        assert response.total_results == 1
+        assert response._total_results == 1
         assert response.confidence_score == 0.85
 
     def test_error_response(self):
@@ -265,7 +265,7 @@ class TestQueryProcessingResponse:
         response = QueryProcessingResponse(
             success=False,
             results=[],
-            total_results=0,
+            _total_results=0,
             error="Processing failed",
         )
 
@@ -293,7 +293,7 @@ class TestQueryProcessingResponse:
         response = QueryProcessingResponse(
             success=True,
             results=[],
-            total_results=0,
+            _total_results=0,
             intent_classification=intent_classification,
             preprocessing_result=preprocessing_result,
             processing_steps=["preprocessing", "intent_classification", "search"],
@@ -313,10 +313,10 @@ class TestQueryProcessingResponse:
         response = QueryProcessingResponse(
             success=True,
             results=[],
-            total_results=0,
+            _total_results=0,
         )
 
-        assert response.total_processing_time_ms == 0.0
+        assert response._total_processing_time_ms == 0.0
         assert response.search_time_ms == 0.0
         assert response.confidence_score == 0.0
         assert response.quality_score == 0.0

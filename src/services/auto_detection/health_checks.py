@@ -11,7 +11,18 @@ import asyncio
 import contextlib
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
+
+
+try:
+    import httpx
+except ImportError:
+    httpx = None
+
+try:
+    import redis.asyncio as redis
+except ImportError:
+    redis = None
 
 from pydantic import BaseModel
 
@@ -30,7 +41,7 @@ class HealthCheckResult(BaseModel):
     response_time_ms: float
     status_code: int | None = None
     error_message: str | None = None
-    metadata: Dict[str, Any] = {}
+    metadata: dict[str, Any] = {}
     timestamp: float
 
 
@@ -43,7 +54,7 @@ class HealthSummary(BaseModel):
     overall_health_score: float
     average_response_time_ms: float
     last_check_timestamp: float
-    service_results: List[HealthCheckResult]
+    service_results: list[HealthCheckResult]
 
 
 class HealthChecker:
@@ -52,7 +63,7 @@ class HealthChecker:
     def __init__(self, config: AutoDetectionConfig):
         self.config = config
         self.logger = logger.getChild("health")
-        self._check_history: Dict[str, List[HealthCheckResult]] = {}
+        self._check_history: dict[str, list[HealthCheckResult]] = {}
         self._check_intervals = {
             "redis": 30,  # seconds
             "qdrant": 30,
@@ -61,7 +72,7 @@ class HealthChecker:
         self._health_check_task: asyncio.Task | None = None
         self._running = False
 
-    async def start_monitoring(self, services: List[DetectedService]) -> None:
+    async def start_monitoring(self, services: list[DetectedService]) -> None:
         """Start continuous health monitoring for services."""
         if self._running:
             return
@@ -76,7 +87,9 @@ class HealthChecker:
         # Start background monitoring task
         self._health_check_task = asyncio.create_task(self._monitor_loop())
 
-        self.logger.info(f"Health monitoring started for {len(services)} services")
+        self.logger.info(
+            f"Health monitoring started for {len(services)} services"
+        )  # TODO: Convert f-string to logging format
 
     async def stop_monitoring(self) -> None:
         """Stop health monitoring."""
@@ -161,17 +174,16 @@ class HealthChecker:
         try:
             if service.service_type == "redis":
                 return await self._check_redis_health(service, start_time)
-            elif service.service_type == "qdrant":
+            if service.service_type == "qdrant":
                 return await self._check_qdrant_health(service, start_time)
-            elif service.service_type == "postgresql":
+            if service.service_type == "postgresql":
                 return await self._check_postgresql_health(service, start_time)
-            else:
-                return await self._check_generic_health(service, start_time)
+            return await self._check_generic_health(service, start_time)
 
         except Exception as e:
             response_time_ms = (time.time() - start_time) * 1000
 
-            self.logger.warning(f"Health check failed for {service.service_name}: {e}")
+            self.logger.warning("Health check failed for {service.service_name}")
 
             return HealthCheckResult(
                 service_name=service.service_name,
@@ -187,7 +199,9 @@ class HealthChecker:
     ) -> HealthCheckResult:
         """Check Redis service health."""
         try:
-            import redis.asyncio as redis
+            if redis is None:
+                msg = "redis not available"
+                raise ImportError(msg)
 
             client = redis.Redis(host=service.host, port=service.port, socket_timeout=5)
 
@@ -215,16 +229,20 @@ class HealthChecker:
             )
 
         except ImportError:
-            raise RuntimeError("redis package not available")
+            msg = "redis package not available"
+            raise RuntimeError(msg) from None
         except Exception as e:
-            raise RuntimeError(f"Redis health check failed: {e}")
+            msg = "Redis health check failed"
+            raise RuntimeError(msg) from e
 
     async def _check_qdrant_health(
         self, service: DetectedService, start_time: float
     ) -> HealthCheckResult:
         """Check Qdrant service health."""
         try:
-            import httpx
+            if httpx is None:
+                msg = "httpx package not available"
+                raise ImportError(msg)
 
             async with httpx.AsyncClient(timeout=5.0) as client:
                 # Use HTTP health endpoint
@@ -247,7 +265,9 @@ class HealthChecker:
                         health_data = response.json()
                         metadata.update(health_data)
                     except Exception:
-                        pass
+                        logger.debug(
+                            "Failed to parse health data from {service.service_name}"
+                        )
 
                 return HealthCheckResult(
                     service_name=service.service_name,
@@ -259,7 +279,8 @@ class HealthChecker:
                 )
 
         except Exception as e:
-            raise RuntimeError(f"Qdrant health check failed: {e}")
+            msg = "Qdrant health check failed"
+            raise RuntimeError(msg) from e
 
     async def _check_postgresql_health(
         self, service: DetectedService, start_time: float
@@ -288,7 +309,8 @@ class HealthChecker:
             )
 
         except Exception as e:
-            raise RuntimeError(f"PostgreSQL health check failed: {e}")
+            msg = "PostgreSQL health check failed"
+            raise RuntimeError(msg) from e
 
     async def _check_generic_health(
         self, service: DetectedService, start_time: float
@@ -297,7 +319,9 @@ class HealthChecker:
         try:
             if service.health_check_url:
                 # HTTP health check
-                import httpx
+                if httpx is None:
+                    msg = "httpx package not available"
+                    raise ImportError(msg)
 
                 async with httpx.AsyncClient(timeout=5.0) as client:
                     response = await client.get(service.health_check_url)
@@ -336,7 +360,8 @@ class HealthChecker:
                 )
 
         except Exception as e:
-            raise RuntimeError(f"Generic health check failed: {e}")
+            msg = "Generic health check failed"
+            raise RuntimeError(msg) from e
 
     async def _monitor_loop(self) -> None:
         """Background monitoring loop."""
@@ -357,8 +382,8 @@ class HealthChecker:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
-                self.logger.exception(f"Health monitoring error: {e}")
+            except Exception:
+                self.logger.exception("Health monitoring error")
                 await asyncio.sleep(60)  # Wait longer on error
 
     def _store_check_result(self, result: HealthCheckResult) -> None:
@@ -374,7 +399,7 @@ class HealthChecker:
 
     def get_service_history(
         self, service_name: str, limit: int = 10
-    ) -> List[HealthCheckResult]:
+    ) -> list[HealthCheckResult]:
         """Get recent health check history for a service."""
         history = self._check_history.get(service_name, [])
         return history[-limit:] if history else []
@@ -396,7 +421,7 @@ class HealthChecker:
         healthy_checks = sum(1 for r in recent_checks if r.is_healthy)
         return healthy_checks / len(recent_checks)
 
-    def get_health_trends(self) -> Dict[str, Any]:
+    def get_health_trends(self) -> dict[str, Any]:
         """Get health trends and statistics."""
         trends = {}
 

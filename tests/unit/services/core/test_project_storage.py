@@ -3,7 +3,7 @@
 import asyncio
 import json
 import tempfile
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -53,7 +53,9 @@ class TestProjectStorage:
     @pytest.fixture
     def project_storage_custom_path(self, storage_path):
         """Create ProjectStorage with custom storage path."""
-        return ProjectStorage(data_dir="/tmp", storage_path=storage_path)
+        return ProjectStorage(
+            data_dir="/tmp", storage_path=storage_path
+        )  # test temp path
 
     def test_init_with_data_dir_only(self, temp_dir):
         """Test initialization with data_dir only."""
@@ -92,7 +94,7 @@ class TestProjectStorage:
         assert project_storage._initialized is True
 
         # Verify file contains empty JSON object
-        with open(project_storage.storage_path) as f:
+        with project_storage.storage_path.open() as f:
             data = json.load(f)
             assert data == {}
 
@@ -105,7 +107,7 @@ class TestProjectStorage:
         }
 
         project_storage.storage_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(project_storage.storage_path, "w") as f:
+        with project_storage.storage_path.open("w") as f:
             json.dump(test_data, f)
 
         await project_storage.initialize()
@@ -117,7 +119,7 @@ class TestProjectStorage:
         """Test initialization handles corrupted JSON file."""
         # Create corrupted JSON file
         project_storage.storage_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(project_storage.storage_path, "w") as f:
+        with project_storage.storage_path.open("w") as f:
             f.write("{ invalid json }")
 
         await project_storage.initialize()
@@ -160,7 +162,7 @@ class TestProjectStorage:
         test_data = {"project1": {"name": "Test"}}
 
         project_storage.storage_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(project_storage.storage_path, "w") as f:
+        with project_storage.storage_path.open("w") as f:
             json.dump(test_data, f)
 
         loaded_data = await project_storage.load_projects()
@@ -218,7 +220,7 @@ class TestProjectStorage:
         assert project_storage._projects_cache["test_project"] == project_data
 
         # Verify project is saved to file
-        with open(project_storage.storage_path) as f:
+        with project_storage.storage_path.open() as f:
             file_data = json.load(f)
             assert file_data["test_project"] == project_data
 
@@ -322,7 +324,7 @@ class TestProjectStorage:
         assert "test_project" not in project_storage._projects_cache
 
         # Verify project is removed from file
-        with open(project_storage.storage_path) as f:
+        with project_storage.storage_path.open() as f:
             file_data = json.load(f)
             assert "test_project" not in file_data
 
@@ -348,7 +350,7 @@ class TestProjectStorage:
         assert project_storage.storage_path.exists()
 
         # Verify content
-        with open(project_storage.storage_path) as f:
+        with project_storage.storage_path.open() as f:
             file_data = json.load(f)
             assert file_data == test_data
 
@@ -426,7 +428,7 @@ class TestProjectStorage:
         assert len(projects) == 10
 
         # Verify cache consistency
-        with open(project_storage.storage_path) as f:
+        with project_storage.storage_path.open() as f:
             file_data = json.load(f)
             assert len(file_data) == 10
 
@@ -437,7 +439,7 @@ class TestProjectStorage:
         # Project data with datetime-like string (common case)
         project_data = {
             "name": "Test Project",
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(tz=UTC).isoformat(),
             "custom_field": "value",
         }
 

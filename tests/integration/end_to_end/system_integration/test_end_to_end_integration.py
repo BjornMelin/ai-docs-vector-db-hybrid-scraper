@@ -26,7 +26,7 @@ class IntegrationTestManager:
         self.error_recovery_logs = []
 
     async def execute_integration_scenario(
-        self, scenario_name: str, scenario_config: dict[str, Any]
+        self, scenario_name: str, _scenario_config: dict[str, Any]
     ) -> dict[str, Any]:
         """Execute a complete integration test scenario."""
         start_time = time.perf_counter()
@@ -54,15 +54,15 @@ class IntegrationTestManager:
             ]
 
             # Calculate results
-            total_duration = time.perf_counter() - start_time
-            scenario_result["total_duration_s"] = total_duration
+            _total_duration = time.perf_counter() - start_time
+            scenario_result["_total_duration_s"] = _total_duration
             scenario_result["success_rate"] = 1.0
             scenario_result["overall_success"] = True
 
             return scenario_result
 
         except Exception as e:
-            scenario_result["total_duration_s"] = time.perf_counter() - start_time
+            scenario_result["_total_duration_s"] = time.perf_counter() - start_time
             scenario_result["overall_success"] = False
             scenario_result["errors"].append(f"Scenario execution failed: {e!s}")
             return scenario_result
@@ -70,7 +70,7 @@ class IntegrationTestManager:
     def get_test_summary(self) -> dict[str, Any]:
         """Get summary of all integration tests executed."""
         return {
-            "total_performance_data_points": len(self.performance_data),
+            "_total_performance_data_points": len(self.performance_data),
             "system_health_checks": len(self.system_health_history),
             "data_artifacts_created": len(self.data_artifacts),
             "error_recovery_events": len(self.error_recovery_logs),
@@ -131,8 +131,8 @@ async def test_complete_system_integration_scenario(
     assert result["success_rate"] >= 0.8, (
         f"Success rate too low: {result['success_rate']:.2%}"
     )
-    assert result["total_duration_s"] < 120, (
-        f"Integration test took too long: {result['total_duration_s']:.2f}s"
+    assert result["_total_duration_s"] < 120, (
+        f"Integration test took too long: {result['_total_duration_s']:.2f}s"
     )
 
 
@@ -148,7 +148,7 @@ async def test_integration_test_summary(
     journey_data_manager.store_artifact("integration_test_summary", test_summary)
 
     # Validate that integration testing was comprehensive
-    assert test_summary["total_performance_data_points"] >= 0, (
+    assert test_summary["_total_performance_data_points"] >= 0, (
         "Performance data should be collected"
     )
     assert test_summary["system_health_checks"] >= 0, (

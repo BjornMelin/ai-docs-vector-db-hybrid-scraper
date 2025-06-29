@@ -12,6 +12,142 @@ import jsonschema
 import pytest
 
 
+class JSONSchemaValidator:
+    def __init__(self):
+        self.schemas = {}
+
+    def register_schema(self, name: str, schema: dict[str, Any]):
+        """Register a JSON schema for validation."""
+        self.schemas[name] = schema
+
+    def validate_data(self, data: Any, schema_name: str) -> dict[str, Any]:
+        """Validate data against a registered schema."""
+        if schema_name not in self.schemas:
+            return {
+                "valid": False,
+                "errors": [f"Schema '{schema_name}' not found"],
+            }
+
+        schema = self.schemas[schema_name]
+        try:
+            jsonschema.validate(data, schema)
+            return {"valid": True, "errors": []}
+        except jsonschema.ValidationError as e:
+            return {
+                "valid": False,
+                "errors": [str(e)],
+                "path": list(e.absolute_path),
+                "schema_path": list(e.schema_path),
+            }
+        except jsonschema.SchemaError as e:
+            return {
+                "valid": False,
+                "errors": [f"Invalid schema: {e!s}"],
+            }
+
+    def validate_against_schema(
+        self, data: Any, schema: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Validate data against a provided schema."""
+        try:
+            jsonschema.validate(data, schema)
+            return {"valid": True, "errors": []}
+        except jsonschema.ValidationError as e:
+            return {
+                "valid": False,
+                "errors": [str(e)],
+                "path": list(e.absolute_path),
+                "schema_path": list(e.schema_path),
+                "failed_value": e.instance,
+            }
+        except jsonschema.SchemaError as e:
+            return {
+                "valid": False,
+                "errors": [f"Invalid schema: {e!s}"],
+            }
+
+    def generate_test_data(self, schema: dict[str, Any]) -> list[dict[str, Any]]:
+        """Generate test data based on schema."""
+        test_cases = []
+
+        # Generate valid test case
+        valid_data = self._generate_valid_data(schema)
+        test_cases.append(
+            {
+                "type": "valid",
+                "data": valid_data,
+                "expected_valid": True,
+            }
+        )
+
+        # Generate invalid test cases
+        invalid_cases = self._generate_invalid_data(schema)
+        test_cases.extend(invalid_cases)
+
+        return test_cases
+
+    def _generate_valid_data(self, schema: dict[str, Any]) -> dict[str, Any]:
+        """Generate valid data for schema."""
+        data = {}
+        properties = schema.get("properties", {})
+
+        for prop_name, prop_schema in properties.items():
+            if prop_schema.get("type") == "string":
+                if "enum" in prop_schema:
+                    data[prop_name] = prop_schema["enum"][0]
+                else:
+                    data[prop_name] = "test_value"
+            elif prop_schema.get("type") == "integer":
+                minimum = prop_schema.get("minimum", 0)
+                maximum = prop_schema.get("maximum", 100)
+                data[prop_name] = minimum + (maximum - minimum) // 2
+            elif prop_schema.get("type") == "number":
+                data[prop_name] = 50.5
+            elif prop_schema.get("type") == "boolean":
+                data[prop_name] = True
+            elif prop_schema.get("type") == "array":
+                data[prop_name] = []
+            elif prop_schema.get("type") == "object":
+                data[prop_name] = {}
+
+        return data
+
+    def _generate_invalid_data(self, schema: dict[str, Any]) -> list[dict[str, Any]]:
+        """Generate invalid test cases for schema."""
+        invalid_cases = []
+        properties = schema.get("properties", {})
+        required = schema.get("required", [])
+
+        # Missing required field case
+        if required:
+            incomplete_data = self._generate_valid_data(schema)
+            del incomplete_data[required[0]]
+            invalid_cases.append(
+                {
+                    "type": "missing_required",
+                    "data": incomplete_data,
+                    "expected_valid": False,
+                    "expected_error": f"'{required[0]}' is a required property",
+                }
+            )
+
+        # Type mismatch cases
+        for prop_name, prop_schema in properties.items():
+            if prop_schema.get("type") == "string":
+                invalid_data = self._generate_valid_data(schema)
+                invalid_data[prop_name] = 12345  # Wrong type
+                invalid_cases.append(
+                    {
+                        "type": "type_mismatch",
+                        "data": invalid_data,
+                        "expected_valid": False,
+                        "property": prop_name,
+                    }
+                )
+
+        return invalid_cases
+
+
 @pytest.fixture(scope="session")
 def contract_test_config():
     """Provide contract testing configuration."""
@@ -48,180 +184,8 @@ def contract_test_config():
 
 
 @pytest.fixture
-def json_schema_validator():
+def _json_schema_validator():
     """JSON schema validation utilities."""
-
-    class JSONSchemaValidator:
-        def __init__(self):
-            self.schemas = {}
-
-        def register_schema(self, name: str, schema: dict[str, Any]):
-            """Register a JSON schema for validation."""
-            self.schemas[name] = schema
-
-        def validate_data(self, data: Any, schema_name: str) -> dict[str, Any]:
-            """Validate data against a registered schema."""
-            if schema_name not in self.schemas:
-                return {
-                    "valid": False,
-                    "errors": [f"Schema '{schema_name}' not found"],
-                }
-
-            schema = self.schemas[schema_name]
-            try:
-                jsonschema.validate(data, schema)
-                return {"valid": True, "errors": []}
-            except jsonschema.ValidationError as e:
-                return {
-                    "valid": False,
-                    "errors": [str(e)],
-                    "path": list(e.absolute_path),
-                    "schema_path": list(e.schema_path),
-                }
-            except jsonschema.SchemaError as e:
-                return {
-                    "valid": False,
-                    "errors": [f"Invalid schema: {e!s}"],
-                }
-
-        def validate_against_schema(
-            self, data: Any, schema: dict[str, Any]
-        ) -> dict[str, Any]:
-            """Validate data against a provided schema."""
-            try:
-                jsonschema.validate(data, schema)
-                return {"valid": True, "errors": []}
-            except jsonschema.ValidationError as e:
-                return {
-                    "valid": False,
-                    "errors": [str(e)],
-                    "path": list(e.absolute_path),
-                    "schema_path": list(e.schema_path),
-                    "failed_value": e.instance,
-                }
-            except jsonschema.SchemaError as e:
-                return {
-                    "valid": False,
-                    "errors": [f"Invalid schema: {e!s}"],
-                }
-
-        def generate_test_data(self, schema: dict[str, Any]) -> list[dict[str, Any]]:
-            """Generate test data based on schema."""
-            test_cases = []
-
-            # Generate valid test case
-            valid_data = self._generate_valid_data(schema)
-            test_cases.append(
-                {
-                    "type": "valid",
-                    "data": valid_data,
-                    "expected_valid": True,
-                }
-            )
-
-            # Generate invalid test cases
-            invalid_cases = self._generate_invalid_data(schema)
-            test_cases.extend(invalid_cases)
-
-            return test_cases
-
-        def _generate_valid_data(self, schema: dict[str, Any]) -> Any:
-            """Generate valid data based on schema."""
-            schema_type = schema.get("type", "object")
-
-            if schema_type == "object":
-                data = {}
-                properties = schema.get("properties", {})
-                required = schema.get("required", [])
-
-                for prop, prop_schema in properties.items():
-                    if prop in required or "default" in prop_schema:
-                        data[prop] = self._generate_valid_data(prop_schema)
-
-                return data
-
-            elif schema_type == "array":
-                items_schema = schema.get("items", {})
-                min_items = schema.get("minItems", 1)
-                return [
-                    self._generate_valid_data(items_schema) for _ in range(min_items)
-                ]
-
-            elif schema_type == "string":
-                if "enum" in schema:
-                    return schema["enum"][0]
-                return schema.get("default", "test_string")
-
-            elif schema_type == "integer":
-                minimum = schema.get("minimum", 0)
-                maximum = schema.get("maximum", 100)
-                return max(minimum, min(maximum, schema.get("default", 42)))
-
-            elif schema_type == "number":
-                minimum = schema.get("minimum", 0.0)
-                maximum = schema.get("maximum", 100.0)
-                return max(minimum, min(maximum, schema.get("default", 42.0)))
-
-            elif schema_type == "boolean":
-                return schema.get("default", True)
-
-            elif schema_type == "null":
-                return None
-
-            return None
-
-        def _generate_invalid_data(
-            self, schema: dict[str, Any]
-        ) -> list[dict[str, Any]]:
-            """Generate invalid data based on schema."""
-            invalid_cases = []
-            schema_type = schema.get("type", "object")
-
-            # Type mismatch cases
-            if schema_type == "string":
-                invalid_cases.append(
-                    {
-                        "type": "invalid_type",
-                        "data": 123,
-                        "expected_valid": False,
-                        "description": "Number instead of string",
-                    }
-                )
-
-            elif schema_type == "integer":
-                invalid_cases.append(
-                    {
-                        "type": "invalid_type",
-                        "data": "not_a_number",
-                        "expected_valid": False,
-                        "description": "String instead of integer",
-                    }
-                )
-
-            elif schema_type == "object":
-                # Missing required field
-                required = schema.get("required", [])
-                if required:
-                    incomplete_data = {}
-                    # Include all but the first required field
-                    properties = schema.get("properties", {})
-                    for prop in required[1:]:
-                        if prop in properties:
-                            incomplete_data[prop] = self._generate_valid_data(
-                                properties[prop]
-                            )
-
-                    invalid_cases.append(
-                        {
-                            "type": "missing_required",
-                            "data": incomplete_data,
-                            "expected_valid": False,
-                            "description": f"Missing required field: {required[0]}",
-                        }
-                    )
-
-            return invalid_cases
-
     return JSONSchemaValidator()
 
 
@@ -239,7 +203,7 @@ def api_contract_validator():
             self.contracts[endpoint] = contract
 
         def validate_request(
-            self, endpoint: str, method: str, **kwargs
+            self, endpoint: str, method: str, **_kwargs
         ) -> dict[str, Any]:
             """Validate a request against its contract."""
             if endpoint not in self.contracts:
@@ -262,14 +226,14 @@ def api_contract_validator():
             # Validate request parameters
             if "parameters" in method_contract:
                 param_errors = self._validate_parameters(
-                    kwargs.get("params", {}), method_contract["parameters"]
+                    _kwargs.get("params", {}), method_contract["parameters"]
                 )
                 errors.extend(param_errors)
 
             # Validate request body
             if "requestBody" in method_contract:
                 body_errors = self._validate_request_body(
-                    kwargs.get("json", kwargs.get("data")),
+                    _kwargs.get("json", _kwargs.get("data")),
                     method_contract["requestBody"],
                 )
                 errors.extend(body_errors)
@@ -277,7 +241,7 @@ def api_contract_validator():
             # Validate headers
             if "headers" in method_contract:
                 header_errors = self._validate_headers(
-                    kwargs.get("headers", {}), method_contract["headers"]
+                    _kwargs.get("headers", {}), method_contract["headers"]
                 )
                 errors.extend(header_errors)
 
@@ -666,19 +630,18 @@ def openapi_contract_manager():
                 for prop_name, prop_schema in properties.items():
                     result[prop_name] = self._generate_simple_test_data(prop_schema)
                 return result
-            elif schema_type == "array":
+            if schema_type == "array":
                 item_schema = schema.get("items", {"type": "string"})
                 return [self._generate_simple_test_data(item_schema)]
-            elif schema_type == "string":
+            if schema_type == "string":
                 return "test_string"
-            elif schema_type == "integer":
+            if schema_type == "integer":
                 return 42
-            elif schema_type == "number":
+            if schema_type == "number":
                 return 3.14
-            elif schema_type == "boolean":
+            if schema_type == "boolean":
                 return True
-            else:
-                return "default_value"
+            return "default_value"
 
     return OpenAPIContractManager()
 
@@ -707,7 +670,7 @@ def pact_contract_builder():
             self.interactions[-1]["description"] = description
             return self
 
-        def with_request(self, method: str, path: str, **kwargs):
+        def with_request(self, method: str, path: str, **_kwargs):
             """Define the expected request."""
             if not self.interactions:
                 self.interactions.append({})
@@ -717,27 +680,27 @@ def pact_contract_builder():
                 "path": path,
             }
 
-            if "headers" in kwargs:
-                request["headers"] = kwargs["headers"]
-            if "query" in kwargs:
-                request["query"] = kwargs["query"]
-            if "body" in kwargs:
-                request["body"] = kwargs["body"]
+            if "headers" in _kwargs:
+                request["headers"] = _kwargs["headers"]
+            if "query" in _kwargs:
+                request["query"] = _kwargs["query"]
+            if "body" in _kwargs:
+                request["body"] = _kwargs["body"]
 
             self.interactions[-1]["request"] = request
             return self
 
-        def will_respond_with(self, status: int, **kwargs):
+        def will_respond_with(self, status: int, **_kwargs):
             """Define the expected response."""
             if not self.interactions:
                 self.interactions.append({})
 
             response = {"status": status}
 
-            if "headers" in kwargs:
-                response["headers"] = kwargs["headers"]
-            if "body" in kwargs:
-                response["body"] = kwargs["body"]
+            if "headers" in _kwargs:
+                response["headers"] = _kwargs["headers"]
+            if "body" in _kwargs:
+                response["body"] = _kwargs["body"]
 
             self.interactions[-1]["response"] = response
             return self
@@ -775,9 +738,8 @@ def pact_contract_builder():
                         "interaction": interaction["description"],
                         "errors": [],
                     }
-                else:
-                    errors.extend(request_match.get("errors", []))
-                    errors.extend(response_match.get("errors", []))
+                errors.extend(request_match.get("errors", []))
+                errors.extend(response_match.get("errors", []))
 
             return {
                 "verified": False,
@@ -855,9 +817,9 @@ def contract_test_data():
                                             "required": ["id", "title", "score"],
                                         },
                                     },
-                                    "total": {"type": "integer"},
+                                    "_total": {"type": "integer"},
                                 },
-                                "required": ["results", "total"],
+                                "required": ["results", "_total"],
                             }
                         },
                         "400": {
@@ -972,21 +934,21 @@ def contract_test_data():
 
 # Mock services for contract testing
 @pytest.fixture
-def mock_contract_service():
+def _mock_contract_service():
     """Mock service for contract testing."""
     service = AsyncMock()
 
-    async def mock_search(query: str, limit: int = 10):
+    async def mock_search(_query: str, _limit: int = 10):
         """Mock search endpoint."""
         return {
             "results": [
                 {"id": "doc1", "title": "Test Document 1", "score": 0.95},
                 {"id": "doc2", "title": "Test Document 2", "score": 0.87},
             ],
-            "total": 2,
+            "_total": 2,
         }
 
-    async def mock_add_document(url: str, collection: str = "default"):
+    async def mock_add_document(_url: str, _collection: str = "default"):
         """Mock add document endpoint."""
         return {"id": "doc123", "status": "created"}
 

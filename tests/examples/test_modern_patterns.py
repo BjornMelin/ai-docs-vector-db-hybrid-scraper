@@ -5,6 +5,7 @@ and modern pytest patterns following 2025 standards.
 """
 
 import asyncio
+import copy
 import logging
 from unittest.mock import AsyncMock, MagicMock
 
@@ -13,6 +14,9 @@ import pytest_asyncio
 from hypothesis import given, settings, strategies as st
 
 from src.config import Config, TaskQueueConfig
+from src.config.core import ChunkingConfig
+from src.config.enums import EmbeddingProvider
+from src.services.task_queue.worker import WorkerSettings
 
 
 class TestModernAsyncPatterns:
@@ -46,7 +50,7 @@ class TestModernAsyncPatterns:
         async def mock_initialize():
             service._initialized = True
 
-        async def mock_search(query: str, collection_name: str, limit: int):
+        async def mock_search(query: str, _collection_name: str, limit: int):
             return {"points": [], "query": query, "limit": limit}
 
         service.initialize = mock_initialize
@@ -99,7 +103,7 @@ class TestModernAsyncPatterns:
         """Test async timeout handling patterns."""
 
         # Mock a slow operation
-        async def slow_search(*args, **kwargs):
+        async def slow_search(*_args, **__kwargs):
             await asyncio.sleep(2.0)
             return {"points": []}
 
@@ -147,7 +151,6 @@ class TestPropertyBasedPatterns:
     )
     def test_redis_url_parsing(self, redis_url: str):
         """Property-based test for Redis URL parsing robustness."""
-        from src.services.task_queue.worker import WorkerSettings
 
         try:
             config = Config()
@@ -171,7 +174,6 @@ class TestPropertyBasedPatterns:
     )
     def test_chunking_config_properties(self, chunk_size: int, chunk_overlap: int):
         """Property-based test for chunking configuration invariants."""
-        from src.config.core import ChunkingConfig
 
         # Ensure chunk_overlap is always less than chunk_size
         if chunk_overlap >= chunk_size:
@@ -207,7 +209,6 @@ class TestModernFixturePatterns:
     def isolated_config(self, app_config: Config) -> Config:
         """Function-scoped config that inherits from session config."""
         # Create a copy for isolation
-        import copy
 
         return copy.deepcopy(app_config)
 
@@ -220,22 +221,22 @@ class TestModernFixturePatterns:
         return pool
 
     @pytest.fixture
-    def caplog_with_level(self, caplog):
+    def _caplog_with_level(self, _caplog):
         """Fixture factory pattern for capturing logs at specific levels."""
 
-        def _caplog_with_level(level: int = logging.INFO):
-            caplog.set_level(level)
-            return caplog
+        def __caplog_with_level(level: int = logging.INFO):
+            _caplog.set_level(level)
+            return _caplog
 
-        return _caplog_with_level
+        return __caplog_with_level
 
     @pytest.mark.asyncio
     async def test_fixture_dependency_injection(
-        self, isolated_config: Config, mock_redis_pool, caplog_with_level
+        self, isolated_config: Config, mock_redis_pool, _caplog_with_level
     ):
         """Test modern dependency injection patterns."""
         # Use the factory fixture
-        caplog_with_level(logging.DEBUG)
+        _caplog_with_level(logging.DEBUG)
 
         # Test config isolation
         isolated_config.debug = False
@@ -313,7 +314,7 @@ class TestErrorHandlingPatterns:
 
 # Parametrized tests with modern patterns
 @pytest.mark.parametrize(
-    "provider,expected_model",
+    ("provider", "expected_model"),
     [
         ("openai", "text-embedding-3-small"),
         ("fastembed", "BAAI/bge-small-en-v1.5"),
@@ -321,7 +322,6 @@ class TestErrorHandlingPatterns:
 )
 def test_embedding_provider_defaults(provider: str, expected_model: str):
     """Test embedding provider defaults with parametrization."""
-    from src.config.enums import EmbeddingProvider
 
     config = Config()
     if provider == "openai":

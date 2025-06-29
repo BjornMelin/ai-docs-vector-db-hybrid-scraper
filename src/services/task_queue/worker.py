@@ -41,7 +41,15 @@ class WorkerSettings:
     def get_redis_settings(cls) -> RedisSettings:
         """Get Redis settings from config."""
         config = get_config()
-        tq_config = config.task_queue
+
+        # Get task queue config with fallback
+        if hasattr(config, "task_queue"):
+            tq_config = config.task_queue
+        else:
+            # Fallback to default TaskQueueConfig if not available
+            from src.config.core import TaskQueueConfig
+
+            tq_config = TaskQueueConfig()
 
         # Parse redis URL
         url = tq_config.redis_url
@@ -49,8 +57,7 @@ class WorkerSettings:
         database = tq_config.redis_database
 
         # Handle different URL formats
-        if url.startswith("redis://"):
-            url = url[8:]  # Remove redis:// prefix
+        url = url.removeprefix("redis://")  # Remove redis:// prefix
 
         # Extract host and port
         if "@" in url:
@@ -76,12 +83,12 @@ class WorkerSettings:
         )
 
     @classmethod
-    def on_startup(cls, ctx: dict[str, Any]) -> None:
+    def on_startup(cls, _ctx: dict[str, Any]) -> None:
         """Called when worker starts."""
         logger.info("ARQ worker starting up")
 
     @classmethod
-    def on_shutdown(cls, ctx: dict[str, Any]) -> None:
+    def on_shutdown(cls, _ctx: dict[str, Any]) -> None:
         """Called when worker shuts down."""
         logger.info("ARQ worker shutting down")
 
@@ -90,7 +97,9 @@ class WorkerSettings:
         """Called when a job starts."""
         job_id = ctx.get("job_id")
         function = ctx.get("job_try", {}).get("function")
-        logger.info(f"Starting job {job_id}: {function}")
+        logger.info(
+            f"Starting job {job_id}: {function}"
+        )  # TODO: Convert f-string to logging format
 
     @classmethod
     def on_job_end(cls, ctx: dict[str, Any]) -> None:
@@ -98,7 +107,9 @@ class WorkerSettings:
         job_id = ctx.get("job_id")
         function = ctx.get("job_try", {}).get("function")
         result = ctx.get("result")
-        logger.info(f"Completed job {job_id}: {function} - Result: {result}")
+        logger.info(
+            f"Completed job {job_id}: {function} - Result: {result}"
+        )  # TODO: Convert f-string to logging format
 
 
 # For ARQ to find the settings

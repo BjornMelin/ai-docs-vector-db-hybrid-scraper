@@ -15,8 +15,7 @@ from src.config import (
     QueryComplexity,
     QueryType,
 )
-
-from ...models.vector_search import ModelSelectionStrategy, QueryClassification
+from src.models.vector_search import ModelSelectionStrategy, QueryClassification
 
 
 logger = logging.getLogger(__name__)
@@ -30,6 +29,7 @@ class ModelSelector:
 
         Args:
             config: Unified configuration
+
         """
         self.config = config
         self.model_registry = self._initialize_model_registry()
@@ -138,6 +138,7 @@ class ModelSelector:
 
         Returns:
             ModelSelectionStrategy with selected model and rationale
+
         """
         try:
             # Get candidate models based on query characteristics
@@ -174,7 +175,9 @@ class ModelSelector:
             )
 
         except Exception as e:
-            logger.error(f"Model selection failed: {e}", exc_info=True)
+            logger.error(
+                f"Model selection failed: {e}", exc_info=True
+            )  # TODO: Convert f-string to logging format
             return self._get_fallback_strategy(query_classification)
 
     def _get_candidate_models(
@@ -246,7 +249,7 @@ class ModelSelector:
         candidates: list[str],
         query_classification: QueryClassification,
         optimization_strategy: OptimizationStrategy,
-        context: dict[str, Any] | None,
+        _context: dict[str, Any] | None,
     ) -> list[dict[str, Any]]:
         """Score candidate models based on multiple criteria."""
         scored_candidates = []
@@ -512,7 +515,9 @@ class ModelSelector:
             )
 
         except Exception as e:
-            logger.error(f"Failed to update performance history: {e}", exc_info=True)
+            logger.error(
+                f"Failed to update performance history: {e}", exc_info=True
+            )  # TODO: Convert f-string to logging format
 
     def get_model_info(self, model_id: str) -> dict[str, Any] | None:
         """Get information about a specific model."""

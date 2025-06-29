@@ -4,6 +4,9 @@ This module tests the main CLI interface with focus on Rich console integration,
 command routing, error handling, and user experience.
 """
 
+import queue
+import threading
+import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -229,7 +232,9 @@ class TestCLICommandIntegration:
             # Test that setup command can access context
             with patch("src.cli.commands.setup.ConfigurationWizard") as mock_wizard:
                 mock_wizard_instance = MagicMock()
-                mock_wizard_instance.run_setup.return_value = Path("/tmp/config.json")
+                mock_wizard_instance.run_setup.return_value = Path(
+                    "/tmp/config.json"
+                )  # test temp path
                 mock_wizard.return_value = mock_wizard_instance
 
                 with patch("src.cli.commands.setup.questionary") as mock_questionary:
@@ -346,7 +351,6 @@ class TestCLIPerformanceAndReliability:
 
     def test_cli_startup_performance(self, interactive_cli_runner):
         """Test that CLI starts up quickly."""
-        import time
 
         start_time = time.time()
 
@@ -393,8 +397,6 @@ class TestCLIPerformanceAndReliability:
 
     def test_concurrent_cli_usage(self, interactive_cli_runner):
         """Test that multiple CLI instances can run without conflicts."""
-        import queue
-        import threading
 
         results = queue.Queue()
 

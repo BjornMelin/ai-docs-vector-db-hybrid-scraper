@@ -12,6 +12,10 @@ from fastapi import Depends
 
 from src.config import Config
 from src.infrastructure.client_manager import ClientManager
+from src.services.cache.manager import CacheManager
+from src.services.crawling.manager import CrawlManager
+from src.services.embeddings.manager import EmbeddingManager
+from src.services.vector_db.service import QdrantService
 
 
 logger = logging.getLogger(__name__)
@@ -23,23 +27,20 @@ async def get_config() -> Config:
 
     Returns:
         Config: Unified application configuration
+
     """
     return Config()
 
 
 # Client manager dependency with resource lifecycle
-async def get_client_manager(
-    config: Annotated[Config, Depends(get_config)],
-) -> AsyncGenerator[ClientManager]:
+async def get_client_manager() -> AsyncGenerator[ClientManager]:
     """Get ClientManager instance with proper lifecycle management.
-
-    Args:
-        config: Application configuration
 
     Yields:
         ClientManager: Initialized client manager
+
     """
-    client_manager = ClientManager(config)
+    client_manager = ClientManager()
     try:
         await client_manager.initialize()
         yield client_manager
@@ -58,9 +59,8 @@ async def get_cache_client(
 
     Yields:
         CacheManager: Initialized cache manager
-    """
-    from ..cache.manager import CacheManager
 
+    """
     cache_manager = CacheManager(
         dragonfly_url=config.cache.dragonfly_url,
         enable_local_cache=config.cache.enable_local_cache,
@@ -90,9 +90,8 @@ async def get_embedding_client(
 
     Yields:
         EmbeddingManager: Initialized embedding manager
-    """
-    from ..embeddings.manager import EmbeddingManager
 
+    """
     embedding_manager = EmbeddingManager(
         config=config,
         client_manager=client_manager,
@@ -118,9 +117,8 @@ async def get_vector_db_client(
 
     Yields:
         QdrantService: Initialized vector database client
-    """
-    from ..vector_db.service import QdrantService
 
+    """
     qdrant_manager = QdrantService(config)
 
     try:
@@ -132,7 +130,7 @@ async def get_vector_db_client(
 
 # Rate limiter dependency (optional)
 async def get_rate_limiter(
-    config: Annotated[Config, Depends(get_config)],
+    _config: Annotated[Config, Depends(get_config)],
 ) -> object | None:
     """Get rate limiter if configured.
 
@@ -141,6 +139,7 @@ async def get_rate_limiter(
 
     Returns:
         RateLimitManager | None: Rate limiter or None if disabled
+
     """
     # Rate limiter implementation would go here
     # For now, return None to maintain compatibility
@@ -160,9 +159,8 @@ async def get_crawling_client(
 
     Yields:
         CrawlManager: Initialized crawl manager
-    """
-    from ..crawling.manager import CrawlManager
 
+    """
     crawl_manager = CrawlManager(
         config=config,
         rate_limiter=rate_limiter,

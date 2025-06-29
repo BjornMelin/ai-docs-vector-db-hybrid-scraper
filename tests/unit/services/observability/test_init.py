@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
+import src.services.observability.init as init_module
 from src.services.observability.config import ObservabilityConfig
 from src.services.observability.init import (
     _setup_auto_instrumentation,
@@ -17,7 +18,6 @@ class TestObservabilityInitialization:
     def setup_method(self):
         """Setup for each test."""
         # Reset global state
-        import src.services.observability.init as init_module
 
         init_module._tracer_provider = None
         init_module._meter_provider = None
@@ -87,17 +87,19 @@ class TestObservabilityInitialization:
             "opentelemetry.exporter.otlp.proto.grpc.metric_exporter"
         ].OTLPMetricExporter = MagicMock()
 
-        with patch.dict("sys.modules", mock_modules):
-            with patch(
+        with (
+            patch.dict("sys.modules", mock_modules),
+            patch(
                 "src.services.observability.init._setup_auto_instrumentation"
-            ) as mock_auto_instrumentation:
-                result = initialize_observability(config)
+            ) as mock_auto_instrumentation,
+        ):
+            result = initialize_observability(config)
 
-                assert result is True
-                assert is_observability_enabled() is True
+            assert result is True
+            assert is_observability_enabled() is True
 
-                # Verify auto-instrumentation setup was called
-                mock_auto_instrumentation.assert_called_once_with(config)
+            # Verify auto-instrumentation setup was called
+            mock_auto_instrumentation.assert_called_once_with(config)
 
     def test_initialize_observability_with_console_exporter(self):
         """Test initialization with console exporter enabled."""
@@ -165,10 +167,11 @@ class TestObservabilityInitialization:
         # Mock the import to cause an exception during initialization
         with patch("builtins.__import__") as mock_import:
 
-            def side_effect(name, *args, **kwargs):
+            def side_effect(name, *args, **_kwargs):
                 if "opentelemetry" in name:
-                    raise Exception("Initialization failed")
-                return __import__(name, *args, **kwargs)
+                    msg = "Initialization failed"
+                    raise ImportError(msg)
+                return __import__(name, *args, **_kwargs)
 
             mock_import.side_effect = side_effect
 
@@ -180,7 +183,6 @@ class TestObservabilityInitialization:
     def test_shutdown_observability(self):
         """Test observability shutdown."""
         # Setup providers
-        import src.services.observability.init as init_module
 
         mock_tracer_provider = MagicMock()
         mock_meter_provider = MagicMock()
@@ -201,7 +203,6 @@ class TestObservabilityInitialization:
     def test_shutdown_observability_with_exceptions(self):
         """Test shutdown handles exceptions gracefully."""
         # Setup providers that raise exceptions
-        import src.services.observability.init as init_module
 
         mock_tracer_provider = MagicMock()
         mock_tracer_provider.shutdown.side_effect = Exception("Shutdown failed")
@@ -222,7 +223,6 @@ class TestObservabilityInitialization:
 
     def test_is_observability_enabled(self):
         """Test observability enabled check."""
-        import src.services.observability.init as init_module
 
         # Initially disabled
         assert is_observability_enabled() is False

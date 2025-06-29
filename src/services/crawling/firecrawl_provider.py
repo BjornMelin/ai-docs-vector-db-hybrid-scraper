@@ -1,15 +1,16 @@
 """Firecrawl provider using direct SDK."""
 
+import asyncio
 import logging
 from typing import Any
 
 from firecrawl import FirecrawlApp
 
 from src.config import FirecrawlConfig
+from src.services.base import BaseService
+from src.services.errors import CrawlServiceError
+from src.services.utilities.rate_limiter import RateLimitManager
 
-from ..base import BaseService
-from ..errors import CrawlServiceError
-from ..utilities.rate_limiter import RateLimitManager
 from .base import CrawlProvider
 
 
@@ -27,6 +28,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
         Args:
             config: Firecrawl configuration model
             rate_limiter: Optional rate limiter
+
         """
         super().__init__(config)
         self.config = config
@@ -46,7 +48,8 @@ class FirecrawlProvider(BaseService, CrawlProvider):
             self._initialized = True
             logger.info("Firecrawl client initialized")
         except Exception as e:
-            raise CrawlServiceError(f"Failed to initialize Firecrawl: {e}") from e
+            msg = "Failed to initialize Firecrawl"
+            raise CrawlServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup Firecrawl resources."""
@@ -65,9 +68,11 @@ class FirecrawlProvider(BaseService, CrawlProvider):
 
         Returns:
             Scrape result
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Provider not initialized")
+            msg = "Provider not initialized"
+            raise CrawlServiceError(msg)
 
         formats = formats or ["markdown"]
 
@@ -84,21 +89,22 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                     "metadata": result.get("metadata", {}),
                     "url": url,
                 }
-            else:
-                return {
-                    "success": False,
-                    "error": result.get("error", "Unknown error"),
-                    "content": "",
-                    "metadata": {},
-                    "url": url,
-                }
+            return {
+                "success": False,
+                "error": result.get("error", "Unknown error"),
+                "content": "",
+                "metadata": {},
+                "url": url,
+            }
 
         except Exception as e:
-            logger.error(f"Failed to scrape {url}: {e}", exc_info=True)
+            logger.error("Failed to scrape {url}", exc_info=True)
 
             error_msg = str(e).lower()
             if "rate limit" in error_msg:
-                logger.warning(f"Firecrawl rate limit hit for {url}")
+                logger.warning(
+                    f"Firecrawl rate limit hit for {url}"
+                )  # TODO: Convert f-string to logging format
                 error_detail = "Rate limit exceeded. Please try again later."
             elif "invalid api key" in error_msg or "unauthorized" in error_msg:
                 logger.exception("Invalid Firecrawl API key")
@@ -106,15 +112,17 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                     "Invalid API key. Please check your Firecrawl configuration."
                 )
             elif "timeout" in error_msg:
-                logger.warning(f"Timeout while scraping {url}")
+                logger.warning(
+                    f"Timeout while scraping {url}"
+                )  # TODO: Convert f-string to logging format
                 error_detail = (
                     "Request timed out. The page may be too large or slow to load."
                 )
             elif "not found" in error_msg or "404" in error_msg:
-                logger.info(f"Page not found: {url}")
+                logger.info("Page not found")
                 error_detail = "Page not found (404)."
             else:
-                error_detail = f"Scraping failed: {e!s}"
+                error_detail = "Scraping failed"
 
             return {
                 "success": False,
@@ -139,9 +147,11 @@ class FirecrawlProvider(BaseService, CrawlProvider):
 
         Returns:
             Crawl result
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Provider not initialized")
+            msg = "Provider not initialized"
+            raise CrawlServiceError(msg)
 
         formats = formats or ["markdown"]
 
@@ -154,12 +164,14 @@ class FirecrawlProvider(BaseService, CrawlProvider):
             # Get crawl ID
             crawl_id = crawl_result.get("id")
             if not crawl_id:
-                raise CrawlServiceError("No crawl ID returned")
+                msg = "No crawl ID returned"
+                raise CrawlServiceError(msg)
 
-            logger.info(f"Started crawl job {crawl_id} for {url}")
+            logger.info(
+                f"Started crawl job {crawl_id} for {url}"
+            )  # TODO: Convert f-string to logging format
 
             # Poll for completion
-            import asyncio
 
             max_attempts = 120  # 10 minutes with 5 second intervals
             for _ in range(max_attempts):
@@ -182,7 +194,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                         "total": len(data),
                         "crawl_id": crawl_id,
                     }
-                elif status.get("status") == "failed":
+                if status.get("status") == "failed":
                     return {
                         "success": False,
                         "error": status.get("error", "Crawl failed"),
@@ -204,7 +216,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
             }
 
         except Exception as e:
-            logger.exception(f"Failed to crawl {url}: {e}")
+            logger.exception("Failed to crawl {url}")
             return {
                 "success": False,
                 "error": str(e),
@@ -220,15 +232,17 @@ class FirecrawlProvider(BaseService, CrawlProvider):
 
         Returns:
             Success status
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Provider not initialized")
+            msg = "Provider not initialized"
+            raise CrawlServiceError(msg)
 
         try:
             result = self._client.cancel_crawl(crawl_id)
             return result.get("success", False)
-        except Exception as e:
-            logger.exception(f"Failed to cancel crawl {crawl_id}: {e}")
+        except Exception:
+            logger.exception("Failed to cancel crawl {crawl_id}")
             return False
 
     async def map_url(
@@ -242,9 +256,11 @@ class FirecrawlProvider(BaseService, CrawlProvider):
 
         Returns:
             Map result with URLs
+
         """
         if not self._initialized:
-            raise CrawlServiceError("Provider not initialized")
+            msg = "Provider not initialized"
+            raise CrawlServiceError(msg)
 
         try:
             result = self._client.map_url(
@@ -258,16 +274,15 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                     "urls": result.get("links", []),
                     "total": len(result.get("links", [])),
                 }
-            else:
-                return {
-                    "success": False,
-                    "error": result.get("error", "Map failed"),
-                    "urls": [],
-                    "total": 0,
-                }
+            return {
+                "success": False,
+                "error": result.get("error", "Map failed"),
+                "urls": [],
+                "total": 0,
+            }
 
         except Exception as e:
-            logger.exception(f"Failed to map {url}: {e}")
+            logger.exception("Failed to map {url}")
             return {
                 "success": False,
                 "error": str(e),
@@ -286,12 +301,12 @@ class FirecrawlProvider(BaseService, CrawlProvider):
 
         Returns:
             Firecrawl response
+
         """
         if self.rate_limiter:
             await self.rate_limiter.acquire("firecrawl")
 
         # Run synchronous method in thread pool to avoid blocking
-        import asyncio
 
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self._client.scrape_url, url, formats)
@@ -308,11 +323,10 @@ class FirecrawlProvider(BaseService, CrawlProvider):
 
         Returns:
             Crawl job info
+
         """
         if self.rate_limiter:
             await self.rate_limiter.acquire("firecrawl")
-
-        import asyncio
 
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(

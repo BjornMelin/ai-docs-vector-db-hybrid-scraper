@@ -147,7 +147,8 @@ class TestEmbeddingTracking:
                 input_texts="Test text",
             ),
         ):
-            raise ValueError("API rate limit exceeded")
+            msg = "API rate limit exceeded"
+            raise ValueError(msg)
 
     def test_track_embedding_generation_cache_hit(self):
         """Test tracking embedding generation with cache hit."""
@@ -178,7 +179,7 @@ class TestLLMTracking:
             mock_usage = Mock()
             mock_usage.prompt_tokens = 50
             mock_usage.completion_tokens = 30
-            mock_usage.total_tokens = 80
+            mock_usage._total_tokens = 80
 
             mock_response = Mock()
             mock_response.choices = [Mock()]
@@ -202,7 +203,7 @@ class TestLLMTracking:
             mock_usage = Mock()
             mock_usage.input_tokens = 100
             mock_usage.output_tokens = 200
-            mock_usage.total_tokens = 300
+            mock_usage._total_tokens = 300
 
             result["usage"] = mock_usage
             result["cost"] = 0.045
@@ -217,7 +218,8 @@ class TestLLMTracking:
                 provider="openai", model="gpt-4", operation="completion"
             ),
         ):
-            raise ConnectionError("API service unavailable")
+            msg = "API service unavailable"
+            raise ConnectionError(msg)
 
     def test_track_llm_call_multiple_choices(self):
         """Test LLM call tracking with multiple response choices."""
@@ -276,7 +278,8 @@ class TestVectorSearchTracking:
                 collection_name="documents", query_type="semantic"
             ),
         ):
-            raise ConnectionError("Qdrant connection failed")
+            msg = "Qdrant connection failed"
+            raise ConnectionError(msg)
 
     def test_track_vector_search_empty_results(self):
         """Test vector search tracking with empty results."""
@@ -314,7 +317,7 @@ class TestRAGPipelineTracking:
             )
             result["retrieval_time"] = 0.15
             result["generation_time"] = 0.8
-            result["total_cost"] = 0.035
+            result["_total_cost"] = 0.035
 
     def test_track_rag_pipeline_minimal(self):
         """Test RAG pipeline tracking with minimal data."""
@@ -337,7 +340,8 @@ class TestRAGPipelineTracking:
                 query="Test query", retrieval_method="hybrid", generation_model="gpt-4"
             ),
         ):
-            raise ValueError("Generation model failed")
+            msg = "Generation model failed"
+            raise ValueError(msg)
 
     def test_track_rag_pipeline_with_timing_breakdown(self):
         """Test RAG pipeline with detailed timing breakdown."""
@@ -353,7 +357,7 @@ class TestRAGPipelineTracking:
             result["generated_answer"] = "Detailed analysis of the query..."
             result["retrieval_time"] = 0.25
             result["generation_time"] = 1.2
-            result["total_cost"] = 0.078
+            result["_total_cost"] = 0.078
 
 
 class TestCachePerformanceTracking:

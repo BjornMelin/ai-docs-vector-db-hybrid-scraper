@@ -6,12 +6,50 @@ group search results for better organization and presentation.
 """
 
 import logging
+import re
+import time
 import warnings
 from enum import Enum
 from typing import Any
 
 import numpy as np
 from pydantic import BaseModel, Field, field_validator
+
+
+# Optional clustering dependencies
+try:
+    import sklearn.cluster
+    from sklearn.cluster import (
+        DBSCAN,
+        AgglomerativeClustering,
+        KMeans,
+        SpectralClustering,
+    )
+    from sklearn.metrics import (
+        calinski_harabasz_score,
+        davies_bouldin_score,
+        silhouette_score,
+    )
+    from sklearn.mixture import GaussianMixture
+    from sklearn.neighbors import NearestNeighbors
+    from sklearn.preprocessing import StandardScaler
+except ImportError:
+    DBSCAN = None
+    KMeans = None
+    AgglomerativeClustering = None
+    SpectralClustering = None
+    GaussianMixture = None
+    silhouette_score = None
+    calinski_harabasz_score = None
+    davies_bouldin_score = None
+    StandardScaler = None
+    NearestNeighbors = None
+    sklearn = None
+
+try:
+    import hdbscan
+except ImportError:
+    hdbscan = None
 
 
 logger = logging.getLogger(__name__)
@@ -70,7 +108,8 @@ class SearchResult(BaseModel):
     def validate_embedding_size(cls, v):
         """Validate embedding dimensions."""
         if v is not None and len(v) == 0:
-            raise ValueError("Embedding cannot be empty")
+            msg = "Embedding cannot be empty"
+            raise ValueError(msg)
         return v
 
 
@@ -167,8 +206,21 @@ class ResultClusteringRequest(BaseModel):
     def validate_results_count(cls, v):
         """Validate minimum results for clustering."""
         if len(v) < 3:
-            raise ValueError("Need at least 3 results for clustering")
+            msg = "Need at least 3 results for clustering"
+            raise ValueError(msg)
         return v
+
+
+def _raise_invalid_clustering_request() -> None:
+    """Raise ValueError for invalid clustering request."""
+    msg = "Invalid clustering request"
+    raise ValueError(msg)
+
+
+def _raise_no_valid_embeddings() -> None:
+    """Raise ValueError when no valid embeddings are found."""
+    msg = "No valid embeddings found in results"
+    raise ValueError(msg)
 
 
 class ResultClusteringResult(BaseModel):
@@ -222,6 +274,7 @@ class ResultClusteringService:
             enable_hdbscan: Enable HDBSCAN algorithm (requires hdbscan package)
             enable_advanced_metrics: Enable advanced clustering metrics
             cache_size: Size of clustering cache
+
         """
         self._logger = logging.getLogger(
             f"{self.__class__.__module__}.{self.__class__.__name__}"
@@ -256,9 +309,8 @@ class ResultClusteringService:
 
         Returns:
             ResultClusteringResult with clustered groups and metadata
-        """
-        import time
 
+        """
         start_time = time.time()
 
         try:
@@ -271,12 +323,12 @@ class ResultClusteringService:
 
             # Validate request
             if not self._validate_clustering_request(request):
-                raise ValueError("Invalid clustering request")
+                _raise_invalid_clustering_request()
 
             # Extract embeddings
             embeddings = self._extract_embeddings(request.results)
             if embeddings is None:
-                raise ValueError("No valid embeddings found in results")
+                _raise_no_valid_embeddings()
 
             # Select and apply clustering method
             method = self._select_clustering_method(request, embeddings)
@@ -324,6 +376,26 @@ class ResultClusteringService:
                 },
             )
 
+        except Exception as e:
+            processing_time_ms = (time.time() - start_time) * 1000
+            self._logger.error(
+                f"Result clustering failed: {e}", exc_info=True
+            )  # TODO: Convert f-string to logging format
+
+            # Return fallback result
+            return ResultClusteringResult(
+                clusters=[],
+                outliers=[],
+                method_used=ClusteringMethod.KMEANS,
+                total_results=len(request.results),
+                clustered_results=0,
+                outlier_count=0,
+                cluster_count=0,
+                processing_time_ms=processing_time_ms,
+                cache_hit=False,
+                clustering_metadata={"error": str(e)},
+            )
+        else:
             # Cache result
             if request.enable_caching:
                 self._cache_result(request, result)
@@ -338,48 +410,16 @@ class ResultClusteringService:
 
             return result
 
-        except Exception as e:
-            processing_time_ms = (time.time() - start_time) * 1000
-            self._logger.error(f"Result clustering failed: {e}", exc_info=True)
-
-            # Return fallback result
-            return ResultClusteringResult(
-                clusters=[],
-                outliers=[],
-                method_used=request.method,
-                total_results=len(request.results),
-                clustered_results=0,
-                outlier_count=len(request.results),
-                cluster_count=0,
-                processing_time_ms=processing_time_ms,
-                clustering_metadata={"error": str(e)},
-            )
-
     def _check_algorithm_availability(self) -> dict[str, bool]:
         """Check which clustering algorithms are available."""
         algorithms = {}
 
-        try:
-            import sklearn.cluster  # noqa: F401
+        algorithms["sklearn"] = sklearn is not None
+        algorithms["hdbscan"] = hdbscan is not None
+        algorithms["numpy"] = True  # numpy is always available
 
-            algorithms["sklearn"] = True
-        except ImportError:
-            algorithms["sklearn"] = False
-
-        try:
-            import hdbscan  # noqa: F401
-
-            algorithms["hdbscan"] = True
-        except ImportError:
-            algorithms["hdbscan"] = False
+        if not algorithms["hdbscan"]:
             self.enable_hdbscan = False
-
-        try:
-            import numpy  # noqa: F401
-
-            algorithms["numpy"] = True
-        except ImportError:
-            algorithms["numpy"] = False
 
         return algorithms
 
@@ -399,11 +439,11 @@ class ResultClusteringService:
 
     def _extract_embeddings(self, results: list[SearchResult]) -> np.ndarray | None:
         """Extract and validate embeddings from results."""
-        embeddings = []
-
-        for result in results:
-            if result.embedding is not None and len(result.embedding) > 0:
-                embeddings.append(result.embedding)
+        embeddings = [
+            result.embedding
+            for result in results
+            if result.embedding is not None and len(result.embedding) > 0
+        ]
 
         if len(embeddings) < 3:
             return None
@@ -434,12 +474,11 @@ class ResultClusteringService:
 
         if n_samples < 50 and self.enable_hdbscan:
             return ClusteringMethod.HDBSCAN
-        elif n_samples < 100:
+        if n_samples < 100:
             return ClusteringMethod.DBSCAN
-        elif request.max_clusters is not None:
+        if request.max_clusters is not None:
             return ClusteringMethod.KMEANS
-        else:
-            return ClusteringMethod.AGGLOMERATIVE
+        return ClusteringMethod.AGGLOMERATIVE
 
     async def _apply_clustering(
         self,
@@ -452,18 +491,18 @@ class ResultClusteringService:
 
         if method == ClusteringMethod.HDBSCAN:
             return self._apply_hdbscan(embeddings, request, metadata)
-        elif method == ClusteringMethod.DBSCAN:
+        if method == ClusteringMethod.DBSCAN:
             return self._apply_dbscan(embeddings, request, metadata)
-        elif method == ClusteringMethod.KMEANS:
+        if method == ClusteringMethod.KMEANS:
             return self._apply_kmeans(embeddings, request, metadata)
-        elif method == ClusteringMethod.AGGLOMERATIVE:
+        if method == ClusteringMethod.AGGLOMERATIVE:
             return self._apply_agglomerative(embeddings, request, metadata)
-        elif method == ClusteringMethod.SPECTRAL:
+        if method == ClusteringMethod.SPECTRAL:
             return self._apply_spectral(embeddings, request, metadata)
-        elif method == ClusteringMethod.GAUSSIAN_MIXTURE:
+        if method == ClusteringMethod.GAUSSIAN_MIXTURE:
             return self._apply_gaussian_mixture(embeddings, request, metadata)
-        else:
-            raise ValueError(f"Unsupported clustering method: {method}")
+        msg = f"Unsupported clustering method: {method}"
+        raise ValueError(msg)
 
     def _apply_hdbscan(
         self,
@@ -472,10 +511,9 @@ class ResultClusteringService:
         metadata: dict[str, Any],
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """Apply HDBSCAN clustering."""
-        try:
-            import hdbscan
-        except ImportError as err:
-            raise ImportError("HDBSCAN requires the 'hdbscan' package") from err
+        if hdbscan is None:
+            msg = "HDBSCAN requires the 'hdbscan' package"
+            raise ImportError(msg)
 
         # Configure parameters
         min_cluster_size = max(request.min_cluster_size, 3)
@@ -513,7 +551,9 @@ class ResultClusteringService:
         metadata: dict[str, Any],
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """Apply DBSCAN clustering."""
-        from sklearn.cluster import DBSCAN
+        if DBSCAN is None:
+            msg = "DBSCAN requires scikit-learn"
+            raise ImportError(msg)
 
         # Auto-determine eps if not provided
         eps = request.eps
@@ -552,7 +592,9 @@ class ResultClusteringService:
         metadata: dict[str, Any],
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """Apply K-means clustering."""
-        from sklearn.cluster import KMeans
+        if KMeans is None:
+            msg = "KMeans requires scikit-learn"
+            raise ImportError(msg)
 
         # Determine number of clusters
         n_clusters = request.max_clusters
@@ -581,7 +623,9 @@ class ResultClusteringService:
         metadata: dict[str, Any],
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """Apply agglomerative clustering."""
-        from sklearn.cluster import AgglomerativeClustering
+        if AgglomerativeClustering is None:
+            msg = "AgglomerativeClustering requires scikit-learn"
+            raise ImportError(msg)
 
         # Determine number of clusters
         n_clusters = request.max_clusters
@@ -606,7 +650,9 @@ class ResultClusteringService:
         metadata: dict[str, Any],
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """Apply spectral clustering."""
-        from sklearn.cluster import SpectralClustering
+        if SpectralClustering is None:
+            msg = "SpectralClustering requires scikit-learn"
+            raise ImportError(msg)
 
         # Determine number of clusters
         n_clusters = request.max_clusters
@@ -635,7 +681,9 @@ class ResultClusteringService:
         metadata: dict[str, Any],
     ) -> tuple[np.ndarray, dict[str, Any]]:
         """Apply Gaussian mixture model clustering."""
-        from sklearn.mixture import GaussianMixture
+        if GaussianMixture is None:
+            msg = "GaussianMixture requires scikit-learn"
+            raise ImportError(msg)
 
         # Determine number of components
         n_components = request.max_clusters
@@ -662,7 +710,9 @@ class ResultClusteringService:
 
     def _estimate_eps(self, embeddings: np.ndarray, min_cluster_size: int) -> float:
         """Estimate eps parameter for DBSCAN using k-distance."""
-        from sklearn.neighbors import NearestNeighbors
+        if NearestNeighbors is None:
+            msg = "NearestNeighbors requires scikit-learn"
+            raise ImportError(msg)
 
         # Use k = min_cluster_size for k-distance
         k = min_cluster_size
@@ -752,7 +802,7 @@ class ResultClusteringService:
         results: list[SearchResult],
         cluster_labels: np.ndarray,
         embeddings: np.ndarray,
-        request: ResultClusteringRequest,
+        _request: ResultClusteringRequest,
     ) -> list[OutlierResult]:
         """Identify outlier results that don't fit into clusters."""
         outliers = []
@@ -815,7 +865,7 @@ class ResultClusteringService:
     def _calculate_cluster_confidence(
         self,
         cluster_embeddings: np.ndarray,
-        all_embeddings: np.ndarray,
+        _all_embeddings: np.ndarray,
         request: ResultClusteringRequest,
     ) -> float:
         """Calculate confidence score for a cluster."""
@@ -837,7 +887,7 @@ class ResultClusteringService:
         self,
         embeddings: np.ndarray,
         cluster_labels: np.ndarray,
-        request: ResultClusteringRequest,
+        _request: ResultClusteringRequest,
     ) -> dict[str, float]:
         """Calculate clustering quality metrics."""
         metrics = {}
@@ -845,41 +895,40 @@ class ResultClusteringService:
         if not self.enable_advanced_metrics:
             return metrics
 
-        try:
-            from sklearn.metrics import (
-                calinski_harabasz_score,
-                davies_bouldin_score,
-                silhouette_score,
-            )
-
+        if silhouette_score is not None:
             # Filter out noise points for metrics calculation
             valid_mask = cluster_labels != -1
             if np.sum(valid_mask) > 1 and len(set(cluster_labels[valid_mask])) > 1:
                 valid_embeddings = embeddings[valid_mask]
                 valid_labels = cluster_labels[valid_mask]
 
-                # Silhouette score
-                metrics["silhouette_score"] = silhouette_score(
-                    valid_embeddings, valid_labels, metric="cosine"
-                )
+                try:
+                    # Silhouette score
+                    metrics["silhouette_score"] = silhouette_score(
+                        valid_embeddings, valid_labels, metric="cosine"
+                    )
 
-                # Calinski-Harabasz index
-                metrics["calinski_harabasz_score"] = calinski_harabasz_score(
-                    valid_embeddings, valid_labels
-                )
+                    # Calinski-Harabasz index
+                    if calinski_harabasz_score is not None:
+                        metrics["calinski_harabasz_score"] = calinski_harabasz_score(
+                            valid_embeddings, valid_labels
+                        )
 
-                # Davies-Bouldin index
-                metrics["davies_bouldin_score"] = davies_bouldin_score(
-                    valid_embeddings, valid_labels
-                )
+                    # Davies-Bouldin index
+                    if davies_bouldin_score is not None:
+                        metrics["davies_bouldin_score"] = davies_bouldin_score(
+                            valid_embeddings, valid_labels
+                        )
 
-        except Exception as e:
-            self._logger.warning(f"Failed to calculate quality metrics: {e}")
+                except Exception as e:
+                    self._logger.warning(
+                        f"Failed to calculate quality metrics: {e}"
+                    )  # TODO: Convert f-string to logging format
 
         return metrics
 
     def _generate_cluster_label(
-        self, results: list[SearchResult], query: str | None = None
+        self, results: list[SearchResult], _query: str | None = None
     ) -> str:
         """Generate human-readable label for a cluster."""
         # Simple implementation - extract common terms
@@ -888,8 +937,6 @@ class ResultClusteringService:
         )  # Use first 5 for efficiency
 
         # Extract most common meaningful words
-        import re
-
         words = re.findall(r"\b\w{3,}\b", all_titles)
 
         # Remove common stop words
@@ -959,8 +1006,6 @@ class ResultClusteringService:
             text_content += f"{result.title} {result.content} "
 
         # Extract keywords using simple frequency analysis
-        import re
-
         words = re.findall(r"\b\w{4,}\b", text_content.lower())
 
         # Remove common words

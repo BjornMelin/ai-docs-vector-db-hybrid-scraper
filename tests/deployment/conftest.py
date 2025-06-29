@@ -10,7 +10,7 @@ import os
 import tempfile
 from collections.abc import AsyncGenerator, Generator
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -170,7 +170,7 @@ def mock_docker_registry() -> Generator[str]:
     """Mock Docker registry for testing."""
     # In real scenarios, this would point to a test registry
     registry_url = "localhost:5000"
-    yield registry_url
+    return registry_url
 
 
 @pytest.fixture
@@ -195,7 +195,7 @@ def mock_infrastructure_config(temp_deployment_dir: Path) -> dict[str, Any]:
 
     # Write config to file
     config_file = temp_deployment_dir / "infrastructure.json"
-    with open(config_file, "w") as f:
+    with config_file.open("w") as f:
         json.dump(config, f, indent=2)
 
     return config
@@ -240,7 +240,7 @@ class DeploymentHealthChecker:
         ]
         self.initialized = True
 
-    async def check_health(self, endpoint: str, timeout: int = 30) -> dict[str, Any]:
+    async def check_health(self, endpoint: str, _timeout: int = 30) -> dict[str, Any]:
         """Check health of a specific endpoint."""
         if not self.initialized:
             await self.initialize()
@@ -252,17 +252,17 @@ class DeploymentHealthChecker:
                 "endpoint": endpoint,
                 "status": "healthy",
                 "response_time_ms": 50.0,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
             }
         except Exception as e:
             return {
                 "endpoint": endpoint,
                 "status": "unhealthy",
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
             }
 
-    async def check_all_health(self, timeout: int = 30) -> dict[str, dict[str, Any]]:
+    async def check_all_health(self, timeout: int = 30) -> dict[str, dict[str, Any]]:  # noqa: ASYNC109
         """Check health of all registered endpoints."""
         results = {}
         for endpoint in self.health_endpoints:
@@ -270,7 +270,10 @@ class DeploymentHealthChecker:
         return results
 
     async def wait_for_healthy(
-        self, endpoint: str, timeout: int = 60, interval: int = 5
+        self,
+        endpoint: str,
+        timeout: int = 60,
+        interval: int = 5,
     ) -> bool:
         """Wait for an endpoint to become healthy."""
         start_time = asyncio.get_event_loop().time()
@@ -298,7 +301,7 @@ class DeploymentRollbackManager:
 
     def record_deployment(self, deployment_info: dict[str, Any]) -> None:
         """Record a deployment for rollback capability."""
-        deployment_info["timestamp"] = datetime.utcnow().isoformat()
+        deployment_info["timestamp"] = datetime.now(tz=UTC).isoformat()
         deployment_info["rollback_available"] = True
 
         self.deployment_history.append(deployment_info)
@@ -329,7 +332,7 @@ class DeploymentRollbackManager:
             rollback_info = {
                 "success": True,
                 "rolled_back_to": rollback_target["deployment_id"],
-                "rollback_time": datetime.utcnow().isoformat(),
+                "rollback_time": datetime.now(tz=UTC).isoformat(),
                 "previous_deployment": self.current_deployment["deployment_id"]
                 if self.current_deployment
                 else None,
@@ -339,14 +342,14 @@ class DeploymentRollbackManager:
             self.current_deployment = rollback_target.copy()
             self.current_deployment["rollback_info"] = rollback_info
 
-            return rollback_info
-
         except Exception as e:
             return {
                 "success": False,
                 "error": str(e),
-                "rollback_time": datetime.utcnow().isoformat(),
+                "rollback_time": datetime.now(tz=UTC).isoformat(),
             }
+        else:
+            return rollback_info
 
     def get_deployment_history(self) -> list[dict[str, Any]]:
         """Get deployment history."""
@@ -376,7 +379,7 @@ class BlueGreenDeploymentManager:
                     "healthy": True,
                     "deployment_id": deployment_info["deployment_id"],
                     "version": deployment_info["version"],
-                    "deployment_time": datetime.utcnow().isoformat(),
+                    "deployment_time": datetime.now(tz=UTC).isoformat(),
                 }
             )
 
@@ -425,16 +428,16 @@ class BlueGreenDeploymentManager:
                 "success": True,
                 "switched_from": active_env["name"],
                 "switched_to": inactive_env["name"],
-                "switch_time": datetime.utcnow().isoformat(),
+                "switch_time": datetime.now(tz=UTC).isoformat(),
             }
-
-            return result
 
         except Exception as e:
             return {
                 "success": False,
                 "error": str(e),
             }
+        else:
+            return result
         finally:
             self.switch_in_progress = False
 

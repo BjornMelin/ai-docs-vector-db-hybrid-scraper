@@ -1,6 +1,3 @@
-import typing
-
-
 """Advanced CLI interface for AI Documentation Scraper.
 
 This module provides a comprehensive CLI interface with:

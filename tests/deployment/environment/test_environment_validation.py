@@ -154,7 +154,7 @@ class TestConfigurationDrift:
         dev_config["database"]["name"] = "ai_docs_dev"
 
         dev_file = temp_deployment_dir / "dev_config.json"
-        with open(dev_file, "w") as f:
+        with dev_file.open("w") as f:
             json.dump(dev_config, f, indent=2)
         configs["development"] = dev_file
 
@@ -165,7 +165,7 @@ class TestConfigurationDrift:
         staging_config["cache"]["max_size_mb"] = 1000
 
         staging_file = temp_deployment_dir / "staging_config.json"
-        with open(staging_file, "w") as f:
+        with staging_file.open("w") as f:
             json.dump(staging_config, f, indent=2)
         configs["staging"] = staging_file
 
@@ -177,7 +177,7 @@ class TestConfigurationDrift:
         prod_config["vector_db"]["collection_name"] = "documents_prod"
 
         prod_file = temp_deployment_dir / "prod_config.json"
-        with open(prod_file, "w") as f:
+        with prod_file.open("w") as f:
             json.dump(prod_config, f, indent=2)
         configs["production"] = prod_file
 
@@ -191,7 +191,7 @@ class TestConfigurationDrift:
         # Load configurations
         configs = {}
         for env, config_file in sample_configs.items():
-            with open(config_file) as f:
+            with config_file.open() as f:
                 configs[env] = json.load(f)
 
         # Detect drift between development and staging
@@ -228,7 +228,7 @@ class TestConfigurationDrift:
         # Load configurations
         configs = {}
         for env, config_file in sample_configs.items():
-            with open(config_file) as f:
+            with config_file.open() as f:
                 configs[env] = json.load(f)
 
         # Categorize drift
@@ -281,7 +281,7 @@ class TestSecretsManagement:
         }
 
         config_file = temp_deployment_dir / "config_with_secrets.json"
-        with open(config_file, "w") as f:
+        with config_file.open("w") as f:
             json.dump(config_with_secrets, f, indent=2)
 
         # Validate secrets
@@ -316,7 +316,7 @@ class TestSecretsManagement:
         }
 
         config_file = temp_deployment_dir / "env_var_config.json"
-        with open(config_file, "w") as f:
+        with config_file.open("w") as f:
             json.dump(config, f, indent=2)
 
         validator = SecretsValidator()
@@ -474,7 +474,7 @@ class SecretsValidator:
         """Scan configuration file for potential secrets."""
         violations = []
 
-        with open(config_file) as f:
+        with config_file.open() as f:
             config = json.load(f)
 
         self._scan_dict(config, violations)

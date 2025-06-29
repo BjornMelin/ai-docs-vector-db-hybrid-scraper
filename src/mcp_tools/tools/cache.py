@@ -3,6 +3,8 @@
 import logging
 from typing import TYPE_CHECKING
 
+from src.mcp_tools.models.responses import CacheClearResponse, CacheStatsResponse
+
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -17,7 +19,7 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from ...infrastructure.client_manager import ClientManager
+from src.infrastructure.client_manager import ClientManager
 
 
 logger = logging.getLogger(__name__)
@@ -26,14 +28,11 @@ logger = logging.getLogger(__name__)
 def register_tools(mcp, client_manager: ClientManager):
     """Register cache management tools with the MCP server."""
 
-    from ..models.responses import CacheClearResponse, CacheStatsResponse
-
     @mcp.tool()
     async def clear_cache(
         pattern: str | None = None, ctx: Context = None
     ) -> CacheClearResponse:
-        """
-        Clear cache entries.
+        """Clear cache entries.
 
         Clears all cache entries or those matching a specific pattern.
         """
@@ -65,13 +64,12 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to clear cache: {e}")
-            logger.exception(f"Failed to clear cache: {e}")
+            logger.exception("Failed to clear cache")
             raise
 
     @mcp.tool()
     async def get_cache_stats(ctx: Context = None) -> CacheStatsResponse:
-        """
-        Get cache statistics and metrics.
+        """Get cache statistics and metrics.
 
         Returns hit rate, size, and performance metrics for the cache.
         """
@@ -93,5 +91,5 @@ def register_tools(mcp, client_manager: ClientManager):
         except Exception as e:
             if ctx:
                 await ctx.error(f"Failed to retrieve cache statistics: {e}")
-            logger.exception(f"Failed to retrieve cache statistics: {e}")
+            logger.exception("Failed to retrieve cache statistics")
             raise

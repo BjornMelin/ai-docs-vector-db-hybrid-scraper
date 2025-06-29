@@ -6,6 +6,7 @@ classification with semantic similarity for accurate content type detection.
 """
 
 import logging
+import math
 import re
 from typing import Any
 
@@ -37,6 +38,7 @@ class ContentClassifier:
 
         Args:
             embedding_manager: Optional EmbeddingManager for semantic analysis
+
         """
         self.embedding_manager = embedding_manager
         self._initialized = False
@@ -373,9 +375,11 @@ class ContentClassifier:
 
         Raises:
             RuntimeError: If classifier not initialized
+
         """
         if not self._initialized:
-            raise RuntimeError("ContentClassifier not initialized")
+            msg = "ContentClassifier not initialized"
+            raise RuntimeError(msg)
 
         if not content.strip():
             return self._create_unknown_classification("Empty content provided")
@@ -461,7 +465,7 @@ class ContentClassifier:
             if url_matches > 0:
                 url_score = min(url_matches / len(patterns["url_patterns"]), 1.0)
                 score += url_score * CLASSIFICATION_WEIGHTS["url_weight"]
-                type_reasoning.append(f"URL patterns: {url_matches}")
+                type_reasoning.append("URL patterns")
 
         # Title pattern matching
         if title_lower and patterns.get("title_patterns"):
@@ -473,7 +477,7 @@ class ContentClassifier:
             if title_matches > 0:
                 title_score = min(title_matches / len(patterns["title_patterns"]), 1.0)
                 score += title_score * CLASSIFICATION_WEIGHTS["title_weight"]
-                type_reasoning.append(f"title patterns: {title_matches}")
+                type_reasoning.append("title patterns")
 
         # Content indicator matching
         if patterns.get("content_indicators"):
@@ -487,7 +491,7 @@ class ContentClassifier:
                     indicator_matches / len(patterns["content_indicators"]), 1.0
                 )
                 score += indicator_score * CLASSIFICATION_WEIGHTS["indicator_weight"]
-                type_reasoning.append(f"indicators: {indicator_matches}")
+                type_reasoning.append("indicators")
 
         return score, type_reasoning
 
@@ -509,8 +513,8 @@ class ContentClassifier:
                         + semantic_scores[content_type] * blend_ratio
                     )
             reasoning_parts.append("semantic analysis applied")
-        except Exception as e:
-            logger.warning(f"Semantic analysis failed: {e}")
+        except Exception:
+            logger.warning("Semantic analysis failed")
 
         return type_scores
 
@@ -564,7 +568,7 @@ class ContentClassifier:
             secondary_types = self._determine_secondary_types(sorted_types)
 
         # Generate reasoning
-        reasoning = f"Rule-based classification: {'; '.join(reasoning_parts[:3])}"
+        reasoning = "Rule-based classification"
         if len(reasoning_parts) > 3:
             reasoning += f" (and {len(reasoning_parts) - 3} more factors)"
 
@@ -601,6 +605,7 @@ class ContentClassifier:
 
         Returns:
             dict[ContentType, float]: Semantic similarity scores for each type
+
         """
         # Reference texts for each content type (used for semantic similarity)
         reference_texts = {
@@ -645,8 +650,8 @@ class ContentClassifier:
 
             return scores
 
-        except Exception as e:
-            logger.exception(f"Semantic classification failed: {e}")
+        except Exception:
+            logger.exception("Semantic classification failed")
             return {}
 
     def _cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:
@@ -658,10 +663,9 @@ class ContentClassifier:
 
         Returns:
             float: Cosine similarity between vectors
+
         """
         try:
-            import math
-
             # Calculate dot product
             dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=False))
 
@@ -685,6 +689,7 @@ class ContentClassifier:
 
         Returns:
             bool: True if code blocks are detected
+
         """
         code_patterns = [
             r"```\w*\n",  # Markdown code fences
@@ -708,6 +713,7 @@ class ContentClassifier:
 
         Returns:
             list[str]: List of detected programming languages
+
         """
         detected_languages = []
 
@@ -725,6 +731,7 @@ class ContentClassifier:
 
         Returns:
             bool: True if content appears tutorial-like
+
         """
         tutorial_indicators = [
             r"step\s+\d+",
@@ -755,6 +762,7 @@ class ContentClassifier:
 
         Returns:
             bool: True if content appears reference-like
+
         """
         reference_indicators = [
             r"parameters?:",
@@ -786,6 +794,7 @@ class ContentClassifier:
 
         Returns:
             bool: True if content appears to be pure code
+
         """
         lines = [line.strip() for line in content.split("\n") if line.strip()]
         if len(lines) < 3:
@@ -869,6 +878,7 @@ class ContentClassifier:
 
         Returns:
             dict: Adjusted type scores
+
         """
         content_lower = content.lower()
 

@@ -6,7 +6,9 @@ time-based content relevance analysis.
 """
 
 import logging
-from datetime import datetime, timedelta
+import math
+import re
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
@@ -70,18 +72,20 @@ class TemporalCriteria(BaseModel):
 
     @field_validator("created_before", "updated_before", "crawled_before")
     @classmethod
-    def validate_before_dates(cls, v, info):
+    def validate_before_dates(cls, v, _info):
         """Ensure 'before' dates are not in the future."""
-        if v and v > datetime.utcnow():
-            raise ValueError(f"Date cannot be in the future: {v}")
+        if v and v > datetime.now(tz=UTC):
+            msg = f"Date cannot be in the future: {v}"
+            raise ValueError(msg)
         return v
 
     @field_validator("created_after", "updated_after", "crawled_after")
     @classmethod
-    def validate_after_dates(cls, v, info):
+    def validate_after_dates(cls, v, _info):
         """Validate 'after' dates are reasonable."""
-        if v and v > datetime.utcnow():
-            raise ValueError(f"Date cannot be in the future: {v}")
+        if v and v > datetime.now(tz=UTC):
+            msg = f"Date cannot be in the future: {v}"
+            raise ValueError(msg)
         return v
 
 
@@ -115,6 +119,7 @@ class TemporalFilter(BaseFilter):
             description: Filter description
             enabled: Whether filter is enabled
             priority: Filter priority (higher = earlier execution)
+
         """
         super().__init__(name, description, enabled, priority)
 
@@ -143,13 +148,14 @@ class TemporalFilter(BaseFilter):
 
         Raises:
             FilterError: If temporal filter application fails
+
         """
         try:
             # Validate and parse criteria
             criteria = TemporalCriteria.model_validate(filter_criteria)
 
             # Get current time from context or use UTC now
-            current_time = datetime.utcnow()
+            current_time = datetime.now(tz=UTC)
             if context and "current_time" in context:
                 current_time = context["current_time"]
 
@@ -345,7 +351,6 @@ class TemporalFilter(BaseFilter):
             # Calculate age threshold based on freshness score
             # Using exponential decay: freshness = e^(-age/half_life)
             # Solving for age: age = -half_life * ln(freshness_threshold)
-            import math
 
             half_life_days = self.default_half_life_days
             max_age_for_threshold = -half_life_days * math.log(
@@ -381,12 +386,11 @@ class TemporalFilter(BaseFilter):
         """Estimate performance impact based on filter complexity."""
         if condition_count == 0:
             return "none"
-        elif condition_count <= 2:
+        if condition_count <= 2:
             return "low"
-        elif condition_count <= 4:
+        if condition_count <= 4:
             return "medium"
-        else:
-            return "high"
+        return "high"
 
     async def validate_criteria(self, filter_criteria: dict[str, Any]) -> bool:
         """Validate temporal filter criteria."""
@@ -394,7 +398,9 @@ class TemporalFilter(BaseFilter):
             TemporalCriteria.model_validate(filter_criteria)
             return True
         except Exception as e:
-            self._logger.warning(f"Invalid temporal criteria: {e}")
+            self._logger.warning(
+                f"Invalid temporal criteria: {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
     def get_supported_operators(self) -> list[str]:
@@ -430,9 +436,10 @@ class TemporalFilter(BaseFilter):
 
         Returns:
             FreshnessScore with calculated score and metadata
+
         """
         if current_time is None:
-            current_time = datetime.utcnow()
+            current_time = datetime.now(tz=UTC)
 
         if half_life_days is None:
             half_life_days = self.default_half_life_days
@@ -443,8 +450,6 @@ class TemporalFilter(BaseFilter):
 
         # Calculate freshness score based on decay function
         if decay_function == "exponential":
-            import math
-
             score = math.exp(-age_days / half_life_days)
         elif decay_function == "linear":
             max_age = half_life_days * 3  # Linear decay over 3x half-life
@@ -459,7 +464,6 @@ class TemporalFilter(BaseFilter):
             )
         else:
             # Default to exponential
-            import math
 
             score = math.exp(-age_days / half_life_days)
 
@@ -481,11 +485,10 @@ class TemporalFilter(BaseFilter):
 
         Returns:
             Parsed datetime or None if parsing fails
-        """
-        import re
 
+        """
         relative_date_str = relative_date_str.lower().strip()
-        current_time = datetime.utcnow()
+        current_time = datetime.now(tz=UTC)
 
         # Pattern matching for common relative dates
         patterns = [
@@ -497,16 +500,16 @@ class TemporalFilter(BaseFilter):
                 r"past (\d+) days?",
                 lambda m: current_time - timedelta(days=int(m.group(1))),
             ),
-            (r"last week", lambda m: current_time - timedelta(weeks=1)),
-            (r"past week", lambda m: current_time - timedelta(weeks=1)),
-            (r"last month", lambda m: current_time - timedelta(days=30)),
-            (r"past month", lambda m: current_time - timedelta(days=30)),
-            (r"last year", lambda m: current_time - timedelta(days=365)),
-            (r"past year", lambda m: current_time - timedelta(days=365)),
-            (r"yesterday", lambda m: current_time - timedelta(days=1)),
+            (r"last week", lambda _m: current_time - timedelta(weeks=1)),
+            (r"past week", lambda _m: current_time - timedelta(weeks=1)),
+            (r"last month", lambda _m: current_time - timedelta(days=30)),
+            (r"past month", lambda _m: current_time - timedelta(days=30)),
+            (r"last year", lambda _m: current_time - timedelta(days=365)),
+            (r"past year", lambda _m: current_time - timedelta(days=365)),
+            (r"yesterday", lambda _m: current_time - timedelta(days=1)),
             (
                 r"today",
-                lambda m: current_time.replace(
+                lambda _m: current_time.replace(
                     hour=0, minute=0, second=0, microsecond=0
                 ),
             ),

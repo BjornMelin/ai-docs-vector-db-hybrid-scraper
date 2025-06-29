@@ -8,13 +8,16 @@ Provides optimized connection pools with:
 - Performance monitoring and metrics
 """
 
+import importlib.util
 import logging
 import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any, Optional
+from typing import Any
 
+import redis.asyncio as redis
 from pydantic import BaseModel
+from qdrant_client import AsyncQdrantClient
 
 from src.config.auto_detect import AutoDetectionConfig, DetectedService
 from src.services.errors import circuit_breaker
@@ -48,7 +51,9 @@ class ConnectionPoolManager:
         if self._initialized:
             return
 
-        self.logger.info(f"Initializing connection pools for {len(services)} services")
+        self.logger.info(
+            f"Initializing connection pools for {len(services)} services"
+        )  # TODO: Convert f-string to logging format
 
         for service in services:
             try:
@@ -65,7 +70,9 @@ class ConnectionPoolManager:
                 )
 
         self._initialized = True
-        self.logger.info(f"Connection pools initialized: {list(self._pools.keys())}")
+        self.logger.info(
+            f"Connection pools initialized: {list(self._pools.keys())}"
+        )  # TODO: Convert f-string to logging format
 
     async def cleanup(self) -> None:
         """Cleanup all connection pools."""
@@ -90,8 +97,6 @@ class ConnectionPoolManager:
     async def _initialize_redis_pool(self, service: DetectedService) -> None:
         """Initialize Redis connection pool with Redis 8.2 optimizations."""
         try:
-            import redis.asyncio as redis
-
             pool_config = {
                 **service.pool_config,
                 "host": service.host,
@@ -119,7 +124,9 @@ class ConnectionPoolManager:
                 library_stats={},
             )
 
-            self.logger.info(f"Redis pool initialized: {service.host}:{service.port}")
+            self.logger.info(
+                f"Redis pool initialized: {service.host}:{service.port}"
+            )  # TODO: Convert f-string to logging format
 
         except ImportError:
             self.logger.warning("redis package not available, skipping Redis pool")
@@ -135,8 +142,6 @@ class ConnectionPoolManager:
     async def _initialize_qdrant_pool(self, service: DetectedService) -> None:
         """Initialize Qdrant connection pool with gRPC optimization."""
         try:
-            from qdrant_client import AsyncQdrantClient
-
             # Prefer gRPC if available
             prefer_grpc = service.metadata.get("grpc_available", False)
 
@@ -192,10 +197,9 @@ class ConnectionPoolManager:
         """Initialize PostgreSQL connection pool with asyncpg."""
         try:
             # Check if asyncpg is available without importing
-            import importlib.util
-
             if not importlib.util.find_spec("asyncpg"):
-                raise ImportError("asyncpg not available")
+                msg = "asyncpg not available"
+                raise ImportError(msg)
 
             # Note: In real implementation, would need actual connection parameters
             # This is a placeholder showing the structure
@@ -238,13 +242,12 @@ class ConnectionPoolManager:
     async def get_redis_connection(self) -> AsyncGenerator[Any]:
         """Get Redis connection from pool."""
         if "redis" not in self._pools:
-            raise RuntimeError("Redis pool not initialized")
+            msg = "Redis pool not initialized"
+            raise RuntimeError(msg)
 
         client = None
 
         try:
-            import redis.asyncio as redis
-
             pool = self._pools["redis"]
             client = redis.Redis(connection_pool=pool)
 
@@ -261,7 +264,8 @@ class ConnectionPoolManager:
     async def get_qdrant_client(self) -> AsyncGenerator[Any]:
         """Get Qdrant client from pool."""
         if "qdrant" not in self._pools:
-            raise RuntimeError("Qdrant pool not initialized")
+            msg = "Qdrant pool not initialized"
+            raise RuntimeError(msg)
 
         try:
             client = self._pools["qdrant"]
@@ -276,7 +280,8 @@ class ConnectionPoolManager:
     async def get_postgresql_connection(self) -> AsyncGenerator[Any]:
         """Get PostgreSQL connection from pool."""
         if "postgresql" not in self._pools:
-            raise RuntimeError("PostgreSQL pool not initialized")
+            msg = "PostgreSQL pool not initialized"
+            raise RuntimeError(msg)
 
         connection = None
 
@@ -349,7 +354,6 @@ class ConnectionPoolManager:
             pool = self._pools["redis"]
 
             # Use library's ping method for health check
-            import redis.asyncio as redis
 
             client = redis.Redis(connection_pool=pool)
 
@@ -379,7 +383,9 @@ class ConnectionPoolManager:
                 await client.aclose()
 
         except Exception as e:
-            self.logger.debug(f"Redis health check failed: {e}")
+            self.logger.debug(
+                f"Redis health check failed: {e}"
+            )  # TODO: Convert f-string to logging format
             metrics.is_healthy = False
 
     async def _update_qdrant_health(self, metrics: PoolHealthMetrics) -> None:
@@ -402,7 +408,9 @@ class ConnectionPoolManager:
             )
 
         except Exception as e:
-            self.logger.debug(f"Qdrant health check failed: {e}")
+            self.logger.debug(
+                f"Qdrant health check failed: {e}"
+            )  # TODO: Convert f-string to logging format
             metrics.is_healthy = False
 
     async def _update_postgresql_health(self, metrics: PoolHealthMetrics) -> None:
@@ -414,7 +422,9 @@ class ConnectionPoolManager:
             metrics.library_stats = {"status": "configured_but_not_implemented"}
 
         except Exception as e:
-            self.logger.debug(f"PostgreSQL health check failed: {e}")
+            self.logger.debug(
+                f"PostgreSQL health check failed: {e}"
+            )  # TODO: Convert f-string to logging format
             metrics.is_healthy = False
 
     async def _cleanup_pool(self, pool_name: str, pool: Any) -> None:
@@ -431,7 +441,9 @@ class ConnectionPoolManager:
             # PostgreSQL pool cleanup
             await pool.close()
 
-        self.logger.info(f"Cleaned up {pool_name} pool")
+        self.logger.info(
+            f"Cleaned up {pool_name} pool"
+        )  # TODO: Convert f-string to logging format
 
     async def get_pool_stats(self) -> dict[str, Any]:
         """Get comprehensive pool statistics using library features."""
@@ -472,7 +484,9 @@ class ConnectionPoolManager:
                 # Would implement actual health check in real code
                 return True
         except Exception as e:
-            self.logger.debug(f"Immediate health check failed for {pool_name}: {e}")
+            self.logger.debug(
+                f"Immediate health check failed for {pool_name}: {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
         return False

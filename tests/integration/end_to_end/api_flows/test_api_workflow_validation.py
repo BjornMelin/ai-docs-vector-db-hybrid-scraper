@@ -49,7 +49,7 @@ class TestAPIWorkflowValidation:
                 }
 
             async def request(
-                self, method: str, endpoint: str, **kwargs
+                self, method: str, endpoint: str, **_kwargs
             ) -> dict[str, Any]:
                 """Mock API request."""
                 start_time = time.perf_counter()
@@ -61,8 +61,11 @@ class TestAPIWorkflowValidation:
                 # Check for configured error responses
                 if endpoint in self.error_responses:
                     error_config = self.error_responses[endpoint]
+                    msg = (
+                        f"HTTP {error_config['status_code']}: {error_config['message']}"
+                    )
                     raise httpx.HTTPStatusError(
-                        f"HTTP {error_config['status_code']}: {error_config['message']}",
+                        msg,
                         request=MagicMock(),
                         response=MagicMock(status_code=error_config["status_code"]),
                     )
@@ -73,15 +76,15 @@ class TestAPIWorkflowValidation:
                     "endpoint": endpoint,
                     "timestamp": time.time(),
                     "duration_ms": (time.perf_counter() - start_time) * 1000,
-                    **kwargs,
+                    **_kwargs,
                 }
                 self.request_history.append(request_record)
 
                 # Generate mock responses based on endpoint
-                return await self._generate_mock_response(method, endpoint, **kwargs)
+                return await self._generate_mock_response(method, endpoint, **_kwargs)
 
             async def _generate_mock_response(
-                self, method: str, endpoint: str, **kwargs
+                self, method: str, endpoint: str, **_kwargs
             ) -> dict[str, Any]:
                 """Generate appropriate mock response based on endpoint."""
                 base_response = {
@@ -103,7 +106,7 @@ class TestAPIWorkflowValidation:
                         "uptime_seconds": 3600,
                     }
 
-                elif endpoint == "/api/auth/login":
+                if endpoint == "/api/auth/login":
                     self.session_token = f"token_{int(time.time())}"
                     return {
                         **base_response,
@@ -112,9 +115,9 @@ class TestAPIWorkflowValidation:
                         "expires_in": 3600,
                     }
 
-                elif endpoint == "/api/projects":
+                if endpoint == "/api/projects":
                     if method == "POST":
-                        project_data = kwargs.get("json", {})
+                        project_data = _kwargs.get("json", {})
                         return {
                             **base_response,
                             "project": {
@@ -125,24 +128,24 @@ class TestAPIWorkflowValidation:
                                 "document_count": 0,
                             },
                         }
-                    else:  # GET
-                        return {
-                            **base_response,
-                            "projects": [
-                                {
-                                    "id": "proj_1",
-                                    "name": "sample-project",
-                                    "created_at": time.time() - 3600,
-                                    "collections": ["docs", "tutorials"],
-                                    "document_count": 25,
-                                },
-                            ],
-                            "total": 1,
-                        }
+                    # GET
+                    return {
+                        **base_response,
+                        "projects": [
+                            {
+                                "id": "proj_1",
+                                "name": "sample-project",
+                                "created_at": time.time() - 3600,
+                                "collections": ["docs", "tutorials"],
+                                "document_count": 25,
+                            },
+                        ],
+                        "_total": 1,
+                    }
 
-                elif endpoint == "/api/documents":
+                if endpoint == "/api/documents":
                     if method == "POST":
-                        doc_data = kwargs.get("json", {})
+                        doc_data = _kwargs.get("json", {})
                         return {
                             **base_response,
                             "document": {
@@ -153,30 +156,30 @@ class TestAPIWorkflowValidation:
                                 "created_at": time.time(),
                             },
                         }
-                    else:  # GET
-                        return {
-                            **base_response,
-                            "documents": [
-                                {
-                                    "id": "doc_1",
-                                    "url": "https://example.com/doc1",
-                                    "title": "Sample Document 1",
-                                    "status": "processed",
-                                    "chunk_count": 5,
-                                },
-                                {
-                                    "id": "doc_2",
-                                    "url": "https://example.com/doc2",
-                                    "title": "Sample Document 2",
-                                    "status": "processed",
-                                    "chunk_count": 8,
-                                },
-                            ],
-                            "total": 2,
-                        }
+                    # GET
+                    return {
+                        **base_response,
+                        "documents": [
+                            {
+                                "id": "doc_1",
+                                "url": "https://example.com/doc1",
+                                "title": "Sample Document 1",
+                                "status": "processed",
+                                "chunk_count": 5,
+                            },
+                            {
+                                "id": "doc_2",
+                                "url": "https://example.com/doc2",
+                                "title": "Sample Document 2",
+                                "status": "processed",
+                                "chunk_count": 8,
+                            },
+                        ],
+                        "_total": 2,
+                    }
 
-                elif endpoint == "/api/search":
-                    query_params = kwargs.get("params", {})
+                if endpoint == "/api/search":
+                    query_params = _kwargs.get("params", {})
                     query = query_params.get("q", "")
                     limit = int(query_params.get("limit", 10))
 
@@ -197,13 +200,13 @@ class TestAPIWorkflowValidation:
                         **base_response,
                         "query": query,
                         "results": results,
-                        "total_found": len(results),
+                        "_total_found": len(results),
                         "search_time_ms": 125,
                     }
 
-                elif endpoint.startswith("/api/collections"):
+                if endpoint.startswith("/api/collections"):
                     if method == "POST":
-                        collection_data = kwargs.get("json", {})
+                        collection_data = _kwargs.get("json", {})
                         return {
                             **base_response,
                             "collection": {
@@ -214,44 +217,43 @@ class TestAPIWorkflowValidation:
                                 "created_at": time.time(),
                             },
                         }
-                    else:  # GET
-                        return {
-                            **base_response,
-                            "collections": [
-                                {
-                                    "id": "coll_1",
-                                    "name": "documentation",
-                                    "description": "Documentation collection",
-                                    "document_count": 15,
-                                },
-                                {
-                                    "id": "coll_2",
-                                    "name": "tutorials",
-                                    "description": "Tutorial collection",
-                                    "document_count": 10,
-                                },
-                            ],
-                            "total": 2,
-                        }
+                    # GET
+                    return {
+                        **base_response,
+                        "collections": [
+                            {
+                                "id": "coll_1",
+                                "name": "documentation",
+                                "description": "Documentation collection",
+                                "document_count": 15,
+                            },
+                            {
+                                "id": "coll_2",
+                                "name": "tutorials",
+                                "description": "Tutorial collection",
+                                "document_count": 10,
+                            },
+                        ],
+                        "_total": 2,
+                    }
 
-                elif endpoint == "/api/analytics/stats":
+                if endpoint == "/api/analytics/stats":
                     return {
                         **base_response,
                         "stats": {
-                            "total_documents": 25,
-                            "total_collections": 3,
-                            "total_searches": 150,
+                            "_total_documents": 25,
+                            "_total_collections": 3,
+                            "_total_searches": 150,
                             "avg_search_time_ms": 145,
                             "storage_used_mb": 125.5,
                         },
                     }
 
-                else:
-                    # Default response for unknown endpoints
-                    return {
-                        **base_response,
-                        "message": f"Mock response for {method} {endpoint}",
-                    }
+                # Default response for unknown endpoints
+                return {
+                    **base_response,
+                    "message": f"Mock response for {method} {endpoint}",
+                }
 
             def get_request_history(self) -> list[dict[str, Any]]:
                 """Get history of all requests made."""
@@ -326,16 +328,16 @@ class TestAPIWorkflowValidation:
             )
             raise
 
-        total_duration = time.perf_counter() - start_time
+        _total_duration = time.perf_counter() - start_time
 
         # Analyze authentication workflow
         successful_steps = [s for s in auth_steps if s.get("success", False)]
         auth_result = {
             "workflow_name": "authentication",
-            "total_duration_s": total_duration,
+            "_total_duration_s": _total_duration,
             "steps": auth_steps,
             "successful_steps": len(successful_steps),
-            "total_steps": len(auth_steps),
+            "_total_steps": len(auth_steps),
             "success_rate": len(successful_steps) / len(auth_steps),
         }
 
@@ -347,7 +349,9 @@ class TestAPIWorkflowValidation:
             "All authentication steps should succeed"
         )
         assert len(successful_steps) == 3, "All three auth steps should complete"
-        assert total_duration < 5.0, f"Authentication took too long: {total_duration}s"
+        assert _total_duration < 5.0, (
+            f"Authentication took too long: {_total_duration}s"
+        )
 
     async def test_document_management_workflow(
         self, mock_api_client, journey_data_manager
@@ -471,16 +475,16 @@ class TestAPIWorkflowValidation:
             )
             raise
 
-        total_duration = time.perf_counter() - start_time
+        _total_duration = time.perf_counter() - start_time
 
         # Analyze document management workflow
         successful_steps = [s for s in doc_mgmt_steps if s.get("success", False)]
         doc_mgmt_result = {
             "workflow_name": "document_management",
-            "total_duration_s": total_duration,
+            "_total_duration_s": _total_duration,
             "steps": doc_mgmt_steps,
             "successful_steps": len(successful_steps),
-            "total_steps": len(doc_mgmt_steps),
+            "_total_steps": len(doc_mgmt_steps),
             "success_rate": len(successful_steps) / len(doc_mgmt_steps),
         }
 
@@ -496,8 +500,8 @@ class TestAPIWorkflowValidation:
         assert len(successful_steps) == 5, (
             "All five document management steps should complete"
         )
-        assert total_duration < 10.0, (
-            f"Document management took too long: {total_duration}s"
+        assert _total_duration < 10.0, (
+            f"Document management took too long: {_total_duration}s"
         )
 
     async def test_search_workflow(self, mock_api_client, journey_data_manager):
@@ -547,12 +551,12 @@ class TestAPIWorkflowValidation:
                     "step": "execute_searches",
                     "success": True,
                     "search_results": search_results,
-                    "total_searches": len(search_queries),
+                    "_total_searches": len(search_queries),
                 }
             )
 
             # Analyze search quality
-            total_results = sum(sr["results_count"] for sr in search_results)
+            _total_results = sum(sr["results_count"] for sr in search_results)
             avg_search_time = sum(sr["search_time_ms"] for sr in search_results) / len(
                 search_results
             )
@@ -561,7 +565,7 @@ class TestAPIWorkflowValidation:
                 {
                     "step": "analyze_search_quality",
                     "success": True,
-                    "total_results_returned": total_results,
+                    "_total_results_returned": _total_results,
                     "avg_search_time_ms": avg_search_time,
                     "searches_with_results": len(
                         [sr for sr in search_results if sr["results_count"] > 0]
@@ -569,7 +573,7 @@ class TestAPIWorkflowValidation:
                 }
             )
 
-            assert total_results > 0, "At least some search results should be returned"
+            assert _total_results > 0, "At least some search results should be returned"
             assert avg_search_time < 1000, (
                 f"Average search time too high: {avg_search_time}ms"
             )
@@ -613,16 +617,16 @@ class TestAPIWorkflowValidation:
             )
             raise
 
-        total_duration = time.perf_counter() - start_time
+        _total_duration = time.perf_counter() - start_time
 
         # Analyze search workflow
         successful_steps = [s for s in search_steps if s.get("success", False)]
         search_workflow_result = {
             "workflow_name": "search",
-            "total_duration_s": total_duration,
+            "_total_duration_s": _total_duration,
             "steps": search_steps,
             "successful_steps": len(successful_steps),
-            "total_steps": len(search_steps),
+            "_total_steps": len(search_steps),
             "success_rate": len(successful_steps) / len(search_steps),
         }
 
@@ -636,7 +640,9 @@ class TestAPIWorkflowValidation:
             "All search steps should succeed"
         )
         assert len(successful_steps) == 3, "All search workflow steps should complete"
-        assert total_duration < 8.0, f"Search workflow took too long: {total_duration}s"
+        assert _total_duration < 8.0, (
+            f"Search workflow took too long: {_total_duration}s"
+        )
 
     async def test_error_handling_workflow(self, mock_api_client, journey_data_manager):
         """Test API error handling and recovery workflows."""
@@ -768,16 +774,16 @@ class TestAPIWorkflowValidation:
             )
             raise
 
-        total_duration = time.perf_counter() - start_time
+        _total_duration = time.perf_counter() - start_time
 
         # Analyze error handling workflow
         successful_steps = [s for s in error_handling_steps if s.get("success", False)]
         error_handling_result = {
             "workflow_name": "error_handling",
-            "total_duration_s": total_duration,
+            "_total_duration_s": _total_duration,
             "steps": error_handling_steps,
             "successful_steps": len(successful_steps),
-            "total_steps": len(error_handling_steps),
+            "_total_steps": len(error_handling_steps),
             "success_rate": len(successful_steps) / len(error_handling_steps),
         }
 
@@ -840,10 +846,10 @@ class TestAPIWorkflowValidation:
             ]
 
             sequential_results = []
-            for method, endpoint, *kwargs in sequential_requests:
+            for method, endpoint, *_kwargs in sequential_requests:
                 request_start = time.perf_counter()
                 await mock_api_client.request(
-                    method, endpoint, **(kwargs[0] if kwargs else {})
+                    method, endpoint, **(_kwargs[0] if _kwargs else {})
                 )
                 request_duration = time.perf_counter() - request_start
 
@@ -862,7 +868,7 @@ class TestAPIWorkflowValidation:
                 {
                     "step": "sequential_requests",
                     "success": True,
-                    "total_duration_s": sequential_duration,
+                    "_total_duration_s": sequential_duration,
                     "requests_count": len(sequential_requests),
                     "avg_request_duration_s": sequential_duration
                     / len(sequential_requests),
@@ -895,7 +901,7 @@ class TestAPIWorkflowValidation:
                 {
                     "step": "concurrent_requests",
                     "success": True,
-                    "total_duration_s": concurrent_duration,
+                    "_total_duration_s": concurrent_duration,
                     "requests_count": len(concurrent_requests),
                     "successful_requests": len(successful_concurrent),
                     "failed_requests": len(failed_concurrent),
@@ -946,7 +952,7 @@ class TestAPIWorkflowValidation:
                 {
                     "step": "rate_testing",
                     "success": True,
-                    "total_duration_s": rate_test_duration,
+                    "_total_duration_s": rate_test_duration,
                     "requests_count": rate_test_requests,
                     "successful_requests": len(successful_rate_tests),
                     "throughput_rps": len(successful_rate_tests) / rate_test_duration,
@@ -967,16 +973,16 @@ class TestAPIWorkflowValidation:
             )
             raise
 
-        total_duration = time.perf_counter() - start_time
+        _total_duration = time.perf_counter() - start_time
 
         # Analyze API performance
         successful_steps = [s for s in performance_steps if s.get("success", False)]
         performance_result = {
             "workflow_name": "api_performance",
-            "total_duration_s": total_duration,
+            "_total_duration_s": _total_duration,
             "steps": performance_steps,
             "successful_steps": len(successful_steps),
-            "total_steps": len(performance_steps),
+            "_total_steps": len(performance_steps),
             "success_rate": len(successful_steps) / len(performance_steps),
         }
 
@@ -1173,16 +1179,16 @@ class TestAPIWorkflowValidation:
             )
             raise
 
-        total_duration = time.perf_counter() - start_time
+        _total_duration = time.perf_counter() - start_time
 
         # Analyze complete integration workflow
         successful_steps = [s for s in integration_steps if s.get("success", False)]
         integration_result = {
             "workflow_name": "complete_api_integration",
-            "total_duration_s": total_duration,
+            "_total_duration_s": _total_duration,
             "steps": integration_steps,
             "successful_steps": len(successful_steps),
-            "total_steps": len(integration_steps),
+            "_total_steps": len(integration_steps),
             "success_rate": len(successful_steps) / len(integration_steps),
         }
 
@@ -1198,8 +1204,8 @@ class TestAPIWorkflowValidation:
         assert len(successful_steps) >= 10, (
             "At least 10 integration steps should complete"
         )
-        assert total_duration < 15.0, (
-            f"Complete integration took too long: {total_duration}s"
+        assert _total_duration < 15.0, (
+            f"Complete integration took too long: {_total_duration}s"
         )
 
         # Validate specific workflow aspects

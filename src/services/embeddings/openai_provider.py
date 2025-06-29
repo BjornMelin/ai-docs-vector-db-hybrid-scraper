@@ -5,18 +5,20 @@ import json
 import logging
 import os
 import tempfile
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from openai import AsyncOpenAI
 
-from ..errors import EmbeddingServiceError
-from ..monitoring.metrics import get_metrics_registry
-from ..utilities.rate_limiter import RateLimitManager
+from src.services.errors import EmbeddingServiceError
+from src.services.monitoring.metrics import get_metrics_registry
+from src.services.utilities.rate_limiter import RateLimitManager
+
 from .base import EmbeddingProvider
 
 
 if TYPE_CHECKING:
-    from ...infrastructure.client_manager import ClientManager
+    from src.infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +60,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             model_name: Model name (text-embedding-3-small, text-embedding-3-large)
             dimensions: Optional dimensions for text-embedding-3-* models
             rate_limiter: Optional RateLimitManager instance
+
         """
         super().__init__(model_name)
         self.api_key = api_key
@@ -68,19 +71,21 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         self._client_manager = client_manager
 
         if model_name not in self._model_configs:
-            raise EmbeddingServiceError(
+            msg = (
                 f"Unsupported model: {model_name}. "
                 f"Supported models: {list(self._model_configs.keys())}"
             )
+            raise EmbeddingServiceError(msg)
 
         # Set dimensions
         config = self._model_configs[model_name]
         if dimensions:
             if dimensions > config["max_dimensions"]:
-                raise EmbeddingServiceError(
+                msg = (
                     f"Dimensions {dimensions} exceeds max {config['max_dimensions']} "
                     f"for {model_name}"
                 )
+                raise EmbeddingServiceError(msg)
             self.dimensions = dimensions
         else:
             self.dimensions = config["max_dimensions"]
@@ -104,14 +109,16 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             self._client = await self._client_manager.get_openai_client()
 
             if self._client is None:
-                raise EmbeddingServiceError("OpenAI API key not configured")
+                msg = "OpenAI API key not configured"
+                raise EmbeddingServiceError(msg)
 
             self._initialized = True
-            logger.info(f"OpenAI client initialized with model {self.model_name}")
+            logger.info(
+                f"OpenAI client initialized with model {self.model_name}"
+            )  # TODO: Convert f-string to logging format
         except Exception as e:
-            raise EmbeddingServiceError(
-                f"Failed to initialize OpenAI client: {e}"
-            ) from e
+            msg = f"Failed to initialize OpenAI client: {e}"
+            raise EmbeddingServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup OpenAI client (delegated to ClientManager)."""
@@ -133,6 +140,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
         Raises:
             EmbeddingServiceError: If not initialized or API call fails
+
         """
         # Monitor embedding generation
         if self.metrics_registry:
@@ -156,15 +164,15 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 )
 
             return embeddings
-        else:
-            return await self._execute_embedding_generation(texts, batch_size)
+        return await self._execute_embedding_generation(texts, batch_size)
 
     async def _execute_embedding_generation(
         self, texts: list[str], batch_size: int | None = None
     ) -> list[list[float]]:
         """Execute the actual embedding generation."""
         if not self._initialized:
-            raise EmbeddingServiceError("Provider not initialized")
+            msg = "Provider not initialized"
+            raise EmbeddingServiceError(msg)
 
         if not texts:
             return []
@@ -210,25 +218,21 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             # Provide specific error messages based on error type
             error_msg = str(e)
             if "rate_limit_exceeded" in error_msg.lower():
-                raise EmbeddingServiceError(
-                    f"OpenAI rate limit exceeded. Please try again later or reduce batch size. Error: {e}"
-                ) from e
-            elif "insufficient_quota" in error_msg.lower():
-                raise EmbeddingServiceError(
+                msg = f"OpenAI rate limit exceeded. Please try again later or reduce batch size. Error: {e}"
+                raise EmbeddingServiceError(msg) from e
+            if "insufficient_quota" in error_msg.lower():
+                msg = (
                     f"OpenAI API quota exceeded. Please check your billing. Error: {e}"
-                ) from e
-            elif "invalid_api_key" in error_msg.lower():
-                raise EmbeddingServiceError(
-                    f"Invalid OpenAI API key. Please check your configuration. Error: {e}"
-                ) from e
-            elif "context_length_exceeded" in error_msg.lower():
-                raise EmbeddingServiceError(
-                    f"Text too long for model {self.model_name}. Max tokens: {self.max_tokens_per_request}. Error: {e}"
-                ) from e
-            else:
-                raise EmbeddingServiceError(
-                    f"Failed to generate embeddings: {e}"
-                ) from e
+                )
+                raise EmbeddingServiceError(msg) from e
+            if "invalid_api_key" in error_msg.lower():
+                msg = f"Invalid OpenAI API key. Please check your configuration. Error: {e}"
+                raise EmbeddingServiceError(msg) from e
+            if "context_length_exceeded" in error_msg.lower():
+                msg = f"Text too long for model {self.model_name}. Max tokens: {self.max_tokens_per_request}. Error: {e}"
+                raise EmbeddingServiceError(msg) from e
+            msg = f"Failed to generate embeddings: {e}"
+            raise EmbeddingServiceError(msg) from e
 
     async def _generate_embeddings_with_rate_limit(self, params: dict[str, Any]) -> Any:
         """Generate embeddings with rate limiting.
@@ -238,6 +242,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
         Returns:
             OpenAI embeddings response
+
         """
         if self.rate_limiter:
             await self.rate_limiter.acquire("openai")
@@ -262,6 +267,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
         Returns:
             Cost in USD
+
         """
         return token_count * self.cost_per_token
 
@@ -286,9 +292,11 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         Note:
             Results available within 24 hours with 50% cost savings.
             No rate limits for batch processing.
+
         """
         if not self._initialized:
-            raise EmbeddingServiceError("Provider not initialized")
+            msg = "Provider not initialized"
+            raise EmbeddingServiceError(msg)
 
         if not custom_ids:
             custom_ids = [f"text-{i}" for i in range(len(texts))]
@@ -325,7 +333,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 os.fsync(f.fileno())
 
             # Upload file with rate limiting
-            with open(temp_file, "rb") as f:
+            with temp_file.open("rb") as f:
                 file_response = await self._upload_file_with_rate_limit(f, "batch")
 
             # Create batch with rate limiting
@@ -333,16 +341,19 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 file_response.id, "/v1/embeddings", "24h"
             )
 
-            logger.info(f"Created batch job {batch_response.id} for {len(texts)} texts")
+            logger.info(
+                f"Created batch job {batch_response.id} for {len(texts)} texts"
+            )  # TODO: Convert f-string to logging format
             return batch_response.id
 
         except Exception as e:
-            raise EmbeddingServiceError(f"Failed to create batch job: {e}") from e
+            msg = f"Failed to create batch job: {e}"
+            raise EmbeddingServiceError(msg) from e
         finally:
             # Clean up temp file
-            if "temp_file" in locals() and temp_file and os.path.exists(temp_file):
+            if "temp_file" in locals() and temp_file and Path(temp_file).exists():
                 with contextlib.suppress(OSError):
-                    os.unlink(temp_file)
+                    Path(temp_file).unlink()
 
     async def _upload_file_with_rate_limit(self, file: Any, purpose: str) -> Any:
         """Upload file with rate limiting.
@@ -353,6 +364,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
         Returns:
             File response from OpenAI
+
         """
         if self.rate_limiter:
             await self.rate_limiter.acquire("openai")
@@ -370,6 +382,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
         Returns:
             Batch response from OpenAI
+
         """
         if self.rate_limiter:
             await self.rate_limiter.acquire("openai")

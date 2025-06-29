@@ -249,7 +249,7 @@ class TestConfigureLogging:
     def test_configure_logging_with_config_log_file(self):
         """Test logging configuration uses config log_file if available."""
         mock_config = self._create_mock_config("INFO")
-        mock_config.log_file = "/tmp/test.log"
+        mock_config.log_file = "/tmp/test.log"  # test temp path
 
         with (
             patch("src.services.logging_config.get_config", return_value=mock_config),
@@ -264,7 +264,7 @@ class TestConfigureLogging:
             configure_logging()
 
         # Should create file handler with config log_file
-        mock_file_handler.assert_called_once_with("/tmp/test.log")
+        mock_file_handler.assert_called_once_with("/tmp/test.log")  # test temp path
 
     def test_configure_logging_clears_existing_handlers(self):
         """Test logging configuration clears existing handlers."""
@@ -319,7 +319,9 @@ class TestConfigureLogging:
 
         with patch("src.services.logging_config.get_config", return_value=mock_config):
             configure_logging(
-                level="INFO", enable_color=False, log_file="/tmp/test.log"
+                level="INFO",
+                enable_color=False,
+                log_file="/tmp/test.log",  # test temp path
             )
 
             # Get the handler and check if it logged
@@ -459,7 +461,8 @@ class TestLogContext:
 
         try:
             with LogContext(service="TestService"):
-                raise ValueError("Test exception")
+                msg = "Test exception"
+                raise ValueError(msg)  # noqa: TRY301
         except ValueError:
             pass
 
@@ -724,7 +727,8 @@ class TestLoggingIntegration:
             LogContext(operation="risky_operation"),
         ):
             try:
-                raise ValueError("Something went wrong")
+                msg = "Something went wrong"
+                raise ValueError(msg)  # noqa: TRY301
             except ValueError:
                 logger.exception("Operation failed")
 

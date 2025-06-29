@@ -6,7 +6,7 @@ Handles mass renaming and moving of documentation files while tracking all chang
 for link updates.
 """
 
-import json
+import json  # noqa: PLC0415
 import re
 import shutil
 from pathlib import Path

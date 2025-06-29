@@ -1,7 +1,7 @@
 """Tests for the similarity threshold filter implementation."""
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -278,19 +278,18 @@ class TestSimilarityThresholdManager:
         assert result.confidence_score == 0.85
 
     @pytest.mark.asyncio
-    async def test_apply_adaptive_strategy(self, manager, sample_context):
+    async def test_apply_adaptive_strategy(self, manager, _sample_context):
         """Test applying filter with adaptive strategy."""
         # Add multiple historical data points for adaptation to work
-        historical_data = []
-        for _ in range(5):  # Need multiple data points
-            historical_data.append(
-                {
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "result_count": 2,  # Too few results (< min_result_count=3)
-                    "precision": 0.9,
-                    "query_time_ms": 200,
-                }
-            )
+        historical_data = [
+            {
+                "timestamp": datetime.now(tz=UTC).isoformat(),
+                "result_count": 2,  # Too few results (< min_result_count=3)
+                "precision": 0.9,
+                "query_time_ms": 200,
+            }
+            for _ in range(5)  # Need multiple data points
+        ]
 
         context = {
             "query_info": {"query": "test query"},
@@ -319,7 +318,7 @@ class TestSimilarityThresholdManager:
         # Create context with similarity scores for clustering
         historical_data = [
             {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
                 "similarity_scores": [
                     0.9,
                     0.85,
@@ -381,16 +380,15 @@ class TestSimilarityThresholdManager:
         query_info = {"query": "test query"}
 
         # Test with too few results - need multiple data points
-        historical_data = []
-        for _ in range(5):  # Need >= 3 data points for adaptation
-            historical_data.append(
-                {
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "result_count": 2,  # Much less than min_result_count=10
-                    "precision": 0.9,
-                    "query_time_ms": 200,
-                }
-            )
+        historical_data = [
+            {
+                "timestamp": datetime.now(tz=UTC).isoformat(),
+                "result_count": 2,  # Much less than min_result_count=10
+                "precision": 0.9,
+                "query_time_ms": 200,
+            }
+            for _ in range(5)  # Need >= 3 data points for adaptation
+        ]
 
         threshold = await manager._adaptive_threshold(
             criteria, query_info, historical_data
@@ -414,7 +412,7 @@ class TestSimilarityThresholdManager:
 
             historical_data.append(
                 {
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(tz=UTC).isoformat(),
                     "threshold": threshold,
                     "precision": performance,
                     "recall": performance * 0.9,
@@ -489,20 +487,19 @@ class TestSimilarityThresholdManager:
         criteria = SimilarityThresholdCriteria(base_threshold=0.7)
 
         # Create sufficient historical data for ML optimization
-        historical_data = []
-        for i in range(25):
-            historical_data.append(
-                {
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "query": f"test query {i}",
-                    "has_technical_terms": i % 2,
-                    "context_score": 0.5 + i * 0.01,
-                    "f1_score": 0.7 + (i % 5) * 0.05,
-                    "result_count": 10 + i,
-                    "threshold": 0.65 + i * 0.01,
-                    "user_satisfaction": 0.7 + (i % 3) * 0.1,
-                }
-            )
+        historical_data = [
+            {
+                "timestamp": datetime.now(tz=UTC).isoformat(),
+                "query": f"test query {i}",
+                "has_technical_terms": i % 2,
+                "context_score": 0.5 + i * 0.01,
+                "f1_score": 0.7 + (i % 5) * 0.05,
+                "result_count": 10 + i,
+                "threshold": 0.65 + i * 0.01,
+                "user_satisfaction": 0.7 + (i % 3) * 0.1,
+            }
+            for i in range(25)
+        ]
 
         query_info = {
             "query": "test query similar",
@@ -520,7 +517,7 @@ class TestSimilarityThresholdManager:
     @pytest.mark.asyncio
     async def test_get_recent_data(self, manager):
         """Test filtering recent historical data."""
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
 
         historical_data = [
             {"timestamp": (now - timedelta(days=2)).isoformat(), "data": "recent"},
@@ -647,7 +644,7 @@ class TestSimilarityThresholdManager:
         # Context that would push threshold very low
         historical_data = [
             {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
                 "result_count": 0,  # No results - should lower threshold
                 "precision": 0.5,
                 "query_time_ms": 2000,  # Slow query
@@ -697,7 +694,7 @@ class TestSimilarityThresholdManager:
             "query_info": {"query": "test query"},
             "historical_data": [
                 {
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(tz=UTC).isoformat(),
                     "result_count": 5,
                     "precision": 0.8,
                 }

@@ -6,7 +6,7 @@ and security tracking for wizard-generated configurations.
 
 import json
 import logging
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +24,7 @@ class ConfigAuditor:
 
         Args:
             audit_dir: Directory for storing audit logs
+
         """
         self.audit_dir = audit_dir or Path("config/audit")
         self.audit_dir.mkdir(parents=True, exist_ok=True)
@@ -68,7 +69,7 @@ class ConfigAuditor:
 
         # Save detailed audit record
         audit_record = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(tz=UTC).isoformat(),
             "action": "wizard_completion",
             "profile": profile,
             "config_path": str(config_path),
@@ -79,11 +80,15 @@ class ConfigAuditor:
 
     def log_validation_failure(self, errors: list[str]) -> None:
         """Log configuration validation failures."""
-        self.logger.warning(f"Validation failed - {len(errors)} errors: {errors}")
+        self.logger.warning(
+            f"Validation failed - {len(errors)} errors: {errors}"
+        )  # TODO: Convert f-string to logging format
 
     def log_security_event(self, event_type: str, details: str) -> None:
         """Log security-related events."""
-        self.logger.warning(f"Security event - {event_type}: {details}")
+        self.logger.warning(
+            f"Security event - {event_type}: {details}"
+        )  # TODO: Convert f-string to logging format
 
     def log_template_customization(
         self, template: str, section: str, changes: dict[str, Any]
@@ -96,13 +101,15 @@ class ConfigAuditor:
 
     def _save_audit_record(self, record: dict[str, Any]) -> None:
         """Save detailed audit record to JSON file."""
-        audit_file = self.audit_dir / f"audit_{datetime.now().strftime('%Y%m%d')}.json"
+        audit_file = (
+            self.audit_dir / f"audit_{datetime.now(tz=UTC).strftime('%Y%m%d')}.json"
+        )
 
         # Load existing records
         records = []
         if audit_file.exists():
             try:
-                with open(audit_file) as f:
+                with audit_file.open() as f:
                     records = json.load(f)
             except (OSError, json.JSONDecodeError):
                 records = []
@@ -112,10 +119,10 @@ class ConfigAuditor:
 
         # Save back to file
         try:
-            with open(audit_file, "w") as f:
+            with audit_file.open("w") as f:
                 json.dump(records, f, indent=2)
-        except OSError as e:
-            self.logger.exception(f"Failed to save audit record: {e}")
+        except OSError:
+            self.logger.exception("Failed to save audit record")
 
     def get_recent_activity(self, days: int = 7) -> list[dict[str, Any]]:
         """Get recent wizard activity from audit logs.
@@ -125,13 +132,12 @@ class ConfigAuditor:
 
         Returns:
             List of recent audit records
+
         """
         recent_records = []
 
         # Check audit files from the last N days
-        from datetime import timedelta
-
-        end_date = datetime.now()
+        end_date = datetime.now(tz=UTC)
         start_date = end_date - timedelta(days=days)
 
         current_date = start_date
@@ -142,7 +148,7 @@ class ConfigAuditor:
 
             if audit_file.exists():
                 try:
-                    with open(audit_file) as f:
+                    with audit_file.open() as f:
                         daily_records = json.load(f)
                         recent_records.extend(daily_records)
                 except (OSError, json.JSONDecodeError):
@@ -189,10 +195,9 @@ class ConfigAuditor:
 
         Args:
             keep_days: Number of days of audit history to keep
-        """
-        from datetime import timedelta
 
-        cutoff_date = datetime.now() - timedelta(days=keep_days)
+        """
+        cutoff_date = datetime.now(tz=UTC) - timedelta(days=keep_days)
 
         audit_files = list(self.audit_dir.glob("audit_*.json"))
         deleted_count = 0
@@ -201,7 +206,7 @@ class ConfigAuditor:
             try:
                 # Extract date from filename
                 date_str = audit_file.stem.replace("audit_", "")
-                file_date = datetime.strptime(date_str, "%Y%m%d")
+                file_date = datetime.strptime(date_str, "%Y%m%d").replace(tzinfo=UTC)
 
                 if file_date < cutoff_date:
                     audit_file.unlink()
@@ -212,4 +217,6 @@ class ConfigAuditor:
                 continue
 
         if deleted_count > 0:
-            self.logger.info(f"Cleaned up {deleted_count} old audit files")
+            self.logger.info(
+                f"Cleaned up {deleted_count} old audit files"
+            )  # TODO: Convert f-string to logging format

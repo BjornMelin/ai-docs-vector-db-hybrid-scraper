@@ -482,20 +482,19 @@ class TestSearchDocumentsCoreIntegration:
     async def test_large_result_set_caching(self, mock_client_manager, mock_context):
         """Test caching behavior with large result sets."""
         # Mock large result set
-        large_results = []
-        for i in range(50):
-            large_results.append(
-                {
-                    "id": f"doc-{i}",
-                    "score": 0.9 - (i * 0.01),
-                    "payload": {
-                        "content": f"Document {i} content",
-                        "url": f"https://example.com/doc{i}",
-                        "title": f"Document {i}",
-                        "metadata": {"index": i},
-                    },
-                }
-            )
+        large_results = [
+            {
+                "id": f"doc-{i}",
+                "score": 0.9 - (i * 0.01),
+                "payload": {
+                    "content": f"Document {i} content",
+                    "url": f"https://example.com/doc{i}",
+                    "title": f"Document {i}",
+                    "metadata": {"index": i},
+                },
+            }
+            for i in range(50)
+        ]
 
         mock_qdrant = mock_client_manager.get_qdrant_service.return_value
         mock_qdrant.hybrid_search = AsyncMock(return_value=large_results)

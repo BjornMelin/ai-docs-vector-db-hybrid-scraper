@@ -204,10 +204,10 @@ class TestAsyncConfigurationLoading:
                 import json
 
                 return json.dumps(data, indent=2)
-            elif format_type == "dict":
+            if format_type == "dict":
                 return data
-            else:
-                raise ValueError(f"Unsupported format: {format_type}")
+            msg = f"Unsupported format: {format_type}"
+            raise ValueError(msg)
 
         config = Config(debug=True, app_name="Serialization Test")
 

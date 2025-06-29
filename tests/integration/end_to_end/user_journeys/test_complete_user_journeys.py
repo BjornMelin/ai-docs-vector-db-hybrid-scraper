@@ -79,8 +79,12 @@ class TestCompleteUserJourneys:
         for step in result.step_results:
             if step["step_name"] in ["search_ml_tutorials", "search_python_guides"]:
                 assert step["success"], f"Search step failed: {step['step_name']}"
-                if "result" in step and "results" in step["result"]:
-                    search_results.extend(step["result"]["results"])
+                if (
+                    "result" in step
+                    and "result" in step["result"]
+                    and "results" in step["result"]["result"]
+                ):
+                    search_results.extend(step["result"]["result"]["results"])
 
         assert len(search_results) > 0, "No search results obtained"
 
@@ -153,8 +157,12 @@ class TestCompleteUserJourneys:
         validated_endpoints = []
         for step in result.step_results:
             if "validate" in step["step_name"] and step["success"]:
-                if "result" in step and "endpoint" in step["result"]:
-                    validated_endpoints.append(step["result"]["endpoint"])
+                if (
+                    "result" in step
+                    and "result" in step["result"]
+                    and "endpoint" in step["result"]["result"]
+                ):
+                    validated_endpoints.append(step["result"]["result"]["endpoint"])
 
         assert len(validated_endpoints) >= 3, "Not enough API endpoints validated"
 
@@ -244,8 +252,8 @@ class TestCompleteUserJourneys:
         )
 
         # Validate concurrent execution didn't degrade performance significantly
-        total_duration = end_time - start_time
-        assert total_duration < 30, "Concurrent execution took too long"
+        _total_duration = end_time - start_time
+        assert _total_duration < 30, "Concurrent execution took too long"
 
         # Validate individual journey success
         for result in successful_results:
@@ -459,15 +467,35 @@ class TestCompleteUserJourneys:
 
         for step in result.step_results:
             if step["step_name"] == "crawl_test_document" and step["success"]:
-                crawl_result = step["result"]
+                crawl_result = (
+                    step["result"]["result"]
+                    if "result" in step["result"]
+                    else step["result"]
+                )
             elif step["step_name"] == "process_crawled_content" and step["success"]:
-                process_result = step["result"]
+                process_result = (
+                    step["result"]["result"]
+                    if "result" in step["result"]
+                    else step["result"]
+                )
             elif step["step_name"] == "generate_content_embeddings" and step["success"]:
-                embedding_result = step["result"]
+                embedding_result = (
+                    step["result"]["result"]
+                    if "result" in step["result"]
+                    else step["result"]
+                )
             elif step["step_name"] == "store_processed_vectors" and step["success"]:
-                storage_result = step["result"]
+                storage_result = (
+                    step["result"]["result"]
+                    if "result" in step["result"]
+                    else step["result"]
+                )
             elif step["step_name"] == "search_stored_content" and step["success"]:
-                search_result = step["result"]
+                search_result = (
+                    step["result"]["result"]
+                    if "result" in step["result"]
+                    else step["result"]
+                )
 
         # Validate data at each stage
         assert crawl_result and "content" in crawl_result, (
@@ -500,7 +528,7 @@ class TestCompleteUserJourneys:
         journey_executor,
         journey_test_config,
         journey_data_manager,
-        mock_browser_config,
+        _mock_browser_config,
     ):
         """Test browser automation user journey with real browser interactions."""
         # Create a browser-based journey
@@ -554,15 +582,28 @@ class TestCompleteUserJourneys:
         for step in result.step_results:
             if step["step_name"] == "navigate_to_test_page" and step["success"]:
                 navigation_success = True
-                assert "loaded" in step["result"], (
-                    "Navigation result missing load status"
+                step_result = (
+                    step["result"]["result"]
+                    if "result" in step["result"]
+                    else step["result"]
                 )
+                assert "loaded" in step_result, "Navigation result missing load status"
             elif step["step_name"] == "interact_with_form" and step["success"]:
-                assert "success" in step["result"], (
+                step_result = (
+                    step["result"]["result"]
+                    if "result" in step["result"]
+                    else step["result"]
+                )
+                assert "success" in step_result, (
                     "Interaction result missing success status"
                 )
             elif step["step_name"] == "extract_page_content" and step["success"]:
-                assert "content" in step["result"], "Content extraction failed"
+                step_result = (
+                    step["result"]["result"]
+                    if "result" in step["result"]
+                    else step["result"]
+                )
+                assert "content" in step_result, "Content extraction failed"
 
         assert navigation_success, "Browser navigation failed"
         # Interaction and extraction may fail in headless CI environments
@@ -729,8 +770,8 @@ class TestCrossSystemIntegration:
         )
 
         # Validate reasonable performance under load
-        total_duration = end_time - start_time
-        assert total_duration < 60, f"Load test took too long: {total_duration}s"
+        _total_duration = end_time - start_time
+        assert _total_duration < 60, f"Load test took too long: {_total_duration}s"
 
         # Validate individual journey performance didn't degrade too much
         avg_duration = sum(r.duration_seconds for r in successful_journeys) / len(

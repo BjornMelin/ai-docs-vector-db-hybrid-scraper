@@ -442,4 +442,4 @@ class TestConfigIntegration:
             # without modifying the working directory
             pass
         finally:
-            os.unlink(env_file)
+            Path(env_file).unlink()

@@ -12,7 +12,15 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from .tracking import get_tracer
+from .tracking import get_meter, get_tracer
+
+
+# Optional OpenTelemetry imports
+try:
+    from opentelemetry.trace import Status, StatusCode
+except ImportError:
+    Status = None
+    StatusCode = None
 
 
 logger = logging.getLogger(__name__)
@@ -39,6 +47,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             service_name: Service name for tracing
             record_request_metrics: Whether to record request metrics
             record_ai_context: Whether to record AI-specific context
+
         """
         super().__init__(app)
         self.service_name = service_name
@@ -56,8 +65,6 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
     def _initialize_metrics(self) -> None:
         """Initialize request-level metrics."""
         try:
-            from .tracking import get_meter
-
             self.meter = get_meter(f"{self.service_name}.requests")
 
             self.request_duration = self.meter.create_histogram(
@@ -77,7 +84,9 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             )
 
         except Exception as e:
-            logger.warning(f"Failed to initialize request metrics: {e}")
+            logger.warning(
+                f"Failed to initialize request metrics: {e}"
+            )  # TODO: Convert f-string to logging format
             self.meter = None
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
@@ -123,9 +132,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
                 span.set_attribute("http.status_code", response.status_code)
 
                 # Set span status based on response
-                if 400 <= response.status_code < 600:
-                    from opentelemetry.trace import Status, StatusCode
-
+                if 400 <= response.status_code < 600 and Status and StatusCode:
                     span.set_status(
                         Status(StatusCode.ERROR, f"HTTP {response.status_code}")
                     )
@@ -139,9 +146,8 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             except Exception as e:
                 # Record exception
                 span.record_exception(e)
-                from opentelemetry.trace import Status, StatusCode
-
-                span.set_status(Status(StatusCode.ERROR, str(e)))
+                if Status and StatusCode:
+                    span.set_status(Status(StatusCode.ERROR, str(e)))
 
                 # Record error metrics
                 if self.meter:
@@ -160,6 +166,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
         Args:
             request: HTTP request
             span: OpenTelemetry span
+
         """
         try:
             # Detect AI operation types from URL path
@@ -203,7 +210,9 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
                 span.set_attribute("http.request.content_type", content_type)
 
         except Exception as e:
-            logger.debug(f"Failed to add AI context: {e}")
+            logger.debug(
+                f"Failed to add AI context: {e}"
+            )  # TODO: Convert f-string to logging format
 
     def _record_request_metrics(
         self, request: Request, response: Response, start_time: float
@@ -214,6 +223,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             request: HTTP request
             response: HTTP response
             start_time: Request start time
+
         """
         try:
             duration = time.perf_counter() - start_time
@@ -239,7 +249,9 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             self.request_counter.add(1, attributes)
 
         except Exception as e:
-            logger.warning(f"Failed to record request metrics: {e}")
+            logger.warning(
+                f"Failed to record request metrics: {e}"
+            )  # TODO: Convert f-string to logging format
 
     def _record_error_metrics(
         self, request: Request, error: Exception, start_time: float
@@ -250,6 +262,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             request: HTTP request
             error: Exception that occurred
             start_time: Request start time
+
         """
         try:
             duration = time.perf_counter() - start_time
@@ -266,4 +279,6 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             self.request_counter.add(1, attributes)
 
         except Exception as e:
-            logger.warning(f"Failed to record error metrics: {e}")
+            logger.warning(
+                f"Failed to record error metrics: {e}"
+            )  # TODO: Convert f-string to logging format

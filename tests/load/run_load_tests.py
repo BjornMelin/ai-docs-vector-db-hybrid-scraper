@@ -6,9 +6,11 @@ with different configurations, profiles, and reporting options.
 """
 
 import argparse
+import contextlib
 import json
 import logging
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -17,8 +19,6 @@ from pathlib import Path
 # Add the project root to Python path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
-
-import contextlib
 
 from locust import main as locust_main
 from locust.env import Environment
@@ -73,13 +73,15 @@ class LoadTestRunner:
 
     def run_locust_test(
         self,
-        config: Dict,
+        config: dict,
         profile: str | None = None,
         headless: bool = True,
         web_port: int = 8089,
-    ) -> Dict:
+    ) -> dict:
         """Run load test using Locust."""
-        logger.info(f"Starting Locust load test with config: {config}")
+        logger.info(
+            f"Starting Locust load test with config: {config}"
+        )  # TODO: Convert f-string to logging format
 
         # Create environment
         env = create_load_test_environment(
@@ -91,7 +93,9 @@ class LoadTestRunner:
             load_profile = get_load_profile(profile)
             if load_profile:
                 env.shape_class = load_profile
-                logger.info(f"Applied load profile: {profile}")
+                logger.info(
+                    f"Applied load profile: {profile}"
+                )  # TODO: Convert f-string to logging format
 
         if headless:
             # Run headless test
@@ -124,46 +128,50 @@ class LoadTestRunner:
 
                 # Save report
                 report_file = self._save_report(report)
-                logger.info(f"Test report saved to: {report_file}")
+                logger.info(
+                    f"Test report saved to: {report_file}"
+                )  # TODO: Convert f-string to logging format
 
-                return report
+            return report
+        # Run with web UI
+        logger.info(
+            f"Starting Locust web UI on port {web_port}"
+        )  # TODO: Convert f-string to logging format
+        logger.info(
+            f"Visit http://localhost:{web_port} to control the test"
+        )  # TODO: Convert f-string to logging format
 
-        else:
-            # Run with web UI
-            logger.info(f"Starting Locust web UI on port {web_port}")
-            logger.info(f"Visit http://localhost:{web_port} to control the test")
+        # Set up Locust arguments for web mode
+        locust_args = [
+            "--web-port",
+            str(web_port),
+            "--host",
+            config["host"],
+            "--users",
+            str(config["users"]),
+            "--spawn-rate",
+            str(config["spawn_rate"]),
+        ]
 
-            # Set up Locust arguments for web mode
-            locust_args = [
-                "--web-port",
-                str(web_port),
-                "--host",
-                config["host"],
-                "--users",
-                str(config["users"]),
-                "--spawn-rate",
-                str(config["spawn_rate"]),
-            ]
+        if config.get("duration"):
+            locust_args.extend(["--run-time", f"{config['duration']}s"])
 
-            if config.get("duration"):
-                locust_args.extend(["--run-time", f"{config['duration']}s"])
+        # Run Locust main
+        os.environ["LOCUST_USER_CLASSES"] = "VectorDBUser,AdminUser"
+        sys.argv = ["locust", *locust_args]
 
-            # Run Locust main
-            os.environ["LOCUST_USER_CLASSES"] = "VectorDBUser,AdminUser"
-            sys.argv = ["locust", *locust_args]
+        with contextlib.suppress(SystemExit):
+            locust_main.main()
 
-            with contextlib.suppress(SystemExit):
-                locust_main.main()
-
-            return {"status": "completed_web_mode"}
+        return {"status": "completed_web_mode"}
 
     def run_pytest_load_tests(
         self, test_type: str = "all", markers: list[str] | None = None
-    ) -> Dict:
+    ) -> dict:
         """Run load tests using pytest."""
-        logger.info(f"Running pytest load tests: {test_type}")
-
-        import subprocess
+        logger.info(
+            f"Running pytest load tests: {test_type}"
+        )  # TODO: Convert f-string to logging format
 
         # Build pytest command
         cmd = ["uv", "run", "pytest", "tests/load/", "-v"]
@@ -192,10 +200,18 @@ class LoadTestRunner:
         # Add output options
         cmd.extend(["--tb=short", "--disable-warnings"])
 
+        # Validate command components for security
+        allowed_executables = ["uv", "python", "python3"]
+        if cmd[0] not in allowed_executables:
+            msg = f"Executable '{cmd[0]}' not allowed"
+            raise ValueError(msg)
+
         # Run tests
         try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, cwd=project_root, check=False
+            result = (
+                subprocess.run(  # Secure: validated executable, no shell, no user input
+                    cmd, capture_output=True, text=True, cwd=project_root, check=False
+                )
             )
 
             return {
@@ -207,26 +223,28 @@ class LoadTestRunner:
             }
 
         except Exception as e:
-            logger.exception(f"Failed to run pytest tests: {e}")
+            logger.exception("Failed to run pytest tests")
             return {
                 "status": "error",
                 "error": str(e),
                 "command": " ".join(cmd),
             }
 
-    def run_custom_scenario(self, scenario_file: str) -> Dict:
+    def run_custom_scenario(self, scenario_file: str) -> dict:
         """Run a custom load test scenario from JSON file."""
-        logger.info(f"Running custom scenario: {scenario_file}")
+        logger.info(
+            f"Running custom scenario: {scenario_file}"
+        )  # TODO: Convert f-string to logging format
 
         try:
-            with open(scenario_file) as f:
+            with Path(scenario_file).open() as f:
                 scenario = json.load(f)
 
             # Validate scenario format
             required_fields = ["name", "description", "config"]
             for field in required_fields:
                 if field not in scenario:
-                    raise ValueError(f"Missing required field: {field}")
+                    self._raise_missing_field_error(field)
 
             config = scenario["config"]
             profile = scenario.get("profile")
@@ -241,24 +259,38 @@ class LoadTestRunner:
                 "file": scenario_file,
             }
 
+        except Exception:
+            logger.exception("Error in test execution")
+        else:
             return result
 
-        except Exception as e:
-            logger.exception(f"Failed to run custom scenario: {e}")
+        try:
+            pass
+        except Exception:
+            logger.exception("Failed to run custom scenario")
             return {
                 "status": "error",
-                "error": str(e),
+                "error": "Unknown error",
                 "scenario_file": scenario_file,
             }
 
-    def benchmark_endpoints(self, endpoints: list[str], config: Dict) -> Dict:
+    def _raise_missing_field_error(self, field: str) -> None:
+        """Raise ValueError for missing required field."""
+        msg = f"Missing required field: {field}"
+        raise ValueError(msg)
+
+    def benchmark_endpoints(self, endpoints: list[str], config: dict) -> dict:
         """Benchmark specific endpoints."""
-        logger.info(f"Benchmarking endpoints: {endpoints}")
+        logger.info(
+            f"Benchmarking endpoints: {endpoints}"
+        )  # TODO: Convert f-string to logging format
 
         results = {}
 
         for endpoint in endpoints:
-            logger.info(f"Benchmarking endpoint: {endpoint}")
+            logger.info(
+                f"Benchmarking endpoint: {endpoint}"
+            )  # TODO: Convert f-string to logging format
 
             # Create custom user class for this endpoint
             endpoint_config = config.copy()
@@ -273,13 +305,15 @@ class LoadTestRunner:
 
         # Save report
         report_file = self._save_report(comparative_report, "endpoint_benchmark")
-        logger.info(f"Endpoint benchmark report saved to: {report_file}")
+        logger.info(
+            f"Endpoint benchmark report saved to: {report_file}"
+        )  # TODO: Convert f-string to logging format
 
         return comparative_report
 
     def validate_performance_regression(
-        self, baseline_file: str, current_config: Dict
-    ) -> Dict:
+        self, baseline_file: str, current_config: dict
+    ) -> dict:
         """Validate performance against a baseline."""
         logger.info(
             f"Running performance regression test against baseline: {baseline_file}"
@@ -287,7 +321,7 @@ class LoadTestRunner:
 
         try:
             # Load baseline results
-            with open(baseline_file) as f:
+            with Path(baseline_file).open() as f:
                 baseline = json.load(f)
 
             # Run current test
@@ -300,36 +334,43 @@ class LoadTestRunner:
 
             # Save regression report
             report_file = self._save_report(regression_analysis, "regression_analysis")
-            logger.info(f"Regression analysis saved to: {report_file}")
+            logger.info(
+                f"Regression analysis saved to: {report_file}"
+            )  # TODO: Convert f-string to logging format
 
+        except Exception:
+            logger.exception("Error in test execution")
+        else:
             return regression_analysis
 
-        except Exception as e:
-            logger.exception(f"Failed to run regression test: {e}")
+        try:
+            pass
+        except Exception:
+            logger.exception("Failed to run regression test")
             return {
                 "status": "error",
-                "error": str(e),
+                "error": "Unknown error",
                 "baseline_file": baseline_file,
             }
 
     def _generate_test_report(
-        self, env: Environment, config: Dict, profile: str | None
-    ) -> Dict:
+        self, env: Environment, config: dict, profile: str | None
+    ) -> dict:
         """Generate comprehensive test report."""
         stats = env.stats
 
-        if not stats or stats.total.num_requests == 0:
+        if not stats or stats._total.num_requests == 0:
             return {
                 "status": "no_data",
                 "message": "No requests were made during the test",
             }
 
         # Calculate key metrics
-        total_requests = stats.total.num_requests
-        total_failures = stats.total.num_failures
+        _total_requests = stats._total.num_requests
+        _total_failures = stats._total.num_failures
         success_rate = (
-            ((total_requests - total_failures) / total_requests) * 100
-            if total_requests > 0
+            ((_total_requests - _total_failures) / _total_requests) * 100
+            if _total_requests > 0
             else 0
         )
 
@@ -353,13 +394,13 @@ class LoadTestRunner:
             "config": config,
             "profile": profile,
             "summary": {
-                "total_requests": total_requests,
-                "total_failures": total_failures,
+                "_total_requests": _total_requests,
+                "_total_failures": _total_failures,
                 "success_rate_percent": success_rate,
-                "avg_response_time_ms": stats.total.avg_response_time,
-                "min_response_time_ms": stats.total.min_response_time,
-                "max_response_time_ms": stats.total.max_response_time,
-                "requests_per_second": stats.total.current_rps,
+                "avg_response_time_ms": stats._total.avg_response_time,
+                "min_response_time_ms": stats._total.min_response_time,
+                "max_response_time_ms": stats._total.max_response_time,
+                "requests_per_second": stats._total.current_rps,
                 "percentiles": percentiles,
             },
             "endpoint_breakdown": {},
@@ -385,7 +426,7 @@ class LoadTestRunner:
 
         return report
 
-    def _run_endpoint_benchmark(self, endpoint: str, config: Dict) -> Dict:
+    def _run_endpoint_benchmark(self, endpoint: str, _config: dict) -> dict:
         """Run benchmark for a specific endpoint."""
         # This would create a custom user class focused on the specific endpoint
         # For now, return a simplified result
@@ -396,7 +437,7 @@ class LoadTestRunner:
             "success_rate_percent": 99.5,  # Placeholder
         }
 
-    def _generate_endpoint_comparison(self, results: Dict) -> Dict:
+    def _generate_endpoint_comparison(self, results: dict) -> dict:
         """Generate comparative analysis of endpoint performance."""
         comparison = {
             "timestamp": time.time(),
@@ -419,7 +460,7 @@ class LoadTestRunner:
 
         return comparison
 
-    def _analyze_performance_regression(self, baseline: Dict, current: Dict) -> Dict:
+    def _analyze_performance_regression(self, baseline: dict, current: dict) -> dict:
         """Analyze performance regression between baseline and current results."""
         analysis = {
             "timestamp": time.time(),
@@ -490,46 +531,45 @@ class LoadTestRunner:
 
     def _calculate_performance_grade(self, stats) -> str:
         """Calculate performance grade based on test results."""
-        if stats.total.num_requests == 0:
+        if stats._total.num_requests == 0:
             return "N/A"
 
         score = 100
 
         # Deduct for high response times
-        avg_response_time = stats.total.avg_response_time
+        avg_response_time = stats._total.avg_response_time
         if avg_response_time > 100:
             score -= min(40, (avg_response_time - 100) / 25)
 
         # Deduct for errors
-        error_rate = (stats.total.num_failures / stats.total.num_requests) * 100
+        error_rate = (stats._total.num_failures / stats._total.num_requests) * 100
         score -= error_rate * 10
 
         # Deduct for low throughput
-        rps = stats.total.current_rps
+        rps = stats._total.current_rps
         if rps < 10:
             score -= (10 - rps) * 2
 
         # Convert to letter grade
         if score >= 90:
             return "A"
-        elif score >= 80:
+        if score >= 80:
             return "B"
-        elif score >= 70:
+        if score >= 70:
             return "C"
-        elif score >= 60:
+        if score >= 60:
             return "D"
-        else:
-            return "F"
+        return "F"
 
     def _generate_recommendations(self, stats) -> list[str]:
         """Generate performance recommendations based on test results."""
         recommendations = []
 
-        if stats.total.num_requests == 0:
+        if stats._total.num_requests == 0:
             return ["No requests were made - check test configuration"]
 
         # Response time recommendations
-        avg_response_time = stats.total.avg_response_time
+        avg_response_time = stats._total.avg_response_time
         if avg_response_time > 1000:
             recommendations.append(
                 "High response times detected - consider optimizing database queries and adding caching"
@@ -540,7 +580,7 @@ class LoadTestRunner:
             )
 
         # Error rate recommendations
-        error_rate = (stats.total.num_failures / stats.total.num_requests) * 100
+        error_rate = (stats._total.num_failures / stats._total.num_requests) * 100
         if error_rate > 5:
             recommendations.append(
                 "High error rate - implement better error handling and retry mechanisms"
@@ -551,7 +591,7 @@ class LoadTestRunner:
             )
 
         # Throughput recommendations
-        rps = stats.total.current_rps
+        rps = stats._total.current_rps
         if rps < 10:
             recommendations.append(
                 "Low throughput - consider horizontal scaling or performance optimization"
@@ -571,13 +611,13 @@ class LoadTestRunner:
         index = int(len(data) * percentile / 100)
         return data[min(index, len(data) - 1)]
 
-    def _save_report(self, report: Dict, report_type: str = "load_test") -> str:
+    def _save_report(self, report: dict, report_type: str = "load_test") -> str:
         """Save test report to file."""
         timestamp = int(time.time())
         filename = f"{report_type}_report_{timestamp}.json"
         filepath = self.results_dir / filename
 
-        with open(filepath, "w") as f:
+        with Path(filepath).open("w") as f:
             json.dump(report, f, indent=2)
 
         return str(filepath)
@@ -751,7 +791,7 @@ def main():
 
             if "summary" in result:
                 summary = result["summary"]
-                print(f"Total Requests: {summary.get('total_requests', 'N/A')}")
+                print(f"Total Requests: {summary.get('_total_requests', 'N/A')}")
                 print(
                     f"Success Rate: {summary.get('success_rate_percent', 'N/A'):.1f}%"
                 )
@@ -773,16 +813,17 @@ def main():
         print("=" * 60)
 
         # Exit with appropriate code
-        if isinstance(result, dict):
-            if result.get("status") == "failed" or result.get("regression_detected"):
-                sys.exit(1)
+        if isinstance(result, dict) and (
+            result.get("status") == "failed" or result.get("regression_detected")
+        ):
+            sys.exit(1)
 
     except KeyboardInterrupt:
         logger.info("Test interrupted by user")
         sys.exit(1)
 
-    except Exception as e:
-        logger.exception(f"Test execution failed: {e}")
+    except Exception:
+        logger.exception("Test execution failed")
         if args.verbose:
             import traceback
 

@@ -4,7 +4,13 @@ import logging
 import sys
 from typing import Any
 
-from ..config import get_config
+
+try:
+    import colorlog
+except ImportError:
+    colorlog = None
+
+from src.config import get_config
 
 
 # Custom formatter for structured logging
@@ -35,6 +41,7 @@ def configure_logging(
         level: Logging level (DEBUG, INFO, WARNING, ERROR)
         enable_color: Enable colored output for console
         log_file: Optional log file path
+
     """
     config = get_config()
 
@@ -54,26 +61,18 @@ def configure_logging(
     # Console handler
     console_handler = logging.StreamHandler(sys.stdout)
 
-    if enable_color:
-        try:
-            import colorlog
-
-            formatter = colorlog.ColoredFormatter(
-                "%(log_color)s%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-                datefmt="%Y-%m-%d %H:%M:%S",
-                log_colors={
-                    "DEBUG": "cyan",
-                    "INFO": "green",
-                    "WARNING": "yellow",
-                    "ERROR": "red",
-                    "CRITICAL": "red,bg_white",
-                },
-            )
-        except ImportError:
-            formatter = ServiceLayerFormatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-                datefmt="%Y-%m-%d %H:%M:%S",
-            )
+    if enable_color and colorlog is not None:
+        formatter = colorlog.ColoredFormatter(
+            "%(log_color)s%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+            log_colors={
+                "DEBUG": "cyan",
+                "INFO": "green",
+                "WARNING": "yellow",
+                "ERROR": "red",
+                "CRITICAL": "red,bg_white",
+            },
+        )
     else:
         formatter = ServiceLayerFormatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -146,5 +145,6 @@ def with_service_context(service_name: str):
     Example:
         with with_service_context("OpenAIProvider"):
             logger.info("Generating embeddings")
+
     """
     return LogContext(service=service_name)

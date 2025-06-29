@@ -5,7 +5,7 @@ switching, traffic routing, health checks, and zero-downtime deployment validati
 """
 
 import asyncio
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -176,7 +176,7 @@ class TestBlueGreenDeployment:
         # Verify zero downtime
         assert availability_report["zero_downtime_achieved"]
         assert availability_report["service_always_available"]
-        assert availability_report["total_downtime_seconds"] == 0
+        assert availability_report["_total_downtime_seconds"] == 0
         assert availability_report["successful_requests_during_switch"] > 0
 
     @pytest.mark.blue_green
@@ -494,7 +494,7 @@ class BlueGreenTester:
         }
 
     async def check_switch_readiness(
-        self, bg_manager: BlueGreenDeploymentManager
+        self, _bg_manager: BlueGreenDeploymentManager
     ) -> dict[str, Any]:
         """Check if environment is ready for traffic switch."""
         await asyncio.sleep(0.5)
@@ -525,11 +525,11 @@ class ZeroDowntimeTester:
 
     def __init__(self):
         self.availability_data = {
-            "total_requests": 0,
+            "_total_requests": 0,
             "successful_requests": 0,
             "failed_requests": 0,
             "downtime_periods": [],
-            "start_time": datetime.utcnow(),
+            "start_time": datetime.now(tz=UTC),
         }
 
     async def monitor_service_availability(self) -> dict[str, Any]:
@@ -540,8 +540,8 @@ class ZeroDowntimeTester:
                 await asyncio.sleep(0.1)
 
                 # Simulate successful requests (99.9% success rate)
-                self.availability_data["total_requests"] += 1
-                if self.availability_data["total_requests"] % 1000 != 0:
+                self.availability_data["_total_requests"] += 1
+                if self.availability_data["_total_requests"] % 1000 != 0:
                     self.availability_data["successful_requests"] += 1
                 else:
                     self.availability_data["failed_requests"] += 1
@@ -551,19 +551,19 @@ class ZeroDowntimeTester:
 
     def get_availability_report(self) -> dict[str, Any]:
         """Get availability report."""
-        total_time = (
-            datetime.utcnow() - self.availability_data["start_time"]
-        ).total_seconds()
+        _total_time = (
+            datetime.now(tz=UTC) - self.availability_data["start_time"]
+        )._total_seconds()
 
         return {
             "zero_downtime_achieved": self.availability_data["failed_requests"] == 0,
             "service_always_available": len(self.availability_data["downtime_periods"])
             == 0,
-            "total_downtime_seconds": 0,
+            "_total_downtime_seconds": 0,
             "successful_requests_during_switch": self.availability_data[
                 "successful_requests"
             ],
-            "total_monitoring_time_seconds": total_time,
+            "_total_monitoring_time_seconds": _total_time,
         }
 
 
@@ -600,15 +600,14 @@ class GradualTrafficRouter:
                         "step_results": step_results,
                     }
                 break
-            else:
-                step_result = {
-                    "step_number": i + 1,
-                    "percentage": step["percentage"],
-                    "success": True,
-                    "error_rate": 1.5,  # Below threshold
-                    "health_checks_passed": True,
-                }
-                step_results.append(step_result)
+            step_result = {
+                "step_number": i + 1,
+                "percentage": step["percentage"],
+                "success": True,
+                "error_rate": 1.5,  # Below threshold
+                "health_checks_passed": True,
+            }
+            step_results.append(step_result)
 
         return {
             "success": True,
@@ -621,7 +620,7 @@ class GradualTrafficRouter:
 class LoadBalancerConfigurator:
     """Configurator for load balancer in blue-green deployments."""
 
-    async def reconfigure_for_switch(self, config: dict[str, Any]) -> dict[str, Any]:
+    async def reconfigure_for_switch(self, _config: dict[str, Any]) -> dict[str, Any]:
         """Reconfigure load balancer for environment switch."""
         await asyncio.sleep(2)
 
@@ -649,7 +648,7 @@ class StatefulServiceManager:
     """Manager for stateful service coordination."""
 
     async def coordinate_stateful_services(
-        self, services: list, source_env: str, target_env: str
+        self, services: list, _source_env: str, _target_env: str
     ) -> dict[str, Any]:
         """Coordinate stateful services during deployment."""
         await asyncio.sleep(3)
@@ -674,7 +673,7 @@ class DatabaseMigrationCoordinator:
     """Coordinator for database migrations in blue-green deployments."""
 
     async def coordinate_migration(
-        self, migration_config: dict[str, Any], source_env: str, target_env: str
+        self, migration_config: dict[str, Any], _source_env: str, _target_env: str
     ) -> dict[str, Any]:
         """Coordinate database migration."""
         await asyncio.sleep(4)
@@ -689,7 +688,7 @@ class DatabaseMigrationCoordinator:
         }
 
     async def test_rollback_capability(
-        self, migration_config: dict[str, Any]
+        self, _migration_config: dict[str, Any]
     ) -> dict[str, Any]:
         """Test migration rollback capability."""
         await asyncio.sleep(2)

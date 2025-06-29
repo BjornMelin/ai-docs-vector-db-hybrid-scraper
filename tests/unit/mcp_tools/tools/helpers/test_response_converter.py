@@ -325,8 +325,8 @@ class TestCompleteResponseConversion:
                 "metadata": {"category": "test"},
             }
         ]
-        mock_response.total_results = 1
-        mock_response.total_processing_time_ms = 150.5
+        mock_response._total_results = 1
+        mock_response._total_processing_time_ms = 150.5
         mock_response.search_time_ms = 120.0
         mock_response.strategy_selection_time_ms = 30.5
         mock_response.confidence_score = 0.88
@@ -347,9 +347,9 @@ class TestCompleteResponseConversion:
         # Verify complete response structure
         assert isinstance(result, AdvancedQueryProcessingResponse)
         assert result.success is True
-        assert result.total_results == 1
+        assert result._total_results == 1
         assert len(result.results) == 1
-        assert result.total_processing_time_ms == 150.5
+        assert result._total_processing_time_ms == 150.5
         assert result.confidence_score == 0.88
         assert result.quality_score == 0.92
         assert result.fallback_used is False
@@ -372,8 +372,8 @@ class TestCompleteResponseConversion:
         mock_response = Mock()
         mock_response.success = False
         mock_response.results = []
-        mock_response.total_results = 0
-        mock_response.total_processing_time_ms = 0.0
+        mock_response._total_results = 0
+        mock_response._total_processing_time_ms = 0.0
         mock_response.search_time_ms = 0.0
         mock_response.strategy_selection_time_ms = 0.0
         mock_response.confidence_score = 0.0
@@ -391,7 +391,7 @@ class TestCompleteResponseConversion:
         )
 
         assert result.success is False
-        assert result.total_results == 0
+        assert result._total_results == 0
         assert result.error == "Processing failed"
         assert result.intent_classification is None
         assert result.preprocessing_result is None

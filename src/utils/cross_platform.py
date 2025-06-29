@@ -7,6 +7,7 @@ platforms, especially for file paths, environment variables, and system dependen
 import os
 import platform
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -50,6 +51,7 @@ def get_platform_cache_dir(app_name: str = "ai-docs-scraper") -> Path:
 
     Returns:
         Path: Platform-specific cache directory
+
     """
     if is_windows():
         cache_root = Path(os.getenv("LOCALAPPDATA", "~\\AppData\\Local")).expanduser()
@@ -69,6 +71,7 @@ def get_platform_config_dir(app_name: str = "ai-docs-scraper") -> Path:
 
     Returns:
         Path: Platform-specific config directory
+
     """
     if is_windows():
         config_root = Path(os.getenv("APPDATA", "~\\AppData\\Roaming")).expanduser()
@@ -88,6 +91,7 @@ def get_platform_data_dir(app_name: str = "ai-docs-scraper") -> Path:
 
     Returns:
         Path: Platform-specific data directory
+
     """
     if is_windows():
         data_root = Path(os.getenv("LOCALAPPDATA", "~\\AppData\\Local")).expanduser()
@@ -107,6 +111,7 @@ def normalize_path(path: str | Path) -> Path:
 
     Returns:
         Path: Normalized Path object
+
     """
     if isinstance(path, str):
         path = Path(path)
@@ -122,7 +127,8 @@ def get_browser_executable_path(browser: str = "chromium") -> Path | None:
         browser: Browser name (chromium, chrome, firefox)
 
     Returns:
-        typing.Optional[Path]: Path to browser executable if found
+        Path | None: Path to browser executable if found
+
     """
     browser_paths = {
         "chromium": {
@@ -164,12 +170,7 @@ def get_browser_executable_path(browser: str = "chromium") -> Path | None:
 
 def get_platform_temp_dir() -> Path:
     """Get platform-appropriate temporary directory."""
-    if is_windows():
-        temp_dir = Path(os.getenv("TEMP", os.getenv("TMP", "C:\\temp")))
-    else:
-        temp_dir = Path("/tmp")
-
-    return temp_dir
+    return Path(tempfile.gettempdir())
 
 
 def get_environment_variables(prefix: str = "AI_DOCS") -> dict[str, str]:
@@ -179,16 +180,15 @@ def get_environment_variables(prefix: str = "AI_DOCS") -> dict[str, str]:
         prefix: Environment variable prefix
 
     Returns:
-        Dict[str, str]: Environment variables matching prefix
+        dict[str, str]: Environment variables matching prefix
+
     """
-    env_vars = {}
     prefix_upper = prefix.upper()
-
-    for key, value in os.environ.items():
-        if key.upper().startswith(prefix_upper):
-            env_vars[key] = value
-
-    return env_vars
+    return {
+        key: value
+        for key, value in os.environ.items()
+        if key.upper().startswith(prefix_upper)
+    }
 
 
 def get_playwright_browser_path() -> str | None:
@@ -196,17 +196,17 @@ def get_playwright_browser_path() -> str | None:
     if is_windows():
         return os.getenv(
             "PLAYWRIGHT_BROWSERS_PATH",
-            os.path.expanduser("~\\AppData\\Local\\ms-playwright"),
+            str(Path("~\\AppData\\Local\\ms-playwright").expanduser()),
         )
-    elif is_macos():
+    if is_macos():
         return os.getenv(
             "PLAYWRIGHT_BROWSERS_PATH",
-            os.path.expanduser("~/Library/Caches/ms-playwright"),
+            str(Path("~/Library/Caches/ms-playwright").expanduser()),
         )
-    else:  # Linux
-        return os.getenv(
-            "PLAYWRIGHT_BROWSERS_PATH", os.path.expanduser("~/.cache/ms-playwright")
-        )
+    # Linux
+    return os.getenv(
+        "PLAYWRIGHT_BROWSERS_PATH", str(Path("~/.cache/ms-playwright").expanduser())
+    )
 
 
 def get_platform_python_executable() -> Path:
@@ -218,15 +218,15 @@ def get_platform_shell_command() -> list[str]:
     """Get platform-appropriate shell command for subprocess."""
     if is_windows():
         return ["cmd", "/c"]
-    else:
-        return ["/bin/bash", "-c"]
+    return ["/bin/bash", "-c"]
 
 
 def set_platform_environment_defaults() -> dict[str, str]:
     """Set platform-specific environment variable defaults.
 
     Returns:
-        Dict[str, str]: Environment variables to set
+        dict[str, str]: Environment variables to set
+
     """
     env_defaults = {}
 
@@ -249,9 +249,8 @@ def get_file_permissions() -> int:
     if is_windows():
         # Windows doesn't use Unix-style permissions
         return 0o777
-    else:
-        # Unix-like systems: read/write for owner, read for group/others
-        return 0o644
+    # Unix-like systems: read/write for owner, read for group/others
+    return 0o644
 
 
 def get_directory_permissions() -> int:
@@ -259,9 +258,8 @@ def get_directory_permissions() -> int:
     if is_windows():
         # Windows doesn't use Unix-style permissions
         return 0o777
-    else:
-        # Unix-like systems: full access for owner, read/execute for group/others
-        return 0o755
+    # Unix-like systems: full access for owner, read/execute for group/others
+    return 0o755
 
 
 def create_directory_with_permissions(path: Path) -> None:
@@ -269,6 +267,7 @@ def create_directory_with_permissions(path: Path) -> None:
 
     Args:
         path: Directory path to create
+
     """
     path.mkdir(parents=True, exist_ok=True)
 
@@ -283,6 +282,7 @@ def write_file_with_permissions(path: Path, content: str) -> None:
     Args:
         path: File path to write
         content: Content to write
+
     """
     path.write_text(content, encoding="utf-8")
 
@@ -295,7 +295,8 @@ def get_process_info() -> dict[str, Any]:
     """Get platform-specific process information.
 
     Returns:
-        Dict[str, Any]: Process information including platform details
+        dict[str, Any]: Process information including platform details
+
     """
     return {
         "platform": platform.system(),

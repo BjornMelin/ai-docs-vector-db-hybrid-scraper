@@ -13,6 +13,12 @@ from contextlib import asynccontextmanager
 
 from fastmcp import FastMCP
 from starlette.applications import Starlette
+
+
+try:
+    import uvicorn
+except ImportError:
+    uvicorn = None
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
@@ -43,16 +49,18 @@ class ProductionMCPServer:
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
 
-    def _signal_handler(self, signum: int, frame) -> None:
+    def _signal_handler(self, signum: int, _frame) -> None:
         """Handle shutdown signals gracefully."""
-        logger.info(f"Received signal {signum}, initiating graceful shutdown...")
+        logger.info(
+            f"Received signal {signum}, initiating graceful shutdown..."
+        )  # TODO: Convert f-string to logging format
         # Store task reference to avoid RUF006 warning
         task = asyncio.create_task(self.shutdown())
         # Set task name for easier debugging
         task.set_name("graceful-shutdown")
 
     @asynccontextmanager
-    async def lifespan(self, app: Starlette):
+    async def lifespan(self, _app: Starlette):
         """Application lifespan manager with startup/shutdown."""
         try:
             # Startup
@@ -60,8 +68,8 @@ class ProductionMCPServer:
             await self.startup()
             yield
 
-        except Exception as e:
-            logger.exception(f"Startup failed: {e}")
+        except Exception:
+            logger.exception("Startup failed")
             raise
 
         finally:
@@ -88,12 +96,12 @@ class ProductionMCPServer:
                 # FastMCP cleanup would go here if it had cleanup methods
                 logger.info("FastMCP server cleanup complete")
 
-        except Exception as e:
-            logger.exception(f"Error during shutdown: {e}")
+        except Exception:
+            logger.exception("Error during shutdown")
 
         logger.info("Production MCP server shutdown complete")
 
-    async def health_check(self, request) -> JSONResponse:
+    async def health_check(self, _request) -> JSONResponse:
         """Health check endpoint."""
         return JSONResponse(
             {
@@ -130,7 +138,9 @@ class ProductionMCPServer:
     ) -> None:
         """Run the production server asynchronously."""
         try:
-            import uvicorn
+            if uvicorn is None:
+                msg = "uvicorn not available"
+                raise ImportError(msg)
 
             # Create app
             app = self.create_app()
@@ -147,8 +157,8 @@ class ProductionMCPServer:
             server = uvicorn.Server(config)
             await server.serve()
 
-        except Exception as e:
-            logger.exception(f"Server error: {e}")
+        except Exception:
+            logger.exception("Server error")
             raise
 
 
@@ -181,8 +191,8 @@ def main() -> None:
         asyncio.run(run_production_server_async(config, host, port))
     except KeyboardInterrupt:
         logger.info("Server interrupted by user")
-    except Exception as e:
-        logger.exception(f"Server error: {e}")
+    except Exception:
+        logger.exception("Server error")
         sys.exit(1)
 
 

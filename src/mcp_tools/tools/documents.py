@@ -5,6 +5,8 @@ import logging
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
+from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
+
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -19,12 +21,11 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
+from src.chunking import DocumentChunker
 from src.config import ChunkingConfig, ChunkingStrategy
-
-from ...chunking import EnhancedChunker
-from ...infrastructure.client_manager import ClientManager
-from ...security import MLSecurityValidator as SecurityValidator
-from ..models.requests import BatchRequest, DocumentRequest
+from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
+from src.security import MLSecurityValidator as SecurityValidator
 
 
 logger = logging.getLogger(__name__)
@@ -33,14 +34,11 @@ logger = logging.getLogger(__name__)
 def register_tools(mcp, client_manager: ClientManager):
     """Register document management tools with the MCP server."""
 
-    from ..models.responses import AddDocumentResponse, DocumentBatchResponse
-
     @mcp.tool()
     async def add_document(
         request: DocumentRequest, ctx: Context
     ) -> AddDocumentResponse:
-        """
-        Add a document to the vector database with smart chunking.
+        """Add a document to the vector database with smart chunking.
 
         Crawls the URL, applies the selected chunking strategy, generates
         embeddings, and stores in the specified collection.
@@ -76,8 +74,13 @@ def register_tools(mcp, client_manager: ClientManager):
                 or not crawl_result.get("success")
                 or not crawl_result.get("content")
             ):
+
+                def _raise_scrape_error():
+                    msg = f"Failed to scrape {request.url}"
+                    raise ValueError(msg)
+
                 await ctx.error(f"Failed to scrape {request.url}")
-                raise ValueError(f"Failed to scrape {request.url}")
+                _raise_scrape_error()
 
             # Apply Content Intelligence analysis
             enriched_content = None
@@ -138,7 +141,7 @@ def register_tools(mcp, client_manager: ClientManager):
             await ctx.debug(
                 f"Chunking document {doc_id} with strategy {chunk_config.strategy}"
             )
-            chunker = EnhancedChunker(chunk_config)
+            chunker = DocumentChunker(chunk_config)
             chunks = chunker.chunk_content(
                 content=crawl_result["content"],
                 title=crawl_result["title"]
@@ -262,19 +265,18 @@ def register_tools(mcp, client_manager: ClientManager):
                 )
             await ctx.info(completion_msg)
 
-            return result
-
         except Exception as e:
             await ctx.error(f"Failed to process document {doc_id}: {e}")
-            logger.exception(f"Failed to add document: {e}")
+            logger.exception("Failed to add document")
             raise
+        else:
+            return result
 
     @mcp.tool()
     async def add_documents_batch(
         request: BatchRequest, ctx: Context
     ) -> DocumentBatchResponse:
-        """
-        Add multiple documents in batch with optimized processing.
+        """Add multiple documents in batch with optimized processing.
 
         Processes multiple URLs concurrently with rate limiting and
         progress tracking.

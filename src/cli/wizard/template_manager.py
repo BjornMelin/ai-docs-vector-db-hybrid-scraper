@@ -26,10 +26,11 @@ class TemplateManager:
 
         Args:
             templates_dir: Directory containing templates. Defaults to config/templates
+
         """
         self.templates_dir = templates_dir or Path("config/templates")
-        self._templates: dict[str, Dict[str, Any]] = {}
-        self._metadata: dict[str, Dict[str, str]] = {}
+        self._templates: dict[str, dict[str, Any]] = {}
+        self._metadata: dict[str, dict[str, str]] = {}
         self._load_templates()
 
     def _load_templates(self) -> None:
@@ -49,7 +50,7 @@ class TemplateManager:
 
         for template_file in template_files:
             try:
-                with open(template_file) as f:
+                with template_file.open() as f:
                     template_data = json.load(f)
 
                 template_name = template_file.stem
@@ -62,7 +63,7 @@ class TemplateManager:
                 console.print(f"[red]Error loading template {template_file}: {e}[/red]")
 
     def _extract_metadata(
-        self, template_data: dict[str, Any], name: str
+        self, _template_data: dict[str, Any], name: str
     ) -> dict[str, str]:
         """Extract metadata from template data."""
         # Template metadata mapping
@@ -127,12 +128,14 @@ class TemplateManager:
 
         Returns:
             Tuple of (is_valid, error_message)
+
         """
         try:
             Config(**template_data)
-            return True, None
         except Exception as e:
             return False, str(e)
+        else:
+            return True, None
 
     def show_template_comparison(self) -> None:
         """Display a comparison table of all templates."""
@@ -163,15 +166,20 @@ class TemplateManager:
             "minimal",
         ]
 
-        ordered_templates = []
-        for template_name in template_order:
-            if template_name in self._templates:
-                ordered_templates.append(template_name)
+        ordered_templates = [
+            template_name
+            for template_name in template_order
+            if template_name in self._templates
+        ]
 
         # Add any templates not in the order
-        for template_name in self._templates:
-            if template_name not in ordered_templates:
-                ordered_templates.append(template_name)
+        ordered_templates.extend(
+            [
+                template_name
+                for template_name in self._templates
+                if template_name not in ordered_templates
+            ]
+        )
 
         for template_name in ordered_templates:
             template_data = self._templates[template_name]
@@ -258,10 +266,12 @@ class TemplateManager:
 
         Raises:
             ValueError: If template not found or validation fails
+
         """
         template_data = self.get_template(template_name)
         if not template_data:
-            raise ValueError(f"Template '{template_name}' not found")
+            msg = f"Template '{template_name}' not found"
+            raise ValueError(msg)
 
         # Apply overrides if provided
         if overrides:
@@ -271,7 +281,8 @@ class TemplateManager:
         try:
             return Config(**template_data)
         except Exception as e:
-            raise ValueError(f"Failed to create config from template: {e}")
+            msg = f"Failed to create config from template: {e}"
+            raise ValueError(msg) from e
 
     def save_template(self, name: str, config: Config, description: str = "") -> Path:
         """Save a Config object as a new template.
@@ -283,6 +294,7 @@ class TemplateManager:
 
         Returns:
             Path to saved template file
+
         """
         template_file = self.templates_dir / f"{name}.json"
 
@@ -290,7 +302,7 @@ class TemplateManager:
         self.templates_dir.mkdir(parents=True, exist_ok=True)
 
         # Save template data
-        with open(template_file, "w") as f:
+        with template_file.open("w") as f:
             json.dump(config.model_dump(), f, indent=2)
 
         # Update internal cache

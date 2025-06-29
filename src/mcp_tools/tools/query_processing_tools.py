@@ -23,16 +23,16 @@ else:
 
 from pydantic import BaseModel, Field
 
-from ...infrastructure.client_manager import ClientManager
+from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.models.responses import SearchResult
 
 # ProcessingStage removed from simplified orchestrator
-from ...services.query_processing import (
+from src.services.query_processing import (
     SearchMode,
     SearchOrchestrator,
     SearchPipeline,
     SearchRequest,
 )
-from ..models.responses import SearchResult
 
 
 logger = logging.getLogger(__name__)
@@ -170,7 +170,9 @@ async def query_expansion_tool(
 
     except Exception as e:
         await ctx.error(f"Query expansion search failed: {e!s}")
-        logger.error(f"Query expansion error: {e}", exc_info=True)
+        logger.error(
+            f"Query expansion error: {e}", exc_info=True
+        )  # TODO: Convert f-string to logging format
         raise
 
 
@@ -221,7 +223,9 @@ async def clustered_search_tool(
 
     except Exception as e:
         await ctx.error(f"Clustered search failed: {e!s}")
-        logger.error(f"Clustered search error: {e}", exc_info=True)
+        logger.error(
+            f"Clustered search error: {e}", exc_info=True
+        )  # TODO: Convert f-string to logging format
         raise
 
 
@@ -272,7 +276,9 @@ async def federated_search_tool(
 
     except Exception as e:
         await ctx.error(f"Federated search failed: {e!s}")
-        logger.error(f"Federated search error: {e}", exc_info=True)
+        logger.error(
+            f"Federated search error: {e}", exc_info=True
+        )  # TODO: Convert f-string to logging format
         raise
 
 
@@ -326,7 +332,9 @@ async def personalized_search_tool(
 
     except Exception as e:
         await ctx.error(f"Personalized search failed: {e!s}")
-        logger.error(f"Personalized search error: {e}", exc_info=True)
+        logger.error(
+            f"Personalized search error: {e}", exc_info=True
+        )  # TODO: Convert f-string to logging format
         raise
 
 
@@ -382,13 +390,14 @@ async def orchestrated_search_tool(
 
     except Exception as e:
         await ctx.error(f"Orchestrated search failed: {e!s}")
-        logger.error(f"Orchestrated search error: {e}", exc_info=True)
+        logger.error(
+            f"Orchestrated search error: {e}", exc_info=True
+        )  # TODO: Convert f-string to logging format
         raise
 
 
-def register_query_processing_tools(mcp, client_manager: ClientManager):
+def register_query_processing_tools(mcp, _client_manager: ClientManager):
     """Register advanced query processing tools with the MCP server."""
-
     # Initialize the orchestrator
     orchestrator = create_orchestrator()
 
@@ -396,8 +405,7 @@ def register_query_processing_tools(mcp, client_manager: ClientManager):
     async def search_with_query_expansion(
         request: QueryExpansionRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Search with automatic query expansion.
+        """Search with automatic query expansion.
 
         Enhance queries by adding synonyms, related terms, and contextual
         expansions to improve recall and find more relevant results.
@@ -408,8 +416,7 @@ def register_query_processing_tools(mcp, client_manager: ClientManager):
     async def search_with_clustering(
         request: ClusteredSearchRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Search with result clustering.
+        """Search with result clustering.
 
         Group search results into meaningful clusters based on content
         similarity, topics, or other features for better organization.
@@ -420,8 +427,7 @@ def register_query_processing_tools(mcp, client_manager: ClientManager):
     async def search_federated(
         request: FederatedSearchRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Search across multiple collections simultaneously.
+        """Search across multiple collections simultaneously.
 
         Execute federated search across different data sources with
         intelligent result merging and ranking strategies.
@@ -432,8 +438,7 @@ def register_query_processing_tools(mcp, client_manager: ClientManager):
     async def search_personalized(
         request: PersonalizedSearchRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Search with user personalization.
+        """Search with user personalization.
 
         Tailor search results based on user history, preferences, and
         behavior patterns for more relevant results.
@@ -444,8 +449,7 @@ def register_query_processing_tools(mcp, client_manager: ClientManager):
     async def search_orchestrated(
         request: OrchestrationRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Search with intelligent orchestration.
+        """Search with intelligent orchestration.
 
         Automatically select and coordinate multiple processing stages
         based on query characteristics and time/quality constraints.

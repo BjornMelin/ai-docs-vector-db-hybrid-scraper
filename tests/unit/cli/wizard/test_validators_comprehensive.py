@@ -314,7 +314,7 @@ class TestPortValidation:
 class TestConfigurationValidation:
     """Tests for full configuration validation."""
 
-    def test_validate_and_show_errors_valid_config(self, rich_output_capturer):
+    def test_validate_and_show_errors_valid_config(self, _rich_output_capturer):
         """Test validation of valid configuration."""
         validator = WizardValidator()
 

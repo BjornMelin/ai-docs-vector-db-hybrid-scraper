@@ -6,6 +6,7 @@ volume testing, and scalability testing.
 """
 
 import asyncio
+import random
 import statistics
 import time
 from collections.abc import Callable
@@ -14,6 +15,10 @@ from enum import Enum
 from typing import Any
 
 import pytest
+
+
+class CustomError(Exception):
+    """Custom exception for this module."""
 
 
 class LoadTestType(Enum):
@@ -45,7 +50,7 @@ class LoadTestConfig:
 class LoadTestMetrics:
     """Metrics collected during load testing."""
 
-    total_requests: int = 0
+    _total_requests: int = 0
     successful_requests: int = 0
     failed_requests: int = 0
     response_times: list[float] = field(default_factory=list)
@@ -140,7 +145,7 @@ def load_test_runner():
             self.metrics_collector = None
 
         async def run_load_test(
-            self, config: LoadTestConfig, target_function: Callable, **kwargs
+            self, config: LoadTestConfig, target_function: Callable, **_kwargs
         ) -> LoadTestResult:
             """Run a load test with the specified configuration."""
             test_id = f"{config.test_type.value}_{time.time()}"
@@ -154,7 +159,7 @@ def load_test_runner():
 
             try:
                 result = await self._execute_load_test(
-                    config, target_function, metrics, **kwargs
+                    config, target_function, metrics, **_kwargs
                 )
                 result.success = self._evaluate_success(result)
                 result.performance_grade = self._calculate_performance_grade(result)
@@ -172,28 +177,28 @@ def load_test_runner():
             config: LoadTestConfig,
             target_function: Callable,
             metrics: LoadTestMetrics,
-            **kwargs,
+            **_kwargs,
         ) -> LoadTestResult:
             """Execute the actual load test."""
             metrics.start_time = time.time()
 
             if config.test_type == LoadTestType.LOAD:
                 await self._run_normal_load_test(
-                    config, target_function, metrics, **kwargs
+                    config, target_function, metrics, **_kwargs
                 )
             elif config.test_type == LoadTestType.STRESS:
-                await self._run_stress_test(config, target_function, metrics, **kwargs)
+                await self._run_stress_test(config, target_function, metrics, **_kwargs)
             elif config.test_type == LoadTestType.SPIKE:
-                await self._run_spike_test(config, target_function, metrics, **kwargs)
+                await self._run_spike_test(config, target_function, metrics, **_kwargs)
             elif config.test_type == LoadTestType.ENDURANCE:
                 await self._run_endurance_test(
-                    config, target_function, metrics, **kwargs
+                    config, target_function, metrics, **_kwargs
                 )
             elif config.test_type == LoadTestType.VOLUME:
-                await self._run_volume_test(config, target_function, metrics, **kwargs)
+                await self._run_volume_test(config, target_function, metrics, **_kwargs)
             elif config.test_type == LoadTestType.SCALABILITY:
                 await self._run_scalability_test(
-                    config, target_function, metrics, **kwargs
+                    config, target_function, metrics, **_kwargs
                 )
 
             metrics.end_time = time.time()
@@ -212,7 +217,7 @@ def load_test_runner():
             config: LoadTestConfig,
             target_function: Callable,
             metrics: LoadTestMetrics,
-            **kwargs,
+            **_kwargs,
         ):
             """Run a normal load test."""
             # Calculate request interval
@@ -232,7 +237,7 @@ def load_test_runner():
             while time.time() < end_time:
                 task = asyncio.create_task(
                     self._execute_request_with_semaphore(
-                        semaphore, target_function, metrics, **kwargs
+                        semaphore, target_function, metrics, **_kwargs
                     )
                 )
                 tasks.append(task)
@@ -248,7 +253,7 @@ def load_test_runner():
             config: LoadTestConfig,
             target_function: Callable,
             metrics: LoadTestMetrics,
-            **kwargs,
+            **_kwargs,
         ):
             """Run a stress test (beyond normal capacity)."""
             # Stress test typically uses higher concurrency
@@ -266,7 +271,7 @@ def load_test_runner():
             )
 
             await self._run_normal_load_test(
-                stress_config, target_function, metrics, **kwargs
+                stress_config, target_function, metrics, **_kwargs
             )
 
         async def _run_spike_test(
@@ -274,7 +279,7 @@ def load_test_runner():
             config: LoadTestConfig,
             target_function: Callable,
             metrics: LoadTestMetrics,
-            **kwargs,
+            **_kwargs,
         ):
             """Run a spike test (sudden load increase)."""
             baseline_users = config.concurrent_users // 4  # 25% baseline
@@ -283,19 +288,19 @@ def load_test_runner():
             # Phase 1: Baseline load
             baseline_duration = config.duration_seconds * 0.3
             await self._run_constant_load(
-                baseline_users, baseline_duration, target_function, metrics, **kwargs
+                baseline_users, baseline_duration, target_function, metrics, **_kwargs
             )
 
             # Phase 2: Spike
             spike_duration = config.duration_seconds * 0.4
             await self._run_constant_load(
-                spike_users, spike_duration, target_function, metrics, **kwargs
+                spike_users, spike_duration, target_function, metrics, **_kwargs
             )
 
             # Phase 3: Return to baseline
             remaining_duration = config.duration_seconds * 0.3
             await self._run_constant_load(
-                baseline_users, remaining_duration, target_function, metrics, **kwargs
+                baseline_users, remaining_duration, target_function, metrics, **_kwargs
             )
 
         async def _run_endurance_test(
@@ -303,7 +308,7 @@ def load_test_runner():
             config: LoadTestConfig,
             target_function: Callable,
             metrics: LoadTestMetrics,
-            **kwargs,
+            **_kwargs,
         ):
             """Run an endurance test (long duration)."""
             # Endurance test uses moderate load for extended period
@@ -319,7 +324,7 @@ def load_test_runner():
             )
 
             await self._run_normal_load_test(
-                endurance_config, target_function, metrics, **kwargs
+                endurance_config, target_function, metrics, **_kwargs
             )
 
         async def _run_volume_test(
@@ -327,23 +332,25 @@ def load_test_runner():
             config: LoadTestConfig,
             target_function: Callable,
             metrics: LoadTestMetrics,
-            **kwargs,
+            **_kwargs,
         ):
             """Run a volume test (large data sets)."""
             # Volume test focuses on large data processing
             large_data_size = max(config.data_size_mb, 10.0)  # At least 10MB
 
-            # Add data size to kwargs
-            kwargs["data_size_mb"] = large_data_size
+            # Add data size to _kwargs
+            _kwargs["data_size_mb"] = large_data_size
 
-            await self._run_normal_load_test(config, target_function, metrics, **kwargs)
+            await self._run_normal_load_test(
+                config, target_function, metrics, **_kwargs
+            )
 
         async def _run_scalability_test(
             self,
             config: LoadTestConfig,
             target_function: Callable,
             metrics: LoadTestMetrics,
-            **kwargs,
+            **_kwargs,
         ):
             """Run a scalability test (increasing load)."""
             # Gradually increase load
@@ -356,7 +363,7 @@ def load_test_runner():
                 (step / steps) * config.requests_per_second
 
                 await self._run_constant_load(
-                    current_users, step_duration, target_function, metrics, **kwargs
+                    current_users, step_duration, target_function, metrics, **_kwargs
                 )
 
                 # Record peak concurrent users
@@ -370,7 +377,7 @@ def load_test_runner():
             duration_seconds: float,
             target_function: Callable,
             metrics: LoadTestMetrics,
-            **kwargs,
+            **_kwargs,
         ):
             """Run constant load for a specified duration."""
             semaphore = asyncio.Semaphore(concurrent_users)
@@ -380,7 +387,7 @@ def load_test_runner():
             while time.time() < end_time:
                 task = asyncio.create_task(
                     self._execute_request_with_semaphore(
-                        semaphore, target_function, metrics, **kwargs
+                        semaphore, target_function, metrics, **_kwargs
                     )
                 )
                 tasks.append(task)
@@ -396,24 +403,24 @@ def load_test_runner():
             semaphore: asyncio.Semaphore,
             target_function: Callable,
             metrics: LoadTestMetrics,
-            **kwargs,
+            **_kwargs,
         ):
             """Execute a single request with concurrency control."""
             async with semaphore:
                 start_time = time.perf_counter()
 
                 try:
-                    await target_function(**kwargs)
+                    await target_function(**_kwargs)
                     response_time = time.perf_counter() - start_time
 
-                    metrics.total_requests += 1
+                    metrics._total_requests += 1
                     metrics.successful_requests += 1
                     metrics.response_times.append(response_time)
 
                 except Exception as e:
                     response_time = time.perf_counter() - start_time
 
-                    metrics.total_requests += 1
+                    metrics._total_requests += 1
                     metrics.failed_requests += 1
                     metrics.response_times.append(response_time)
                     metrics.errors.append(str(e))
@@ -442,7 +449,7 @@ def load_test_runner():
                 p95_response_time_ms = float("inf")
 
             error_rate_percent = (
-                metrics.failed_requests / max(metrics.total_requests, 1)
+                metrics.failed_requests / max(metrics._total_requests, 1)
             ) * 100
 
             # Check each criterion
@@ -476,7 +483,7 @@ def load_test_runner():
             # Calculate key metrics
             avg_response_time_ms = statistics.mean(metrics.response_times) * 1000
             error_rate_percent = (
-                metrics.failed_requests / max(metrics.total_requests, 1)
+                metrics.failed_requests / max(metrics._total_requests, 1)
             ) * 100
 
             # Grade based on performance
@@ -496,14 +503,13 @@ def load_test_runner():
             # Convert score to grade
             if score >= 90:
                 return "A"
-            elif score >= 80:
+            if score >= 80:
                 return "B"
-            elif score >= 70:
+            if score >= 70:
                 return "C"
-            elif score >= 60:
+            if score >= 60:
                 return "D"
-            else:
-                return "F"
+            return "F"
 
         def _identify_bottlenecks(self, result: LoadTestResult) -> list[str]:
             """Identify performance bottlenecks from test results."""
@@ -522,7 +528,7 @@ def load_test_runner():
 
             # High error rate
             error_rate_percent = (
-                metrics.failed_requests / max(metrics.total_requests, 1)
+                metrics.failed_requests / max(metrics._total_requests, 1)
             ) * 100
             if error_rate_percent > 5:
                 bottlenecks.append(f"High error rate: {error_rate_percent:.2f}%")
@@ -600,9 +606,9 @@ def load_test_runner():
                 return {"error": "No test results provided"}
 
             # Aggregate metrics
-            total_requests = sum(r.metrics.total_requests for r in results)
-            total_successful = sum(r.metrics.successful_requests for r in results)
-            total_failed = sum(r.metrics.failed_requests for r in results)
+            _total_requests = sum(r.metrics._total_requests for r in results)
+            _total_successful = sum(r.metrics.successful_requests for r in results)
+            _total_failed = sum(r.metrics.failed_requests for r in results)
 
             all_response_times = []
             for result in results:
@@ -619,12 +625,14 @@ def load_test_runner():
 
             return {
                 "summary": {
-                    "total_tests": len(results),
+                    "_total_tests": len(results),
                     "successful_tests": sum(1 for r in results if r.success),
-                    "total_requests": total_requests,
-                    "successful_requests": total_successful,
-                    "failed_requests": total_failed,
-                    "overall_success_rate": (total_successful / max(total_requests, 1))
+                    "_total_requests": _total_requests,
+                    "successful_requests": _total_successful,
+                    "failed_requests": _total_failed,
+                    "overall_success_rate": (
+                        _total_successful / max(_total_requests, 1)
+                    )
                     * 100,
                 },
                 "performance": {
@@ -640,7 +648,7 @@ def load_test_runner():
                         "test_type": r.test_type.value,
                         "success": r.success,
                         "grade": r.performance_grade,
-                        "requests": r.metrics.total_requests,
+                        "requests": r.metrics._total_requests,
                         "throughput_rps": round(r.metrics.throughput_rps, 2),
                         "bottlenecks": r.bottlenecks_identified,
                     }
@@ -673,13 +681,15 @@ def mock_load_test_service():
             """Set base latency for testing performance."""
             self.base_latency = max(0.01, latency_seconds)
 
-        async def process_request(self, data_size_mb: float = 1.0, **kwargs):
+        async def process_request(self, data_size_mb: float = 1.0, **__kwargs):
             """Process a request with simulated work."""
             self.request_count += 1
 
             # Simulate failure
-            if self.failure_rate > 0 and time.time() % 1.0 < self.failure_rate:
-                raise Exception(f"Simulated failure (rate: {self.failure_rate})")
+
+            if random.random() < self.failure_rate:
+                msg = f"Simulated failure (rate: {self.failure_rate})"
+                raise CustomError(msg)
 
             # Simulate latency based on load and data size
             latency = self.base_latency * self.load_factor * (1 + data_size_mb * 0.1)
@@ -693,7 +703,7 @@ def mock_load_test_service():
             }
 
         async def search_documents(
-            self, query: str = "test", limit: int = 10, **kwargs
+            self, query: str = "test", limit: int = 10, **_kwargs
         ):
             """Mock document search with variable response times."""
             # Simulate search complexity based on query length and limit
@@ -703,25 +713,27 @@ def mock_load_test_service():
             await asyncio.sleep(latency)
 
             if self.failure_rate > 0 and time.time() % 1.0 < self.failure_rate:
-                raise Exception("Search service temporarily unavailable")
+                msg = "Search service temporarily unavailable"
+                raise CustomError(msg)
 
             return {
                 "results": [
                     {"id": f"doc_{i}", "score": 0.9 - i * 0.1} for i in range(limit)
                 ],
-                "total": limit,
+                "_total": limit,
                 "query": query,
                 "processing_time": latency,
             }
 
-        async def add_document(self, url: str, collection: str = "default", **kwargs):
+        async def add_document(self, url: str, collection: str = "default", **__kwargs):
             """Mock document addition with variable processing time."""
             # Simulate processing time based on URL complexity
             processing_time = self.base_latency * (1 + len(url) / 100)
             await asyncio.sleep(processing_time)
 
             if self.failure_rate > 0 and time.time() % 1.0 < self.failure_rate:
-                raise Exception("Document processing failed")
+                msg = "Document processing failed"
+                raise CustomError(msg)
 
             return {
                 "id": f"doc_{self.request_count}",
@@ -734,7 +746,7 @@ def mock_load_test_service():
         def get_metrics(self):
             """Get service metrics."""
             return {
-                "total_requests": self.request_count,
+                "_total_requests": self.request_count,
                 "current_failure_rate": self.failure_rate,
                 "base_latency_ms": self.base_latency * 1000,
                 "load_factor": self.load_factor,

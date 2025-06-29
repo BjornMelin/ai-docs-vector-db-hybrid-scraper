@@ -12,9 +12,8 @@ from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
 from src.config import get_config
-
-from ...services.rag import RAGGenerator
-from ...services.rag.models import RAGRequest
+from src.services.rag import RAGGenerator
+from src.services.rag.models import RAGRequest
 
 
 logger = logging.getLogger(__name__)
@@ -99,15 +98,18 @@ def register_tools(app: FastMCP) -> None:
         Raises:
             ValueError: If request is invalid
             RuntimeError: If RAG generation fails
+
         """
         config = get_config()
 
         # Check if RAG is enabled
         if not config.rag.enable_rag:
-            raise RuntimeError("RAG is not enabled in the configuration")
+            msg = "RAG is not enabled in the configuration"
+            raise RuntimeError(msg)
 
         if not request.search_results:
-            raise ValueError("Search results are required for RAG answer generation")
+            msg = "Search results are required for RAG answer generation"
+            raise ValueError(msg)
 
         try:
             # Initialize RAG generator
@@ -169,8 +171,9 @@ def register_tools(app: FastMCP) -> None:
             )
 
         except Exception as e:
-            logger.exception(f"RAG answer generation failed: {e}")
-            raise RuntimeError(f"Failed to generate RAG answer: {e}") from e
+            logger.exception("RAG answer generation failed")
+            msg = "Failed to generate RAG answer"
+            raise RuntimeError(msg) from e
 
     @app.tool()
     async def get_rag_metrics() -> RAGMetricsResponse:
@@ -184,11 +187,13 @@ def register_tools(app: FastMCP) -> None:
 
         Raises:
             RuntimeError: If metrics retrieval fails
+
         """
         config = get_config()
 
         if not config.rag.enable_rag:
-            raise RuntimeError("RAG is not enabled in the configuration")
+            msg = "RAG is not enabled in the configuration"
+            raise RuntimeError(msg)
 
         try:
             # Initialize RAG generator to get metrics
@@ -209,8 +214,9 @@ def register_tools(app: FastMCP) -> None:
             )
 
         except Exception as e:
-            logger.exception(f"Failed to get RAG metrics: {e}")
-            raise RuntimeError(f"Failed to get RAG metrics: {e}") from e
+            logger.exception("Failed to get RAG metrics")
+            msg = "Failed to get RAG metrics"
+            raise RuntimeError(msg) from e
 
     @app.tool()
     async def test_rag_configuration() -> dict[str, Any]:
@@ -224,6 +230,7 @@ def register_tools(app: FastMCP) -> None:
 
         Raises:
             RuntimeError: If configuration test fails
+
         """
         config = get_config()
 
@@ -254,7 +261,7 @@ def register_tools(app: FastMCP) -> None:
 
         except Exception as e:
             results["error"] = str(e)
-            logger.exception(f"RAG configuration test failed: {e}")
+            logger.exception("RAG configuration test failed")
 
         return results
 
@@ -270,11 +277,13 @@ def register_tools(app: FastMCP) -> None:
 
         Raises:
             RuntimeError: If cache clearing fails
+
         """
         config = get_config()
 
         if not config.rag.enable_rag:
-            raise RuntimeError("RAG is not enabled in the configuration")
+            msg = "RAG is not enabled in the configuration"
+            raise RuntimeError(msg)
 
         try:
             # Create RAG generator instance and clear cache
@@ -287,7 +296,8 @@ def register_tools(app: FastMCP) -> None:
             }
 
         except Exception as e:
-            logger.exception(f"Failed to clear RAG cache: {e}")
-            raise RuntimeError(f"Failed to clear RAG cache: {e}") from e
+            logger.exception("Failed to clear RAG cache")
+            msg = "Failed to clear RAG cache"
+            raise RuntimeError(msg) from e
 
     logger.info("RAG MCP tools registered successfully")

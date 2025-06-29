@@ -18,7 +18,34 @@ from rich.text import Text
 from src.cli.wizard import ProfileManager, TemplateManager, WizardValidator
 
 
+# Optional import for config validation
+try:
+    from .config import validate_config
+except ImportError:
+    validate_config = None
+
+
 console = Console()
+
+
+def _abort_no_template(profile: str) -> None:
+    """Helper function to abort when no template is found for profile."""
+    msg = f"No template found for profile '{profile}'"
+    raise ValueError(msg)
+
+
+def _abort_validation_errors() -> None:
+    """Helper function to abort due to validation errors."""
+    msg = "Setup cancelled due to validation errors"
+    raise click.Abort(msg)
+
+
+def _abort_profile_not_found(profile: str, available_profiles: list[str]) -> None:
+    """Helper function to abort when profile is not found."""
+    console.print(
+        f"[red]Profile '{profile}' not found. Available: {', '.join(available_profiles)}[/red]"
+    )
+    raise click.Abort()
 
 
 class ConfigurationWizard:
@@ -29,6 +56,7 @@ class ConfigurationWizard:
 
         Args:
             config_dir: Directory for configuration files
+
         """
         self.console = Console()
         self.template_manager = TemplateManager()
@@ -99,7 +127,8 @@ class ConfigurationWizard:
         ).ask()
 
         if not selected_profile:
-            raise click.Abort("Profile selection cancelled")
+            msg = "Profile selection cancelled"
+            raise click.Abort(msg)
 
         # Show profile details
         self.profile_manager.show_profile_setup_instructions(selected_profile)
@@ -123,7 +152,8 @@ class ConfigurationWizard:
 
         template_data = self.template_manager.get_template(template_name)
         if not template_data:
-            raise ValueError(f"Template '{template_name}' not found")
+            msg = f"Template '{template_name}' not found"
+            raise ValueError(msg)
 
         customizations = {}
 
@@ -149,7 +179,7 @@ class ConfigurationWizard:
             ("API Keys", self._customize_api_keys),
             ("Database Connection", self._customize_database),
             ("Performance Settings", self._customize_performance),
-            ("Advanced Options", self._customize_advanced),
+            ("Advanced Options", self._customize_template),
         ]
 
         for section_name, customize_func in customization_sections:
@@ -159,7 +189,7 @@ class ConfigurationWizard:
 
         return customizations
 
-    def _customize_api_keys(self, template_data: dict[str, Any]) -> dict[str, Any]:
+    def _customize_api_keys(self, _template_data: dict[str, Any]) -> dict[str, Any]:
         """Customize API key settings."""
         customizations = {}
 
@@ -172,10 +202,9 @@ class ConfigurationWizard:
                     if is_valid:
                         customizations.setdefault("openai", {})["api_key"] = api_key
                         break
-                    else:
-                        self.console.print(f"[red]Invalid API key: {error}[/red]")
-                        if not questionary.confirm("Try again?", default=True).ask():
-                            break
+                    self.console.print(f"[red]Invalid API key: {error}[/red]")
+                    if not questionary.confirm("Try again?", default=True).ask():
+                        break
 
         # Firecrawl API Key (optional)
         if questionary.confirm(
@@ -190,14 +219,13 @@ class ConfigurationWizard:
                     if is_valid:
                         customizations.setdefault("firecrawl", {})["api_key"] = api_key
                         break
-                    else:
-                        self.console.print(f"[red]Invalid API key: {error}[/red]")
-                        if not questionary.confirm("Try again?", default=True).ask():
-                            break
+                    self.console.print(f"[red]Invalid API key: {error}[/red]")
+                    if not questionary.confirm("Try again?", default=True).ask():
+                        break
 
         return customizations
 
-    def _customize_database(self, template_data: dict[str, Any]) -> dict[str, Any]:
+    def _customize_database(self, _template_data: dict[str, Any]) -> dict[str, Any]:
         """Customize database connection settings."""
         customizations = {}
 
@@ -234,7 +262,7 @@ class ConfigurationWizard:
 
         return customizations
 
-    def _customize_performance(self, template_data: dict[str, Any]) -> dict[str, Any]:
+    def _customize_performance(self, _template_data: dict[str, Any]) -> dict[str, Any]:
         """Customize performance settings."""
         customizations = {}
 
@@ -257,8 +285,8 @@ class ConfigurationWizard:
 
         return customizations
 
-    def _customize_advanced(self, template_data: dict[str, Any]) -> dict[str, Any]:
-        """Customize advanced settings."""
+    def _customize_template(self, _template_data: dict[str, Any]) -> dict[str, Any]:
+        """Customize template settings."""
         customizations = {}
 
         # Debug mode
@@ -303,11 +331,11 @@ class ConfigurationWizard:
                     f"📄 Environment file created: [green]{env_path}[/green]"
                 )
 
-            return config_path
-
         except Exception as e:
             self.console.print(f"❌ Error saving configuration: [red]{e}[/red]")
             raise
+        else:
+            return config_path
 
     def run_setup(self) -> Path:
         """Run the complete modern template-driven setup wizard."""
@@ -332,9 +360,7 @@ class ConfigurationWizard:
                 self.selected_profile
             )
             if not template_name:
-                raise ValueError(
-                    f"No template found for profile '{self.selected_profile}'"
-                )
+                _abort_no_template(self.selected_profile)
 
             # Step 2: Template Customization
             self.customizations = self.customize_template(template_name)
@@ -358,7 +384,7 @@ class ConfigurationWizard:
                     default=False,
                 ).ask()
                 if not fix_choice:
-                    raise click.Abort("Setup cancelled due to validation errors")
+                    _abort_validation_errors()
 
             # Step 4: Save Configuration
             config_path = self.save_configuration(
@@ -447,7 +473,7 @@ class ConfigurationWizard:
 )
 @click.pass_context
 def setup(
-    ctx: click.Context, profile: str | None, output: Path | None, config_dir: Path
+    ctx: click.Context, profile: str | None, _output: Path | None, config_dir: Path
 ):
     """🧙 Modern template-driven configuration wizard.
 
@@ -478,10 +504,7 @@ def setup(
         if profile:
             available_profiles = wizard.profile_manager.list_profiles()
             if profile not in available_profiles:
-                console.print(
-                    f"[red]Profile '{profile}' not found. Available: {', '.join(available_profiles)}[/red]"
-                )
-                raise click.Abort()
+                _abort_profile_not_found(profile, available_profiles)
             wizard.selected_profile = profile
             console.print(f"[cyan]Using pre-selected profile: {profile}[/cyan]")
 
@@ -493,11 +516,9 @@ def setup(
         ).ask()
 
         if validate_choice:
-            try:
-                from .config import validate_config
-
+            if validate_config is not None:
                 ctx.invoke(validate_config, config_file=config_path)
-            except ImportError:
+            else:
                 # Fallback validation using our wizard validator
                 console.print(
                     "[yellow]Using wizard validation (config command not available)[/yellow]"

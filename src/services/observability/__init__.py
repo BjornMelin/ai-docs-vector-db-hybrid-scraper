@@ -1,6 +1,3 @@
-import typing
-
-
 """Comprehensive OpenTelemetry observability for AI/ML documentation system.
 
 This module provides enterprise-grade observability with advanced instrumentation,
@@ -120,6 +117,10 @@ __all__ = [
     # AI/ML tracking
     "AIOperationMetrics",
     "AIOperationTracker",
+    # Configuration instrumentation
+    "ConfigAttributes",
+    "ConfigOperationType",
+    "ConfigPerformanceMonitor",
     "ErrorCorrelationTracker",
     # Legacy compatibility
     "FastAPIObservabilityMiddleware",

@@ -5,7 +5,114 @@ service architecture while following OpenTelemetry best practices.
 """
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+
+# Optional OpenTelemetry imports - handled at runtime
+try:
+    from opentelemetry import metrics, trace
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+    from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+    OPENTELEMETRY_AVAILABLE = True
+except ImportError:
+    # Mock classes for when OpenTelemetry is not available
+    class OTLPSpanExporter:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class MeterProvider:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class PeriodicExportingMetricReader:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class Resource:
+        @staticmethod
+        def create(*args, **kwargs):
+            return None
+
+    class TracerProvider:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class BatchSpanProcessor:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class MockMetrics:
+        def set_meter_provider(self, *args, **kwargs):
+            pass
+
+    class MockTrace:
+        def set_tracer_provider(self, *args, **kwargs):
+            pass
+
+    metrics = MockMetrics()
+    trace = MockTrace()
+    OPENTELEMETRY_AVAILABLE = False
+
+# Additional OpenTelemetry imports - also optional
+try:
+    from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
+        OTLPMetricExporter,
+    )
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+except ImportError:
+
+    class OTLPMetricExporter:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class ConsoleSpanExporter:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class FastAPIInstrumentor:
+        @staticmethod
+        def instrument_app(*args, **kwargs):
+            pass
+
+
+# Additional instrumentation imports - also optional
+try:
+    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+    from opentelemetry.instrumentation.redis import RedisInstrumentor
+    from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+except ImportError:
+
+    class HTTPXClientInstrumentor:
+        @staticmethod
+        def instrument(*args, **kwargs):
+            pass
+
+    class RedisInstrumentor:
+        @staticmethod
+        def instrument(*args, **kwargs):
+            pass
+
+    class SQLAlchemyInstrumentor:
+        @staticmethod
+        def instrument(*args, **kwargs):
+            pass
+
+
+if TYPE_CHECKING:
+    from .config import ObservabilityConfig
+
+# Optional imports for OpenTelemetry config - handled at runtime
+try:
+    from .config import get_observability_config, get_resource_attributes
+except ImportError:
+    get_observability_config = None
+    get_resource_attributes = None
 
 
 logger = logging.getLogger(__name__)
@@ -26,12 +133,14 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
 
     Returns:
         True if initialization succeeded, False otherwise
+
     """
     global _tracer_provider, _meter_provider
 
     if config is None:
-        from .config import get_observability_config
-
+        if get_observability_config is None:
+            logger.error("Config system not available")
+            return False
         config = get_observability_config()
 
     if not config.enabled:
@@ -39,25 +148,17 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
         return False
 
     try:
-        # Import OpenTelemetry components
-        from opentelemetry import metrics, trace
-        from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
-            OTLPMetricExporter,
-        )
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
-            OTLPSpanExporter,
-        )
-        from opentelemetry.sdk.metrics import MeterProvider
-        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-        from opentelemetry.sdk.resources import Resource
-        from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-        from .config import get_resource_attributes
+        # Check for required OpenTelemetry components
+        if metrics is None or trace is None or OTLPMetricExporter is None:
+            logger.error("Required OpenTelemetry components not available")
+            return False
 
         logger.info("Initializing OpenTelemetry observability...")
 
         # Create resource with service metadata
+        if get_resource_attributes is None:
+            logger.error("Resource attributes function not available")
+            return False
         resource = Resource.create(get_resource_attributes(config))
 
         # Initialize tracing
@@ -83,10 +184,11 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
 
         # Add console exporter for development
         if config.console_exporter:
-            from opentelemetry.sdk.trace.export import ConsoleSpanExporter
-
-            console_processor = BatchSpanProcessor(ConsoleSpanExporter())
-            _tracer_provider.add_span_processor(console_processor)
+            if ConsoleSpanExporter is None:
+                logger.warning("ConsoleSpanExporter not available")
+            else:
+                console_processor = BatchSpanProcessor(ConsoleSpanExporter())
+                _tracer_provider.add_span_processor(console_processor)
 
         # Set global tracer provider
         trace.set_tracer_provider(_tracer_provider)
@@ -116,17 +218,17 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
             f"OpenTelemetry initialized successfully - "
             f"Service: {config.service_name}, "
             f"Endpoint: {config.otlp_endpoint}, "
-            f"Sample Rate: {config.trace_sample_rate}"
+            "Sample Rate"
         )
 
+    except ImportError:
+        logger.warning("OpenTelemetry packages not available")
+        return False
+    except Exception:
+        logger.exception("Failed to initialize OpenTelemetry")
+        return False
+    else:
         return True
-
-    except ImportError as e:
-        logger.warning(f"OpenTelemetry packages not available: {e}")
-        return False
-    except Exception as e:
-        logger.exception(f"Failed to initialize OpenTelemetry: {e}")
-        return False
 
 
 def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
@@ -134,52 +236,55 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
 
     Args:
         config: Observability configuration
+
     """
     try:
         # FastAPI instrumentation
         if config.instrument_fastapi:
-            try:
-                from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-
-                FastAPIInstrumentor().instrument()
-                logger.info("FastAPI auto-instrumentation enabled")
-            except ImportError:
+            if FastAPIInstrumentor is None:
                 logger.warning("FastAPI instrumentation not available")
+            else:
+                try:
+                    FastAPIInstrumentor().instrument()
+                    logger.info("FastAPI auto-instrumentation enabled")
+                except Exception:
+                    logger.warning("Failed to enable FastAPI instrumentation")
 
         # HTTP client instrumentation
         if config.instrument_httpx:
-            try:
-                from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
-
-                HTTPXClientInstrumentor().instrument()
-                logger.info("HTTPX client auto-instrumentation enabled")
-            except ImportError:
+            if HTTPXClientInstrumentor is None:
                 logger.warning("HTTPX instrumentation not available")
+            else:
+                try:
+                    HTTPXClientInstrumentor().instrument()
+                    logger.info("HTTPX client auto-instrumentation enabled")
+                except Exception:
+                    logger.warning("Failed to enable HTTPX instrumentation")
 
         # Redis instrumentation
         if config.instrument_redis:
-            try:
-                from opentelemetry.instrumentation.redis import RedisInstrumentor
-
-                RedisInstrumentor().instrument()
-                logger.info("Redis auto-instrumentation enabled")
-            except ImportError:
+            if RedisInstrumentor is None:
                 logger.warning("Redis instrumentation not available")
+            else:
+                try:
+                    RedisInstrumentor().instrument()
+                    logger.info("Redis auto-instrumentation enabled")
+                except Exception:
+                    logger.warning("Failed to enable Redis instrumentation")
 
         # SQLAlchemy instrumentation
         if config.instrument_sqlalchemy:
-            try:
-                from opentelemetry.instrumentation.sqlalchemy import (
-                    SQLAlchemyInstrumentor,
-                )
-
-                SQLAlchemyInstrumentor().instrument()
-                logger.info("SQLAlchemy auto-instrumentation enabled")
-            except ImportError:
+            if SQLAlchemyInstrumentor is None:
                 logger.warning("SQLAlchemy instrumentation not available")
+            else:
+                try:
+                    SQLAlchemyInstrumentor().instrument()
+                    logger.info("SQLAlchemy auto-instrumentation enabled")
+                except Exception:
+                    logger.warning("Failed to enable SQLAlchemy instrumentation")
 
-    except Exception as e:
-        logger.warning(f"Auto-instrumentation setup failed: {e}")
+    except Exception:
+        logger.warning("Auto-instrumentation setup failed")
 
 
 def shutdown_observability() -> None:
@@ -195,8 +300,8 @@ def shutdown_observability() -> None:
         try:
             logger.info("Shutting down OpenTelemetry tracer provider...")
             _tracer_provider.shutdown()
-        except Exception as e:
-            logger.exception(f"Error during tracer provider shutdown: {e}")
+        except Exception:
+            logger.exception("Error during tracer provider shutdown")
         finally:
             _tracer_provider = None
 
@@ -205,8 +310,8 @@ def shutdown_observability() -> None:
         try:
             logger.info("Shutting down OpenTelemetry meter provider...")
             _meter_provider.shutdown()
-        except Exception as e:
-            logger.exception(f"Error during meter provider shutdown: {e}")
+        except Exception:
+            logger.exception("Error during meter provider shutdown")
         finally:
             _meter_provider = None
 
@@ -218,5 +323,6 @@ def is_observability_enabled() -> bool:
 
     Returns:
         True if observability is enabled and initialized
+
     """
     return _tracer_provider is not None

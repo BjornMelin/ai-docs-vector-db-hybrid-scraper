@@ -5,11 +5,16 @@ stress conditions, including maximum throughput, connection limits, memory
 thresholds, and response time degradation points.
 """
 
+import random
 import statistics
 
 import pytest
 
 from tests.load.conftest import LoadTestConfig, LoadTestType
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
 
 
 @pytest.mark.stress
@@ -57,7 +62,7 @@ class TestBreakingPointAnalysis:
                     # Calculate key metrics
                     success_rate = (
                         result.metrics.successful_requests
-                        / max(result.metrics.total_requests, 1)
+                        / max(result.metrics._total_requests, 1)
                     ) * 100
                     actual_rps = result.metrics.throughput_rps
                     avg_response_time = (
@@ -73,7 +78,7 @@ class TestBreakingPointAnalysis:
                         "users": users,
                         "success_rate": success_rate,
                         "avg_response_time_ms": avg_response_time * 1000,
-                        "total_requests": result.metrics.total_requests,
+                        "_total_requests": result.metrics._total_requests,
                         "successful_requests": result.metrics.successful_requests,
                         "failed_requests": result.metrics.failed_requests,
                         "system_stable": success_rate >= 80.0
@@ -166,7 +171,7 @@ class TestBreakingPointAnalysis:
 
                     success_rate = (
                         result.metrics.successful_requests
-                        / max(result.metrics.total_requests, 1)
+                        / max(result.metrics._total_requests, 1)
                     ) * 100
                     avg_response_time = (
                         sum(result.metrics.response_times)
@@ -192,7 +197,7 @@ class TestBreakingPointAnalysis:
                         "avg_response_time_ms": avg_response_time * 1000,
                         "p95_response_time_ms": p95_response_time * 1000,
                         "p99_response_time_ms": p99_response_time * 1000,
-                        "total_requests": result.metrics.total_requests,
+                        "_total_requests": result.metrics._total_requests,
                         "peak_concurrent": result.metrics.peak_concurrent_users,
                         "system_stable": success_rate >= 75.0
                         and avg_response_time < 3.0,
@@ -336,7 +341,7 @@ class TestBreakingPointAnalysis:
 
                     success_rate = (
                         result.metrics.successful_requests
-                        / max(result.metrics.total_requests, 1)
+                        / max(result.metrics._total_requests, 1)
                     ) * 100
 
                     # Set baseline for comparison
@@ -363,7 +368,7 @@ class TestBreakingPointAnalysis:
                         "response_time_cv": cv,
                         "degradation_factor": degradation_factor,
                         "success_rate": success_rate,
-                        "total_requests": result.metrics.total_requests,
+                        "_total_requests": result.metrics._total_requests,
                         "acceptable_performance": avg_response_time < 2.0
                         and success_rate >= 90.0,
                     }
@@ -447,30 +452,25 @@ class TestBreakingPointAnalysis:
                 self.service = service
                 self.error_cascade_level = 0.0
 
-            async def error_prone_task(self, **kwargs):
+            async def error_prone_task(self, **_kwargs):
                 """Task that becomes more error-prone under load."""
                 # Error probability increases with load and cascade level
                 load_factor = min(1.0, self.service.request_count / 500.0)
                 base_error_rate = 0.02  # 2% base error rate
                 cascade_error_rate = self.error_cascade_level * 0.1
 
-                total_error_rate = min(
+                _total_error_rate = min(
                     0.8, base_error_rate + load_factor * 0.15 + cascade_error_rate
                 )
 
-                import random
-
-                if random.random() < total_error_rate:
+                if random.random() < _total_error_rate:
                     # Increase cascade level on error
-                    self.error_cascade_level = min(5.0, self.error_cascade_level + 0.1)
-                    raise Exception(
-                        f"Cascading error (cascade level: {self.error_cascade_level:.1f}, load: {load_factor:.2f})"
-                    )
-                else:
-                    # Decrease cascade level on success
-                    self.error_cascade_level = max(0.0, self.error_cascade_level - 0.05)
+                    msg = f"Cascading error (cascade level: {self.error_cascade_level:.1f}, load: {load_factor:.2f})"
+                    raise TestError(msg)
+                # Decrease cascade level on success
+                self.error_cascade_level = max(0.0, self.error_cascade_level - 0.05)
 
-                result = await self.service.process_request(**kwargs)
+                result = await self.service.process_request(**_kwargs)
                 result["cascade_level"] = self.error_cascade_level
                 result["load_factor"] = load_factor
                 return result
@@ -512,18 +512,18 @@ class TestBreakingPointAnalysis:
                     final_cascade = self.error_cascade_level
                     success_rate = (
                         result.metrics.successful_requests
-                        / max(result.metrics.total_requests, 1)
+                        / max(result.metrics._total_requests, 1)
                     ) * 100
                     error_rate = (
                         result.metrics.failed_requests
-                        / max(result.metrics.total_requests, 1)
+                        / max(result.metrics._total_requests, 1)
                     ) * 100
 
                     cascade_result = {
                         "level": level["name"],
                         "users": level["users"],
                         "rps": level["rps"],
-                        "total_requests": result.metrics.total_requests,
+                        "_total_requests": result.metrics._total_requests,
                         "success_rate": success_rate,
                         "error_rate": error_rate,
                         "initial_cascade_level": initial_cascade,
@@ -590,5 +590,6 @@ class TestBreakingPointAnalysis:
 
         # Validate that we detected meaningful patterns
         assert (
-            len([r for r in analysis["cascade_results"] if r["total_requests"] > 0]) > 0
+            len([r for r in analysis["cascade_results"] if r["_total_requests"] > 0])
+            > 0
         ), "No meaningful test results"

@@ -113,6 +113,7 @@ class HyDEConfig(BaseModel):
 
         Returns:
             HyDEConfig instance with values from unified config
+
         """
         return cls(
             enable_hyde=unified_hyde_config.enable_hyde,

@@ -1,8 +1,8 @@
 import typing
 """DragonflyDB cache implementation with advanced performance optimizations."""
 
-import json
-import logging
+import json  # noqa: PLC0415
+import logging  # noqa: PLC0415
 from typing import Any
 
 import redis.asyncio as redis
@@ -91,7 +91,7 @@ class DragonflyCache(CacheInterface[Any]):
             try:
                 self.metrics_registry = get_metrics_registry()
                 logger.debug("DragonflyDB cache monitoring enabled")
-            except Exception as e:
+            except Exception:
                 logger.debug(f"DragonflyDB cache monitoring disabled: {e}")
 
     @property

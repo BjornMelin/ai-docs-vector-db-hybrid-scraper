@@ -9,9 +9,9 @@ from urllib.parse import urlparse
 from pydantic import ValidationError
 
 from src.config import PlaywrightConfig
+from src.services.base import BaseService
+from src.services.errors import CrawlServiceError
 
-from ..base import BaseService
-from ..errors import CrawlServiceError
 from .action_schemas import validate_actions
 from .anti_detection import EnhancedAntiDetection
 
@@ -44,6 +44,7 @@ class PlaywrightAdapter(BaseService):
         Args:
             config: Playwright configuration model
             enable_anti_detection: Whether to enable enhanced anti-detection features
+
         """
         super().__init__(config)
         self.config = config
@@ -68,9 +69,8 @@ class PlaywrightAdapter(BaseService):
     async def initialize(self) -> None:
         """Initialize Playwright browser."""
         if not self._available:
-            raise CrawlServiceError(
-                "Playwright not available - please install playwright package"
-            )
+            msg = "Playwright not available - please install playwright package"
+            raise CrawlServiceError(msg)
 
         if self._initialized:
             return
@@ -111,7 +111,8 @@ class PlaywrightAdapter(BaseService):
             )
 
         except Exception as e:
-            raise CrawlServiceError(f"Failed to initialize Playwright: {e}") from e
+            msg = "Failed to initialize Playwright"
+            raise CrawlServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup Playwright resources."""
@@ -127,14 +128,15 @@ class PlaywrightAdapter(BaseService):
             self._initialized = False
             self.logger.info("Playwright adapter cleaned up")
 
-        except Exception as e:
-            self.logger.exception(f"Error cleaning up Playwright: {e}")
+        except Exception:
+            self.logger.exception("Error cleaning up Playwright")
 
     async def scrape(
         self,
         url: str,
         actions: list[dict],
-        timeout: int = 30000,
+        *,
+        timeout: int = 30000,  # noqa: ASYNC109
     ) -> dict[str, Any]:
         """Scrape with direct Playwright control.
 
@@ -145,12 +147,15 @@ class PlaywrightAdapter(BaseService):
 
         Returns:
             Scraping result with standardized format
+
         """
         if not self._available:
-            raise CrawlServiceError("Playwright not available")
+            msg = "Playwright not available"
+            raise CrawlServiceError(msg)
 
         if not self._initialized:
-            raise CrawlServiceError("Adapter not initialized")
+            msg = "Adapter not initialized"
+            raise CrawlServiceError(msg)
 
         start_time = time.time()
         context: Any | None = None
@@ -200,7 +205,7 @@ class PlaywrightAdapter(BaseService):
         return site_profile, stealth_config
 
     async def _create_browser_context_and_page(
-        self, site_profile: str, stealth_config: Any, timeout: int
+        self, _site_profile: str, stealth_config: Any, _timeout: int
     ) -> tuple[Any, Any]:
         """Create browser context and page with appropriate configuration."""
         # Create browser context with enhanced settings
@@ -215,7 +220,7 @@ class PlaywrightAdapter(BaseService):
                 extra_http_headers=stealth_config.headers,
                 device_scale_factor=stealth_config.viewport.device_scale_factor,
             )
-            self.logger.debug(f"Using anti-detection profile: {site_profile}")
+            self.logger.debug("Using anti-detection profile")
         else:
             # Use original configuration
             context = await self._browser.new_context(
@@ -231,13 +236,19 @@ class PlaywrightAdapter(BaseService):
         page = await context.new_page()
 
         # Set up event listeners for debugging
-        page.on("console", lambda msg: self.logger.debug(f"Console: {msg.text}"))
-        page.on("pageerror", lambda error: self.logger.warning(f"Page error: {error}"))
+        page.on("console", lambda _msg: self.logger.debug("Console"))
+        page.on("pageerror", lambda _error: self.logger.warning("Page error"))
 
         return context, page
 
     async def _navigate_and_execute_actions(
-        self, page: Any, url: str, actions: list[dict], timeout: int, site_profile: str
+        self,
+        page: Any,
+        url: str,
+        actions: list[dict],
+        *,
+        timeout: int,  # noqa: ASYNC109
+        site_profile: str,
     ) -> list[dict[str, Any]]:
         """Navigate to URL and execute all actions."""
         # Inject stealth JavaScript patterns for enhanced anti-detection
@@ -259,7 +270,8 @@ class PlaywrightAdapter(BaseService):
         try:
             validated_actions = validate_actions(actions)
         except ValidationError as e:
-            raise CrawlServiceError(f"Invalid actions: {e}") from e
+            msg = "Invalid actions"
+            raise CrawlServiceError(msg) from e
 
         # Execute custom actions
         action_results = []
@@ -268,7 +280,9 @@ class PlaywrightAdapter(BaseService):
                 result = await self._execute_action(page, action, i)
                 action_results.append(result)
             except Exception as e:
-                self.logger.warning(f"Action {i} failed: {e}")
+                self.logger.warning(
+                    f"Action {i} failed"
+                )  # TODO: Convert f-string to logging format
                 action_results.append(
                     {
                         "action_index": i,
@@ -340,7 +354,7 @@ class PlaywrightAdapter(BaseService):
     ) -> dict[str, Any]:
         """Build error result for failed scraping."""
         processing_time = (time.time() - start_time) * 1000
-        self.logger.error(f"Playwright error for {url}: {error}")
+        self.logger.error("Playwright error for {url}")
 
         # Record failed attempt for anti-detection monitoring
         if self.anti_detection:
@@ -373,8 +387,8 @@ class PlaywrightAdapter(BaseService):
         if context:
             try:
                 await context.close()
-            except Exception as e:
-                self.logger.warning(f"Failed to close context: {e}")
+            except Exception:
+                self.logger.warning("Failed to close context")
 
     async def _inject_stealth_scripts(self, page: Any, stealth_config: Any) -> None:
         """Inject JavaScript patterns to avoid detection.
@@ -382,6 +396,7 @@ class PlaywrightAdapter(BaseService):
         Args:
             page: Playwright page instance
             stealth_config: Browser stealth configuration
+
         """
         try:
             # Basic stealth script to hide automation indicators
@@ -477,8 +492,8 @@ class PlaywrightAdapter(BaseService):
             await page.add_init_script(stealth_script)
             self.logger.debug("Stealth JavaScript patterns injected successfully")
 
-        except Exception as e:
-            self.logger.warning(f"Failed to inject stealth scripts: {e}")
+        except Exception:
+            self.logger.warning("Failed to inject stealth scripts")
 
     async def _execute_action(
         self, page: Any, action: Any, index: int
@@ -492,6 +507,7 @@ class PlaywrightAdapter(BaseService):
 
         Returns:
             Action result
+
         """
         action_type = action.type
         start_time = time.time()
@@ -535,7 +551,8 @@ class PlaywrightAdapter(BaseService):
             await self._execute_drag_drop_action(page, action)
 
         else:
-            raise ValueError(f"Unknown action type: {action_type}")
+            msg = "Unknown action type"
+            raise ValueError(msg)
 
         return None  # No custom result
 
@@ -643,6 +660,7 @@ class PlaywrightAdapter(BaseService):
 
         Returns:
             Content dictionary with text and HTML
+
         """
         # Try multiple content selectors in order of preference
         content_selectors = [
@@ -667,8 +685,8 @@ class PlaywrightAdapter(BaseService):
                     if text and len(text.strip()) > 50:
                         return {"text": text, "html": html}
 
-            except Exception as e:
-                self.logger.debug(f"Failed to extract with selector {selector}: {e}")
+            except Exception:
+                self.logger.debug("Failed to extract with selector {selector}")
                 continue
 
         # Fallback to full body
@@ -677,8 +695,8 @@ class PlaywrightAdapter(BaseService):
                 "text": await page.inner_text("body"),
                 "html": await page.inner_html("body"),
             }
-        except Exception as e:
-            self.logger.warning(f"Failed to extract body content: {e}")
+        except Exception:
+            self.logger.warning("Failed to extract body content")
             return {"text": "", "html": ""}
 
     async def _extract_metadata(self, page: Any) -> dict[str, Any]:
@@ -689,6 +707,7 @@ class PlaywrightAdapter(BaseService):
 
         Returns:
             Metadata dictionary
+
         """
         try:
             metadata = await page.evaluate("""
@@ -733,8 +752,8 @@ class PlaywrightAdapter(BaseService):
 
             return metadata
 
-        except Exception as e:
-            self.logger.warning(f"Failed to extract metadata: {e}")
+        except Exception:
+            self.logger.warning("Failed to extract metadata")
             return {
                 "title": await page.title() if page else "",
                 "description": None,
@@ -750,6 +769,7 @@ class PlaywrightAdapter(BaseService):
 
         Returns:
             Performance metrics dictionary
+
         """
         try:
             metrics = await page.evaluate("""
@@ -772,8 +792,8 @@ class PlaywrightAdapter(BaseService):
 
             return metrics
 
-        except Exception as e:
-            self.logger.debug(f"Failed to get performance metrics: {e}")
+        except Exception:
+            self.logger.debug("Failed to get performance metrics")
             return {}
 
     def get_capabilities(self) -> dict[str, Any]:
@@ -781,6 +801,7 @@ class PlaywrightAdapter(BaseService):
 
         Returns:
             Capabilities dictionary
+
         """
         return {
             "name": "playwright",
@@ -825,6 +846,7 @@ class PlaywrightAdapter(BaseService):
 
         Returns:
             Health status dictionary
+
         """
         if not self._available:
             return {
@@ -879,11 +901,11 @@ class PlaywrightAdapter(BaseService):
                 "response_time_ms": 15000,
                 "available": True,
             }
-        except Exception as e:
+        except Exception:
             return {
                 "healthy": False,
                 "status": "error",
-                "message": f"Health check failed: {e}",
+                "message": "Health check failed",
                 "available": True,
             }
 
@@ -897,6 +919,7 @@ class PlaywrightAdapter(BaseService):
 
         Returns:
             Test results
+
         """
         if not self._available or not self._initialized:
             return {

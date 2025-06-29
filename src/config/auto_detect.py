@@ -14,13 +14,12 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
-from urllib.parse import urlparse
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, Field, computed_field
 
-from src.config.enums import DeploymentTier, Environment
+from src.config.enums import Environment
 
 
 # Delayed import to avoid circular dependency
@@ -41,7 +40,7 @@ class DetectedEnvironment(BaseModel):
     container_runtime: str | None = Field(None, description="Container runtime")
     detection_confidence: float = Field(description="Confidence score 0.0-1.0")
     detection_time_ms: float = Field(description="Time taken to detect")
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
 
@@ -59,12 +58,12 @@ class DetectedService(BaseModel):
     supports_pooling: bool = Field(
         default=False, description="Supports connection pooling"
     )
-    pool_config: Dict[str, Any] = Field(
+    pool_config: dict[str, Any] = Field(
         default_factory=dict, description="Pool configuration"
     )
     health_check_url: str | None = Field(None, description="Health check endpoint")
     detection_time_ms: float = Field(description="Time taken to detect")
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
 
@@ -127,7 +126,7 @@ class AutoDetectedServices(BaseModel):
     """Container for all auto-detected services and environment."""
 
     environment: DetectedEnvironment = Field(description="Detected environment")
-    services: List[DetectedService] = Field(
+    services: list[DetectedService] = Field(
         default_factory=list, description="Detected services"
     )
     detection_started_at: float = Field(
@@ -139,7 +138,7 @@ class AutoDetectedServices(BaseModel):
     total_detection_time_ms: float | None = Field(
         None, description="Total detection time"
     )
-    errors: List[str] = Field(default_factory=list, description="Detection errors")
+    errors: list[str] = Field(default_factory=list, description="Detection errors")
 
     @computed_field
     @property
@@ -240,10 +239,8 @@ class EnvironmentDetector:
                 f"in {detection_time_ms:.1f}ms"
             )
 
-            return detected_env
-
         except Exception as e:
-            self.logger.exception(f"Environment detection failed: {e}")
+            self.logger.exception("Environment detection failed")
             # Return default environment on failure
             return DetectedEnvironment(
                 environment_type=Environment.DEVELOPMENT,
@@ -253,6 +250,8 @@ class EnvironmentDetector:
                 detection_time_ms=(time.time() - start_time) * 1000,
                 metadata={"error": str(e)},
             )
+        else:
+            return detected_env
 
     def _is_cache_valid(self) -> bool:
         """Check if cached result is still valid."""
@@ -271,23 +270,25 @@ class EnvironmentDetector:
             # Check multiple container indicators
             indicators = [
                 # Docker
-                os.path.exists("/.dockerenv"),
+                Path("/.dockerenv").exists(),
                 # Generic container
-                os.path.exists("/proc/1/cgroup") and self._check_cgroup_container(),
+                Path("/proc/1/cgroup").exists() and self._check_cgroup_container(),
                 # Kubernetes
-                os.path.exists("/var/run/secrets/kubernetes.io"),
+                Path("/var/run/secrets/kubernetes.io").exists(),
             ]
 
             return any(indicators)
 
         except Exception as e:
-            self.logger.debug(f"Container detection failed: {e}")
+            self.logger.debug(
+                f"Container detection failed: {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
     def _check_cgroup_container(self) -> bool:
         """Check cgroup for container indicators."""
         try:
-            with open("/proc/1/cgroup") as f:
+            with Path("/proc/1/cgroup").open() as f:
                 content = f.read()
                 container_patterns = ["docker", "containerd", "lxc", "kubepods"]
                 return any(pattern in content for pattern in container_patterns)
@@ -302,7 +303,7 @@ class EnvironmentDetector:
         try:
             # Check Kubernetes service account
             k8s_indicators = [
-                os.path.exists("/var/run/secrets/kubernetes.io/serviceaccount"),
+                Path("/var/run/secrets/kubernetes.io/serviceaccount").exists(),
                 os.getenv("KUBERNETES_SERVICE_HOST") is not None,
                 os.getenv("KUBERNETES_SERVICE_PORT") is not None,
             ]
@@ -310,10 +311,12 @@ class EnvironmentDetector:
             return any(k8s_indicators)
 
         except Exception as e:
-            self.logger.debug(f"Kubernetes detection failed: {e}")
+            self.logger.debug(
+                f"Kubernetes detection failed: {e}"
+            )  # TODO: Convert f-string to logging format
             return False
 
-    async def _detect_cloud_provider(self) -> Dict[str, Any]:
+    async def _detect_cloud_provider(self) -> dict[str, Any]:
         """Detect cloud provider via metadata APIs."""
         if not self.config.cloud_detection_enabled:
             return {}
@@ -342,7 +345,7 @@ class EnvironmentDetector:
 
         return cloud_info
 
-    async def _detect_aws(self, client: httpx.AsyncClient) -> Dict[str, Any]:
+    async def _detect_aws(self, client: httpx.AsyncClient) -> dict[str, Any]:
         """Detect AWS via IMDSv2."""
         try:
             # Get IMDSv2 token first
@@ -371,11 +374,13 @@ class EnvironmentDetector:
                 }
 
         except Exception as e:
-            self.logger.debug(f"AWS detection failed: {e}")
+            self.logger.debug(
+                f"AWS detection failed: {e}"
+            )  # TODO: Convert f-string to logging format
 
         return {}
 
-    async def _detect_gcp(self, client: httpx.AsyncClient) -> Dict[str, Any]:
+    async def _detect_gcp(self, client: httpx.AsyncClient) -> dict[str, Any]:
         """Detect GCP via metadata API."""
         try:
             response = await client.get(
@@ -395,11 +400,13 @@ class EnvironmentDetector:
                 }
 
         except Exception as e:
-            self.logger.debug(f"GCP detection failed: {e}")
+            self.logger.debug(
+                f"GCP detection failed: {e}"
+            )  # TODO: Convert f-string to logging format
 
         return {}
 
-    async def _detect_azure(self, client: httpx.AsyncClient) -> Dict[str, Any]:
+    async def _detect_azure(self, client: httpx.AsyncClient) -> dict[str, Any]:
         """Detect Azure via IMDS."""
         try:
             response = await client.get(
@@ -412,25 +419,26 @@ class EnvironmentDetector:
                 return {"provider": "azure", "region": response.text, "runtime": "vm"}
 
         except Exception as e:
-            self.logger.debug(f"Azure detection failed: {e}")
+            self.logger.debug(
+                f"Azure detection failed: {e}"
+            )  # TODO: Convert f-string to logging format
 
         return {}
 
     def _determine_environment_type(
-        self, is_containerized: bool, is_kubernetes: bool, cloud_info: Dict[str, Any]
+        self, is_containerized: bool, is_kubernetes: bool, cloud_info: dict[str, Any]
     ) -> Environment:
         """Determine environment type based on detection results."""
         if cloud_info.get("provider"):
             return Environment.PRODUCTION
-        elif is_kubernetes:
+        if is_kubernetes:
             return Environment.STAGING
-        elif is_containerized:
+        if is_containerized:
             return Environment.TESTING
-        else:
-            return Environment.DEVELOPMENT
+        return Environment.DEVELOPMENT
 
     def _calculate_confidence(
-        self, is_containerized: bool, is_kubernetes: bool, cloud_info: Dict[str, Any]
+        self, is_containerized: bool, is_kubernetes: bool, cloud_info: dict[str, Any]
     ) -> float:
         """Calculate confidence score based on detection indicators."""
         confidence = 0.0

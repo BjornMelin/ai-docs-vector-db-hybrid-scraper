@@ -8,7 +8,9 @@ import base64
 import hashlib
 import os
 import secrets
+import string
 import time
+from collections import Counter
 from typing import Any
 
 import pytest
@@ -128,7 +130,8 @@ class TestDataProtection:
                 elif algorithm == "AES-128":
                     key_material = os.urandom(16)  # 128 bits
                 else:
-                    raise ValueError(f"Unsupported algorithm: {algorithm}")
+                    msg = f"Unsupported algorithm: {algorithm}"
+                    raise ValueError(msg)
 
                 version = self.key_versions.get(key_id, 0) + 1
                 self.key_versions[key_id] = version
@@ -219,7 +222,7 @@ class TestDataProtection:
 
     def test_password_hashing_security(self, encryption_service):
         """Test password hashing security."""
-        password = "strong_password_123!"
+        password = os.getenv("TEST_PASSWORD", "test_strong_password_123!")
 
         # Hash password
         result = encryption_service.hash_password(password)
@@ -263,7 +266,6 @@ class TestDataProtection:
         assert len(token_custom) >= 64
 
         # Tokens should be URL-safe
-        import string
 
         allowed_chars = string.ascii_letters + string.digits + "-_"
         assert all(c in allowed_chars for c in token1)
@@ -271,7 +273,7 @@ class TestDataProtection:
 
     def test_constant_time_comparison(self, encryption_service):
         """Test constant time comparison for timing attack prevention."""
-        secret = "secret_token_123"
+        secret = os.getenv("TEST_SECRET", "test_secret_token_123")
 
         # Valid comparison
         assert encryption_service.constant_time_compare(secret, secret) is True
@@ -285,7 +287,6 @@ class TestDataProtection:
         assert encryption_service.constant_time_compare(secret, "") is False
 
         # Test timing attack resistance (simplified test)
-        import time
 
         # Compare similar length strings
         start_time = time.perf_counter()
@@ -344,7 +345,7 @@ class TestDataProtection:
         assert current_key["version"] == 2
         assert current_key["key_material"] == key2["key_material"]
 
-    def test_data_at_rest_encryption(self, encryption_service, key_management_service):
+    def test_data_at_rest_encryption(self, _encryption_service, key_management_service):
         """Test data at rest encryption."""
         # Simulate database encryption
         sensitive_data = {
@@ -522,9 +523,9 @@ class TestDataProtection:
             """Check if algorithm is approved for use."""
             if category == "symmetric":
                 return algorithm in approved_symmetric
-            elif category == "asymmetric":
+            if category == "asymmetric":
                 return algorithm in approved_asymmetric
-            elif category == "hashing":
+            if category == "hashing":
                 return algorithm in approved_hashing
             return False
 
@@ -570,7 +571,6 @@ class TestDataProtection:
         assert unique_values > 200  # Should have good variety
 
         # Check that no single value dominates
-        from collections import Counter
 
         value_counts = Counter(random_values)
         max_count = max(value_counts.values())
@@ -579,7 +579,9 @@ class TestDataProtection:
     def test_side_channel_attack_resistance(self, encryption_service):
         """Test resistance to side-channel attacks."""
         # Test timing attack resistance in password verification
-        correct_password = "correct_password_123"
+        correct_password = os.getenv(
+            "TEST_CORRECT_PASSWORD", "test_correct_password_123"
+        )
         password_hash = encryption_service.hash_password(correct_password)
 
         # Test with different wrong passwords of varying lengths
@@ -702,7 +704,7 @@ class TestDataProtection:
                 self.recovery_log = []
 
             def create_backup(
-                self, keys: list[dict[str, Any]], backup_password: str
+                self, keys: list[dict[str, Any]], _backup_password: str
             ) -> str:
                 """Create encrypted backup of keys."""
                 # In real implementation, this would:
@@ -725,11 +727,12 @@ class TestDataProtection:
                 return backup_id
 
             def restore_backup(
-                self, backup_id: str, backup_password: str
+                self, backup_id: str, _backup_password: str
             ) -> list[dict[str, Any]]:
                 """Restore keys from backup."""
                 if backup_id not in self.backup_storage:
-                    raise ValueError("Backup not found")
+                    msg = "Backup not found"
+                    raise ValueError(msg)
 
                 backup_data = self.backup_storage[backup_id]
 
@@ -738,7 +741,8 @@ class TestDataProtection:
                     str(backup_data["keys"]).encode()
                 ).hexdigest()
                 if current_hash != backup_data["integrity_hash"]:
-                    raise ValueError("Backup integrity check failed")
+                    msg = "Backup integrity check failed"
+                    raise ValueError(msg)
 
                 # Log recovery
                 self.recovery_log.append(
@@ -754,7 +758,9 @@ class TestDataProtection:
         backup_service = KeyBackupService()
 
         # Create backup
-        backup_password = "strong_backup_password_456!"
+        backup_password = os.getenv(
+            "TEST_BACKUP_PASSWORD", "test_strong_backup_password_456!"
+        )
         backup_id = backup_service.create_backup(keys_to_backup, backup_password)
 
         assert backup_id is not None

@@ -244,8 +244,8 @@ def memory_profiler():
             )
 
             if growth_trend:
-                total_growth = recent_snapshots[-1].rss_mb - recent_snapshots[0].rss_mb
-                return total_growth > threshold_mb
+                _total_growth = recent_snapshots[-1].rss_mb - recent_snapshots[0].rss_mb
+                return _total_growth > threshold_mb
 
             return False
 
@@ -274,7 +274,8 @@ def performance_timer():
         def stop(self, name: str) -> float:
             """Stop timing and return duration in seconds."""
             if name not in self.active_timers:
-                raise ValueError(f"Timer '{name}' was not started")
+                msg = f"Timer '{name}' was not started"
+                raise ValueError(msg)
 
             start_time = self.active_timers.pop(name)
             duration = time.perf_counter() - start_time
@@ -293,7 +294,7 @@ def performance_timer():
             durations = self.timings[name]
             return {
                 "count": len(durations),
-                "total": sum(durations),
+                "_total": sum(durations),
                 "average": sum(durations) / len(durations),
                 "min": min(durations),
                 "max": max(durations),
@@ -411,7 +412,7 @@ def database_performance_monitor():
                 return {"error": "No successful queries recorded"}
 
             return {
-                "total_queries": len(timings),
+                "_total_queries": len(timings),
                 "successful_queries": len(successful_timings),
                 "average_time": sum(successful_timings) / len(successful_timings),
                 "min_time": min(successful_timings),
@@ -469,8 +470,6 @@ def network_latency_monitor():
                     }
                 )
 
-                return latency
-
             except Exception as e:
                 latency = time.perf_counter() - start_time
 
@@ -487,6 +486,8 @@ def network_latency_monitor():
                 )
 
                 raise
+            else:
+                return latency
 
         def get_latency_stats(self, endpoint: str) -> dict[str, Any]:
             """Get latency statistics for an endpoint."""
@@ -502,7 +503,7 @@ def network_latency_monitor():
             latencies = [m["latency"] for m in successful_measurements]
 
             return {
-                "total_requests": len(measurements),
+                "_total_requests": len(measurements),
                 "successful_requests": len(successful_measurements),
                 "average_latency": sum(latencies) / len(latencies),
                 "min_latency": min(latencies),
@@ -567,7 +568,7 @@ def resource_limit_monitor():
                 "cpu_time": {
                     "user_time": cpu_times.user,
                     "system_time": cpu_times.system,
-                    "total_time": cpu_times.user + cpu_times.system,
+                    "_total_time": cpu_times.user + cpu_times.system,
                 },
             }
 
@@ -601,7 +602,7 @@ async def performance_test_session():
     # Cleanup and garbage collection
     gc.collect()
     session_data["end_time"] = time.time()
-    session_data["total_duration"] = (
+    session_data["_total_duration"] = (
         session_data["end_time"] - session_data["start_time"]
     )
 
@@ -634,6 +635,139 @@ def mock_high_performance_service():
     return service
 
 
+# Additional fixtures for performance optimization testing
+
+
+@pytest.fixture
+def mock_search_manager():
+    """Mock search manager for performance testing."""
+    search_manager = AsyncMock()
+
+    async def mock_search(query: str):
+        """Mock search implementation with realistic timing."""
+        import random
+
+        # Simulate realistic search latency (20-80ms)
+        await asyncio.sleep(random.uniform(0.02, 0.08))
+
+        return {
+            "query": query,
+            "results": [
+                {
+                    "id": f"doc_{i}",
+                    "score": 0.9 - i * 0.1,
+                    "content": f"Result {i} for {query}",
+                }
+                for i in range(5)
+            ],
+            "total_time": random.uniform(0.02, 0.08),
+        }
+
+    search_manager.search = mock_search
+    return search_manager
+
+
+@pytest.fixture
+def mock_qdrant_client():
+    """Mock Qdrant client for performance testing."""
+    from unittest.mock import MagicMock
+
+    client = AsyncMock()
+
+    # Mock collection creation
+    async def mock_create_collection(*args, **kwargs):
+        await asyncio.sleep(0.01)  # Simulate creation time
+        return True
+
+    # Mock search operations
+    async def mock_search(*args, **kwargs):
+        import random
+
+        await asyncio.sleep(random.uniform(0.01, 0.05))  # Simulate search time
+        return [
+            {
+                "id": f"point_{i}",
+                "score": 0.9 - i * 0.1,
+                "payload": {"content": f"content_{i}"},
+            }
+            for i in range(10)
+        ]
+
+    # Mock collection info
+    async def mock_get_collection(collection_name):
+        return MagicMock(
+            config=MagicMock(
+                params=MagicMock(
+                    vectors=MagicMock(
+                        size=384,
+                        distance=MagicMock(value="Cosine"),
+                        quantization_config=MagicMock(),  # Simulates quantization enabled
+                        hnsw_config=MagicMock(m=32, ef_construct=200),
+                    )
+                )
+            ),
+            vectors_count=1000,
+            indexed_vectors_count=1000,
+            optimizer_status=MagicMock(status="green"),
+        )
+
+    # Mock collections list
+    async def mock_get_collections():
+        return MagicMock(collections=[MagicMock(name="test_collection")])
+
+    client.create_collection = mock_create_collection
+    client.search = mock_search
+    client.get_collection = mock_get_collection
+    client.get_collections = mock_get_collections
+
+    return client
+
+
+@pytest.fixture
+def redis_url():
+    """Redis URL for testing (uses fakeredis if Redis not available)."""
+    import os
+
+    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+    # Check if Redis is available, otherwise use fakeredis
+    try:
+        import redis
+
+        client = redis.from_url(redis_url)
+        client.ping()
+        return redis_url
+    except Exception:
+        # Fall back to fakeredis for testing
+        return "redis://fake:6379/0"
+
+
+@pytest.fixture
+def performance_test_vectors():
+    """Generate test vectors for performance testing."""
+    import numpy as np
+
+    # Generate 100 test vectors of dimension 384
+    return [np.random.random(384).tolist() for _ in range(100)]
+
+
+@pytest.fixture
+def sample_search_queries():
+    """Sample search queries for performance testing."""
+    return [
+        "python async programming",
+        "machine learning algorithms",
+        "web scraping techniques",
+        "database optimization",
+        "API design patterns",
+        "cloud computing architecture",
+        "data structures and algorithms",
+        "software engineering best practices",
+        "performance optimization techniques",
+        "security vulnerability assessment",
+    ]
+
+
 # Pytest markers for performance test categorization
 def pytest_configure(config):
     """Configure performance testing markers."""
@@ -648,3 +782,4 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "throughput: mark test as throughput test")
     config.addinivalue_line("markers", "load: mark test as load test")
     config.addinivalue_line("markers", "stress: mark test as stress test")
+    config.addinivalue_line("markers", "benchmark: mark test as benchmark test")

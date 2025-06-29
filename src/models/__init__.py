@@ -51,7 +51,7 @@ class SmartSelectionConfig:
     """Legacy compatibility - removed during config simplification."""
     pass
 from .api_contracts import (
-    AdvancedSearchRequest,
+    SearchRequest,
     AnalyticsRequest,
     AnalyticsResponse,
     BulkDocumentRequest,
@@ -118,10 +118,9 @@ from .vector_search import (
     AdaptiveSearchParams,
     CollectionStats,
     ContentTypeSearchCriteria,
-    EnhancedFilteredSearchRequest,
-    EnhancedSearchResponse,
-    EnhancedSearchResult,
     FilteredSearchRequest,
+    FilteredSearchResponse,
+    FilteredSearchResult,
     FusionConfig,
     HybridSearchRequest,
     HyDESearchRequest,
@@ -148,7 +147,7 @@ __all__ = [
     # Vector Search
     "AdaptiveSearchParams",
     # API Contracts
-    "AdvancedSearchRequest",
+    "SearchRequest",
     "AnalyticsRequest",
     "AnalyticsResponse",
     "BulkDocumentRequest",
@@ -179,12 +178,11 @@ __all__ = [
     "DocumentResponse",
     "DocumentationSite",
     "EmbeddingConfig",
-    "EnhancedFilteredSearchRequest",
-    "EnhancedSearchResponse",
-    "EnhancedSearchResult",
+    "FilteredSearchRequest",
+    "FilteredSearchResponse",
+    "FilteredSearchResult",
     "ErrorResponse",
     "FastEmbedConfig",
-    "FilteredSearchRequest",
     "FirecrawlConfig",
     "FusionConfig",
     "HNSWConfig",

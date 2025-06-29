@@ -3,6 +3,7 @@
 Tests environment variable loading, file loading, and complex integration scenarios.
 """
 
+import json
 import os
 import tempfile
 from pathlib import Path
@@ -211,8 +212,6 @@ class TestConfigurationFileLoading:
         }
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            import json
-
             json.dump(config_data, f, indent=2)
             json_file = f.name
 
@@ -240,7 +239,7 @@ class TestConfigurationFileLoading:
             assert config.documentation_sites[1].max_pages == 200
 
         finally:
-            os.unlink(json_file)
+            Path(json_file).unlink()
 
     def test_yaml_file_loading_comprehensive(self):
         """Test comprehensive YAML file loading."""
@@ -298,7 +297,7 @@ class TestConfigurationFileLoading:
             assert config.performance.max_retries == 5
 
         finally:
-            os.unlink(yaml_file)
+            Path(yaml_file).unlink()
 
     def test_toml_file_loading(self):
         """Test TOML file loading."""
@@ -338,7 +337,7 @@ class TestConfigurationFileLoading:
             assert config.chunking.chunk_size == 1600
 
         finally:
-            os.unlink(toml_file)
+            Path(toml_file).unlink()
 
     def test_file_loading_with_validation_errors(self):
         """Test file loading with validation errors."""
@@ -348,8 +347,6 @@ class TestConfigurationFileLoading:
         }
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            import json
-
             json.dump(invalid_config, f)
             json_file = f.name
 
@@ -357,7 +354,7 @@ class TestConfigurationFileLoading:
             with pytest.raises(ValueError, match="OpenAI API key required"):
                 Config.load_from_file(json_file)
         finally:
-            os.unlink(json_file)
+            Path(json_file).unlink()
 
 
 class TestDirectoryCreation:

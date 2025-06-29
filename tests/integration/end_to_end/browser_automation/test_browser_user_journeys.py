@@ -5,9 +5,13 @@ user workflows through real browser interactions using Playwright.
 """
 
 import asyncio
+import logging
 import time
 
 import pytest
+
+
+logger = logging.getLogger(__name__)
 
 
 try:
@@ -142,7 +146,11 @@ class TestBrowserUserJourneys:
                     )
                     if search_element:
                         break
-                except:
+                except Exception as e:
+                    # Try next selector pattern
+                    logger.debug(
+                        f"Selector pattern failed, trying next: {e}"
+                    )  # TODO: Convert f-string to logging format
                     continue
 
             # If no search element found, create a simulated search scenario
@@ -235,12 +243,12 @@ class TestBrowserUserJourneys:
             raise
 
         finally:
-            total_duration = time.perf_counter() - start_time
+            _total_duration = time.perf_counter() - start_time
 
             # Store journey results
             journey_result = {
                 "journey_name": "documentation_discovery",
-                "total_duration_s": total_duration,
+                "_total_duration_s": _total_duration,
                 "steps": journey_steps,
                 "success": all(step.get("success", False) for step in journey_steps),
                 "steps_completed": len(
@@ -259,7 +267,7 @@ class TestBrowserUserJourneys:
             assert journey_result["steps_completed"] >= 3, (
                 "Not enough steps completed successfully"
             )
-            assert total_duration < 30, f"Journey took too long: {total_duration}s"
+            assert _total_duration < 30, f"Journey took too long: {_total_duration}s"
 
     async def test_multi_page_crawling_journey(
         self,
@@ -330,7 +338,7 @@ class TestBrowserUserJourneys:
                     }
                 )
 
-        total_duration = time.perf_counter() - start_time
+        _total_duration = time.perf_counter() - start_time
 
         # Analyze crawling results
         successful_crawls = [p for p in crawled_pages if p.get("success", False)]
@@ -338,7 +346,7 @@ class TestBrowserUserJourneys:
 
         crawling_result = {
             "journey_name": "multi_page_crawling",
-            "total_duration_s": total_duration,
+            "_total_duration_s": _total_duration,
             "pages_attempted": len(pages_to_crawl),
             "pages_successful": len(successful_crawls),
             "pages_failed": len(failed_crawls),
@@ -360,8 +368,8 @@ class TestBrowserUserJourneys:
         assert len(successful_crawls) >= 2, (
             "At least 2 pages should be crawled successfully"
         )
-        assert total_duration < 60, (
-            f"Multi-page crawling took too long: {total_duration}s"
+        assert _total_duration < 60, (
+            f"Multi-page crawling took too long: {_total_duration}s"
         )
 
         # Validate content quality
@@ -414,7 +422,7 @@ class TestBrowserUserJourneys:
                             "success": True,
                         }
                     )
-            except:
+            except Exception:
                 form_interactions.append(
                     {
                         "field": "custname",
@@ -439,7 +447,7 @@ class TestBrowserUserJourneys:
                             "success": True,
                         }
                     )
-            except:
+            except Exception:
                 form_interactions.append(
                     {
                         "field": "custtel",
@@ -464,7 +472,7 @@ class TestBrowserUserJourneys:
                             "success": True,
                         }
                     )
-            except:
+            except Exception:
                 form_interactions.append(
                     {
                         "field": "custemail",
@@ -489,7 +497,7 @@ class TestBrowserUserJourneys:
                             "success": True,
                         }
                     )
-            except:
+            except Exception:
                 form_interactions.append(
                     {
                         "field": "delivery",
@@ -534,7 +542,7 @@ class TestBrowserUserJourneys:
                             "error": "Submit button not found",
                         }
                     )
-            except:
+            except Exception:
                 journey_steps.append(
                     {
                         "step": "form_submission_validation",
@@ -580,16 +588,16 @@ class TestBrowserUserJourneys:
                 }
             )
 
-        total_duration = time.perf_counter() - start_time
+        _total_duration = time.perf_counter() - start_time
 
         # Analyze form interaction results
         successful_steps = [s for s in journey_steps if s.get("success", False)]
         form_result = {
             "journey_name": "form_interaction",
-            "total_duration_s": total_duration,
+            "_total_duration_s": _total_duration,
             "steps": journey_steps,
             "successful_steps": len(successful_steps),
-            "total_steps": len(journey_steps),
+            "_total_steps": len(journey_steps),
             "success_rate": len(successful_steps) / len(journey_steps),
         }
 
@@ -654,7 +662,7 @@ class TestBrowserUserJourneys:
                                 tcp: perfEntries.connectEnd - perfEntries.connectStart,
                                 request: perfEntries.responseStart - perfEntries.requestStart,
                                 response: perfEntries.responseEnd - perfEntries.responseStart,
-                                total: perfEntries.loadEventEnd - perfEntries.navigationStart,
+                                _total: perfEntries.loadEventEnd - perfEntries.navigationStart,
                             },
                             paint: paintEntries.reduce((acc, entry) => {
                                 acc[entry.name] = entry.startTime;
@@ -662,7 +670,7 @@ class TestBrowserUserJourneys:
                             }, {}),
                             memory: performance.memory ? {
                                 used: performance.memory.usedJSHeapSize,
-                                total: performance.memory.totalJSHeapSize,
+                                _total: performance.memory._totalJSHeapSize,
                                 limit: performance.memory.jsHeapSizeLimit,
                             } : null,
                         };
@@ -682,9 +690,9 @@ class TestBrowserUserJourneys:
                 )
 
                 # Validate performance thresholds
-                total_load_time = performance_metrics["navigation"]["total"]
-                assert total_load_time < 10000, (
-                    f"Page load too slow: {total_load_time}ms"
+                _total_load_time = performance_metrics["navigation"]["_total"]
+                assert _total_load_time < 10000, (
+                    f"Page load too slow: {_total_load_time}ms"
                 )
 
             except Exception as e:
@@ -698,13 +706,13 @@ class TestBrowserUserJourneys:
                     }
                 )
 
-        total_duration = time.perf_counter() - start_time
+        _total_duration = time.perf_counter() - start_time
 
         # Analyze performance results
         successful_scenarios = [p for p in performance_data if p.get("success", False)]
         performance_result = {
             "journey_name": "performance_monitoring",
-            "total_duration_s": total_duration,
+            "_total_duration_s": _total_duration,
             "scenarios_tested": len(test_scenarios),
             "scenarios_successful": len(successful_scenarios),
             "success_rate": len(successful_scenarios) / len(test_scenarios),
@@ -719,7 +727,7 @@ class TestBrowserUserJourneys:
                     "navigation"
                 ):
                     load_times.append(
-                        scenario["browser_metrics"]["navigation"]["total"]
+                        scenario["browser_metrics"]["navigation"]["_total"]
                     )
 
             if load_times:
@@ -821,13 +829,13 @@ class TestBrowserUserJourneys:
                     }
                 )
 
-        total_duration = time.perf_counter() - start_time
+        _total_duration = time.perf_counter() - start_time
 
         # Analyze error handling results
         correct_predictions = [s for s in error_scenarios if s.get("success", False)]
         error_result = {
             "journey_name": "error_handling",
-            "total_duration_s": total_duration,
+            "_total_duration_s": _total_duration,
             "test_cases": len(error_test_cases),
             "correct_predictions": len(correct_predictions),
             "prediction_accuracy": len(correct_predictions) / len(error_test_cases),

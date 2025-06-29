@@ -5,10 +5,14 @@ for comprehensive CLI testing with Rich console integration.
 """
 
 import os
+import re
 import sys
+import time
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
+from click.testing import CliRunner
 
 
 # Add src to Python path for testing
@@ -34,7 +38,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "performance: mark test as performance test")
 
 
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(_config, items):
     """Modify test collection for CLI tests."""
     for item in items:
         # Auto-mark CLI tests
@@ -114,7 +118,6 @@ def mock_questionary_dependencies():
 @pytest.fixture
 def performance_timer():
     """Timer for performance testing."""
-    import time
 
     class Timer:
         def __init__(self):
@@ -231,7 +234,6 @@ def cli_error_scenarios():
 @pytest.fixture
 def cli_command_tester():
     """Helper for testing CLI commands."""
-    from click.testing import CliRunner
 
     class CLICommandTester:
         def __init__(self):
@@ -268,7 +270,6 @@ def rich_testing_utils():
         def extract_text_content(rich_output):
             """Extract plain text from Rich output."""
             # Remove ANSI escape codes
-            import re
 
             ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
             return ansi_escape.sub("", rich_output)
@@ -304,7 +305,6 @@ def questionary_testing_utils():
         @staticmethod
         def simulate_user_flow(responses_dict):
             """Simulate a complete user interaction flow."""
-            from unittest.mock import patch
 
             patches = []
 
@@ -349,7 +349,7 @@ def cli_coverage_collector(request):
     """Collect CLI-specific coverage data."""
     if request.config.getoption("--cli-coverage"):
         # Setup CLI coverage collection
-        import coverage
+        import coverage  # noqa: PLC0415
 
         cov = coverage.Coverage(source=["src/cli"])
         cov.start()

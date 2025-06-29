@@ -5,13 +5,17 @@ test execution, deployment automation, and rollback procedures.
 """
 
 import asyncio
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from tests.deployment.conftest import DeploymentEnvironment, DeploymentTestConfig
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
 
 
 class TestCICDPipeline:
@@ -21,7 +25,7 @@ class TestCICDPipeline:
     @pytest.mark.asyncio
     async def test_complete_pipeline_workflow(
         self,
-        deployment_config: DeploymentTestConfig,
+        _deployment_config: DeploymentTestConfig,
         deployment_environment: DeploymentEnvironment,
         temp_deployment_dir: Path,
     ):
@@ -133,7 +137,7 @@ class TestCICDPipeline:
         assert rollback_info["rollback_time"]
 
     @pytest.mark.pipeline
-    def test_pipeline_configuration_validation(self, temp_deployment_dir: Path):
+    def test_pipeline_configuration_validation(self, _temp_deployment_dir: Path):
         """Test pipeline configuration validation."""
         validator = PipelineConfigValidator()
 
@@ -493,7 +497,7 @@ class PipelineExecutor:
             "pipeline_id": pipeline_id,
             "environment": environment,
             "stage_results": [],
-            "start_time": datetime.utcnow().isoformat(),
+            "start_time": datetime.now(tz=UTC).isoformat(),
             "rollback_executed": False,
         }
 
@@ -518,7 +522,7 @@ class PipelineExecutor:
             result["success"] = False
             result["error"] = str(e)
 
-        result["end_time"] = datetime.utcnow().isoformat()
+        result["end_time"] = datetime.now(tz=UTC).isoformat()
         return result
 
     async def _execute_stage(self, stage_config: dict[str, Any]) -> dict[str, Any]:
@@ -528,24 +532,27 @@ class PipelineExecutor:
         timeout = stage_config.get("timeout", 300)
         simulate_failure = stage_config.get("simulate_failure", False)
 
-        start_time = datetime.utcnow()
+        start_time = datetime.now(tz=UTC)
 
         try:
             if simulate_failure:
-                await asyncio.sleep(1)
-                raise Exception(f"Simulated failure in {stage_name} stage")
+                msg = f"Simulated failure in {stage_name} stage"
+                raise TestError(msg)
+                msg = f"Simulated failure in {stage_name} stage"
+                raise TestError(msg)
 
             # Execute stage-specific logic
             executor = self.stage_executors.get(stage_type)
             if not executor:
-                raise Exception(f"Unknown stage type: {stage_type}")
+                msg = f"Unknown stage type: {stage_type}"
+                raise TestError(msg)
 
             stage_result = await asyncio.wait_for(
                 executor(stage_config), timeout=timeout
             )
 
-            end_time = datetime.utcnow()
-            duration = (end_time - start_time).total_seconds()
+            end_time = datetime.now(tz=UTC)
+            duration = (end_time - start_time)._total_seconds()
 
             return {
                 "name": stage_name,
@@ -558,8 +565,8 @@ class PipelineExecutor:
             }
 
         except Exception as e:
-            end_time = datetime.utcnow()
-            duration = (end_time - start_time).total_seconds()
+            end_time = datetime.now(tz=UTC)
+            duration = (end_time - start_time)._total_seconds()
 
             return {
                 "name": stage_name,
@@ -571,7 +578,7 @@ class PipelineExecutor:
                 "end_time": end_time.isoformat(),
             }
 
-    async def _execute_build_stage(self, config: dict[str, Any]) -> dict[str, Any]:
+    async def _execute_build_stage(self, _config: dict[str, Any]) -> dict[str, Any]:
         """Execute build stage."""
         await asyncio.sleep(2)  # Simulate build time
 
@@ -583,7 +590,7 @@ class PipelineExecutor:
             }
         }
 
-    async def _execute_test_stage(self, config: dict[str, Any]) -> dict[str, Any]:
+    async def _execute_test_stage(self, _config: dict[str, Any]) -> dict[str, Any]:
         """Execute test stage."""
         await asyncio.sleep(5)  # Simulate test time
 
@@ -596,7 +603,7 @@ class PipelineExecutor:
             }
         }
 
-    async def _execute_security_stage(self, config: dict[str, Any]) -> dict[str, Any]:
+    async def _execute_security_stage(self, _config: dict[str, Any]) -> dict[str, Any]:
         """Execute security stage."""
         await asyncio.sleep(3)  # Simulate security scan time
 
@@ -614,14 +621,14 @@ class PipelineExecutor:
 
         return {
             "artifacts": {
-                "deployment_id": f"deploy-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}",
+                "deployment_id": f"deploy-{datetime.now(tz=UTC).strftime('%Y%m%d-%H%M%S')}",
                 "version": "1.0.0",
                 "environment": config.get("environment", "staging"),
             }
         }
 
     async def _execute_verification_stage(
-        self, config: dict[str, Any]
+        self, _config: dict[str, Any]
     ) -> dict[str, Any]:
         """Execute verification stage."""
         await asyncio.sleep(2)  # Simulate verification time
@@ -634,14 +641,14 @@ class PipelineExecutor:
             }
         }
 
-    async def _execute_rollback(self, pipeline_id: str) -> dict[str, Any]:
+    async def _execute_rollback(self, _pipeline_id: str) -> dict[str, Any]:
         """Execute rollback procedure."""
         await asyncio.sleep(3)  # Simulate rollback time
 
         return {
             "success": True,
             "rollback_type": "automatic",
-            "rollback_time": datetime.utcnow().isoformat(),
+            "rollback_time": datetime.now(tz=UTC).isoformat(),
             "previous_deployment_restored": True,
         }
 
@@ -712,14 +719,14 @@ class DockerBuildManager:
 
     async def build_image(self, config: dict[str, Any]) -> dict[str, Any]:
         """Build Docker image."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(tz=UTC)
 
         try:
             # Simulate build process
             await asyncio.sleep(3)
 
-            end_time = datetime.utcnow()
-            duration = (end_time - start_time).total_seconds()
+            end_time = datetime.now(tz=UTC)
+            duration = (end_time - start_time)._total_seconds()
 
             image_tag = f"{config['registry']}/{config['image_name']}:{config['tag']}"
 
@@ -746,15 +753,15 @@ class DockerBuildManager:
                 "success": False,
                 "error": str(e),
                 "build_duration_seconds": (
-                    datetime.utcnow() - start_time
-                ).total_seconds(),
+                    datetime.now(tz=UTC) - start_time
+                )._total_seconds(),
             }
 
 
 class BuildSecurityScanner:
     """Security scanner for build artifacts."""
 
-    async def scan_build_artifacts(self, artifacts: dict[str, Any]) -> dict[str, Any]:
+    async def scan_build_artifacts(self, _artifacts: dict[str, Any]) -> dict[str, Any]:
         """Scan build artifacts for security vulnerabilities."""
         # Simulate security scanning
         await asyncio.sleep(2)
@@ -788,7 +795,7 @@ class PipelineTestExecutor:
         test_type = config["test_type"]
         config.get("timeout_seconds", 600)
 
-        start_time = datetime.utcnow()
+        start_time = datetime.now(tz=UTC)
 
         try:
             # Simulate test execution based on type
@@ -802,10 +809,11 @@ class PipelineTestExecutor:
                 await asyncio.sleep(4)
                 result = self._simulate_load_test_results(config)
             else:
-                raise ValueError(f"Unknown test type: {test_type}")
+                msg = f"Unknown test type: {test_type}"
+                raise ValueError(msg)
 
-            end_time = datetime.utcnow()
-            duration = (end_time - start_time).total_seconds()
+            end_time = datetime.now(tz=UTC)
+            duration = (end_time - start_time)._total_seconds()
 
             return {
                 "success": True,
@@ -819,7 +827,9 @@ class PipelineTestExecutor:
                 "success": False,
                 "test_type": test_type,
                 "error": str(e),
-                "duration_seconds": (datetime.utcnow() - start_time).total_seconds(),
+                "duration_seconds": (
+                    datetime.now(tz=UTC) - start_time
+                )._total_seconds(),
             }
 
     def _simulate_unit_test_results(self) -> dict[str, Any]:
@@ -844,7 +854,7 @@ class PipelineTestExecutor:
             "services_validated": config.get("services_required", []),
         }
 
-    def _simulate_load_test_results(self, config: dict[str, Any]) -> dict[str, Any]:
+    def _simulate_load_test_results(self, _config: dict[str, Any]) -> dict[str, Any]:
         """Simulate load test results."""
         return {
             "tests_run": 1,
@@ -871,8 +881,7 @@ class AutomatedDeploymentManager:
 
         if deployment_strategy == "blue_green":
             return await self._deploy_blue_green(config)
-        else:
-            return await self._deploy_rolling_update(config)
+        return await self._deploy_rolling_update(config)
 
     async def _deploy_rolling_update(self, config: dict[str, Any]) -> dict[str, Any]:
         """Execute rolling update deployment."""

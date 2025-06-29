@@ -3,7 +3,7 @@
 import asyncio
 import json
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -23,8 +23,6 @@ logger = logging.getLogger(__name__)
 class ProjectStorageError(BaseError):
     """Project storage specific errors."""
 
-    pass
-
 
 class ProjectStorage:
     """Manages persistent storage of project configurations."""
@@ -40,6 +38,7 @@ class ProjectStorage:
             data_dir: Required base data directory from UnifiedConfig. Must be provided.
             storage_path: Optional custom path to storage file. If not provided, defaults to data_dir/projects.json.
                 When both storage_path and data_dir are provided, storage_path takes precedence.
+
         """
         if storage_path is None:
             base_dir = Path(data_dir)
@@ -60,17 +59,20 @@ class ProjectStorage:
             # Create storage file if it doesn't exist
             if not self.storage_path.exists():
                 await self._save_projects({})
-                logger.info(f"Created new project storage at {self.storage_path}")
+                logger.info(
+                    f"Created new project storage at {self.storage_path}"
+                )  # TODO: Convert f-string to logging format
 
             # Load existing projects
             await self.load_projects()
             self._initialized = True
-            logger.info(f"Loaded {len(self._projects_cache)} projects from storage")
+            logger.info(
+                f"Loaded {len(self._projects_cache)} projects from storage"
+            )  # TODO: Convert f-string to logging format
 
         except Exception as e:
-            raise ProjectStorageError(
-                f"Failed to initialize project storage: {e}"
-            ) from e
+            msg = "Failed to initialize project storage"
+            raise ProjectStorageError(msg) from e
 
     async def load_projects(self) -> dict[str, dict[str, Any]]:
         """Load projects from storage file."""
@@ -81,7 +83,7 @@ class ProjectStorage:
                         content = await f.read()
                 else:
                     # Fallback to synchronous read
-                    with open(self.storage_path) as f:
+                    with self.storage_path.open() as f:
                         content = f.read()
 
                 self._projects_cache = json.loads(content) if content else {}
@@ -89,13 +91,15 @@ class ProjectStorage:
             except FileNotFoundError:
                 self._projects_cache = {}
                 return {}
-            except json.JSONDecodeError as e:
-                logger.exception(f"Invalid JSON in project storage: {e}")
+            except json.JSONDecodeError:
+                logger.exception("Invalid JSON in project storage")
                 # Backup corrupted file
                 backup_path = self.storage_path.with_suffix(".json.bak")
                 if self.storage_path.exists():
                     self.storage_path.rename(backup_path)
-                    logger.warning(f"Backed up corrupted file to {backup_path}")
+                    logger.warning(
+                        f"Backed up corrupted file to {backup_path}"
+                    )  # TODO: Convert f-string to logging format
                 self._projects_cache = {}
                 return {}
 
@@ -117,12 +121,13 @@ class ProjectStorage:
         """Update a project's data."""
         async with self._lock:
             if project_id not in self._projects_cache:
-                raise ProjectStorageError(f"Project {project_id} not found")
+                msg = f"Project {project_id} not found"
+                raise ProjectStorageError(msg)
 
             self._projects_cache[project_id].update(updates)
-            self._projects_cache[project_id]["updated_at"] = (
-                datetime.utcnow().isoformat()
-            )
+            self._projects_cache[project_id]["updated_at"] = datetime.now(
+                tz=UTC
+            ).isoformat()
             await self._save_projects(self._projects_cache)
 
     async def delete_project(self, project_id: str) -> None:
@@ -143,14 +148,15 @@ class ProjectStorage:
                     await f.write(json.dumps(projects, indent=2, default=str))
             else:
                 # Fallback to synchronous write
-                with open(temp_path, "w") as f:
+                with temp_path.open("w") as f:
                     f.write(json.dumps(projects, indent=2, default=str))
 
             # Atomically replace the old file
             temp_path.replace(self.storage_path)
 
         except Exception as e:
-            raise ProjectStorageError(f"Failed to save projects: {e}") from e
+            msg = "Failed to save projects"
+            raise ProjectStorageError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup resources."""

@@ -30,6 +30,7 @@ class TraceCorrelationManager:
 
         Returns:
             Unique request ID string
+
         """
         return str(uuid.uuid4())
 
@@ -50,6 +51,7 @@ class TraceCorrelationManager:
 
         Returns:
             Request ID that was set
+
         """
         if request_id is None:
             request_id = self.generate_request_id()
@@ -75,7 +77,9 @@ class TraceCorrelationManager:
             if tenant_id:
                 current_span.set_attribute("tenant.id", tenant_id)
 
-        logger.debug(f"Set request context: request_id={request_id}, user_id={user_id}")
+        logger.debug(
+            f"Set request context: request_id={request_id}, user_id={user_id}"
+        )  # TODO: Convert f-string to logging format
         return request_id
 
     def set_business_context(
@@ -96,6 +100,7 @@ class TraceCorrelationManager:
             ai_provider: AI/ML provider being used
             model_name: Model name being used
             cache_strategy: Caching strategy employed
+
         """
         # Set baggage for cross-service propagation
         baggage.set_baggage("business.operation_type", operation_type)
@@ -140,6 +145,7 @@ class TraceCorrelationManager:
             timeout_ms: Operation timeout in milliseconds
             retry_count: Current retry attempt count
             circuit_breaker_state: Circuit breaker state (closed, open, half-open)
+
         """
         # Set baggage
         baggage.set_baggage("performance.priority", priority)
@@ -169,6 +175,7 @@ class TraceCorrelationManager:
 
         Returns:
             Dictionary containing current context information
+
         """
         context_info = {}
 
@@ -194,6 +201,7 @@ class TraceCorrelationManager:
 
         Returns:
             Correlation ID
+
         """
         correlation_id = f"{operation_name}_{uuid.uuid4().hex[:8]}"
 
@@ -223,6 +231,7 @@ class TraceCorrelationManager:
 
         Yields:
             Correlation ID for the operation
+
         """
         if correlation_id is None:
             correlation_id = self.create_correlation_id(operation_name)
@@ -256,6 +265,7 @@ class TraceCorrelationManager:
 
         Returns:
             Correlation ID for child operation
+
         """
         child_correlation_id = f"{child_operation}_{uuid.uuid4().hex[:8]}"
 
@@ -286,6 +296,7 @@ class TraceCorrelationManager:
 
         Returns:
             OpenTelemetry context object
+
         """
         return extract(headers)
 
@@ -294,6 +305,7 @@ class TraceCorrelationManager:
 
         Args:
             headers: HTTP headers dictionary to inject into
+
         """
         inject(headers)
 
@@ -302,6 +314,7 @@ class TraceCorrelationManager:
 
         Returns:
             Current OpenTelemetry context
+
         """
         return context.get_current()
 
@@ -316,6 +329,7 @@ class TraceCorrelationManager:
 
         Returns:
             Function result
+
         """
         # Use context.attach and detach pattern for compatibility
         token = context.attach(ctx)
@@ -333,6 +347,7 @@ class ErrorCorrelationTracker:
 
         Args:
             correlation_manager: Trace correlation manager instance
+
         """
         self.correlation_manager = correlation_manager
         self.tracer = trace.get_tracer(__name__)
@@ -356,6 +371,7 @@ class ErrorCorrelationTracker:
 
         Returns:
             Error correlation ID
+
         """
         error_id = str(uuid.uuid4())
         context_info = self.correlation_manager.get_current_context()
@@ -424,6 +440,7 @@ class ErrorCorrelationTracker:
 
         Returns:
             Context manager for error span
+
         """
 
         @contextmanager
@@ -462,6 +479,7 @@ def get_correlation_manager() -> TraceCorrelationManager:
 
     Returns:
         Global TraceCorrelationManager instance
+
     """
     global _correlation_manager
     if _correlation_manager is None:
@@ -474,6 +492,7 @@ def get_error_tracker() -> ErrorCorrelationTracker:
 
     Returns:
         Global ErrorCorrelationTracker instance
+
     """
     global _error_tracker
     if _error_tracker is None:

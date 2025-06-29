@@ -78,6 +78,7 @@ class AIOperationTracker:
 
         Args:
             metrics: AI operation metrics to record
+
         """
         labels = {
             "operation_type": metrics.operation_type,
@@ -119,6 +120,7 @@ class AIOperationTracker:
 
         Yields:
             Dictionary to store operation results
+
         """
         tracer = get_tracer()
         operation_result = {"embeddings": None, "cost": None, "cache_hit": False}
@@ -228,6 +230,7 @@ class AIOperationTracker:
 
         Yields:
             Dictionary to store operation results
+
         """
         tracer = get_tracer()
         operation_result = {"response": None, "usage": None, "cost": None}
@@ -336,6 +339,7 @@ class AIOperationTracker:
 
         Yields:
             Dictionary to store operation results
+
         """
         tracer = get_tracer()
         operation_result = {"results": None, "scores": None, "cache_hit": False}
@@ -432,6 +436,7 @@ class AIOperationTracker:
 
         Yields:
             Dictionary to store pipeline results
+
         """
         tracer = get_tracer()
         pipeline_result = {
@@ -541,6 +546,7 @@ class AIOperationTracker:
             operation: Operation type
             hit_rate: Cache hit rate (0.0 to 1.0)
             avg_retrieval_time_ms: Average retrieval time in milliseconds
+
         """
         labels = {"cache_type": cache_type, "operation": operation}
 
@@ -554,7 +560,7 @@ class AIOperationTracker:
         self,
         provider: str,
         model: str,
-        operation_type: str,
+        _operation_type: str,
         success_rate: float,
         avg_latency_ms: float,
         cost_per_operation: float | None = None,
@@ -568,8 +574,8 @@ class AIOperationTracker:
             success_rate: Success rate (0.0 to 1.0)
             avg_latency_ms: Average latency in milliseconds
             cost_per_operation: Average cost per operation
-        """
 
+        """
         # Record performance metrics
         add_span_event(
             "model_performance_summary",
@@ -592,6 +598,7 @@ def get_ai_tracker() -> AIOperationTracker:
 
     Returns:
         Global AIOperationTracker instance
+
     """
     global _ai_tracker
     if _ai_tracker is None:
@@ -615,6 +622,7 @@ def track_embedding_generation(
 
     Returns:
         Context manager for tracking
+
     """
     tracker = get_ai_tracker()
     return tracker.track_embedding_generation(
@@ -638,6 +646,7 @@ def track_llm_call(
 
     Returns:
         Context manager for tracking
+
     """
     tracker = get_ai_tracker()
     return tracker.track_llm_call(provider, model, operation, expected_max_tokens)
@@ -657,6 +666,7 @@ def track_vector_search(
 
     Returns:
         Context manager for tracking
+
     """
     tracker = get_ai_tracker()
     return tracker.track_vector_search(collection_name, query_type, top_k)
@@ -674,6 +684,7 @@ def track_rag_pipeline(
 
     Returns:
         Context manager for tracking
+
     """
     tracker = get_ai_tracker()
     return tracker.track_rag_pipeline(query, retrieval_method, generation_model)

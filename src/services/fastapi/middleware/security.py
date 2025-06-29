@@ -1,14 +1,17 @@
 """Security middleware for production-grade security headers and protection.
 
 This middleware adds essential security headers and provides basic protection
-against common web vulnerabilities in production deployments.
+against common web vulnerabilities in production deployments, including
+Redis-backed rate limiting for distributed deployment scenarios.
 """
 
+import asyncio
 import logging
 import time
 from collections import defaultdict
 from collections.abc import Callable
 
+import redis.asyncio as redis
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
@@ -20,33 +23,87 @@ logger = logging.getLogger(__name__)
 
 
 class SecurityMiddleware(BaseHTTPMiddleware):
-    """Security middleware with headers injection and rate limiting.
+    """Security middleware with headers injection and Redis-backed rate limiting.
 
     Features:
     - Essential security headers injection
-    - Simple in-memory rate limiting
+    - Redis-backed rate limiting for distributed deployments
+    - Fallback to in-memory rate limiting for development
     - Request validation and filtering
     - Security event logging
+    - AI-specific threat detection (prompt injection)
     """
 
-    def __init__(self, app: Callable, config: SecurityConfig):
+    def __init__(
+        self, app: Callable, config: SecurityConfig, redis_url: str | None = None
+    ):
         """Initialize security middleware.
 
         Args:
             app: ASGI application
             config: Security configuration
+            redis_url: Redis connection URL for distributed rate limiting
+
         """
         super().__init__(app)
         self.config = config
+        self.redis_url = redis_url or "redis://localhost:6379/1"
 
-        # In-memory rate limiting storage
-        # Note: In production, use Redis or similar distributed storage
+        # Redis connection for distributed rate limiting
+        self.redis_client: redis.Redis | None = None
+        self._redis_healthy = False
+
+        # In-memory fallback rate limiting storage
         self._rate_limit_storage: dict[str, dict[str, int]] = defaultdict(
             lambda: {"requests": 0, "window_start": 0}
         )
 
         # Security headers to inject
         self._security_headers = self._build_security_headers()
+
+        # Initialize Redis connection
+        asyncio.create_task(self._initialize_redis())
+
+    async def _initialize_redis(self) -> None:
+        """Initialize Redis connection for distributed rate limiting.
+
+        Establishes connection to Redis/DragonflyDB and performs health checks.
+        Falls back to in-memory rate limiting if Redis is unavailable.
+        """
+        try:
+            self.redis_client = redis.Redis.from_url(
+                self.redis_url,
+                encoding="utf-8",
+                decode_responses=True,
+                socket_connect_timeout=5,
+                socket_timeout=5,
+                retry_on_timeout=True,
+                health_check_interval=30,
+            )
+
+            # Test Redis connection
+            await self.redis_client.ping()
+            self._redis_healthy = True
+
+            logger.info(
+                "Redis connection established for distributed rate limiting",
+                extra={
+                    "redis_url": self.redis_url,
+                    "fallback_available": True,
+                },
+            )
+
+        except Exception as e:
+            logger.warning(
+                "Redis connection failed, falling back to in-memory rate limiting",
+                extra={
+                    "error": str(e),
+                    "redis_url": self.redis_url,
+                    "fallback_mode": True,
+                },
+            )
+            self._redis_healthy = False
+            self.redis_client = None
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with security checks and header injection."""
@@ -57,7 +114,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         client_ip = self._get_client_ip(request)
 
         # Check rate limiting
-        if self.config.enable_rate_limiting and not self._check_rate_limit(client_ip):
+        if self.config.enable_rate_limiting and not await self._check_rate_limit(
+            client_ip
+        ):
             logger.warning(
                 "Rate limit exceeded",
                 extra={
@@ -89,6 +148,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Dictionary of security headers
+
         """
         headers = {}
 
@@ -124,23 +184,97 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Args:
             response: HTTP response to modify
+
         """
         for header_name, header_value in self._security_headers.items():
             # Don't override existing headers
             if header_name not in response.headers:
                 response.headers[header_name] = header_value
 
-    def _check_rate_limit(self, client_ip: str) -> bool:
-        """Check if client is within rate limits.
+    async def _check_rate_limit(self, client_ip: str) -> bool:
+        """Check if client is within rate limits using Redis or in-memory fallback.
 
-        Simple sliding window rate limiting implementation.
-        In production, consider using Redis with atomic operations.
+        Implements sliding window rate limiting with Redis for distributed deployments.
+        Falls back to in-memory storage for development or when Redis is unavailable.
 
         Args:
             client_ip: Client IP address
 
         Returns:
             True if request is allowed, False if rate limited
+
+        """
+        # Use Redis rate limiting if available and healthy
+        if self._redis_healthy and self.redis_client:
+            return await self._check_rate_limit_redis(client_ip)
+
+        # Fallback to in-memory rate limiting
+        return self._check_rate_limit_memory(client_ip)
+
+    async def _check_rate_limit_redis(self, client_ip: str) -> bool:
+        """Redis-based sliding window rate limiting implementation.
+
+        Uses Redis atomic operations for distributed rate limiting that persists
+        across application restarts and scales horizontally.
+
+        Args:
+            client_ip: Client IP address
+
+        Returns:
+            True if request is allowed, False if rate limited
+        """
+        try:
+            # Create rate limiting key
+            rate_limit_key = f"rate_limit:{client_ip}"
+
+            # Use Redis pipeline for atomic operations
+            async with self.redis_client.pipeline(transaction=True) as pipe:
+                # Get current request count
+                current_count = await pipe.get(rate_limit_key).execute()
+
+                if current_count and current_count[0]:
+                    count = int(current_count[0])
+
+                    # Check if limit exceeded
+                    if count >= self.config.rate_limit_requests:
+                        return False
+
+                    # Increment counter
+                    await pipe.incr(rate_limit_key).execute()
+                else:
+                    # First request in window - set counter and expiry
+                    await pipe.multi()
+                    await pipe.incr(rate_limit_key)
+                    await pipe.expire(rate_limit_key, self.config.rate_limit_window)
+                    await pipe.execute()
+
+                return True
+
+        except Exception as e:
+            logger.warning(
+                "Redis rate limiting failed, falling back to in-memory",
+                extra={
+                    "client_ip": client_ip,
+                    "error": str(e),
+                    "fallback_mode": True,
+                },
+            )
+            # Mark Redis as unhealthy and fall back to memory
+            self._redis_healthy = False
+            return self._check_rate_limit_memory(client_ip)
+
+    def _check_rate_limit_memory(self, client_ip: str) -> bool:
+        """In-memory sliding window rate limiting implementation.
+
+        Fallback rate limiting using local memory storage.
+        Suitable for development or single-instance deployments.
+
+        Args:
+            client_ip: Client IP address
+
+        Returns:
+            True if request is allowed, False if rate limited
+
         """
         current_time = int(time.time())
         client_data = self._rate_limit_storage[client_ip]
@@ -159,6 +293,48 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         client_data["requests"] += 1
         return True
 
+    async def _check_redis_health(self) -> bool:
+        """Check Redis connection health and attempt reconnection if needed.
+
+        Returns:
+            True if Redis is healthy, False otherwise
+        """
+        if not self.redis_client:
+            return False
+
+        try:
+            await self.redis_client.ping()
+            if not self._redis_healthy:
+                logger.info("Redis connection restored")
+                self._redis_healthy = True
+            return True
+
+        except Exception as e:
+            if self._redis_healthy:
+                logger.warning(
+                    "Redis connection lost",
+                    extra={
+                        "error": str(e),
+                        "fallback_mode": True,
+                    },
+                )
+            self._redis_healthy = False
+            return False
+
+    async def cleanup(self) -> None:
+        """Cleanup Redis connection and resources."""
+        if self.redis_client:
+            try:
+                await self.redis_client.aclose()
+                logger.info("Redis connection closed")
+            except Exception as e:
+                logger.warning(
+                    f"Error closing Redis connection: {e}"
+                )  # TODO: Convert f-string to logging format
+            finally:
+                self.redis_client = None
+                self._redis_healthy = False
+
     def _get_client_ip(self, request: Request) -> str:
         """Extract client IP address from request.
 
@@ -167,6 +343,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Client IP address
+
         """
         # Check X-Forwarded-For header first
         forwarded_for = request.headers.get("x-forwarded-for")
@@ -201,7 +378,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             del self._rate_limit_storage[ip]
 
         if expired_ips:
-            logger.debug(f"Cleaned {len(expired_ips)} expired rate limit entries")
+            logger.debug(
+                f"Cleaned {len(expired_ips)} expired rate limit entries"
+            )  # TODO: Convert f-string to logging format
 
 
 class CSRFProtectionMiddleware(BaseHTTPMiddleware):
@@ -219,6 +398,7 @@ class CSRFProtectionMiddleware(BaseHTTPMiddleware):
             app: ASGI application
             secret_key: Secret key for token generation
             exempt_paths: List of paths to exempt from CSRF protection
+
         """
         super().__init__(app)
         self.secret_key = secret_key

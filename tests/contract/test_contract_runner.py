@@ -6,7 +6,7 @@ and managing contract validation results.
 
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -41,7 +41,7 @@ class ContractValidationResult:
 class ContractTestReport:
     """Complete contract test report."""
 
-    total_tests: int
+    _total_tests: int
     passed_tests: int
     failed_tests: int
     skipped_tests: int
@@ -63,12 +63,12 @@ class ContractTestRunner:
 
     def start_test_session(self):
         """Start a contract testing session."""
-        self.start_time = datetime.now()
+        self.start_time = datetime.now(tz=UTC)
         self.results = []
 
     def end_test_session(self):
         """End a contract testing session."""
-        self.end_time = datetime.now()
+        self.end_time = datetime.now(tz=UTC)
 
     def add_result(self, result: ContractValidationResult):
         """Add a test result to the session."""
@@ -77,9 +77,10 @@ class ContractTestRunner:
     def generate_report(self) -> ContractTestReport:
         """Generate a comprehensive test report."""
         if not self.start_time or not self.end_time:
-            raise ValueError("Test session not properly started/ended")
+            msg = "Test session not properly started/ended"
+            raise ValueError(msg)
 
-        total_time = (self.end_time - self.start_time).total_seconds() * 1000
+        _total_time = (self.end_time - self.start_time)._total_seconds() * 1000
 
         # Count results by type
         passed = sum(1 for r in self.results if r.result == ContractTestResult.PASSED)
@@ -95,17 +96,17 @@ class ContractTestRunner:
             / len(self.results)
             if self.results
             else 0,
-            "total_errors": sum(len(r.errors) for r in self.results),
-            "total_warnings": sum(len(r.warnings) for r in self.results),
+            "_total_errors": sum(len(r.errors) for r in self.results),
+            "_total_warnings": sum(len(r.warnings) for r in self.results),
         }
 
         return ContractTestReport(
-            total_tests=len(self.results),
+            _total_tests=len(self.results),
             passed_tests=passed,
             failed_tests=failed,
             skipped_tests=skipped,
             warning_tests=warning,
-            execution_time_ms=total_time,
+            execution_time_ms=_total_time,
             test_results=self.results,
             summary=summary,
             generated_at=self.end_time,
@@ -115,7 +116,7 @@ class ContractTestRunner:
         """Save test report to file."""
         report_data = {
             "metadata": {
-                "total_tests": report.total_tests,
+                "_total_tests": report._total_tests,
                 "passed_tests": report.passed_tests,
                 "failed_tests": report.failed_tests,
                 "skipped_tests": report.skipped_tests,
@@ -139,12 +140,12 @@ class ContractTestRunner:
             ],
         }
 
-        with open(output_path, "w") as f:
+        with output_path.open("w") as f:
             json.dump(report_data, f, indent=2)
 
     def load_report(self, input_path: Path) -> ContractTestReport:
         """Load test report from file."""
-        with open(input_path) as f:
+        with input_path.open() as f:
             data = json.load(f)
 
         metadata = data["metadata"]
@@ -163,7 +164,7 @@ class ContractTestRunner:
         ]
 
         return ContractTestReport(
-            total_tests=metadata["total_tests"],
+            _total_tests=metadata["_total_tests"],
             passed_tests=metadata["passed_tests"],
             failed_tests=metadata["failed_tests"],
             skipped_tests=metadata["skipped_tests"],
@@ -197,7 +198,7 @@ class TestContractRunner:
             errors=[],
             warnings=[],
             execution_time_ms=45.0,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=UTC),
         )
 
         result2 = ContractValidationResult(
@@ -208,7 +209,7 @@ class TestContractRunner:
             errors=["Missing required field: id"],
             warnings=[],
             execution_time_ms=12.0,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=UTC),
         )
 
         runner.add_result(result1)
@@ -223,7 +224,7 @@ class TestContractRunner:
         # Generate report
         report = runner.generate_report()
 
-        assert report.total_tests == 2
+        assert report._total_tests == 2
         assert report.passed_tests == 1
         assert report.failed_tests == 1
         assert report.skipped_tests == 0
@@ -236,8 +237,8 @@ class TestContractRunner:
         assert summary["success_rate"] == 0.5
         assert "api_contract" in summary["contract_types"]
         assert "json_schema" in summary["contract_types"]
-        assert summary["total_errors"] == 1
-        assert summary["total_warnings"] == 0
+        assert summary["_total_errors"] == 1
+        assert summary["_total_warnings"] == 0
 
     @pytest.mark.contract
     def test_contract_report_serialization(self, tmp_path):
@@ -254,7 +255,7 @@ class TestContractRunner:
             errors=[],
             warnings=["Deprecated field used"],
             execution_time_ms=25.0,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=UTC),
         )
 
         runner.add_result(result)
@@ -272,7 +273,7 @@ class TestContractRunner:
         # Load and verify report
         loaded_report = runner.load_report(output_path)
 
-        assert loaded_report.total_tests == report.total_tests
+        assert loaded_report._total_tests == report._total_tests
         assert loaded_report.passed_tests == report.passed_tests
         assert loaded_report.summary == report.summary
         assert len(loaded_report.test_results) == len(report.test_results)
@@ -311,7 +312,7 @@ class TestContractRunner:
                 errors=[f"Error in {contract_type}"] if i % 2 == 1 else [],
                 warnings=[],
                 execution_time_ms=float(10 + i * 5),
-                timestamp=datetime.now(),
+                timestamp=datetime.now(tz=UTC),
             )
             runner.add_result(result)
 
@@ -319,11 +320,11 @@ class TestContractRunner:
         report = runner.generate_report()
 
         # Verify report statistics
-        assert report.total_tests == 5
+        assert report._total_tests == 5
         assert report.passed_tests == 3  # Even indices
         assert report.failed_tests == 2  # Odd indices
         assert len(report.summary["contract_types"]) == 5
-        assert report.summary["total_errors"] == 2
+        assert report.summary["_total_errors"] == 2
 
     @pytest.mark.contract
     def test_contract_runner_performance_metrics(self):
@@ -343,7 +344,7 @@ class TestContractRunner:
                 errors=[],
                 warnings=[],
                 execution_time_ms=exec_time,
-                timestamp=datetime.now(),
+                timestamp=datetime.now(tz=UTC),
             )
             runner.add_result(result)
 
@@ -390,7 +391,7 @@ class TestContractRunner:
                 errors=case["errors"],
                 warnings=case["warnings"],
                 execution_time_ms=20.0,
-                timestamp=datetime.now(),
+                timestamp=datetime.now(tz=UTC),
             )
             runner.add_result(result)
 
@@ -398,8 +399,8 @@ class TestContractRunner:
         report = runner.generate_report()
 
         # Verify error and warning aggregation
-        assert report.summary["total_errors"] == 3  # 2 + 0 + 1 + 0
-        assert report.summary["total_warnings"] == 3  # 1 + 2 + 0 + 0
+        assert report.summary["_total_errors"] == 3  # 2 + 0 + 1 + 0
+        assert report.summary["_total_warnings"] == 3  # 1 + 2 + 0 + 0
 
         # Verify test classification
         assert report.failed_tests == 2  # Tests with errors
@@ -407,25 +408,25 @@ class TestContractRunner:
 
     @pytest.mark.contract
     def test_contract_runner_integration_with_fixtures(
-        self, api_contract_validator, json_schema_validator, contract_test_data
+        self, api_contract_validator, _json_schema_validator, contract_test_data
     ):
         """Test contract runner integration with actual contract fixtures."""
         runner = ContractTestRunner()
         runner.start_test_session()
 
         # Test 1: JSON Schema validation
-        start_time = datetime.now()
+        start_time = datetime.now(tz=UTC)
 
         search_schema = contract_test_data["json_schemas"]["search_result"]
-        json_schema_validator.register_schema("search_result", search_schema)
+        _json_schema_validator.register_schema("search_result", search_schema)
 
         valid_data = {"id": "doc1", "title": "Test Document", "score": 0.95}
 
-        schema_validation = json_schema_validator.validate_data(
+        schema_validation = _json_schema_validator.validate_data(
             valid_data, "search_result"
         )
 
-        exec_time = (datetime.now() - start_time).total_seconds() * 1000
+        exec_time = (datetime.now(tz=UTC) - start_time)._total_seconds() * 1000
 
         schema_result = ContractValidationResult(
             test_name="json_schema_integration_test",
@@ -437,13 +438,13 @@ class TestContractRunner:
             errors=schema_validation.get("errors", []),
             warnings=[],
             execution_time_ms=exec_time,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=UTC),
         )
 
         runner.add_result(schema_result)
 
         # Test 2: API Contract validation
-        start_time = datetime.now()
+        start_time = datetime.now(tz=UTC)
 
         api_contract_validator.register_contract(
             "/api/search", contract_test_data["api_contracts"]["/api/search"]
@@ -453,7 +454,7 @@ class TestContractRunner:
             "/api/search", "GET", params={"q": "test query", "limit": 10}
         )
 
-        exec_time = (datetime.now() - start_time).total_seconds() * 1000
+        exec_time = (datetime.now(tz=UTC) - start_time)._total_seconds() * 1000
 
         api_result = ContractValidationResult(
             test_name="api_contract_integration_test",
@@ -465,7 +466,7 @@ class TestContractRunner:
             errors=api_validation.get("errors", []),
             warnings=[],
             execution_time_ms=exec_time,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=UTC),
         )
 
         runner.add_result(api_result)
@@ -474,7 +475,7 @@ class TestContractRunner:
         report = runner.generate_report()
 
         # Verify integration test results
-        assert report.total_tests == 2
+        assert report._total_tests == 2
         assert report.passed_tests == 2
         assert report.failed_tests == 0
 

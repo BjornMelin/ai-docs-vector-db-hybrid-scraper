@@ -9,14 +9,14 @@ This script validates the 4-6x performance improvement claims by:
 5. Generating detailed performance comparison report
 """
 
-import asyncio
+import asyncio  # noqa: PLC0415
 import contextlib
-import logging
-import os
+import logging  # noqa: PLC0415
+import os  # noqa: PLC0415
 import platform
 import statistics
-import time
-from datetime import datetime
+import time  # noqa: PLC0415
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -163,7 +163,7 @@ class CrawlerBenchmark:
             result["cpu_usage"] = avg_cpu
 
             return elapsed, result
-        except Exception as e:
+        except Exception:
             elapsed = time.time() - start_time
             # Cancel CPU monitoring if still running
             if not cpu_task.done():
@@ -367,7 +367,7 @@ class CrawlerBenchmark:
                     cost_estimate=self._estimate_cost(provider_name, len(bulk_urls)),
                 )
 
-            except Exception as e:
+            except Exception:
                 logger.error(f"Bulk crawl failed for {provider_name}: {e}")
                 results[f"{provider_name}_bulk"] = BenchmarkMetrics(
                     provider=f"{provider_name}_bulk",
@@ -412,7 +412,7 @@ class CrawlerBenchmark:
         """Generate comprehensive benchmark report."""
         report_lines = [
             "# Crawl4AI vs Firecrawl Performance Benchmark Report",
-            f"\nGenerated: {datetime.now().isoformat()}",
+            f"\nGenerated: {datetime.now(tz=timezone.utc).isoformat()}",
             f"Platform: {platform.system()} {platform.release()}",
             f"Python: {platform.python_version()}",
             "\n## Executive Summary\n",
@@ -598,7 +598,7 @@ class CrawlerBenchmark:
         report_dir = Path("benchmark_results")
         report_dir.mkdir(exist_ok=True)
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
         report_file = report_dir / f"crawl4ai_benchmark_{timestamp}.md"
 
         with open(report_file, "w") as f:

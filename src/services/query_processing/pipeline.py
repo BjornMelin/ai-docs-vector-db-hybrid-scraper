@@ -4,10 +4,13 @@ This module provides the main unified interface for the advanced query
 processing system, orchestrating all components through a single entry point.
 """
 
+import asyncio
 import logging
+import time
 from typing import Any
 
-from ..base import BaseService
+from src.services.base import BaseService
+
 from .models import QueryProcessingRequest, QueryProcessingResponse
 from .orchestrator import SearchOrchestrator as AdvancedSearchOrchestrator
 
@@ -32,9 +35,11 @@ class QueryProcessingPipeline(BaseService):
 
         Raises:
             ValueError: If orchestrator is None
+
         """
         if orchestrator is None:
-            raise ValueError("Orchestrator cannot be None")
+            msg = "Orchestrator cannot be None"
+            raise ValueError(msg)
 
         super().__init__(config)
         self.orchestrator = orchestrator
@@ -49,8 +54,8 @@ class QueryProcessingPipeline(BaseService):
             self._initialized = True
             logger.info("QueryProcessingPipeline initialized successfully")
 
-        except Exception as e:
-            logger.exception(f"Failed to initialize QueryProcessingPipeline: {e}")
+        except Exception:
+            logger.exception("Failed to initialize QueryProcessingPipeline")
             raise
 
     async def process(
@@ -76,9 +81,11 @@ class QueryProcessingPipeline(BaseService):
 
         Raises:
             RuntimeError: If pipeline not initialized
+
         """
         if not self._initialized:
-            raise RuntimeError("QueryProcessingPipeline not initialized")
+            msg = "QueryProcessingPipeline not initialized"
+            raise RuntimeError(msg)
 
         # Handle both string query and QueryProcessingRequest
         if isinstance(query_or_request, QueryProcessingRequest):
@@ -114,6 +121,7 @@ class QueryProcessingPipeline(BaseService):
 
         Returns:
             QueryProcessingResponse: Complete processing results
+
         """
         self._validate_initialized()
         return await self.orchestrator.process_query(request)
@@ -129,10 +137,9 @@ class QueryProcessingPipeline(BaseService):
 
         Returns:
             list[QueryProcessingResponse]: Results for each query
+
         """
         self._validate_initialized()
-
-        import asyncio
 
         semaphore = asyncio.Semaphore(max_concurrent)
 
@@ -143,9 +150,7 @@ class QueryProcessingPipeline(BaseService):
                 try:
                     return await self.process(request)
                 except Exception as e:
-                    logger.exception(
-                        f"Batch processing failed for query '{request}': {e}"
-                    )
+                    logger.exception("Batch processing failed for query '{request}'")
                     return QueryProcessingResponse(
                         success=False, results=[], total_results=0, error=str(e)
                     )
@@ -172,6 +177,7 @@ class QueryProcessingPipeline(BaseService):
 
         Returns:
             dict[str, Any]: Analysis results including intent and strategy
+
         """
         self._validate_initialized()
 
@@ -207,6 +213,7 @@ class QueryProcessingPipeline(BaseService):
 
         Returns:
             dict[str, Any]: Performance statistics and metrics
+
         """
         if not self._initialized:
             return {
@@ -232,6 +239,7 @@ class QueryProcessingPipeline(BaseService):
 
         Returns:
             dict[str, Any]: Health status of all components
+
         """
         health_status = {
             "status": "healthy" if self._initialized else "unhealthy",
@@ -288,7 +296,7 @@ class QueryProcessingPipeline(BaseService):
                     health_status["status"] = "degraded"
 
             except Exception as e:
-                logger.exception(f"Health check failed: {e}")
+                logger.exception("Health check failed")
                 health_status["status"] = "unhealthy"
                 health_status["components"] = {
                     "orchestrator": {"status": "unhealthy", "message": str(e)},
@@ -304,10 +312,9 @@ class QueryProcessingPipeline(BaseService):
 
         Returns:
             dict[str, Any]: Warmup results including status and timing
+
         """
         self._validate_initialized()
-
-        import time
 
         start_time = time.time()
 
@@ -367,7 +374,7 @@ class QueryProcessingPipeline(BaseService):
             end_time = time.time()
             warmup_time_ms = (end_time - start_time) * 1000
 
-            logger.warning(f"Pipeline warmup had issues: {e}")
+            logger.warning("Pipeline warmup had issues")
 
             return {
                 "status": "partial",

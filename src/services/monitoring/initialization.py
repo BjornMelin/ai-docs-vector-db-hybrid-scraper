@@ -6,11 +6,18 @@ for FastMCP-based applications.
 
 import asyncio
 import logging
+import time
 
 from src.config import Config, MonitoringConfig
 
-from .health import HealthCheckManager
+from .health import HealthCheckConfig, HealthCheckManager, HealthStatus
 from .metrics import MetricsConfig, MetricsRegistry, initialize_metrics
+
+
+try:
+    from fastapi.responses import JSONResponse
+except ImportError:
+    JSONResponse = None  # type: ignore
 
 
 logger = logging.getLogger(__name__)
@@ -26,6 +33,7 @@ async def initialize_monitoring(
 
     Returns:
         Tuple of (MetricsRegistry, HealthCheckManager) or (None, None) if disabled
+
     """
     if not config.enabled:
         logger.info("Monitoring disabled by configuration")
@@ -46,8 +54,6 @@ async def initialize_monitoring(
     metrics_registry = MetricsRegistry(metrics_config)
 
     # Create health check config from monitoring config
-    from .health import HealthCheckConfig
-
     health_config = HealthCheckConfig(
         enabled=config.enabled, timeout=config.health_check_timeout
     )
@@ -67,6 +73,7 @@ async def cleanup_monitoring(
     Args:
         metrics_registry: Metrics registry to clean up
         health_manager: Health manager to clean up
+
     """
     if metrics_registry:
         logger.info("Cleaning up metrics registry...")
@@ -90,6 +97,7 @@ async def start_background_monitoring_tasks(
 
     Returns:
         List of started tasks
+
     """
     tasks = []
 
@@ -123,11 +131,14 @@ async def stop_background_monitoring_tasks(tasks: list[asyncio.Task]) -> None:
 
     Args:
         tasks: List of tasks to stop
+
     """
     if not tasks:
         return
 
-    logger.info(f"Stopping {len(tasks)} background monitoring tasks...")
+    logger.info(
+        f"Stopping {len(tasks)} background monitoring tasks..."
+    )  # TODO: Convert f-string to logging format
 
     for task in tasks:
         task.cancel()
@@ -150,6 +161,7 @@ def initialize_monitoring_system(
 
     Returns:
         Tuple of (MetricsRegistry, HealthCheckManager)
+
     """
     if not config.monitoring.enabled:
         logger.info("Monitoring disabled by configuration")
@@ -170,7 +182,6 @@ def initialize_monitoring_system(
     metrics_registry = initialize_metrics(metrics_config)
 
     # Create health check manager
-    from .health import HealthCheckConfig
 
     health_config = HealthCheckConfig(
         enabled=config.monitoring.enabled,
@@ -208,7 +219,7 @@ def initialize_monitoring_system(
             name=service_name,
             timeout_seconds=config.monitoring.health_check_timeout,
         )
-        logger.info(f"Added external service health check: {service_name}")
+        logger.info("Added external service health check")
 
     # Start metrics server
     if metrics_config.enabled:
@@ -217,8 +228,8 @@ def initialize_monitoring_system(
             logger.info(
                 f"Prometheus metrics server started on port {metrics_config.export_port}"
             )
-        except Exception as e:
-            logger.exception(f"Failed to start metrics server: {e}")
+        except Exception:
+            logger.exception("Failed to start metrics server")
 
     logger.info("Monitoring system initialization complete")
     return metrics_registry, health_manager
@@ -237,6 +248,7 @@ def setup_fastmcp_monitoring(
         config: Application configuration
         metrics_registry: Initialized metrics registry
         health_manager: Initialized health check manager
+
     """
     if not config.monitoring.enabled or not metrics_registry or not health_manager:
         logger.info("Monitoring not enabled or not initialized")
@@ -257,10 +269,6 @@ def setup_fastmcp_monitoring(
             )
             async def health_endpoint():
                 """Health check endpoint for FastMCP."""
-                import time
-
-                from fastapi.responses import JSONResponse
-
                 if not health_manager:
                     return JSONResponse(
                         content={
@@ -276,8 +284,6 @@ def setup_fastmcp_monitoring(
                 overall_status = health_manager.get_overall_status()
 
                 # Determine HTTP status code based on health
-                from .health import HealthStatus
-
                 if overall_status == HealthStatus.HEALTHY:
                     status_code = 200
                 elif overall_status == HealthStatus.DEGRADED:
@@ -297,10 +303,6 @@ def setup_fastmcp_monitoring(
             )
             async def liveness_endpoint():
                 """Kubernetes liveness probe endpoint."""
-                import time
-
-                from fastapi.responses import JSONResponse
-
                 return JSONResponse(
                     content={"status": "alive", "timestamp": time.time()},
                     status_code=200,
@@ -314,12 +316,6 @@ def setup_fastmcp_monitoring(
             )
             async def readiness_endpoint():
                 """Kubernetes readiness probe endpoint."""
-                import time
-
-                from fastapi.responses import JSONResponse
-
-                from .health import HealthStatus
-
                 if not health_manager:
                     return JSONResponse(
                         content={
@@ -344,25 +340,26 @@ def setup_fastmcp_monitoring(
                         },
                         status_code=200,
                     )
-                else:
-                    return JSONResponse(
-                        content={
-                            "status": "not_ready",
-                            "health_summary": health_manager.get_health_summary(),
-                            "timestamp": time.time(),
-                        },
-                        status_code=503,
-                    )
+                return JSONResponse(
+                    content={
+                        "status": "not_ready",
+                        "health_summary": health_manager.get_health_summary(),
+                        "timestamp": time.time(),
+                    },
+                    status_code=503,
+                )
 
-            logger.info(f"Added health endpoints at {config.monitoring.health_path}")
+            logger.info(
+                f"Added health endpoints at {config.monitoring.health_path}"
+            )  # TODO: Convert f-string to logging format
 
         else:
             logger.warning(
                 "FastMCP app does not expose underlying FastAPI app - health endpoints not added"
             )
 
-    except Exception as e:
-        logger.exception(f"Failed to set up FastMCP monitoring: {e}")
+    except Exception:
+        logger.exception("Failed to set up FastMCP monitoring")
 
 
 async def run_periodic_health_checks(
@@ -373,18 +370,21 @@ async def run_periodic_health_checks(
     Args:
         health_manager: Health check manager
         interval_seconds: Interval between health checks
+
     """
     if not health_manager:
         return
 
-    logger.info(f"Starting periodic health checks (interval: {interval_seconds}s)")
+    logger.info(
+        f"Starting periodic health checks (interval: {interval_seconds}s)"
+    )  # TODO: Convert f-string to logging format
 
     while True:
         try:
             await health_manager.check_all()
             logger.debug("Completed periodic health check")
-        except Exception as e:
-            logger.exception(f"Error in periodic health check: {e}")
+        except Exception:
+            logger.exception("Error in periodic health check")
 
         await asyncio.sleep(interval_seconds)
 
@@ -397,6 +397,7 @@ async def update_system_metrics_periodically(
     Args:
         metrics_registry: Metrics registry
         interval_seconds: Interval between updates
+
     """
     if not metrics_registry or not metrics_registry.config.include_system_metrics:
         return
@@ -409,8 +410,8 @@ async def update_system_metrics_periodically(
         try:
             metrics_registry.update_system_metrics()
             logger.debug("Updated system metrics")
-        except Exception as e:
-            logger.exception(f"Error updating system metrics: {e}")
+        except Exception:
+            logger.exception("Error updating system metrics")
 
         await asyncio.sleep(interval_seconds)
 
@@ -424,6 +425,7 @@ async def update_cache_metrics_periodically(
         metrics_registry: Metrics registry
         cache_manager: Cache manager instance to collect stats from
         interval_seconds: Interval between updates
+
     """
     if not metrics_registry or not cache_manager:
         return
@@ -436,7 +438,7 @@ async def update_cache_metrics_periodically(
         try:
             metrics_registry.update_cache_stats(cache_manager)
             logger.debug("Updated cache metrics")
-        except Exception as e:
-            logger.exception(f"Error updating cache metrics: {e}")
+        except Exception:
+            logger.exception("Error updating cache metrics")
 
         await asyncio.sleep(interval_seconds)

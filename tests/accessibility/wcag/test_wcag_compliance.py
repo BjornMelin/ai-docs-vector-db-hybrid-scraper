@@ -154,7 +154,7 @@ class TestWCAGCompliance:
             f"Keyboard navigation errors: {keyboard_errors}"
         )
 
-    def test_wcag_guideline_2_1_2_no_keyboard_trap(self, keyboard_navigation_tester):
+    def test_wcag_guideline_2_1_2_no_keyboard_trap(self, _keyboard_navigation_tester):
         """Test WCAG 2.1.2 - No Keyboard Trap (Level A).
 
         Keyboard focus is not trapped in any part of the content.
@@ -197,7 +197,7 @@ class TestWCAGCompliance:
         assert result["compliant"], f"Skip links validation failed: {result['issues']}"
         assert result["skip_links_found"] > 0, "Should have at least one skip link"
 
-    def test_wcag_guideline_2_4_2_page_titled(self, wcag_validator):
+    def test_wcag_guideline_2_4_2_page_titled(self, _wcag_validator):
         """Test WCAG 2.4.2 - Page Titled (Level A).
 
         Web pages have titles that describe topic or purpose.
@@ -441,7 +441,7 @@ class TestWCAGCompliance:
         assert result["compliant"], (
             f"Accessible form should pass validation: {result['issues']}"
         )
-        assert result["total_inputs"] > 0
+        assert result["_total_inputs"] > 0
         assert result["radio_inputs"] == 2
 
     def test_wcag_semantic_structure_validation(self, screen_reader_validator):
@@ -483,7 +483,7 @@ class TestWCAGCompliance:
         assert result["nav_count"] == 1
 
     @pytest.mark.parametrize(
-        "foreground,background,text_size,expected_aa",
+        ("foreground", "background", "text_size", "expected_aa"),
         [
             ("#000000", "#FFFFFF", "normal", True),  # Black on white
             ("#FFFFFF", "#000000", "normal", True),  # White on black
@@ -581,7 +581,7 @@ class TestWCAGAutomatedValidation:
         return page
 
     @pytest.mark.asyncio
-    async def test_axe_core_integration(self, mock_axe_core, mock_browser_page):
+    async def test_axe_core_integration(self, _mock_axe_core, _mock_browser_page):
         """Test integration with axe-core accessibility engine."""
         # Mock axe-core execution
         with patch("axe_core_python.run") as mock_axe_run:
@@ -729,7 +729,7 @@ class TestWCAGAutomatedValidation:
             "conformance_level": "AA",
             "overall_compliant": structure_result["compliant"]
             and aria_result["compliant"],
-            "total_issues": structure_result["total_issues"]
+            "_total_issues": structure_result["_total_issues"]
             + len(aria_result["issues"]),
             "structure_validation": structure_result,
             "aria_validation": aria_result,
@@ -745,5 +745,5 @@ class TestWCAGAutomatedValidation:
         assert "wcag_version" in report
         assert "conformance_level" in report
         assert isinstance(report["overall_compliant"], bool)
-        assert isinstance(report["total_issues"], int)
+        assert isinstance(report["_total_issues"], int)
         assert len(report["recommendations"]) > 0

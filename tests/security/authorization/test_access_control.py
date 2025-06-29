@@ -4,6 +4,7 @@ This module tests role-based access control (RBAC), permission validation,
 and authorization boundary enforcement.
 """
 
+import time
 from typing import Any
 
 import pytest
@@ -98,14 +99,13 @@ class TestAccessControl:
                     return False
 
                 # Check if role can access the resource
-                if resource:
-                    if (
+                return not (
+                    resource
+                    and (
                         "all" not in role_data["resources"]
                         and resource not in role_data["resources"]
-                    ):
-                        return False
-
-                return True
+                    )
+                )
 
             def get_user_permissions(self, user_role: str) -> list[str]:
                 """Get all permissions for a user role."""
@@ -253,7 +253,7 @@ class TestAccessControl:
                 is False
             )
 
-    def test_horizontal_privilege_escalation_prevention(self, rbac_system):
+    def test_horizontal_privilege_escalation_prevention(self, _rbac_system):
         """Test prevention of horizontal privilege escalation."""
         # Test that users cannot access other users' resources
 
@@ -377,7 +377,7 @@ class TestAccessControl:
             is True
         )
 
-    def test_api_key_based_authorization(self, rbac_system):
+    def test_api_key_based_authorization(self, _rbac_system):
         """Test API key-based authorization."""
 
         class APIKeyAuthz:
@@ -444,7 +444,7 @@ class TestAccessControl:
         # Test admin key
         assert api_authz.validate_api_key_access("admin_key", "admin", "all") is True
 
-    def test_resource_based_permissions(self, rbac_system):
+    def test_resource_based_permissions(self, _rbac_system):
         """Test resource-based permission validation."""
 
         class ResourcePermissions:
@@ -519,7 +519,7 @@ class TestAccessControl:
             is False
         )
 
-    def test_permission_delegation(self, rbac_system):
+    def test_permission_delegation(self, _rbac_system):
         """Test permission delegation mechanisms."""
 
         class PermissionDelegation:
@@ -564,7 +564,6 @@ class TestAccessControl:
         delegation_system = PermissionDelegation()
 
         # Admin delegates write permission to user
-        import time
 
         current_time = int(time.time())
         expiry_time = current_time + 3600  # 1 hour
@@ -597,7 +596,7 @@ class TestAccessControl:
             is False
         )
 
-    def test_access_control_bypass_prevention(self, rbac_system):
+    def test_access_control_bypass_prevention(self, _rbac_system):
         """Test prevention of access control bypasses."""
 
         # Test common bypass techniques
@@ -621,7 +620,8 @@ class TestAccessControl:
         def validate_role_input(role_input) -> str:
             """Validate and normalize role input."""
             if not isinstance(role_input, str):
-                raise SecurityError("Role must be a string")
+                msg = "Role must be a string"
+                raise SecurityError(msg)
 
             # Remove null bytes and control characters
             role = "".join(c for c in role_input if ord(c) >= 32)
@@ -639,7 +639,8 @@ class TestAccessControl:
                 "api_service",
             }
             if role not in valid_roles:
-                raise SecurityError(f"Invalid role: {role}")
+                msg = f"Invalid role: {role}"
+                raise SecurityError(msg)
 
             return role
 
@@ -719,7 +720,7 @@ class TestAccessControl:
             is False
         )
 
-    def test_attribute_based_access_control(self, rbac_system):
+    def test_attribute_based_access_control(self, _rbac_system):
         """Test attribute-based access control (ABAC)."""
 
         class ABACEngine:

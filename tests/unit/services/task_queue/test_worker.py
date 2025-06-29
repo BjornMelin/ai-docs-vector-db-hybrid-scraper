@@ -2,7 +2,18 @@
 
 from unittest.mock import Mock, patch
 
-from src.services.task_queue.worker import WorkerSettings
+from src.services.task_queue.worker import (
+    WorkerSettings,
+    cron_jobs,
+    functions,
+    job_timeout,
+    max_jobs,
+    on_job_end,
+    on_job_start,
+    on_shutdown,
+    on_startup,
+    redis_settings,
+)
 
 
 class TestWorkerSettings:
@@ -53,8 +64,8 @@ class TestWorkerSettings:
         """Test Redis settings with authentication."""
         mock_config = Mock()
         mock_config.task_queue = Mock()
-        mock_config.task_queue.redis_url = "redis://user:pass@localhost:6380"
-        mock_config.task_queue.redis_password = "override_pass"
+        mock_config.task_queue.redis_url = "redis://user:testpass@localhost:6380"
+        mock_config.task_queue.redis_password = "test_override_pass"
         mock_config.task_queue.redis_database = 2
 
         with patch(
@@ -64,7 +75,7 @@ class TestWorkerSettings:
 
         assert settings.host == "localhost"
         assert settings.port == 6380
-        assert settings.password == "override_pass"
+        assert settings.password == "test_override_pass"
         assert settings.database == 2
 
     def test_get_redis_settings_url_parsing(self):
@@ -128,18 +139,6 @@ class TestWorkerSettings:
     def test_module_level_settings(self):
         """Test module-level settings for ARQ worker."""
         # These are imported and used by ARQ directly
-        from src.services.task_queue.worker import (
-            cron_jobs,
-            functions,
-            job_timeout,
-            max_jobs,
-            on_job_end,
-            on_job_start,
-            on_shutdown,
-            on_startup,
-            redis_settings,
-        )
-
         # Verify they exist and have expected types
         assert redis_settings is not None
         assert isinstance(max_jobs, int)

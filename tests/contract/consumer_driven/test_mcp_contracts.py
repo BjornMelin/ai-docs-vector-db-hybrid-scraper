@@ -15,7 +15,7 @@ class TestMCPSearchToolContracts:
 
     @pytest.mark.consumer_driven
     @pytest.mark.mcp
-    async def test_search_tool_contract(self, mock_contract_service):
+    async def test_search_tool_contract(self, _mock_contract_service):
         """Test search tool consumer contract."""
         # Consumer expectation: search tool should accept query and return results
         search_request = {
@@ -45,7 +45,7 @@ class TestMCPSearchToolContracts:
                                     "metadata": {"source": "docs"},
                                 }
                             ],
-                            "total_count": 1,
+                            "_total_count": 1,
                             "query_time_ms": 45.0,
                             "search_strategy": "hybrid",
                         }
@@ -55,12 +55,12 @@ class TestMCPSearchToolContracts:
         }
 
         # Mock the service response
-        mock_contract_service.search.return_value = expected_response["content"][0][
+        _mock_contract_service.search.return_value = expected_response["content"][0][
             "text"
         ]
 
         # Execute the tool
-        result = await mock_contract_service.search(
+        result = await _mock_contract_service.search(
             search_request["arguments"]["query"], search_request["arguments"]["limit"]
         )
 
@@ -68,13 +68,13 @@ class TestMCPSearchToolContracts:
         assert result is not None
         result_data = json.loads(result) if isinstance(result, str) else result
         assert "results" in result_data
-        assert "total_count" in result_data
+        assert "_total_count" in result_data
         assert "success" in result_data
         assert result_data["success"] is True
 
     @pytest.mark.consumer_driven
     @pytest.mark.mcp
-    async def test_advanced_search_tool_contract(self, mock_contract_service):
+    async def test_advanced_search_tool_contract(self, _mock_contract_service):
         """Test advanced search tool consumer contract."""
         # Consumer expectation: advanced search with strategy selection
         search_request = {
@@ -109,15 +109,15 @@ class TestMCPSearchToolContracts:
                     "metadata": {"reranked": True, "strategy_used": "hybrid"},
                 }
             ],
-            "total_count": 15,
+            "_total_count": 15,
             "query_time_ms": 120.0,
             **expected_response_features,
         }
 
-        mock_contract_service.search.return_value = json.dumps(mock_response)
+        _mock_contract_service.search.return_value = json.dumps(mock_response)
 
         # Execute advanced search
-        result = await mock_contract_service.search(
+        result = await _mock_contract_service.search(
             search_request["arguments"]["query"], search_request["arguments"]["limit"]
         )
 
@@ -131,7 +131,7 @@ class TestMCPSearchToolContracts:
 
     @pytest.mark.consumer_driven
     @pytest.mark.mcp
-    async def test_search_error_handling_contract(self, mock_contract_service):
+    async def test_search_error_handling_contract(self, _mock_contract_service):
         """Test search tool error handling contract."""
         # Consumer expectation: proper error responses for invalid inputs
         invalid_requests = [
@@ -149,10 +149,10 @@ class TestMCPSearchToolContracts:
                 "context": invalid_request,
             }
 
-            mock_contract_service.search.return_value = json.dumps(error_response)
+            _mock_contract_service.search.return_value = json.dumps(error_response)
 
             # Execute with invalid parameters
-            result = await mock_contract_service.search(
+            result = await _mock_contract_service.search(
                 invalid_request["query"], invalid_request["limit"]
             )
 
@@ -171,7 +171,7 @@ class TestMCPDocumentToolContracts:
 
     @pytest.mark.consumer_driven
     @pytest.mark.mcp
-    async def test_add_document_tool_contract(self, mock_contract_service):
+    async def test_add_document_tool_contract(self, _mock_contract_service):
         """Test add document tool consumer contract."""
         # Consumer expectation: add document with URL and get processing status
         add_document_request = {
@@ -196,10 +196,10 @@ class TestMCPDocumentToolContracts:
             "collection_name": "tutorials",
         }
 
-        mock_contract_service.add_document.return_value = json.dumps(expected_response)
+        _mock_contract_service.add_document.return_value = json.dumps(expected_response)
 
         # Execute the tool
-        result = await mock_contract_service.add_document(
+        result = await _mock_contract_service.add_document(
             add_document_request["arguments"]["url"],
             add_document_request["arguments"]["collection_name"],
         )
@@ -219,7 +219,7 @@ class TestMCPDocumentToolContracts:
 
     @pytest.mark.consumer_driven
     @pytest.mark.mcp
-    async def test_bulk_document_processing_contract(self, mock_contract_service):
+    async def test_bulk_document_processing_contract(self, _mock_contract_service):
         """Test bulk document processing consumer contract."""
         # Consumer expectation: process multiple documents in batch
         bulk_request = {
@@ -241,7 +241,7 @@ class TestMCPDocumentToolContracts:
             "success": True,
             "processed_count": 3,
             "failed_count": 0,
-            "total_chunks": 24,
+            "_total_chunks": 24,
             "processing_time_ms": 7500.0,
             "results": [
                 {
@@ -266,10 +266,10 @@ class TestMCPDocumentToolContracts:
             "errors": [],
         }
 
-        mock_contract_service.add_document.return_value = json.dumps(expected_response)
+        _mock_contract_service.add_document.return_value = json.dumps(expected_response)
 
         # Execute bulk processing
-        result = await mock_contract_service.add_document(
+        result = await _mock_contract_service.add_document(
             bulk_request["arguments"]["urls"],
             bulk_request["arguments"]["collection_name"],
         )
@@ -298,7 +298,7 @@ class TestMCPCollectionToolContracts:
 
     @pytest.mark.consumer_driven
     @pytest.mark.mcp
-    async def test_create_collection_tool_contract(self, mock_contract_service):
+    async def test_create_collection_tool_contract(self, _mock_contract_service):
         """Test create collection tool consumer contract."""
         # Consumer expectation: create collection with specified configuration
         create_request = {
@@ -326,12 +326,12 @@ class TestMCPCollectionToolContracts:
             },
         }
 
-        mock_contract_service.create_collection = AsyncMock(
+        _mock_contract_service.create_collection = AsyncMock(
             return_value=json.dumps(expected_response)
         )
 
         # Execute collection creation
-        result = await mock_contract_service.create_collection(
+        result = await _mock_contract_service.create_collection(
             create_request["arguments"]["collection_name"],
             create_request["arguments"]["vector_size"],
         )
@@ -353,7 +353,7 @@ class TestMCPCollectionToolContracts:
 
     @pytest.mark.consumer_driven
     @pytest.mark.mcp
-    async def test_list_collections_tool_contract(self, mock_contract_service):
+    async def test_list_collections_tool_contract(self, _mock_contract_service):
         """Test list collections tool consumer contract."""
         # Consumer expectation: get list of all collections with metadata
         expected_response = {
@@ -376,21 +376,21 @@ class TestMCPCollectionToolContracts:
                     "config": {"vector_size": 1536, "distance_metric": "Cosine"},
                 },
             ],
-            "total_count": 2,
+            "_total_count": 2,
         }
 
-        mock_contract_service.list_collections = AsyncMock(
+        _mock_contract_service.list_collections = AsyncMock(
             return_value=json.dumps(expected_response)
         )
 
         # Execute list collections
-        result = await mock_contract_service.list_collections()
+        result = await _mock_contract_service.list_collections()
         result_data = json.loads(result)
 
         # Verify list collections contract
         assert "collections" in result_data
-        assert "total_count" in result_data
-        assert len(result_data["collections"]) == result_data["total_count"]
+        assert "_total_count" in result_data
+        assert len(result_data["collections"]) == result_data["_total_count"]
 
         # Verify collection metadata structure
         for collection in result_data["collections"]:
@@ -415,7 +415,7 @@ class TestMCPAnalyticsToolContracts:
 
     @pytest.mark.consumer_driven
     @pytest.mark.mcp
-    async def test_analytics_tool_contract(self, mock_contract_service):
+    async def test_analytics_tool_contract(self, _mock_contract_service):
         """Test analytics tool consumer contract."""
         # Consumer expectation: get analytics data with metrics
         analytics_request = {
@@ -464,12 +464,12 @@ class TestMCPAnalyticsToolContracts:
             "generated_at": 1704067200.0,
         }
 
-        mock_contract_service.get_analytics = AsyncMock(
+        _mock_contract_service.get_analytics = AsyncMock(
             return_value=json.dumps(expected_response)
         )
 
         # Execute analytics request
-        result = await mock_contract_service.get_analytics(
+        result = await _mock_contract_service.get_analytics(
             analytics_request["arguments"]["collection_name"],
             analytics_request["arguments"]["time_range"],
         )
@@ -498,7 +498,7 @@ class TestMCPContractEvolution:
 
     @pytest.mark.consumer_driven
     @pytest.mark.mcp
-    async def test_tool_versioning_contract(self, mock_contract_service):
+    async def test_tool_versioning_contract(self, _mock_contract_service):
         """Test MCP tool versioning and backward compatibility."""
         # Test v1 search tool contract
         v1_search_request = {
@@ -508,7 +508,7 @@ class TestMCPContractEvolution:
 
         v1_expected_response = {
             "results": [{"id": "doc1", "title": "Test", "score": 0.95}],
-            "total": 1,
+            "_total": 1,
         }
 
         # Test v2 search tool contract (backward compatible)
@@ -525,19 +525,19 @@ class TestMCPContractEvolution:
         v2_expected_response = {
             "success": True,  # New field
             "results": [{"id": "doc1", "title": "Test", "score": 0.95}],
-            "total_count": 1,  # Renamed from 'total'
+            "_total_count": 1,  # Renamed from '_total'
             "search_strategy": "hybrid",  # New field
             "query_time_ms": 45.0,  # New field
         }
 
         # Mock both versions
-        mock_contract_service.search.return_value = json.dumps(v1_expected_response)
-        mock_contract_service.search_v2 = AsyncMock(
+        _mock_contract_service.search.return_value = json.dumps(v1_expected_response)
+        _mock_contract_service.search_v2 = AsyncMock(
             return_value=json.dumps(v2_expected_response)
         )
 
         # Test v1 contract
-        v1_result = await mock_contract_service.search(
+        v1_result = await _mock_contract_service.search(
             v1_search_request["arguments"]["query"],
             v1_search_request["arguments"]["limit"],
         )
@@ -545,10 +545,10 @@ class TestMCPContractEvolution:
 
         # Verify v1 contract
         assert "results" in v1_data
-        assert "total" in v1_data
+        assert "_total" in v1_data
 
         # Test v2 contract
-        v2_result = await mock_contract_service.search_v2(
+        v2_result = await _mock_contract_service.search_v2(
             v2_search_request["arguments"]["query"],
             v2_search_request["arguments"]["limit"],
         )
@@ -557,16 +557,16 @@ class TestMCPContractEvolution:
         # Verify v2 contract (backward compatible)
         assert "success" in v2_data
         assert "results" in v2_data
-        assert "total_count" in v2_data
+        assert "_total_count" in v2_data
         assert "search_strategy" in v2_data
 
         # Verify data consistency
         assert len(v1_data["results"]) == len(v2_data["results"])
-        assert v1_data["total"] == v2_data["total_count"]
+        assert v1_data["_total"] == v2_data["_total_count"]
 
     @pytest.mark.consumer_driven
     @pytest.mark.mcp
-    async def test_contract_deprecation_handling(self, mock_contract_service):
+    async def test_contract_deprecation_handling(self, _mock_contract_service):
         """Test handling of deprecated contract features."""
         # Test deprecated field handling
         deprecated_request = {
@@ -582,7 +582,7 @@ class TestMCPContractEvolution:
         expected_response = {
             "success": True,
             "results": [{"id": "doc1", "title": "Test", "score": 0.95}],
-            "total_count": 1,
+            "_total_count": 1,
             "warnings": [
                 "Field 'max_results' is deprecated, use 'limit' instead",
                 "Field 'include_content' is deprecated, content is always included",
@@ -590,10 +590,10 @@ class TestMCPContractEvolution:
             "deprecated_fields_used": ["max_results", "include_content"],
         }
 
-        mock_contract_service.search.return_value = json.dumps(expected_response)
+        _mock_contract_service.search.return_value = json.dumps(expected_response)
 
         # Execute with deprecated fields
-        result = await mock_contract_service.search(
+        result = await _mock_contract_service.search(
             deprecated_request["arguments"]["query"],
             deprecated_request["arguments"].get("max_results", 10),
         )

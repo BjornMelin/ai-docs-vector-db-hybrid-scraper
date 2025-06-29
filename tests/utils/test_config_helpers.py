@@ -132,7 +132,8 @@ class ConfigManager:
             KeyError: If environment not found
         """
         if name not in self.environments:
-            raise KeyError(f"Test environment '{name}' not found")
+            msg = f"Test environment '{name}' not found"
+            raise KeyError(msg)
         return self.environments[name]
 
     def set_current_environment(self, name: str):
@@ -174,18 +175,18 @@ class ConfigManager:
             environment_name: Name for the environment
         """
         if not file_path.exists():
-            raise FileNotFoundError(f"Configuration file not found: {file_path}")
+            msg = f"Configuration file not found: {file_path}"
+            raise FileNotFoundError(msg)
 
         if file_path.suffix.lower() == ".yaml" or file_path.suffix.lower() == ".yml":
-            with open(file_path) as f:
+            with Path(file_path).open() as f:
                 config_data = yaml.safe_load(f)
         elif file_path.suffix.lower() == ".json":
-            with open(file_path) as f:
+            with Path(file_path).open() as f:
                 config_data = json.load(f)
         else:
-            raise ValueError(
-                f"Unsupported configuration file format: {file_path.suffix}"
-            )
+            msg = f"Unsupported configuration file format: {file_path.suffix}"
+            raise ValueError(msg)
 
         # Create environment from config data
         env = EnvironmentConfig(**config_data)
@@ -207,18 +208,19 @@ class ConfigManager:
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
         if format.lower() == "yaml":
-            with open(file_path, "w") as f:
+            with Path(file_path).open("w") as f:
                 yaml.dump(config_data, f, default_flow_style=False)
         elif format.lower() == "json":
-            with open(file_path, "w") as f:
+            with Path(file_path).open("w") as f:
                 json.dump(config_data, f, indent=2)
         else:
-            raise ValueError(f"Unsupported format: {format}")
+            msg = f"Unsupported format: {format}"
+            raise ValueError(msg)
 
     def cleanup_temp_directories(self):
         """Clean up all temporary directories created during testing."""
         for temp_dir in self._temp_dirs:
-            if os.path.exists(temp_dir):
+            if Path(temp_dir).exists():
                 shutil.rmtree(temp_dir, ignore_errors=True)
         self._temp_dirs.clear()
 
@@ -231,11 +233,11 @@ class ConfigManager:
         return self.environments.copy()
 
     @contextmanager
-    def temporary_environment(self, **kwargs):
+    def temporary_environment(self, **_kwargs):
         """Create a temporary test environment.
 
         Args:
-            **kwargs: Environment configuration parameters
+            **_kwargs: Environment configuration parameters
         """
         # Create temporary environment
         temp_name = f"temp_{len(self.environments)}"
@@ -247,7 +249,7 @@ class ConfigManager:
             "cache_url": "memory://localhost",
             "temp_dir": self._create_temp_dir(temp_name),
         }
-        defaults.update(kwargs)
+        defaults.update(_kwargs)
 
         temp_env = EnvironmentConfig(**defaults)
         self.environments[temp_name] = temp_env
@@ -268,8 +270,13 @@ class ConfigManager:
                 del self.environments[temp_name]
 
 
-# Global configuration manager instance
+# Module-level configuration manager instance
 _config_manager = ConfigManager()
+
+
+def get_config_manager() -> ConfigManager:
+    """Get the test configuration manager instance."""
+    return _config_manager
 
 
 def get_test_environment(name: str | None = None) -> EnvironmentConfig:
@@ -281,13 +288,14 @@ def get_test_environment(name: str | None = None) -> EnvironmentConfig:
     Returns:
         Test environment configuration
     """
+    config_manager = get_config_manager()
     if name is None:
-        if _config_manager.current_environment is None:
+        if config_manager.current_environment is None:
             # Default to unit test environment
-            _config_manager.set_current_environment("unit")
-        return _config_manager.current_environment
+            config_manager.set_current_environment("unit")
+        return config_manager.current_environment
 
-    return _config_manager.get_environment(name)
+    return config_manager.get_environment(name)
 
 
 def setup_test_database(environment_name: str = "unit") -> dict[str, Any]:
@@ -361,7 +369,7 @@ def cleanup_test_data(environment_name: str = "unit") -> dict[str, Any]:
             ]
 
         # Clean up temporary files
-        if os.path.exists(env.temp_dir):
+        if Path(env.temp_dir).exists():
             temp_files_count = len(list(Path(env.temp_dir).rglob("*")))
             shutil.rmtree(env.temp_dir, ignore_errors=True)
             cleanup_results["temp_files_removed"] = True
@@ -375,7 +383,7 @@ def cleanup_test_data(environment_name: str = "unit") -> dict[str, Any]:
             cleanup_results["cache_cleared"] = True
             cleanup_results["cache_keys_removed"] = 0  # Mock count
 
-    except Exception as e:
+    except (ValueError, RuntimeError, OSError) as e:
         cleanup_results["errors"].append(str(e))
 
     return cleanup_results
@@ -399,7 +407,7 @@ def create_test_config(
         "vector_db_url": "memory://localhost",
         "embedding_api_key": "test-key",
         "cache_url": "memory://localhost",
-        "temp_dir": _config_manager._create_temp_dir(name),
+        "temp_dir": get_config_manager()._create_temp_dir(name),
         "log_level": "INFO",
         "debug_mode": True,
         "additional_config": {},
@@ -409,7 +417,7 @@ def create_test_config(
         base_config.update(overrides)
 
     env = EnvironmentConfig(**base_config)
-    _config_manager.environments[name] = env
+    get_config_manager().environments[name] = env
 
     return env
 
@@ -453,7 +461,7 @@ def create_test_file(
     return file_path
 
 
-def setup_mock_services(environment_name: str = "unit") -> dict[str, Any]:
+def setup__mock_services(environment_name: str = "unit") -> dict[str, Any]:
     """Setup mock services for testing.
 
     Args:
@@ -464,7 +472,7 @@ def setup_mock_services(environment_name: str = "unit") -> dict[str, Any]:
     """
     env = get_test_environment(environment_name)
 
-    mock_services = {
+    _mock_services = {
         "vector_db": {
             "url": env.vector_db_url,
             "collections": ["test_collection"],
@@ -491,7 +499,7 @@ def setup_mock_services(environment_name: str = "unit") -> dict[str, Any]:
         },
     }
 
-    return mock_services
+    return _mock_services
 
 
 def validate_test_environment(environment_name: str) -> dict[str, Any]:
@@ -538,7 +546,7 @@ def validate_test_environment(environment_name: str) -> dict[str, Any]:
 
     # Check temp directory
     if hasattr(env, "temp_dir") and env.temp_dir:
-        if not os.path.exists(env.temp_dir):
+        if not Path(env.temp_dir).exists():
             validation_results["warnings"].append(
                 f"Temp directory does not exist: {env.temp_dir}"
             )
@@ -560,15 +568,16 @@ def validate_test_environment(environment_name: str) -> dict[str, Any]:
 # Cleanup function for pytest fixtures
 def cleanup_all_test_environments():
     """Clean up all test environments and temporary resources."""
-    global _config_manager
+    config_manager = get_config_manager()
 
     # Clean up temporary directories
-    _config_manager.cleanup_temp_directories()
+    config_manager.cleanup_temp_directories()
 
     # Reset environment variables
     test_env_vars = [key for key in os.environ if key.startswith("TEST_")]
     for var in test_env_vars:
         os.environ.pop(var, None)
 
-    # Reset configuration manager
-    _config_manager = ConfigManager()
+    # Reset configuration manager state
+    config_manager.environments.clear()
+    config_manager.current_environment = None

@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """Test performance monitoring dashboard and regression detection."""
 
-import json
+import json  # noqa: PLC0415
 import sqlite3
-import time
-from datetime import datetime
+import time  # noqa: PLC0415
+from datetime import datetime, timezone
 from datetime import timedelta
 from pathlib import Path
-
 
 
 import matplotlib.pyplot as plt
@@ -16,11 +15,11 @@ import pandas as pd
 
 class TestPerformanceDatabase:
     """SQLite database for storing test performance metrics."""
-    
+
     def __init__(self, db_path: str = "test_performance.db"):
         self.db_path = Path(db_path)
         self.init_database()
-    
+
     def init_database(self):
         """Initialize performance tracking database."""
         with sqlite3.connect(self.db_path) as conn:
@@ -37,7 +36,7 @@ class TestPerformanceDatabase:
                     success_rate REAL
                 )
             """)
-            
+
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS test_timings (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,7 +47,7 @@ class TestPerformanceDatabase:
                     FOREIGN KEY (run_id) REFERENCES test_runs (id)
                 )
             """)
-            
+
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS performance_alerts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,90 +60,124 @@ class TestPerformanceDatabase:
                     message TEXT
                 )
             """)
-    
+
     def record_test_run(self, results: Dict) -> int:
         """Record a test run and return run ID."""
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 INSERT INTO test_runs 
                 (timestamp, git_commit, branch, total_tests, total_time, 
                  average_time, parallel_workers, success_rate)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                time.time(),
-                results.get("git_commit", "unknown"),
-                results.get("branch", "unknown"),
-                results["total_tests"],
-                results["total_time"],
-                results["average_time"],
-                results.get("parallel_workers", 1),
-                results.get("success_rate", 1.0),
-            ))
+            """,
+                (
+                    time.time(),
+                    results.get("git_commit", "unknown"),
+                    results.get("branch", "unknown"),
+                    results["total_tests"],
+                    results["total_time"],
+                    results["average_time"],
+                    results.get("parallel_workers", 1),
+                    results.get("success_rate", 1.0),
+                ),
+            )
             return cursor.lastrowid
-    
+
     def record_test_timings(self, run_id: int, timings: list[Dict]):
         """Record individual test timings."""
         with sqlite3.connect(self.db_path) as conn:
-            conn.executemany("""
+            conn.executemany(
+                """
                 INSERT INTO test_timings (run_id, test_name, duration, category)
                 VALUES (?, ?, ?, ?)
-            """, [
-                (run_id, timing["test"], timing["duration"], timing.get("category", "unknown"))
-                for timing in timings
-            ])
-    
-    def record_alert(self, alert_type: str, test_name: str, current: float, 
-                    baseline: float, threshold: float, message: str):
+            """,
+                [
+                    (
+                        run_id,
+                        timing["test"],
+                        timing["duration"],
+                        timing.get("category", "unknown"),
+                    )
+                    for timing in timings
+                ],
+            )
+
+    def record_alert(
+        self,
+        alert_type: str,
+        test_name: str,
+        current: float,
+        baseline: float,
+        threshold: float,
+        message: str,
+    ):
         """Record a performance alert."""
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT INTO performance_alerts 
                 (timestamp, alert_type, test_name, current_value, baseline_value, 
                  threshold_exceeded, message)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (
-                time.time(), alert_type, test_name, current, baseline, threshold, message
-            ))
-    
+            """,
+                (
+                    time.time(),
+                    alert_type,
+                    test_name,
+                    current,
+                    baseline,
+                    threshold,
+                    message,
+                ),
+            )
+
     def get_recent_runs(self, days: int = 30) -> list[Dict]:
         """Get recent test runs."""
         cutoff = time.time() - (days * 24 * 3600)
-        
+
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT * FROM test_runs 
                 WHERE timestamp > ? 
                 ORDER BY timestamp DESC
-            """, (cutoff,))
-            
+            """,
+                (cutoff,),
+            )
+
             columns = [desc[0] for desc in cursor.description]
             return [dict(zip(columns, row)) for row in cursor.fetchall()]
-    
+
     def get_test_history(self, test_name: str, days: int = 30) -> list[Dict]:
         """Get performance history for a specific test."""
         cutoff = time.time() - (days * 24 * 3600)
-        
+
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT tr.timestamp, tr.git_commit, tt.duration
                 FROM test_timings tt
                 JOIN test_runs tr ON tt.run_id = tr.id
                 WHERE tt.test_name = ? AND tr.timestamp > ?
                 ORDER BY tr.timestamp DESC
-            """, (test_name, cutoff))
-            
+            """,
+                (test_name, cutoff),
+            )
+
             return [
                 {"timestamp": row[0], "commit": row[1], "duration": row[2]}
                 for row in cursor.fetchall()
             ]
-    
+
     def get_performance_trends(self, days: int = 30) -> Dict:
         """Get performance trend analysis."""
         cutoff = time.time() - (days * 24 * 3600)
-        
+
         with sqlite3.connect(self.db_path) as conn:
             # Overall trends
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT 
                     AVG(total_time) as avg_total_time,
                     AVG(average_time) as avg_test_time,
@@ -152,12 +185,17 @@ class TestPerformanceDatabase:
                     COUNT(*) as run_count
                 FROM test_runs 
                 WHERE timestamp > ?
-            """, (cutoff,))
-            
-            overall = dict(zip([desc[0] for desc in cursor.description], cursor.fetchone()))
-            
+            """,
+                (cutoff,),
+            )
+
+            overall = dict(
+                zip([desc[0] for desc in cursor.description], cursor.fetchone())
+            )
+
             # Slowest tests
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT tt.test_name, AVG(tt.duration) as avg_duration, COUNT(*) as run_count
                 FROM test_timings tt
                 JOIN test_runs tr ON tt.run_id = tr.id
@@ -166,13 +204,15 @@ class TestPerformanceDatabase:
                 HAVING COUNT(*) >= 3
                 ORDER BY avg_duration DESC
                 LIMIT 10
-            """, (cutoff,))
-            
+            """,
+                (cutoff,),
+            )
+
             slowest_tests = [
                 {"test": row[0], "avg_duration": row[1], "run_count": row[2]}
                 for row in cursor.fetchall()
             ]
-            
+
             return {
                 "overall": overall,
                 "slowest_tests": slowest_tests,
@@ -181,7 +221,7 @@ class TestPerformanceDatabase:
 
 class PerformanceRegressionDetector:
     """Detect performance regressions in test execution."""
-    
+
     def __init__(self, db: TestPerformanceDatabase):
         self.db = db
         self.thresholds = {
@@ -189,57 +229,63 @@ class PerformanceRegressionDetector:
             "total_time_increase_percent": 25.0,  # 25% total time increase
             "minimum_runs": 5,  # Minimum runs to establish baseline
         }
-    
+
     def detect_regressions(self, current_results: Dict) -> list[Dict]:
         """Detect performance regressions in current test run."""
         regressions = []
-        
+
         # Get baseline performance (average of last 10 runs, excluding current)
         recent_runs = self.db.get_recent_runs(days=14)
         if len(recent_runs) < self.thresholds["minimum_runs"]:
             return regressions  # Not enough data
-        
+
         # Calculate baseline total time
         baseline_total_times = [run["total_time"] for run in recent_runs[:10]]
         baseline_avg_total = sum(baseline_total_times) / len(baseline_total_times)
-        
+
         # Check total time regression
         current_total = current_results["total_time"]
-        total_increase = ((current_total - baseline_avg_total) / baseline_avg_total) * 100
-        
+        total_increase = (
+            (current_total - baseline_avg_total) / baseline_avg_total
+        ) * 100
+
         if total_increase > self.thresholds["total_time_increase_percent"]:
-            regressions.append({
-                "type": "total_time_regression",
-                "current": current_total,
-                "baseline": baseline_avg_total,
-                "increase_percent": total_increase,
-                "message": f"Total execution time increased by {total_increase:.1f}%",
-            })
-        
+            regressions.append(
+                {
+                    "type": "total_time_regression",
+                    "current": current_total,
+                    "baseline": baseline_avg_total,
+                    "increase_percent": total_increase,
+                    "message": f"Total execution time increased by {total_increase:.1f}%",
+                }
+            )
+
         # Check individual test regressions
         if "timings" in current_results:
             for timing in current_results["timings"]:
                 test_history = self.db.get_test_history(timing["test"], days=14)
-                
+
                 if len(test_history) >= self.thresholds["minimum_runs"]:
                     baseline_durations = [h["duration"] for h in test_history[:10]]
                     baseline_avg = sum(baseline_durations) / len(baseline_durations)
-                    
+
                     current_duration = timing["duration"]
                     increase = ((current_duration - baseline_avg) / baseline_avg) * 100
-                    
+
                     if increase > self.thresholds["duration_increase_percent"]:
-                        regressions.append({
-                            "type": "test_duration_regression",
-                            "test": timing["test"],
-                            "current": current_duration,
-                            "baseline": baseline_avg,
-                            "increase_percent": increase,
-                            "message": f"Test {timing['test']} duration increased by {increase:.1f}%",
-                        })
-        
+                        regressions.append(
+                            {
+                                "type": "test_duration_regression",
+                                "test": timing["test"],
+                                "current": current_duration,
+                                "baseline": baseline_avg,
+                                "increase_percent": increase,
+                                "message": f"Test {timing['test']} duration increased by {increase:.1f}%",
+                            }
+                        )
+
         return regressions
-    
+
     def record_regressions(self, regressions: list[Dict]):
         """Record detected regressions as alerts."""
         for regression in regressions:
@@ -255,25 +301,29 @@ class PerformanceRegressionDetector:
 
 class PerformanceDashboard:
     """Generate performance monitoring dashboard."""
-    
+
     def __init__(self, db: TestPerformanceDatabase):
         self.db = db
-    
-    def generate_html_dashboard(self, output_file: str = "test_performance_dashboard.html"):
+
+    def generate_html_dashboard(
+        self, output_file: str = "test_performance_dashboard.html"
+    ):
         """Generate HTML performance dashboard."""
         trends = self.db.get_performance_trends()
         recent_runs = self.db.get_recent_runs(days=7)
-        
+
         html_content = self._create_html_template()
-        
+
         # Insert data
         html_content = html_content.replace("{{TRENDS_DATA}}", json.dumps(trends))
         html_content = html_content.replace("{{RECENT_RUNS}}", json.dumps(recent_runs))
-        html_content = html_content.replace("{{LAST_UPDATED}}", datetime.now().isoformat())
-        
+        html_content = html_content.replace(
+            "{{LAST_UPDATED}}", datetime.now(tz=timezone.utc).isoformat()
+        )
+
         Path(output_file).write_text(html_content)
         print(f"📊 Dashboard generated: {output_file}")
-    
+
     def _create_html_template(self) -> str:
         """Create HTML dashboard template."""
         return """
@@ -482,59 +532,67 @@ class PerformanceDashboard:
 </body>
 </html>
         """
-    
+
     def generate_performance_report(self) -> str:
         """Generate text-based performance report."""
         trends = self.db.get_performance_trends()
         recent_runs = self.db.get_recent_runs(days=7)
-        
+
         report = []
         report.append("🚀 Test Performance Report")
         report.append("=" * 50)
-        report.append(f"Generated: {datetime.now().isoformat()}")
+        report.append(f"Generated: {datetime.now(tz=timezone.utc).isoformat()}")
         report.append("")
-        
+
         # Overall trends
         overall = trends["overall"]
         report.append("📊 Performance Overview:")
         report.append(f"  Average Total Time: {overall['avg_total_time']:.1f}s")
-        report.append(f"  Average Test Time: {overall['avg_test_time']*1000:.0f}ms")
-        report.append(f"  Success Rate: {overall['avg_success_rate']*100:.1f}%")
+        report.append(f"  Average Test Time: {overall['avg_test_time'] * 1000:.0f}ms")
+        report.append(f"  Success Rate: {overall['avg_success_rate'] * 100:.1f}%")
         report.append(f"  Total Runs Analyzed: {overall['run_count']}")
         report.append("")
-        
+
         # Performance status
         report.append("🎯 Performance Status:")
-        
+
         if overall["avg_total_time"] > 300:
             report.append("  ❌ Total execution time is high (>5min)")
         elif overall["avg_total_time"] > 180:
             report.append("  ⚠️  Total execution time is moderate (>3min)")
         else:
             report.append("  ✅ Total execution time is good (<3min)")
-        
+
         if overall["avg_test_time"] > 0.5:
             report.append("  ❌ Average test time is high (>500ms)")
         elif overall["avg_test_time"] > 0.1:
             report.append("  ⚠️  Average test time is moderate (>100ms)")
         else:
             report.append("  ✅ Average test time is good (<100ms)")
-        
+
         if overall["avg_success_rate"] < 0.95:
             report.append("  ❌ Success rate is low (<95%)")
         else:
             report.append("  ✅ Success rate is good (≥95%)")
-        
+
         report.append("")
-        
+
         # Slowest tests
         report.append("🐌 Top 5 Slowest Tests:")
         for i, test in enumerate(trends["slowest_tests"][:5], 1):
-            status = "❌" if test["avg_duration"] > 2 else "⚠️" if test["avg_duration"] > 0.5 else "✅"
-            report.append(f"  {i}. {status} {test['test']} - {test['avg_duration']:.3f}s ({test['run_count']} runs)")
-        
+            status = (
+                "❌"
+                if test["avg_duration"] > 2
+                else "⚠️"
+                if test["avg_duration"] > 0.5
+                else "✅"
+            )
+            report.append(
+                f"  {i}. {status} {test['test']} - {test['avg_duration']:.3f}s ({test['run_count']} runs)"
+            )
+
         report.append("")
-        
+
         # Recent performance
         if recent_runs:
             latest = recent_runs[0]
@@ -542,48 +600,56 @@ class PerformanceDashboard:
             report.append(f"  Timestamp: {datetime.fromtimestamp(latest['timestamp'])}")
             report.append(f"  Total Tests: {latest['total_tests']}")
             report.append(f"  Total Time: {latest['total_time']:.1f}s")
-            report.append(f"  Average Time: {latest['average_time']*1000:.0f}ms")
-            report.append(f"  Success Rate: {latest['success_rate']*100:.1f}%")
-        
+            report.append(f"  Average Time: {latest['average_time'] * 1000:.0f}ms")
+            report.append(f"  Success Rate: {latest['success_rate'] * 100:.1f}%")
+
         return "\n".join(report)
 
 
 def main():
     """Main execution function."""
     import argparse
-    
-    parser = argparse.ArgumentParser(description="Test performance monitoring dashboard")
-    parser.add_argument("--db", default="test_performance.db", help="Database file path")
-    parser.add_argument("--dashboard", action="store_true", help="Generate HTML dashboard")
+
+    parser = argparse.ArgumentParser(
+        description="Test performance monitoring dashboard"
+    )
+    parser.add_argument(
+        "--db", default="test_performance.db", help="Database file path"
+    )
+    parser.add_argument(
+        "--dashboard", action="store_true", help="Generate HTML dashboard"
+    )
     parser.add_argument("--report", action="store_true", help="Generate text report")
-    parser.add_argument("--days", type=int, default=30, help="Days of history to analyze")
-    
+    parser.add_argument(
+        "--days", type=int, default=30, help="Days of history to analyze"
+    )
+
     args = parser.parse_args()
-    
+
     db = TestPerformanceDatabase(args.db)
     dashboard = PerformanceDashboard(db)
-    
+
     if args.dashboard:
         dashboard.generate_html_dashboard()
-    
+
     if args.report:
         report = dashboard.generate_performance_report()
         print(report)
-        
+
         # Save report to file
-        report_file = f"performance_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        report_file = f"performance_report_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}.txt"
         Path(report_file).write_text(report)
         print(f"\n📄 Report saved to: {report_file}")
-    
+
     if not args.dashboard and not args.report:
         # Default: show quick status
         trends = db.get_performance_trends(args.days)
         overall = trends["overall"]
-        
+
         print("🚀 Quick Performance Status:")
         print(f"  Total Time: {overall['avg_total_time']:.1f}s")
-        print(f"  Test Time: {overall['avg_test_time']*1000:.0f}ms")
-        print(f"  Success Rate: {overall['avg_success_rate']*100:.1f}%")
+        print(f"  Test Time: {overall['avg_test_time'] * 1000:.0f}ms")
+        print(f"  Success Rate: {overall['avg_success_rate'] * 100:.1f}%")
         print(f"  Runs: {overall['run_count']}")
 
 

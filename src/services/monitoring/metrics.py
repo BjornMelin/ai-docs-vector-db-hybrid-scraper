@@ -6,6 +6,7 @@ with support for vector search, embeddings, cache, and ML model performance moni
 
 import asyncio
 import functools
+import logging
 import time
 from collections.abc import Callable
 from typing import Any, TypeVar
@@ -48,6 +49,7 @@ class MetricsRegistry:
         Args:
             config: Metrics configuration
             registry: Prometheus registry (uses default if not provided)
+
         """
         self.config = config
         self.registry = registry or REGISTRY
@@ -314,6 +316,7 @@ class MetricsRegistry:
 
         Returns:
             Decorated function with search performance monitoring
+
         """
 
         def decorator(func: F) -> F:
@@ -324,6 +327,12 @@ class MetricsRegistry:
 
                 try:
                     result = await func(*args, **kwargs)
+                except Exception:
+                    self._metrics["search_requests"].labels(
+                        collection=collection, status="error"
+                    ).inc()
+                    raise
+                else:
                     self._metrics["search_requests"].labels(
                         collection=collection, status="success"
                     ).inc()
@@ -336,12 +345,6 @@ class MetricsRegistry:
                         ).observe(max_score)
 
                     return result
-
-                except Exception:
-                    self._metrics["search_requests"].labels(
-                        collection=collection, status="error"
-                    ).inc()
-                    raise
 
                 finally:
                     duration = time.time() - start_time
@@ -357,16 +360,16 @@ class MetricsRegistry:
 
                 try:
                     result = func(*args, **kwargs)
-                    self._metrics["search_requests"].labels(
-                        collection=collection, status="success"
-                    ).inc()
-                    return result
-
                 except Exception:
                     self._metrics["search_requests"].labels(
                         collection=collection, status="error"
                     ).inc()
                     raise
+                else:
+                    self._metrics["search_requests"].labels(
+                        collection=collection, status="success"
+                    ).inc()
+                    return result
 
                 finally:
                     duration = time.time() - start_time
@@ -390,6 +393,7 @@ class MetricsRegistry:
 
         Returns:
             Decorated function with embedding monitoring
+
         """
 
         def decorator(func: F) -> F:
@@ -461,6 +465,7 @@ class MetricsRegistry:
 
         Returns:
             Decorated function with cache monitoring
+
         """
 
         def decorator(func: F) -> F:
@@ -517,6 +522,7 @@ class MetricsRegistry:
 
         Returns:
             Decorated function with cache performance monitoring
+
         """
 
         def decorator(func: F) -> F:
@@ -576,6 +582,7 @@ class MetricsRegistry:
         Args:
             cache_layer: Cache layer (local, distributed)
             cache_type: Type of cache data (embeddings, crawl, search, etc.)
+
         """
         self._metrics["cache_hits"].labels(
             cache_layer=cache_layer, cache_type=cache_type
@@ -586,6 +593,7 @@ class MetricsRegistry:
 
         Args:
             cache_type: Type of cache data (embeddings, crawl, search, etc.)
+
         """
         self._metrics["cache_misses"].labels(cache_type=cache_type).inc()
 
@@ -598,6 +606,7 @@ class MetricsRegistry:
             cache_type: Type of cache (local, distributed)
             cache_name: Name of the cache instance
             memory_bytes: Memory usage in bytes
+
         """
         self._metrics["cache_memory_usage"].labels(
             cache_type=cache_type, cache_name=cache_name
@@ -608,6 +617,7 @@ class MetricsRegistry:
 
         Args:
             cache_manager: CacheManager instance to collect stats from
+
         """
         try:
             if hasattr(cache_manager, "local_cache") and cache_manager.local_cache:
@@ -626,9 +636,10 @@ class MetricsRegistry:
 
         except Exception as e:
             # Log error but don't raise to avoid breaking monitoring
-            import logging
 
-            logging.getLogger(__name__).warning(f"Failed to update cache stats: {e}")
+            logging.getLogger(__name__).warning(
+                f"Failed to update cache stats: {e}"
+            )  # TODO: Convert f-string to logging format
 
     def record_embedding_cost(self, provider: str, model: str, cost: float) -> None:
         """Record embedding generation cost.
@@ -637,6 +648,7 @@ class MetricsRegistry:
             provider: Embedding provider
             model: Model name
             cost: Cost in USD
+
         """
         self._metrics["embedding_cost"].labels(provider=provider, model=model).inc(cost)
 
@@ -646,6 +658,7 @@ class MetricsRegistry:
         Args:
             provider: Embedding provider
             depth: Current queue depth
+
         """
         self._metrics["embedding_queue_depth"].labels(provider=provider).set(depth)
 
@@ -655,6 +668,7 @@ class MetricsRegistry:
         Args:
             service: Service name
             healthy: Whether service is healthy
+
         """
         self._metrics["service_health"].labels(service=service).set(1 if healthy else 0)
 
@@ -664,6 +678,7 @@ class MetricsRegistry:
         Args:
             dependency: Dependency name (qdrant, redis, etc.)
             healthy: Whether dependency is healthy
+
         """
         self._metrics["dependency_health"].labels(dependency=dependency).set(
             1 if healthy else 0
@@ -678,6 +693,7 @@ class MetricsRegistry:
             collection: Collection name
             size: Number of vectors
             memory_usage: Memory usage in bytes
+
         """
         self._metrics["qdrant_collection_size"].labels(collection=collection).set(size)
         self._metrics["qdrant_memory_usage"].labels(collection=collection).set(
@@ -693,6 +709,7 @@ class MetricsRegistry:
             operation: Operation type (insert, search, delete, etc.)
             collection: Collection name
             success: Whether operation succeeded
+
         """
         status = "success" if success else "error"
         self._metrics["qdrant_operations"].labels(
@@ -706,6 +723,7 @@ class MetricsRegistry:
             queue: Queue name
             status: Task status (pending, running, complete, failed)
             size: Number of tasks
+
         """
         self._metrics["task_queue_size"].labels(queue=queue, status=status).set(size)
 
@@ -718,6 +736,7 @@ class MetricsRegistry:
             task_name: Name of the task
             duration_seconds: Execution duration
             success: Whether task succeeded
+
         """
         status = "success" if success else "error"
         self._metrics["task_execution_duration"].labels(
@@ -731,6 +750,7 @@ class MetricsRegistry:
         Args:
             queue: Queue name
             count: Number of active workers
+
         """
         self._metrics["worker_active"].labels(queue=queue).set(count)
 
@@ -743,6 +763,7 @@ class MetricsRegistry:
             tier: Browser tier name
             duration_seconds: Request duration
             success: Whether request succeeded
+
         """
         status = "success" if success else "error"
         self._metrics["browser_requests"].labels(tier=tier, status=status).inc()
@@ -756,6 +777,7 @@ class MetricsRegistry:
         Args:
             tier: Browser tier name
             healthy: Whether tier is healthy
+
         """
         self._metrics["browser_tier_health"].labels(tier=tier).set(1 if healthy else 0)
 
@@ -772,6 +794,7 @@ class MetricsRegistry:
 
         Returns:
             Prometheus metric object or None if not found
+
         """
         return self._metrics.get(name)
 
@@ -788,11 +811,11 @@ def get_metrics_registry() -> MetricsRegistry:
 
     Raises:
         RuntimeError: If registry not initialized
+
     """
     if _global_registry is None:
-        raise RuntimeError(
-            "Metrics registry not initialized. Call initialize_metrics() first."
-        )
+        msg = "Metrics registry not initialized. Call initialize_metrics() first."
+        raise RuntimeError(msg)
     return _global_registry
 
 
@@ -804,7 +827,8 @@ def initialize_metrics(config: MetricsConfig) -> MetricsRegistry:
 
     Returns:
         Initialized MetricsRegistry instance
+
     """
-    global _global_registry  # noqa: PLW0603
+    global _global_registry
     _global_registry = MetricsRegistry(config)
     return _global_registry

@@ -5,19 +5,18 @@ application lifecycle events, ensuring proper initialization, cleanup,
 and service registration for zero-downtime configuration reloading.
 """
 
-import asyncio
 import logging
 from collections.abc import Callable
-from typing import Dict, List, Optional
 
 from fastapi import FastAPI
 
-from ..services.observability.init import (
+from src.services.observability.init import (
     initialize_observability,
     shutdown_observability,
 )
+
 from .core import Config, get_config, set_config
-from .reload import ConfigReloader, get_config_reloader, set_config_reloader
+from .reload import ConfigReloader, set_config_reloader
 
 
 logger = logging.getLogger(__name__)
@@ -31,10 +30,11 @@ class ConfigurationLifecycleManager:
 
         Args:
             app: FastAPI application instance
+
         """
         self.app = app
-        self.reloader: Optional[ConfigReloader] = None
-        self.service_callbacks: List[Callable[[Config, Config], bool]] = []
+        self.reloader: ConfigReloader | None = None
+        self.service_callbacks: list[Callable[[Config, Config], bool]] = []
 
         # Setup lifecycle events
         self._setup_lifecycle_events()
@@ -87,8 +87,8 @@ class ConfigurationLifecycleManager:
 
             logger.info("Configuration reloading system initialized successfully")
 
-        except Exception as e:
-            logger.exception(f"Failed to initialize configuration system: {e}")
+        except Exception:
+            logger.exception("Failed to initialize configuration system")
             raise
 
     async def _register_core_service_callbacks(self) -> None:
@@ -102,10 +102,11 @@ class ConfigurationLifecycleManager:
                     logger.info("Database configuration changed, marking for restart")
                     # Note: Database connections typically require restart
                     # This is a placeholder for actual database reconfiguration
-                return True
-            except Exception as e:
-                logger.error(f"Failed to update database configuration: {e}")
+            except Exception:
+                logger.exception("Failed to update database configuration")
                 return False
+            else:
+                return True
 
         # Cache configuration callback
         def update_cache_config(old_config: Config, new_config: Config) -> bool:
@@ -115,10 +116,11 @@ class ConfigurationLifecycleManager:
                     logger.info("Cache configuration changed")
                     # Placeholder for cache reconfiguration
                     # In a real implementation, this would update cache connections
-                return True
-            except Exception as e:
-                logger.error(f"Failed to update cache configuration: {e}")
+            except Exception:
+                logger.exception("Failed to update cache configuration")
                 return False
+            else:
+                return True
 
         # Observability configuration callback
         def update_observability_config(old_config: Config, new_config: Config) -> bool:
@@ -144,10 +146,11 @@ class ConfigurationLifecycleManager:
                             logger.warning("Failed to reconfigure observability")
                             return False
 
-                return True
-            except Exception as e:
-                logger.error(f"Failed to update observability configuration: {e}")
+            except Exception:
+                logger.exception("Failed to update observability configuration")
                 return False
+            else:
+                return True
 
         # Performance configuration callback
         def update_performance_config(old_config: Config, new_config: Config) -> bool:
@@ -157,10 +160,11 @@ class ConfigurationLifecycleManager:
                     logger.info("Performance configuration changed")
                     # Placeholder for performance setting updates
                     # This could update request limits, timeouts, etc.
-                return True
-            except Exception as e:
-                logger.error(f"Failed to update performance configuration: {e}")
+            except Exception:
+                logger.exception("Failed to update performance configuration")
                 return False
+            else:
+                return True
 
         # Security configuration callback
         def update_security_config(old_config: Config, new_config: Config) -> bool:
@@ -170,22 +174,24 @@ class ConfigurationLifecycleManager:
                     logger.info("Security configuration changed")
                     # Placeholder for security setting updates
                     # This could update API keys, rate limits, etc.
-                return True
-            except Exception as e:
-                logger.error(f"Failed to update security configuration: {e}")
+            except Exception:
+                logger.exception("Failed to update security configuration")
                 return False
+            else:
+                return True
 
         # Global configuration update callback
-        async def update_global_config(old_config: Config, new_config: Config) -> bool:
+        async def update_global_config(_old_config: Config, new_config: Config) -> bool:
             """Update global configuration instance."""
             try:
                 # Update global configuration
                 set_config(new_config)
                 logger.info("Global configuration updated")
-                return True
-            except Exception as e:
-                logger.error(f"Failed to update global configuration: {e}")
+            except Exception:
+                logger.exception("Failed to update global configuration")
                 return False
+            else:
+                return True
 
         # Register all callbacks
         if self.reloader:
@@ -239,8 +245,8 @@ class ConfigurationLifecycleManager:
 
             logger.info("Configuration reloading system shutdown completed")
 
-        except Exception as e:
-            logger.exception(f"Error during configuration system shutdown: {e}")
+        except Exception:
+            logger.exception("Error during configuration system shutdown")
 
     def register_service_callback(
         self,
@@ -256,6 +262,7 @@ class ConfigurationLifecycleManager:
             callback: Callback function (old_config, new_config) -> success
             priority: Callback priority (higher = called earlier)
             async_callback: Whether the callback is async
+
         """
         if self.reloader:
             self.reloader.add_change_listener(
@@ -264,7 +271,9 @@ class ConfigurationLifecycleManager:
                 priority=priority,
                 async_callback=async_callback,
             )
-            logger.info(f"Registered configuration callback: {name}")
+            logger.info(
+                f"Registered configuration callback: {name}"
+            )  # TODO: Convert f-string to logging format
 
     def unregister_service_callback(self, name: str) -> bool:
         """Unregister a service configuration callback.
@@ -274,6 +283,7 @@ class ConfigurationLifecycleManager:
 
         Returns:
             True if callback was removed, False if not found
+
         """
         if self.reloader:
             return self.reloader.remove_change_listener(name)
@@ -284,6 +294,7 @@ class ConfigurationLifecycleManager:
 
         Args:
             poll_interval: File polling interval in seconds
+
         """
         if self.reloader:
             await self.reloader.enable_file_watching(poll_interval)
@@ -293,7 +304,7 @@ class ConfigurationLifecycleManager:
         if self.reloader:
             await self.reloader.disable_file_watching()
 
-    def get_reloader_stats(self) -> Dict[str, any]:
+    def get_reloader_stats(self) -> dict[str, any]:
         """Get configuration reloader statistics."""
         if self.reloader:
             return self.reloader.get_reload_stats()
@@ -301,7 +312,7 @@ class ConfigurationLifecycleManager:
 
 
 # Global lifecycle manager instance
-_lifecycle_manager: Optional[ConfigurationLifecycleManager] = None
+_lifecycle_manager: ConfigurationLifecycleManager | None = None
 
 
 def setup_configuration_lifecycle(app: FastAPI) -> ConfigurationLifecycleManager:
@@ -312,13 +323,14 @@ def setup_configuration_lifecycle(app: FastAPI) -> ConfigurationLifecycleManager
 
     Returns:
         ConfigurationLifecycleManager instance
+
     """
     global _lifecycle_manager
     _lifecycle_manager = ConfigurationLifecycleManager(app)
     return _lifecycle_manager
 
 
-def get_lifecycle_manager() -> Optional[ConfigurationLifecycleManager]:
+def get_lifecycle_manager() -> ConfigurationLifecycleManager | None:
     """Get the global configuration lifecycle manager."""
     return _lifecycle_manager
 
@@ -338,6 +350,7 @@ def register_config_callback(
         callback: Callback function (old_config, new_config) -> success
         priority: Callback priority (higher = called earlier)
         async_callback: Whether the callback is async
+
     """
     if _lifecycle_manager:
         _lifecycle_manager.register_service_callback(

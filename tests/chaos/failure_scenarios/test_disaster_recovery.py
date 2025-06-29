@@ -13,6 +13,10 @@ from typing import Any
 import pytest
 
 
+class TestError(Exception):
+    """Custom exception for this module."""
+
+
 class DisasterType(Enum):
     """Types of disaster scenarios."""
 
@@ -79,14 +83,16 @@ class TestDisasterRecovery:
                 self, backup_id: str | None = None
             ) -> dict[str, Any]:
                 if not self.backups:
-                    raise Exception("No backups available")
+                    msg = "No backups available"
+                    raise TestError(msg)
 
                 if backup_id:
                     backup = next(
                         (b for b in self.backups if b.location == backup_id), None
                     )
                     if not backup:
-                        raise Exception(f"Backup {backup_id} not found")
+                        msg = f"Backup {backup_id} not found"
+                        raise TestError(msg)
                 else:
                     # Get latest backup
                     backup = max(self.backups, key=lambda b: b.timestamp)
@@ -128,11 +134,13 @@ class TestDisasterRecovery:
                 self, disaster_type: DisasterType
             ) -> dict[str, Any]:
                 if self.recovery_in_progress:
-                    raise Exception("Recovery already in progress")
+                    msg = "Recovery already in progress"
+                    raise TestError(msg)
 
                 plan = self.recovery_plans.get(disaster_type)
                 if not plan:
-                    raise Exception(f"No recovery plan for {disaster_type}")
+                    msg = f"No recovery plan for {disaster_type}"
+                    raise TestError(msg)
 
                 self.recovery_in_progress = True
                 self.recovery_start_time = time.time()
@@ -170,7 +178,7 @@ class TestDisasterRecovery:
         return RecoveryOrchestrator()
 
     async def test_datacenter_outage_recovery(
-        self, backup_system, recovery_orchestrator, resilience_validator
+        self, backup_system, recovery_orchestrator, _resilience_validator
     ):
         """Test recovery from complete datacenter outage."""
         # Setup data and backups
@@ -205,7 +213,8 @@ class TestDisasterRecovery:
 
         async def check_datacenter_health():
             if not datacenter_healthy:
-                raise Exception("Primary datacenter is offline")
+                msg = "Primary datacenter is offline"
+                raise TestError(msg)
             return {"status": "healthy"}
 
         # Verify outage detected
@@ -321,7 +330,7 @@ class TestDisasterRecovery:
             "Should restore latest good version"
         )
 
-    async def test_network_partition_recovery(self, recovery_orchestrator):
+    async def test_network_partition_recovery(self, _recovery_orchestrator):
         """Test recovery from network partition (split-brain scenario)."""
         # Simulate distributed system nodes
         nodes = {
@@ -352,7 +361,8 @@ class TestDisasterRecovery:
         async def distributed_write(key: str, value: str) -> bool:
             """Perform distributed write with quorum."""
             if not await check_quorum():
-                raise Exception("Cannot perform write - insufficient quorum")
+                msg = "Cannot perform write - insufficient quorum"
+                raise TestError(msg)
 
             # Write to accessible nodes
             success_count = 0
@@ -541,7 +551,7 @@ class TestDisasterRecovery:
             return wrong_config
 
         async def detect_human_error(
-            current_config: Dict, current_data: Dict
+            current_config: dict, current_data: dict
         ) -> dict[str, Any]:
             """Detect human error by comparing with expected state."""
             errors = []
@@ -557,8 +567,8 @@ class TestDisasterRecovery:
             if not current_data.get("collections"):
                 errors.append("missing_collections")
 
-            actual_total_docs = sum(current_data.get("indexes", {}).values())
-            if actual_total_docs == 0:
+            actual__total_docs = sum(current_data.get("indexes", {}).values())
+            if actual__total_docs == 0:
                 errors.append("data_loss")
 
             return {
@@ -619,7 +629,7 @@ class TestDisasterRecovery:
             "No errors should remain after recovery"
         )
 
-    async def test_multi_region_failover(self, recovery_orchestrator):
+    async def test_multi_region_failover(self, _recovery_orchestrator):
         """Test multi-region failover and recovery."""
         # Setup multi-region deployment
         regions = {
@@ -648,7 +658,8 @@ class TestDisasterRecovery:
             region_info = regions[region]
 
             if region_info["status"] == "failed":
-                raise Exception(f"Region {region} is offline")
+                msg = f"Region {region} is offline"
+                raise TestError(msg)
 
             return {
                 "region": region,
@@ -660,7 +671,8 @@ class TestDisasterRecovery:
         async def failover_to_region(failed_region: str, target_region: str):
             """Failover traffic from failed region to target region."""
             if regions[failed_region]["status"] != "failed":
-                raise Exception(f"Region {failed_region} is not marked as failed")
+                msg = f"Region {failed_region} is not marked as failed"
+                raise TestError(msg)
 
             # Redistribute traffic
             failed_weight = regions[failed_region]["traffic_weight"]
@@ -748,7 +760,7 @@ class TestDisasterRecovery:
         assert "binary_data" not in partial_restored
 
     async def test_rto_rpo_compliance_monitoring(
-        self, backup_system, recovery_orchestrator
+        self, backup_system, _recovery_orchestrator
     ):
         """Test RTO/RPO compliance monitoring and alerting."""
         # Setup monitoring metrics

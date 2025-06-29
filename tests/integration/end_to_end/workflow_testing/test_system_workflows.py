@@ -56,7 +56,7 @@ class WorkflowOrchestrator:
         workflow_name: str,
         components: list[str],
         workflow_steps: list[dict[str, Any]],
-        success_criteria: dict[str, Any] | None = None,
+        _success_criteria: dict[str, Any] | None = None,
     ) -> WorkflowResult:
         """Execute a complete workflow with multiple components and steps."""
         start_time = time.perf_counter()
@@ -70,7 +70,7 @@ class WorkflowOrchestrator:
 
         # Mock performance metrics
         performance_metrics = {
-            "total_steps": len(workflow_steps),
+            "_total_steps": len(workflow_steps),
             "successful_steps": len(workflow_steps),
             "failed_steps": 0,
             "avg_step_duration_s": 0.05,

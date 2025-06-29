@@ -6,9 +6,13 @@ Rich console integration, questionary flows, and real user interaction scenarios
 
 import json
 import os
+import queue
+import threading
+import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import questionary
 from click.testing import CliRunner
 
 from src.cli.main import main
@@ -138,34 +142,35 @@ class TestCLIInteractiveFlows:
             mock_wizard_class.return_value = mock_wizard
 
             # Test different questionary interaction patterns
-            with patch("questionary.confirm") as mock_confirm:
-                with patch("questionary.select") as mock_select:
-                    with patch("questionary.text") as mock_text:
-                        # Setup mock responses
-                        mock_confirm.return_value.ask.return_value = True
-                        mock_select.return_value.ask.return_value = "personal"
-                        mock_text.return_value.ask.return_value = "test-value"
+            with (
+                patch("questionary.confirm") as mock_confirm,
+                patch("questionary.select") as mock_select,
+                patch("questionary.text") as mock_text,
+            ):
+                # Setup mock responses
+                mock_confirm.return_value.ask.return_value = True
+                mock_select.return_value.ask.return_value = "personal"
+                mock_text.return_value.ask.return_value = "test-value"
 
-                        # Mock wizard to use these questionary calls
-                        def mock_run_setup():
-                            # Simulate questionary usage
-                            import questionary
+                # Mock wizard to use these questionary calls
+                def mock_run_setup():
+                    # Simulate questionary usage
 
-                            questionary.confirm("Test question?").ask()
-                            questionary.select("Choose:", choices=["a", "b"]).ask()
-                            questionary.text("Enter text:").ask()
-                            return tmp_path / "config.json"
+                    questionary.confirm("Test question?").ask()
+                    questionary.select("Choose:", choices=["a", "b"]).ask()
+                    questionary.text("Enter text:").ask()
+                    return tmp_path / "config.json"
 
-                        mock_wizard.run_setup = mock_run_setup
+                mock_wizard.run_setup = mock_run_setup
 
-                        runner.invoke(main, ["setup"])
+                runner.invoke(main, ["setup"])
 
-                        # Verify questionary methods were called
-                        mock_confirm.assert_called()
-                        mock_select.assert_called()
-                        mock_text.assert_called()
+                # Verify questionary methods were called
+                mock_confirm.assert_called()
+                mock_select.assert_called()
+                mock_text.assert_called()
 
-    def test_keyboard_interrupt_handling(self, tmp_path):
+    def test_keyboard_interrupt_handling(self, _tmp_path):
         """Test keyboard interrupt handling during interactive flows."""
         runner = CliRunner()
 
@@ -179,7 +184,7 @@ class TestCLIInteractiveFlows:
             assert result.exit_code == 1
             assert "cancelled by user" in result.output
 
-    def test_user_input_validation_flow(self, tmp_path):
+    def test__user_input_validation_flow(self, tmp_path):
         """Test user input validation during interactive flows."""
         runner = CliRunner()
 
@@ -236,7 +241,7 @@ class TestCLIRichIntegration:
                     assert result.exit_code == 0
                     # Rich console should be used for output
 
-    def test_rich_error_formatting(self, tmp_path):
+    def test_rich_error_formatting(self, _tmp_path):
         """Test Rich error message formatting."""
         runner = CliRunner()
 
@@ -321,14 +326,16 @@ class TestCLIConfigurationIntegration:
         config_file = Path(env_vars["AI_DOCS_CONFIG"])
         config_file.write_text(json.dumps(config_data, indent=2))
 
-        with patch.dict(os.environ, env_vars):
-            with patch("src.cli.main.get_config") as mock_get_config:
-                mock_config = MagicMock()
-                mock_get_config.return_value = mock_config
+        with (
+            patch.dict(os.environ, env_vars),
+            patch("src.cli.main.get_config") as mock_get_config,
+        ):
+            mock_config = MagicMock()
+            mock_get_config.return_value = mock_config
 
-                result = runner.invoke(main, [])
+            result = runner.invoke(main, [])
 
-                assert result.exit_code == 0
+            assert result.exit_code == 0
 
     def test_config_validation_across_commands(self, tmp_path):
         """Test configuration validation across different CLI commands."""
@@ -363,7 +370,7 @@ class TestCLIConfigurationIntegration:
 class TestCLIAccessibilityAndUsability:
     """Tests for CLI accessibility and usability features."""
 
-    def test_cli_help_accessibility(self, tmp_path):
+    def test_cli_help_accessibility(self, _tmp_path):
         """Test CLI help accessibility and clarity."""
         runner = CliRunner()
 
@@ -383,7 +390,7 @@ class TestCLIAccessibilityAndUsability:
         lines = help_content.split("\n")
         assert len(lines) < 100  # Reasonable length
 
-    def test_error_message_helpfulness(self, tmp_path):
+    def test_error_message_helpfulness(self, _tmp_path):
         """Test that error messages are helpful and actionable."""
         runner = CliRunner()
 
@@ -407,7 +414,7 @@ class TestCLIAccessibilityAndUsability:
             # Should not show raw Python tracebacks to users
             assert "Traceback" not in result.output
 
-    def test_cli_progressive_disclosure(self, tmp_path):
+    def test_cli_progressive_disclosure(self, _tmp_path):
         """Test progressive disclosure of CLI features."""
         runner = CliRunner()
 
@@ -425,7 +432,7 @@ class TestCLIAccessibilityAndUsability:
         assert detailed_help_length > basic_help_length
         assert detailed_help_length < basic_help_length * 3  # Not too overwhelming
 
-    def test_cli_consistent_patterns(self, tmp_path):
+    def test_cli_consistent_patterns(self, _tmp_path):
         """Test that CLI follows consistent patterns across commands."""
         runner = CliRunner()
 
@@ -462,8 +469,6 @@ class TestCLIPerformanceIntegration:
             "browser": {"headless": True, "timeout": 30000},
         }
         config_file.write_text(json.dumps(config_data, indent=2))
-
-        import time
 
         start_time = time.time()
 
@@ -504,10 +509,8 @@ class TestCLIPerformanceIntegration:
             assert result.exit_code == 0
             # Should handle large configs without issues
 
-    def test_concurrent_cli_operations(self, tmp_path):
+    def test_concurrent_cli_operations(self, _tmp_path):
         """Test concurrent CLI operations don't interfere."""
-        import queue
-        import threading
 
         results = queue.Queue()
 

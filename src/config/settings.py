@@ -15,6 +15,7 @@ def get_settings() -> Config:
 
     Returns:
         Config: The global configuration instance.
+
     """
     global _config
     if _config is None:

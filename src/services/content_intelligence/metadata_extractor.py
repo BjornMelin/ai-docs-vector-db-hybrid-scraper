@@ -9,7 +9,7 @@ import hashlib
 import json
 import logging
 import re
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlparse
 
@@ -118,6 +118,7 @@ class MetadataExtractor:
 
         Returns:
             ContentMetadata: Enriched metadata
+
         """
         if not self._initialized:
             await self.initialize()
@@ -170,6 +171,7 @@ class MetadataExtractor:
         Args:
             metadata: ContentMetadata to update
             html: Raw HTML content
+
         """
         # Extract basic meta information
         for field, patterns in self._meta_patterns.items():
@@ -205,7 +207,7 @@ class MetadataExtractor:
         metadata.tags.extend(tags_meta)
 
     async def _extract_content_metadata(
-        self, metadata: ContentMetadata, content: str, url: str
+        self, metadata: ContentMetadata, content: str, _url: str
     ) -> None:
         """Extract metadata from content analysis.
 
@@ -213,6 +215,7 @@ class MetadataExtractor:
             metadata: ContentMetadata to update
             content: Text content
             url: Source URL
+
         """
         # Extract title from content if not already set
         if not metadata.title:
@@ -246,14 +249,16 @@ class MetadataExtractor:
         entities = []
         for entity_type, pattern in self._entity_patterns.items():
             matches = re.findall(pattern, content, re.IGNORECASE)
-            for match in matches:
-                entities.append(
+            entities.extend(
+                [
                     {
                         "type": entity_type,
                         "value": match if isinstance(match, str) else match[0],
                         "text": match if isinstance(match, str) else "".join(match),
                     }
-                )
+                    for match in matches
+                ]
+            )
         metadata.entities = entities
 
         # Extract breadcrumbs
@@ -278,6 +283,7 @@ class MetadataExtractor:
         Args:
             metadata: ContentMetadata to update
             content: Text content
+
         """
         # Extract topics based on content analysis
         content_lower = content.lower()
@@ -346,6 +352,7 @@ class MetadataExtractor:
             content: Text content
             url: Source URL
             extraction_metadata: Optional extraction metadata
+
         """
         # Generate content hash
         content_bytes = content.encode("utf-8")
@@ -377,6 +384,7 @@ class MetadataExtractor:
             metadata: ContentMetadata to update
             content: Text content
             url: Source URL
+
         """
         # Extract related URLs from content
         url_pattern = r'https?://[^\s<>"\']+|www\.[^\s<>"\']+|\[[^\]]+\]\([^)]+\)'
@@ -417,6 +425,7 @@ class MetadataExtractor:
         Args:
             metadata: ContentMetadata to update
             html: Raw HTML content
+
         """
         # Detect Schema.org types
         schema_types = []
@@ -469,6 +478,7 @@ class MetadataExtractor:
 
         Returns:
             datetime | None: Parsed datetime or None if parsing fails
+
         """
         # Common date formats
         date_formats = [
@@ -492,7 +502,7 @@ class MetadataExtractor:
 
         for fmt in date_formats:
             try:
-                return datetime.strptime(date_str, fmt)
+                return datetime.strptime(date_str, fmt).replace(tzinfo=UTC)
             except ValueError:
                 continue
 
@@ -502,7 +512,7 @@ class MetadataExtractor:
             try:
                 return datetime.strptime(
                     date_match.group(1).replace("/", "-"), "%Y-%m-%d"
-                )
+                ).replace(tzinfo=UTC)
             except ValueError:
                 pass
 

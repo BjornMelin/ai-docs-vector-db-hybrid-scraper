@@ -20,6 +20,7 @@ class BaseService(ABC):
 
         Args:
             config: Unified configuration
+
         """
         self.config = config
         self._client: object | None = None
@@ -28,12 +29,10 @@ class BaseService(ABC):
     @abstractmethod
     async def initialize(self) -> None:
         """Initialize service resources."""
-        pass
 
     @abstractmethod
     async def cleanup(self) -> None:
         """Cleanup service resources."""
-        pass
 
     @asynccontextmanager
     async def context(self):
@@ -47,10 +46,11 @@ class BaseService(ABC):
     def _validate_initialized(self) -> None:
         """Ensure service is initialized."""
         if not self._initialized:
-            raise APIError(
+            msg = (
                 f"{self.__class__.__name__} not initialized. "
                 "Call initialize() or use context manager."
             )
+            raise APIError(msg)
 
     async def __aenter__(self):
         """Async context manager entry."""

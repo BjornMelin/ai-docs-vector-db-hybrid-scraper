@@ -555,7 +555,7 @@ class TestEmbeddingCache:
         stats = await embedding_cache.get_cache_stats()
 
         expected_stats = {
-            "total_embeddings": 4,
+            "_total_embeddings": 4,
             "cache_size": 1000,
             "by_provider": {"openai": 3, "fastembed": 1},
             "by_model": {
@@ -583,7 +583,7 @@ class TestEmbeddingCache:
         stats = await embedding_cache.get_cache_stats()
 
         # Should handle malformed keys gracefully
-        assert stats["total_embeddings"] == 3
+        assert stats["_total_embeddings"] == 3
         assert stats["by_provider"] == {"openai": 1}
         assert stats["by_model"] == {"openai:text-embedding-3-small": 1}
 

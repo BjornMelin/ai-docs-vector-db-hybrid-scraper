@@ -3,6 +3,8 @@
 import logging
 from typing import TYPE_CHECKING
 
+from ._search_utils import search_documents_core
+
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -17,9 +19,9 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from ...infrastructure.client_manager import ClientManager
-from ..models.requests import SearchRequest
-from ..models.responses import SearchResult
+from src.infrastructure.client_manager import ClientManager
+from src.mcp_tools.models.requests import SearchRequest
+from src.mcp_tools.models.responses import SearchResult
 
 
 logger = logging.getLogger(__name__)
@@ -32,14 +34,11 @@ def register_tools(mcp, client_manager: ClientManager):
     async def search_documents(
         request: SearchRequest, ctx: Context
     ) -> list[SearchResult]:
-        """
-        Search documents with advanced hybrid search and reranking.
+        """Search documents with advanced hybrid search and reranking.
 
         Supports dense, sparse, and hybrid search strategies with optional
         BGE reranking for improved accuracy.
         """
-        from ._search_utils import search_documents_core
-
         return await search_documents_core(request, client_manager, ctx)
 
     @mcp.tool()
@@ -50,8 +49,7 @@ def register_tools(mcp, client_manager: ClientManager):
         score_threshold: float = 0.7,
         ctx: Context = None,
     ) -> list[SearchResult]:
-        """
-        Search for documents similar to a given document ID.
+        """Search for documents similar to a given document ID.
 
         Uses the document's embedding to find semantically similar content.
         """
@@ -80,9 +78,8 @@ def register_tools(mcp, client_manager: ClientManager):
                     await ctx.error(
                         f"Document {query_id} not found in collection {collection}"
                     )
-                raise ValueError(
-                    f"Document {query_id} not found in collection {collection}"
-                )
+                msg = f"Document {query_id} not found in collection {collection}"
+                raise ValueError(msg)
 
             # Extract the vector
             source_doc = retrieved[0]
@@ -111,19 +108,18 @@ def register_tools(mcp, client_manager: ClientManager):
                 await ctx.debug(f"Hybrid search returned {len(results)} results")
 
             # Convert to response format, excluding the source document
-            search_results = []
-            for result in results:
-                if str(result["id"]) != query_id:
-                    search_results.append(
-                        SearchResult(
-                            id=str(result["id"]),
-                            content=result["payload"].get("content", ""),
-                            score=result["score"],
-                            url=result["payload"].get("url"),
-                            title=result["payload"].get("title"),
-                            metadata=result["payload"],
-                        )
-                    )
+            search_results = [
+                SearchResult(
+                    id=str(result["id"]),
+                    content=result["payload"].get("content", ""),
+                    score=result["score"],
+                    url=result["payload"].get("url"),
+                    title=result["payload"].get("title"),
+                    metadata=result["payload"],
+                )
+                for result in results
+                if str(result["id"]) != query_id
+            ]
 
             final_results = search_results[
                 :limit
@@ -134,8 +130,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 )
             return final_results
 
-        except Exception as e:
+        except Exception:
             if ctx:
-                await ctx.error(f"Similar search failed: {e}")
-            logger.exception(f"Similar search failed: {e}")
+                await ctx.error("Similar search failed")
+            logger.exception("Similar search failed")
             raise

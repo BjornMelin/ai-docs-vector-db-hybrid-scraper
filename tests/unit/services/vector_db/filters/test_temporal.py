@@ -1,6 +1,6 @@
 """Tests for the temporal filter implementation."""
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -35,7 +35,7 @@ class TestTemporalCriteria:
 
     def test_with_absolute_dates(self):
         """Test criteria with absolute date ranges."""
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
         yesterday = now - timedelta(days=1)
         last_week = now - timedelta(days=7)
 
@@ -73,7 +73,7 @@ class TestTemporalCriteria:
 
     def test_validation_future_dates(self):
         """Test validation of future dates."""
-        future_date = datetime.utcnow() + timedelta(days=1)
+        future_date = datetime.now(tz=UTC) + timedelta(days=1)
 
         # Future dates should raise validation error for 'before' fields
         with pytest.raises(ValueError, match="cannot be in the future"):
@@ -195,7 +195,7 @@ class TestTemporalFilter:
     @pytest.mark.asyncio
     async def test_apply_absolute_date_filter(self, temporal_filter):
         """Test applying absolute date filters."""
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
         last_week = now - timedelta(days=7)
         yesterday = now - timedelta(days=1)
 
@@ -258,7 +258,7 @@ class TestTemporalFilter:
     @pytest.mark.asyncio
     async def test_apply_with_context(self, temporal_filter):
         """Test applying filter with context."""
-        current_time = datetime(2024, 1, 15, 12, 0, 0)
+        current_time = datetime(2024, 1, 15, 12, 0, 0, tzinfo=UTC)
 
         criteria = {
             "created_within_days": 7,
@@ -282,7 +282,7 @@ class TestTemporalFilter:
         """Test criteria validation."""
         # Valid criteria
         valid_criteria = {
-            "created_after": datetime.utcnow() - timedelta(days=7),
+            "created_after": datetime.now(tz=UTC) - timedelta(days=7),
             "max_age_days": 30,
         }
 
@@ -290,7 +290,7 @@ class TestTemporalFilter:
         assert is_valid is True
 
         # Invalid criteria (future date)
-        invalid_criteria = {"created_before": datetime.utcnow() + timedelta(days=1)}
+        invalid_criteria = {"created_before": datetime.now(tz=UTC) + timedelta(days=1)}
 
         is_valid = await temporal_filter.validate_criteria(invalid_criteria)
         assert is_valid is False
@@ -314,7 +314,7 @@ class TestTemporalFilter:
 
     def test_calculate_freshness_score_exponential(self, temporal_filter):
         """Test calculating freshness score with exponential decay."""
-        current_time = datetime.utcnow()
+        current_time = datetime.now(tz=UTC)
 
         # Fresh content (0 days old)
         content_date = current_time
@@ -348,7 +348,7 @@ class TestTemporalFilter:
 
     def test_calculate_freshness_score_linear(self, temporal_filter):
         """Test calculating freshness score with linear decay."""
-        current_time = datetime.utcnow()
+        current_time = datetime.now(tz=UTC)
 
         # Fresh content
         content_date = current_time
@@ -379,7 +379,7 @@ class TestTemporalFilter:
 
     def test_calculate_freshness_score_step(self, temporal_filter):
         """Test calculating freshness score with step decay."""
-        current_time = datetime.utcnow()
+        current_time = datetime.now(tz=UTC)
 
         # Within half-life
         content_date = current_time - timedelta(days=25)
@@ -408,25 +408,25 @@ class TestTemporalFilter:
     def test_parse_relative_date(self, temporal_filter):
         """Test parsing relative date strings."""
         # Test various relative date formats
-        current_time = datetime.utcnow()
+        current_time = datetime.now(tz=UTC)
 
         # Last N days
         result = temporal_filter.parse_relative_date("last 7 days")
         assert result is not None
         expected = current_time - timedelta(days=7)
-        assert abs((result - expected).total_seconds()) < 60  # Within 1 minute
+        assert abs((result - expected)._total_seconds()) < 60  # Within 1 minute
 
         # Past week
         result = temporal_filter.parse_relative_date("past week")
         assert result is not None
         expected = current_time - timedelta(weeks=1)
-        assert abs((result - expected).total_seconds()) < 60
+        assert abs((result - expected)._total_seconds()) < 60
 
         # Yesterday
         result = temporal_filter.parse_relative_date("yesterday")
         assert result is not None
         expected = current_time - timedelta(days=1)
-        assert abs((result - expected).total_seconds()) < 60
+        assert abs((result - expected)._total_seconds()) < 60
 
         # Today
         result = temporal_filter.parse_relative_date("today")
@@ -446,14 +446,14 @@ class TestTemporalFilter:
         assert result.performance_impact == "none"
 
         # Few conditions
-        criteria = {"created_after": datetime.utcnow() - timedelta(days=7)}
+        criteria = {"created_after": datetime.now(tz=UTC) - timedelta(days=7)}
         result = await temporal_filter.apply(criteria)
         assert result.performance_impact == "low"
 
         # Multiple conditions
         criteria = {
-            "created_after": datetime.utcnow() - timedelta(days=7),
-            "created_before": datetime.utcnow(),
+            "created_after": datetime.now(tz=UTC) - timedelta(days=7),
+            "created_before": datetime.now(tz=UTC),
             "updated_within_days": 3,
             "freshness_threshold": 0.8,
         }
@@ -474,7 +474,7 @@ class TestTemporalFilter:
     @pytest.mark.asyncio
     async def test_complex_temporal_query(self, temporal_filter):
         """Test complex temporal query with multiple criteria."""
-        now = datetime.utcnow()
+        now = datetime.now(tz=UTC)
 
         criteria = {
             "created_after": now - timedelta(days=30),

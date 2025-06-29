@@ -4,10 +4,19 @@ Provides decorators and utilities for tracking AI operations, costs, and
 performance metrics that integrate with the existing function-based services.
 """
 
+import asyncio
 import functools
 import logging
 from collections.abc import Callable
 from typing import Any, TypeVar
+
+
+# Optional OpenTelemetry imports - handled at runtime
+try:
+    from opentelemetry import metrics, trace
+except ImportError:
+    trace = None
+    metrics = None
 
 
 logger = logging.getLogger(__name__)
@@ -29,10 +38,12 @@ def get_tracer(name: str = "ai-docs-vector-db") -> Any:
 
     Returns:
         OpenTelemetry Tracer instance or NoOpTracer if not initialized
+
     """
     try:
-        from opentelemetry import trace
-
+        if trace is None:
+            msg = "OpenTelemetry trace not available"
+            raise ImportError(msg)
         return trace.get_tracer(name)
     except ImportError:
         logger.warning("OpenTelemetry not available, returning NoOp tracer")
@@ -47,10 +58,12 @@ def get_meter(name: str = "ai-docs-vector-db") -> Any:
 
     Returns:
         OpenTelemetry Meter instance or NoOpMeter if not initialized
+
     """
     try:
-        from opentelemetry import metrics
-
+        if metrics is None:
+            msg = "OpenTelemetry metrics not available"
+            raise ImportError(msg)
         return metrics.get_meter(name)
     except ImportError:
         logger.warning("OpenTelemetry not available, returning NoOp meter")
@@ -91,7 +104,9 @@ def _initialize_metrics() -> None:
         )
 
     except Exception as e:
-        logger.warning(f"Failed to initialize AI metrics: {e}")
+        logger.warning(
+            f"Failed to initialize AI metrics: {e}"
+        )  # TODO: Convert f-string to logging format
 
 
 def instrument_function(
@@ -110,6 +125,7 @@ def instrument_function(
 
     Returns:
         Decorated function with tracing
+
     """
 
     def decorator(func: F) -> F:
@@ -138,7 +154,9 @@ def instrument_function(
                                     f"function.kwarg.{key}", str(value)[:100]
                                 )
                     except Exception as e:
-                        logger.debug(f"Failed to record function arguments: {e}")
+                        logger.debug(
+                            f"Failed to record function arguments: {e}"
+                        )  # TODO: Convert f-string to logging format
 
                 try:
                     result = await func(*args, **kwargs)
@@ -181,7 +199,9 @@ def instrument_function(
                                     f"function.kwarg.{key}", str(value)[:100]
                                 )
                     except Exception as e:
-                        logger.debug(f"Failed to record function arguments: {e}")
+                        logger.debug(
+                            f"Failed to record function arguments: {e}"
+                        )  # TODO: Convert f-string to logging format
 
                 try:
                     result = func(*args, **kwargs)
@@ -200,8 +220,6 @@ def instrument_function(
                     raise
 
         # Return appropriate wrapper based on function type
-        import asyncio
-
         return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
 
     return decorator
@@ -228,6 +246,7 @@ def record_ai_operation(
         duration: Operation duration in seconds
         success: Whether operation succeeded
         **attributes: Additional attributes to record
+
     """
     # Initialize metrics if not done
     if _ai_operation_counter is None:
@@ -266,7 +285,9 @@ def record_ai_operation(
                 _ai_token_counter.add(output_tokens, token_attrs)
 
     except Exception as e:
-        logger.warning(f"Failed to record AI operation metrics: {e}")
+        logger.warning(
+            f"Failed to record AI operation metrics: {e}"
+        )  # TODO: Convert f-string to logging format
 
 
 def track_cost(
@@ -284,6 +305,7 @@ def track_cost(
         cost_usd: Cost in USD
         model: Model name if applicable
         **attributes: Additional attributes
+
     """
     if _ai_cost_counter is None:
         _initialize_metrics()
@@ -303,14 +325,16 @@ def track_cost(
             _ai_cost_counter.add(cost_usd, attrs)
 
     except Exception as e:
-        logger.warning(f"Failed to record AI cost: {e}")
+        logger.warning(
+            f"Failed to record AI cost: {e}"
+        )  # TODO: Convert f-string to logging format
 
 
 # NoOp implementations for when OpenTelemetry is not available
 class _NoOpTracer:
     """No-op tracer when OpenTelemetry is not available."""
 
-    def start_as_current_span(self, name: str, **kwargs):
+    def start_as_current_span(self, _name: str, **_kwargs):
         return _NoOpSpan()
 
 
@@ -333,10 +357,10 @@ class _NoOpSpan:
 class _NoOpMeter:
     """No-op meter when OpenTelemetry is not available."""
 
-    def create_histogram(self, name: str, **kwargs):
+    def create_histogram(self, _name: str, **_kwargs):
         return _NoOpHistogram()
 
-    def create_counter(self, name: str, **kwargs):
+    def create_counter(self, _name: str, **_kwargs):
         return _NoOpCounter()
 
 
@@ -350,5 +374,5 @@ class _NoOpHistogram:
 class _NoOpCounter:
     """No-op counter when OpenTelemetry is not available."""
 
-    def add(self, value: float | int, attributes: dict | None = None) -> None:
+    def add(self, value: float, attributes: dict | None = None) -> None:
         pass

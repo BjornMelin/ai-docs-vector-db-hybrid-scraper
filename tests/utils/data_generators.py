@@ -7,14 +7,11 @@ that covers edge cases, realistic scenarios, and property-based testing patterns
 import random
 import string
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 
 try:
-    import hypothesis.strategies as st
-    from hypothesis import given, settings
-
     HYPOTHESIS_AVAILABLE = True
 except ImportError:
     HYPOTHESIS_AVAILABLE = False
@@ -80,14 +77,12 @@ except ImportError:
             return random.choice(words)
 
         @staticmethod
-        def date_time_between(start_date, end_date):
-            # Simple date generation
-            from datetime import datetime, timedelta
-
-            start = datetime.now() - timedelta(days=365)
-            end = datetime.now()
+        def date_time_between(_start_date, _end_date):
+            # Simple date generation - uses fixed range for now
+            start = datetime.now(tz=UTC) - timedelta(days=365)
+            end = datetime.now(tz=UTC)
             return start + timedelta(
-                seconds=random.randint(0, int((end - start).total_seconds()))
+                seconds=random.randint(0, int((end - start)._total_seconds()))
             )
 
         @staticmethod
@@ -112,13 +107,12 @@ class HypothesisStrategies:
 
         if id_type == "uuid":
             return str(uuid.uuid4())
-        elif id_type == "numeric":
+        if id_type == "numeric":
             return str(random.randint(1, 999999))
-        else:
-            # Custom alphanumeric ID
-            length = random.randint(8, 32)
-            chars = string.ascii_letters + string.digits + "_-"
-            return "".join(random.choices(chars, k=length))
+        # Custom alphanumeric ID
+        length = random.randint(8, 32)
+        chars = string.ascii_letters + string.digits + "_-"
+        return "".join(random.choices(chars, k=length))
 
     @staticmethod
     def url():
@@ -155,14 +149,14 @@ class HypothesisStrategies:
                 for _ in range(random.randint(1, 3))
             ]
             return " ".join(words)
-        elif query_type == "phrase":
+        if query_type == "phrase":
             # Quoted phrase queries
             words = [
                 "".join(random.choices(string.ascii_letters, k=random.randint(3, 10)))
                 for _ in range(random.randint(2, 5))
             ]
             return f'"{" ".join(words)}"'
-        elif query_type == "boolean":
+        if query_type == "boolean":
             # Boolean queries with AND, OR, NOT
             terms = [
                 "".join(random.choices(string.ascii_letters, k=random.randint(3, 10)))
@@ -174,24 +168,23 @@ class HypothesisStrategies:
             for i, op in enumerate(operators):
                 result += f" {op} {terms[i + 1]}"
             return result
-        else:
-            # Technical queries with programming terms
-            tech_terms = [
-                "python",
-                "javascript",
-                "react",
-                "api",
-                "database",
-                "authentication",
-                "docker",
-                "kubernetes",
-                "microservices",
-                "REST",
-                "GraphQL",
-                "OAuth",
-            ]
-            selected_terms = random.sample(tech_terms, k=random.randint(1, 3))
-            return " ".join(selected_terms)
+        # Technical queries with programming terms
+        tech_terms = [
+            "python",
+            "javascript",
+            "react",
+            "api",
+            "database",
+            "authentication",
+            "docker",
+            "kubernetes",
+            "microservices",
+            "REST",
+            "GraphQL",
+            "OAuth",
+        ]
+        selected_terms = random.sample(tech_terms, k=random.randint(1, 3))
+        return " ".join(selected_terms)
 
     @staticmethod
     def embedding_vector(dimension=None):
@@ -296,7 +289,7 @@ class TestDataGenerator:
                 "tags": [self.fake.word() for _ in range(random.randint(1, 5))],
             },
             "chunk_index": random.randint(0, 10),
-            "chunk_total": random.randint(1, 15),
+            "chunk__total": random.randint(1, 15),
         }
 
         if include_embedding:
@@ -324,9 +317,9 @@ class TestDataGenerator:
         content_parts = [document["content"]]
 
         # Inject some query terms into content
-        for term in query_terms:
-            if random.random() < 0.7:  # 70% chance to include each term
-                content_parts.append(f" {term}")
+        content_parts.extend(
+            f" {term}" for term in query_terms if random.random() < 0.7
+        )
 
         return {
             "id": document["id"],
@@ -351,7 +344,7 @@ class TestDataGenerator:
         if query_type == "simple":
             return " ".join([self.fake.word() for _ in range(random.randint(1, 3))])
 
-        elif query_type == "complex":
+        if query_type == "complex":
             base_terms = [self.fake.word() for _ in range(random.randint(2, 4))]
             operators = ["AND", "OR", "NOT"]
 
@@ -362,7 +355,7 @@ class TestDataGenerator:
 
             return " ".join(query_parts)
 
-        elif query_type == "technical":
+        if query_type == "technical":
             tech_terms = [
                 "python",
                 "javascript",
@@ -383,9 +376,9 @@ class TestDataGenerator:
             selected = random.sample(tech_terms, random.randint(1, 3))
             return " ".join(selected)
 
-        else:  # mixed
-            query_types = ["simple", "complex", "technical"]
-            return self.generate_search_query(random.choice(query_types))
+        # mixed
+        query_types = ["simple", "complex", "technical"]
+        return self.generate_search_query(random.choice(query_types))
 
     def generate_api_response(
         self,
@@ -406,7 +399,7 @@ class TestDataGenerator:
         if success:
             response = {
                 "status": "success",
-                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "timestamp": datetime.now(tz=UTC).isoformat() + "Z",
                 "request_id": str(uuid.uuid4()),
             }
 
@@ -416,7 +409,7 @@ class TestDataGenerator:
             if include_pagination:
                 page = random.randint(1, 5)
                 per_page = random.randint(10, 50)
-                total = items_count + random.randint(0, 100)
+                _total = items_count + random.randint(0, 100)
 
                 response.update(
                     {
@@ -427,9 +420,9 @@ class TestDataGenerator:
                         "pagination": {
                             "page": page,
                             "per_page": per_page,
-                            "total": total,
-                            "total_pages": (total + per_page - 1) // per_page,
-                            "has_next": page * per_page < total,
+                            "_total": _total,
+                            "_total_pages": (_total + per_page - 1) // per_page,
+                            "has_next": page * per_page < _total,
                             "has_prev": page > 1,
                         },
                     }
@@ -453,7 +446,7 @@ class TestDataGenerator:
                 "status": "error",
                 "error": error_type,
                 "message": self._generate_error_message(error_type),
-                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "timestamp": datetime.now(tz=UTC).isoformat() + "Z",
                 "request_id": str(uuid.uuid4()),
             }
 
@@ -462,13 +455,13 @@ class TestDataGenerator:
     def _generate_content(self, length_range: tuple) -> str:
         """Generate realistic content text."""
         paragraphs = []
-        total_length = 0
+        _total_length = 0
         target_length = random.randint(*length_range)
 
-        while total_length < target_length:
+        while _total_length < target_length:
             paragraph = self.fake.paragraph(nb_sentences=random.randint(3, 8))
             paragraphs.append(paragraph)
-            total_length += len(paragraph)
+            _total_length += len(paragraph)
 
         content = " ".join(paragraphs)
 
@@ -509,18 +502,18 @@ class TestDataGenerator:
 
 
 # Convenience functions for quick data generation
-def generate_test_documents(count: int = 10, **kwargs) -> list[dict[str, Any]]:
+def generate_test_documents(count: int = 10, **_kwargs) -> list[dict[str, Any]]:
     """Generate a list of test documents.
 
     Args:
         count: Number of documents to generate
-        **kwargs: Additional arguments for TestDataGenerator.generate_document()
+        **_kwargs: Additional arguments for TestDataGenerator.generate_document()
 
     Returns:
         List of generated documents
     """
     generator = TestDataGenerator()
-    return [generator.generate_document(**kwargs) for _ in range(count)]
+    return [generator.generate_document(**_kwargs) for _ in range(count)]
 
 
 def generate_search_queries(count: int = 10, query_type: str = "mixed") -> list[str]:

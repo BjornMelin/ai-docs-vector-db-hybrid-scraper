@@ -10,11 +10,13 @@ Philosophy: Use existing, proven security infrastructure rather than building ML
 """
 
 import importlib.util
+import json
 import logging
+import shutil
 import subprocess
 
 # Import SecurityValidator from the security.py file (not the package)
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -39,7 +41,7 @@ class SecurityCheckResult(BaseModel):
     passed: bool
     message: str
     severity: str = "info"  # info, warning, error, critical
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     details: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -78,9 +80,13 @@ class MLSecurityValidator:
 
         Returns:
             Security check result
+
         """
-        # Check if ML input validation is enabled
-        if not self.config.security.enable_ml_input_validation:
+        # Check if ML input validation is enabled (use default if not configured)
+        enable_validation = getattr(
+            self.config.security, "enable_ml_input_validation", True
+        )
+        if not enable_validation:
             result = SecurityCheckResult(
                 check_type="input_validation",
                 passed=True,
@@ -92,7 +98,8 @@ class MLSecurityValidator:
         try:
             # Check data size (prevent DoS)
             data_str = str(data)
-            if len(data_str) > self.config.security.max_ml_input_size:
+            max_input_size = getattr(self.config.security, "max_ml_input_size", 1000000)
+            if len(data_str) > max_input_size:
                 result = SecurityCheckResult(
                     check_type="input_validation",
                     passed=False,
@@ -116,17 +123,17 @@ class MLSecurityValidator:
                         return result
 
             # Check for suspicious patterns from config
-            suspicious_patterns = (
-                self.config.security.suspicious_patterns
-                if hasattr(self.config.security, "suspicious_patterns")
-                else ["<script", "DROP TABLE", "__import__", "eval("]
+            suspicious_patterns = getattr(
+                self.config.security,
+                "suspicious_patterns",
+                ["<script", "DROP TABLE", "__import__", "eval("],
             )
             for pattern in suspicious_patterns:
                 if pattern in data_str:
                     result = SecurityCheckResult(
                         check_type="input_validation",
                         passed=False,
-                        message=f"Suspicious pattern detected: {pattern}",
+                        message="Suspicious pattern detected",
                         severity="error",
                     )
                     self.checks_performed.append(result)
@@ -141,7 +148,7 @@ class MLSecurityValidator:
             return result
 
         except Exception as e:
-            logger.exception(f"Input validation error: {e}")
+            logger.exception("Input validation error")
             result = SecurityCheckResult(
                 check_type="input_validation",
                 passed=False,
@@ -156,9 +163,13 @@ class MLSecurityValidator:
 
         Returns:
             Security check result
+
         """
-        # Check if dependency scanning is enabled
-        if not self.config.security.enable_dependency_scanning:
+        # Check if dependency scanning is enabled (use default if not configured)
+        enable_scanning = getattr(
+            self.config.security, "enable_dependency_scanning", True
+        )
+        if not enable_scanning:
             result = SecurityCheckResult(
                 check_type="dependency_scan",
                 passed=True,
@@ -168,18 +179,34 @@ class MLSecurityValidator:
             return result
 
         try:
-            # Use pip-audit if available
-            result = subprocess.run(
-                ["pip-audit", "--format", "json"],
+            # Use pip-audit if available with full path for security
+            pip_audit_path = shutil.which("pip-audit")
+            if not pip_audit_path:
+                # pip-audit not available
+                result = SecurityCheckResult(
+                    check_type="dependency_scan",
+                    passed=True,
+                    message="Dependency scan skipped (pip-audit not available)",
+                )
+                self.checks_performed.append(result)
+                return result
+
+            # Validate executable path for security
+            if not pip_audit_path.startswith(("/usr/bin/", "/usr/local/bin/", "/opt/")):
+                logger.warning(
+                    f"pip-audit found in unexpected location: {pip_audit_path}"
+                )
+
+            result = subprocess.run(  # Validated executable path
+                [pip_audit_path, "--format", "json"],
                 capture_output=True,
                 text=True,
                 timeout=30,
                 check=False,
+                shell=False,  # Explicitly disable shell
             )
 
             if result.returncode == 0:
-                import json
-
                 audit_data = json.loads(result.stdout)
                 vulnerabilities = audit_data.get("vulnerabilities", [])
 
@@ -193,23 +220,21 @@ class MLSecurityValidator:
                     )
                     self.checks_performed.append(result)
                     return result
-                else:
-                    result = SecurityCheckResult(
-                        check_type="dependency_scan",
-                        passed=True,
-                        message="No vulnerabilities found",
-                    )
-                    self.checks_performed.append(result)
-                    return result
-            else:
-                # pip-audit not available or failed
                 result = SecurityCheckResult(
                     check_type="dependency_scan",
                     passed=True,
-                    message="Dependency scan skipped (pip-audit not available)",
+                    message="No vulnerabilities found",
                 )
                 self.checks_performed.append(result)
                 return result
+            # pip-audit not available or failed
+            result = SecurityCheckResult(
+                check_type="dependency_scan",
+                passed=True,
+                message="Dependency scan skipped (pip-audit not available)",
+            )
+            self.checks_performed.append(result)
+            return result
 
         except subprocess.TimeoutExpired:
             result = SecurityCheckResult(
@@ -220,8 +245,8 @@ class MLSecurityValidator:
             )
             self.checks_performed.append(result)
             return result
-        except Exception as e:
-            logger.exception(f"Dependency check error: {e}")
+        except Exception:
+            logger.exception("Dependency check error")
             result = SecurityCheckResult(
                 check_type="dependency_scan",
                 passed=True,
@@ -239,12 +264,40 @@ class MLSecurityValidator:
 
         Returns:
             Security check result
+
         """
         try:
-            # Try trivy first
-            result = subprocess.run(
+            # Try trivy first with full path for security
+            trivy_path = shutil.which("trivy")
+            if not trivy_path:
+                result = SecurityCheckResult(
+                    check_type="container_scan",
+                    passed=True,
+                    message="Container scan skipped (trivy not available)",
+                )
+                self.checks_performed.append(result)
+                return result
+
+            # Validate executable path for security
+            if not trivy_path.startswith(("/usr/bin/", "/usr/local/bin/", "/opt/")):
+                logger.warning(
+                    f"trivy found in unexpected location: {trivy_path}"
+                )  # TODO: Convert f-string to logging format
+
+            # Validate image name for security
+            if not image_name or ".." in image_name or "/" not in image_name:
+                result = SecurityCheckResult(
+                    check_type="container_scan",
+                    passed=False,
+                    message="Invalid container image name",
+                    severity="error",
+                )
+                self.checks_performed.append(result)
+                return result
+
+            result = subprocess.run(  # Validated executable path
                 [
-                    "trivy",
+                    trivy_path,
                     "image",
                     "--severity",
                     "CRITICAL,HIGH",
@@ -257,11 +310,10 @@ class MLSecurityValidator:
                 text=True,
                 timeout=60,
                 check=False,
+                shell=False,  # Explicitly disable shell
             )
 
             if result.returncode == 0:
-                import json
-
                 scan_data = json.loads(result.stdout)
 
                 # Count vulnerabilities
@@ -280,25 +332,23 @@ class MLSecurityValidator:
                     )
                     self.checks_performed.append(result)
                     return result
-                else:
-                    result = SecurityCheckResult(
-                        check_type="container_scan",
-                        passed=True,
-                        message="No critical vulnerabilities found",
-                    )
-                    self.checks_performed.append(result)
-                    return result
-            else:
                 result = SecurityCheckResult(
                     check_type="container_scan",
                     passed=True,
-                    message="Container scan skipped (trivy not available)",
+                    message="No critical vulnerabilities found",
                 )
                 self.checks_performed.append(result)
                 return result
+            result = SecurityCheckResult(
+                check_type="container_scan",
+                passed=True,
+                message="Container scan skipped (trivy not available)",
+            )
+            self.checks_performed.append(result)
+            return result
 
-        except Exception as e:
-            logger.info(f"Container scan skipped: {e}")
+        except Exception:
+            logger.info("Container scan skipped")
             result = SecurityCheckResult(
                 check_type="container_scan",
                 passed=True,
@@ -316,6 +366,7 @@ class MLSecurityValidator:
 
         Returns:
             Validated collection name
+
         """
         return self.base_validator.validate_collection_name(name)
 
@@ -327,8 +378,21 @@ class MLSecurityValidator:
 
         Returns:
             Validated query string
+
         """
         return self.base_validator.validate_query_string(query)
+
+    def sanitize_filename(self, filename: str) -> str:
+        """Sanitize filename using base validator.
+
+        Args:
+            filename: Filename to sanitize
+
+        Returns:
+            Sanitized filename
+
+        """
+        return self.base_validator.sanitize_filename(filename)
 
     def log_security_event(
         self, event_type: str, details: dict[str, Any], severity: str = "info"
@@ -339,27 +403,28 @@ class MLSecurityValidator:
             event_type: Type of security event
             details: Event details
             severity: Event severity
+
         """
         # Use existing logging infrastructure
-        log_data = {
-            "event_type": event_type,
-            "timestamp": datetime.utcnow().isoformat(),
-            "severity": severity,
-            **details,
-        }
-
         if severity == "critical":
-            logger.error(f"Security event: {log_data}")
+            logger.error(
+                f"Security event: {event_type}", extra=details
+            )  # TODO: Convert f-string to logging format
         elif severity == "error":
-            logger.warning(f"Security event: {log_data}")
+            logger.warning(
+                f"Security event: {event_type}", extra=details
+            )  # TODO: Convert f-string to logging format
         else:
-            logger.info(f"Security event: {log_data}")
+            logger.info(
+                f"Security event: {event_type}", extra=details
+            )  # TODO: Convert f-string to logging format
 
     def get_security_summary(self) -> dict[str, Any]:
         """Get summary of security checks performed.
 
         Returns:
             Summary of security status
+
         """
         failed_checks = [c for c in self.checks_performed if not c.passed]
 
@@ -384,7 +449,7 @@ class SimpleRateLimiter:
         """Initialize using existing config."""
         self.config = get_config()
 
-    def is_allowed(self, identifier: str) -> bool:
+    def is_allowed(self, _identifier: str) -> bool:
         """Check if request is allowed.
 
         This is a placeholder - actual rate limiting should be done
@@ -395,6 +460,7 @@ class SimpleRateLimiter:
 
         Returns:
             Whether request is allowed
+
         """
         # In production, use existing rate limiting infrastructure
         # This is just for local development

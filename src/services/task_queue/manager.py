@@ -7,15 +7,14 @@ from arq import ArqRedis, create_pool
 from arq.connections import RedisSettings
 
 from src.config import Config
-
-from ..base import BaseService
+from src.services.base import BaseService
 
 
 logger = logging.getLogger(__name__)
 
 # Import monitoring registry for Prometheus integration
 try:
-    from ..monitoring.metrics import get_metrics_registry
+    from src.services.monitoring.metrics import get_metrics_registry
 
     MONITORING_AVAILABLE = True
 except ImportError:
@@ -30,6 +29,7 @@ class TaskQueueManager(BaseService):
 
         Args:
             config: Unified configuration
+
         """
         super().__init__(config)
         self._redis_pool: ArqRedis | None = None
@@ -41,8 +41,8 @@ class TaskQueueManager(BaseService):
             try:
                 self.metrics_registry = get_metrics_registry()
                 logger.debug("Task queue monitoring enabled")
-            except Exception as e:
-                logger.debug(f"Task queue monitoring disabled: {e}")
+            except Exception:
+                logger.debug("Task queue monitoring disabled")
 
     def _create_redis_settings(self) -> RedisSettings:
         """Create Redis settings from config."""
@@ -52,8 +52,7 @@ class TaskQueueManager(BaseService):
         database = self.config.task_queue.redis_database
 
         # Handle different URL formats
-        if url.startswith("redis://"):
-            url = url[8:]  # Remove redis:// prefix
+        url = url.removeprefix("redis://")  # Remove redis:// prefix
 
         # Extract host and port
         if "@" in url:
@@ -84,8 +83,8 @@ class TaskQueueManager(BaseService):
             self._redis_pool = await create_pool(self._redis_settings)
             logger.info("Task queue manager initialized")
             self._initialized = True
-        except Exception as e:
-            logger.exception(f"Failed to initialize task queue: {e}")
+        except Exception:
+            logger.exception("Failed to initialize task queue")
             raise
 
     async def cleanup(self) -> None:
@@ -114,6 +113,7 @@ class TaskQueueManager(BaseService):
 
         Returns:
             Job ID if successful, None otherwise
+
         """
         if not self._redis_pool:
             logger.error("Task queue not initialized")
@@ -140,17 +140,18 @@ class TaskQueueManager(BaseService):
                     )  # Just tracking enqueue for now
 
                 return job.job_id
-            else:
-                logger.error(f"Failed to enqueue task {task_name}")
+            logger.error(
+                f"Failed to enqueue task {task_name}"
+            )  # TODO: Convert f-string to logging format
 
-                # Record failure metrics
-                if self.metrics_registry:
-                    self.metrics_registry.record_task_execution(task_name, 0.0, False)
+            # Record failure metrics
+            if self.metrics_registry:
+                self.metrics_registry.record_task_execution(task_name, 0.0, False)
 
-                return None
+            return None
 
-        except Exception as e:
-            logger.exception(f"Error enqueueing task {task_name}: {e}")
+        except Exception:
+            logger.exception("Error enqueueing task {task_name}")
             return None
 
     async def get_job_status(self, job_id: str) -> dict[str, Any]:
@@ -161,6 +162,7 @@ class TaskQueueManager(BaseService):
 
         Returns:
             Job status information
+
         """
         if not self._redis_pool:
             return {"status": "error", "message": "Task queue not initialized"}
@@ -186,7 +188,7 @@ class TaskQueueManager(BaseService):
             }
 
         except Exception as e:
-            logger.exception(f"Error getting job status: {e}")
+            logger.exception("Error getting job status")
             return {"status": "error", "message": str(e)}
 
     async def cancel_job(self, job_id: str) -> bool:
@@ -197,6 +199,7 @@ class TaskQueueManager(BaseService):
 
         Returns:
             True if cancelled successfully
+
         """
         if not self._redis_pool:
             return False
@@ -205,12 +208,14 @@ class TaskQueueManager(BaseService):
             job = await self._redis_pool.job(job_id)
             if job and job.status == "deferred":
                 await job.abort()
-                logger.info(f"Cancelled job {job_id}")
+                logger.info(
+                    f"Cancelled job {job_id}"
+                )  # TODO: Convert f-string to logging format
                 return True
             return False
 
-        except Exception as e:
-            logger.exception(f"Error cancelling job: {e}")
+        except Exception:
+            logger.exception("Error cancelling job")
             return False
 
     async def get_queue_stats(self, queue_name: str | None = None) -> dict[str, int]:
@@ -221,6 +226,7 @@ class TaskQueueManager(BaseService):
 
         Returns:
             Queue statistics
+
         """
         if not self._redis_pool:
             return {"error": -1}
@@ -242,8 +248,8 @@ class TaskQueueManager(BaseService):
 
             return stats
 
-        except Exception as e:
-            logger.exception(f"Error getting queue stats: {e}")
+        except Exception:
+            logger.exception("Error getting queue stats")
             return {"error": -1}
 
     def get_redis_settings(self) -> RedisSettings:

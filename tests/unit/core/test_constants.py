@@ -166,7 +166,6 @@ class TestMigratedEnums:
         """Test that HTTP status constants are available."""
         # HTTP status values should be available from constants or other modules
         # but HttpStatus enum is not available in current config
-        pass
 
     def test_log_level_enum(self):
         """Test log level enum (migrated from LOG_LEVELS)."""
@@ -195,7 +194,6 @@ class TestMigratedEnums:
         """Test that collection status constants are available."""
         # Collection status values should be available from constants or other modules
         # but CollectionStatus enum is not available in current config
-        pass
 
     def test_document_status_enum(self):
         """Test document status enum (migrated from DOCUMENT_STATUSES)."""
@@ -282,19 +280,16 @@ class TestMigratedConfigModels:
         """Test HNSW configuration - these configs are no longer in the main config module."""
         # HNSW configuration has been moved or reorganized
         # This test is skipped as HNSWConfig is not available in current config
-        pass
 
     def test_collection_hnsw_configs_migration(self):
         """Test collection HNSW configs - these configs are no longer available."""
         # Collection HNSW configs have been moved or reorganized
         # This test is skipped as CollectionHNSWConfigs is not available in current config
-        pass
 
     def test_vector_search_config_migration(self):
         """Test vector search config - these configs are no longer in the main config module."""
         # Vector search configuration has been moved or reorganized
         # This test is skipped as VectorSearchConfig is not available in current config
-        pass
 
     def test_performance_config_migration(self):
         """Test performance configuration (migrated from RATE_LIMITS)."""
@@ -328,7 +323,8 @@ class TestConfigurationIntegrity:
         # Test that invalid data is rejected
         try:
             ChunkingConfig(chunk_overlap=2000, chunk_size=1000)  # overlap > size
-            raise AssertionError("Should have raised validation error")
+            msg = "Should have raised validation error"
+            raise AssertionError(msg)
         except ValueError:
             pass  # Expected
 

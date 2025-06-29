@@ -1,12 +1,14 @@
 """Integration tests for OpenTelemetry observability."""
 
 import asyncio
+import importlib
 from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+import src.services.observability.middleware
 from src.config.core import get_config, reset_config
 from src.services.observability.config import ObservabilityConfig
 from src.services.observability.dependencies import (
@@ -21,6 +23,15 @@ from src.services.observability.init import (
     shutdown_observability,
 )
 from src.services.observability.middleware import FastAPIObservabilityMiddleware
+from src.services.observability.tracking import (
+    _NoOpMeter,
+    _NoOpTracer,
+    get_meter,
+    get_tracer,
+    instrument_function,
+    record_ai_operation,
+    track_cost,
+)
 
 
 class TestObservabilityIntegration:
@@ -64,11 +75,11 @@ class TestObservabilityIntegration:
     @patch("src.services.observability.init._setup_auto_instrumentation")
     def test_full_observability_initialization(
         self,
-        mock_auto_instrumentation,
+        _mock_auto_instrumentation,
         mock_resource,
         mock_metric_reader,
-        mock_metric_exporter,
-        mock_span_exporter,
+        _mock_metric_exporter,
+        _mock_span_exporter,
         mock_span_processor,
         mock_meter_provider,
         mock_tracer_provider,
@@ -85,7 +96,7 @@ class TestObservabilityIntegration:
 
         config = ObservabilityConfig(
             enabled=True,
-            service_name="integration-test",
+            service_name="integration-test",  # Test data
             otlp_endpoint="http://test.example.com:4317",
         )
 
@@ -110,8 +121,6 @@ class TestObservabilityIntegration:
 
         assert service["enabled"] is False
         # When disabled, we get NoOp implementations
-        from src.services.observability.tracking import _NoOpMeter, _NoOpTracer
-
         assert isinstance(service["tracer"], _NoOpTracer)
         assert isinstance(service["meter"], _NoOpMeter)
 
@@ -173,8 +182,6 @@ class TestObservabilityIntegration:
         assert meter is not None
 
         # With disabled observability, should get NoOp implementations
-        from src.services.observability.tracking import _NoOpMeter, _NoOpTracer
-
         assert isinstance(tracer, _NoOpTracer)
         assert isinstance(meter, _NoOpMeter)
 
@@ -192,7 +199,8 @@ class TestFastAPIObservabilityIntegration:
 
         @self.app.get("/error")
         async def error_endpoint():
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
     def test_middleware_integration_disabled(self):
         """Test middleware integration when observability is disabled."""
@@ -213,10 +221,8 @@ class TestFastAPIObservabilityIntegration:
             # Add middleware
             self.app.add_middleware(
                 FastAPIObservabilityMiddleware,
-                **{
-                    "service_name": "test-service",
-                    "record_request_metrics": False,
-                },
+                service_name="test-service",
+                record_request_metrics=False,
             )
 
             client = TestClient(self.app)
@@ -229,8 +235,6 @@ class TestFastAPIObservabilityIntegration:
 
     def test_middleware_integration_with_metrics(self):
         """Test middleware integration with metrics enabled."""
-        import importlib
-        from unittest.mock import patch
 
         # Setup mocks
         mock_tracer = MagicMock()
@@ -271,21 +275,14 @@ class TestFastAPIObservabilityIntegration:
                 ),
             ):
                 # Force reload of middleware module to pick up mocked functions
-                import src.services.observability.middleware
 
                 importlib.reload(src.services.observability.middleware)
-
-                from src.services.observability.middleware import (
-                    FastAPIObservabilityMiddleware,
-                )
 
                 # Add middleware with metrics
                 self.app.add_middleware(
                     FastAPIObservabilityMiddleware,
-                    **{
-                        "service_name": "test-service",
-                        "record_request_metrics": True,
-                    },
+                    service_name="test-service",
+                    record_request_metrics=True,
                 )
 
                 client = TestClient(self.app)
@@ -305,8 +302,6 @@ class TestFastAPIObservabilityIntegration:
 
     def test_middleware_integration_error_handling(self):
         """Test middleware error handling integration."""
-        import importlib
-        from unittest.mock import patch
 
         # Setup mocks
         mock_tracer = MagicMock()
@@ -331,21 +326,14 @@ class TestFastAPIObservabilityIntegration:
                 return_value=mock_tracer,
             ):
                 # Force reload of middleware module to pick up mocked functions
-                import src.services.observability.middleware
 
                 importlib.reload(src.services.observability.middleware)
-
-                from src.services.observability.middleware import (
-                    FastAPIObservabilityMiddleware,
-                )
 
                 # Add middleware
                 self.app.add_middleware(
                     FastAPIObservabilityMiddleware,
-                    **{
-                        "service_name": "test-service",
-                        "record_request_metrics": False,
-                    },
+                    service_name="test-service",
+                    record_request_metrics=False,
                 )
 
                 client = TestClient(self.app)
@@ -361,8 +349,6 @@ class TestFastAPIObservabilityIntegration:
 
     def test_middleware_ai_context_detection(self):
         """Test middleware AI context detection."""
-        import importlib
-        from unittest.mock import patch
 
         # Setup mocks
         mock_tracer = MagicMock()
@@ -387,13 +373,8 @@ class TestFastAPIObservabilityIntegration:
                 return_value=mock_tracer,
             ):
                 # Force reload of middleware module to pick up mocked functions
-                import src.services.observability.middleware
 
                 importlib.reload(src.services.observability.middleware)
-
-                from src.services.observability.middleware import (
-                    FastAPIObservabilityMiddleware,
-                )
 
                 # Add AI endpoint
                 @self.app.post("/api/search")
@@ -403,11 +384,9 @@ class TestFastAPIObservabilityIntegration:
                 # Add middleware with AI context
                 self.app.add_middleware(
                     FastAPIObservabilityMiddleware,
-                    **{
-                        "service_name": "test-service",
-                        "record_ai_context": True,
-                        "record_request_metrics": False,
-                    },
+                    service_name="test-service",
+                    record_ai_context=True,
+                    record_request_metrics=False,
                 )
 
                 client = TestClient(self.app)
@@ -458,7 +437,7 @@ class TestObservabilityConfigurationIntegration:
         config = get_config()
 
         assert config.observability.enabled is True
-        assert config.observability.service_name == "integration-test"
+        assert config.observability.service_name == "integration-test"  # Test data
         assert config.observability.trace_sample_rate == 0.5
 
     def test_programmatic_configuration(self):
@@ -467,10 +446,10 @@ class TestObservabilityConfigurationIntegration:
 
         # Modify observability config
         config.observability.enabled = True
-        config.observability.service_name = "programmatic-test"
+        config.observability.service_name = "programmatic-test"  # Test data
 
         assert config.observability.enabled is True
-        assert config.observability.service_name == "programmatic-test"
+        assert config.observability.service_name == "programmatic-test"  # Test data
 
     def test_configuration_validation_integration(self):
         """Test configuration validation integration."""
@@ -512,16 +491,16 @@ class TestEndToEndObservabilityFlow:
     @patch("src.services.observability.init._setup_auto_instrumentation")
     def test_complete_observability_flow(
         self,
-        mock_auto_instrumentation,
+        _mock_auto_instrumentation,
         mock_resource,
         mock_metric_reader,
-        mock_metric_exporter,
-        mock_span_exporter,
+        _mock_metric_exporter,
+        _mock_span_exporter,
         mock_span_processor,
         mock_meter_provider,
         mock_tracer_provider,
-        mock_metrics,
-        mock_trace,
+        _mock_metrics,
+        _mock_trace,
     ):
         """Test complete observability flow from configuration to shutdown."""
         # Setup comprehensive mocks
@@ -559,8 +538,6 @@ class TestEndToEndObservabilityFlow:
             assert meter is not None
 
             # Step 4: Test health check
-            import asyncio
-
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
@@ -583,11 +560,6 @@ class TestEndToEndObservabilityFlow:
     @pytest.mark.asyncio
     async def test_observability_with_ai_operations(self):
         """Test observability integration with AI operations."""
-        from src.services.observability.tracking import (
-            instrument_function,
-            record_ai_operation,
-            track_cost,
-        )
 
         # Test AI operation recording (should work even when disabled)
         record_ai_operation(
@@ -616,20 +588,15 @@ class TestEndToEndObservabilityFlow:
     def test_observability_graceful_degradation(self):
         """Test observability graceful degradation when packages unavailable."""
         # Test that observability functions work even when OpenTelemetry is unavailable
-        from src.services.observability.tracking import get_meter, get_tracer
 
         with patch("src.services.observability.tracking.trace") as mock_trace:
             mock_trace.side_effect = ImportError("OpenTelemetry not available")
 
             tracer = get_tracer("test-service")
-            from src.services.observability.tracking import _NoOpTracer
-
             assert isinstance(tracer, _NoOpTracer)
 
         with patch("src.services.observability.tracking.metrics") as mock_metrics:
             mock_metrics.side_effect = ImportError("OpenTelemetry not available")
 
             meter = get_meter("test-service")
-            from src.services.observability.tracking import _NoOpMeter
-
             assert isinstance(meter, _NoOpMeter)

@@ -3,6 +3,8 @@
 import logging
 from typing import TYPE_CHECKING
 
+from src.mcp_tools.models.responses import ConfigValidationResponse, GenericDictResponse
+
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -17,7 +19,7 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from ...infrastructure.client_manager import ClientManager
+from src.infrastructure.client_manager import ClientManager
 
 
 logger = logging.getLogger(__name__)
@@ -26,8 +28,6 @@ logger = logging.getLogger(__name__)
 def register_tools(mcp, client_manager: ClientManager):
     """Register utility tools with the MCP server."""
 
-    from ..models.responses import ConfigValidationResponse, GenericDictResponse
-
     @mcp.tool()
     async def estimate_costs(
         text_count: int,
@@ -35,8 +35,7 @@ def register_tools(mcp, client_manager: ClientManager):
         include_storage: bool = True,
         ctx: Context = None,
     ) -> GenericDictResponse:
-        """
-        Estimate costs for processing documents.
+        """Estimate costs for processing documents.
 
         Calculates embedding generation and storage costs based on
         current pricing models.
@@ -88,16 +87,15 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return GenericDictResponse(**costs)
 
-        except Exception as e:
+        except Exception:
             if ctx:
-                await ctx.error(f"Failed to estimate costs: {e}")
-            logger.exception(f"Failed to estimate costs: {e}")
+                await ctx.error("Failed to estimate costs")
+            logger.exception("Failed to estimate costs")
             raise
 
     @mcp.tool()
     async def validate_configuration(ctx: Context = None) -> ConfigValidationResponse:
-        """
-        Validate system configuration and API keys.
+        """Validate system configuration and API keys.
 
         Checks all required configuration and returns validation results.
         """
@@ -117,9 +115,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 client_manager.unified_config.qdrant.url
             )
             if ctx:
-                await ctx.debug(
-                    f"Qdrant URL configured: {client_manager.unified_config.qdrant.url}"
-                )
+                await ctx.debug("Qdrant URL configured")
 
             # Check API keys
             if not client_manager.unified_config.openai.api_key:
@@ -147,9 +143,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 "l2_enabled": client_manager.unified_config.cache.redis_url is not None,
             }
             if ctx:
-                await ctx.debug(
-                    f"Cache configuration: L1 enabled, L2 enabled: {config_status['config']['cache']['l2_enabled']}"
-                )
+                await ctx.debug("Cache configuration: L1 enabled, L2 enabled")
 
             # Determine overall validity
             if config_status["errors"]:
@@ -157,7 +151,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Configuration validation completed. Valid: {config_status['valid']}, Warnings: {len(config_status['warnings'])}"
+                    "Configuration validation completed. Valid: {config_status['valid']}, Warnings"
                 )
 
             return ConfigValidationResponse(
@@ -166,8 +160,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 details=config_status,
             )
 
-        except Exception as e:
+        except Exception:
             if ctx:
-                await ctx.error(f"Failed to validate configuration: {e}")
-            logger.exception(f"Failed to validate configuration: {e}")
+                await ctx.error("Failed to validate configuration")
+            logger.exception("Failed to validate configuration")
             raise

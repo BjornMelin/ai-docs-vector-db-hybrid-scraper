@@ -390,7 +390,7 @@ class TestSearchResultCache:
             stats = await search_cache.get_cache_stats()
 
         expected_stats = {
-            "total_search_results": 3,
+            "_total_search_results": 3,
             "popularity_counters": 2,
             "cache_size": 100,
             "by_collection": {"collection1": 2, "collection2": 1},
@@ -418,7 +418,7 @@ class TestSearchResultCache:
             stats = await search_cache.get_cache_stats()
 
         # Should handle malformed keys gracefully
-        assert stats["total_search_results"] == 3
+        assert stats["_total_search_results"] == 3
         assert stats["by_collection"] == {"collection1": 1, "collection2": 1}
 
     @pytest.mark.asyncio

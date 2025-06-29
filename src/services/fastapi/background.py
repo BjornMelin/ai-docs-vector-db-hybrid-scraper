@@ -11,7 +11,7 @@ import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -81,16 +81,19 @@ class BackgroundTask:
     max_retries: int = 3
     retry_delay: float = 1.0
     timeout: float | None = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def __post_init__(self):
         """Post-initialization validation."""
         if not callable(self.func):
-            raise ValueError("Task function must be callable")
+            msg = "Task function must be callable"
+            raise ValueError(msg)
         if self.max_retries < 0:
-            raise ValueError("Max retries cannot be negative")
+            msg = "Max retries cannot be negative"
+            raise ValueError(msg)
         if self.retry_delay < 0:
-            raise ValueError("Retry delay cannot be negative")
+            msg = "Retry delay cannot be negative"
+            raise ValueError(msg)
 
 
 class BackgroundTaskManager:
@@ -110,6 +113,7 @@ class BackgroundTaskManager:
         Args:
             max_workers: Maximum number of concurrent workers
             max_queue_size: Maximum size of task queue
+
         """
         self.max_workers = max_workers
         self.max_queue_size = max_queue_size
@@ -147,13 +151,16 @@ class BackgroundTaskManager:
             worker = asyncio.create_task(self._worker_loop(f"worker-{i}"))
             self._workers.append(worker)
 
-        logger.info(f"Background task manager started with {self.max_workers} workers")
+        logger.info(
+            f"Background task manager started with {self.max_workers} workers"
+        )  # TODO: Convert f-string to logging format
 
-    async def stop(self, timeout: float = 30.0) -> None:
+    async def stop(self, timeout: float = 30.0) -> None:  # noqa: ASYNC109
         """Stop the background task manager gracefully.
 
         Args:
             timeout: Maximum time to wait for tasks to complete
+
         """
         if not self._running:
             return
@@ -196,7 +203,7 @@ class BackgroundTaskManager:
         task_id: str | None = None,
         priority: TaskPriority = TaskPriority.NORMAL,
         max_retries: int = 3,
-        timeout: float | None = None,
+        timeout: float | None = None,  # noqa: ASYNC109
         **kwargs,
     ) -> str:
         """Submit a background task for execution.
@@ -216,9 +223,11 @@ class BackgroundTaskManager:
         Raises:
             RuntimeError: If manager is not running
             ValueError: If queue is full
+
         """
         if not self._running:
-            raise RuntimeError("Task manager is not running")
+            msg = "Task manager is not running"
+            raise RuntimeError(msg)
 
         # Generate task ID if not provided
         if task_id is None:
@@ -246,7 +255,9 @@ class BackgroundTaskManager:
         # Add to queue
         try:
             await self._task_queue.put(task_id)
-            logger.debug(f"Task {task_id} submitted successfully")
+            logger.debug(
+                f"Task {task_id} submitted successfully"
+            )  # TODO: Convert f-string to logging format
             return task_id
         except asyncio.QueueFull as e:
             # Remove from storage if queue is full
@@ -254,7 +265,8 @@ class BackgroundTaskManager:
                 del self._tasks[task_id]
                 del self._results[task_id]
                 self._total_tasks -= 1
-            raise ValueError("Task queue is full") from e
+            msg = "Task queue is full"
+            raise ValueError(msg) from e
 
     async def get_task_result(self, task_id: str) -> TaskResult | None:
         """Get result of a specific task.
@@ -264,12 +276,15 @@ class BackgroundTaskManager:
 
         Returns:
             Task result or None if not found
+
         """
         with self._task_lock:
             return self._results.get(task_id)
 
     async def wait_for_task(
-        self, task_id: str, timeout: float | None = None
+        self,
+        task_id: str,
+        timeout: float | None = None,  # noqa: ASYNC109
     ) -> TaskResult:
         """Wait for a task to complete.
 
@@ -283,19 +298,22 @@ class BackgroundTaskManager:
         Raises:
             asyncio.TimeoutError: If timeout is reached
             ValueError: If task not found
+
         """
         start_time = time.time()
 
         while True:
             result = await self.get_task_result(task_id)
             if result is None:
-                raise ValueError(f"Task {task_id} not found")
+                msg = f"Task {task_id} not found"
+                raise ValueError(msg)
 
             if result.is_complete:
                 return result
 
             if timeout and (time.time() - start_time) > timeout:
-                raise TimeoutError(f"Timeout waiting for task {task_id}")
+                msg = f"Timeout waiting for task {task_id}"
+                raise TimeoutError(msg)
 
             await asyncio.sleep(0.1)
 
@@ -307,6 +325,7 @@ class BackgroundTaskManager:
 
         Returns:
             True if task was cancelled, False if not found or already complete
+
         """
         return await self._cancel_task(task_id)
 
@@ -316,8 +335,10 @@ class BackgroundTaskManager:
             result = self._results.get(task_id)
             if result and not result.is_complete:
                 result.status = TaskStatus.CANCELLED
-                result.end_time = datetime.utcnow()
-                logger.debug(f"Task {task_id} cancelled")
+                result.end_time = datetime.now(tz=UTC)
+                logger.debug(
+                    f"Task {task_id} cancelled"
+                )  # TODO: Convert f-string to logging format
                 return True
         return False
 
@@ -326,8 +347,11 @@ class BackgroundTaskManager:
 
         Args:
             worker_name: Name of the worker for logging
+
         """
-        logger.debug(f"Worker {worker_name} started")
+        logger.debug(
+            f"Worker {worker_name} started"
+        )  # TODO: Convert f-string to logging format
 
         while self._running:
             try:
@@ -341,10 +365,12 @@ class BackgroundTaskManager:
                 if self._shutdown_event.is_set():
                     break
                 continue
-            except Exception as e:
-                logger.exception(f"Worker {worker_name} error: {e}")
+            except Exception:
+                logger.exception("Worker {worker_name} error")
 
-        logger.debug(f"Worker {worker_name} stopped")
+        logger.debug(
+            f"Worker {worker_name} stopped"
+        )  # TODO: Convert f-string to logging format
 
     async def _execute_task(self, task_id: str, worker_name: str) -> None:
         """Execute a single task.
@@ -352,13 +378,16 @@ class BackgroundTaskManager:
         Args:
             task_id: Task identifier
             worker_name: Name of executing worker
+
         """
         with self._task_lock:
             task = self._tasks.get(task_id)
             result = self._results.get(task_id)
 
         if not task or not result:
-            logger.warning(f"Task {task_id} not found for execution")
+            logger.warning(
+                f"Task {task_id} not found for execution"
+            )  # TODO: Convert f-string to logging format
             return
 
         # Check if task was cancelled
@@ -367,9 +396,11 @@ class BackgroundTaskManager:
 
         # Update task status
         result.status = TaskStatus.RUNNING
-        result.start_time = datetime.utcnow()
+        result.start_time = datetime.now(tz=UTC)
 
-        logger.debug(f"Worker {worker_name} executing task {task_id}")
+        logger.debug(
+            f"Worker {worker_name} executing task {task_id}"
+        )  # TODO: Convert f-string to logging format
 
         try:
             # Execute task with timeout
@@ -397,18 +428,20 @@ class BackgroundTaskManager:
             # Task completed successfully
             result.status = TaskStatus.COMPLETED
             result.result = task_result
-            result.end_time = datetime.utcnow()
+            result.end_time = datetime.now(tz=UTC)
 
             with self._task_lock:
                 self._completed_tasks += 1
 
-            logger.debug(f"Task {task_id} completed successfully")
+            logger.debug(
+                f"Task {task_id} completed successfully"
+            )  # TODO: Convert f-string to logging format
 
         except TimeoutError:
             # Task timeout
             result.status = TaskStatus.FAILED
             result.error = f"Task timeout after {task.timeout} seconds"
-            result.end_time = datetime.utcnow()
+            result.end_time = datetime.now(tz=UTC)
 
             await self._handle_task_retry(task, result)
 
@@ -416,9 +449,9 @@ class BackgroundTaskManager:
             # Task failed
             result.status = TaskStatus.FAILED
             result.error = str(e)
-            result.end_time = datetime.utcnow()
+            result.end_time = datetime.now(tz=UTC)
 
-            logger.exception(f"Task {task_id} failed: {e}")
+            logger.exception("Task {task_id} failed")
             await self._handle_task_retry(task, result)
 
     async def _handle_task_retry(
@@ -429,6 +462,7 @@ class BackgroundTaskManager:
         Args:
             task: Failed task
             result: Task result
+
         """
         if task.retry_count < task.max_retries:
             task.retry_count += 1
@@ -456,7 +490,9 @@ class BackgroundTaskManager:
             # Max retries reached
             with self._task_lock:
                 self._failed_tasks += 1
-            logger.error(f"Task {task.task_id} failed after {task.max_retries} retries")
+            logger.error(
+                f"Task {task.task_id} failed after {task.max_retries} retries"
+            )  # TODO: Convert f-string to logging format
 
     async def _schedule_retry(self, task_id: str, delay: float) -> None:
         """Schedule a task retry after delay.
@@ -464,6 +500,7 @@ class BackgroundTaskManager:
         Args:
             task_id: Task identifier
             delay: Delay in seconds
+
         """
         await asyncio.sleep(delay)
 
@@ -478,6 +515,7 @@ class BackgroundTaskManager:
 
         Returns:
             Statistics dictionary
+
         """
         with self._task_lock:
             queue_size = self._task_queue.qsize() if self._task_queue else 0
@@ -502,6 +540,7 @@ class BackgroundTaskManager:
 
         Returns:
             List of task information
+
         """
         task_list = []
 
@@ -539,8 +578,9 @@ def get_task_manager() -> BackgroundTaskManager:
 
     Returns:
         Background task manager instance
+
     """
-    global _task_manager  # noqa: PLW0603
+    global _task_manager
     if _task_manager is None:
         _task_manager = BackgroundTaskManager()
     return _task_manager
@@ -554,8 +594,9 @@ async def initialize_task_manager(
     Args:
         max_workers: Maximum number of concurrent workers
         max_queue_size: Maximum size of task queue
+
     """
-    global _task_manager  # noqa: PLW0603
+    global _task_manager
     if _task_manager is None:
         _task_manager = BackgroundTaskManager(max_workers, max_queue_size)
     await _task_manager.start()
@@ -563,7 +604,7 @@ async def initialize_task_manager(
 
 async def cleanup_task_manager() -> None:
     """Clean up the global background task manager."""
-    global _task_manager  # noqa: PLW0603
+    global _task_manager
     if _task_manager:
         await _task_manager.stop()
         _task_manager = None
@@ -582,6 +623,7 @@ def submit_background_task(
         func: Function to execute
         *args: Positional arguments
         **kwargs: Keyword arguments
+
     """
     background_tasks.add_task(func, *args, **kwargs)
 
@@ -599,6 +641,7 @@ async def submit_managed_task(
 
     Returns:
         Task ID
+
     """
     manager = get_task_manager()
     return await manager.submit_task(func, *args, priority=priority, **kwargs)

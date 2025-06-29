@@ -1,7 +1,7 @@
-"""Main benchmark orchestrator for Advanced Hybrid Search system.
+"""Main benchmark orchestrator for Hybrid Search system.
 
 This module provides the primary benchmarking interface for comprehensive
-performance testing of the advanced hybrid search implementation.
+performance testing of the hybrid search implementation.
 """
 
 import json
@@ -13,13 +13,10 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from ..config import Config
-from ..models.vector_search import (
-    AdvancedHybridSearchRequest,
-    FusionConfig,
-    SearchParams,
-)
-from ..services.vector_db.hybrid_search import AdvancedHybridSearchService
+from src.config import Config
+from src.models.vector_search import FusionConfig, HybridSearchRequest, SearchParams
+from src.services.vector_db.hybrid_search import HybridSearchService
+
 from .benchmark_reporter import BenchmarkReporter
 from .component_benchmarks import ComponentBenchmarks
 from .load_test_runner import LoadTestConfig, LoadTestRunner
@@ -116,21 +113,22 @@ class BenchmarkResults(BaseModel):
     )
 
 
-class AdvancedHybridSearchBenchmark:
-    """Main orchestrator for comprehensive Advanced Hybrid Search benchmarks."""
+class HybridSearchBenchmark:
+    """Main orchestrator for comprehensive Hybrid Search benchmarks."""
 
     def __init__(
         self,
         config: Config,
-        search_service: AdvancedHybridSearchService,
+        search_service: HybridSearchService,
         benchmark_config: BenchmarkConfig,
     ):
         """Initialize the benchmark orchestrator.
 
         Args:
             config: Unified configuration
-            search_service: Advanced hybrid search service to benchmark
+            search_service: Hybrid search service to benchmark
             benchmark_config: Benchmark configuration
+
         """
         self.config = config
         self.search_service = search_service
@@ -146,7 +144,7 @@ class AdvancedHybridSearchBenchmark:
         # Test data
         self.test_queries = self._generate_test_queries()
 
-    def _generate_test_queries(self) -> list[AdvancedHybridSearchRequest]:
+    def _generate_test_queries(self) -> list[HybridSearchRequest]:
         """Generate realistic test queries for benchmarking."""
         test_data = [
             # Code queries
@@ -196,7 +194,7 @@ class AdvancedHybridSearchBenchmark:
 
         queries = []
         for query_text, _query_category in test_data:
-            request = AdvancedHybridSearchRequest(
+            request = HybridSearchRequest(
                 query=query_text,
                 collection_name="benchmark_collection",
                 limit=10,
@@ -223,9 +221,12 @@ class AdvancedHybridSearchBenchmark:
 
         Returns:
             Comprehensive benchmark results with performance metrics and recommendations
+
         """
         start_time = time.time()
-        logger.info(f"Starting comprehensive benchmark: {self.benchmark_config.name}")
+        logger.info(
+            f"Starting comprehensive benchmark: {self.benchmark_config.name}"
+        )  # TODO: Convert f-string to logging format
 
         results = BenchmarkResults(
             benchmark_name=self.benchmark_config.name,
@@ -289,15 +290,20 @@ class AdvancedHybridSearchBenchmark:
             logger.info(
                 f"Benchmark completed in {results.duration_seconds:.2f} seconds"
             )
-            logger.info(f"Meets targets: {results.meets_targets}")
-
-            return results
+            logger.info(
+                f"Meets targets: {results.meets_targets}"
+            )  # TODO: Convert f-string to logging format
 
         except Exception as e:
-            logger.error(f"Benchmark failed: {e}", exc_info=True)
+            logger.error(
+                f"Benchmark failed: {e}", exc_info=True
+            )  # TODO: Convert f-string to logging format
             results.duration_seconds = time.time() - start_time
             results.failed_targets.append(f"Benchmark execution failed: {e!s}")
+        else:
             return results
+
+        return results
 
     async def _run_component_benchmarks(self) -> dict[str, Any]:
         """Run component-level benchmarks."""
@@ -311,7 +317,9 @@ class AdvancedHybridSearchBenchmark:
         load_results = {}
 
         for concurrent_users in self.benchmark_config.concurrent_users:
-            logger.info(f"Running load test with {concurrent_users} concurrent users")
+            logger.info(
+                f"Running load test with {concurrent_users} concurrent users"
+            )  # TODO: Convert f-string to logging format
 
             load_config = LoadTestConfig(
                 concurrent_users=concurrent_users,
@@ -381,7 +389,9 @@ class AdvancedHybridSearchBenchmark:
                 total_predictions += 1
 
             except Exception as e:
-                logger.warning(f"Classification failed for query '{query_text}': {e}")
+                logger.warning(
+                    f"Classification failed for query '{query_text}': {e}"
+                )  # TODO: Convert f-string to logging format
                 total_predictions += 1
 
         return correct_predictions / max(total_predictions, 1)
@@ -422,7 +432,9 @@ class AdvancedHybridSearchBenchmark:
                 total_selections += 1
 
             except Exception as e:
-                logger.warning(f"Model selection failed for query '{query_text}': {e}")
+                logger.warning(
+                    f"Model selection failed for query '{query_text}': {e}"
+                )  # TODO: Convert f-string to logging format
                 total_selections += 1
 
         return appropriate_selections / max(total_selections, 1)
@@ -450,7 +462,9 @@ class AdvancedHybridSearchBenchmark:
                 total_fusions += 1
 
             except Exception as e:
-                logger.warning(f"Fusion tuning failed for query '{query.query}': {e}")
+                logger.warning(
+                    f"Fusion tuning failed for query '{query.query}': {e}"
+                )  # TODO: Convert f-string to logging format
                 total_fusions += 1
 
         return effective_fusions / max(total_fusions, 1)
@@ -563,15 +577,17 @@ class AdvancedHybridSearchBenchmark:
 
         # Save JSON results
         json_file = output_dir / f"benchmark_results_{int(time.time())}.json"
-        with open(json_file, "w") as f:
+        with json_file.open("w") as f:
             json.dump(results.model_dump(), f, indent=2, default=str)
 
         # Generate HTML report
         html_report = await self.benchmark_reporter.generate_html_report(results)
         html_file = output_dir / f"benchmark_report_{int(time.time())}.html"
-        with open(html_file, "w") as f:
+        with html_file.open("w") as f:
             f.write(html_report)
 
-        logger.info(f"Results saved to {output_dir}")
-        logger.info(f"JSON: {json_file}")
-        logger.info(f"HTML: {html_file}")
+        logger.info(
+            f"Results saved to {output_dir}"
+        )  # TODO: Convert f-string to logging format
+        logger.info(f"JSON: {json_file}")  # TODO: Convert f-string to logging format
+        logger.info(f"HTML: {html_file}")  # TODO: Convert f-string to logging format

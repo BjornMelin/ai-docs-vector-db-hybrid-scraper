@@ -26,17 +26,17 @@ class TestCacheStats:
         assert stats.sets == 15
         assert stats.errors == 2
 
-    def test_cache_stats_total_requests_property(self):
-        """Test total_requests property calculation."""
+    def test_cache_stats__total_requests_property(self):
+        """Test _total_requests property calculation."""
         stats = CacheStats(hits=10, misses=5)
 
-        assert stats.total_requests == 15
+        assert stats._total_requests == 15
 
-    def test_cache_stats_total_requests_zero(self):
-        """Test total_requests property when both hits and misses are zero."""
+    def test_cache_stats__total_requests_zero(self):
+        """Test _total_requests property when both hits and misses are zero."""
         stats = CacheStats()
 
-        assert stats.total_requests == 0
+        assert stats._total_requests == 0
 
     def test_cache_stats_hit_rate_property(self):
         """Test hit_rate property calculation."""
@@ -83,7 +83,7 @@ class TestCacheStats:
         """Test that computed properties work correctly with field changes."""
         stats = CacheStats(hits=5, misses=5)
 
-        assert stats.total_requests == 10
+        assert stats._total_requests == 10
         assert stats.hit_rate == 0.5
 
         # Modify fields
@@ -91,7 +91,7 @@ class TestCacheStats:
         stats.misses = 2
 
         # Properties should reflect new values
-        assert stats.total_requests == 10
+        assert stats._total_requests == 10
         assert stats.hit_rate == 0.8
 
     def test_cache_stats_equality(self):
@@ -151,8 +151,8 @@ class TestCacheMetrics:
         cache_metrics.record_miss("embedding", 2.5)
 
         summary = cache_metrics.get_summary()
-        assert summary["embedding"]["total"]["hits"] == 0
-        assert summary["embedding"]["total"]["misses"] == 1
+        assert summary["embedding"]["_total"]["hits"] == 0
+        assert summary["embedding"]["_total"]["misses"] == 1
 
     def test_record_miss_multiple(self, cache_metrics):
         """Test recording multiple cache misses."""
@@ -160,7 +160,7 @@ class TestCacheMetrics:
             cache_metrics.record_miss("search", 1.2)
 
         summary = cache_metrics.get_summary()
-        assert summary["search"]["total"]["misses"] == 3
+        assert summary["search"]["_total"]["misses"] == 3
 
     def test_record_miss_different_types(self, cache_metrics):
         """Test recording misses for different cache types."""
@@ -169,8 +169,8 @@ class TestCacheMetrics:
         cache_metrics.record_miss("embedding", 1.8)
 
         summary = cache_metrics.get_summary()
-        assert summary["embedding"]["total"]["misses"] == 2
-        assert summary["search"]["total"]["misses"] == 1
+        assert summary["embedding"]["_total"]["misses"] == 2
+        assert summary["search"]["_total"]["misses"] == 1
 
     def test_record_set_success(self, cache_metrics):
         """Test recording successful cache set operations."""
@@ -178,8 +178,8 @@ class TestCacheMetrics:
         cache_metrics.record_set("embedding", 0.6, True)
 
         summary = cache_metrics.get_summary()
-        assert summary["embedding"]["total"]["sets"] == 2
-        assert summary["embedding"]["total"]["errors"] == 0
+        assert summary["embedding"]["_total"]["sets"] == 2
+        assert summary["embedding"]["_total"]["errors"] == 0
 
     def test_record_set_failure(self, cache_metrics):
         """Test recording failed cache set operations."""
@@ -187,9 +187,9 @@ class TestCacheMetrics:
         cache_metrics.record_set("search", 0.9, False)
 
         summary = cache_metrics.get_summary()
-        assert summary["embedding"]["total"]["sets"] == 0
-        assert summary["embedding"]["total"]["errors"] == 1
-        assert summary["search"]["total"]["errors"] == 1
+        assert summary["embedding"]["_total"]["sets"] == 0
+        assert summary["embedding"]["_total"]["errors"] == 1
+        assert summary["search"]["_total"]["errors"] == 1
 
     def test_record_set_mixed_success_failure(self, cache_metrics):
         """Test recording mixed successful and failed set operations."""
@@ -199,8 +199,8 @@ class TestCacheMetrics:
         cache_metrics.record_set("embedding", 1.5, False)
 
         summary = cache_metrics.get_summary()
-        assert summary["embedding"]["total"]["sets"] == 2
-        assert summary["embedding"]["total"]["errors"] == 2
+        assert summary["embedding"]["_total"]["sets"] == 2
+        assert summary["embedding"]["_total"]["errors"] == 2
 
     def test_mixed_operations_single_cache_type(self, cache_metrics):
         """Test mixed operations for a single cache type."""
@@ -219,10 +219,10 @@ class TestCacheMetrics:
         assert embedding_stats["dragonfly"]["hits"] == 1
         assert embedding_stats["local"]["hits"] == 1
 
-        # Check total stats
-        assert embedding_stats["total"]["misses"] == 2
-        assert embedding_stats["total"]["sets"] == 1
-        assert embedding_stats["total"]["errors"] == 1
+        # Check _total stats
+        assert embedding_stats["_total"]["misses"] == 2
+        assert embedding_stats["_total"]["sets"] == 1
+        assert embedding_stats["_total"]["errors"] == 1
 
     def test_mixed_operations_multiple_cache_types(self, cache_metrics):
         """Test mixed operations across multiple cache types."""
@@ -244,17 +244,17 @@ class TestCacheMetrics:
 
         # Verify embedding stats
         assert summary["embedding"]["dragonfly"]["hits"] == 1
-        assert summary["embedding"]["total"]["misses"] == 1
-        assert summary["embedding"]["total"]["sets"] == 1
+        assert summary["embedding"]["_total"]["misses"] == 1
+        assert summary["embedding"]["_total"]["sets"] == 1
 
         # Verify search stats
         assert summary["search"]["local"]["hits"] == 1
         assert summary["search"]["dragonfly"]["hits"] == 1
-        assert summary["search"]["total"]["misses"] == 1
-        assert summary["search"]["total"]["errors"] == 1
+        assert summary["search"]["_total"]["misses"] == 1
+        assert summary["search"]["_total"]["errors"] == 1
 
         # Verify document stats
-        assert summary["document"]["total"]["misses"] == 1
+        assert summary["document"]["_total"]["misses"] == 1
 
     def test_get_summary_empty(self, cache_metrics):
         """Test get_summary with no recorded metrics."""
@@ -274,7 +274,7 @@ class TestCacheMetrics:
         assert "embedding" in summary
         assert isinstance(summary["embedding"], dict)
         assert "dragonfly" in summary["embedding"]
-        assert "total" in summary["embedding"]
+        assert "_total" in summary["embedding"]
 
         # Check dragonfly layer stats
         dragonfly_stats = summary["embedding"]["dragonfly"]
@@ -282,10 +282,10 @@ class TestCacheMetrics:
         for field in expected_fields:
             assert field in dragonfly_stats
 
-        # Check total layer stats
-        total_stats = summary["embedding"]["total"]
+        # Check _total layer stats
+        _total_stats = summary["embedding"]["_total"]
         for field in expected_fields:
-            assert field in total_stats
+            assert field in _total_stats
 
     def test_hit_rate_calculation_in_summary(self, cache_metrics):
         """Test hit rate calculation in summary."""
@@ -293,7 +293,7 @@ class TestCacheMetrics:
         for _ in range(3):
             cache_metrics.record_hit("embedding", "dragonfly", 0.3)
 
-        # Misses go to total layer
+        # Misses go to _total layer
         for _ in range(2):
             cache_metrics.record_miss("embedding", 2.0)
 
@@ -303,7 +303,7 @@ class TestCacheMetrics:
         assert summary["embedding"]["dragonfly"]["hit_rate"] == 1.0
 
         # Total layer should have 0% hit rate (0 hits, 2 misses)
-        assert summary["embedding"]["total"]["hit_rate"] == 0.0
+        assert summary["embedding"]["_total"]["hit_rate"] == 0.0
 
     def test_hit_rate_calculation_mixed_layer(self, cache_metrics):
         """Test hit rate calculation with mixed layer stats."""
@@ -311,7 +311,7 @@ class TestCacheMetrics:
         cache_metrics.record_hit("search", "local", 0.1)
         cache_metrics.record_hit("search", "local", 0.1)
 
-        # Then add a miss to total (simulating local cache miss, going to next layer)
+        # Then add a miss to _total (simulating local cache miss, going to next layer)
         cache_metrics.record_miss("search", 1.0)
 
         summary = cache_metrics.get_summary()
@@ -320,7 +320,7 @@ class TestCacheMetrics:
         assert summary["search"]["local"]["hit_rate"] == 1.0
 
         # Total layer: 0 hits, 1 miss = 0% hit rate
-        assert summary["search"]["total"]["hit_rate"] == 0.0
+        assert summary["search"]["_total"]["hit_rate"] == 0.0
 
     def test_latency_parameter_ignored(self, cache_metrics):
         """Test that latency parameters are accepted but not used in V1."""
@@ -332,8 +332,8 @@ class TestCacheMetrics:
         # Should still work normally
         summary = cache_metrics.get_summary()
         assert summary["embedding"]["dragonfly"]["hits"] == 1
-        assert summary["embedding"]["total"]["misses"] == 1
-        assert summary["embedding"]["total"]["sets"] == 1
+        assert summary["embedding"]["_total"]["misses"] == 1
+        assert summary["embedding"]["_total"]["sets"] == 1
 
     def test_edge_case_very_large_numbers(self, cache_metrics):
         """Test with very large numbers of operations."""
@@ -354,8 +354,8 @@ class TestCacheMetrics:
         # Should work normally
         summary = cache_metrics.get_summary()
         assert summary["embedding"]["dragonfly"]["hits"] == 1
-        assert summary["embedding"]["total"]["misses"] == 1
-        assert summary["embedding"]["total"]["sets"] == 1
+        assert summary["embedding"]["_total"]["misses"] == 1
+        assert summary["embedding"]["_total"]["sets"] == 1
 
     def test_cache_type_and_layer_naming(self, cache_metrics):
         """Test various cache type and layer names."""
@@ -413,6 +413,6 @@ class TestCacheMetrics:
 
         # Verify all expected metrics are tracked
         assert summary["test"]["layer"]["hits"] == 1
-        assert summary["test"]["total"]["misses"] == 1
-        assert summary["test"]["total"]["sets"] == 1
-        assert summary["test"]["total"]["errors"] == 1
+        assert summary["test"]["_total"]["misses"] == 1
+        assert summary["test"]["_total"]["sets"] == 1
+        assert summary["test"]["_total"]["errors"] == 1

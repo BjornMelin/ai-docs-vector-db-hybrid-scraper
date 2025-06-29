@@ -7,6 +7,7 @@ API-based configuration reloads with zero-downtime guarantees.
 
 import asyncio
 import contextlib
+import hashlib
 import json
 import logging
 import signal
@@ -18,18 +19,19 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from threading import Lock
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from pydantic import ValidationError
 
-from ..services.observability.config_instrumentation import (
+from src.services.observability.config_instrumentation import (
     ConfigOperationType,
     instrument_config_operation,
     record_config_change,
     trace_async_config_operation,
 )
-from ..services.observability.config_performance import record_config_operation
+from src.services.observability.config_performance import record_config_operation
+
 from .core import Config
 
 
@@ -66,12 +68,12 @@ class ReloadOperation:
     trigger: ReloadTrigger = ReloadTrigger.MANUAL
     status: ReloadStatus = ReloadStatus.PENDING
     start_time: float = field(default_factory=time.time)
-    end_time: Optional[float] = None
+    end_time: float | None = None
 
     # Configuration tracking
-    previous_config_hash: Optional[str] = None
-    new_config_hash: Optional[str] = None
-    config_source: Optional[str] = None
+    previous_config_hash: str | None = None
+    new_config_hash: str | None = None
+    config_source: str | None = None
 
     # Validation results
     validation_errors: list[str] = field(default_factory=list)
@@ -79,7 +81,7 @@ class ReloadOperation:
 
     # Operation results
     success: bool = False
-    error_message: Optional[str] = None
+    error_message: str | None = None
     changes_applied: list[str] = field(default_factory=list)
     services_notified: list[str] = field(default_factory=list)
 
@@ -88,7 +90,7 @@ class ReloadOperation:
     apply_duration_ms: float = 0.0
     total_duration_ms: float = 0.0
 
-    def complete(self, success: bool, error_message: Optional[str] = None) -> None:
+    def complete(self, success: bool, error_message: str | None = None) -> None:
         """Mark the operation as complete."""
         self.end_time = time.time()
         self.success = success
@@ -123,7 +125,7 @@ class ConfigReloader:
 
     def __init__(
         self,
-        config_source: Optional[Path] = None,
+        config_source: Path | None = None,
         backup_count: int = 5,
         validation_timeout: float = 30.0,
         enable_signal_handler: bool = True,
@@ -137,6 +139,7 @@ class ConfigReloader:
             validation_timeout: Timeout for configuration validation
             enable_signal_handler: Whether to enable signal-based reloading
             signal_number: Signal number for triggering reload
+
         """
         self.config_source = config_source or Path(".env")
         self.backup_count = backup_count
@@ -145,8 +148,8 @@ class ConfigReloader:
         self.signal_number = signal_number
 
         # Current configuration state
-        self._current_config: Optional[Config] = None
-        self._config_hash: Optional[str] = None
+        self._current_config: Config | None = None
+        self._config_hash: str | None = None
         self._reload_lock = Lock()
 
         # Configuration backups for rollback
@@ -160,13 +163,16 @@ class ConfigReloader:
         self._max_history = 100
 
         # File watching
-        self._file_watcher: Optional[asyncio.Task] = None
+        self._file_watcher: asyncio.Task | None = None
         self._file_watch_enabled = False
 
         # Thread pool for blocking operations
         self._executor = ThreadPoolExecutor(
             max_workers=2, thread_name_prefix="config-reload"
         )
+
+        # Track original signal handler for cleanup
+        self._original_signal_handler = None
 
         # Setup signal handler
         if self.enable_signal_handler and hasattr(signal, "SIGHUP"):
@@ -176,7 +182,9 @@ class ConfigReloader:
         """Setup signal handler for configuration reloading."""
 
         def signal_handler(signum: int, _frame) -> None:
-            logger.info(f"Received signal {signum}, triggering configuration reload")
+            logger.info(
+                f"Received signal {signum}, triggering configuration reload"
+            )  # TODO: Convert f-string to logging format
             # Store reference to prevent task from being garbage collected
             task = asyncio.create_task(self.reload_config(trigger=ReloadTrigger.SIGNAL))
             # Add done callback to handle any exceptions
@@ -187,12 +195,17 @@ class ConfigReloader:
             )
 
         try:
-            signal.signal(self.signal_number, signal_handler)
+            # Store original handler for cleanup
+            self._original_signal_handler = signal.signal(
+                self.signal_number, signal_handler
+            )
             logger.info(
                 f"Configuration reload signal handler setup for signal {self.signal_number}"
             )
         except (OSError, ValueError) as e:
-            logger.warning(f"Failed to setup signal handler: {e}")
+            logger.warning(
+                f"Failed to setup signal handler: {e}"
+            )  # TODO: Convert f-string to logging format
 
     def set_current_config(self, config: Config) -> None:
         """Set the current configuration instance."""
@@ -206,8 +219,6 @@ class ConfigReloader:
         # Convert config to dict and create a stable hash
         config_dict = config.model_dump()
         config_json = json.dumps(config_dict, sort_keys=True, default=str)
-        import hashlib
-
         return hashlib.sha256(config_json.encode()).hexdigest()[:16]
 
     def _add_config_backup(self, config: Config) -> None:
@@ -238,6 +249,7 @@ class ConfigReloader:
             priority: Priority for callback execution (higher = earlier)
             async_callback: Whether the callback is async
             timeout_seconds: Timeout for callback execution
+
         """
         listener = ConfigChangeListener(
             name=name,
@@ -261,7 +273,9 @@ class ConfigReloader:
         for i, listener in enumerate(self._change_listeners):
             if listener.name == name:
                 del self._change_listeners[i]
-                logger.info(f"Removed configuration change listener: {name}")
+                logger.info(
+                    f"Removed configuration change listener: {name}"
+                )  # TODO: Convert f-string to logging format
                 return True
         return False
 
@@ -272,7 +286,7 @@ class ConfigReloader:
     async def reload_config(
         self,
         trigger: ReloadTrigger = ReloadTrigger.MANUAL,
-        config_source: Optional[Path] = None,
+        config_source: Path | None = None,
         force: bool = False,
     ) -> ReloadOperation:
         """Reload configuration with zero-downtime guarantees.
@@ -284,6 +298,7 @@ class ConfigReloader:
 
         Returns:
             ReloadOperation with results and metrics
+
         """
         operation = ReloadOperation(trigger=trigger)
         operation.config_source = str(config_source or self.config_source)
@@ -315,7 +330,7 @@ class ConfigReloader:
     async def _perform_reload(
         self,
         operation: ReloadOperation,
-        config_source: Optional[Path],
+        config_source: Path | None,
         force: bool,
         _span,
     ) -> ReloadOperation:
@@ -422,13 +437,11 @@ class ConfigReloader:
             if config_source.suffix.lower() in [".json", ".yaml", ".yml", ".toml"]:
                 # Load from structured config file
                 return Config.load_from_file(config_source)
-            else:
-                # Load with environment variables (typical .env file)
-                return Config()
+            # Load with environment variables (typical .env file)
+            return Config()
         except Exception as e:
-            raise ValueError(
-                f"Failed to load configuration from {config_source}: {e}"
-            ) from e
+            msg = f"Failed to load configuration from {config_source}: {e}"
+            raise ValueError(msg) from e
 
     async def _validate_config(self, config: Config) -> dict[str, list[str]]:
         """Validate new configuration."""
@@ -474,7 +487,7 @@ class ConfigReloader:
 
     async def _apply_config_changes(
         self,
-        old_config: Optional[Config],
+        old_config: Config | None,
         new_config: Config,
         operation: ReloadOperation,
     ) -> bool:
@@ -520,7 +533,9 @@ class ConfigReloader:
                     )
                 else:
                     operation.services_notified.append(f"{listener.name}:failed")
-                    logger.warning(f"Config listener {listener.name} returned failure")
+                    logger.warning(
+                        f"Config listener {listener.name} returned failure"
+                    )  # TODO: Convert f-string to logging format
 
             except TimeoutError:
                 operation.services_notified.append(f"{listener.name}:timeout")
@@ -535,9 +550,7 @@ class ConfigReloader:
         # Consider success if majority of listeners succeeded
         return success_count >= (total_listeners * 0.5) if total_listeners > 0 else True
 
-    async def rollback_config(
-        self, target_hash: Optional[str] = None
-    ) -> ReloadOperation:
+    async def rollback_config(self, target_hash: str | None = None) -> ReloadOperation:
         """Rollback to a previous configuration.
 
         Args:
@@ -545,6 +558,7 @@ class ConfigReloader:
 
         Returns:
             ReloadOperation with rollback results
+
         """
         operation = ReloadOperation(trigger=ReloadTrigger.MANUAL)
         operation.status = ReloadStatus.IN_PROGRESS
@@ -676,13 +690,34 @@ class ConfigReloader:
 
     async def shutdown(self) -> None:
         """Shutdown the configuration reloader."""
+        # Disable file watching
         await self.disable_file_watching()
+
+        # Restore original signal handler
+        if self._original_signal_handler is not None and self.enable_signal_handler:
+            try:
+                signal.signal(self.signal_number, self._original_signal_handler)
+                logger.info(
+                    f"Restored original signal handler for signal {self.signal_number}"
+                )
+            except (OSError, ValueError) as e:
+                logger.warning(
+                    f"Failed to restore signal handler: {e}"
+                )  # TODO: Convert f-string to logging format
+
+        # Shutdown thread pool executor
         self._executor.shutdown(wait=True)
+
+        # Clear listeners and history to free memory
+        self._change_listeners.clear()
+        self._reload_history.clear()
+        self._config_backups.clear()
+
         logger.info("Configuration reloader shutdown completed")
 
 
 # Global configuration reloader instance
-_config_reloader: Optional[ConfigReloader] = None
+_config_reloader: ConfigReloader | None = None
 
 
 def get_config_reloader() -> ConfigReloader:

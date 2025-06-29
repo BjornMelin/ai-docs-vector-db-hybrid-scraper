@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import src.services.observability.tracking as tracking_module
 from src.services.observability.tracking import (
     _initialize_metrics,
     _NoOpCounter,
@@ -135,7 +136,7 @@ class TestInstrumentFunction:
         mock_get_tracer.return_value = mock_tracer
 
         @instrument_function(record_args=True)
-        def test_function(arg1: str, arg2: int, complex_arg: dict):
+        def test_function(_arg1: str, _arg2: int, _complex_arg: dict):
             return "success"
 
         test_function("simple", 42, {"complex": "data"})
@@ -176,7 +177,8 @@ class TestInstrumentFunction:
 
         @instrument_function()
         def test_function():
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
         with pytest.raises(ValueError, match="Test error"):
             test_function()
@@ -206,7 +208,6 @@ class TestMetricsTracking:
 
     def setup_method(self):
         """Reset global metrics before each test."""
-        import src.services.observability.tracking as tracking_module
 
         tracking_module._ai_operation_duration = None
         tracking_module._ai_operation_counter = None
@@ -237,9 +238,8 @@ class TestMetricsTracking:
         "src.services.observability.tracking._ai_operation_duration", new=MagicMock()
     )
     @patch("src.services.observability.tracking._ai_token_counter", new=MagicMock())
-    def test_record_ai_operation(self, mock_init_metrics):
+    def test_record_ai_operation(self, _mock_init_metrics):
         """Test recording AI operation metrics."""
-        import src.services.observability.tracking as tracking_module
 
         mock_counter = MagicMock()
         mock_histogram = MagicMock()
@@ -280,9 +280,8 @@ class TestMetricsTracking:
 
     @patch("src.services.observability.tracking._initialize_metrics")
     @patch("src.services.observability.tracking._ai_cost_counter", new=MagicMock())
-    def test_track_cost(self, mock_init_metrics):
+    def test_track_cost(self, _mock_init_metrics):
         """Test cost tracking."""
-        import src.services.observability.tracking as tracking_module
 
         mock_cost_counter = MagicMock()
         tracking_module._ai_cost_counter = mock_cost_counter
@@ -375,7 +374,6 @@ class TestMetricsInitializationExceptionHandling:
 
     def setup_method(self):
         """Reset global metrics before each test."""
-        import src.services.observability.tracking as tracking_module
 
         tracking_module._ai_operation_duration = None
         tracking_module._ai_operation_counter = None
@@ -391,7 +389,6 @@ class TestMetricsInitializationExceptionHandling:
         _initialize_metrics()
 
         # Verify metrics remain None
-        import src.services.observability.tracking as tracking_module
 
         assert tracking_module._ai_operation_duration is None
         assert tracking_module._ai_operation_counter is None

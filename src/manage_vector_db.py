@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Vector Database Management Utility
-Modern Python 3.13 implementation with async patterns for Qdrant operations
+Modern Python 3.13 implementation with async patterns for Qdrant operations.
 
 Provides comprehensive database management, search, and maintenance utilities
 """
@@ -23,7 +23,7 @@ console = Console()
 
 
 class SearchResult(BaseModel):
-    """Search result from vector database"""
+    """Search result from vector database."""
 
     id: int
     score: float
@@ -34,7 +34,7 @@ class SearchResult(BaseModel):
 
 
 class CollectionInfo(BaseModel):
-    """Collection information"""
+    """Collection information."""
 
     name: str
     vector_count: int
@@ -42,7 +42,7 @@ class CollectionInfo(BaseModel):
 
 
 class DatabaseStats(BaseModel):
-    """Database statistics"""
+    """Database statistics."""
 
     total_collections: int
     total_vectors: int
@@ -50,7 +50,7 @@ class DatabaseStats(BaseModel):
 
 
 def setup_logging(level: str = "INFO") -> logging.Logger:
-    """Setup logging configuration"""
+    """Setup logging configuration."""
     log_level = getattr(logging, level.upper())
     logging.basicConfig(
         level=log_level,
@@ -62,7 +62,7 @@ def setup_logging(level: str = "INFO") -> logging.Logger:
 
 
 class VectorDBManager:
-    """Comprehensive vector database management using ClientManager"""
+    """Comprehensive vector database management using ClientManager."""
 
     def __init__(
         self,
@@ -74,13 +74,14 @@ class VectorDBManager:
         Args:
             client_manager: ClientManager instance for all services
             qdrant_url: Optional Qdrant URL override
+
         """
         self.client_manager = client_manager
         self.qdrant_url = qdrant_url
         self._initialized = False
 
     async def initialize(self) -> None:
-        """Initialize services using ClientManager"""
+        """Initialize services using ClientManager."""
         if self._initialized:
             return
 
@@ -97,25 +98,25 @@ class VectorDBManager:
         self._initialized = True
 
     async def get_qdrant_service(self):
-        """Get QdrantService from ClientManager"""
+        """Get QdrantService from ClientManager."""
         if not self._initialized:
             await self.initialize()
         return await self.client_manager.get_qdrant_service()
 
     async def get_embedding_manager(self):
-        """Get EmbeddingManager from ClientManager"""
+        """Get EmbeddingManager from ClientManager."""
         if not self._initialized:
             await self.initialize()
         return await self.client_manager.get_embedding_manager()
 
     async def cleanup(self) -> None:
-        """Cleanup services (delegated to ClientManager)"""
+        """Cleanup services (delegated to ClientManager)."""
         if self.client_manager:
             await self.client_manager.cleanup()
         self._initialized = False
 
     async def list_collections(self) -> list[str]:
-        """List all collections"""
+        """List all collections."""
         try:
             await self.initialize()
             qdrant_service = await self.get_qdrant_service()
@@ -127,7 +128,7 @@ class VectorDBManager:
     async def create_collection(
         self, collection_name: str, vector_size: int = 1536
     ) -> bool:
-        """Create a new collection"""
+        """Create a new collection."""
         try:
             await self.initialize()
             qdrant_service = await self.get_qdrant_service()
@@ -139,7 +140,7 @@ class VectorDBManager:
             console.print(
                 f"✅ Successfully created collection: {collection_name}", style="green"
             )
-            return True
+            return True  # noqa: TRY300
         except Exception as e:
             console.print(
                 f"❌ Error creating collection {collection_name}: {e}", style="red"
@@ -147,7 +148,7 @@ class VectorDBManager:
             return False
 
     async def delete_collection(self, collection_name: str) -> bool:
-        """Delete a collection"""
+        """Delete a collection."""
         try:
             await self.initialize()
             qdrant_service = await self.get_qdrant_service()
@@ -155,7 +156,7 @@ class VectorDBManager:
             console.print(
                 f"✅ Successfully deleted collection: {collection_name}", style="green"
             )
-            return True
+            return True  # noqa: TRY300
         except Exception as e:
             console.print(
                 f"❌ Error deleting collection {collection_name}: {e}", style="red"
@@ -163,7 +164,7 @@ class VectorDBManager:
             return False
 
     async def get_collection_info(self, collection_name: str) -> CollectionInfo | None:
-        """Get information about a specific collection"""
+        """Get information about a specific collection."""
         try:
             await self.initialize()
             qdrant_service = await self.get_qdrant_service()
@@ -191,7 +192,7 @@ class VectorDBManager:
         limit: int = 5,
         score_threshold: float = 0.0,
     ) -> list[SearchResult]:
-        """Search for similar vectors"""
+        """Search for similar vectors."""
         try:
             await self.initialize()
             qdrant_service = await self.get_qdrant_service()
@@ -222,7 +223,7 @@ class VectorDBManager:
             return []
 
     async def get_database_stats(self) -> DatabaseStats | None:
-        """Get comprehensive database statistics"""
+        """Get comprehensive database statistics."""
         try:
             await self.initialize()
             qdrant_service = await self.get_qdrant_service()
@@ -254,7 +255,7 @@ class VectorDBManager:
             return None
 
     async def clear_collection(self, collection_name: str) -> bool:
-        """Clear all vectors from a collection"""
+        """Clear all vectors from a collection."""
         try:
             await self.initialize()
 
@@ -286,12 +287,12 @@ class VectorDBManager:
             return False
 
     async def get_stats(self) -> DatabaseStats | None:
-        """Alias for get_database_stats for backward compatibility"""
+        """Alias for get_database_stats for backward compatibility."""
         return await self.get_database_stats()
 
 
 async def create_embeddings(text: str, embedding_manager) -> list[float]:
-    """Create embeddings for text using EmbeddingManager"""
+    """Create embeddings for text using EmbeddingManager."""
     try:
         embeddings = await embedding_manager.generate_embeddings([text])
         return embeddings[0] if embeddings else []
@@ -316,7 +317,7 @@ def _create_manager_from_context(ctx) -> VectorDBManager:
 @click.option("--log-level", default="INFO", help="Logging level")
 @click.pass_context
 def cli(ctx, url, log_level):
-    """Vector Database Management CLI"""
+    """Vector Database Management CLI."""
     # Get configuration from unified config
     unified_config = get_config()
 
@@ -333,7 +334,7 @@ def cli(ctx, url, log_level):
 @click.pass_context
 @async_command
 async def list(ctx):
-    """List all collections"""
+    """List all collections."""
     manager = _create_manager_from_context(ctx)
     try:
         collections = await manager.list_collections()
@@ -353,7 +354,7 @@ async def list(ctx):
 @click.pass_context
 @async_command
 async def create(ctx, collection_name, vector_size):
-    """Create a new collection"""
+    """Create a new collection."""
     manager = _create_manager_from_context(ctx)
     try:
         await manager.create_collection(collection_name, vector_size)
@@ -366,7 +367,7 @@ async def create(ctx, collection_name, vector_size):
 @click.pass_context
 @async_command
 async def delete(ctx, collection_name):
-    """Delete a collection"""
+    """Delete a collection."""
     manager = _create_manager_from_context(ctx)
     try:
         await manager.delete_collection(collection_name)
@@ -378,7 +379,7 @@ async def delete(ctx, collection_name):
 @click.pass_context
 @async_command
 async def stats(ctx):
-    """Show database statistics"""
+    """Show database statistics."""
     manager = _create_manager_from_context(ctx)
     try:
         stats = await manager.get_database_stats()
@@ -412,7 +413,7 @@ async def stats(ctx):
 @click.pass_context
 @async_command
 async def info(ctx, collection_name):
-    """Show collection information"""
+    """Show collection information."""
     manager = _create_manager_from_context(ctx)
     try:
         info = await manager.get_collection_info(collection_name)
@@ -431,7 +432,7 @@ async def info(ctx, collection_name):
 @click.pass_context
 @async_command
 async def clear(ctx, collection_name):
-    """Clear all vectors from a collection"""
+    """Clear all vectors from a collection."""
     manager = _create_manager_from_context(ctx)
     try:
         await manager.clear_collection(collection_name)
@@ -446,7 +447,7 @@ async def clear(ctx, collection_name):
 @click.pass_context
 @async_command
 async def search(ctx, collection_name, query, limit):
-    """Search for similar documents"""
+    """Search for similar documents."""
     manager = _create_manager_from_context(ctx)
     try:
         # Initialize manager to ensure embedding_manager is available
@@ -480,7 +481,7 @@ async def search(ctx, collection_name, query, limit):
 
 
 def main():
-    """Main entry point"""
+    """Main entry point."""
     cli()
 
 
