@@ -5,16 +5,17 @@ splitting the monolithic server into domain-specific services following
 FastMCP 2.0+ best practices.
 """
 
-from .search_service import SearchService
-from .document_service import DocumentService  
 from .analytics_service import AnalyticsService
-from .system_service import SystemService
+from .document_service import DocumentService
 from .orchestrator_service import OrchestratorService
+from .search_service import SearchService
+from .system_service import SystemService
+
 
 __all__ = [
-    "SearchService",
-    "DocumentService", 
     "AnalyticsService",
-    "SystemService",
+    "DocumentService",
     "OrchestratorService",
+    "SearchService",
+    "SystemService",
 ]
