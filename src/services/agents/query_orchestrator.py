@@ -5,21 +5,19 @@ analyzing queries, delegating to specialists, and ensuring optimal results.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import uuid4
 
 from .core import BaseAgent, BaseAgentDependencies
 
 
-if BaseAgent.__module__ != "src.services.agents.core":
-    # Handle import path for development
-    try:
-        from pydantic_ai import RunContext
+try:
+    from pydantic_ai import RunContext
 
-        PYDANTIC_AI_AVAILABLE = True
-    except ImportError:
-        PYDANTIC_AI_AVAILABLE = False
-        RunContext = None
+    PYDANTIC_AI_AVAILABLE = True
+except ImportError:
+    PYDANTIC_AI_AVAILABLE = False
+    RunContext = None
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +74,7 @@ Available Specialists:
 
 Always provide structured decisions with confidence scores and reasoning."""
 
-    async def initialize_tools(self, deps: BaseAgentDependencies) -> None:
+    async def initialize_tools(self, deps: BaseAgentDependencies) -> None:  # noqa: ARG002
         """Initialize Query Orchestrator tools.
 
         Args:
@@ -90,7 +88,7 @@ Always provide structured decisions with confidence scores and reasoning."""
         async def analyze_query_intent(
             ctx: RunContext[BaseAgentDependencies],
             query: str,
-            user_context: dict[str, Any] | None = None,
+            user_context: dict[str, Any] | None = None,  # noqa: ARG001
         ) -> dict[str, Any]:
             """Analyze query to determine intent and optimal processing strategy.
 
@@ -202,7 +200,7 @@ Always provide structured decisions with confidence scores and reasoning."""
                 ),
             }
 
-            logger.info(f"Delegated task to {agent_type} with priority {priority}")
+            logger.info("Delegated task to %s with priority %s", agent_type, priority)
 
             return delegation_result
 
@@ -255,7 +253,7 @@ Always provide structured decisions with confidence scores and reasoning."""
                 return coordination_result
 
             except Exception as e:
-                logger.error(f"Multi-stage search coordination failed: {e}")
+                logger.exception("Multi-stage search coordination failed")
                 return {
                     "status": "failed",
                     "error": str(e),
@@ -268,7 +266,7 @@ Always provide structured decisions with confidence scores and reasoning."""
             ctx: RunContext[BaseAgentDependencies],
             strategy: str,
             results: dict[str, Any],
-            user_feedback: dict[str, Any] | None = None,
+            user_feedback: dict[str, Any] | None = None,  # noqa: ARG001
         ) -> dict[str, Any]:
             """Evaluate the performance of a chosen strategy.
 
@@ -388,9 +386,12 @@ Always provide structured decisions with confidence scores and reasoning."""
         Returns:
             Recommendation string
         """
-        if stats["avg_performance"] > 0.8:
+        avg_performance = stats.get(
+            "avg_performance", 0.5
+        )  # Default to medium performance
+        if avg_performance > 0.8:
             return "continue_using"
-        if stats["avg_performance"] > 0.6:
+        if avg_performance > 0.6:
             return "monitor_performance"
         return "consider_alternative"
 
@@ -413,7 +414,8 @@ Always provide structured decisions with confidence scores and reasoning."""
             Complete orchestration result
         """
         if not self._initialized:
-            raise RuntimeError("Agent not initialized")
+            msg = "Agent not initialized"
+            raise RuntimeError(msg)
 
         # Create execution context
         execution_context = {
@@ -424,7 +426,7 @@ Always provide structured decisions with confidence scores and reasoning."""
             "orchestration_id": str(uuid4()),
         }
 
-        logger.info(f"Starting query orchestration for: {query[:50]}...")
+        logger.info("Starting query orchestration for: %s...", query[:50])
 
         try:
             if PYDANTIC_AI_AVAILABLE and self.agent is not None:
@@ -448,7 +450,7 @@ Always provide structured decisions with confidence scores and reasoning."""
             return await self._fallback_orchestration(execution_context)
 
         except Exception as e:
-            logger.error(f"Query orchestration failed: {e}", exc_info=True)
+            logger.exception("Query orchestration failed")
             return {
                 "success": False,
                 "error": str(e),
