@@ -842,7 +842,8 @@ class TestFilterComposer:
             "parallel"  # Use parallel to trigger timeout logic
         )
 
-        # Should handle timeout - the actual behavior may be to return a result with warnings
+        # Should handle timeout - the actual behavior may be to return
+        # a result with warnings
         # rather than raising an exception, so let's test for that
         result = await composer.apply(criteria)
 

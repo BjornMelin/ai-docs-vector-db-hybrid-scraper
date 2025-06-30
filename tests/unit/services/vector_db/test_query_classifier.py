@@ -103,15 +103,24 @@ class TestQueryClassifier:
             ("Compare React and Vue performance", QueryComplexity.MODERATE),
             # Complex queries - ML classifier is conservative with complexity scoring
             (
-                "How to optimize database performance and implement caching strategies while maintaining ACID properties?",
+                (
+                    "How to optimize database performance and implement caching "
+                    "strategies while maintaining ACID properties?"
+                ),
                 QueryComplexity.MODERATE,  # ML classifies as moderate
             ),
             (
-                "Design microservices architecture with event sourcing and CQRS patterns",
+                (
+                    "Design microservices architecture with event sourcing "
+                    "and CQRS patterns"
+                ),
                 QueryComplexity.SIMPLE,  # ML classifies as simple
             ),
             (
-                "Implement distributed consensus algorithm with Byzantine fault tolerance",
+                (
+                    "Implement distributed consensus algorithm with "
+                    "Byzantine fault tolerance"
+                ),
                 QueryComplexity.SIMPLE,  # ML classifies as simple
             ),
         ],

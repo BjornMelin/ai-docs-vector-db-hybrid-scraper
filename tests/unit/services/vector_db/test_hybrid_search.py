@@ -11,17 +11,14 @@ import pytest
 
 from src.config import ABTestVariant, Config, ModelType, OptimizationStrategy, QueryType
 from src.models.vector_search import (
-    # TODO: Fix imports - these classes need to be implemented or renamed
-    # ABTestConfig,
-    # FusionConfig,
-    # HybridSearchRequest,
-    # HybridSearchResponse,
-    # ModelSelectionStrategy,
-    # QueryClassification,
+    ABTestConfig,
+    FusionConfig,
+    HybridSearchRequest,
+    HybridSearchResponse,
+    ModelSelectionStrategy,
+    QueryClassification,
     SearchAccuracy,
     SecureSearchParamsModel,
-    AdvancedHybridSearchRequest,  # Use existing class
-    # Add other available classes as needed
 )
 from src.services.errors import QdrantServiceError
 from src.services.query_processing.models import (
@@ -172,7 +169,8 @@ class TestAdvancedHybridSearchService:
                         "payload": {
                             "id": f"result_{i}",
                             "title": f"Search Result {i}",
-                            "content": f"Content for result {i} matching query: {sample_request.query}",
+                            "content": f"Content for result {i} matching query: "
+                            f"{sample_request.query}",
                             "score": 0.9 - i * 0.1,
                             "content_type": "documentation" if i % 2 == 0 else "code",
                             "published_date": "2024-01-01T00:00:00Z",
@@ -256,7 +254,8 @@ class TestAdvancedHybridSearchService:
 
         assert isinstance(response, HybridSearchResponse)
         assert response.fusion_weights is None
-        # Other optimizations (query classification, model selection) may still be applied
+        # Other optimizations (query classification, model selection) may still be
+        # applied
         # so optimization_applied can be True even when adaptive fusion is disabled
 
     async def test_ab_test_assignment(self, service, sample_request):
