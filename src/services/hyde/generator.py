@@ -4,7 +4,6 @@ import asyncio
 import hashlib
 import logging
 import time
-from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
 
