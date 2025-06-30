@@ -122,9 +122,15 @@ def _get_app_description(mode: ApplicationMode) -> str:
     )
 
     if mode == ApplicationMode.SIMPLE:
-        return f"{base_description} - Optimized for solo developers with minimal complexity"
+        return (
+            f"{base_description} - Optimized for solo developers "
+            "with minimal complexity"
+        )
     if mode == ApplicationMode.ENTERPRISE:
-        return f"{base_description} - Full enterprise feature set with advanced capabilities"
+        return (
+            f"{base_description} - Full enterprise feature set "
+            "with advanced capabilities"
+        )
     return base_description
 
 
@@ -224,7 +230,9 @@ def _configure_common_routes(app: FastAPI) -> None:
         """Root endpoint with mode information."""
         mode = app.state.mode
         return {
-            "message": f"AI Docs Vector DB Hybrid Scraper API ({mode.value.title()} Mode)",
+            "message": (
+                f"AI Docs Vector DB Hybrid Scraper API ({mode.value.title()} Mode)"
+            ),
             "version": "0.1.0",
             "status": "running",
             "mode": mode.value,

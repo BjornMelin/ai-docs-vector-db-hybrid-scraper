@@ -80,7 +80,7 @@ class ModeAwareServiceFactory:
         if enterprise_impl:
             self._service_registry[name]["enterprise"] = enterprise_impl
 
-        logger.debug(f"Registered service '{name}' with mode implementations")
+        logger.debug("Registered service '%s' with mode implementations", name)
 
     def register_universal_service(
         self, name: str, implementation: type[ServiceProtocol]
@@ -128,7 +128,7 @@ class ModeAwareServiceFactory:
             self._service_instances[name] = service
             self._initialization_status[name] = True
 
-            logger.info(f"Initialized service '{name}' in {self.mode.value} mode")
+            logger.info("Initialized service '%s' in %s mode", name, self.mode.value)
 
         except Exception as e:
             self._initialization_status[name] = False
@@ -151,8 +151,10 @@ class ModeAwareServiceFactory:
             fallback_key = "simple" if mode_key == "enterprise" else "enterprise"
             if fallback_key in mode_implementations:
                 logger.warning(
-                    f"Service '{name}' not available for {mode_key} mode, "
-                    f"falling back to {fallback_key} implementation"
+                    "Service '%s' not available for %s mode, falling back to %s implementation",
+                    name,
+                    mode_key,
+                    fallback_key,
                 )
                 return mode_implementations[fallback_key]
 
@@ -177,7 +179,7 @@ class ModeAwareServiceFactory:
             ServiceNotFoundError,
             ServiceInitializationError,
         ) as e:
-            logger.debug(f"Service '{name}' not available: {e}")
+            logger.debug("Service '%s' not available: %s", name, e)
             return None
 
     def is_service_available(self, name: str) -> bool:
@@ -267,9 +269,9 @@ class ModeAwareServiceFactory:
         for name, service in self._service_instances.items():
             try:
                 await service.cleanup()
-                logger.debug(f"Cleaned up service '{name}'")
-            except Exception as e:
-                logger.exception("Error cleaning up service '{name}'")
+                logger.debug("Cleaned up service '%s'", name)
+            except Exception:
+                logger.exception("Error cleaning up service '%s'", name)
 
         self._service_instances.clear()
         self._initialization_status.clear()

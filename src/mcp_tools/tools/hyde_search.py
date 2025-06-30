@@ -41,7 +41,9 @@ def register_tools(mcp, client_manager: ClientManager):
         filters: dict[str, Any] | None = None,
         ctx: Context = None,
     ) -> dict[str, Any]:
-        """Perform HyDE search by generating hypothetical documents and using their embeddings.
+        """Perform HyDE search by generating hypothetical documents.
+        
+        Uses their embeddings for improved semantic search.
 
         Implements HyDE (Hypothetical Document Embeddings) with autonomous document
         generation and adaptive query enhancement for improved semantic search.
@@ -51,7 +53,8 @@ def register_tools(mcp, client_manager: ClientManager):
             collection_name: Target collection for search
             limit: Maximum number of results to return
             hyde_documents: Number of hypothetical documents to generate
-            generation_strategy: Strategy for document generation (adaptive, diverse, focused)
+            generation_strategy: Strategy for document generation
+                (adaptive, diverse, focused)
             filters: Optional metadata filters
             ctx: MCP context for logging
 
@@ -60,9 +63,11 @@ def register_tools(mcp, client_manager: ClientManager):
         """
         try:
             if ctx:
-                await ctx.info(
-                    f"Performing HyDE search: '{query}' with {hyde_documents} hypothetical documents"
+                info_msg = (
+                    f"Performing HyDE search: '{query}' with {hyde_documents} "
+                    f"hypothetical documents"
                 )
+                await ctx.info(info_msg)
 
             # Validate query
             security_validator = SecurityValidator.from_unified_config()
