@@ -444,7 +444,8 @@ class TestAdaptiveRateLimiter:
         # Verify adjustment factor changed
         assert limiter.adjustment_factor < initial_adjustment_factor
 
-        # Since headers were provided and adjustment factor changed, max_calls should update
+        # Since headers were provided and adjustment factor changed,
+        # max_calls should update
         expected_max_calls = int(60 * limiter.adjustment_factor)
         assert limiter.max_calls == expected_max_calls
         assert limiter.refill_rate == limiter.max_calls / limiter.time_window

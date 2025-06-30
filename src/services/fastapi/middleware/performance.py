@@ -568,12 +568,11 @@ class AdvancedPerformanceMiddleware(PerformanceMiddleware):
 
         # Add P95 latency calculation
         with self._stats_lock:
-            all_response_times = []
-            for stats in self._endpoint_stats.values():
-                for metric in stats.recent_requests:
-                    all_response_times.append(
-                        metric.response_time * 1000
-                    )  # Convert to ms
+            all_response_times = [
+                metric.response_time * 1000  # Convert to ms
+                for stats in self._endpoint_stats.values()
+                for metric in stats.recent_requests
+            ]
 
             if all_response_times:
                 all_response_times.sort()

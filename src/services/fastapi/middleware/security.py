@@ -5,7 +5,6 @@ against common web vulnerabilities in production deployments, including
 Redis-backed rate limiting for distributed deployment scenarios.
 """
 
-import asyncio
 import logging
 import time
 from collections import defaultdict

@@ -294,7 +294,7 @@ class TestVectorFuzzingAttacks:
             assert isinstance(stage.query_vector.values, list)
             assert len(stage.query_vector.values) > 0
             assert len(stage.query_vector.values) <= 4096
-            assert all(isinstance(v, (int, float)) for v in stage.query_vector.values)
+            assert all(isinstance(v, int | float) for v in stage.query_vector.values)
             assert all(math.isfinite(v) for v in stage.query_vector.values)
 
         except (ValueError, TypeError) as e:

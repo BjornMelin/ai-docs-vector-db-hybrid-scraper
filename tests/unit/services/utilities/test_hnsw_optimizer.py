@@ -304,7 +304,8 @@ class TestHNSWOptimizer:
         mock_collection_info = MagicMock()
         mock_collection_info.config.params.vectors.dense.hnsw_config.m = 16
         mock_collection_info.config.params.vectors.dense.hnsw_config.ef_construct = 200
-        mock_collection_info.config.params.vectors.dense.hnsw_config.full_scan_threshold = 10000
+        hnsw_config = mock_collection_info.config.params.vectors.dense.hnsw_config
+        hnsw_config.full_scan_threshold = 10000
         _mock_qdrant_service._client.get_collection.return_value = mock_collection_info
 
         # Mock test performance
@@ -376,7 +377,8 @@ class TestHNSWOptimizer:
         mock_collection_info = MagicMock()
         mock_collection_info.config.params.vectors.dense.hnsw_config.m = 18
         mock_collection_info.config.params.vectors.dense.hnsw_config.ef_construct = 250
-        mock_collection_info.config.params.vectors.dense.hnsw_config.full_scan_threshold = 8000
+        hnsw_config = mock_collection_info.config.params.vectors.dense.hnsw_config
+        hnsw_config.full_scan_threshold = 8000
 
         config = optimizer._extract_current_hnsw_config(mock_collection_info)
 
@@ -459,8 +461,10 @@ class TestHNSWOptimizer:
         improvement = optimizer._estimate_performance_improvement(current, recommended)
 
         assert improvement["estimated_recall_improvement_percent"] > 0
-        # Note: The test implementation shows latency can be negative due to better quality
-        # Higher m increases latency (+2% per m = +16%) but higher ef can reduce it slightly (-0.1% per ef = -17.2%)
+        # Note: The test implementation shows latency can be negative due to
+        # better quality
+        # Higher m increases latency (+2% per m = +16%) but higher ef can
+        # reduce it slightly (-0.1% per ef = -17.2%)
         # Net effect: +16% - 17.2% = -1.2%
         assert "estimated_latency_change_percent" in improvement
         assert (

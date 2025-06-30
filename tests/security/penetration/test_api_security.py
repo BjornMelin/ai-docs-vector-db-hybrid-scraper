@@ -1237,7 +1237,7 @@ class TestInputValidationEnhanced:
                 )
 
                 # Simulate comprehensive input validation
-                if not isinstance(input_data, (str, int, float, bool, list, dict)):
+                if not isinstance(input_data, str | int | float | bool | list | dict):
                     return {
                         "valid": False,
                         "error": "Invalid input type",
