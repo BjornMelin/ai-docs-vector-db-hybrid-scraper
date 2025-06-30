@@ -258,7 +258,16 @@ class QueryClassifier:
         # Keyword density
         keyword_density = self._calculate_keyword_density(query_lower, tokens)
 
-        return Any  # TODO: Replace with proper QueryFeatures type(
+        # TODO: Replace with proper QueryFeatures type
+        class QueryFeatures:
+            def __init__(self, **kwargs):
+                for k, v in kwargs.items():
+                    setattr(self, k, v)
+            
+            def model_dump(self):
+                return self.__dict__
+        
+        return QueryFeatures(
             query_length=query_length,
             has_code_keywords=has_code_keywords,
             has_function_names=has_function_names,
@@ -271,7 +280,7 @@ class QueryClassifier:
             keyword_density=keyword_density,
         )
 
-    def _classify_query_type(self, query: str, features: Any  # TODO: Replace with proper QueryFeatures type) -> QueryType:
+    def _classify_query_type(self, query: str, features: Any) -> QueryType:  # TODO: Replace with proper QueryFeatures type
         """Classify the primary query type."""
         query_lower = query.lower()
 
@@ -371,7 +380,7 @@ class QueryClassifier:
             return QueryComplexity.MODERATE
         return QueryComplexity.COMPLEX
 
-    def _detect_domain(self, query: str, features: Any  # TODO: Replace with proper QueryFeatures type) -> str:
+    def _detect_domain(self, query: str, features: Any) -> str:  # TODO: Replace with proper QueryFeatures type
         """Detect the technical domain of the query."""
         query_lower = query.lower()
 
@@ -438,7 +447,7 @@ class QueryClassifier:
     def _calculate_confidence(
         self,
         _query: str,
-        features: Any  # TODO: Replace with proper QueryFeatures type,
+        features: Any,  # TODO: Replace with proper QueryFeatures type
         _query_type: QueryType,
         _complexity: QueryComplexity,
     ) -> float:

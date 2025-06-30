@@ -670,11 +670,11 @@ PROVIDER_TEST_DATA = [
 ]
 
 CACHE_TYPE_TEST_DATA = [
-    pytest.param(CacheType.MEMORY, {"cache_type": CacheType.MEMORY}, id="memory"),
+    pytest.param(CacheType.LOCAL, {"cache_type": CacheType.LOCAL}, id="local"),
     pytest.param(
-        CacheType.DRAGONFLY,
-        {"cache_type": CacheType.DRAGONFLY, "dragonfly_url": "redis://localhost:6379"},
-        id="dragonfly",
+        CacheType.REDIS,
+        {"cache_type": CacheType.REDIS, "redis_url": "redis://localhost:6379"},
+        id="redis",
     ),
 ]
 

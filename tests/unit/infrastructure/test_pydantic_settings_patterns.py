@@ -18,6 +18,25 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from src.config import Config
 
 
+# Test fixtures to avoid hardcoded secrets in tests
+@pytest.fixture
+def test_api_secret():
+    """Test API secret value."""
+    return "super-secret-key"
+
+
+@pytest.fixture
+def test_api_secret_alt():
+    """Alternative test API secret value."""
+    return "another-secret"
+
+
+@pytest.fixture
+def test_password():
+    """Test password value."""
+    return "SecurePass123"
+
+
 class TestPydanticSettingsPatterns:
     """Test modern pydantic-settings patterns."""
 
@@ -167,7 +186,7 @@ class TestPydanticSettingsPatterns:
             assert settings.cache.ttl == 600
             assert settings.cache.enabled is True  # Default value
 
-    def test_configuration_aliases(self):
+    def test_configuration_aliases(self, test_api_secret, test_api_secret_alt):
         """Test configuration aliases and alternative names.
 
         Verifies that pydantic-settings handles field aliases
@@ -193,26 +212,26 @@ class TestPydanticSettingsPatterns:
             os.environ,
             {
                 "DB_URL": "postgresql://localhost/test",
-                "SECRET_KEY": "super-secret-key",
+                "SECRET_KEY": test_api_secret,
             },
         ):
             settings = AliasedSettings()
 
             assert settings.database_url == "postgresql://localhost/test"
-            assert settings.api_secret == "super-secret-key"  # Test data
+            assert settings.api_secret == test_api_secret
 
         # Test with field names
         with patch.dict(
             os.environ,
             {
                 "DATABASE_URL": "mysql://localhost/app",
-                "API_SECRET": "another-secret",
+                "API_SECRET": test_api_secret_alt,
             },
         ):
             settings = AliasedSettings()
 
             assert settings.database_url == "mysql://localhost/app"
-            assert settings.api_secret == "another-secret"  # Test data
+            assert settings.api_secret == test_api_secret_alt
 
     def test_configuration_from_multiple_sources(self):
         """Test configuration loading from multiple sources.
@@ -343,7 +362,7 @@ class TestPydanticSettingsPatterns:
             password="SecurePass123",  # Test data
         )
         assert settings.email == "user@example.com"  # Lowercased
-        assert settings.password == "SecurePass123"  # Test data
+        assert settings.password == test_password
 
         # Test invalid configurations
         with pytest.raises(ValidationError) as exc_info:

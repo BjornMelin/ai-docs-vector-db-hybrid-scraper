@@ -278,8 +278,7 @@ class TestVectorSearchTracking:
                 collection_name="documents", query_type="semantic"
             ),
         ):
-            msg = "Qdrant connection failed"
-            raise ConnectionError(msg)
+            raise ConnectionError("Qdrant connection failed")
 
     def test_track_vector_search_empty_results(self):
         """Test vector search tracking with empty results."""
