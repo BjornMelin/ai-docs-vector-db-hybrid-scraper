@@ -5,7 +5,7 @@ adaptive query enhancement for improved semantic search results.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:

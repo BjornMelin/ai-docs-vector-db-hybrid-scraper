@@ -11,12 +11,11 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from src.infrastructure.client_manager import ClientManager
 from src.services.agents.core import AgentState, BaseAgent, BaseAgentDependencies
 from src.services.cache.patterns import CircuitBreakerPattern
 from src.services.observability.tracking import PerformanceTracker
@@ -563,8 +562,10 @@ class ParallelAgentCoordinator:
             # Track failure in circuit breaker
             if self.enable_circuit_breaker:
                 try:
+                    # Create a lambda that captures the exception to test circuit breaker
+                    exception_to_throw = e
                     await self.circuit_breakers[agent_name].call(
-                        lambda: (_ for _ in ()).throw(e)
+                        lambda: (_ for _ in ()).throw(exception_to_throw)
                     )
                 except Exception:  # nosec # Expected to fail for circuit breaker testing
                     pass

@@ -1,7 +1,7 @@
 """Firecrawl client provider."""
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 
 try:

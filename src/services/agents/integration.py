@@ -5,16 +5,13 @@ agentic vector management, and tool orchestration systems into a cohesive
 autonomous AI platform based on I4 research findings.
 """
 
-import asyncio
 import logging
 import time
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Set, Union
-from uuid import uuid4
+from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
 from src.services.agents.coordination import (
     AgentCoordinationResult,

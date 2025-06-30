@@ -8,6 +8,7 @@ from typing import Any
 import aiohttp
 import redis.asyncio as redis
 from dependency_injector import containers, providers
+from dependency_injector.wiring import Provide
 from firecrawl import AsyncFirecrawlApp
 from openai import AsyncOpenAI
 from qdrant_client import AsyncQdrantClient

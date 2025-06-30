@@ -8,6 +8,8 @@ import asyncio
 import logging
 from typing import Any
 
+from fastapi import FastAPI, HTTPException, Request
+
 from src.config import Config
 from src.services.cache.modern import ModernCacheManager
 from src.services.circuit_breaker.modern import ModernCircuitBreakerManager
@@ -62,7 +64,6 @@ class EmbeddingServiceWithProtection:
         self.circuit_breaker_manager = circuit_breaker_manager
         self.cache_manager = cache_manager
 
-    @cache_manager.cache_embeddings(ttl=86400)  # Cache for 24 hours
     async def generate_embedding(
         self, text: str, model: str = "default"
     ) -> list[float]:
@@ -121,7 +122,6 @@ class SearchServiceWithCaching:
         """Initialize search service with caching."""
         self.cache_manager = cache_manager
 
-    @cache_manager.cache_search_results(ttl=3600)  # Cache for 1 hour
     async def search_documents(
         self,
         query: str,

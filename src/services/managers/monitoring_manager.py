@@ -4,7 +4,7 @@ import asyncio
 import contextlib
 import logging
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from dependency_injector.wiring import Provide, inject
 

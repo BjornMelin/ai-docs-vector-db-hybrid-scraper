@@ -458,7 +458,9 @@ class AgenticVectorManager:
             # Track failure in circuit breaker
             if circuit_breaker:
                 try:
-                    await circuit_breaker.call(lambda: (_ for _ in ()).throw(e))
+                    # Create a lambda that captures the exception to test circuit breaker
+                    exception_to_throw = e
+                    await circuit_breaker.call(lambda: (_ for _ in ()).throw(exception_to_throw))
                 except Exception:
                     pass  # Expected to fail
 

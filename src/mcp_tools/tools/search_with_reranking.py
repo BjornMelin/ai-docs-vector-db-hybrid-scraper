@@ -5,7 +5,7 @@ autonomous ranking optimization, and multi-criteria result evaluation.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:

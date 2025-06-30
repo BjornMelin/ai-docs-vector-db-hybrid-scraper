@@ -9,19 +9,17 @@ import asyncio
 import logging
 import random
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
-
-from pydantic import BaseModel, Field
+from typing import Any
 
 from src.automation.self_healing.autonomous_health_monitor import (
     AutonomousHealthMonitor,
     SystemMetrics,
 )
 from tests.chaos.conftest import ChaosExperiment, ExperimentResult, FailureType
-from tests.chaos.test_chaos_runner import ChaosTestRunner, ExperimentStatus
+from tests.chaos.test_chaos_runner import ChaosTestRunner
 
 
 logger = logging.getLogger(__name__)

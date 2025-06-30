@@ -6,17 +6,14 @@ multi-agent workflows.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import uuid4
 
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
-from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
 from src.services.agents import (
-    AgentState,
-    BaseAgentDependencies,
     QueryOrchestrator,
     create_agent_dependencies,
     orchestrate_tools,

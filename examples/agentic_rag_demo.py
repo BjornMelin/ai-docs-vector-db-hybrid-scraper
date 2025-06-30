@@ -9,12 +9,8 @@ multi-agent coordination.
 import asyncio
 import logging
 from collections import Counter
-from typing import Any
 from uuid import uuid4
 
-import pydantic_ai
-
-from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
 from src.services.agents import (
     QueryOrchestrator,

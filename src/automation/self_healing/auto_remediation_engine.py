@@ -8,17 +8,16 @@ import asyncio
 import contextlib
 import gc
 import logging
+import os
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import psutil
-from pydantic import BaseModel, Field
 
-from src.automation.infrastructure_automation import SelfHealingManager
 from src.services.circuit_breaker.modern import ModernCircuitBreakerManager
 from src.services.monitoring.health import HealthCheckManager
 

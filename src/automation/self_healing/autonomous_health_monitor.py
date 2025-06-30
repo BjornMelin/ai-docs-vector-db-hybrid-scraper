@@ -7,14 +7,12 @@ deployment modes with predictive failure detection capabilities.
 
 import asyncio
 import logging
-import time
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import psutil
-from pydantic import BaseModel, Field
 
 from src.services.circuit_breaker.modern import ModernCircuitBreakerManager
 from src.services.monitoring.health import HealthCheckManager, HealthStatus

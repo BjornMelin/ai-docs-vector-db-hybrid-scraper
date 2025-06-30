@@ -12,7 +12,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from .core import BaseAgent, BaseAgentDependencies, _check_api_key_availability
+from .core import BaseAgent, BaseAgentDependencies
 
 
 logger = logging.getLogger(__name__)

@@ -19,11 +19,7 @@ from typing import Any
 
 from src.config.settings import load_settings
 from src.infrastructure.client_manager import ClientManager
-from src.infrastructure.container import (
-    DependencyContext,
-    initialize_container,
-    shutdown_container,
-)
+from src.infrastructure.container import DependencyContext
 
 
 # Configure logging

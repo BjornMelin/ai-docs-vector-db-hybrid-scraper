@@ -17,7 +17,7 @@ import time
 
 # Configuration
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -78,6 +78,11 @@ def make_api_request(
     """Make API request with error handling and timing."""
     start_time = time.time()
 
+    def _raise_unsupported_method_error(method: str) -> None:
+        """Raise error for unsupported HTTP method."""
+        msg = f"Unsupported method: {method}"
+        raise ValueError(msg)
+
     try:
         url = f"{API_BASE_URL}{endpoint}"
 
@@ -86,8 +91,7 @@ def make_api_request(
         elif method == "POST":
             response = requests.post(url, json=data, timeout=DEFAULT_TIMEOUT)
         else:
-            msg = f"Unsupported method: {method}"
-            raise ValueError(msg)
+            _raise_unsupported_method_error(method)
 
         end_time = time.time()
         response_time = round((end_time - start_time) * 1000, 2)

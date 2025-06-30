@@ -1,7 +1,6 @@
 """Qdrant client provider."""
 
 import logging
-from typing import Any
 
 
 try:

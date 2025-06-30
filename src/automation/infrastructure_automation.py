@@ -14,7 +14,7 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any
 
 import psutil
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine

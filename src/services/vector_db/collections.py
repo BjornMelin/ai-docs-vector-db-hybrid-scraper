@@ -11,7 +11,7 @@ from src.services.errors import QdrantServiceError
 
 
 if TYPE_CHECKING:
-    from src.config import get_config
+    from src.config import Config, get_config
 
 
 logger = logging.getLogger(__name__)

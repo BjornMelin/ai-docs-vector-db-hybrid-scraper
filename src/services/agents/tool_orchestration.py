@@ -13,7 +13,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Set, Tuple, Union
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -515,7 +515,9 @@ class AdvancedToolOrchestrator:
             # Track failure in circuit breaker
             if circuit_breaker:
                 try:
-                    await circuit_breaker.call(lambda: (_ for _ in ()).throw(e))
+                    # Create a lambda that captures the exception to test circuit breaker
+                    exception_to_throw = e
+                    await circuit_breaker.call(lambda: (_ for _ in ()).throw(exception_to_throw))
                 except Exception:  # nosec # Expected to fail for circuit breaker testing
                     pass
 

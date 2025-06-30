@@ -20,6 +20,7 @@ from collections.abc import Callable
 from typing import Any, Optional
 
 from fastapi import HTTPException, Request, Response
+from fastapi.security import HTTPBearer
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 

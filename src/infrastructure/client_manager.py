@@ -4,7 +4,7 @@ import asyncio
 import logging
 import threading
 from contextlib import asynccontextmanager
-from typing import Any, Optional
+from typing import Any
 
 from dependency_injector.wiring import Provide, inject
 

@@ -22,7 +22,6 @@ import logging
 import os
 import tempfile
 from pathlib import Path
-from typing import Any
 
 from src.config.security import (
     ConfigDataClassification,

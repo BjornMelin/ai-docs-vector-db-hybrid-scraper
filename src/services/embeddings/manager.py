@@ -7,7 +7,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 
 try:
@@ -21,7 +21,6 @@ except ImportError:
     CacheManager = None
 
 from src.config import Config
-from src.models import ModelBenchmark
 from src.services.errors import EmbeddingServiceError
 
 from .base import EmbeddingProvider
@@ -114,7 +113,9 @@ class EmbeddingManager:
             )
 
         # Model benchmarks and smart selection config (loaded from configuration)
-        self._benchmarks: dict[str, ModelBenchmark] = config.embedding.model_benchmarks
+        self._benchmarks: dict[str, dict[str, Any]] = getattr(
+            config.embedding, "model_benchmarks", {}
+        )
         self._smart_config = config.embedding.smart_selection
 
         # Dynamic quality tier mappings
@@ -948,7 +949,7 @@ class EmbeddingManager:
 
     def _calculate_model_score(
         self,
-        benchmark: ModelBenchmark,
+        benchmark: dict[str, Any],
         text_analysis: TextAnalysis,
         quality_tier: QualityTier | None,
         speed_priority: bool,

@@ -6,7 +6,7 @@ processing and intelligent organization capabilities.
 
 import datetime
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 
@@ -24,7 +24,6 @@ else:
 
 
 from src.infrastructure.client_manager import ClientManager
-from src.security import MLSecurityValidator as SecurityValidator
 
 
 logger = logging.getLogger(__name__)
