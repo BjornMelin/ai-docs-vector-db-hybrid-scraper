@@ -9,8 +9,8 @@ import time
 from typing import Any
 
 from src.config import Config
-# TODO: Fix import - QueryClassification doesn't exist in vector_search models
-# from src.models.vector_search import QueryClassification
+# TODO: Fix import - Any  # TODO: Replace with proper QueryClassification type doesn't exist in vector_search models
+# from src.models.vector_search import Any  # TODO: Replace with proper QueryClassification type
 
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ class AdaptiveFusionTuner:
 
     async def compute_adaptive_weights(
         self,
-        query_classification: QueryClassification,
+        query_classification: Any,  # TODO: Replace with proper Any  # TODO: Replace with proper QueryClassification type type
         historical_performance: dict[str, float] | None = None,
         _context: dict[str, Any] | None = None,
     ) -> dict[str, float]:
@@ -114,7 +114,7 @@ class AdaptiveFusionTuner:
             return {"dense": 0.7, "sparse": 0.3}
 
     def _compute_complexity_adjustment(
-        self, query_classification: QueryClassification
+        self, query_classification: Any  # TODO: Replace with proper QueryClassification type
     ) -> float:
         """Compute weight adjustment based on query complexity."""
         complexity = query_classification.complexity_level.lower()
@@ -130,7 +130,7 @@ class AdaptiveFusionTuner:
     def _compute_performance_adjustment(
         self,
         historical_performance: dict[str, float],
-        _query_classification: QueryClassification,
+        _query_classification: Any  # TODO: Replace with proper QueryClassification type,
     ) -> float:
         """Compute adjustment based on historical performance."""
         try:
@@ -151,7 +151,7 @@ class AdaptiveFusionTuner:
 
     def _update_performance_history(
         self,
-        query_classification: QueryClassification,
+        query_classification: Any,  # TODO: Replace with proper Any  # TODO: Replace with proper QueryClassification type type
         weight: float,
         computation_time: float,
     ) -> None:

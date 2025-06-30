@@ -9,7 +9,8 @@ import re
 from typing import Any
 
 from src.config import Config, QueryComplexity, QueryType
-from src.models.vector_search import QueryClassification, QueryFeatures
+# TODO: Fix imports - Any  # TODO: Replace with proper QueryClassification type and Any  # TODO: Replace with proper QueryFeatures type don't exist
+# from src.models.vector_search import Any  # TODO: Replace with proper QueryClassification type, Any  # TODO: Replace with proper QueryFeatures type
 
 
 logger = logging.getLogger(__name__)
@@ -158,7 +159,7 @@ class QueryClassifier:
 
     async def classify_query(
         self, query: str, _context: dict[str, Any] | None = None
-    ) -> QueryClassification:
+    ) -> Any:  # TODO: Replace with proper QueryClassification type
         """Classify a query to determine optimal search strategy.
 
         Args:
@@ -166,7 +167,7 @@ class QueryClassifier:
             context: Optional context information (user history, session data)
 
         Returns:
-            QueryClassification with type, complexity, and features
+            Any  # TODO: Replace with proper QueryClassification type with type, complexity, and features
 
         """
         try:
@@ -191,32 +192,35 @@ class QueryClassifier:
             # Check for multimodal indicators
             is_multimodal = self._detect_multimodal(query, features)
 
-            return QueryClassification(
-                query_type=query_type,
-                complexity_level=complexity,
-                domain=domain,
-                programming_language=programming_language,
-                is_multimodal=is_multimodal,
-                confidence=confidence,
-                features=features.model_dump(),
-            )
+            # TODO: Replace with proper QueryClassification type
+            return {
+                "query_type": query_type,
+                "complexity_level": complexity,
+                "domain": domain,
+                "programming_language": programming_language,
+                "is_multimodal": is_multimodal,
+                "confidence": confidence,
+                "features": features,
+            }
 
         except Exception as e:
+            # TODO: Convert f-string to logging format
             logger.error(
                 f"Query classification failed: {e}", exc_info=True
-            )  # TODO: Convert f-string to logging format
-            # Return default classification
-            return QueryClassification(
-                query_type=QueryType.CONCEPTUAL,
-                complexity_level=QueryComplexity.MODERATE,
-                domain="general",
-                programming_language=None,
-                is_multimodal=False,
-                confidence=0.5,
-                features={},
             )
+            # Return default classification
+            # TODO: Replace with proper QueryClassification type
+            return {
+                "query_type": QueryType.CONCEPTUAL,
+                "complexity_level": QueryComplexity.MODERATE,
+                "domain": "general",
+                "programming_language": None,
+                "is_multimodal": False,
+                "confidence": 0.5,
+                "features": {},
+            }
 
-    def _extract_features(self, query: str) -> QueryFeatures:
+    def _extract_features(self, query: str) -> Any:  # TODO: Replace with proper QueryFeatures type
         """Extract features from query for classification."""
         query_lower = query.lower()
         tokens = query_lower.split()
@@ -254,7 +258,7 @@ class QueryClassifier:
         # Keyword density
         keyword_density = self._calculate_keyword_density(query_lower, tokens)
 
-        return QueryFeatures(
+        return Any  # TODO: Replace with proper QueryFeatures type(
             query_length=query_length,
             has_code_keywords=has_code_keywords,
             has_function_names=has_function_names,
@@ -267,7 +271,7 @@ class QueryClassifier:
             keyword_density=keyword_density,
         )
 
-    def _classify_query_type(self, query: str, features: QueryFeatures) -> QueryType:
+    def _classify_query_type(self, query: str, features: Any  # TODO: Replace with proper QueryFeatures type) -> QueryType:
         """Classify the primary query type."""
         query_lower = query.lower()
 
@@ -325,7 +329,7 @@ class QueryClassifier:
         return QueryType.CONCEPTUAL
 
     def _assess_complexity(
-        self, query: str, features: QueryFeatures
+        self, query: str, features: Any  # TODO: Replace with proper QueryFeatures type
     ) -> QueryComplexity:
         """Assess query complexity level."""
         complexity_score = 0
@@ -367,7 +371,7 @@ class QueryClassifier:
             return QueryComplexity.MODERATE
         return QueryComplexity.COMPLEX
 
-    def _detect_domain(self, query: str, features: QueryFeatures) -> str:
+    def _detect_domain(self, query: str, features: Any  # TODO: Replace with proper QueryFeatures type) -> str:
         """Detect the technical domain of the query."""
         query_lower = query.lower()
 
@@ -423,7 +427,7 @@ class QueryClassifier:
         return "general"
 
     def _detect_programming_language(
-        self, _query: str, features: QueryFeatures
+        self, _query: str, features: Any  # TODO: Replace with proper QueryFeatures type
     ) -> str | None:
         """Detect the primary programming language mentioned in the query."""
         if features.programming_language_indicators:
@@ -434,7 +438,7 @@ class QueryClassifier:
     def _calculate_confidence(
         self,
         _query: str,
-        features: QueryFeatures,
+        features: Any  # TODO: Replace with proper QueryFeatures type,
         _query_type: QueryType,
         _complexity: QueryComplexity,
     ) -> float:
@@ -459,7 +463,7 @@ class QueryClassifier:
 
         return min(max(confidence, 0.1), 1.0)  # Clamp between 0.1 and 1.0
 
-    def _detect_multimodal(self, query: str, _features: QueryFeatures) -> bool:
+    def _detect_multimodal(self, query: str, _features: Any  # TODO: Replace with proper QueryFeatures type) -> bool:
         """Detect if query involves multiple modalities."""
         query_lower = query.lower()
         multimodal_keywords = [
