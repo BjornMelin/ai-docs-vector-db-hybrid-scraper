@@ -4,9 +4,10 @@ This test module provides thorough coverage of the AgenticOrchestrator functiona
 focusing on autonomous decision-making, tool composition, and error handling.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from typing import Any, Dict, List
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from src.services.agents.agentic_orchestrator import (
     AgenticOrchestrator,
@@ -433,7 +434,7 @@ class TestOrchestratorIntegration:
         # Process queries concurrently
         tasks = [
             orchestrator.process_query(query, state)
-            for query, state in zip(queries, states)
+            for query, state in zip(queries, states, strict=False)
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)

@@ -411,6 +411,7 @@ class TestToolRegistryIntegration:
 
         if TYPE_CHECKING:
             from fastmcp import FastMCP
+
             from src.infrastructure.client_manager import ClientManager
 
             # This should not raise type errors

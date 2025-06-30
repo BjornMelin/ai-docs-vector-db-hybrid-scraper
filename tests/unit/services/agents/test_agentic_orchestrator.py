@@ -1216,13 +1216,11 @@ class TestPydanticAIIntegration:
     async def test_real_pydantic_ai_orchestration(self):
         """Test orchestration with real Pydantic-AI agent."""
         # This would test with actual Pydantic-AI when installed
-        pass
 
     @pytest.mark.asyncio
     async def test_real_tool_registration(self):
         """Test actual tool registration with Pydantic-AI."""
         # This would test tool registration when Pydantic-AI is available
-        pass
 
 
 # Performance benchmarks

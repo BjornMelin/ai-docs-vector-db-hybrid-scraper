@@ -7,10 +7,11 @@ import pytest
 def mock_dependencies():
     """Mock dependencies for agent testing."""
     from unittest.mock import Mock
-    from src.config import get_config
-    from src.services.agents.core import AgentState, BaseAgentDependencies
-    from src.infrastructure.client_manager import ClientManager
     from uuid import uuid4
+
+    from src.config import get_config
+    from src.infrastructure.client_manager import ClientManager
+    from src.services.agents.core import AgentState, BaseAgentDependencies
 
     mock_client_manager = Mock(spec=ClientManager)
     config = get_config()
