@@ -14,9 +14,9 @@ import time
 import psutil
 import pytest
 
-from ..base_load_test import create_load_test_runner
-from ..conftest import LoadTestConfig, LoadTestType
-from ..load_profiles import SteadyLoadProfile
+from tests.load.base_load_test import create_load_test_runner
+from tests.load.conftest import LoadTestConfig, LoadTestType
+from tests.load.load_profiles import SteadyLoadProfile
 
 
 logger = logging.getLogger(__name__)
@@ -64,14 +64,14 @@ class TestEnduranceLoad:
             memory_mb = process.memory_info().rss / 1024 / 1024
 
             stats = env.stats
-            if stats and stats._total.num_requests > 0:
+            if stats and stats.total.num_requests > 0:
                 time_series_metrics.append(
                     {
                         "timestamp": current_time,
-                        "requests": stats._total.num_requests,
-                        "failures": stats._total.num_failures,
-                        "avg_response_time": stats._total.avg_response_time,
-                        "rps": stats._total.current_rps,
+                        "requests": stats.total.num_requests,
+                        "failures": stats.total.num_failures,
+                        "avg_response_time": stats.total.avg_response_time,
+                        "rps": stats.total.current_rps,
                         "memory_mb": memory_mb,
                     }
                 )
@@ -421,7 +421,7 @@ class TestEnduranceLoad:
 
                 if connections_to_remove:
                     logger.info(
-                        f"Cleaned up {len(connections_to_remove)} idle connections"
+                        "Cleaned up %s idle connections", len(connections_to_remove)
                     )
 
             def get_pool_stats(self) -> dict:

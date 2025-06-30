@@ -190,7 +190,7 @@ class ModernCircuitBreakerManager:
             logger.warning(f"Circuit breaker for {service_name} does not support reset")
             return False
         except Exception as e:
-            logger.exception(f"Failed to reset circuit breaker for {service_name}: {e}")
+            logger.exception("Failed to reset circuit breaker for {service_name}")
             return False
 
     async def get_all_statuses(self) -> dict[str, dict[str, Any]]:
@@ -215,7 +215,7 @@ class ModernCircuitBreakerManager:
             self._breakers.clear()
             logger.info("ModernCircuitBreakerManager closed successfully")
         except Exception as e:
-            logger.exception(f"Error closing ModernCircuitBreakerManager: {e}")
+            logger.exception("Error closing ModernCircuitBreakerManager")
 
 
 # Convenience function for creating circuit breaker manager

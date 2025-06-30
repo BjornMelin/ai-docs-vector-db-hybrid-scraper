@@ -8,9 +8,9 @@ AI integration patterns.
 import logging
 from typing import Any
 
-from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
+from fastmcp import FastMCP
 from src.config import get_config
 from src.services.rag import RAGGenerator
 from src.services.rag.models import RAGRequest

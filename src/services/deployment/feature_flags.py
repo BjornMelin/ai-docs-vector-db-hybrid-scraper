@@ -12,7 +12,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.config.enums import DeploymentTier
+from src.config import DeploymentTier
 
 
 # Optional dependency handling
@@ -27,6 +27,8 @@ logger = logging.getLogger(__name__)
 
 class FeatureFlagConfig(BaseModel):
     """Configuration for feature flag integration."""
+
+    model_config = {"arbitrary_types_allowed": True}
 
     enabled: bool = Field(default=False, description="Enable feature flag integration")
     provider: str = Field(default="flagsmith", description="Feature flag provider")

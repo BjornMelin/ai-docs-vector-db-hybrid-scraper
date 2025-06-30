@@ -193,11 +193,9 @@ class TestDatabaseConnectionPooling:
             try:
                 conn = await mock_pool.get_connection()
                 await mock_pool.release_connection(conn)
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError) as e:
                 # Expected exception in stress test
-                logger.debug(
-                    f"Expected connection pool exception: {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.debug("Expected connection pool exception: %s", e)
 
         hit_rate = mock_pool.get_affinity_hit_rate()
         # Should be approximately 73% hit rate

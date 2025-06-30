@@ -179,7 +179,7 @@ class TestNetworkPartitions:
 
         return simulator
 
-    async def test_simple_network_partition(self, network_simulator, _fault_injector):
+    async def test_simple_network_partition(self, network_simulator, fault_injector):
         """Test basic network partition scenario."""
         # Verify initial connectivity
         assert await network_simulator.can_communicate("node_1", "node_3")
@@ -451,9 +451,7 @@ class TestNetworkPartitions:
         assert not minority_write["write_successful"]
         assert minority_write["successful_writes"] < minority_write["quorum_required"]
 
-    async def test_network_partition_detection(
-        self, network_simulator, _fault_injector
-    ):
+    async def test_network_partition_detection(self, network_simulator, fault_injector):
         """Test network partition detection mechanisms."""
 
         class PartitionDetector:
@@ -766,7 +764,7 @@ class TestNetworkPartitions:
                             except ConnectionError:
                                 pass
 
-                except Exception as e:
+                except (TimeoutError, ConnectionError, OSError) as e:
                     write_op["error"] = str(e)
 
                 self.operations_log.append(write_op)
@@ -788,7 +786,7 @@ class TestNetworkPartitions:
                         read_op["value"] = self.network.nodes[node_id].data[key]
                         read_op["success"] = True
 
-                except Exception as e:
+                except (TimeoutError, ConnectionError, OSError) as e:
                     read_op["error"] = str(e)
 
                 self.reads_log.append(read_op)

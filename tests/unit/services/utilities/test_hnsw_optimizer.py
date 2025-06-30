@@ -21,8 +21,7 @@ class TestHNSWOptimizer:
     @pytest.fixture
     def mock_config(self):
         """Create mock unified config."""
-        config = MagicMock(spec=Config)
-        return config
+        return MagicMock(spec=Config)
 
     @pytest.fixture
     def _mock_qdrant_service(self):
@@ -528,6 +527,7 @@ class TestHNSWOptimizer:
                 raise TestError(msg)
                 msg = "Query failed"
                 raise TestError(msg)
+            return None
 
         _mock_qdrant_service._client.query_points.side_effect = mock_query
 

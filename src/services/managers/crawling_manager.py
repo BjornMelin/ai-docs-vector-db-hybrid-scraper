@@ -54,12 +54,11 @@ class CrawlingManager:
             logger.info("CrawlingManager service initialized with 5-tier automation")
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 f"Failed to initialize CrawlingManager: {e}"
             )  # TODO: Convert f-string to logging format
-            raise CrawlServiceError(
-                f"Failed to initialize crawling manager: {e}"
-            ) from e
+            msg = f"Failed to initialize crawling manager: {e}"
+            raise CrawlServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup crawling manager resources."""
@@ -95,12 +94,13 @@ class CrawlingManager:
             CrawlServiceError: If manager not initialized or scraping fails
         """
         if not self._initialized or not self._core_manager:
-            raise CrawlServiceError("Crawling manager not initialized")
+            msg = "Crawling manager not initialized"
+            raise CrawlServiceError(msg)
 
         try:
             return await self._core_manager.scrape_url(url, preferred_provider)
         except Exception as e:
-            logger.error(
+            logger.exception(
                 f"URL scraping failed for {url}: {e}"
             )  # TODO: Convert f-string to logging format
             return {
@@ -135,14 +135,15 @@ class CrawlingManager:
             CrawlServiceError: If manager not initialized
         """
         if not self._initialized or not self._core_manager:
-            raise CrawlServiceError("Crawling manager not initialized")
+            msg = "Crawling manager not initialized"
+            raise CrawlServiceError(msg)
 
         try:
             return await self._core_manager.crawl_site(
                 url, max_pages, preferred_provider
             )
         except Exception as e:
-            logger.error(
+            logger.exception(
                 f"Site crawling failed for {url}: {e}"
             )  # TODO: Convert f-string to logging format
             return {
@@ -166,7 +167,8 @@ class CrawlingManager:
             CrawlServiceError: If manager not initialized
         """
         if not self._initialized or not self._core_manager:
-            raise CrawlServiceError("Crawling manager not initialized")
+            msg = "Crawling manager not initialized"
+            raise CrawlServiceError(msg)
 
         try:
             return await self._core_manager.get_recommended_tool(url)
@@ -194,7 +196,8 @@ class CrawlingManager:
             CrawlServiceError: If manager not initialized
         """
         if not self._initialized or not self._core_manager:
-            raise CrawlServiceError("Crawling manager not initialized")
+            msg = "Crawling manager not initialized"
+            raise CrawlServiceError(msg)
 
         try:
             return await self._core_manager.map_url(url, include_subdomains)
@@ -321,7 +324,8 @@ class CrawlingManager:
             Extracted content with metadata
         """
         if not self._initialized or not self._core_manager:
-            raise CrawlServiceError("Crawling manager not initialized")
+            msg = "Crawling manager not initialized"
+            raise CrawlServiceError(msg)
 
         try:
             # Use scrape_url as base and extract specific content
@@ -358,7 +362,7 @@ class CrawlingManager:
             return extracted
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 f"Content extraction failed for {url}: {e}"
             )  # TODO: Convert f-string to logging format
             return {
@@ -386,7 +390,8 @@ class CrawlingManager:
             List of scraping results for each URL
         """
         if not self._initialized or not self._core_manager:
-            raise CrawlServiceError("Crawling manager not initialized")
+            msg = "Crawling manager not initialized"
+            raise CrawlServiceError(msg)
 
         import asyncio
 
@@ -419,7 +424,7 @@ class CrawlingManager:
             return processed_results
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 f"Bulk scraping failed: {e}"
             )  # TODO: Convert f-string to logging format
             # Return error results for all URLs

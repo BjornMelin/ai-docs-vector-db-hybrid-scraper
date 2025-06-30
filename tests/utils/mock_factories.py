@@ -318,7 +318,7 @@ def create_mock_web_scraper(
             try:
                 result = await mock_scrape_url(url, **_kwargs)
                 results.append(result)
-            except Exception as e:
+            except (TimeoutError, CustomError, ValueError) as e:
                 results.append({"url": url, "error": str(e), "success": False})
         return results
 

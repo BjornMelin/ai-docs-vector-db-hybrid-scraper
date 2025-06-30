@@ -472,7 +472,7 @@ def setup__mock_services(environment_name: str = "unit") -> dict[str, Any]:
     """
     env = get_test_environment(environment_name)
 
-    _mock_services = {
+    return {
         "vector_db": {
             "url": env.vector_db_url,
             "collections": ["test_collection"],
@@ -498,8 +498,6 @@ def setup__mock_services(environment_name: str = "unit") -> dict[str, Any]:
             "status": "active",
         },
     }
-
-    return _mock_services
 
 
 def validate_test_environment(environment_name: str) -> dict[str, Any]:

@@ -315,7 +315,7 @@ class SPLADEProvider:
     def _build_fallback_vocabulary(self) -> dict[str, int]:
         """Build a fallback vocabulary for token ID mapping."""
         # Common programming and technical terms with assigned IDs
-        base_vocab = {
+        return {
             # Basic programming terms
             "function": 1,
             "method": 2,
@@ -433,8 +433,6 @@ class SPLADEProvider:
             "sample": 169,
         }
 
-        return base_vocab
-
     def _normalize_sparse_vector(
         self, sparse_vector: dict[int, float]
     ) -> dict[int, float]:
@@ -448,10 +446,7 @@ class SPLADEProvider:
             return sparse_vector
 
         # Normalize weights
-        normalized = {
-            token_id: weight / norm for token_id, weight in sparse_vector.items()
-        }
-        return normalized
+        return {token_id: weight / norm for token_id, weight in sparse_vector.items()}
 
     def _apply_top_k_filtering(
         self, sparse_vector: dict[int, float]

@@ -38,8 +38,7 @@ def mock_qdrant_client():
 @pytest.fixture
 async def qdrant_service(mock_config, mock_client_manager):
     """Create QdrantService instance."""
-    service = QdrantService(mock_config, client_manager=mock_client_manager)
-    return service
+    return QdrantService(mock_config, client_manager=mock_client_manager)
 
 
 class TestQdrantServiceInitialization:

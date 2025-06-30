@@ -140,9 +140,7 @@ class AdaptiveFusionTuner:
             score_diff = dense_score - sparse_score
 
             # Scale the adjustment (max ±0.15)
-            adjustment = max(-0.15, min(0.15, score_diff * 0.3))
-
-            return adjustment
+            return max(-0.15, min(0.15, score_diff * 0.3))
 
         except Exception as e:
             logger.debug(

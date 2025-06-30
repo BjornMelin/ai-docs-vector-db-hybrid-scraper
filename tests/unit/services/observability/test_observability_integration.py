@@ -1,7 +1,5 @@
 """Integration tests for the complete observability system."""
 
-import asyncio
-import time
 from unittest.mock import Mock, patch
 
 from src.services.observability.ai_tracking import (

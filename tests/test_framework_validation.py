@@ -5,6 +5,7 @@ demonstrates the key features of the modern AI/ML testing implementation.
 """
 
 import asyncio
+import time
 
 import pytest
 from hypothesis import given, strategies as st
@@ -161,8 +162,6 @@ class TestFrameworkValidation:
         """Test that test categorization is working."""
         # This test validates the categorization system
         # by being marked as a fast test
-        import time
-
         start_time = time.time()
 
         # Simulate fast operation (should be < 2 seconds)

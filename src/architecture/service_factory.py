@@ -109,9 +109,8 @@ class ModeAwareServiceFactory:
         """
         # Check if service is enabled in current mode
         if name not in self.mode_config.enabled_services:
-            raise ServiceNotEnabledError(
-                f"Service '{name}' not enabled in {self.mode.value} mode"
-            )
+            msg = f"Service '{name}' not enabled in {self.mode.value} mode"
+            raise ServiceNotEnabledError(msg)
 
         # Return cached instance if available
         if name in self._service_instances:
@@ -130,18 +129,19 @@ class ModeAwareServiceFactory:
             self._initialization_status[name] = True
 
             logger.info(f"Initialized service '{name}' in {self.mode.value} mode")
-            return service
 
         except Exception as e:
             self._initialization_status[name] = False
-            raise ServiceInitializationError(
-                f"Failed to initialize service '{name}': {e}"
-            ) from e
+            msg = f"Failed to initialize service '{name}': {e}"
+            raise ServiceInitializationError(msg) from e
+        else:
+            return service
 
     def _get_service_class(self, name: str) -> type[ServiceProtocol]:
         """Get the service class for the current mode."""
         if name not in self._service_registry:
-            raise ServiceNotFoundError(f"Service '{name}' not registered")
+            msg = f"Service '{name}' not registered"
+            raise ServiceNotFoundError(msg)
 
         mode_implementations = self._service_registry[name]
         mode_key = self.mode.value
@@ -156,9 +156,8 @@ class ModeAwareServiceFactory:
                 )
                 return mode_implementations[fallback_key]
 
-            raise ServiceNotFoundError(
-                f"Service '{name}' has no implementation for {mode_key} mode"
-            )
+            msg = f"Service '{name}' has no implementation for {mode_key} mode"
+            raise ServiceNotFoundError(msg)
 
         return mode_implementations[mode_key]
 
@@ -197,10 +196,11 @@ class ModeAwareServiceFactory:
 
             # Check if implementation exists
             self._get_service_class(name)
-            return True
 
         except (ServiceNotFoundError, ServiceNotEnabledError):
             return False
+        else:
+            return True
 
     def get_available_services(self) -> list[str]:
         """Get list of services available in the current mode.
@@ -208,11 +208,11 @@ class ModeAwareServiceFactory:
         Returns:
             list of service names available in current mode
         """
-        available = []
-        for service_name in self.mode_config.enabled_services:
-            if self.is_service_available(service_name):
-                available.append(service_name)
-        return available
+        return [
+            service_name
+            for service_name in self.mode_config.enabled_services
+            if self.is_service_available(service_name)
+        ]
 
     def get_service_status(self, name: str) -> dict[str, Any]:
         """Get status information for a service.
@@ -231,6 +231,37 @@ class ModeAwareServiceFactory:
             "mode": self.mode.value,
         }
 
+    def is_service_registered(self, name: str) -> bool:
+        """Check if a service is registered.
+
+        Args:
+            name: Service name
+
+        Returns:
+            True if service is registered
+        """
+        return name in self._service_registry
+
+    def get_registered_service_implementations(
+        self, name: str
+    ) -> dict[str, type[ServiceProtocol]]:
+        """Get registered implementations for a service.
+
+        Args:
+            name: Service name
+
+        Returns:
+            Dictionary mapping mode names to implementation classes
+
+        Raises:
+            ServiceNotFoundError: If service not registered
+        """
+        if name not in self._service_registry:
+            msg = f"Service '{name}' not registered"
+            raise ServiceNotFoundError(msg)
+
+        return self._service_registry[name].copy()
+
     async def cleanup_all_services(self) -> None:
         """Clean up all initialized services."""
         for name, service in self._service_instances.items():
@@ -238,7 +269,7 @@ class ModeAwareServiceFactory:
                 await service.cleanup()
                 logger.debug(f"Cleaned up service '{name}'")
             except Exception as e:
-                logger.exception(f"Error cleaning up service '{name}': {e}")
+                logger.exception("Error cleaning up service '{name}'")
 
         self._service_instances.clear()
         self._initialization_status.clear()

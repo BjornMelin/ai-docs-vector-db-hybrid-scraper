@@ -244,8 +244,8 @@ class TestCacheIntegrationPatterns:
         """
         # Arrange: Cache that raises exceptions
         mock_cache = AsyncMock()
-        mock_cache.get.side_effect = Exception("Cache connection failed")
-        mock_cache.set.side_effect = Exception("Cache connection failed")
+        mock_cache.get.side_effect = ConnectionError("Cache connection failed")
+        mock_cache.set.side_effect = ConnectionError("Cache connection failed")
 
         # Simulate service with cache fallback
         async def resilient_service_method(key: str) -> str:
@@ -253,22 +253,18 @@ class TestCacheIntegrationPatterns:
                 cached_value = await mock_cache.get(key)
                 if cached_value:
                     return cached_value
-            except Exception as e:
+            except (ConnectionError, TimeoutError, RuntimeError, ValueError) as e:
                 # Gracefully handle cache failure
-                logger.debug(
-                    f"Cache read failure (graceful fallback): {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.debug("Cache read failure (graceful fallback): %s", e)
 
             # Fallback to direct computation
             computed_value = f"computed_value_for_{key}"
 
             try:
                 await mock_cache.set(key, computed_value)
-            except Exception as e:
+            except (ConnectionError, TimeoutError, RuntimeError, ValueError) as e:
                 # Cache set failure is non-fatal
-                logger.debug(
-                    f"Cache set failure (non-fatal): {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.debug("Cache set failure (non-fatal): %s", e)
 
             return computed_value
 

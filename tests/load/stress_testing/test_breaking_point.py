@@ -62,7 +62,7 @@ class TestBreakingPointAnalysis:
                     # Calculate key metrics
                     success_rate = (
                         result.metrics.successful_requests
-                        / max(result.metrics._total_requests, 1)
+                        / max(result.metrics.total_requests, 1)
                     ) * 100
                     actual_rps = result.metrics.throughput_rps
                     avg_response_time = (
@@ -78,7 +78,7 @@ class TestBreakingPointAnalysis:
                         "users": users,
                         "success_rate": success_rate,
                         "avg_response_time_ms": avg_response_time * 1000,
-                        "_total_requests": result.metrics._total_requests,
+                        "_total_requests": result.metrics.total_requests,
                         "successful_requests": result.metrics.successful_requests,
                         "failed_requests": result.metrics.failed_requests,
                         "system_stable": success_rate >= 80.0
@@ -171,7 +171,7 @@ class TestBreakingPointAnalysis:
 
                     success_rate = (
                         result.metrics.successful_requests
-                        / max(result.metrics._total_requests, 1)
+                        / max(result.metrics.total_requests, 1)
                     ) * 100
                     avg_response_time = (
                         sum(result.metrics.response_times)
@@ -197,7 +197,7 @@ class TestBreakingPointAnalysis:
                         "avg_response_time_ms": avg_response_time * 1000,
                         "p95_response_time_ms": p95_response_time * 1000,
                         "p99_response_time_ms": p99_response_time * 1000,
-                        "_total_requests": result.metrics._total_requests,
+                        "_total_requests": result.metrics.total_requests,
                         "peak_concurrent": result.metrics.peak_concurrent_users,
                         "system_stable": success_rate >= 75.0
                         and avg_response_time < 3.0,
@@ -341,7 +341,7 @@ class TestBreakingPointAnalysis:
 
                     success_rate = (
                         result.metrics.successful_requests
-                        / max(result.metrics._total_requests, 1)
+                        / max(result.metrics.total_requests, 1)
                     ) * 100
 
                     # Set baseline for comparison
@@ -368,7 +368,7 @@ class TestBreakingPointAnalysis:
                         "response_time_cv": cv,
                         "degradation_factor": degradation_factor,
                         "success_rate": success_rate,
-                        "_total_requests": result.metrics._total_requests,
+                        "_total_requests": result.metrics.total_requests,
                         "acceptable_performance": avg_response_time < 2.0
                         and success_rate >= 90.0,
                     }
@@ -512,18 +512,18 @@ class TestBreakingPointAnalysis:
                     final_cascade = self.error_cascade_level
                     success_rate = (
                         result.metrics.successful_requests
-                        / max(result.metrics._total_requests, 1)
+                        / max(result.metrics.total_requests, 1)
                     ) * 100
                     error_rate = (
                         result.metrics.failed_requests
-                        / max(result.metrics._total_requests, 1)
+                        / max(result.metrics.total_requests, 1)
                     ) * 100
 
                     cascade_result = {
                         "level": level["name"],
                         "users": level["users"],
                         "rps": level["rps"],
-                        "_total_requests": result.metrics._total_requests,
+                        "_total_requests": result.metrics.total_requests,
                         "success_rate": success_rate,
                         "error_rate": error_rate,
                         "initial_cascade_level": initial_cascade,

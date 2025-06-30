@@ -6,8 +6,8 @@ import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastmcp import FastMCP
 
+from fastmcp import FastMCP
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tool_registry import register_all_tools
 from src.services.logging_config import configure_logging
@@ -463,7 +463,7 @@ class TestLifespanContextManager:
             async with unified_mcp_server.lifespan():
                 # Simulate an exception during operation
                 msg = "Operation failed"
-                raise RuntimeError(msg)  # noqa: TRY301
+                raise RuntimeError(msg)
         except RuntimeError:
             pass
 
@@ -518,11 +518,9 @@ class TestLifespanContextManager:
         try:
             async with unified_mcp_server.lifespan():
                 pass
-        except Exception as e:
+        except (ConnectionError, RuntimeError, ValueError) as e:
             # Exception expected during lifespan test
-            logger.debug(
-                f"Expected lifespan test exception: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Expected lifespan test exception: %s", e)
 
         # Should not attempt to cleanup non-existent client manager
         # (No assertion needed as exception would be raised if cleanup was called incorrectly)

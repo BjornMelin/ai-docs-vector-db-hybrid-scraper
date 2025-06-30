@@ -11,9 +11,9 @@ import time
 
 import pytest
 
-from ..base_load_test import create_load_test_runner
-from ..conftest import LoadTestConfig, LoadTestType
-from ..load_profiles import DoubleSpike, SpikeLoadProfile
+from tests.load.base_load_test import create_load_test_runner
+from tests.load.conftest import LoadTestConfig, LoadTestType
+from tests.load.load_profiles import DoubleSpike, SpikeLoadProfile
 
 
 class TestError(Exception):
@@ -106,15 +106,15 @@ class TestSpikeLoad:
         def track_inter_spike_performance(**__kwargs):
             """Track performance between spikes."""
             stats = env.stats
-            if stats and stats._total.num_requests > 0:
+            if stats and stats.total.num_requests > 0:
                 inter_spike_metrics.append(
                     {
                         "timestamp": time.time(),
                         "users": env.runner.user_count if env.runner else 0,
-                        "rps": stats._total.current_rps,
-                        "avg_response_time": stats._total.avg_response_time,
+                        "rps": stats.total.current_rps,
+                        "avg_response_time": stats.total.avg_response_time,
                         "error_rate": (
-                            stats._total.num_failures / stats._total.num_requests
+                            stats.total.num_failures / stats.total.num_requests
                         )
                         * 100,
                     }
@@ -184,7 +184,7 @@ class TestSpikeLoad:
                     self.current_capacity * 1.5, self.max_capacity
                 )
                 logger.info(
-                    f"Scaled up from {old_capacity} to {self.current_capacity}"
+                    "Scaled up from %s to %s", old_capacity, self.current_capacity
                 )  # TODO: Convert f-string to logging format
 
             def scale_down(self):
@@ -192,7 +192,7 @@ class TestSpikeLoad:
                 old_capacity = self.current_capacity
                 self.current_capacity = max(self.current_capacity * 0.8, 100)
                 logger.info(
-                    f"Scaled down from {old_capacity} to {self.current_capacity}"
+                    "Scaled down from %s to %s", old_capacity, self.current_capacity
                 )
 
         auto_scaler = AutoScalingSimulator()

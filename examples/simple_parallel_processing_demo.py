@@ -16,14 +16,15 @@ import asyncio
 import logging
 import sys
 import time
+import traceback
 from pathlib import Path
+
+from src.config.core import Config
+from src.infrastructure.container import DependencyContext
 
 
 # Add src to path for importing
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-from src.config.core import Config
-from src.infrastructure.container import DependencyContext
 
 
 # Configure logging
@@ -148,8 +149,6 @@ async def main():
 
     except Exception as e:
         print(f"❌ Integration failed: {e}")
-        import traceback
-
         traceback.print_exc()
         return False
 

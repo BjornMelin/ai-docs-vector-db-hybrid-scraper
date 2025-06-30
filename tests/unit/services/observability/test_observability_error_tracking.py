@@ -450,7 +450,7 @@ class TestErrorMetrics:
             # Verify error metrics were recorded
             # In a real implementation, we'd check the actual metric values
 
-        except Exception:
+        except (AttributeError, RuntimeError, ImportError):
             # Handle case where metrics bridge is not available
             pytest.skip("Metrics bridge not available")
 
@@ -482,11 +482,9 @@ class TestErrorMetrics:
                         _raise_value_error("Invalid API response")
                     elif error_type == "timeout_error":
                         _raise_timeout_error("Request timeout")
-            except Exception as e:
+            except (AttributeError, RuntimeError, ImportError) as e:
                 # Errors are expected and tracked by observability system
-                logger.debug(
-                    f"Expected error for observability tracking: {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.debug("Expected error for observability tracking: %s", e)
 
         # AI tracker should have recorded error metrics
         # Verification would be implementation-specific

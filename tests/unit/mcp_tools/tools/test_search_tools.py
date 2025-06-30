@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from src.config.enums import FusionAlgorithm, SearchAccuracy, SearchStrategy
+from src.config.settings import FusionAlgorithm, SearchAccuracy, SearchStrategy
 from src.mcp_tools.models.requests import (
     FilteredSearchRequest,
     HyDESearchRequest,

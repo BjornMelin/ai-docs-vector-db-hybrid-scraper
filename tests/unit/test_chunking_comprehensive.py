@@ -6,6 +6,7 @@ assertions, and modern test patterns.
 """
 
 import pytest
+from pydantic import ValidationError
 
 from src.chunking import DocumentChunker
 from src.config.core import ChunkingConfig
@@ -818,7 +819,7 @@ class TestErrorHandling:
     def test_invalid_config(self):
         """Test handling of invalid configuration."""
         # This should be caught by Pydantic validation in ChunkingConfig
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="chunk_size.*greater"):
             ChunkingConfig(chunk_size=0)
 
     def test_none_content(self):

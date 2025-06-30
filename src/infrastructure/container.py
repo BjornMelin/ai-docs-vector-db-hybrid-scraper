@@ -5,11 +5,23 @@ from collections.abc import AsyncGenerator
 from functools import lru_cache
 from typing import Any
 
+import aiohttp
 import redis.asyncio as redis
 from dependency_injector import containers, providers
 from firecrawl import AsyncFirecrawlApp
 from openai import AsyncOpenAI
 from qdrant_client import AsyncQdrantClient
+
+
+# Import parallel processing components
+try:
+    from src.services.processing.parallel_integration import (
+        OptimizationConfig,
+        ParallelProcessingSystem,
+    )
+except ImportError:
+    OptimizationConfig = None
+    ParallelProcessingSystem = None
 
 
 logger = logging.getLogger(__name__)
@@ -114,8 +126,6 @@ async def _create_http_client(timeout: float = 30.0) -> AsyncGenerator[Any]:
     Yields:
         HTTP client session
     """
-    import aiohttp
-
     timeout_config = aiohttp.ClientTimeout(total=timeout)
     async with aiohttp.ClientSession(timeout=timeout_config) as session:
         yield session
@@ -130,12 +140,7 @@ def _create_parallel_processing_system(embedding_manager: Any) -> Any:
     Returns:
         ParallelProcessingSystem instance
     """
-    try:
-        from src.services.processing.parallel_integration import (
-            OptimizationConfig,
-            ParallelProcessingSystem,
-        )
-
+    if OptimizationConfig and ParallelProcessingSystem:
         # Create optimization configuration
         config = OptimizationConfig(
             enable_parallel_processing=True,
@@ -145,22 +150,23 @@ def _create_parallel_processing_system(embedding_manager: Any) -> Any:
             auto_optimization=True,
         )
 
-        return ParallelProcessingSystem(embedding_manager, config)
+        try:
+            return ParallelProcessingSystem(embedding_manager, config)
+        except Exception as e:
+            logger.warning(
+                f"Failed to create parallel processing system: {e}"
+            )  # TODO: Convert f-string to logging format
+            # Fall through to mock system
 
-    except Exception as e:
-        logger.warning(
-            f"Failed to create parallel processing system: {e}"
-        )  # TODO: Convert f-string to logging format
+    # Return a minimal mock system if creation fails or components unavailable
+    class MockParallelProcessingSystem:
+        async def get_system_status(self):
+            return {"system_health": {"status": "unavailable"}}
 
-        # Return a minimal mock system if creation fails
-        class MockParallelProcessingSystem:
-            async def get_system_status(self):
-                return {"system_health": {"status": "unavailable"}}
+        async def cleanup(self):
+            pass
 
-            async def cleanup(self):
-                pass
-
-        return MockParallelProcessingSystem()
+    return MockParallelProcessingSystem()
 
 
 class ApplicationContainer(containers.DeclarativeContainer):
@@ -321,7 +327,7 @@ class ContainerManager:
             return {
                 key: self._serialize_config_dict(value) for key, value in data.items()
             }
-        if isinstance(data, (list, tuple)):
+        if isinstance(data, list | tuple):
             return [self._serialize_config_dict(item) for item in data]
         return data
 

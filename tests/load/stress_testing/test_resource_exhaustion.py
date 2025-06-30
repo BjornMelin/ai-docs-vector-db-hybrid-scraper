@@ -131,7 +131,7 @@ class ResourceMonitor:
                 # Timestamp
                 self.metrics.timestamps.append(time.time())
 
-            except Exception:
+            except (TimeoutError, ConnectionError, RuntimeError, MemoryError):
                 logger.warning("Error collecting resource metrics")
 
             time.sleep(self.interval)
@@ -221,9 +221,7 @@ class TestResourceExhaustion:
 
                     if memory_mb > 1024:  # Over 1GB
                         memory_exhaustion_detected = True
-                        logger.warning(
-                            f"High memory usage detected: {memory_mb:.2f} MB"
-                        )
+                        logger.warning("High memory usage detected: %.2f MB", memory_mb)
 
                     return {
                         "status": "processed",
@@ -266,14 +264,14 @@ class TestResourceExhaustion:
             assert peak_usage["peak_memory_mb"] > 512, (
                 f"Peak memory usage too low: {peak_usage['peak_memory_mb']} MB"
             )
-            assert result.metrics._total_requests > 0, "No requests were processed"
+            assert result.metrics.total_requests > 0, "No requests were processed"
 
             # Verify graceful degradation under memory pressure
             if result.metrics.failed_requests > 0:
                 memory_errors = sum(
                     1 for e in result.metrics.errors if "memory" in e.lower()
                 )
-                assert memory_errors < result.metrics._total_requests * 0.8, (
+                assert memory_errors < result.metrics.total_requests * 0.8, (
                     "Too many memory-related failures"
                 )
 
@@ -316,9 +314,7 @@ class TestResourceExhaustion:
                 cpu_percent = psutil.Process().cpu_percent()
                 if cpu_percent > 80:
                     cpu_saturation_detected = True
-                    logger.warning(
-                        f"High CPU usage detected: {cpu_percent:.2f}%"
-                    )  # TODO: Convert f-string to logging format
+                    logger.warning("High CPU usage detected: %.2f%%", cpu_percent)
 
                 await asyncio.sleep(0.01)  # Small async yield
 
@@ -401,7 +397,7 @@ class TestResourceExhaustion:
                 if _total_data_mb > 100:  # 100MB _total
                     network_stress_detected = True
                     logger.warning(
-                        f"Network stress detected: {_total_data_mb:.2f} MB transferred"
+                        "Network stress detected: %.2f MB transferred", _total_data_mb
                     )
 
                 return {
@@ -435,7 +431,7 @@ class TestResourceExhaustion:
 
             # Assertions
             assert network_stress_detected, "Network stress scenario was not triggered"
-            assert result.metrics._total_requests > 0, "No requests were processed"
+            assert result.metrics.total_requests > 0, "No requests were processed"
 
             # Verify network handling under stress
             _total_data_processed = sum(len(p) for p in large_payload_responses) / (
@@ -547,7 +543,7 @@ class TestResourceExhaustion:
             pool_errors = sum(
                 1 for e in result.metrics.errors if "pool exhausted" in e.lower()
             )
-            _total_requests = result.metrics._total_requests
+            _total_requests = result.metrics.total_requests
             if _total_requests > 0:
                 pool_error_rate = pool_errors / _total_requests
                 assert pool_error_rate < 0.8, "Too many pool exhaustion errors"
@@ -637,7 +633,7 @@ class TestResourceExhaustion:
                         for e in result.metrics.errors
                         if "file descriptor" in e.lower()
                     )
-                    if result.metrics._total_requests > 0:
+                    if result.metrics.total_requests > 0:
                         assert fd_errors > 0, (
                             "Expected some file descriptor exhaustion errors"
                         )

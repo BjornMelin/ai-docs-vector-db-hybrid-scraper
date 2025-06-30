@@ -539,9 +539,7 @@ class QueryExpansionService:
         query = re.sub(r"[^\w\s\-\+\.]", " ", query)
 
         # Normalize whitespace
-        query = re.sub(r"\s+", " ", query)
-
-        return query
+        return re.sub(r"\s+", " ", query)
 
     def _extract_key_terms(self, query: str, _context: dict[str, Any]) -> list[str]:
         """Extract key terms from the query for expansion."""
@@ -830,12 +828,10 @@ class QueryExpansionService:
     def _calculate_synonym_confidence(self, _original: str, _synonym: str) -> float:
         """Calculate confidence for synonym relationships."""
         # Simple confidence calculation - in production would be more sophisticated
-        base_confidence = 0.7
+        return 0.7
 
         # Boost confidence for exact matches in dictionaries
         # Reduce confidence for approximate matches
-
-        return base_confidence
 
     def _calculate_context_relevance(self, term: str, context: dict[str, Any]) -> float:
         """Calculate relevance of term to query context."""

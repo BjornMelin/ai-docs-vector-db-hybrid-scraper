@@ -344,7 +344,7 @@ class DistributedRateLimiter:
 
             return True
         except Exception as e:
-            logger.exception(f"Failed to reset rate limit for {identifier}: {e}")
+            logger.exception("Failed to reset rate limit for {identifier}")
             return False
 
     async def cleanup_expired_entries(self, max_age_hours: int = 24) -> int:

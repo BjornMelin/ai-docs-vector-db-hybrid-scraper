@@ -45,7 +45,7 @@ def _abort_profile_not_found(profile: str, available_profiles: list[str]) -> Non
     console.print(
         f"[red]Profile '{profile}' not found. Available: {', '.join(available_profiles)}[/red]"
     )
-    raise click.Abort()
+    raise click.Abort
 
 
 class ConfigurationWizard:
@@ -225,6 +225,26 @@ class ConfigurationWizard:
 
         return customizations
 
+    def customize_database(self, template_data: dict[str, Any]) -> dict[str, Any]:
+        """Customize database connection settings (public method for testing)."""
+        return self._customize_database(template_data)
+
+    def customize_api_keys(self, template_data: dict[str, Any]) -> dict[str, Any]:
+        """Customize API keys (public method for testing)."""
+        return self._customize_api_keys(template_data)
+
+    def customize_performance(self, template_data: dict[str, Any]) -> dict[str, Any]:
+        """Customize performance settings (public method for testing)."""
+        return self._customize_performance(template_data)
+
+    def customize_template(self, template_data: dict[str, Any]) -> dict[str, Any]:
+        """Customize template settings (public method for testing)."""
+        return self._customize_template(template_data)
+
+    def show_success_message(self, config_file: Path) -> None:
+        """Show success message (public method for testing)."""
+        return self._show_success_message(config_file)
+
     def _customize_database(self, _template_data: dict[str, Any]) -> dict[str, Any]:
         """Customize database connection settings."""
         customizations = {}
@@ -348,7 +368,7 @@ class ConfigurationWizard:
 
         if not ready:
             self.console.print("Setup cancelled.")
-            raise click.Abort()
+            raise click.Abort
 
         try:
             # Step 1: Profile Selection (unless pre-selected)
@@ -398,7 +418,7 @@ class ConfigurationWizard:
 
         except KeyboardInterrupt:
             self.console.print("\n[yellow]Setup cancelled by user.[/yellow]")
-            raise click.Abort() from None
+            raise click.Abort from None
         except Exception as e:
             self.console.print(f"\n[red]Setup failed: {e}[/red]")
             raise
@@ -528,7 +548,7 @@ def setup(
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Setup cancelled by user.[/yellow]")
-        raise click.Abort() from None
+        raise click.Abort from None
     except Exception as e:
         console.print(f"\n[red]Setup failed: {e}[/red]")
-        raise click.Abort() from e
+        raise click.Abort from e

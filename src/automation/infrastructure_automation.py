@@ -85,7 +85,8 @@ class AdaptiveCircuitBreaker:
     async def call(self, func: Callable, *args, **kwargs):
         """Execute function with circuit breaker protection."""
         if self._should_reject():
-            raise CircuitBreakerOpenError(f"Circuit breaker {self.name} is open")
+            msg = f"Circuit breaker {self.name} is open"
+            raise CircuitBreakerOpenError(msg)
 
         try:
             start_time = time.time()
@@ -123,10 +124,12 @@ class AdaptiveCircuitBreaker:
         self.state.success_count += 1
         self.state.total_requests += 1
 
-        if self.state.state == "half_open":
-            if self.state.success_count >= self.half_open_max_calls:
-                self.state.state = "closed"
-                self.state.failure_count = 0
+        if (
+            self.state.state == "half_open"
+            and self.state.success_count >= self.half_open_max_calls
+        ):
+            self.state.state = "closed"
+            self.state.failure_count = 0
 
         # Adapt thresholds based on success patterns
         self._adapt_thresholds(success=True, response_time=response_time)
@@ -222,7 +225,7 @@ class SelfHealingDatabaseManager:
             logger.info("Database connection initialized successfully")
 
         except Exception as e:
-            logger.exception(f"Failed to initialize database: {e}")
+            logger.exception("Failed to initialize database")
             # Start background recovery
             asyncio.create_task(self._background_recovery())
 
@@ -253,7 +256,8 @@ class SelfHealingDatabaseManager:
                 )
                 await asyncio.sleep(delay)
 
-        raise RuntimeError("Failed to establish database connection after retries")
+        msg = "Failed to establish database connection after retries"
+        raise RuntimeError(msg)
 
     @asynccontextmanager
     async def get_session(self):
@@ -271,7 +275,7 @@ class SelfHealingDatabaseManager:
 
         except Exception as e:
             self.error_count += 1
-            logger.exception(f"Database session error: {e}")
+            logger.exception("Database session error")
 
             # Attempt automatic recovery
             if self._should_attempt_recovery():
@@ -286,7 +290,8 @@ class SelfHealingDatabaseManager:
     async def _create_session(self) -> AsyncSession:
         """Create a new database session."""
         if not self.engine:
-            raise DatabaseNotAvailableError("Database engine not available")
+            msg = "Database engine not available"
+            raise DatabaseNotAvailableError(msg)
 
         return AsyncSession(self.engine)
 
@@ -311,7 +316,7 @@ class SelfHealingDatabaseManager:
             logger.info("Database recovery successful")
 
         except Exception as e:
-            logger.exception(f"Database recovery failed: {e}")
+            logger.exception("Database recovery failed")
             # Schedule retry
             asyncio.create_task(self._delayed_recovery())
 
@@ -382,7 +387,7 @@ class AutoScalingManager:
                 await asyncio.sleep(check_interval)
 
             except Exception as e:
-                logger.exception(f"Auto-scaling monitoring error: {e}")
+                logger.exception("Auto-scaling monitoring error")
                 await asyncio.sleep(30)  # Shorter interval on error
 
     async def _collect_metrics(self) -> SystemMetrics:

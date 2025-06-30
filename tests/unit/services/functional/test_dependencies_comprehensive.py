@@ -4,8 +4,7 @@ Tests modern dependency injection patterns with FastAPI integration,
 circuit breaker patterns, and async service lifecycle management.
 """
 
-import asyncio
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -41,9 +40,9 @@ class TestDependencyLifecycle:
         """Test ClientManager lifecycle with proper initialization and cleanup."""
         with patch(
             "src.services.functional.dependencies.ClientManager"
-        ) as MockClientManager:
+        ) as mock_client_manager:
             mock_instance = AsyncMock()
-            MockClientManager.return_value = mock_instance
+            mock_client_manager.return_value = mock_instance
 
             # Test dependency generator - consume the full generator to trigger cleanup
             client_managers = []
@@ -70,9 +69,9 @@ class TestDependencyLifecycle:
 
         with patch(
             "src.services.functional.dependencies.CacheManager"
-        ) as MockCacheManager:
+        ) as mock_cache_manager:
             mock_instance = AsyncMock()
-            MockCacheManager.return_value = mock_instance
+            mock_cache_manager.return_value = mock_instance
 
             # Use proper async context manager pattern to ensure cleanup
             cache_generator = get_cache_client(mock_config)
@@ -80,14 +79,12 @@ class TestDependencyLifecycle:
             assert cache_client == mock_instance
 
             # Complete the generator to trigger cleanup
-            try:
+            with suppress(StopAsyncIteration):
                 await cache_generator.__anext__()
-            except StopAsyncIteration:
-                pass
 
             # Verify CacheManager was initialized with correct config
-            MockCacheManager.assert_called_once()
-            call__kwargs = MockCacheManager.call_args.kwargs
+            mock_cache_manager.assert_called_once()
+            call__kwargs = mock_cache_manager.call_args.kwargs
             assert call__kwargs["dragonfly_url"] == "redis://localhost:6379"
             assert call__kwargs["enable_local_cache"] is True
             assert call__kwargs["enable_distributed_cache"] is True
@@ -106,9 +103,9 @@ class TestDependencyLifecycle:
 
         with patch(
             "src.services.functional.dependencies.EmbeddingManager"
-        ) as MockEmbeddingManager:
+        ) as mock_embedding_manager:
             mock_instance = AsyncMock()
-            MockEmbeddingManager.return_value = mock_instance
+            mock_embedding_manager.return_value = mock_instance
 
             # Use proper async context manager pattern to ensure cleanup
             embedding_generator = get_embedding_client(mock_config, mock_client_manager)
@@ -116,13 +113,11 @@ class TestDependencyLifecycle:
             assert embedding_client == mock_instance
 
             # Complete the generator to trigger cleanup
-            try:
+            with suppress(StopAsyncIteration):
                 await embedding_generator.__anext__()
-            except StopAsyncIteration:
-                pass
 
             # Verify EmbeddingManager was initialized correctly
-            MockEmbeddingManager.assert_called_once_with(
+            mock_embedding_manager.assert_called_once_with(
                 config=mock_config,
                 client_manager=mock_client_manager,
                 budget_limit=None,
@@ -143,9 +138,9 @@ class TestDependencyLifecycle:
 
         with patch(
             "src.services.functional.dependencies.QdrantService"
-        ) as MockQdrantService:
+        ) as mock_qdrant_service:
             mock_instance = AsyncMock()
-            MockQdrantService.return_value = mock_instance
+            mock_qdrant_service.return_value = mock_instance
 
             # Use proper async context manager pattern to ensure cleanup
             vector_db_generator = get_vector_db_client(mock_config)
@@ -153,13 +148,11 @@ class TestDependencyLifecycle:
             assert vector_db_client == mock_instance
 
             # Complete the generator to trigger cleanup
-            try:
+            with suppress(StopAsyncIteration):
                 await vector_db_generator.__anext__()
-            except StopAsyncIteration:
-                pass
 
             # Verify initialization and cleanup
-            MockQdrantService.assert_called_once_with(mock_config)
+            mock_qdrant_service.assert_called_once_with(mock_config)
             mock_instance.initialize.assert_called_once()
             mock_instance.cleanup.assert_called_once()
 
@@ -176,9 +169,9 @@ class TestDependencyLifecycle:
 
         with patch(
             "src.services.functional.dependencies.CrawlManager"
-        ) as MockCrawlManager:
+        ) as mock_crawl_manager:
             mock_instance = AsyncMock()
-            MockCrawlManager.return_value = mock_instance
+            mock_crawl_manager.return_value = mock_instance
 
             # Use proper async context manager pattern to ensure cleanup
             crawling_generator = get_crawling_client(mock_config, mock_rate_limiter)
@@ -186,13 +179,11 @@ class TestDependencyLifecycle:
             assert crawling_client == mock_instance
 
             # Complete the generator to trigger cleanup
-            try:
+            with suppress(StopAsyncIteration):
                 await crawling_generator.__anext__()
-            except StopAsyncIteration:
-                pass
 
             # Verify initialization
-            MockCrawlManager.assert_called_once_with(
+            mock_crawl_manager.assert_called_once_with(
                 config=mock_config,
                 rate_limiter=mock_rate_limiter,
             )
@@ -204,9 +195,9 @@ class TestDependencyLifecycle:
         """Test error handling in dependency lifecycle."""
         with patch(
             "src.services.functional.dependencies.ClientManager"
-        ) as MockClientManager:
+        ) as mock_client_manager:
             mock_instance = AsyncMock()
-            MockClientManager.return_value = mock_instance
+            mock_client_manager.return_value = mock_instance
 
             # Simulate initialization error
             mock_instance.initialize.side_effect = Exception("Initialization failed")
@@ -631,6 +622,7 @@ class TestErrorHandlingPatterns:
                         raise
                     delay = base_delay * (2**attempt)
                     await asyncio.sleep(delay)
+            return None
 
         result = await retry_with_backoff(flaky_service)
         assert result == "success"
@@ -649,7 +641,7 @@ class TestErrorHandlingPatterns:
         async def service_with_fallback(data):
             try:
                 return await primary_service.process(data)
-            except Exception:
+            except (ConnectionError, RuntimeError, ValueError):
                 return await fallback_service.process(data)
 
         result = await service_with_fallback("test_data")
@@ -692,7 +684,7 @@ class TestErrorHandlingPatterns:
             # Try AI-enhanced processing first
             try:
                 return await ai_service.process(data)
-            except Exception:
+            except (ConnectionError, RuntimeError, ValueError):
                 # Fall back to cached results
                 cached_result = await cache_service.get(f"cache:{data}")
                 if cached_result:

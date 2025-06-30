@@ -170,7 +170,7 @@ class ModernRateLimiter:
                 "default_limits": self.limiter.default_limits,
             }
         except Exception as e:
-            logger.exception(f"Error getting current limits: {e}")
+            logger.exception("Error getting current limits")
             return {"error": str(e)}
 
     async def reset_limits(self, key: str) -> bool:
@@ -196,7 +196,7 @@ class ModernRateLimiter:
             logger.warning("Rate limit reset not supported")
             return False
         except Exception as e:
-            logger.exception(f"Error resetting limits for {key}: {e}")
+            logger.exception("Error resetting limits for {key}")
             return False
 
     async def get_stats(self) -> dict[str, Any]:
@@ -218,7 +218,7 @@ class ModernRateLimiter:
                 },
             }
         except Exception as e:
-            logger.exception(f"Error getting rate limiter stats: {e}")
+            logger.exception("Error getting rate limiter stats")
             return {"error": str(e)}
 
 

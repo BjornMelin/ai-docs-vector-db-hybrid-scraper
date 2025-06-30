@@ -8,8 +8,6 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from openai import AsyncOpenAI
-
 from src.services.errors import EmbeddingServiceError
 from src.services.monitoring.metrics import get_metrics_registry
 from src.services.utilities.rate_limiter import RateLimitManager
@@ -18,6 +16,8 @@ from .base import EmbeddingProvider
 
 
 if TYPE_CHECKING:
+    from openai import AsyncOpenAI
+
     from src.infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)

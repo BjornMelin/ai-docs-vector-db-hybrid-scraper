@@ -215,17 +215,15 @@ class TestTreeSitterImportErrors:
         try:
             with patch("builtins.__import__", side_effect=mock_import):
                 # This should trigger the import and handle the error
-                from src.chunking import DocumentChunker  # noqa: PLC0415
+                from src.chunking import DocumentChunker
 
                 config = ChunkingConfig()
                 chunker = DocumentChunker(config)
                 assert chunker.parsers == {}
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError, AttributeError) as e:
             # If we can't test the import error due to module caching,
             # that's acceptable - the important thing is the code handles it
-            logger.debug(
-                f"Module import test limitation (acceptable): {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Module import test limitation (acceptable): %s", e)
 
     def test_language_parser_import_errors(self):
         """Test handling of language-specific parser import errors."""

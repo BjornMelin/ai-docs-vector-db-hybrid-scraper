@@ -23,7 +23,7 @@ import pytest
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 
-from src.config.core import Config
+from src.config import Config
 
 
 class CachedConfigModel(BaseModel):
@@ -222,8 +222,7 @@ class TestAsyncConfigurationPerformance:
         async def create_async_config():
             config = Config()
             # Test auto-detection performance
-            auto_detected_config = await config.auto_detect_and_apply_services()
-            return auto_detected_config
+            return await config.auto_detect_and_apply_services()
 
         def run_async_benchmark():
             return asyncio.run(create_async_config())

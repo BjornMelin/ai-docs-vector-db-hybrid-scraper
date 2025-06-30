@@ -6,12 +6,11 @@ import logging
 import threading
 import time
 from contextlib import asynccontextmanager
+from typing import Any
 
 from dependency_injector.wiring import Provide, inject
 
 from src.infrastructure.clients import (
-from typing import Any
-
     FirecrawlClientProvider,
     HTTPClientProvider,
     OpenAIClientProvider,
@@ -21,10 +20,6 @@ from typing import Any
 from src.infrastructure.container import ApplicationContainer, get_container
 from src.infrastructure.shared import ClientHealth, ClientState
 from src.services.errors import APIError
-
-
-if TYPE_CHECKING:
-    pass
 
 
 logger = logging.getLogger(__name__)
@@ -134,14 +129,16 @@ class ClientManager:
         """Get Qdrant client through provider."""
         provider = self._providers.get("qdrant")
         if not provider:
-            raise APIError("Qdrant client provider not available")
+            msg = "Qdrant client provider not available"
+            raise APIError(msg)
         return provider.client
 
     async def get_redis_client(self):
         """Get Redis client through provider."""
         provider = self._providers.get("redis")
         if not provider:
-            raise APIError("Redis client provider not available")
+            msg = "Redis client provider not available"
+            raise APIError(msg)
         return provider.client
 
     async def get_firecrawl_client(self):
@@ -155,7 +152,8 @@ class ClientManager:
         """Get HTTP client through provider."""
         provider = self._providers.get("http")
         if not provider:
-            raise APIError("HTTP client provider not available")
+            msg = "HTTP client provider not available"
+            raise APIError(msg)
         return provider.client
 
     async def cleanup(self) -> None:
@@ -356,6 +354,7 @@ class ClientManager:
 
         self._initialized = False
         logger.info("ClientManager cleaned up")
+        return None
 
     async def get_qdrant_client(self) -> AsyncQdrantClient:
         """Get or create Qdrant client with health checks.
@@ -817,11 +816,10 @@ class ClientManager:
         """
         if self._migration_manager:
             return await self._migration_manager.get_circuit_breaker(service_name)
-        else:
-            # Fallback to legacy circuit breaker
-            if service_name not in self._circuit_breakers:
-                self._circuit_breakers[service_name] = CircuitBreaker()
-            return self._circuit_breakers[service_name]
+        # Fallback to legacy circuit breaker
+        if service_name not in self._circuit_breakers:
+            self._circuit_breakers[service_name] = CircuitBreaker()
+        return self._circuit_breakers[service_name]
 
     async def get_modern_cache_manager(self):
         """Get modern cache manager through migration manager.
@@ -831,9 +829,8 @@ class ClientManager:
         """
         if self._migration_manager:
             return await self._migration_manager.get_cache_manager()
-        else:
-            # Fallback to legacy cache manager
-            return await self.get_cache_manager()
+        # Fallback to legacy cache manager
+        return await self.get_cache_manager()
 
     # Enterprise Deployment Services
 

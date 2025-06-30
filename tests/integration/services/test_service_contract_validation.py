@@ -982,6 +982,7 @@ class TestVersionCompatibility:
                         ],
                         "metadata": {"_total_count": 2, "search_duration_ms": 45},
                     }
+                return None
 
             def adapt_response(
                 self, response: dict[str, Any], target_version: str

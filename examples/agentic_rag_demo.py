@@ -8,8 +8,11 @@ multi-agent coordination.
 
 import asyncio
 import logging
-from typing import Any, Dict
+from collections import Counter
+from typing import Any
 from uuid import uuid4
+
+import pydantic_ai
 
 from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
@@ -18,6 +21,7 @@ from src.services.agents import (
     ToolCompositionEngine,
     create_agent_dependencies,
 )
+from src.services.agents.tool_composition import ToolCategory
 
 
 # Configure logging
@@ -97,7 +101,7 @@ async def demo_query_orchestration():
         await client_manager.cleanup()
 
     except Exception as e:
-        logger.error(f"Query orchestration demo failed: {e}")
+        logger.exception("Query orchestration demo failed")
         print(f"Demo failed: {e}")
 
 
@@ -122,7 +126,6 @@ async def demo_tool_composition():
 
         # Demonstrate tool discovery
         print("\n--- Available Tools by Category ---")
-        from src.services.agents.tool_composition import ToolCategory
 
         for category in ToolCategory:
             tools = engine.list_tools_by_category(category)
@@ -203,7 +206,7 @@ async def demo_tool_composition():
         await client_manager.cleanup()
 
     except Exception as e:
-        logger.error(f"Tool composition demo failed: {e}")
+        logger.exception("Tool composition demo failed")
         print(f"Demo failed: {e}")
 
 
@@ -293,7 +296,7 @@ async def demo_agent_learning():
         await client_manager.cleanup()
 
     except Exception as e:
-        logger.error(f"Agent learning demo failed: {e}")
+        logger.exception("Agent learning demo failed")
         print(f"Demo failed: {e}")
 
 
@@ -402,8 +405,6 @@ async def demo_performance_optimization():
         for result in performance_results:
             all_tools.extend(result["tools_used"])
 
-        from collections import Counter
-
         tool_usage = Counter(all_tools)
         print("\nTool usage patterns:")
         for tool, count in tool_usage.most_common():
@@ -413,7 +414,7 @@ async def demo_performance_optimization():
         await client_manager.cleanup()
 
     except Exception as e:
-        logger.error(f"Performance optimization demo failed: {e}")
+        logger.exception("Performance optimization demo failed")
         print(f"Demo failed: {e}")
 
 
@@ -425,8 +426,7 @@ async def main():
     try:
         # Check if Pydantic-AI is available
         try:
-            import pydantic_ai
-
+            # Import check - pydantic_ai already imported at top
             print("✓ Pydantic-AI available - running full demonstrations")
             full_demo = True
         except ImportError:
@@ -452,7 +452,7 @@ async def main():
     except KeyboardInterrupt:
         print("\nDemo interrupted by user")
     except Exception as e:
-        logger.error(f"Demo failed: {e}")
+        logger.exception("Demo failed")
         print(f"\nDemo failed with error: {e}")
 
 

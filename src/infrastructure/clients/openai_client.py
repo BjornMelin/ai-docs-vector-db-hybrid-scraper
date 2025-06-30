@@ -64,7 +64,8 @@ class OpenAIClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("OpenAI client is not available or unhealthy")
+            msg = "OpenAI client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         response = await self.client.embeddings.create(input=text, model=model)
         return response.data[0].embedding
@@ -86,7 +87,8 @@ class OpenAIClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("OpenAI client is not available or unhealthy")
+            msg = "OpenAI client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         response = await self.client.chat.completions.create(
             model=model, messages=messages, **kwargs

@@ -15,6 +15,12 @@ import pytest
 from click.testing import CliRunner
 
 
+try:
+    import coverage
+except ImportError:
+    coverage = None
+
+
 # Add src to Python path for testing
 src_path = Path(__file__).parent.parent / "src"
 if str(src_path) not in sys.path:
@@ -248,8 +254,7 @@ def cli_command_tester():
 
         def test_command_version(self, command):
             """Test command version output."""
-            result = self.runner.invoke(command, ["--version"])
-            return result
+            return self.runner.invoke(command, ["--version"])
 
         def test_command_with_args(self, command, args, expected_exit_code=0):
             """Test command with specific arguments."""
@@ -347,10 +352,8 @@ def questionary_testing_utils():
 @pytest.fixture(autouse=True)
 def cli_coverage_collector(request):
     """Collect CLI-specific coverage data."""
-    if request.config.getoption("--cli-coverage"):
+    if request.config.getoption("--cli-coverage") and coverage is not None:
         # Setup CLI coverage collection
-        import coverage  # noqa: PLC0415
-
         cov = coverage.Coverage(source=["src/cli"])
         cov.start()
 

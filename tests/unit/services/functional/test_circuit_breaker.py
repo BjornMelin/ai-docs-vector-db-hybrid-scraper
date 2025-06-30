@@ -301,7 +301,7 @@ class TestConcurrentAccess:
         config = CircuitBreakerConfig.simple_mode()
         breaker = CircuitBreaker(config)
 
-        call_count = threading.local()
+        # Use thread-safe counter for concurrent operations
         counter_lock = threading.Lock()
         global_counter = 0
 

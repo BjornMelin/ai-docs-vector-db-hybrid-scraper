@@ -4,10 +4,9 @@ This module contains comprehensive performance tests to ensure the system meets
 the specified performance targets for portfolio demonstrations.
 """
 
-import asyncio
+import contextlib
 import logging
 import statistics
-import time
 
 import pytest
 
@@ -47,15 +46,9 @@ class TestPerformanceTargets:
         max_latency = max(latencies)
 
         logger.info("Search latency metrics:")
-        logger.info(
-            f"  P95: {p95_latency:.1f}ms"
-        )  # TODO: Convert f-string to logging format
-        logger.info(
-            f"  Average: {avg_latency:.1f}ms"
-        )  # TODO: Convert f-string to logging format
-        logger.info(
-            f"  Maximum: {max_latency:.1f}ms"
-        )  # TODO: Convert f-string to logging format
+        logger.info("  P95: %.1f ms", p95_latency)
+        logger.info("  Average: %.1f ms", avg_latency)
+        logger.info("  Maximum: %.1f ms", max_latency)
 
         assert p95_latency < 100, (
             f"P95 latency {p95_latency:.1f}ms exceeds 100ms target"
@@ -80,7 +73,7 @@ class TestPerformanceTargets:
                     f"concurrent test query {query_id}"
                 )
                 return {"success": True, "result": result}
-            except Exception as e:
+            except (TimeoutError, ConnectionError, RuntimeError) as e:
                 return {"success": False, "error": str(e)}
 
         # Launch 500 concurrent searches
@@ -97,18 +90,10 @@ class TestPerformanceTargets:
         throughput = successful_searches / total_time
 
         logger.info("Throughput test results:")
-        logger.info(
-            f"  Successful searches: {successful_searches}/500"
-        )  # TODO: Convert f-string to logging format
-        logger.info(
-            f"  Failed searches: {failed_searches}"
-        )  # TODO: Convert f-string to logging format
-        logger.info(
-            f"  Throughput: {throughput:.1f} searches/sec"
-        )  # TODO: Convert f-string to logging format
-        logger.info(
-            f"  Total time: {total_time:.2f}s"
-        )  # TODO: Convert f-string to logging format
+        logger.info("  Successful searches: %d/500", successful_searches)
+        logger.info("  Failed searches: %d", failed_searches)
+        logger.info("  Throughput: %.1f searches/sec", throughput)
+        logger.info("  Total time: %.2f s", total_time)
 
         assert throughput >= 500, (
             f"Throughput {throughput:.1f} searches/sec below 500 target"
@@ -152,16 +137,17 @@ class TestPerformanceTargets:
             hit_rate = hits / total_requests
             cache_stats = await cache.get_cache_stats()
 
+            # Performance test: Verify internal cache structure integrity
+            assert cache._connection_pool.size == 1
+            assert len(cache._l1_cache) <= 1000
+
             logger.info("Cache performance test results:")
+            logger.info("  Hit rate: %.1f%%", hit_rate * 100)
             logger.info(
-                f"  Hit rate: {hit_rate:.1%}"
-            )  # TODO: Convert f-string to logging format
-            logger.info(
-                f"  L1 cache utilization: {cache_stats['l1_cache']['utilization']:.1%}"
+                "  L1 cache utilization: %.1f%%",
+                cache_stats["l1_cache"]["utilization"] * 100,
             )
-            logger.info(
-                f"  Total hits: {hits}/{total_requests}"
-            )  # TODO: Convert f-string to logging format
+            logger.info("  Total hits: %d/%d", hits, total_requests)
 
             assert hit_rate >= 0.85, f"Cache hit rate {hit_rate:.1%} below 85% target"
 
@@ -190,24 +176,24 @@ class TestPerformanceTargets:
         # Get optimization metrics
         metrics = await optimizer.get_optimization_metrics(collection_name)
 
+        # Performance test: Verify internal optimizer state
+        assert optimizer._client == mock_qdrant_client
+        assert hasattr(optimizer._config, "quantization_settings")
+
         logger.info("Quantization test results:")
+        logger.info("  Collection created: %s", success)
         logger.info(
-            f"  Collection created: {success}"
-        )  # TODO: Convert f-string to logging format
-        logger.info(
-            f"  Quantization enabled: {metrics.get('quantization_enabled', False)}"
+            "  Quantization enabled: %s", metrics.get("quantization_enabled", False)
         )
-        logger.info(
-            f"  Vector size: {vector_size}"
-        )  # TODO: Convert f-string to logging format
+        logger.info("  Vector size: %d", vector_size)
 
         assert metrics.get("quantization_enabled", False), "Quantization not enabled"
 
         # Test memory efficiency (quantization should reduce memory by ~83%)
         expected_memory_reduction = 0.83
         logger.info(
-            f"  Expected memory reduction: {expected_memory_reduction:.1%}"
-        )  # TODO: Convert f-string to logging format
+            "  Expected memory reduction: %.1f%%", expected_memory_reduction * 100
+        )
 
     @pytest.mark.asyncio
     async def test_batch_processing_optimization(self):
@@ -235,26 +221,20 @@ class TestPerformanceTargets:
         results = await asyncio.gather(*tasks)
         total_time = time.perf_counter() - start_time
 
+        # Performance test: Verify internal batch processor state
+        assert batch_processor._queue.qsize() == 0
+        assert batch_processor._stats.batches_processed > 0
+
         # Get performance statistics
         stats = batch_processor.get_performance_stats()
         throughput = len(results) / total_time
 
         logger.info("Batch processing test results:")
-        logger.info(
-            f"  Items processed: {len(results)}"
-        )  # TODO: Convert f-string to logging format
-        logger.info(
-            f"  Total time: {total_time:.2f}s"
-        )  # TODO: Convert f-string to logging format
-        logger.info(
-            f"  Throughput: {throughput:.1f} items/sec"
-        )  # TODO: Convert f-string to logging format
-        logger.info(
-            f"  Average batch size: {stats.get('avg_batch_size', 0):.1f}"
-        )  # TODO: Convert f-string to logging format
-        logger.info(
-            f"  Time per item: {stats.get('avg_time_per_item_ms', 0):.1f}ms"
-        )  # TODO: Convert f-string to logging format
+        logger.info("  Items processed: %d", len(results))
+        logger.info("  Total time: %.2f s", total_time)
+        logger.info("  Throughput: %.1f items/sec", throughput)
+        logger.info("  Average batch size: %.1f", stats.get("avg_batch_size", 0))
+        logger.info("  Time per item: %.1f ms", stats.get("avg_time_per_item_ms", 0))
 
         assert len(results) == 200, "Not all items were processed"
         assert throughput > 100, f"Throughput {throughput:.1f} items/sec too low"
@@ -283,24 +263,23 @@ class TestPerformanceTargets:
                 monitor.record_request(0.05)  # 50ms request
                 await asyncio.sleep(0.01)
 
+            # Performance test: Verify internal monitoring state
+            assert len(monitor._request_history) > 0
+            assert monitor._monitoring_task is not None
+
             # Get performance summary
             summary = monitor.get_performance_summary()
             trends = monitor.get_performance_trends(minutes=1)
             recommendations = monitor.get_optimization_recommendations()
 
+            # Verify trends data structure
+            assert isinstance(trends, dict), "Trends should be a dictionary"
+
             logger.info("Monitoring performance test results:")
-            logger.info(
-                f"  Snapshots collected: {len(monitor.snapshots)}"
-            )  # TODO: Convert f-string to logging format
-            logger.info(
-                f"  Current CPU: {summary.get('cpu_percent', 0):.1f}%"
-            )  # TODO: Convert f-string to logging format
-            logger.info(
-                f"  Current memory: {summary.get('memory_percent', 0):.1f}%"
-            )  # TODO: Convert f-string to logging format
-            logger.info(
-                f"  Recommendations: {len(recommendations)}"
-            )  # TODO: Convert f-string to logging format
+            logger.info("  Snapshots collected: %d", len(monitor.snapshots))
+            logger.info("  Current CPU: %.1f%%", summary.get("cpu_percent", 0))
+            logger.info("  Current memory: %.1f%%", summary.get("memory_percent", 0))
+            logger.info("  Recommendations: %d", len(recommendations))
 
             assert len(monitor.snapshots) > 0, "No performance snapshots collected"
             assert summary.get("timestamp") is not None, "Invalid performance summary"
@@ -309,10 +288,8 @@ class TestPerformanceTargets:
         finally:
             await monitor.stop_monitoring()
             monitoring_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await monitoring_task
-            except asyncio.CancelledError:
-                pass
 
     @pytest.mark.asyncio
     async def test_end_to_end_performance_pipeline(
@@ -371,27 +348,22 @@ class TestPerformanceTargets:
             cache_stats = await cache.get_cache_stats()
             performance_summary = monitor.get_performance_summary()
 
+            # Verify performance summary contains expected metrics
+            assert "total_requests" in performance_summary
+            assert "avg_latency_ms" in performance_summary
+
             overall_throughput = total_requests / total_time
             cache_hit_rate = cached_requests / total_requests
 
             logger.info("End-to-end performance test results:")
+            logger.info("  Total requests: %d", total_requests)
+            logger.info("  Cache hits: %d", cached_requests)
+            logger.info("  Cache hit rate: %.1f%%", cache_hit_rate * 100)
+            logger.info("  Overall throughput: %.1f req/sec", overall_throughput)
+            logger.info("  Total time: %.2f s", total_time)
             logger.info(
-                f"  Total requests: {total_requests}"
-            )  # TODO: Convert f-string to logging format
-            logger.info(
-                f"  Cache hits: {cached_requests}"
-            )  # TODO: Convert f-string to logging format
-            logger.info(
-                f"  Cache hit rate: {cache_hit_rate:.1%}"
-            )  # TODO: Convert f-string to logging format
-            logger.info(
-                f"  Overall throughput: {overall_throughput:.1f} req/sec"
-            )  # TODO: Convert f-string to logging format
-            logger.info(
-                f"  Total time: {total_time:.2f}s"
-            )  # TODO: Convert f-string to logging format
-            logger.info(
-                f"  L1 cache utilization: {cache_stats['l1_cache']['utilization']:.1%}"
+                "  L1 cache utilization: %.1f%%",
+                cache_stats["l1_cache"]["utilization"] * 100,
             )
 
             # Validate performance targets
@@ -409,10 +381,8 @@ class TestPerformanceTargets:
             await cache.cleanup()
             await monitor.stop_monitoring()
             monitoring_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await monitoring_task
-            except asyncio.CancelledError:
-                pass
 
 
 @pytest.mark.performance
@@ -426,7 +396,6 @@ class TestBenchmarkTargets:
 
         def create_optimized_collection():
             """Benchmark function for collection creation."""
-            import asyncio
 
             return asyncio.run(
                 optimizer.create_optimized_collection("benchmark_collection", 384)
@@ -452,8 +421,6 @@ class TestBenchmarkTargets:
                 await cache.cleanup()
 
         def run_cache_benchmark():
-            import asyncio
-
             return asyncio.run(cache_operations())
 
         result = benchmark(run_cache_benchmark)

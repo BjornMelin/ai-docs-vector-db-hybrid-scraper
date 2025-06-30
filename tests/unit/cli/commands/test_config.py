@@ -4,7 +4,7 @@ This module tests configuration management commands including validation,
 display, export, and load functionality with Rich console output.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from src.cli.commands.config import (
     _show_config_json,
@@ -15,9 +15,9 @@ from src.cli.commands.config import (
 
 
 # Test constants to avoid hardcoded sensitive values
-TEST_SECRET_VALUE = "test_secret"
-TEST_PASS_VALUE = "test_password"
-TEST_TOKEN_VALUE = "test_secret_token"
+TEST_SECRET_VALUE = "test_secret"  # nosec
+TEST_PASS_VALUE = "test_password"  # nosec
+TEST_TOKEN_VALUE = "test_secret_token"  # nosec
 
 
 class TestConfigCommandGroup:

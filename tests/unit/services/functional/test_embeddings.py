@@ -1,7 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-
 """Tests for function-based embedding service."""
 
 from unittest.mock import AsyncMock
@@ -17,6 +13,10 @@ from src.services.functional.embeddings import (
     generate_embeddings,
     rerank_results,
 )
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
 
 
 class TestGenerateEmbeddings:
@@ -245,6 +245,7 @@ class TestBatchGenerateEmbeddings:
                 raise TestError(msg)
                 msg = "Provider error"
                 raise TestError(msg)
+            return None
 
         mock_client.generate_embeddings.side_effect = mock_generate
 

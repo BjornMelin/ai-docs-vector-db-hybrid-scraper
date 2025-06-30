@@ -319,13 +319,12 @@ class TestParallelProcessingPerformance:
             )
 
             try:
-                results = await parallel_system.process_documents_parallel(
+                return await parallel_system.process_documents_parallel(
                     documents=test_documents,
                     enable_classification=False,
                     enable_metadata_extraction=False,
                     enable_embedding_generation=True,
                 )
-                return results
             finally:
                 await parallel_system.cleanup()
 

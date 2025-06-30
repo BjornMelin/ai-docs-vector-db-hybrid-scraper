@@ -204,7 +204,8 @@ def get_mode_config(mode: ApplicationMode | None = None) -> ModeConfig:
         return SIMPLE_MODE_CONFIG
     if mode == ApplicationMode.ENTERPRISE:
         return ENTERPRISE_MODE_CONFIG
-    raise ValueError(f"Unknown application mode: {mode}")
+    msg = f"Unknown application mode: {mode}"
+    raise ValueError(msg)
 
 
 def get_current_mode() -> ApplicationMode:

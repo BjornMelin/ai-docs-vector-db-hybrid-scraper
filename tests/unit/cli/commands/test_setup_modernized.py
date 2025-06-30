@@ -137,10 +137,10 @@ class TestModernConfigurationWizard:
         # Mock profile manager with patch
         with (
             patch.object(wizard.profile_manager, "list_profiles") as mock_list,
-            patch.object(wizard.profile_manager, "show_profiles_table") as mock_show,
+            patch.object(wizard.profile_manager, "show_profiles_table") as _mock_show,
             patch.object(
                 wizard.profile_manager, "show_profile_setup_instructions"
-            ) as mock_instructions,
+            ) as _mock_instructions,
         ):
             mock_list.return_value = ["personal", "development"]
 
@@ -200,7 +200,7 @@ class TestModernConfigurationWizard:
                     "sk-test-valid-key"
                 )
 
-                result = wizard._customize_api_keys({})
+                result = wizard.customize_api_keys({})
 
                 assert result == {"openai": {"api_key": "sk-test-valid-key"}}
                 mock_validate.assert_called_with("openai", "sk-test-valid-key")
@@ -228,7 +228,7 @@ class TestModernConfigurationWizard:
                     "sk-valid-key",
                 ]
 
-                result = wizard._customize_api_keys({})
+                result = wizard.customize_api_keys({})
 
                 assert result == {"openai": {"api_key": "sk-valid-key"}}
                 rich_output_capturer.assert_contains(
@@ -252,7 +252,7 @@ class TestModernConfigurationWizard:
                     "6333",
                 ]
 
-                result = wizard._customize_database({})
+                result = wizard.customize_database({})
 
                 assert result == {"qdrant": {"host": "localhost", "port": 6333}}
 
@@ -275,7 +275,7 @@ class TestModernConfigurationWizard:
                     "cloud-api-key"
                 )
 
-                result = wizard._customize_database({})
+                result = wizard.customize_database({})
 
                 assert result == {
                     "qdrant": {
@@ -292,7 +292,7 @@ class TestModernConfigurationWizard:
             mock_questionary.confirm.return_value.ask.return_value = True
             mock_questionary.text.return_value.ask.return_value = "2000"
 
-            result = wizard._customize_performance({})
+            result = wizard.customize_performance({})
 
             assert result == {"text_processing": {"chunk_size": 2000}}
 
@@ -305,7 +305,7 @@ class TestModernConfigurationWizard:
             mock_questionary.confirm.return_value.ask.return_value = True
             mock_questionary.text.return_value.ask.return_value = "invalid"
 
-            result = wizard._customize_performance({})
+            result = wizard.customize_performance({})
 
             assert result == {}
             rich_output_capturer.assert_contains("Invalid chunk size")
@@ -317,12 +317,13 @@ class TestModernConfigurationWizard:
         with patch("src.cli.commands.setup.questionary") as mock_questionary:
             mock_questionary.confirm.return_value.ask.return_value = True
 
-            result = wizard._customize_template({})
+            result = wizard.customize_template({})
 
             assert result == {"debug": True, "log_level": "DEBUG"}
 
     @patch("builtins.open", new_callable=mock_open)
-    def test_save_configuration_success(self, _mock_file, rich_output_capturer):
+    @pytest.mark.usefixtures("_mock_file")
+    def test_save_configuration_success(self, rich_output_capturer):
         """Test successful configuration saving."""
         wizard = ConfigurationWizard()
         wizard.console = rich_output_capturer.console
@@ -424,7 +425,7 @@ class TestModernConfigurationWizard:
                 wizard.template_manager, "create_config_from_template"
             ) as mock_create,
             patch.object(wizard.validator, "validate_and_show_errors") as mock_validate,
-            patch.object(wizard.validator, "show_validation_summary") as mock_summary,
+            patch.object(wizard.validator, "show_validation_summary") as _mock_summary,
         ):
             # Mock template manager
             config_mock = MagicMock()
@@ -514,7 +515,7 @@ class TestModernConfigurationWizard:
         with patch.object(
             wizard.profile_manager, "profile_templates", {"personal": "personal-use"}
         ):
-            wizard._show_success_message(Path(temp_path))
+            wizard.show_success_message(Path(temp_path))
 
             rich_output_capturer.assert_panel_title("🚀 Template-Driven Setup Complete")
             rich_output_capturer.assert_contains("🎉 Modern Setup Complete!")
@@ -578,16 +579,18 @@ class TestSetupCommandModernized:
             )  # test temp path
             mock_wizard_class.return_value = mock_wizard
 
-            with patch("src.cli.commands.config.validate_config"):
-                with patch("src.cli.commands.setup.questionary") as mock_questionary:
-                    mock_questionary.confirm.return_value.ask.return_value = (
-                        True  # Accept validation
-                    )
+            with (
+                patch("src.cli.commands.config.validate_config"),
+                patch("src.cli.commands.setup.questionary") as mock_questionary,
+            ):
+                mock_questionary.confirm.return_value.ask.return_value = (
+                    True  # Accept validation
+                )
 
-                    result = interactive_cli_runner.invoke(setup, [])
+                result = interactive_cli_runner.invoke(setup, [])
 
-                    assert result.exit_code == 0
-                    # Note: validate_config would be called but might not be available in test
+                assert result.exit_code == 0
+                # Note: validate_config would be called but might not be available in test
 
     def test_setup_command_validation_fallback(self, interactive_cli_runner):
         """Test setup command validation fallback when config command unavailable."""

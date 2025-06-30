@@ -8,7 +8,7 @@ based on the I4 Vector Database Modernization research.
 import asyncio
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from uuid import uuid4
@@ -281,9 +281,8 @@ class AgenticVectorManager:
             Optimization results
         """
         if collection_name not in self.agent_collections:
-            raise ValueError(
-                f"Collection {collection_name} not managed by agentic system"
-            )
+            msg = f"Collection {collection_name} not managed by agentic system"
+            raise ValueError(msg)
 
         config = self.agent_collections[collection_name]
         metrics = self.collection_metrics[collection_name]
@@ -348,7 +347,7 @@ class AgenticVectorManager:
             optimization_time = time.time() - optimization_start
 
             # Update metrics and history
-            metrics.last_optimized = datetime.now()
+            metrics.last_optimized = datetime.now(tz=UTC)
 
             optimization_result = {
                 "optimization_id": optimization_id,
@@ -360,7 +359,7 @@ class AgenticVectorManager:
                 "performance_after": await self._analyze_collection_performance(
                     collection_name
                 ),
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
             }
 
             self.optimization_history.append(optimization_result)
@@ -376,7 +375,7 @@ class AgenticVectorManager:
             return {
                 "optimization_id": optimization_id,
                 "error": str(e),
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
             }
 
     async def autonomous_search(
@@ -404,9 +403,8 @@ class AgenticVectorManager:
             # Check circuit breaker
             circuit_breaker = self.circuit_breakers.get(collection_name)
             if circuit_breaker and circuit_breaker.is_open():
-                raise RuntimeError(
-                    f"Circuit breaker open for collection {collection_name}"
-                )
+                msg = f"Circuit breaker open for collection {collection_name}"
+                raise RuntimeError(msg)
 
             # Get collection configuration
             config = self.agent_collections.get(collection_name)
@@ -461,7 +459,7 @@ class AgenticVectorManager:
             if circuit_breaker:
                 try:
                     await circuit_breaker.call(lambda: (_ for _ in ()).throw(e))
-                except:
+                except Exception:
                     pass  # Expected to fail
 
             logger.error(f"Autonomous search failed: {e}", exc_info=True)
@@ -541,7 +539,7 @@ class AgenticVectorManager:
             except Exception as e:
                 error_msg = f"Failed to delete collection {collection_name}: {e}"
                 cleanup_results["errors"].append(error_msg)
-                logger.error(error_msg)
+                logger.exception(error_msg)
 
         return cleanup_results
 
@@ -554,7 +552,7 @@ class AgenticVectorManager:
         total_collections = len(self.agent_collections)
         healthy_collections = sum(
             1
-            for name in self.agent_collections.keys()
+            for name in self.agent_collections
             if not self.circuit_breakers[name].is_open()
         )
 
@@ -583,7 +581,7 @@ class AgenticVectorManager:
                     opt
                     for opt in self.optimization_history
                     if datetime.fromisoformat(opt["timestamp"])
-                    > datetime.now() - timedelta(hours=24)
+                    > datetime.now(tz=UTC) - timedelta(hours=24)
                 ]
             ),
             "collection_breakdown": {
@@ -678,13 +676,13 @@ class AgenticVectorManager:
                     )
 
             except Exception as e:
-                logger.error(
+                logger.exception(
                     f"Health check failed for collection {collection_name}: {e}"
                 )
 
     async def _run_periodic_optimization(self) -> None:
         """Run periodic optimization on collections that need it."""
-        current_time = datetime.now()
+        current_time = datetime.now(tz=UTC)
 
         for collection_name, config in self.agent_collections.items():
             if not config.enable_auto_optimization:
@@ -703,7 +701,7 @@ class AgenticVectorManager:
                 try:
                     await self.optimize_collection(collection_name)
                 except Exception as e:
-                    logger.error(
+                    logger.exception(
                         f"Periodic optimization failed for {collection_name}: {e}"
                     )
 

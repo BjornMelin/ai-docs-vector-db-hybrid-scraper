@@ -412,8 +412,7 @@ class TestConfigurationIntegrationPatterns:
                 remote_config = await self.load_remote_config()
 
                 # Merge configurations (remote overrides local)
-                merged = {**local_config, **remote_config}
-                return merged
+                return {**local_config, **remote_config}
 
         # Test
         base_settings = Config()

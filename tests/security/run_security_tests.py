@@ -88,9 +88,7 @@ class SecurityTestRunner:
 
         for category in categories_to_run:
             if category in available_categories:
-                self.logger.info(
-                    f"Running {category} tests..."
-                )  # TODO: Convert f-string to logging format
+                self.logger.info("Running %s tests...", category)
                 try:
                     category_results = available_categories[category]()
                     results["test_categories"][category] = category_results
@@ -117,7 +115,8 @@ class SecurityTestRunner:
         self._generate_reports(results)
 
         self.logger.info(
-            f"Security test suite completed in {results['execution_info']['duration']:.2f} seconds"
+            "Security test suite completed in %.2f seconds",
+            results["execution_info"]["duration"],
         )
         return results
 
@@ -239,7 +238,7 @@ class SecurityTestRunner:
 
         except subprocess.TimeoutExpired:
             return {"status": "timeout", "error": "Bandit analysis timed out"}
-        except Exception as e:
+        except (ValueError, RuntimeError, ImportError) as e:
             return {"status": "error", "error": str(e)}
 
     def _run_dependency_scan(self) -> dict[str, Any]:
@@ -301,7 +300,7 @@ class SecurityTestRunner:
 
         except subprocess.TimeoutExpired:
             return {"status": "timeout", "error": "Safety scan timed out"}
-        except Exception as e:
+        except (ValueError, RuntimeError, ImportError) as e:
             return {"status": "error", "error": str(e)}
 
     def _run_pytest_category(
@@ -316,9 +315,7 @@ class SecurityTestRunner:
         Returns:
             Test execution results
         """
-        self.logger.info(
-            f"Running pytest for {category} category..."
-        )  # TODO: Convert f-string to logging format
+        self.logger.info("Running pytest for %s category...", category)
 
         # Build pytest command
         cmd = [
@@ -416,7 +413,7 @@ class SecurityTestRunner:
                 "tests_passed": 0,
                 "tests_failed": 1,
             }
-        except Exception as e:
+        except (ValueError, RuntimeError, ImportError) as e:
             return {
                 "status": "error",
                 "error": str(e),
@@ -520,9 +517,7 @@ class SecurityTestRunner:
         # Executive summary
         self._generate_executive_summary(results)
 
-        self.logger.info(
-            f"Reports generated in {self.output_dir}"
-        )  # TODO: Convert f-string to logging format
+        self.logger.info("Reports generated in %s", self.output_dir)
 
     def _generate_html_report(self, results: dict[str, Any]) -> None:
         """Generate HTML summary report."""

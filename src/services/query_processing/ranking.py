@@ -1241,9 +1241,7 @@ class PersonalizedRankingService:
 
         # Normalize by maximum possible diversity
         max_diversity = min(10, len(results))
-        diversity_score = len(content_types) / max_diversity
-
-        return diversity_score
+        return len(content_types) / max_diversity
 
     def _calculate_coverage_score(
         self, results: list[RankedResult], user_profile: UserProfile
@@ -1262,8 +1260,7 @@ class PersonalizedRankingService:
                         covered_preferences += 1
                         break
 
-        coverage_score = covered_preferences / len(user_profile.preferences)
-        return coverage_score
+        return covered_preferences / len(user_profile.preferences)
 
     def _calculate_reranking_impact(
         self, original_results: list[dict[str, Any]], ranked_results: list[RankedResult]
@@ -1280,8 +1277,7 @@ class PersonalizedRankingService:
             position_change = abs(new_pos - original_pos)
             total_position_change += position_change
 
-        avg_position_change = total_position_change / len(ranked_results)
-        return avg_position_change
+        return total_position_change / len(ranked_results)
 
     def _generate_content_explanation(
         self, content_boost: float, _user_profile: UserProfile

@@ -8,8 +8,9 @@ Portfolio feature showcasing data analytics and visualization capabilities.
 import asyncio
 import json
 import logging
+import re
 import time
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
@@ -135,7 +136,7 @@ class SearchAnalyticsDashboard(BaseService):
             query_data = {
                 "query": query,
                 "user_id": user_id or "anonymous",
-                "timestamp": datetime.now(),
+                "timestamp": datetime.now(tz=UTC),
                 "processing_time_ms": processing_time_ms,
                 "success": success,
                 "features_used": features_used or [],
@@ -181,7 +182,7 @@ class SearchAnalyticsDashboard(BaseService):
         """
         try:
             metric = PerformanceMetric(
-                timestamp=datetime.now(),
+                timestamp=datetime.now(tz=UTC),
                 metric_name=metric_name,
                 value=value,
                 tags=tags or {},
@@ -212,7 +213,7 @@ class SearchAnalyticsDashboard(BaseService):
             # Get performance trends
             trends = await self._calculate_performance_trends()
 
-            dashboard_data = {
+            return {
                 "realtime_stats": self.realtime_stats.copy(),
                 "query_patterns": [
                     pattern.model_dump() for pattern in self.detected_patterns[:10]
@@ -223,10 +224,8 @@ class SearchAnalyticsDashboard(BaseService):
                 "query_volume_timeline": await self._get_query_volume_timeline(),
                 "top_performing_queries": await self._get_top_performing_queries(),
                 "optimization_opportunities": await self._identify_optimization_opportunities(),
-                "last_updated": datetime.now().isoformat(),
+                "last_updated": datetime.now(tz=UTC).isoformat(),
             }
-
-            return dashboard_data
 
         except Exception:
             self._logger.exception("Failed to generate realtime dashboard")
@@ -245,7 +244,7 @@ class SearchAnalyticsDashboard(BaseService):
             Detailed analytics data
         """
         try:
-            cutoff_time = datetime.now() - timedelta(hours=time_range_hours)
+            cutoff_time = datetime.now(tz=UTC) - timedelta(hours=time_range_hours)
 
             # Filter queries by time range and user
             filtered_queries = [
@@ -279,7 +278,7 @@ class SearchAnalyticsDashboard(BaseService):
             for feature in set(all_features):
                 feature_usage[feature] = all_features.count(feature)
 
-            analytics = {
+            return {
                 "time_range_hours": time_range_hours,
                 "user_id": user_id,
                 "total_queries": total_queries,
@@ -306,10 +305,8 @@ class SearchAnalyticsDashboard(BaseService):
                 "performance_distribution": self._calculate_distribution(
                     [q["processing_time_ms"] for q in filtered_queries]
                 ),
-                "generated_at": datetime.now().isoformat(),
+                "generated_at": datetime.now(tz=UTC).isoformat(),
             }
-
-            return analytics
 
         except Exception:
             self._logger.exception("Failed to generate query analytics")
@@ -328,7 +325,7 @@ class SearchAnalyticsDashboard(BaseService):
             recent_queries = [
                 q
                 for q in self.query_history
-                if q["timestamp"] >= datetime.now() - timedelta(hours=1)
+                if q["timestamp"] >= datetime.now(tz=UTC) - timedelta(hours=1)
             ]
 
             if recent_queries:
@@ -404,7 +401,7 @@ class SearchAnalyticsDashboard(BaseService):
         """Update real-time statistics."""
         try:
             # Get queries from last hour
-            hour_ago = datetime.now() - timedelta(hours=1)
+            hour_ago = datetime.now(tz=UTC) - timedelta(hours=1)
             recent_queries = [
                 q for q in self.query_history if q["timestamp"] >= hour_ago
             ]
@@ -425,7 +422,7 @@ class SearchAnalyticsDashboard(BaseService):
                         / len(recent_queries),
                         "error_rate": sum(1 for q in recent_queries if not q["success"])
                         / len(recent_queries),
-                        "active_users": len(set(q["user_id"] for q in recent_queries)),
+                        "active_users": len({q["user_id"] for q in recent_queries}),
                     }
                 )
 
@@ -502,8 +499,6 @@ class SearchAnalyticsDashboard(BaseService):
     def _extract_pattern(self, query: str) -> str:
         """Extract a pattern from a query by replacing specific terms."""
         # Simple pattern extraction - replace numbers and specific terms
-        import re
-
         # Replace numbers
         pattern = re.sub(r"\d+", "[NUMBER]", query)
 
@@ -705,7 +700,7 @@ class SearchAnalyticsDashboard(BaseService):
         try:
             # Group queries by hour
             hour_buckets = {}
-            cutoff = datetime.now() - timedelta(hours=24)
+            cutoff = datetime.now(tz=UTC) - timedelta(hours=24)
 
             for query_data in self.query_history:
                 if query_data["timestamp"] >= cutoff:

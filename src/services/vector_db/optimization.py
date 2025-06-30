@@ -9,6 +9,10 @@ import time
 from typing import Any, Optional
 
 import numpy as np
+
+
+# Initialize numpy random generator
+rng = np.random.default_rng()
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
@@ -122,7 +126,7 @@ class QdrantOptimizer:
             return True
 
         except Exception as e:
-            logger.exception(f"Failed to create optimized collection: {e}")
+            logger.exception("Failed to create optimized collection")
             return False
 
     async def benchmark_search_performance(
@@ -198,7 +202,7 @@ class QdrantOptimizer:
 
             # Generate test vectors for benchmarking
             vector_size = collection_info.config.params.vectors.size
-            test_vectors = [np.random.random(vector_size).tolist() for _ in range(50)]
+            test_vectors = [rng.random(vector_size).tolist() for _ in range(50)]
 
             # Benchmark current performance
             current_performance = await self.benchmark_search_performance(
@@ -213,7 +217,7 @@ class QdrantOptimizer:
                 collection_info.config.params.vectors.quantization_config is not None
             )
 
-            recommendations = {
+            return {
                 "current_performance": current_performance,
                 "optimal_ef": optimal_ef,
                 "quantization_enabled": has_quantization,
@@ -222,10 +226,8 @@ class QdrantOptimizer:
                 ),
             }
 
-            return recommendations
-
         except Exception as e:
-            logger.exception(f"Failed to optimize collection '{collection_name}': {e}")
+            logger.exception("Failed to optimize collection '{collection_name}'")
             return {"error": str(e)}
 
     def _find_optimal_ef(
@@ -335,7 +337,7 @@ class QdrantOptimizer:
             return {"status": "success", "quantization_enabled": True}
 
         except Exception as e:
-            logger.exception(f"Failed to enable quantization: {e}")
+            logger.exception("Failed to enable quantization")
             return {"status": "error", "error": str(e)}
 
     async def get_optimization_metrics(self, collection_name: str) -> dict[str, Any]:
@@ -352,7 +354,7 @@ class QdrantOptimizer:
             collection_info = await self.client.get_collection(collection_name)
             config = collection_info.config
 
-            metrics = {
+            return {
                 "collection_name": collection_name,
                 "vector_count": collection_info.vectors_count,
                 "indexed_vectors": collection_info.indexed_vectors_count,
@@ -370,8 +372,6 @@ class QdrantOptimizer:
                 "distance_metric": config.params.vectors.distance.value,
             }
 
-            return metrics
-
         except Exception as e:
-            logger.exception(f"Failed to get optimization metrics: {e}")
+            logger.exception("Failed to get optimization metrics")
             return {"error": str(e)}

@@ -458,9 +458,7 @@ class ResultClusteringService:
         # Normalize embeddings for cosine similarity
         norms = np.linalg.norm(embedding_array, axis=1, keepdims=True)
         norms[norms == 0] = 1  # Avoid division by zero
-        embedding_array = embedding_array / norms
-
-        return embedding_array
+        return embedding_array / norms
 
     def _select_clustering_method(
         self, request: ResultClusteringRequest, embeddings: np.ndarray

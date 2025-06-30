@@ -191,7 +191,7 @@ class ModelSelector:
             specializations = model_info["specializations"]
 
             # Map QueryTypes to the properties that make a model suitable.
-            QUERY_TYPE_REQUIREMENTS = {
+            query_type_requirements = {
                 QueryType.CODE: {
                     "specializations": {"code"},
                     "model_types": {ModelType.CODE_SPECIALIZED},
@@ -218,7 +218,7 @@ class ModelSelector:
             current_query_type = query_classification.query_type
 
             # Get the requirements for the current query type
-            requirements = QUERY_TYPE_REQUIREMENTS.get(current_query_type)
+            requirements = query_type_requirements.get(current_query_type)
 
             if requirements:
                 # A model is a candidate if its type matches OR it has a required specialization.

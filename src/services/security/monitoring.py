@@ -16,6 +16,7 @@ import json
 import logging
 import time
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
@@ -239,7 +240,7 @@ class SecurityMonitor:
             self._check_automated_responses(security_event)
 
         except Exception as e:
-            logger.exception(f"Failed to log security event: {e}")
+            logger.exception("Failed to log security event")
 
     def _determine_severity(self, event_type: SecurityEventType) -> SecuritySeverity:
         """Determine severity based on event type.
@@ -671,7 +672,8 @@ class SecurityMonitor:
                     f"{event.severity.value},{event.client_ip},{event.endpoint},{event.method}"
                 )
             return "\n".join(lines)
-        raise ValueError(f"Unsupported export format: {format}")
+        msg = f"Unsupported export format: {format}"
+        raise ValueError(msg)
 
     def cleanup_old_data(self, days: int = 30) -> int:
         """Clean up old security data to manage memory usage.

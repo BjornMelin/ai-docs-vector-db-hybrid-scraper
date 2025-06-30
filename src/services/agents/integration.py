@@ -248,7 +248,7 @@ class UnifiedAgenticSystem:
             await self.initialize()
 
         start_time = time.time()
-        request_start = datetime.now()
+        request_start = datetime.now(tz=datetime.timezone.utc)
 
         logger.info(f"Executing unified request {request.request_id}: {request.goal}")
 
@@ -375,7 +375,7 @@ class UnifiedAgenticSystem:
             )
 
             # Calculate 24h metrics
-            cutoff_time = datetime.now() - timedelta(hours=24)
+            cutoff_time = datetime.now(tz=datetime.timezone.utc) - timedelta(hours=24)
             recent_requests = [
                 req
                 for req in self.request_history
@@ -504,7 +504,7 @@ class UnifiedAgenticSystem:
             return vector_results
 
         except Exception as e:
-            logger.error(f"Vector environment preparation failed: {e}")
+            logger.exception("Vector environment preparation failed")
             return {"error": str(e)}
 
     async def _compose_tool_chain(
@@ -531,7 +531,7 @@ class UnifiedAgenticSystem:
             )
 
         except Exception as e:
-            logger.error(f"Tool chain composition failed: {e}")
+            logger.exception("Tool chain composition failed")
             raise
 
     async def _create_coordination_tasks(
@@ -572,7 +572,7 @@ class UnifiedAgenticSystem:
             return tasks
 
         except Exception as e:
-            logger.error(f"Coordination task creation failed: {e}")
+            logger.exception("Coordination task creation failed")
             raise
 
     async def _execute_unified_workflow(
@@ -614,7 +614,7 @@ class UnifiedAgenticSystem:
             }
 
         except Exception as e:
-            logger.error(f"Unified workflow execution failed: {e}")
+            logger.exception("Unified workflow execution failed")
             return {"error": str(e), "integration_success": False}
 
     async def _integrate_results(
@@ -637,7 +637,9 @@ class UnifiedAgenticSystem:
                         "vector_manager",
                         "orchestrator",
                     ],
-                    "integration_time": datetime.now().isoformat(),
+                    "integration_time": datetime.now(
+                        tz=datetime.timezone.utc
+                    ).isoformat(),
                     "success": execution_results.get("integration_success", False),
                 },
             }
@@ -656,7 +658,7 @@ class UnifiedAgenticSystem:
             return integrated
 
         except Exception as e:
-            logger.error(f"Results integration failed: {e}")
+            logger.exception("Results integration failed")
             return {"error": str(e)}
 
     async def _calculate_quality_metrics(
@@ -719,7 +721,7 @@ class UnifiedAgenticSystem:
             }
 
         except Exception as e:
-            logger.error(f"Quality metrics calculation failed: {e}")
+            logger.exception("Quality metrics calculation failed")
             return {
                 "quality_score": 0.5,
                 "confidence": 0.5,
@@ -764,7 +766,7 @@ class UnifiedAgenticSystem:
                 high_resource_usage = any(
                     v > 100
                     for v in quality_metrics["resource_usage"].values()
-                    if isinstance(v, (int, float))
+                    if isinstance(v, int | float)
                 )
                 if high_resource_usage:
                     recommendations.append(
@@ -778,7 +780,7 @@ class UnifiedAgenticSystem:
             return recommendations
 
         except Exception as e:
-            logger.error(f"Recommendation generation failed: {e}")
+            logger.exception("Recommendation generation failed")
             return ["Unable to generate recommendations"]
 
     async def _register_default_tools(self) -> None:
@@ -831,7 +833,7 @@ class UnifiedAgenticSystem:
             logger.info("Default tools registered with orchestrator")
 
         except Exception as e:
-            logger.error(f"Failed to register default tools: {e}")
+            logger.exception("Failed to register default tools")
 
     async def _update_system_metrics(self, response: UnifiedAgentResponse) -> None:
         """Update system performance metrics."""
@@ -850,11 +852,13 @@ class UnifiedAgenticSystem:
             self.performance_metrics["avg_execution_time"] = new_avg
 
             # Track 24h requests
-            response.start_time = datetime.now()  # Add timestamp
+            response.start_time = datetime.now(
+                tz=datetime.timezone.utc
+            )  # Add timestamp
             self.performance_metrics["last_24h_requests"].append(response)
 
             # Keep only last 24 hours
-            cutoff = datetime.now() - timedelta(hours=24)
+            cutoff = datetime.now(tz=datetime.timezone.utc) - timedelta(hours=24)
             self.performance_metrics["last_24h_requests"] = [
                 req
                 for req in self.performance_metrics["last_24h_requests"]
@@ -867,7 +871,7 @@ class UnifiedAgenticSystem:
                 self.request_history = self.request_history[-1000:]
 
         except Exception as e:
-            logger.error(f"Failed to update system metrics: {e}")
+            logger.exception("Failed to update system metrics")
 
     async def _identify_system_optimizations(self) -> list[str]:
         """Identify system-wide optimization opportunities."""
@@ -907,5 +911,5 @@ class UnifiedAgenticSystem:
             return optimizations
 
         except Exception as e:
-            logger.error(f"Failed to identify optimizations: {e}")
+            logger.exception("Failed to identify optimizations")
             return ["Unable to analyze optimizations"]

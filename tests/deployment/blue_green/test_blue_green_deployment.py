@@ -242,10 +242,8 @@ class TestBlueGreenDeployment:
         }
 
         # This should be rejected
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(Exception, match="(?i)in progress"):
             await blue_green_deployment_manager.deploy_to_inactive(deployment_2)
-
-        assert "in progress" in str(exc_info.value).lower()
 
         # Wait for first deployment to complete
         result_1 = await deployment_task

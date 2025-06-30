@@ -107,8 +107,7 @@ async def ml_security_middleware(request: Request, call_next):
         if content_length and int(content_length) > 1_000_000:
             raise HTTPException(status_code=413, detail="Request too large")
 
-    response = await call_next(request)
-    return response
+    return await call_next(request)
 
 
 # Startup task for dependency scanning

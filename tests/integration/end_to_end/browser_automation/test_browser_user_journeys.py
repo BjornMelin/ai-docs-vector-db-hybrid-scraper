@@ -146,11 +146,9 @@ class TestBrowserUserJourneys:
                     )
                     if search_element:
                         break
-                except Exception as e:
+                except (TimeoutError, RuntimeError) as e:
                     # Try next selector pattern
-                    logger.debug(
-                        f"Selector pattern failed, trying next: {e}"
-                    )  # TODO: Convert f-string to logging format
+                    logger.debug("Selector pattern failed, trying next: %s", e)
                     continue
 
             # If no search element found, create a simulated search scenario
@@ -231,7 +229,7 @@ class TestBrowserUserJourneys:
             assert metadata["url"], "URL should be extracted"
             assert metadata["links_count"] >= 0, "Links count should be non-negative"
 
-        except Exception as e:
+        except (TimeoutError, RuntimeError) as e:
             journey_steps.append(
                 {
                     "step": "error_occurred",
@@ -328,7 +326,7 @@ class TestBrowserUserJourneys:
                 # Small delay between pages
                 await asyncio.sleep(0.5)
 
-            except Exception as e:
+            except (TimeoutError, RuntimeError) as e:
                 crawled_pages.append(
                     {
                         "url": url,
@@ -422,7 +420,7 @@ class TestBrowserUserJourneys:
                             "success": True,
                         }
                     )
-            except Exception:
+            except (TimeoutError, RuntimeError):
                 form_interactions.append(
                     {
                         "field": "custname",
@@ -447,7 +445,7 @@ class TestBrowserUserJourneys:
                             "success": True,
                         }
                     )
-            except Exception:
+            except (TimeoutError, RuntimeError):
                 form_interactions.append(
                     {
                         "field": "custtel",
@@ -472,7 +470,7 @@ class TestBrowserUserJourneys:
                             "success": True,
                         }
                     )
-            except Exception:
+            except (TimeoutError, RuntimeError):
                 form_interactions.append(
                     {
                         "field": "custemail",
@@ -497,7 +495,7 @@ class TestBrowserUserJourneys:
                             "success": True,
                         }
                     )
-            except Exception:
+            except (TimeoutError, RuntimeError):
                 form_interactions.append(
                     {
                         "field": "delivery",
@@ -542,7 +540,7 @@ class TestBrowserUserJourneys:
                             "error": "Submit button not found",
                         }
                     )
-            except Exception:
+            except (TimeoutError, RuntimeError):
                 journey_steps.append(
                     {
                         "step": "form_submission_validation",
@@ -579,7 +577,7 @@ class TestBrowserUserJourneys:
                 }
             )
 
-        except Exception as e:
+        except (TimeoutError, RuntimeError) as e:
             journey_steps.append(
                 {
                     "step": "error_in_form_journey",
@@ -695,7 +693,7 @@ class TestBrowserUserJourneys:
                     f"Page load too slow: {_total_load_time}ms"
                 )
 
-            except Exception as e:
+            except (TimeoutError, RuntimeError) as e:
                 performance_data.append(
                     {
                         "scenario": scenario["name"],
@@ -721,14 +719,12 @@ class TestBrowserUserJourneys:
 
         # Calculate aggregate performance metrics
         if successful_scenarios:
-            load_times = []
-            for scenario in successful_scenarios:
-                if scenario.get("browser_metrics") and scenario["browser_metrics"].get(
-                    "navigation"
-                ):
-                    load_times.append(
-                        scenario["browser_metrics"]["navigation"]["_total"]
-                    )
+            load_times = [
+                scenario["browser_metrics"]["navigation"]["_total"]
+                for scenario in successful_scenarios
+                if scenario.get("browser_metrics")
+                and scenario["browser_metrics"].get("navigation")
+            ]
 
             if load_times:
                 performance_result["aggregate_metrics"] = {
@@ -813,7 +809,7 @@ class TestBrowserUserJourneys:
                     }
                 )
 
-            except Exception as e:
+            except (TimeoutError, RuntimeError) as e:
                 # Navigation failed
                 error_scenarios.append(
                     {

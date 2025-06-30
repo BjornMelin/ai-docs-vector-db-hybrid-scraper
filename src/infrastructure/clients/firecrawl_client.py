@@ -63,7 +63,8 @@ class FirecrawlClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("Firecrawl client is not available or unhealthy")
+            msg = "Firecrawl client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.scrape_url(url, params=params or {})
 
@@ -83,7 +84,8 @@ class FirecrawlClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("Firecrawl client is not available or unhealthy")
+            msg = "Firecrawl client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.crawl_url(url, params=params or {})
 
@@ -100,7 +102,8 @@ class FirecrawlClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("Firecrawl client is not available or unhealthy")
+            msg = "Firecrawl client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.get_crawl_status(job_id)
 
@@ -120,6 +123,7 @@ class FirecrawlClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("Firecrawl client is not available or unhealthy")
+            msg = "Firecrawl client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.search(query, params=params or {})

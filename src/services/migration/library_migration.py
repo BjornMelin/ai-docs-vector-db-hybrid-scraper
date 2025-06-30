@@ -116,7 +116,7 @@ class LibraryMigrationManager:
             logger.info("Modern services initialized successfully")
 
         except Exception as e:
-            logger.exception(f"Failed to initialize modern services: {e}")
+            logger.exception("Failed to initialize modern services")
             raise
 
     async def _initialize_legacy_services(self) -> None:
@@ -287,7 +287,7 @@ class LibraryMigrationManager:
                 await self._collect_metrics()
                 await self._check_rollback_conditions()
             except Exception as e:
-                logger.exception(f"Error in monitoring loop: {e}")
+                logger.exception("Error in monitoring loop")
 
     async def _collect_metrics(self) -> None:
         """Collect performance metrics from services."""
@@ -305,7 +305,7 @@ class LibraryMigrationManager:
             logger.debug("Performance metrics collected")
 
         except Exception as e:
-            logger.exception(f"Error collecting metrics: {e}")
+            logger.exception("Error collecting metrics")
 
     async def _check_rollback_conditions(self) -> None:
         """Check if rollback conditions are met."""
@@ -359,7 +359,7 @@ class LibraryMigrationManager:
             )  # TODO: Convert f-string to logging format
             return False
         except Exception as e:
-            logger.exception(f"Error forcing migration of {service}: {e}")
+            logger.exception("Error forcing migration of {service}")
             return False
 
     async def cleanup(self) -> None:
@@ -374,7 +374,7 @@ class LibraryMigrationManager:
             logger.info("LibraryMigrationManager cleaned up successfully")
 
         except Exception as e:
-            logger.exception(f"Error cleaning up LibraryMigrationManager: {e}")
+            logger.exception("Error cleaning up LibraryMigrationManager")
 
 
 # Convenience function for creating migration manager

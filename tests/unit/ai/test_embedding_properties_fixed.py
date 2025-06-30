@@ -7,9 +7,10 @@ Hypothesis with realistic constraints and proper test configuration.
 from __future__ import annotations
 
 import math
+import random
 
 import pytest
-from hypothesis import HealthCheck, assume, given, settings, strategies as st
+from hypothesis import HealthCheck, given, settings, strategies as st
 
 from tests.conftest import document_strategy, embedding_strategy
 
@@ -31,7 +32,7 @@ class TestEmbeddingPropertiesFixed:
         """Embeddings should have consistent properties regardless of dimension."""
         # Property: Valid embedding structure
         assert len(embedding) > 0, "Embedding must not be empty"
-        assert all(isinstance(x, (int, float)) for x in embedding), (
+        assert all(isinstance(x, int | float) for x in embedding), (
             "All values must be numeric"
         )
 
@@ -129,8 +130,6 @@ class TestEmbeddingPropertiesFixed:
     ):
         """Test that similarity degrades gracefully with noise addition."""
         # Add controlled noise
-        import random
-
         random.seed(42)  # Deterministic for reproducibility
 
         noisy_embedding = []
@@ -244,8 +243,8 @@ class TestEmbeddingPropertiesFixed:
         self, dimension: int, batch_size: int, ai_test_utilities
     ):
         """Test properties of mock embedding API responses."""
-        # Generate query vector
-        query_vector = ai_test_utilities.generate_test_embeddings(
+        # Generate query vector (unused but shows test pattern)
+        _query_vector = ai_test_utilities.generate_test_embeddings(
             count=1, dim=dimension
         )[0]
 

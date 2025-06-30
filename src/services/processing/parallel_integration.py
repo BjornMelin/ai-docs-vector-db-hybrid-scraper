@@ -257,7 +257,7 @@ class ParallelProcessingSystem:
             return results
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 f"Parallel document processing failed: {e}"
             )  # TODO: Convert f-string to logging format
             await self._update_system_metrics(
@@ -583,7 +583,7 @@ class ParallelProcessingSystem:
             logger.info("ParallelProcessingSystem cleanup completed")
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 f"Error during cleanup: {e}"
             )  # TODO: Convert f-string to logging format
 

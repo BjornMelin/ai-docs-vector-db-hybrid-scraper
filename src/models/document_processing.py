@@ -13,8 +13,8 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 
-from ..config.enums import ChunkingStrategy
-from ..config.enums import DocumentStatus
+from ..config import ChunkingStrategy
+from ..config import DocumentStatus
 
 
 class CodeLanguage(str, Enum):

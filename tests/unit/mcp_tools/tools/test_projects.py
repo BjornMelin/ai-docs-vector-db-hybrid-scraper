@@ -9,7 +9,7 @@ import yaml
 from pydantic import ValidationError
 
 # Import the actual enums before any mocking happens
-from src.config.enums import QualityTier, SearchStrategy
+from src.config import SearchStrategy
 from src.mcp_tools.models.requests import ProjectRequest
 from src.mcp_tools.models.responses import ProjectInfo
 from src.mcp_tools.tools.projects import register_tools
@@ -771,7 +771,7 @@ async def test_quality_tier_enum_handling(mock_client_manager, mock_context):
     project_storage.create_project.return_value = {
         "id": "proj_123",
         "name": "Test Project",
-        "quality_tier": QualityTier.PREMIUM.value,
+        "quality_tier": "premium",
     }
 
     qdrant = await mock_client_manager.get_qdrant_service()

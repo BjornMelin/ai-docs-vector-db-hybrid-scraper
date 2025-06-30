@@ -178,7 +178,7 @@ class TestDisasterRecovery:
         return RecoveryOrchestrator()
 
     async def test_datacenter_outage_recovery(
-        self, backup_system, recovery_orchestrator, _resilience_validator
+        self, backup_system, recovery_orchestrator, resilience_validator
     ):
         """Test recovery from complete datacenter outage."""
         # Setup data and backups
@@ -330,7 +330,7 @@ class TestDisasterRecovery:
             "Should restore latest good version"
         )
 
-    async def test_network_partition_recovery(self, _recovery_orchestrator):
+    async def test_network_partition_recovery(self, recovery_orchestrator):
         """Test recovery from network partition (split-brain scenario)."""
         # Simulate distributed system nodes
         nodes = {
@@ -537,18 +537,16 @@ class TestDisasterRecovery:
         async def accidental_deletion():
             """Simulate accidental data deletion."""
             # "Accidentally" delete collections
-            damaged_data = {"collections": [], "indexes": {}}
-            return damaged_data
+            return {"collections": [], "indexes": {}}
 
         async def wrong_configuration():
             """Simulate incorrect configuration deployment."""
             # "Accidentally" deploy test config to production
-            wrong_config = {
+            return {
                 "database": {"host": "test-db", "port": 5432, "pool_size": 1},
                 "cache": {"host": "test-cache", "port": 6379, "ttl": 60},
                 "search": {"index": "test", "shards": 1, "replicas": 0},
             }
-            return wrong_config
 
         async def detect_human_error(
             current_config: dict, current_data: dict
@@ -629,7 +627,7 @@ class TestDisasterRecovery:
             "No errors should remain after recovery"
         )
 
-    async def test_multi_region_failover(self, _recovery_orchestrator):
+    async def test_multi_region_failover(self, recovery_orchestrator):
         """Test multi-region failover and recovery."""
         # Setup multi-region deployment
         regions = {
@@ -760,7 +758,7 @@ class TestDisasterRecovery:
         assert "binary_data" not in partial_restored
 
     async def test_rto_rpo_compliance_monitoring(
-        self, backup_system, _recovery_orchestrator
+        self, backup_system, recovery_orchestrator
     ):
         """Test RTO/RPO compliance monitoring and alerting."""
         # Setup monitoring metrics
@@ -819,7 +817,7 @@ class TestDisasterRecovery:
                     "test_duration": test_duration,
                     "timestamp": test_start,
                 }
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError, OSError) as e:
                 return {
                     "test_successful": False,
                     "error": str(e),

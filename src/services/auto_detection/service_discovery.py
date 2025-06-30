@@ -33,7 +33,7 @@ try:
 except ImportError:
     AsyncQdrantClient = None
 
-from src.config.auto_detect import AutoDetectionConfig, DetectedService
+from src.config import AutoDetectionConfig, DetectedService
 from src.services.errors import circuit_breaker
 
 
@@ -531,7 +531,7 @@ class ServiceDiscovery:
         self, qdrant_info: dict[str, Any], grpc_available: bool
     ) -> dict[str, Any]:
         """Get optimized Qdrant connection pool configuration."""
-        config = {
+        return {
             "timeout": 10.0,
             "prefer_grpc": grpc_available,
             "max_retries": 3,
@@ -545,8 +545,6 @@ class ServiceDiscovery:
             else None,
             "version_info": qdrant_info,
         }
-
-        return config
 
     def _get_postgresql_pool_config(self, pg_info: dict[str, Any]) -> dict[str, Any]:
         """Get optimized PostgreSQL connection pool configuration."""

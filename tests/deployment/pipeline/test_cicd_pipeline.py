@@ -5,6 +5,7 @@ test execution, deployment automation, and rollback procedures.
 """
 
 import asyncio
+import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -518,7 +519,7 @@ class PipelineExecutor:
 
                     break
 
-        except Exception as e:
+        except (RuntimeError, OSError, subprocess.CalledProcessError) as e:
             result["success"] = False
             result["error"] = str(e)
 
@@ -564,7 +565,7 @@ class PipelineExecutor:
                 **stage_result,
             }
 
-        except Exception as e:
+        except (RuntimeError, OSError, subprocess.CalledProcessError) as e:
             end_time = datetime.now(tz=UTC)
             duration = (end_time - start_time)._total_seconds()
 
@@ -748,7 +749,7 @@ class DockerBuildManager:
 
             return result
 
-        except Exception as e:
+        except (RuntimeError, OSError, subprocess.CalledProcessError) as e:
             return {
                 "success": False,
                 "error": str(e),
@@ -822,7 +823,7 @@ class PipelineTestExecutor:
                 **result,
             }
 
-        except Exception as e:
+        except (RuntimeError, OSError, subprocess.CalledProcessError) as e:
             return {
                 "success": False,
                 "test_type": test_type,

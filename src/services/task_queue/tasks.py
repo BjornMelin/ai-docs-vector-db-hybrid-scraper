@@ -50,10 +50,12 @@ def _validate_dynamic_import(module_name: str, function_name: str) -> bool:
         ValueError: If module or function is not whitelisted
     """
     if module_name not in ALLOWED_PERSIST_MODULES:
-        raise ValueError(f"Module '{module_name}' not in security whitelist")
+        msg = f"Module '{module_name}' not in security whitelist"
+        raise ValueError(msg)
 
     if function_name not in ALLOWED_PERSIST_FUNCTIONS:
-        raise ValueError(f"Function '{function_name}' not in security whitelist")
+        msg = f"Function '{function_name}' not in security whitelist"
+        raise ValueError(msg)
 
     return True
 
@@ -180,7 +182,7 @@ async def persist_cache(
         try:
             _validate_dynamic_import(persist_func_module, persist_func_name)
         except ValueError as ve:
-            logger.error(f"Security validation failed for dynamic import: {ve}")
+            logger.exception(f"Security validation failed for dynamic import: {ve}")
             return {
                 "status": "failed",
                 "key": key,
@@ -475,5 +477,5 @@ async def create_task(
             await client_manager.cleanup()
 
     except Exception as e:
-        logger.exception(f"Failed to create task {task_name}: {e}")
+        logger.exception("Failed to create task {task_name}")
         return None

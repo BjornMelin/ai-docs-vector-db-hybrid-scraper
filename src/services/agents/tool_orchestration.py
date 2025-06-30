@@ -11,7 +11,7 @@ import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from uuid import uuid4
@@ -336,7 +336,7 @@ class AdvancedToolOrchestrator:
                 "execution_metadata": {
                     "execution_id": execution_id,
                     "plan_id": plan.plan_id,
-                    "start_time": datetime.now(),
+                    "start_time": datetime.now(tz=datetime.timezone.utc),
                     "goal": plan.goal,
                 },
             }
@@ -426,10 +426,11 @@ class AdvancedToolOrchestrator:
             Tool execution result
         """
         execution_id = str(uuid4())
-        start_time = datetime.now()
+        start_time = datetime.now(tz=datetime.timezone.utc)
 
         if tool_id not in self.registered_tools:
-            raise ValueError(f"Tool {tool_id} not registered")
+            msg = f"Tool {tool_id} not registered"
+            raise ValueError(msg)
 
         tool_def = self.registered_tools[tool_id]
         timeout_seconds = timeout_seconds or (tool_def.timeout_ms or 30000) / 1000.0
@@ -447,7 +448,8 @@ class AdvancedToolOrchestrator:
                         timeout_seconds,
                         execution_id,
                     )
-                raise RuntimeError(f"Circuit breaker open for tool {tool_id}")
+                msg = f"Circuit breaker open for tool {tool_id}"
+                raise RuntimeError(msg)
 
             # Execute tool with timeout
             if tool_def.executor:
@@ -457,7 +459,7 @@ class AdvancedToolOrchestrator:
             else:
                 result = await self._mock_tool_execution(tool_def, input_data)
 
-            end_time = datetime.now()
+            end_time = datetime.now(tz=datetime.timezone.utc)
             duration_ms = (end_time - start_time).total_seconds() * 1000
 
             # Track success in circuit breaker
@@ -482,7 +484,7 @@ class AdvancedToolOrchestrator:
             return execution_result
 
         except TimeoutError:
-            end_time = datetime.now()
+            end_time = datetime.now(tz=datetime.timezone.utc)
             duration_ms = (end_time - start_time).total_seconds() * 1000
 
             logger.warning(f"Tool {tool_id} execution timed out")
@@ -507,17 +509,17 @@ class AdvancedToolOrchestrator:
             )
 
         except Exception as e:
-            end_time = datetime.now()
+            end_time = datetime.now(tz=datetime.timezone.utc)
             duration_ms = (end_time - start_time).total_seconds() * 1000
 
             # Track failure in circuit breaker
             if circuit_breaker:
                 try:
                     await circuit_breaker.call(lambda: (_ for _ in ()).throw(e))
-                except:
-                    pass  # Expected to fail
+                except Exception:  # nosec # Expected to fail for circuit breaker testing
+                    pass
 
-            logger.error(f"Tool {tool_id} execution failed: {e}")
+            logger.exception("Tool {tool_id} execution failed")
 
             # Try fallback if available
             if fallback_enabled and tool_def.fallback_tools:
@@ -547,7 +549,7 @@ class AdvancedToolOrchestrator:
         total_tools = len(self.registered_tools)
         healthy_tools = sum(
             1
-            for tool_id in self.registered_tools.keys()
+            for tool_id in self.registered_tools
             if not (
                 self.circuit_breakers.get(tool_id, CircuitBreakerPattern()).is_open()
             )
@@ -557,7 +559,7 @@ class AdvancedToolOrchestrator:
         recent_executions = [
             result
             for result in self.execution_history
-            if result.start_time > datetime.now() - timedelta(hours=1)
+            if result.start_time > datetime.now(tz=UTC) - timedelta(hours=1)
         ]
 
         avg_success_rate = (
@@ -878,7 +880,7 @@ class AdvancedToolOrchestrator:
         self, node: ToolChainNode, execution_state: dict[str, Any]
     ) -> dict[str, Any]:
         """Execute a single node in the tool chain."""
-        node.start_time = datetime.now()
+        node.start_time = datetime.now(tz=UTC)
         node.status = "running"
 
         try:
@@ -898,7 +900,7 @@ class AdvancedToolOrchestrator:
                 node.tool_id, input_data, fallback_enabled=True
             )
 
-            node.end_time = datetime.now()
+            node.end_time = datetime.now(tz=UTC)
             node.result = result.result
 
             if result.success:
@@ -920,12 +922,12 @@ class AdvancedToolOrchestrator:
             return result.result or {"error": result.error}
 
         except Exception as e:
-            node.end_time = datetime.now()
+            node.end_time = datetime.now(tz=UTC)
             node.status = "failed"
             node.error = str(e)
             execution_state["failed_nodes"].add(node.node_id)
 
-            logger.error(f"Node {node.node_id} execution failed: {e}")
+            logger.exception("Node {node.node_id} execution failed")
 
             return {"error": str(e)}
 
