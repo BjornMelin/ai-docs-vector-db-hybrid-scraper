@@ -4,15 +4,16 @@ This test module provides thorough coverage of the agentic core functionality,
 focusing on behavior validation rather than implementation details.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from src.services.agents.core import (
+    PYDANTIC_AI_AVAILABLE,
     AgentState,
     BaseAgent,
     BaseAgentDependencies,
     create_agent_dependencies,
-    PYDANTIC_AI_AVAILABLE,
 )
 
 

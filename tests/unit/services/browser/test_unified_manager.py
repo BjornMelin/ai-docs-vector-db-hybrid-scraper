@@ -47,8 +47,7 @@ def mock_automation_router():
 @pytest.fixture
 async def unified_manager(mock_config):
     """Create UnifiedBrowserManager instance for testing."""
-    manager = UnifiedBrowserManager(mock_config)
-    return manager
+    return UnifiedBrowserManager(mock_config)
 
 
 class TestUnifiedBrowserManagerInitialization:

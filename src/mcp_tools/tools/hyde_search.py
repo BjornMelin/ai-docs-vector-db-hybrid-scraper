@@ -7,6 +7,7 @@ adaptive query enhancement for improved semantic search results.
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -37,9 +38,9 @@ def register_tools(mcp, client_manager: ClientManager):
         limit: int = 10,
         hyde_documents: int = 3,
         generation_strategy: str = "adaptive",
-        filters: Optional[Dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform HyDE search by generating hypothetical documents and using their embeddings.
 
         Implements HyDE (Hypothetical Document Embeddings) with autonomous document
@@ -108,7 +109,7 @@ def register_tools(mcp, client_manager: ClientManager):
             search_metadata = []
 
             for i, (doc, embedding) in enumerate(
-                zip(hypothetical_docs["documents"], embeddings)
+                zip(hypothetical_docs["documents"], embeddings, strict=False)
             ):
                 search_result = await qdrant_service.search(
                     collection_name=collection_name,
@@ -204,9 +205,9 @@ def register_tools(mcp, client_manager: ClientManager):
         limit: int = 10,
         auto_optimize: bool = True,
         quality_threshold: float = 0.7,
-        filters: Optional[Dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform adaptive HyDE search with ML-powered optimization.
 
         Automatically adjusts HyDE parameters based on query characteristics
@@ -338,7 +339,7 @@ def register_tools(mcp, client_manager: ClientManager):
         expansion_factor: int = 3,
         diversity_weight: float = 0.3,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate expanded queries using HyDE document generation.
 
         Uses HyDE's hypothetical document generation to create diverse
@@ -424,7 +425,7 @@ def register_tools(mcp, client_manager: ClientManager):
             }
 
     @mcp.tool()
-    async def get_hyde_capabilities() -> Dict[str, Any]:
+    async def get_hyde_capabilities() -> dict[str, Any]:
         """Get HyDE search capabilities and configuration options.
 
         Returns:
@@ -484,7 +485,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
 async def _generate_hypothetical_documents(
     llm_client, query: str, count: int, strategy: str, ctx
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate hypothetical documents using LLM."""
     try:
         # Prepare generation prompt based on strategy
@@ -590,9 +591,9 @@ async def _fallback_search(
     query: str,
     collection_name: str,
     limit: int,
-    filters: Optional[Dict],
+    filters: dict | None,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Perform fallback search when HyDE generation fails."""
     try:
         # Generate embedding for original query
@@ -630,8 +631,8 @@ async def _fallback_search(
 
 
 async def _fuse_hyde_results(
-    all_results: List[Dict], hypothetical_docs: List[Dict], limit: int, ctx
-) -> Dict[str, Any]:
+    all_results: list[dict], hypothetical_docs: list[dict], limit: int, ctx
+) -> dict[str, Any]:
     """Fuse results from multiple HyDE document searches."""
     # Group results by document ID
     document_scores = {}
@@ -688,7 +689,7 @@ async def _fuse_hyde_results(
     }
 
 
-def _calculate_fusion_confidence(results: List[Dict], num_hyde_docs: int) -> float:
+def _calculate_fusion_confidence(results: list[dict], num_hyde_docs: int) -> float:
     """Calculate confidence in HyDE fusion results."""
     if not results:
         return 0.0
@@ -712,8 +713,8 @@ def _calculate_fusion_confidence(results: List[Dict], num_hyde_docs: int) -> flo
 
 
 def _calculate_hyde_metrics(
-    hypothetical_docs: Dict, search_metadata: List[Dict], fused_results: Dict
-) -> Dict[str, Any]:
+    hypothetical_docs: dict, search_metadata: list[dict], fused_results: dict
+) -> dict[str, Any]:
     """Calculate HyDE-specific metrics."""
     docs = hypothetical_docs["documents"]
 
@@ -732,8 +733,8 @@ def _calculate_hyde_metrics(
 
 
 async def _generate_hyde_optimization_insights(
-    query: str, hypothetical_docs: Dict, fused_results: Dict, ctx
-) -> Dict[str, Any]:
+    query: str, hypothetical_docs: dict, fused_results: dict, ctx
+) -> dict[str, Any]:
     """Generate optimization insights for HyDE search."""
     docs = hypothetical_docs["documents"]
     avg_quality = sum(doc["quality_score"] for doc in docs) / len(docs)
@@ -776,7 +777,7 @@ async def _generate_hyde_optimization_insights(
     return insights
 
 
-def _calculate_variance(values: List[float]) -> float:
+def _calculate_variance(values: list[float]) -> float:
     """Calculate variance of a list of values."""
     if not values:
         return 0.0
@@ -784,7 +785,7 @@ def _calculate_variance(values: List[float]) -> float:
     return sum((x - mean) ** 2 for x in values) / len(values)
 
 
-async def _analyze_query_for_hyde(query: str, ctx) -> Dict[str, Any]:
+async def _analyze_query_for_hyde(query: str, ctx) -> dict[str, Any]:
     """Analyze query characteristics for optimal HyDE parameters."""
     words = query.split()
 
@@ -801,7 +802,7 @@ async def _analyze_query_for_hyde(query: str, ctx) -> Dict[str, Any]:
     }
 
 
-def _detect_domain_indicators(query: str) -> List[str]:
+def _detect_domain_indicators(query: str) -> list[str]:
     """Detect domain-specific indicators in query."""
     technical_terms = [
         "algorithm",
@@ -832,19 +833,18 @@ def _classify_question_type(query: str) -> str:
 
     if any(word in query_lower for word in ["how", "implement", "build", "create"]):
         return "procedural"
-    elif any(word in query_lower for word in ["what", "define", "explain", "describe"]):
+    if any(word in query_lower for word in ["what", "define", "explain", "describe"]):
         return "definitional"
-    elif any(word in query_lower for word in ["why", "reason", "cause", "purpose"]):
+    if any(word in query_lower for word in ["why", "reason", "cause", "purpose"]):
         return "causal"
-    elif any(word in query_lower for word in ["compare", "difference", "vs", "versus"]):
+    if any(word in query_lower for word in ["compare", "difference", "vs", "versus"]):
         return "comparative"
-    else:
-        return "informational"
+    return "informational"
 
 
 async def _select_optimal_hyde_parameters(
-    query_analysis: Dict, auto_optimize: bool, quality_threshold: float, ctx
-) -> Dict[str, Any]:
+    query_analysis: dict, auto_optimize: bool, quality_threshold: float, ctx
+) -> dict[str, Any]:
     """Select optimal HyDE parameters based on query analysis."""
     params = {
         "hyde_documents": 3,
@@ -877,8 +877,8 @@ async def _select_optimal_hyde_parameters(
 
 
 async def _adjust_iteration_parameters(
-    optimal_params: Dict, iteration: int, best_result: Optional[Dict], ctx
-) -> Dict[str, Any]:
+    optimal_params: dict, iteration: int, best_result: dict | None, ctx
+) -> dict[str, Any]:
     """Adjust parameters for each iteration."""
     params = optimal_params.copy()
 
@@ -902,7 +902,7 @@ async def _adjust_iteration_parameters(
 
 async def _generate_expansion_documents(
     llm_client, query: str, expansion_factor: int, diversity_weight: float, ctx
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate documents for query expansion."""
     # Use HyDE document generation with emphasis on diversity
     return await _generate_hypothetical_documents(
@@ -911,8 +911,8 @@ async def _generate_expansion_documents(
 
 
 async def _extract_expansion_queries(
-    expansion_docs: List[Dict], original_query: str, ctx
-) -> List[Dict[str, Any]]:
+    expansion_docs: list[dict], original_query: str, ctx
+) -> list[dict[str, Any]]:
     """Extract expanded queries from hypothetical documents."""
     expanded_queries = []
 
@@ -964,8 +964,8 @@ async def _extract_expansion_queries(
 
 
 def _calculate_expansion_metrics(
-    original_query: str, expanded_queries: List[Dict], expansion_docs: List[Dict]
-) -> Dict[str, Any]:
+    original_query: str, expanded_queries: list[dict], expansion_docs: list[dict]
+) -> dict[str, Any]:
     """Calculate metrics for query expansion."""
     return {
         "expansion_count": len(expanded_queries),

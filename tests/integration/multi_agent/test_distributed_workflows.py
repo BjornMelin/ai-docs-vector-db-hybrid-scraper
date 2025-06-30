@@ -118,7 +118,8 @@ class WorkflowOrchestrator:
                 )
 
                 if not ready_nodes:
-                    raise RuntimeError("Circular dependency or deadlock detected")
+                    msg = "Circular dependency or deadlock detected"
+                    raise RuntimeError(msg)
 
                 # Execute ready nodes in parallel
                 node_tasks = []
@@ -182,7 +183,8 @@ class WorkflowOrchestrator:
             # Find suitable agent for the node
             agent_id = self._select_agent_for_node(node)
             if not agent_id:
-                raise RuntimeError(f"No suitable agent found for node {node.node_id}")
+                msg = f"No suitable agent found for node {node.node_id}"
+                raise RuntimeError(msg)
 
             agent_info = self.agent_pool[agent_id]
             agent = agent_info["agent"]
@@ -543,7 +545,8 @@ class TestDistributedWorkflowExecution:
 
         async def failing_orchestrate(task, constraints, deps):
             if "fail_task" in task:
-                raise Exception("Simulated agent failure")
+                msg = "Simulated agent failure"
+                raise Exception(msg)
             return await original_orchestrate(task, constraints, deps)
 
         unreliable_agent.orchestrate = failing_orchestrate
@@ -766,7 +769,7 @@ class TestDistributedWorkflowExecution:
 
         workflow = DistributedWorkflow(
             workflow_id="load_balance_001",
-            nodes=parallel_tasks + [aggregation_task],
+            nodes=[*parallel_tasks, aggregation_task],
             global_constraints={"load_balancing": True},
         )
 
@@ -881,7 +884,8 @@ class TestAutonomousCapabilities:
             nonlocal call_count
             call_count += 1
             if call_count > 1:  # Fail after first successful call
-                raise Exception("Primary agent failure - triggering self-healing")
+                msg = "Primary agent failure - triggering self-healing"
+                raise Exception(msg)
             return await original_orchestrate(task, constraints, deps)
 
         primary_agent.orchestrate = failing_primary_orchestrate
@@ -1206,7 +1210,8 @@ class TestAutonomousCapabilities:
             try:
                 if node.constraints.get("will_fail"):
                     # Simulate failure
-                    raise Exception("Simulated critical failure")
+                    msg = "Simulated critical failure"
+                    raise Exception(msg)
 
                 return await original_execute_node(node, workflow, deps)
 

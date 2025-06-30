@@ -11,7 +11,6 @@ from src.architecture.modes import (
     SIMPLE_MODE_CONFIG,
     ApplicationMode,
     detect_mode_from_environment,
-    get_current_mode,
     get_enabled_services,
     get_feature_setting,
     get_mode_config,
@@ -171,7 +170,7 @@ class TestFeatureFlags:
         """Test feature flag auto-detects mode when config not provided."""
         with patch("src.architecture.features.get_mode_config") as mock_get_config:
             mock_get_config.return_value = ENTERPRISE_MODE_CONFIG
-            feature_flag = FeatureFlag()
+            _feature_flag = FeatureFlag()
             mock_get_config.assert_called_once()
 
     def test_feature_flag_mode_detection(self):
@@ -316,11 +315,10 @@ class TestServiceFactory:
 
         factory.register_service("test_service", SimpleService, EnterpriseService)
 
-        assert "test_service" in factory._service_registry
-        assert factory._service_registry["test_service"]["simple"] == SimpleService
-        assert (
-            factory._service_registry["test_service"]["enterprise"] == EnterpriseService
-        )
+        assert factory.is_service_registered("test_service")
+        implementations = factory.get_registered_service_implementations("test_service")
+        assert implementations["simple"] == SimpleService
+        assert implementations["enterprise"] == EnterpriseService
 
     def test_universal_service_registration(self):
         """Test universal service registration."""
@@ -331,13 +329,12 @@ class TestServiceFactory:
 
         factory.register_universal_service("universal_service", UniversalService)
 
-        assert (
-            factory._service_registry["universal_service"]["simple"] == UniversalService
+        assert factory.is_service_registered("universal_service")
+        implementations = factory.get_registered_service_implementations(
+            "universal_service"
         )
-        assert (
-            factory._service_registry["universal_service"]["enterprise"]
-            == UniversalService
-        )
+        assert implementations["simple"] == UniversalService
+        assert implementations["enterprise"] == UniversalService
 
     def test_service_availability_check(self):
         """Test service availability checking."""
@@ -351,7 +348,7 @@ class TestServiceFactory:
 
         # Create a copy of enabled services to avoid mutating the global config
         original_services = factory.mode_config.enabled_services.copy()
-        factory.mode_config.enabled_services = original_services + ["test_service"]
+        factory.mode_config.enabled_services = [*original_services, "test_service"]
 
         assert factory.is_service_available("test_service") is True
         assert factory.is_service_available("nonexistent_service") is False
@@ -372,7 +369,8 @@ class TestServiceFactory:
 
         # Create a copy and add test services to avoid mutating the global config
         original_services = factory.mode_config.enabled_services.copy()
-        factory.mode_config.enabled_services = original_services + [
+        factory.mode_config.enabled_services = [
+            *original_services,
             "service1",
             "service2",
         ]
@@ -395,7 +393,7 @@ class TestServiceFactory:
 
         # Create a copy and add test service to avoid mutating the global config
         original_services = factory.mode_config.enabled_services.copy()
-        factory.mode_config.enabled_services = original_services + ["test_service"]
+        factory.mode_config.enabled_services = [*original_services, "test_service"]
 
         status = factory.get_service_status("test_service")
 

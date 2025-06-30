@@ -63,12 +63,12 @@ class TestStressLoad:
             nonlocal breaking_point
 
             stats = env.stats
-            _total_requests = stats._total._total_num_requests
-            _total_failures = stats._total._total_num_failures
+            _total_requests = stats.total._total_num_requests
+            _total_failures = stats.total._total_num_failures
 
             if _total_requests > 0:
                 error_rate = (_total_failures / _total_requests) * 100
-                avg_response_time = stats._total.avg_response_time
+                avg_response_time = stats.total.avg_response_time
 
                 current_users = env.runner.user_count if env.runner else 0
 
@@ -77,7 +77,7 @@ class TestStressLoad:
                         "users": current_users,
                         "error_rate": error_rate,
                         "avg_response_time": avg_response_time,
-                        "throughput": stats._total.current_rps,
+                        "throughput": stats.total.current_rps,
                     }
                 )
 
@@ -87,7 +87,7 @@ class TestStressLoad:
                 ):
                     breaking_point = current_users
                     logger.warning(
-                        f"Breaking point detected at {current_users} users"
+                        "Breaking point detected at %s users", current_users
                     )  # TODO: Convert f-string to logging format
 
         # Run stress test
@@ -158,7 +158,7 @@ class TestStressLoad:
 
         # Verify resource handling
         assert (
-            resource_metrics["timeout_errors"] < result.metrics._total_requests * 0.5
+            resource_metrics["timeout_errors"] < result.metrics.total_requests * 0.5
         ), "Too many timeout errors"
         assert not resource_metrics["connection_pool_exhaustion"], (
             "Connection pool exhausted - need better pooling"
@@ -210,7 +210,7 @@ class TestStressLoad:
             except Exception as e:
                 # Check if failure is cascading
                 logger.warning(
-                    f"Service failure: {e}"
+                    "Service failure: %s", e
                 )  # TODO: Convert f-string to logging format
             else:
                 await services.call_service("embedding")

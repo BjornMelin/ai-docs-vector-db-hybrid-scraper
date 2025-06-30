@@ -14,6 +14,7 @@ while maintaining full backward compatibility for existing code.
 # Import everything from the unified settings system
 from .settings import *
 
+
 # Legacy aliases for backward compatibility during transition
 UnifiedConfig = Config
 
@@ -135,85 +136,71 @@ class DeploymentTier:
 class TierCapability:
     """Mock tier capability for backward compatibility."""
 
-    pass
 
 
 class TierConfiguration:
     """Mock tier configuration for backward compatibility."""
 
-    pass
 
 
 class TierManager:
     """Mock tier manager for backward compatibility."""
 
-    pass
 
 
 class ConfigError(Exception):
     """Configuration error."""
 
-    pass
 
 
 class ConfigFileWatchError(ConfigError):
     """Configuration file watch error."""
 
-    pass
 
 
 class ConfigLoadError(ConfigError):
     """Configuration load error."""
 
-    pass
 
 
 class ConfigReloadError(ConfigError):
     """Configuration reload error."""
 
-    pass
 
 
 class ConfigValidationError(ConfigError):
     """Configuration validation error."""
 
-    pass
 
 
 class ErrorContext:
     """Mock error context for backward compatibility."""
 
-    pass
 
 
 class GracefulDegradationHandler:
     """Mock graceful degradation handler for backward compatibility."""
 
-    pass
 
 
 class RetryableConfigOperation:
     """Mock retryable config operation for backward compatibility."""
 
-    pass
 
 
 class SafeConfigLoader:
     """Mock safe config loader for backward compatibility."""
 
-    pass
 
 
 class ConfigManager:
     """Mock config manager for backward compatibility."""
 
-    pass
 
 
 class ConfigMigrator:
     """Mock config migrator for backward compatibility."""
 
-    pass
 
 
 # Mock functions for backward compatibility
@@ -234,7 +221,6 @@ def is_feature_enabled(feature: str) -> bool:
 
 def async_error_context(*args, **kwargs):
     """Mock async error context."""
-    pass
 
 
 def create_and_load_config_async():
@@ -259,7 +245,6 @@ def get_config_manager():
 
 def set_config_manager(manager):
     """Mock config manager setter."""
-    pass
 
 
 def get_degradation_handler():
@@ -269,12 +254,10 @@ def get_degradation_handler():
 
 def handle_validation_error(*args, **kwargs):
     """Mock validation error handler."""
-    pass
 
 
 def retry_config_operation(*args, **kwargs):
     """Mock retry operation."""
-    pass
 
 
 # Update __all__ to include everything for full backward compatibility

@@ -80,7 +80,7 @@ class ContractTestRunner:
             msg = "Test session not properly started/ended"
             raise ValueError(msg)
 
-        _total_time = (self.end_time - self.start_time)._total_seconds() * 1000
+        _total_time = (self.end_time - self.start_time).total_seconds() * 1000
 
         # Count results by type
         passed = sum(1 for r in self.results if r.result == ContractTestResult.PASSED)
@@ -116,7 +116,7 @@ class ContractTestRunner:
         """Save test report to file."""
         report_data = {
             "metadata": {
-                "_total_tests": report._total_tests,
+                "_total_tests": len(report.test_results),
                 "passed_tests": report.passed_tests,
                 "failed_tests": report.failed_tests,
                 "skipped_tests": report.skipped_tests,
@@ -224,7 +224,7 @@ class TestContractRunner:
         # Generate report
         report = runner.generate_report()
 
-        assert report._total_tests == 2
+        assert len(report.test_results) == 2
         assert report.passed_tests == 1
         assert report.failed_tests == 1
         assert report.skipped_tests == 0
@@ -273,7 +273,7 @@ class TestContractRunner:
         # Load and verify report
         loaded_report = runner.load_report(output_path)
 
-        assert loaded_report._total_tests == report._total_tests
+        assert len(loaded_report.test_results) == len(report.test_results)
         assert loaded_report.passed_tests == report.passed_tests
         assert loaded_report.summary == report.summary
         assert len(loaded_report.test_results) == len(report.test_results)
@@ -320,7 +320,7 @@ class TestContractRunner:
         report = runner.generate_report()
 
         # Verify report statistics
-        assert report._total_tests == 5
+        assert len(report.test_results) == 5
         assert report.passed_tests == 3  # Even indices
         assert report.failed_tests == 2  # Odd indices
         assert len(report.summary["contract_types"]) == 5
@@ -426,7 +426,7 @@ class TestContractRunner:
             valid_data, "search_result"
         )
 
-        exec_time = (datetime.now(tz=UTC) - start_time)._total_seconds() * 1000
+        exec_time = (datetime.now(tz=UTC) - start_time).total_seconds() * 1000
 
         schema_result = ContractValidationResult(
             test_name="json_schema_integration_test",
@@ -454,7 +454,7 @@ class TestContractRunner:
             "/api/search", "GET", params={"q": "test query", "limit": 10}
         )
 
-        exec_time = (datetime.now(tz=UTC) - start_time)._total_seconds() * 1000
+        exec_time = (datetime.now(tz=UTC) - start_time).total_seconds() * 1000
 
         api_result = ContractValidationResult(
             test_name="api_contract_integration_test",
@@ -475,7 +475,7 @@ class TestContractRunner:
         report = runner.generate_report()
 
         # Verify integration test results
-        assert report._total_tests == 2
+        assert len(report.test_results) == 2
         assert report.passed_tests == 2
         assert report.failed_tests == 0
 

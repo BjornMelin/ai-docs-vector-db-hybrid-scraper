@@ -127,7 +127,6 @@ class ModernAITestingUtils:
         }
 
     @staticmethod
-    @respx.mock
     def setup_openai_embedding_mock(respx_mock, embedding_dim: int = 1536):
         """set up realistic OpenAI embeddings API mock.
 

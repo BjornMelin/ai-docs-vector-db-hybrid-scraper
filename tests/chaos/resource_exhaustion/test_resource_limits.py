@@ -223,7 +223,7 @@ class TestResourceExhaustion:
         return ResourceExhaustionSimulator()
 
     async def test_memory_exhaustion_scenario(
-        self, resource_simulator, _fault_injector
+        self, resource_simulator, fault_injector
     ):
         """Test system behavior under memory exhaustion."""
         # Monitor initial memory state

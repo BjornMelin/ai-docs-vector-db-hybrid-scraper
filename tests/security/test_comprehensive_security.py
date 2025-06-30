@@ -17,6 +17,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.config.security import SecurityConfig
+from src.services.security import AISecurityValidator
 from src.services.security.integration import setup_application_security
 from src.services.security.monitoring import SecurityMonitor
 from src.services.security.rate_limiter import DistributedRateLimiter

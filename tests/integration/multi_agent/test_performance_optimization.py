@@ -209,7 +209,7 @@ class PerformanceOptimizer:
         success_results = [r["success"] for r in results]
         latencies = [r["latency_ms"] for r in results]
 
-        optimized_metrics = PerformanceMetrics(
+        return PerformanceMetrics(
             operation_name=f"optimized_{scenario.scenario_id}_parallel",
             start_time=start_time,
             end_time=end_time,
@@ -226,8 +226,6 @@ class PerformanceOptimizer:
             if len(latencies) > 5
             else (latencies[0] if latencies else 0),
         )
-
-        return optimized_metrics
 
     async def _hierarchical_optimized_execution(
         self,

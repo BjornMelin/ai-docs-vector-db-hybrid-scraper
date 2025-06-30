@@ -280,7 +280,7 @@ class TestRecoveryValidation:
         return RecoveryOrchestrator()
 
     async def test_service_failure_recovery(
-        self, system_monitor, recovery_orchestrator, _resilience_validator
+        self, system_monitor, recovery_orchestrator, resilience_validator
     ):
         """Test recovery from service failures."""
         # Capture baseline
@@ -665,7 +665,7 @@ class TestRecoveryValidation:
         assert final_state.performance_metrics["throughput"] > 0  # Still functional
 
     async def test_recovery_time_objectives(
-        self, _system_monitor, recovery_orchestrator
+        self, system_monitor, recovery_orchestrator
     ):
         """Test recovery time objectives (RTO) compliance."""
 
@@ -730,7 +730,7 @@ class TestRecoveryValidation:
         assert slow_metrics.service_availability_score >= 0.8
 
     async def test_recovery_point_objectives(
-        self, _system_monitor, recovery_orchestrator
+        self, system_monitor, recovery_orchestrator
     ):
         """Test recovery point objectives (RPO) compliance."""
 
@@ -797,7 +797,7 @@ class TestRecoveryValidation:
         assert lenient_metrics.data_consistency_score >= 0.9  # 90%+ of data
 
     async def test_automated_recovery_validation(
-        self, system_monitor, _recovery_orchestrator
+        self, system_monitor, recovery_orchestrator
     ):
         """Test automated recovery validation and health checks."""
 

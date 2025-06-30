@@ -7,7 +7,7 @@ import pytest
 from hypothesis import given, strategies as st
 from pydantic import ValidationError
 
-from src.config.core import (
+from src.config import (
     BrowserUseConfig,
     Crawl4AIConfig,
     EmbeddingConfig,
@@ -20,7 +20,7 @@ from src.config.core import (
     SQLAlchemyConfig,
     TaskQueueConfig,
 )
-from src.config.enums import EmbeddingModel, EmbeddingProvider, SearchStrategy
+from src.config import EmbeddingModel, EmbeddingProvider, SearchStrategy
 
 
 # Test constants to avoid hardcoded sensitive values

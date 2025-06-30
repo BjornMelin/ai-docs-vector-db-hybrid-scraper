@@ -7,14 +7,18 @@ across the entire AI Documentation Vector DB Hybrid Scraper system.
 from __future__ import annotations
 
 import asyncio
+import shutil
 import tempfile
 import time
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 import pytest
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @dataclass
@@ -265,6 +269,7 @@ def journey_executor():
                         await asyncio.sleep(1.0 * (attempt + 1))  # Exponential backoff
                         continue
                     raise
+            return None
 
         async def _perform_action(
             self,
@@ -885,16 +890,14 @@ def journey_data_manager():
                         await cleanup_func()
                     else:
                         cleanup_func()
-                except Exception as e:
+                except (RuntimeError, ValueError, OSError) as e:
                     print(f"Cleanup error: {e}")
 
             # Remove temp directories
-            import shutil
-
             for temp_dir in self.temp_dirs:
                 try:
                     shutil.rmtree(temp_dir)
-                except Exception as e:
+                except OSError as e:
                     print(f"Failed to remove temp dir {temp_dir}: {e}")
 
             # Clear artifacts

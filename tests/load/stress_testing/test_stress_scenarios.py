@@ -83,12 +83,12 @@ class TestStressScenarios:
                 "level": stress_level["name"],
                 "cpu_factor": stress_level["factor"],
                 "users": stress_level["users"],
-                "_total_requests": result.metrics._total_requests,
+                "_total_requests": result.metrics.total_requests,
                 "successful_requests": result.metrics.successful_requests,
                 "failed_requests": result.metrics.failed_requests,
                 "success_rate": (
                     result.metrics.successful_requests
-                    / max(result.metrics._total_requests, 1)
+                    / max(result.metrics.total_requests, 1)
                 )
                 * 100,
                 "avg_response_time": sum(result.metrics.response_times)
@@ -101,7 +101,7 @@ class TestStressScenarios:
             stress_results.append(stress_result)
 
             # Check if system is still responsive
-            assert result.metrics._total_requests > 0, (
+            assert result.metrics.total_requests > 0, (
                 f"System completely unresponsive at {stress_level['name']}"
             )
 
@@ -205,10 +205,10 @@ class TestStressScenarios:
                 "level": memory_level["name"],
                 "data_size_mb": memory_level["data_mb"],
                 "users": memory_level["users"],
-                "_total_requests": result.metrics._total_requests,
+                "_total_requests": result.metrics.total_requests,
                 "success_rate": (
                     result.metrics.successful_requests
-                    / max(result.metrics._total_requests, 1)
+                    / max(result.metrics.total_requests, 1)
                 )
                 * 100,
                 "avg_response_time": sum(result.metrics.response_times)
@@ -220,7 +220,7 @@ class TestStressScenarios:
 
             memory_results.append(memory_result)
 
-            assert result.metrics._total_requests > 0, (
+            assert result.metrics.total_requests > 0, (
                 f"No requests processed at {memory_level['name']}"
             )
 
@@ -308,12 +308,12 @@ class TestStressScenarios:
                 "test": test["name"],
                 "users": test["users"],
                 "rps": test["rps"],
-                "_total_requests": result.metrics._total_requests,
+                "_total_requests": result.metrics.total_requests,
                 "successful_requests": result.metrics.successful_requests,
                 "connection_failures": connection_stress.connection_failures,
                 "success_rate": (
                     result.metrics.successful_requests
-                    / max(result.metrics._total_requests, 1)
+                    / max(result.metrics.total_requests, 1)
                 )
                 * 100,
                 "_total_failures": result.metrics.failed_requests,
@@ -321,7 +321,7 @@ class TestStressScenarios:
 
             connection_results.append(connection_result)
 
-            assert result.metrics._total_requests > 0, (
+            assert result.metrics.total_requests > 0, (
                 f"No requests attempted at {test['name']}"
             )
 
@@ -426,12 +426,12 @@ class TestStressScenarios:
                 "test": test["name"],
                 "users": test["users"],
                 "duration": test["duration"],
-                "_total_requests": result.metrics._total_requests,
+                "_total_requests": result.metrics.total_requests,
                 "successful_requests": result.metrics.successful_requests,
                 "failed_requests": result.metrics.failed_requests,
                 "success_rate": (
                     result.metrics.successful_requests
-                    / max(result.metrics._total_requests, 1)
+                    / max(result.metrics.total_requests, 1)
                 )
                 * 100,
                 "initial_cascade_level": initial_cascade_level,
@@ -442,7 +442,7 @@ class TestStressScenarios:
 
             cascade_results.append(cascade_result)
 
-            assert result.metrics._total_requests > 0, (
+            assert result.metrics.total_requests > 0, (
                 f"No requests processed during {test['name']}"
             )
 
@@ -541,11 +541,11 @@ class TestStressScenarios:
             phase_result = {
                 "phase": phase["phase"],
                 "users": phase["users"],
-                "_total_requests": result.metrics._total_requests,
+                "_total_requests": result.metrics.total_requests,
                 "successful_requests": result.metrics.successful_requests,
                 "success_rate": (
                     result.metrics.successful_requests
-                    / max(result.metrics._total_requests, 1)
+                    / max(result.metrics.total_requests, 1)
                 )
                 * 100,
                 "initial_resources": initial_resources,
@@ -560,7 +560,7 @@ class TestStressScenarios:
 
             exhaustion_results.append(phase_result)
 
-            assert result.metrics._total_requests > 0, (
+            assert result.metrics.total_requests > 0, (
                 f"No requests processed during {phase['phase']}"
             )
 

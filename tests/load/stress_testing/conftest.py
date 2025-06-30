@@ -144,7 +144,7 @@ class FailureInjector:
         }
 
         logger.warning(
-            f"Injecting network failures: {failure_rate:.1%} rate for {duration}s"
+            "Injecting network failures: %.1f%% rate for %ss", failure_rate * 100, duration
         )
 
         # Simulate network failure
@@ -182,7 +182,7 @@ class FailureInjector:
         }
 
         logger.warning(
-            f"Injecting memory pressure: {pressure_mb}MB for {duration}s"
+            "Injecting memory pressure: %sMB for %ss", pressure_mb, duration
         )  # TODO: Convert f-string to logging format
 
         # Allocate memory to create pressure
@@ -225,7 +225,7 @@ class FailureInjector:
         }
 
         logger.warning(
-            f"Injecting CPU saturation: {cpu_load:.1%} load for {duration}s"
+            "Injecting CPU saturation: %.1f%% load for %ss", cpu_load * 100, duration
         )  # TODO: Convert f-string to logging format
 
         # CPU intensive work
@@ -283,7 +283,7 @@ class FailureInjector:
         }
 
         logger.warning(
-            f"Injecting disk I/O stress: {io_intensity:.1%} intensity for {duration}s"
+            "Injecting disk I/O stress: %.1f%% intensity for %ss", io_intensity * 100, duration
         )
 
         # Create temporary files and perform I/O operations
@@ -405,7 +405,7 @@ class StressTestOrchestrator:
             # Recovery phase
             if scenario.recovery_time > 0:
                 logger.info(
-                    f"Recovery phase for {scenario.name}: {scenario.recovery_time}s"
+                    "Recovery phase for %s: %ss", scenario.name, scenario.recovery_time
                 )
                 await asyncio.sleep(scenario.recovery_time)
 
@@ -438,7 +438,7 @@ class StressTestOrchestrator:
 
         for i, phase in enumerate(phases):
             logger.info(
-                f"Starting stress test phase {i + 1}/{len(phases)}: {phase.get('name', f'Phase {i + 1}')}"
+                "Starting stress test phase %s/%s: %s", i + 1, len(phases), phase.get('name', f'Phase {i + 1}')
             )
 
             phase_start = time.time()
@@ -503,7 +503,7 @@ class StressTestOrchestrator:
 
             phase_results.append(phase_result)
             logger.info(
-                f"Completed stress test phase {i + 1}"
+                "Completed stress test phase %s", i + 1
             )  # TODO: Convert f-string to logging format
 
         return phase_results
@@ -653,7 +653,7 @@ def stress_test_environment():
     # Log system information
     logger.info("Setting up stress testing environment")
     logger.info(
-        f"System: {psutil.cpu_count()} CPUs, {psutil.virtual_memory()._total / (1024**3):.2f} GB RAM"
+        "System: %s CPUs, %s GB RAM", psutil.cpu_count(), psutil.virtual_memory()._total / (1024**3):.2f
     )
 
     # Check resource limits
@@ -661,13 +661,13 @@ def stress_test_environment():
         try:
             fd_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
             logger.info(
-                f"File descriptor limit: {fd_limit[0]} (soft), {fd_limit[1]} (hard)"
+                "File descriptor limit: %s (soft), %s (hard)", fd_limit[0], fd_limit[1]
             )
 
             mem_limit = resource.getrlimit(resource.RLIMIT_AS)
             if mem_limit[0] != resource.RLIM_INFINITY:
                 logger.info(
-                    f"Memory limit: {mem_limit[0] / (1024**3):.2f} GB"
+                    "Memory limit: %s GB", mem_limit[0] / (1024**3):.2f
                 )  # TODO: Convert f-string to logging format
             else:
                 logger.info("Memory limit: unlimited")

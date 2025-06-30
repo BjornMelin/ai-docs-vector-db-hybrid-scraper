@@ -179,7 +179,7 @@ class TestNetworkPartitions:
 
         return simulator
 
-    async def test_simple_network_partition(self, network_simulator, _fault_injector):
+    async def test_simple_network_partition(self, network_simulator, fault_injector):
         """Test basic network partition scenario."""
         # Verify initial connectivity
         assert await network_simulator.can_communicate("node_1", "node_3")
@@ -452,7 +452,7 @@ class TestNetworkPartitions:
         assert minority_write["successful_writes"] < minority_write["quorum_required"]
 
     async def test_network_partition_detection(
-        self, network_simulator, _fault_injector
+        self, network_simulator, fault_injector
     ):
         """Test network partition detection mechanisms."""
 

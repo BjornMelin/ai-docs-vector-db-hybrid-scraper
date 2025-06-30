@@ -875,14 +875,13 @@ class TestEventDrivenArchitecture:
     @pytest.fixture
     async def event_driven_services(self):
         """Setup event-driven architecture services."""
-        services = {
+        return {
             "event_bus": AsyncMock(),
             "document_processor": AsyncMock(),
             "index_updater": AsyncMock(),
             "cache_invalidator": AsyncMock(),
             "metrics_collector": AsyncMock(),
         }
-        return services
 
     @pytest.mark.asyncio
     async def test_document_ingestion_event_flow(self, event_driven_services):

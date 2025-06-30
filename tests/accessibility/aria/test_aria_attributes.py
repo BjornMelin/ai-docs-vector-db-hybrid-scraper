@@ -67,7 +67,7 @@ class TestAriaAttributeCompliance:
         # Comprehensive ARIA properties and states
         aria_properties_html = """
         <!-- Labeling properties -->
-        <button aria-label="Close dialog">×</button>
+        <button aria-label="Close dialog">x</button>
         <input type="text" aria-labelledby="username-label">
         <label id="username-label">Username</label>
         <input type="password" aria-describedby="password-help">
@@ -935,7 +935,7 @@ class TestAriaAttributeCompliance:
             ),
         ],
     )
-    def test_role_attribute_requirements(self, required_attrs, optional_attrs):
+    def test_role_attribute_requirements(self, role, required_attrs, optional_attrs):
         """Test that ARIA roles have required and appropriate optional attributes."""
         # This test documents the attribute requirements for different roles
         # In a real implementation, this would validate actual HTML

@@ -4,9 +4,10 @@ This test module provides thorough coverage of the MCP services functionality,
 focusing on service initialization, tool registration, and error handling.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from typing import Any, Dict, List
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # Import the MCP service modules individually to avoid import issues
 from src.mcp_services.analytics_service import AnalyticsService

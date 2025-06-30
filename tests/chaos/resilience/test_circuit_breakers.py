@@ -146,7 +146,7 @@ class TestCircuitBreakers:
         )
 
     async def test_circuit_breaker_state_transitions(
-        self, circuit_breaker_config, _fault_injector
+        self, circuit_breaker_config, fault_injector
     ):
         """Test circuit breaker state transitions."""
         circuit_breaker = CircuitBreaker(circuit_breaker_config)

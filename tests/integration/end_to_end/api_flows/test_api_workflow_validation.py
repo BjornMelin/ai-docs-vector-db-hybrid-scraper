@@ -184,17 +184,16 @@ class TestAPIWorkflowValidation:
                     limit = int(query_params.get("limit", 10))
 
                     # Generate mock search results
-                    results = []
-                    for i in range(min(limit, 5)):
-                        results.append(
-                            {
-                                "id": f"result_{i}",
-                                "title": f"Search Result {i + 1} for '{query}'",
-                                "content": f"Content snippet for {query} result {i + 1}",
-                                "score": 0.95 - (i * 0.1),
-                                "source_url": f"https://example.com/result_{i}",
-                            }
-                        )
+                    results = [
+                        {
+                            "id": f"result_{i}",
+                            "title": f"Search Result {i + 1} for '{query}'",
+                            "content": f"Content snippet for {query} result {i + 1}",
+                            "score": 0.95 - (i * 0.1),
+                            "source_url": f"https://example.com/result_{i}",
+                        }
+                        for i in range(min(limit, 5))
+                    ]
 
                     return {
                         **base_response,
@@ -298,7 +297,7 @@ class TestAPIWorkflowValidation:
             )
 
             assert "access_token" in login_response, "Login should return access token"
-            assert login_response["token_type"] == "bearer", (
+            assert login_response["token_type"] == "bearer", (  # noqa: S105
                 "Token type should be bearer"
             )
 
@@ -703,7 +702,7 @@ class TestAPIWorkflowValidation:
                         }
                     )
 
-                except Exception as e:
+                except (httpx.HTTPError, ValueError, KeyError) as e:
                     # Request failed
                     error_test_results.append(
                         {
@@ -930,7 +929,7 @@ class TestAPIWorkflowValidation:
                             "success": True,
                         }
                     )
-                except Exception as e:
+                except (httpx.HTTPError, ValueError, KeyError) as e:
                     rate_test_results.append(
                         {
                             "request_index": i,

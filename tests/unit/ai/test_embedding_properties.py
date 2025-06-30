@@ -4,6 +4,7 @@ This module demonstrates modern property-based testing for AI/ML systems using
 Hypothesis, focusing on embedding operations and vector similarity.
 """
 
+import numpy as np
 import pytest
 from hypothesis import HealthCheck, assume, given, settings, strategies as st
 
@@ -28,8 +29,6 @@ class TestEmbeddingProperties:
         )
 
         # Property: No invalid values
-        import numpy as np
-
         arr = np.array(embedding)
         assert not np.any(np.isnan(arr)), "No NaN values allowed"
         assert not np.any(np.isinf(arr)), "No infinite values allowed"
@@ -95,8 +94,6 @@ class TestEmbeddingProperties:
 
         # We expect some variation in similarities (not all identical)
         if len(similarities) > 1:
-            import numpy as np
-
             similarity_std = np.std(similarities)
             # Allow for some cases where embeddings might be similar by chance
             # but generally expect some variation
@@ -116,11 +113,10 @@ class TestEmbeddingProperties:
         self, base_embedding: list[float], noise_scale: float
     ):
         """Test that adding noise decreases similarity predictably."""
-        import numpy as np
-
         # Create noisy version
         base_arr = np.array(base_embedding)
-        noise = np.random.normal(0, noise_scale, len(base_embedding))
+        rng = np.random.default_rng(42)  # Use recommended random generator
+        noise = rng.normal(0, noise_scale, len(base_embedding))
         noisy_embedding = base_arr + noise
 
         # Normalize both (common in practice)
@@ -225,9 +221,9 @@ class TestEmbeddingProperties:
     def test_mock_embedding_response_properties(self, dimension: int, batch_size: int):
         """Test properties of mock embedding responses."""
         # Generate mock response
-        query_vector = ModernAITestingUtils.generate_mock_embeddings(dimension, 1)[0]
+        _query_vector = ModernAITestingUtils.generate_mock_embeddings(dimension, 1)[0]
         response = ModernAITestingUtils.create_mock_qdrant_response(
-            query_vector, batch_size
+            _query_vector, batch_size
         )
 
         # Property: Response structure is correct

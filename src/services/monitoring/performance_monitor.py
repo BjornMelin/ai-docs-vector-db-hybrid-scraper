@@ -361,10 +361,9 @@ class RealTimePerformanceMonitor:
 
         if diff_percent > 10:
             return "increasing"
-        elif diff_percent < -10:
+        if diff_percent < -10:
             return "decreasing"
-        else:
-            return "stable"
+        return "stable"
 
     def _get_active_connections(self) -> int:
         """Get number of active connections (placeholder).

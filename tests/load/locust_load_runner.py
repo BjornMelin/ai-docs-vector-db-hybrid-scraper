@@ -392,9 +392,7 @@ class VectorDBUser(HttpUser):
     def on_stop(self):
         """Cleanup user session."""
         session_duration = time.time() - self.start_time
-        logger.info(
-            f"User session completed. Duration: {session_duration:.2f}s"
-        )  # TODO: Convert f-string to logging format
+        logger.info("User session completed. Duration: %.2fs", session_duration)
         logger.info("Search operations")
         logger.info("Embedding operations")
 
@@ -684,10 +682,10 @@ def save_load_test_report(summary: dict[str, Any], environment: Environment):
         },
         "performance_summary": summary,
         "locust_stats": {
-            "_total_requests": environment.stats._total.num_requests,
-            "_total_failures": environment.stats._total.num_failures,
-            "average_response_time": environment.stats._total.avg_response_time,
-            "requests_per_second": environment.stats._total.current_rps,
+            "_total_requests": environment.stats.total.num_requests,
+            "_total_failures": environment.stats.total.num_failures,
+            "average_response_time": environment.stats.total.avg_response_time,
+            "requests_per_second": environment.stats.total.current_rps,
         }
         if environment.stats
         else {},
@@ -697,7 +695,7 @@ def save_load_test_report(summary: dict[str, Any], environment: Environment):
         with report_file.open("w") as f:
             json.dump(full_report, f, indent=2)
         logger.info(
-            f"Load test report saved to {report_file}"
+            "Load test report saved to %s", report_file
         )  # TODO: Convert f-string to logging format
     except Exception:
         logger.exception("Failed to save load test report")

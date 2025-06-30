@@ -231,6 +231,34 @@ class ModeAwareServiceFactory:
             "mode": self.mode.value,
         }
 
+    def is_service_registered(self, name: str) -> bool:
+        """Check if a service is registered.
+
+        Args:
+            name: Service name
+
+        Returns:
+            True if service is registered
+        """
+        return name in self._service_registry
+
+    def get_registered_service_implementations(self, name: str) -> dict[str, type[ServiceProtocol]]:
+        """Get registered implementations for a service.
+
+        Args:
+            name: Service name
+
+        Returns:
+            Dictionary mapping mode names to implementation classes
+
+        Raises:
+            ServiceNotFoundError: If service not registered
+        """
+        if name not in self._service_registry:
+            raise ServiceNotFoundError(f"Service '{name}' not registered")
+        
+        return self._service_registry[name].copy()
+
     async def cleanup_all_services(self) -> None:
         """Clean up all initialized services."""
         for name, service in self._service_instances.items():

@@ -248,8 +248,7 @@ def cli_command_tester():
 
         def test_command_version(self, command):
             """Test command version output."""
-            result = self.runner.invoke(command, ["--version"])
-            return result
+            return self.runner.invoke(command, ["--version"])
 
         def test_command_with_args(self, command, args, expected_exit_code=0):
             """Test command with specific arguments."""

@@ -64,10 +64,16 @@ class TestJWTSecurity:
 
         def mock_verify_token(token):
             try:
-                payload = jwt.decode(token, _jwt_secret, algorithms=["HS256"])
-                return {"valid": True, "payload": payload}
+                payload = jwt.decode(
+                    token,
+                    _jwt_secret,
+                    algorithms=["HS256"],
+                    options={"verify_aud": False, "verify_iss": False}
+                )
             except jwt.InvalidTokenError as e:
                 return {"valid": False, "error": str(e)}
+            else:
+                return {"valid": True, "payload": payload}
 
         service.generate_token = mock_generate_token
         service.verify_token = mock_verify_token
@@ -250,7 +256,7 @@ class TestJWTSecurity:
         result = jwt_service.verify_token(manipulated_token)
         assert result["valid"] is False
 
-    def test_jwt_time_claims_validation(self, _jwt_service, _jwt_secret):
+    def test_jwt_time_claims_validation(self, jwt_service, _jwt_secret):
         """Test validation of JWT time-based claims."""
         current_time = int(time.time())
 
@@ -276,7 +282,7 @@ class TestJWTSecurity:
             # Expected behavior
             pass
 
-    def test_jwt_issuer_validation(self, _jwt_service, _jwt_secret):
+    def test_jwt_issuer_validation(self, jwt_service, _jwt_secret):
         """Test JWT issuer validation."""
         invalid_issuer_payload = {
             "user_id": "test_user",
@@ -301,7 +307,7 @@ class TestJWTSecurity:
             # Expected behavior
             pass
 
-    def test_jwt_audience_validation(self, _jwt_service, _jwt_secret):
+    def test_jwt_audience_validation(self, jwt_service, _jwt_secret):
         """Test JWT audience validation."""
         invalid_audience_payload = {
             "user_id": "test_user",

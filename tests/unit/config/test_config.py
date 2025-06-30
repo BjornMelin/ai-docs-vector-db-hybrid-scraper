@@ -25,7 +25,7 @@ from src.config import (
     reset_config,
     set_config,
 )
-from src.config.enums import (
+from src.config import (
     ChunkingStrategy,
     CrawlProvider,
     EmbeddingProvider,

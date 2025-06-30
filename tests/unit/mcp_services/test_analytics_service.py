@@ -84,17 +84,19 @@ class TestAnalyticsService:
         """Test service initialization with client manager."""
         service = AnalyticsService()
 
-        with patch.object(
-            service, "_initialize_observability_integration", new_callable=AsyncMock
-        ) as mock_obs_init:
-            with patch.object(
+        with (
+            patch.object(
+                service, "_initialize_observability_integration", new_callable=AsyncMock
+            ) as mock_obs_init,
+            patch.object(
                 service, "_register_analytics_tools", new_callable=AsyncMock
-            ) as mock_register:
-                await service.initialize(mock_client_manager)
+            ) as mock_register,
+        ):
+            await service.initialize(mock_client_manager)
 
-                assert service.client_manager == mock_client_manager
-                mock_obs_init.assert_called_once()
-                mock_register.assert_called_once()
+            assert service.client_manager == mock_client_manager
+            mock_obs_init.assert_called_once()
+            mock_register.assert_called_once()
 
     async def test_initialize_logs_success_message(self, mock_client_manager, caplog):
         """Test that initialization logs success message with agentic observability."""
@@ -123,22 +125,24 @@ class TestAnalyticsService:
         mock_correlation_manager = Mock()
         mock_performance_monitor = Mock()
 
-        with patch.multiple(
-            "src.mcp_services.analytics_service",
-            get_ai_tracker=Mock(return_value=mock_ai_tracker),
-            get_correlation_manager=Mock(return_value=mock_correlation_manager),
-            get_performance_monitor=Mock(return_value=mock_performance_monitor),
+        with (
+            patch.multiple(
+                "src.mcp_services.analytics_service",
+                get_ai_tracker=Mock(return_value=mock_ai_tracker),
+                get_correlation_manager=Mock(return_value=mock_correlation_manager),
+                get_performance_monitor=Mock(return_value=mock_performance_monitor),
+            ),
+            caplog.at_level(logging.INFO),
         ):
-            with caplog.at_level(logging.INFO):
-                await service._initialize_observability_integration()
+            await service._initialize_observability_integration()
 
-                assert service.ai_tracker == mock_ai_tracker
-                assert service.correlation_manager == mock_correlation_manager
-                assert service.performance_monitor == mock_performance_monitor
-                assert (
-                    "Integrated with existing enterprise observability infrastructure"
-                    in caplog.text
-                )
+            assert service.ai_tracker == mock_ai_tracker
+            assert service.correlation_manager == mock_correlation_manager
+            assert service.performance_monitor == mock_performance_monitor
+            assert (
+                "Integrated with existing enterprise observability infrastructure"
+                in caplog.text
+            )
 
     async def test_register_analytics_tools_raises_error_when_not_initialized(self):
         """Test that tool registration raises error when service not initialized."""
@@ -161,36 +165,38 @@ class TestAnalyticsService:
             "agentic_rag": Mock(),
         }
 
-        for tool_name, mock_tool in mock_tools.items():
+        for mock_tool in mock_tools.values():
             mock_tool.register_tools = Mock()
 
         # Patch the tool imports and enhanced tools registration
-        with patch.multiple(
-            "src.mcp_services.analytics_service",
-            analytics=mock_tools["analytics"],
-            query_processing=mock_tools["query_processing"],
-            agentic_rag=mock_tools["agentic_rag"],
-        ):
-            with patch.object(
+        with (
+            patch.multiple(
+                "src.mcp_services.analytics_service",
+                analytics=mock_tools["analytics"],
+                query_processing=mock_tools["query_processing"],
+                agentic_rag=mock_tools["agentic_rag"],
+            ),
+            patch.object(
                 service,
                 "_register_enhanced_observability_tools",
                 new_callable=AsyncMock,
-            ) as mock_enhanced:
-                await service._register_analytics_tools()
+            ) as mock_enhanced,
+        ):
+            await service._register_analytics_tools()
 
-                # Verify all core tools were registered
-                mock_tools["analytics"].register_tools.assert_called_once_with(
-                    service.mcp, mock_client_manager
-                )
-                mock_tools["query_processing"].register_tools.assert_called_once_with(
-                    service.mcp, mock_client_manager
-                )
-                mock_tools["agentic_rag"].register_tools.assert_called_once_with(
-                    service.mcp, mock_client_manager
-                )
+            # Verify all core tools were registered
+            mock_tools["analytics"].register_tools.assert_called_once_with(
+                service.mcp, mock_client_manager
+            )
+            mock_tools["query_processing"].register_tools.assert_called_once_with(
+                service.mcp, mock_client_manager
+            )
+            mock_tools["agentic_rag"].register_tools.assert_called_once_with(
+                service.mcp, mock_client_manager
+            )
 
-                # Verify enhanced tools were registered
-                mock_enhanced.assert_called_once()
+            # Verify enhanced tools were registered
+            mock_enhanced.assert_called_once()
 
     async def test_register_analytics_tools_logs_success_message(
         self, mock_client_manager, caplog
@@ -670,25 +676,27 @@ class TestAnalyticsServiceErrorHandling:
         """Test that multiple initialization calls are handled safely."""
         service = AnalyticsService()
 
-        with patch.object(
-            service, "_initialize_observability_integration", new_callable=AsyncMock
-        ) as mock_obs_init:
-            with patch.object(
+        with (
+            patch.object(
+                service, "_initialize_observability_integration", new_callable=AsyncMock
+            ) as mock_obs_init,
+            patch.object(
                 service, "_register_analytics_tools", new_callable=AsyncMock
-            ) as mock_register:
-                # First initialization
-                await service.initialize(mock_client_manager)
-                first_obs_calls = mock_obs_init.call_count
-                first_register_calls = mock_register.call_count
+            ) as mock_register,
+        ):
+            # First initialization
+            await service.initialize(mock_client_manager)
+            first_obs_calls = mock_obs_init.call_count
+            first_register_calls = mock_register.call_count
 
-                # Second initialization
-                await service.initialize(mock_client_manager)
-                second_obs_calls = mock_obs_init.call_count
-                second_register_calls = mock_register.call_count
+            # Second initialization
+            await service.initialize(mock_client_manager)
+            second_obs_calls = mock_obs_init.call_count
+            second_register_calls = mock_register.call_count
 
-                # Should handle multiple calls gracefully
-                assert second_obs_calls >= first_obs_calls
-                assert second_register_calls >= first_register_calls
+            # Should handle multiple calls gracefully
+            assert second_obs_calls >= first_obs_calls
+            assert second_register_calls >= first_register_calls
 
 
 class TestAnalyticsServicePerformanceAndIntegration:
@@ -702,13 +710,13 @@ class TestAnalyticsServicePerformanceAndIntegration:
 
         start_time = time.time()
 
-        with patch.object(
-            service, "_initialize_observability_integration", new_callable=AsyncMock
+        with (
+            patch.object(
+                service, "_initialize_observability_integration", new_callable=AsyncMock
+            ),
+            patch.object(service, "_register_analytics_tools", new_callable=AsyncMock),
         ):
-            with patch.object(
-                service, "_register_analytics_tools", new_callable=AsyncMock
-            ):
-                await service.initialize(mock_client_manager)
+            await service.initialize(mock_client_manager)
 
         end_time = time.time()
 
@@ -747,17 +755,17 @@ class TestAnalyticsServicePerformanceAndIntegration:
             await service.initialize(mock_client_manager)
             return await service.get_service_info()
 
-        with patch.object(
-            service, "_initialize_observability_integration", new_callable=AsyncMock
+        with (
+            patch.object(
+                service, "_initialize_observability_integration", new_callable=AsyncMock
+            ),
+            patch.object(service, "_register_analytics_tools", new_callable=AsyncMock),
         ):
-            with patch.object(
-                service, "_register_analytics_tools", new_callable=AsyncMock
-            ):
-                # Run multiple concurrent operations
-                tasks = [concurrent_operation() for _ in range(5)]
-                results = await asyncio.gather(*tasks, return_exceptions=True)
+            # Run multiple concurrent operations
+            tasks = [concurrent_operation() for _ in range(5)]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
 
-                # All operations should succeed
-                for result in results:
-                    assert not isinstance(result, Exception)
-                    assert result["service"] == "analytics"
+            # All operations should succeed
+            for result in results:
+                assert not isinstance(result, Exception)
+                assert result["service"] == "analytics"

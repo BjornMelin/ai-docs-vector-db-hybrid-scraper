@@ -94,7 +94,7 @@ class TestSearchService:
             "web_search": Mock(),
         }
 
-        for tool_name, mock_tool in mock_tools.items():
+        for mock_tool in mock_tools.values():
             mock_tool.register_tools = Mock()
 
         # Patch the tool imports
@@ -109,7 +109,7 @@ class TestSearchService:
             await service._register_search_tools()
 
             # Verify all tools were registered
-            for tool_name, mock_tool in mock_tools.items():
+            for mock_tool in mock_tools.values():
                 mock_tool.register_tools.assert_called_once_with(
                     service.mcp, mock_client_manager
                 )
@@ -122,21 +122,23 @@ class TestSearchService:
         service.client_manager = mock_client_manager
 
         # Mock tool modules
-        with patch.multiple(
-            "src.mcp_services.search_service",
-            hybrid_search=Mock(register_tools=Mock()),
-            hyde_search=Mock(register_tools=Mock()),
-            multi_stage_search=Mock(register_tools=Mock()),
-            search_with_reranking=Mock(register_tools=Mock()),
-            web_search=Mock(register_tools=Mock()),
+        with (
+            patch.multiple(
+                "src.mcp_services.search_service",
+                hybrid_search=Mock(register_tools=Mock()),
+                hyde_search=Mock(register_tools=Mock()),
+                multi_stage_search=Mock(register_tools=Mock()),
+                search_with_reranking=Mock(register_tools=Mock()),
+                web_search=Mock(register_tools=Mock()),
+            ),
+            caplog.at_level(logging.INFO),
         ):
-            with caplog.at_level(logging.INFO):
-                await service._register_search_tools()
+            await service._register_search_tools()
 
-                assert (
-                    "Registered search tools with autonomous web search capabilities"
-                    in caplog.text
-                )
+            assert (
+                "Registered search tools with autonomous web search capabilities"
+                in caplog.text
+            )
 
     def test_get_mcp_server_returns_configured_instance(self):
         """Test that get_mcp_server returns the configured FastMCP instance."""

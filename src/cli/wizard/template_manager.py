@@ -12,7 +12,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
-from src.config.core import Config
+from src.config import Config
 
 
 console = Console()

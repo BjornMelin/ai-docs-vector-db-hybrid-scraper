@@ -376,6 +376,7 @@ unfixable = [
     "ARG",     # Skip unused argument rules for fixtures
     "B904",    # Allow raise without from in tests
     "TRY401",  # Allow simple error logging in tests
+    "PT019",   # Allow fixtures as parameters (false positives in pytest)
 ]
 
 # Example files - demonstration code

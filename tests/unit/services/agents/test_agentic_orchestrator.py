@@ -244,7 +244,7 @@ class TestToolDiscoveryAndSelection:
         assert "content_analysis" in tools
 
         # Verify tool metadata structure
-        for tool_name, tool_info in tools.items():
+        for tool_info in tools.values():
             assert "capabilities" in tool_info
             assert "performance" in tool_info
             assert "description" in tool_info
@@ -493,7 +493,8 @@ class TestAutonomousOrchestration:
         # Mock mixed success/failure
         async def mock_execute_tool(tool_name, context, deps):
             if tool_name == "failing_tool":
-                raise Exception("Tool execution failed")
+                msg = "Tool execution failed"
+                raise Exception(msg)
             return {
                 "tool": tool_name,
                 "result": f"{tool_name} result",
@@ -1216,13 +1217,11 @@ class TestPydanticAIIntegration:
     async def test_real_pydantic_ai_orchestration(self):
         """Test orchestration with real Pydantic-AI agent."""
         # This would test with actual Pydantic-AI when installed
-        pass
 
     @pytest.mark.asyncio
     async def test_real_tool_registration(self):
         """Test actual tool registration with Pydantic-AI."""
         # This would test tool registration when Pydantic-AI is available
-        pass
 
 
 # Performance benchmarks

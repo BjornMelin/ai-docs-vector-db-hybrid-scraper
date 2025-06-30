@@ -33,8 +33,7 @@ def analytics_dashboard(mock_config):
     with patch(
         "src.services.analytics.search_dashboard.get_config", return_value=mock_config
     ):
-        dashboard = SearchAnalyticsDashboard()
-        return dashboard
+        return SearchAnalyticsDashboard()
 
 
 @pytest.fixture

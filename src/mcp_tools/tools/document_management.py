@@ -8,6 +8,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from uuid import uuid4
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -34,10 +35,10 @@ def register_tools(mcp, client_manager: ClientManager):
     @mcp.tool()
     async def create_document_workspace(
         workspace_name: str,
-        collections: List[str],
-        configuration: Optional[Dict[str, Any]] = None,
+        collections: list[str],
+        configuration: dict[str, Any] | None = None,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create a managed document workspace with collections and configuration.
 
         Implements autonomous document organization with intelligent defaults
@@ -130,9 +131,9 @@ def register_tools(mcp, client_manager: ClientManager):
     async def manage_document_lifecycle(
         collection_name: str,
         lifecycle_action: str,
-        filters: Optional[Dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Manage document lifecycle with autonomous policies.
 
         Implements intelligent document lifecycle management including
@@ -223,9 +224,9 @@ def register_tools(mcp, client_manager: ClientManager):
     async def intelligent_document_organization(
         collection_name: str,
         organization_strategy: str = "semantic",
-        parameters: Optional[Dict[str, Any]] = None,
+        parameters: dict[str, Any] | None = None,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Intelligently organize documents using ML-powered strategies.
 
         Implements autonomous document organization with semantic clustering,
@@ -325,8 +326,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def get_workspace_analytics(
-        workspace_name: Optional[str] = None, ctx: Context = None
-    ) -> Dict[str, Any]:
+        workspace_name: str | None = None, ctx: Context = None
+    ) -> dict[str, Any]:
         """Get comprehensive analytics for document workspaces.
 
         Returns:
@@ -422,8 +423,8 @@ def _get_timestamp() -> str:
 
 
 async def _analyze_document_collection(
-    qdrant_service, collection_name: str, filters: Optional[Dict], ctx
-) -> Dict[str, Any]:
+    qdrant_service, collection_name: str, filters: dict | None, ctx
+) -> dict[str, Any]:
     """Analyze document collection health."""
     collection_info = await qdrant_service.get_collection_info(collection_name)
 
@@ -442,8 +443,8 @@ async def _analyze_document_collection(
 
 
 async def _cleanup_documents(
-    qdrant_service, collection_name: str, filters: Optional[Dict], ctx
-) -> Dict[str, Any]:
+    qdrant_service, collection_name: str, filters: dict | None, ctx
+) -> dict[str, Any]:
     """Clean up duplicate or low-quality documents."""
     # Mock cleanup results
     if ctx:
@@ -458,8 +459,8 @@ async def _cleanup_documents(
 
 
 async def _archive_documents(
-    qdrant_service, collection_name: str, filters: Optional[Dict], ctx
-) -> Dict[str, Any]:
+    qdrant_service, collection_name: str, filters: dict | None, ctx
+) -> dict[str, Any]:
     """Archive old or inactive documents."""
     # Mock archive results
     if ctx:
@@ -474,7 +475,7 @@ async def _archive_documents(
 
 async def _optimize_collection(
     qdrant_service, collection_name: str, ctx
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Optimize collection structure and performance."""
     # Mock optimization results
     if ctx:
@@ -489,8 +490,8 @@ async def _optimize_collection(
 
 
 async def _organize_by_semantics(
-    documents: List[Dict], parameters: Optional[Dict], ctx
-) -> Dict[str, Any]:
+    documents: list[dict], parameters: dict | None, ctx
+) -> dict[str, Any]:
     """Organize documents by semantic similarity."""
     # Mock semantic clustering
     return {
@@ -504,8 +505,8 @@ async def _organize_by_semantics(
 
 
 async def _organize_by_topics(
-    documents: List[Dict], parameters: Optional[Dict], ctx
-) -> Dict[str, Any]:
+    documents: list[dict], parameters: dict | None, ctx
+) -> dict[str, Any]:
     """Organize documents by topic modeling."""
     # Mock topic modeling
     return {
@@ -519,8 +520,8 @@ async def _organize_by_topics(
 
 
 async def _organize_by_quality(
-    documents: List[Dict], parameters: Optional[Dict], ctx
-) -> Dict[str, Any]:
+    documents: list[dict], parameters: dict | None, ctx
+) -> dict[str, Any]:
     """Organize documents by quality metrics."""
     # Mock quality-based organization
     return {
@@ -534,8 +535,8 @@ async def _organize_by_quality(
 
 
 async def _organize_by_time(
-    documents: List[Dict], parameters: Optional[Dict], ctx
-) -> Dict[str, Any]:
+    documents: list[dict], parameters: dict | None, ctx
+) -> dict[str, Any]:
     """Organize documents by temporal patterns."""
     # Mock temporal organization
     return {
@@ -549,8 +550,8 @@ async def _organize_by_time(
 
 
 async def _update_document_organization(
-    qdrant_service, collection_name: str, organization_results: Dict, ctx
-) -> Dict[str, Any]:
+    qdrant_service, collection_name: str, organization_results: dict, ctx
+) -> dict[str, Any]:
     """Update document metadata with organization results."""
     # Mock update results
     if ctx:
@@ -564,8 +565,8 @@ async def _update_document_organization(
 
 
 async def _analyze_workspace_health(
-    workspace_data: Dict, qdrant_service, ctx
-) -> Dict[str, Any]:
+    workspace_data: dict, qdrant_service, ctx
+) -> dict[str, Any]:
     """Analyze health of a specific workspace."""
     return {
         "workspace_id": workspace_data.get("workspace_id"),
@@ -584,8 +585,8 @@ async def _analyze_workspace_health(
 
 
 async def _analyze_workspace_collections(
-    workspace: str, collections: List[str], qdrant_service, ctx
-) -> Dict[str, Any]:
+    workspace: str, collections: list[str], qdrant_service, ctx
+) -> dict[str, Any]:
     """Analyze collections for a workspace."""
     return {
         "workspace_name": workspace,
@@ -597,7 +598,7 @@ async def _analyze_workspace_collections(
     }
 
 
-def _calculate_global_health_score(workspace_analytics: Dict) -> float:
+def _calculate_global_health_score(workspace_analytics: dict) -> float:
     """Calculate global health score across all workspaces."""
     if not workspace_analytics:
         return 0.0
@@ -606,7 +607,7 @@ def _calculate_global_health_score(workspace_analytics: Dict) -> float:
     return sum(scores) / len(scores) if scores else 0.0
 
 
-def _generate_autonomous_insights(workspace_analytics: Dict) -> Dict[str, Any]:
+def _generate_autonomous_insights(workspace_analytics: dict) -> dict[str, Any]:
     """Generate autonomous insights from workspace analytics."""
     return {
         "optimization_opportunities": [

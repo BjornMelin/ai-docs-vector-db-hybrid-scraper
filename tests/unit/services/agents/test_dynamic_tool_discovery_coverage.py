@@ -4,17 +4,18 @@ This test module provides thorough coverage of the DynamicToolDiscovery function
 focusing on tool detection, capability analysis, and adaptive discovery mechanisms.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from typing import Any, Dict, List
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+from src.services.agents.core import AgentState, BaseAgentDependencies
 from src.services.agents.dynamic_tool_discovery import (
     DynamicToolDiscovery,
     ToolCapability,
     discover_tools_for_task,
     get_discovery_engine,
 )
-from src.services.agents.core import AgentState, BaseAgentDependencies
 
 
 class TestToolCapability:
@@ -508,7 +509,7 @@ class TestDiscoveryIntegration:
         # All tasks should complete
         assert len(results) == 5
         for result in results:
-            assert isinstance(result, list) or isinstance(result, Exception)
+            assert isinstance(result, list | Exception)
 
     @pytest.mark.asyncio
     async def test_discovery_with_real_tool_registry(self):

@@ -32,8 +32,7 @@ def visualization_engine(mock_config):
         "src.services.analytics.vector_visualization.get_config",
         return_value=mock_config,
     ):
-        engine = VectorVisualizationEngine()
-        return engine
+        return VectorVisualizationEngine()
 
 
 @pytest.fixture
@@ -60,9 +59,7 @@ def sample_embeddings():
     cluster3[:, 1] = np.random.normal(1.0, 0.1, 10)
 
     # Combine all clusters
-    embeddings = np.vstack([cluster1, cluster2, cluster3])
-
-    return embeddings
+    return np.vstack([cluster1, cluster2, cluster3])
 
 
 @pytest.fixture
@@ -299,7 +296,7 @@ class TestVectorVisualizationEngine:
             sample_embeddings
         )  # Some points might not have cluster assignments
         assert all(
-            isinstance(cluster_id, (int, np.integer)) for cluster_id in cluster_ids
+            isinstance(cluster_id, int | np.integer) for cluster_id in cluster_ids
         )
         if cluster_ids:  # Only check min if we have cluster IDs
             assert min(cluster_ids) >= 0

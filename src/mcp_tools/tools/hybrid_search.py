@@ -7,6 +7,7 @@ autonomous optimization, and performance correlation analysis.
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -38,9 +39,9 @@ def register_tools(mcp, client_manager: ClientManager):
         vector_weight: float = 0.7,
         text_weight: float = 0.3,
         fusion_strategy: str = "dbsf",
-        filters: Optional[Dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform hybrid search combining vector similarity and text matching.
 
         Implements DBSF (Distribution-Based Score Fusion) and other advanced
@@ -170,9 +171,9 @@ def register_tools(mcp, client_manager: ClientManager):
         limit: int = 10,
         auto_optimize: bool = True,
         performance_target: str = "balanced",
-        filters: Optional[Dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform adaptive hybrid search with ML-powered parameter optimization.
 
         Automatically selects optimal fusion strategy and weights based on
@@ -255,12 +256,12 @@ def register_tools(mcp, client_manager: ClientManager):
     @mcp.tool()
     async def multi_collection_hybrid_search(
         query: str,
-        collections: List[str],
+        collections: list[str],
         limit: int = 10,
-        collection_weights: Optional[Dict[str, float]] = None,
+        collection_weights: dict[str, float] | None = None,
         fusion_strategy: str = "dbsf",
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform hybrid search across multiple collections with intelligent result fusion.
 
         Implements cross-collection search with weighted fusion and
@@ -368,7 +369,7 @@ def register_tools(mcp, client_manager: ClientManager):
             }
 
     @mcp.tool()
-    async def get_hybrid_search_capabilities() -> Dict[str, Any]:
+    async def get_hybrid_search_capabilities() -> dict[str, Any]:
         """Get hybrid search capabilities and configuration options.
 
         Returns:
@@ -428,9 +429,9 @@ async def _perform_text_search(
     collection_name: str,
     query: str,
     limit: int,
-    filters: Optional[Dict],
+    filters: dict | None,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Perform text-based search using sparse vectors or keyword matching."""
     try:
         # Use sparse vector search if available, otherwise simulate text search
@@ -471,14 +472,14 @@ def _calculate_text_relevance(query: str, content: str) -> float:
 
 
 async def _apply_fusion_strategy(
-    vector_results: Dict,
-    text_results: Dict,
+    vector_results: dict,
+    text_results: dict,
     strategy: str,
     vector_weight: float,
     text_weight: float,
     limit: int,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Apply the specified fusion strategy to combine vector and text results."""
     vector_points = vector_results.get("points", [])
     text_points = text_results.get("points", [])
@@ -503,12 +504,12 @@ async def _apply_fusion_strategy(
 
 
 def _apply_dbsf_fusion(
-    vector_points: List,
-    text_points: List,
+    vector_points: list,
+    text_points: list,
     vector_weight: float,
     text_weight: float,
     limit: int,
-) -> List[Dict]:
+) -> list[dict]:
     """Apply Distribution-Based Score Fusion (DBSF)."""
     # Create combined results with normalized scores
     combined = {}
@@ -566,12 +567,12 @@ def _apply_dbsf_fusion(
 
 
 def _apply_rrf_fusion(
-    vector_points: List,
-    text_points: List,
+    vector_points: list,
+    text_points: list,
     vector_weight: float,
     text_weight: float,
     limit: int,
-) -> List[Dict]:
+) -> list[dict]:
     """Apply Reciprocal Rank Fusion (RRF)."""
     k = 60  # RRF parameter
     combined = {}
@@ -611,12 +612,12 @@ def _apply_rrf_fusion(
 
 
 def _apply_linear_fusion(
-    vector_points: List,
-    text_points: List,
+    vector_points: list,
+    text_points: list,
     vector_weight: float,
     text_weight: float,
     limit: int,
-) -> List[Dict]:
+) -> list[dict]:
     """Apply Linear Weighted Fusion."""
     combined = {}
 
@@ -657,7 +658,7 @@ def _apply_linear_fusion(
     return results
 
 
-def _calculate_std(scores: List[float], mean: float) -> float:
+def _calculate_std(scores: list[float], mean: float) -> float:
     """Calculate standard deviation."""
     if not scores:
         return 1.0
@@ -672,7 +673,7 @@ def _normalize_score(score: float, mean: float, std: float) -> float:
     return (score - mean) / std
 
 
-def _calculate_fusion_confidence(results: List[Dict]) -> float:
+def _calculate_fusion_confidence(results: list[dict]) -> float:
     """Calculate confidence in fusion results."""
     if not results:
         return 0.0
@@ -691,7 +692,7 @@ def _calculate_fusion_confidence(results: List[Dict]) -> float:
 
 def _calculate_search_performance(
     vector_count: int, text_count: int, final_count: int
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Calculate search performance metrics."""
     return {
         "vector_results": vector_count,
@@ -703,8 +704,8 @@ def _calculate_search_performance(
 
 
 async def _generate_optimization_insights(
-    query: str, vector_results: Dict, text_results: Dict, fused_results: Dict, ctx
-) -> Dict[str, Any]:
+    query: str, vector_results: dict, text_results: dict, fused_results: dict, ctx
+) -> dict[str, Any]:
     """Generate autonomous optimization insights."""
     vector_count = len(vector_results.get("points", []))
     text_count = len(text_results.get("points", []))
@@ -745,7 +746,7 @@ async def _generate_optimization_insights(
     return insights
 
 
-async def _analyze_query_characteristics(query: str, ctx) -> Dict[str, Any]:
+async def _analyze_query_characteristics(query: str, ctx) -> dict[str, Any]:
     """Analyze query characteristics for parameter optimization."""
     words = query.split()
 
@@ -762,8 +763,8 @@ async def _analyze_query_characteristics(query: str, ctx) -> Dict[str, Any]:
 
 
 async def _select_optimal_parameters(
-    query_analysis: Dict, performance_target: str, auto_optimize: bool, ctx
-) -> Dict[str, Any]:
+    query_analysis: dict, performance_target: str, auto_optimize: bool, ctx
+) -> dict[str, Any]:
     """Select optimal parameters based on query analysis and performance target."""
     # Default parameters
     params = {
@@ -795,8 +796,8 @@ async def _select_optimal_parameters(
 
 
 async def _apply_cross_collection_fusion(
-    collection_results: Dict, collection_weights: Optional[Dict], limit: int, ctx
-) -> Dict[str, Any]:
+    collection_results: dict, collection_weights: dict | None, limit: int, ctx
+) -> dict[str, Any]:
     """Apply fusion across multiple collection results."""
     all_results = []
 
@@ -830,7 +831,7 @@ async def _apply_cross_collection_fusion(
                     for r in all_results[:limit]
                     if r.get("source_collection") == collection
                 )
-                for collection in collection_results.keys()
+                for collection in collection_results
             },
         },
     }

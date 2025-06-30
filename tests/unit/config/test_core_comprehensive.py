@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.config.core import (
+from src.config import (
     CacheConfig,
     ChunkingConfig,
     Config,
@@ -24,7 +24,7 @@ from src.config.core import (
     reset_config,
     set_config,
 )
-from src.config.enums import (
+from src.config import (
     ChunkingStrategy,
     EmbeddingModel,
     EmbeddingProvider,

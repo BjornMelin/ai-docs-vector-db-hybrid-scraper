@@ -7,6 +7,7 @@ autonomous issue detection, and intelligent self-healing capabilities.
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -36,7 +37,7 @@ def register_tools(mcp, client_manager: ClientManager):
         include_security: bool = True,
         deep_analysis: bool = False,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform comprehensive system health assessment with ML-powered diagnostics.
 
         Implements autonomous health monitoring with intelligent issue detection,
@@ -151,7 +152,7 @@ def register_tools(mcp, client_manager: ClientManager):
         max_healing_actions: int = 5,
         require_confirmation: bool = False,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform autonomous self-healing with intelligent issue resolution.
 
         Implements AI-powered self-healing with autonomous issue detection,
@@ -262,9 +263,9 @@ def register_tools(mcp, client_manager: ClientManager):
         prediction_horizon: str = "24_hours",
         anomaly_detection: bool = True,
         trend_analysis: bool = True,
-        alert_thresholds: Optional[Dict[str, float]] = None,
+        alert_thresholds: dict[str, float] | None = None,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform predictive health monitoring with ML-powered forecasting.
 
         Implements advanced predictive monitoring with anomaly detection,
@@ -367,7 +368,7 @@ def register_tools(mcp, client_manager: ClientManager):
             }
 
     @mcp.tool()
-    async def get_system_health_capabilities() -> Dict[str, Any]:
+    async def get_system_health_capabilities() -> dict[str, Any]:
         """Get system health monitoring capabilities and configuration options.
 
         Returns:
@@ -433,7 +434,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
 async def _assess_core_system_health(
     client_manager: ClientManager, ctx
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Assess core system components health."""
     # Mock core health assessment
     return {
@@ -470,7 +471,7 @@ async def _assess_core_system_health(
     }
 
 
-async def _assess_service_health(assessment_scope: str, ctx) -> Dict[str, Any]:
+async def _assess_service_health(assessment_scope: str, ctx) -> dict[str, Any]:
     """Assess health of individual services."""
     # Mock service health assessment
     return {
@@ -511,7 +512,7 @@ async def _assess_service_health(assessment_scope: str, ctx) -> Dict[str, Any]:
     }
 
 
-async def _assess_infrastructure_health(ctx) -> Dict[str, Any]:
+async def _assess_infrastructure_health(ctx) -> dict[str, Any]:
     """Assess infrastructure and resource health."""
     # Mock infrastructure assessment
     return {
@@ -540,7 +541,7 @@ async def _assess_infrastructure_health(ctx) -> Dict[str, Any]:
     }
 
 
-async def _perform_performance_analysis(deep_analysis: bool, ctx) -> Dict[str, Any]:
+async def _perform_performance_analysis(deep_analysis: bool, ctx) -> dict[str, Any]:
     """Perform detailed performance analysis."""
     performance_data = {
         "query_performance": {
@@ -584,7 +585,7 @@ async def _perform_performance_analysis(deep_analysis: bool, ctx) -> Dict[str, A
     return performance_data
 
 
-async def _perform_security_assessment(ctx) -> Dict[str, Any]:
+async def _perform_security_assessment(ctx) -> dict[str, Any]:
     """Perform security vulnerability assessment."""
     return {
         "security_status": "secure",
@@ -616,8 +617,8 @@ async def _perform_security_assessment(ctx) -> Dict[str, Any]:
 
 
 async def _perform_ml_diagnostics(
-    core_health: Dict, service_health: Dict, infrastructure_health: Dict, ctx
-) -> Dict[str, Any]:
+    core_health: dict, service_health: dict, infrastructure_health: dict, ctx
+) -> dict[str, Any]:
     """Perform ML-powered diagnostics and correlation analysis."""
     return {
         "correlation_analysis": {
@@ -660,13 +661,13 @@ async def _perform_ml_diagnostics(
 
 
 async def _calculate_overall_health_score(
-    core_health: Dict,
-    service_health: Dict,
-    infrastructure_health: Dict,
-    performance_analysis: Dict,
-    security_assessment: Dict,
+    core_health: dict,
+    service_health: dict,
+    infrastructure_health: dict,
+    performance_analysis: dict,
+    security_assessment: dict,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Calculate comprehensive health score."""
     # Weight different components
     weights = {
@@ -710,12 +711,12 @@ async def _calculate_overall_health_score(
 
 
 async def _generate_health_recommendations(
-    core_health: Dict,
-    service_health: Dict,
-    infrastructure_health: Dict,
-    health_score: Dict,
+    core_health: dict,
+    service_health: dict,
+    infrastructure_health: dict,
+    health_score: dict,
     ctx,
-) -> List[str]:
+) -> list[str]:
     """Generate autonomous health recommendations."""
     recommendations = []
 
@@ -765,7 +766,7 @@ def _get_timestamp() -> str:
     return datetime.datetime.now().isoformat()
 
 
-async def _detect_issues_for_healing(healing_scope: str, ctx) -> Dict[str, Any]:
+async def _detect_issues_for_healing(healing_scope: str, ctx) -> dict[str, Any]:
     """Detect issues that require self-healing intervention."""
     # Mock issue detection
     detected_issues = [
@@ -816,8 +817,8 @@ async def _detect_issues_for_healing(healing_scope: str, ctx) -> Dict[str, Any]:
 
 
 async def _perform_root_cause_analysis(
-    detected_issues: List[Dict], ctx
-) -> Dict[str, Any]:
+    detected_issues: list[dict], ctx
+) -> dict[str, Any]:
     """Perform root cause analysis for detected issues."""
     root_causes = {}
 
@@ -868,8 +869,8 @@ async def _perform_root_cause_analysis(
 
 
 async def _generate_healing_plan(
-    root_cause_analysis: Dict, safety_mode: bool, max_actions: int, ctx
-) -> Dict[str, Any]:
+    root_cause_analysis: dict, safety_mode: bool, max_actions: int, ctx
+) -> dict[str, Any]:
     """Generate comprehensive healing plan."""
     planned_actions = []
 
@@ -938,8 +939,8 @@ async def _generate_healing_plan(
 
 
 async def _apply_healing_actions(
-    healing_plan: Dict, safety_mode: bool, ctx
-) -> Dict[str, Any]:
+    healing_plan: dict, safety_mode: bool, ctx
+) -> dict[str, Any]:
     """Apply healing actions with safety validation."""
     applied_actions = []
     failed_actions = []
@@ -998,7 +999,7 @@ async def _apply_healing_actions(
     }
 
 
-async def _apply_single_healing_action(action: Dict, ctx) -> Dict[str, Any]:
+async def _apply_single_healing_action(action: dict, ctx) -> dict[str, Any]:
     """Apply a single healing action."""
     # Mock healing action application
     if ctx:
@@ -1015,7 +1016,7 @@ async def _apply_single_healing_action(action: Dict, ctx) -> Dict[str, Any]:
             ],
             "impact": "cache_hit_rate_improved_to_87%",
         }
-    elif action["action_type"] == "service_restart":
+    if action["action_type"] == "service_restart":
         return {
             "success": True,
             "execution_time_seconds": 30,
@@ -1025,7 +1026,7 @@ async def _apply_single_healing_action(action: Dict, ctx) -> Dict[str, Any]:
             ],
             "impact": "memory_usage_reduced_by_15%",
         }
-    elif action["action_type"] == "configuration_update":
+    if action["action_type"] == "configuration_update":
         return {
             "success": True,
             "execution_time_seconds": 60,
@@ -1035,16 +1036,15 @@ async def _apply_single_healing_action(action: Dict, ctx) -> Dict[str, Any]:
             ],
             "impact": "connection_pool_utilization_reduced_to_70%",
         }
-    else:
-        return {
-            "success": False,
-            "error": f"Unknown action type: {action['action_type']}",
-        }
+    return {
+        "success": False,
+        "error": f"Unknown action type: {action['action_type']}",
+    }
 
 
 async def _validate_healing_effectiveness(
-    detected_issues: List[Dict], healing_results: Dict, ctx
-) -> Dict[str, Any]:
+    detected_issues: list[dict], healing_results: dict, ctx
+) -> dict[str, Any]:
     """Validate the effectiveness of applied healing actions."""
     if not healing_results.get("applied", False):
         return {
@@ -1104,12 +1104,12 @@ async def _validate_healing_effectiveness(
 
 
 async def _generate_healing_insights(
-    issue_detection: Dict,
-    root_cause_analysis: Dict,
-    healing_results: Dict,
-    validation_results: Dict,
+    issue_detection: dict,
+    root_cause_analysis: dict,
+    healing_results: dict,
+    validation_results: dict,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate insights from healing process."""
     return {
         "healing_summary": {
@@ -1143,7 +1143,7 @@ async def _generate_healing_insights(
 
 async def _collect_metrics_baseline(
     client_manager: ClientManager, ctx
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Collect current metrics baseline for predictive monitoring."""
     # Mock metrics collection
     return {
@@ -1169,7 +1169,7 @@ async def _collect_metrics_baseline(
     }
 
 
-async def _perform_anomaly_detection(metrics_baseline: Dict, ctx) -> Dict[str, Any]:
+async def _perform_anomaly_detection(metrics_baseline: dict, ctx) -> dict[str, Any]:
     """Perform ML-powered anomaly detection on metrics."""
     # Mock anomaly detection
     detected_anomalies = [
@@ -1202,8 +1202,8 @@ async def _perform_anomaly_detection(metrics_baseline: Dict, ctx) -> Dict[str, A
 
 
 async def _perform_trend_analysis(
-    metrics_baseline: Dict, prediction_horizon: str, ctx
-) -> Dict[str, Any]:
+    metrics_baseline: dict, prediction_horizon: str, ctx
+) -> dict[str, Any]:
     """Perform trend analysis and forecasting."""
     # Mock trend analysis
     return {
@@ -1239,11 +1239,11 @@ async def _perform_trend_analysis(
 
 
 async def _generate_health_predictions(
-    metrics_baseline: Dict,
+    metrics_baseline: dict,
     prediction_horizon: str,
-    alert_thresholds: Optional[Dict],
+    alert_thresholds: dict | None,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate health predictions for the specified horizon."""
     # Mock health predictions
     predictions = {
@@ -1282,12 +1282,12 @@ async def _generate_health_predictions(
 
 
 async def _calculate_health_risk_assessment(
-    metrics_baseline: Dict,
-    anomaly_results: Dict,
-    trend_results: Dict,
-    health_predictions: Dict,
+    metrics_baseline: dict,
+    anomaly_results: dict,
+    trend_results: dict,
+    health_predictions: dict,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Calculate comprehensive health risk assessment."""
     # Calculate risk scores
     anomaly_risk = len(anomaly_results.get("detected_anomalies", [])) * 0.1
@@ -1329,11 +1329,11 @@ async def _calculate_health_risk_assessment(
 
 
 async def _generate_predictive_alerts(
-    health_predictions: Dict,
-    risk_assessment: Dict,
-    alert_thresholds: Optional[Dict],
+    health_predictions: dict,
+    risk_assessment: dict,
+    alert_thresholds: dict | None,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate predictive alerts based on predictions and risk assessment."""
     alerts = []
 
@@ -1399,12 +1399,12 @@ async def _generate_predictive_alerts(
 
 
 async def _generate_monitoring_insights(
-    metrics_baseline: Dict,
-    anomaly_results: Dict,
-    trend_results: Dict,
-    risk_assessment: Dict,
+    metrics_baseline: dict,
+    anomaly_results: dict,
+    trend_results: dict,
+    risk_assessment: dict,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate insights from monitoring analysis."""
     return {
         "key_insights": [

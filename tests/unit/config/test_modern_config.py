@@ -432,7 +432,7 @@ class TestConfigSyncBehavior:
 
 
 @pytest.mark.parametrize(
-    "mode,expected_crawls",
+    ("mode", "expected_crawls"),
     [
         (ApplicationMode.SIMPLE, 10),
         (ApplicationMode.ENTERPRISE, 25),
@@ -451,7 +451,7 @@ def test_mode_performance_limits(mode, expected_crawls):
 
 
 @pytest.mark.parametrize(
-    "provider,api_key,should_pass",
+    ("provider", "api_key", "should_pass"),
     [
         (EmbeddingProvider.FASTEMBED, None, True),  # FastEmbed doesn't need key
         (EmbeddingProvider.OPENAI, None, False),  # OpenAI needs key

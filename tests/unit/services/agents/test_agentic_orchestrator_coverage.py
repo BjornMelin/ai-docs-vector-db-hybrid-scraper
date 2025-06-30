@@ -4,9 +4,10 @@ This test module provides thorough coverage of the AgenticOrchestrator functiona
 focusing on autonomous decision-making, tool composition, and error handling.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from typing import Any, Dict, List
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from src.services.agents.agentic_orchestrator import (
     AgenticOrchestrator,
@@ -102,7 +103,7 @@ class TestAgenticOrchestrator:
             result = await orchestrator._analyze_query_intent(query, state)
             assert isinstance(result, dict)
             assert "intent" in result
-            assert isinstance(result["confidence"], (int, float))
+            assert isinstance(result["confidence"], int | float)
 
     @pytest.mark.asyncio
     async def test_orchestrator_select_tools(self):
@@ -433,7 +434,7 @@ class TestOrchestratorIntegration:
         # Process queries concurrently
         tasks = [
             orchestrator.process_query(query, state)
-            for query, state in zip(queries, states)
+            for query, state in zip(queries, states, strict=False)
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -441,4 +442,4 @@ class TestOrchestratorIntegration:
         # All queries should complete successfully
         assert len(results) == 3
         for result in results:
-            assert isinstance(result, dict) or isinstance(result, Exception)
+            assert isinstance(result, dict | Exception)

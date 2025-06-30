@@ -68,7 +68,7 @@ class BreakingPointAnalyzer:
         """Add a performance measurement point."""
         self.performance_points.append(point)
         logger.debug(
-            f"Added performance point: {point.users} users, {point.error_rate:.2f}% errors"
+            "Added performance point: %s users, %.2f%% errors", point.users, point.error_rate
         )
 
     def identify_breaking_point(self) -> BreakingPointMetrics:
@@ -241,7 +241,7 @@ class TestBreakingPoints:
         # Run each load step
         for i, step in enumerate(load_steps):
             logger.info(
-                f"Running load step {i + 1}/{len(load_steps)}: {step['users']} users"
+                "Running load step %s/%s: %s users", i + 1, len(load_steps), step['users']
             )
 
             # Configure step test
@@ -269,7 +269,7 @@ class TestBreakingPoints:
                 # Calculate metrics for this step
                 error_rate = (
                     result.metrics.failed_requests
-                    / max(result.metrics._total_requests, 1)
+                    / max(result.metrics.total_requests, 1)
                 ) * 100
                 avg_response_time = (
                     statistics.mean(result.metrics.response_times) * 1000
@@ -299,13 +299,13 @@ class TestBreakingPoints:
                 )
 
                 logger.info(
-                    f"Step {i + 1} completed: {error_rate:.2f}% errors, {avg_response_time:.2f}ms avg response time"
+                    "Step %s completed: %.2f%% errors, %.2fms avg response time", i + 1, error_rate, avg_response_time
                 )
 
                 # Stop if we've clearly hit the breaking point
                 if error_rate > 25 and avg_response_time > 5000:
                     logger.warning(
-                        f"Breaking point reached at step {i + 1}"
+                        "Breaking point reached at step %s", i + 1
                     )  # TODO: Convert f-string to logging format
                     break
 
@@ -345,10 +345,10 @@ class TestBreakingPoints:
         assert breaking_point.graceful_degradation, "System did not degrade gracefully"
 
         logger.info(
-            f"Breaking point identified: {breaking_point.breaking_point_users} users"
+            "Breaking point identified: %s users", breaking_point.breaking_point_users
         )
         logger.info(
-            f"Maximum stable load: {breaking_point.max_stable_users} users"
+            "Maximum stable load: %s users", breaking_point.max_stable_users
         )  # TODO: Convert f-string to logging format
         logger.info("Graceful degradation")
 
@@ -458,7 +458,7 @@ class TestBreakingPoints:
                 # Analyze spike handling
                 error_rate = (
                     result.metrics.failed_requests
-                    / max(result.metrics._total_requests, 1)
+                    / max(result.metrics.total_requests, 1)
                 ) * 100
                 avg_response_time = (
                     statistics.mean(result.metrics.response_times) * 1000
@@ -490,7 +490,7 @@ class TestBreakingPoints:
                 )
 
                 logger.info(
-                    f"Spike {scenario['name']}: {error_rate:.2f}% errors, {avg_response_time:.2f}ms response time"
+                    "Spike %s: %.2f%% errors, %.2fms response time", scenario['name'], error_rate, avg_response_time
                 )
 
             except Exception:
@@ -527,7 +527,7 @@ class TestBreakingPoints:
         assert spike_success_rate > 0.3, "System handled too few spikes"
 
         logger.info(
-            f"Maximum handled spike: {max_handled_spike} users"
+            "Maximum handled spike: %s users", max_handled_spike
         )  # TODO: Convert f-string to logging format
         logger.info("Spike success rate")
 
@@ -630,7 +630,7 @@ class TestBreakingPoints:
 
             # Calculate phase metrics
             error_rate = (
-                result.metrics.failed_requests / max(result.metrics._total_requests, 1)
+                result.metrics.failed_requests / max(result.metrics.total_requests, 1)
             ) * 100
             avg_response_time = (
                 statistics.mean(result.metrics.response_times) * 1000
@@ -724,8 +724,8 @@ class TestBreakingPoints:
         )
         logger.info("Recovery efficiency")
         logger.info(
-            f"Baseline vs Recovery - Errors: {baseline_performance['error_rate']:.2f}% -> {recovery_performance['error_rate']:.2f}%"
+            "Baseline vs Recovery - Errors: %s% -> %s%", baseline_performance['error_rate']:.2f, recovery_performance['error_rate']:.2f
         )
         logger.info(
-            f"Baseline vs Recovery - Response time: {baseline_performance['response_time']:.2f}ms -> {recovery_performance['response_time']:.2f}ms"
+            "Baseline vs Recovery - Response time: %sms -> %sms", baseline_performance['response_time']:.2f, recovery_performance['response_time']:.2f
         )

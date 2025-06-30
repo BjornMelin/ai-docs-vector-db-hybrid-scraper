@@ -7,6 +7,7 @@ adaptive filter selection, and intelligent query enhancement.
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -33,12 +34,12 @@ def register_tools(mcp, client_manager: ClientManager):
     @mcp.tool()
     async def intelligent_filter_optimization(
         query: str,
-        base_filters: Optional[Dict[str, Any]] = None,
+        base_filters: dict[str, Any] | None = None,
         optimization_target: str = "relevance",
         auto_enhance: bool = True,
-        collection_name: Optional[str] = None,
+        collection_name: str | None = None,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform intelligent filter optimization with ML-powered enhancement.
 
         Implements autonomous filter optimization with query analysis,
@@ -154,12 +155,12 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def adaptive_filter_composition(
-        filters: List[Dict[str, Any]],
+        filters: list[dict[str, Any]],
         composition_strategy: str = "intelligent",
-        performance_target: Optional[float] = None,
+        performance_target: float | None = None,
         quality_threshold: float = 0.7,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Compose multiple filters with adaptive optimization strategies.
 
         Implements intelligent filter composition with performance optimization,
@@ -266,12 +267,12 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def dynamic_filter_learning(
-        query_patterns: List[str],
-        result_feedback: List[Dict[str, Any]],
+        query_patterns: list[str],
+        result_feedback: list[dict[str, Any]],
         learning_mode: str = "adaptive",
         update_frequency: str = "real_time",
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Learn and adapt filters based on query patterns and result feedback.
 
         Implements ML-powered filter learning with pattern recognition,
@@ -380,7 +381,7 @@ def register_tools(mcp, client_manager: ClientManager):
             }
 
     @mcp.tool()
-    async def get_filtering_capabilities() -> Dict[str, Any]:
+    async def get_filtering_capabilities() -> dict[str, Any]:
         """Get advanced filtering capabilities and configuration options.
 
         Returns:
@@ -491,7 +492,7 @@ def register_tools(mcp, client_manager: ClientManager):
 # Helper functions
 
 
-async def _analyze_query_for_filtering(query: str, ctx) -> Dict[str, Any]:
+async def _analyze_query_for_filtering(query: str, ctx) -> dict[str, Any]:
     """Analyze query characteristics for optimal filtering."""
     query_words = query.lower().split()
 
@@ -517,32 +518,29 @@ def _classify_query_type(query: str) -> str:
 
     if any(word in query_lower for word in ["how", "implement", "build", "create"]):
         return "procedural"
-    elif any(word in query_lower for word in ["what", "define", "explain", "describe"]):
+    if any(word in query_lower for word in ["what", "define", "explain", "describe"]):
         return "definitional"
-    elif any(word in query_lower for word in ["compare", "difference", "vs", "versus"]):
+    if any(word in query_lower for word in ["compare", "difference", "vs", "versus"]):
         return "comparative"
-    elif any(word in query_lower for word in ["find", "search", "list", "show"]):
+    if any(word in query_lower for word in ["find", "search", "list", "show"]):
         return "exploratory"
-    else:
-        return "informational"
+    return "informational"
 
 
-def _detect_entities(query: str) -> List[str]:
+def _detect_entities(query: str) -> list[str]:
     """Detect named entities and important terms in query."""
     # Simple entity detection (can be enhanced with NLP models)
     entities = []
     words = query.split()
 
     for word in words:
-        if word.istitle() and len(word) > 2:  # Potential proper noun
-            entities.append(word)
-        elif word.upper() == word and len(word) > 2:  # Potential acronym
+        if (word.istitle() and len(word) > 2) or (word.upper() == word and len(word) > 2):  # Potential proper noun
             entities.append(word)
 
     return entities
 
 
-def _detect_temporal_indicators(query: str) -> Dict[str, Any]:
+def _detect_temporal_indicators(query: str) -> dict[str, Any]:
     """Detect temporal indicators in query."""
     query_lower = query.lower()
 
@@ -590,7 +588,7 @@ def _detect_temporal_indicators(query: str) -> Dict[str, Any]:
     return temporal_indicators
 
 
-def _detect_domain_indicators(query: str) -> List[str]:
+def _detect_domain_indicators(query: str) -> list[str]:
     """Detect domain-specific indicators for filtering."""
     query_lower = query.lower()
     domains = []
@@ -618,7 +616,7 @@ def _detect_domain_indicators(query: str) -> List[str]:
     return domains or ["general"]
 
 
-def _assess_filter_potential(query: str) -> Dict[str, float]:
+def _assess_filter_potential(query: str) -> dict[str, float]:
     """Assess filtering potential for different filter types."""
     return {
         "metadata_filtering": 0.7,  # High potential for metadata filtering
@@ -629,7 +627,7 @@ def _assess_filter_potential(query: str) -> Dict[str, float]:
     }
 
 
-def _generate_optimization_hints(query: str) -> List[str]:
+def _generate_optimization_hints(query: str) -> list[str]:
     """Generate optimization hints based on query analysis."""
     hints = []
     query_lower = query.lower()
@@ -651,7 +649,7 @@ def _generate_optimization_hints(query: str) -> List[str]:
 
 async def _analyze_collection_characteristics(
     collection_name: str, client_manager: ClientManager, ctx
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Analyze collection characteristics for context-aware filtering."""
     try:
         # Get collection metadata
@@ -711,12 +709,12 @@ async def _analyze_collection_characteristics(
 
 async def _generate_filter_recommendations(
     query: str,
-    base_filters: Optional[Dict],
-    query_analysis: Dict,
-    collection_analysis: Dict,
+    base_filters: dict | None,
+    query_analysis: dict,
+    collection_analysis: dict,
     optimization_target: str,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate intelligent filter recommendations."""
     recommendations = []
 
@@ -800,8 +798,8 @@ async def _generate_filter_recommendations(
 
 
 async def _apply_autonomous_filter_enhancements(
-    recommendations: Dict, optimization_target: str, ctx
-) -> Dict[str, Any]:
+    recommendations: dict, optimization_target: str, ctx
+) -> dict[str, Any]:
     """Apply autonomous filter enhancements based on recommendations."""
     optimized_filters = {}
     applied_enhancements = []
@@ -834,7 +832,7 @@ async def _apply_autonomous_filter_enhancements(
     }
 
 
-def _optimize_filter_order_for_performance(filters: Dict[str, Any]) -> Dict[str, Any]:
+def _optimize_filter_order_for_performance(filters: dict[str, Any]) -> dict[str, Any]:
     """Optimize filter order for better query performance."""
     # Reorder filters based on selectivity (mock implementation)
     # In practice, this would use actual collection statistics
@@ -863,8 +861,8 @@ def _optimize_filter_order_for_performance(filters: Dict[str, Any]) -> Dict[str,
 
 
 async def _predict_filter_performance(
-    filters: Dict[str, Any], query_analysis: Dict, collection_analysis: Dict, ctx
-) -> Dict[str, Any]:
+    filters: dict[str, Any], query_analysis: dict, collection_analysis: dict, ctx
+) -> dict[str, Any]:
     """Predict performance impact of applied filters."""
     # Mock performance prediction based on filter characteristics
 
@@ -901,12 +899,12 @@ async def _predict_filter_performance(
 
 
 async def _generate_filter_optimization_insights(
-    query_analysis: Dict,
-    recommendations: Dict,
-    enhanced_filters: Dict,
-    performance_prediction: Dict,
+    query_analysis: dict,
+    recommendations: dict,
+    enhanced_filters: dict,
+    performance_prediction: dict,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate insights from filter optimization process."""
     return {
         "optimization_summary": {
@@ -944,7 +942,7 @@ def _get_timestamp() -> str:
     return datetime.datetime.now().isoformat()
 
 
-async def _validate_filter_consistency(filters: List[Dict], ctx) -> Dict[str, Any]:
+async def _validate_filter_consistency(filters: list[dict], ctx) -> dict[str, Any]:
     """Validate consistency and compatibility of filters."""
     validation_issues = []
 
@@ -986,7 +984,7 @@ async def _validate_filter_consistency(filters: List[Dict], ctx) -> Dict[str, An
     }
 
 
-async def _analyze_filter_relationships(filters: List[Dict], ctx) -> Dict[str, Any]:
+async def _analyze_filter_relationships(filters: list[dict], ctx) -> dict[str, Any]:
     """Analyze relationships and dependencies between filters."""
     return {
         "filter_count": len(filters),
@@ -1020,7 +1018,7 @@ async def _analyze_filter_relationships(filters: List[Dict], ctx) -> Dict[str, A
     }
 
 
-def _build_filter_dependency_graph(filters: List[Dict]) -> Dict[str, List[str]]:
+def _build_filter_dependency_graph(filters: list[dict]) -> dict[str, list[str]]:
     """Build dependency graph for filters."""
     # Simple dependency analysis based on field relationships
     dependencies = {}
@@ -1041,11 +1039,11 @@ def _build_filter_dependency_graph(filters: List[Dict]) -> Dict[str, List[str]]:
 
 
 async def _select_optimal_composition_strategy(
-    filter_analysis: Dict,
+    filter_analysis: dict,
     requested_strategy: str,
-    performance_target: Optional[float],
+    performance_target: float | None,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Select optimal strategy for filter composition."""
 
     if requested_strategy == "adaptive":
@@ -1070,8 +1068,8 @@ async def _select_optimal_composition_strategy(
 
 
 async def _apply_filter_composition(
-    filters: List[Dict], strategy: Dict, quality_threshold: float, ctx
-) -> Dict[str, Any]:
+    filters: list[dict], strategy: dict, quality_threshold: float, ctx
+) -> dict[str, Any]:
     """Apply filter composition using selected strategy."""
 
     if strategy["strategy"] == "intelligent":
@@ -1094,8 +1092,8 @@ async def _apply_filter_composition(
 
 
 async def _intelligent_filter_composition(
-    filters: List[Dict], quality_threshold: float, ctx
-) -> Dict[str, Any]:
+    filters: list[dict], quality_threshold: float, ctx
+) -> dict[str, Any]:
     """Apply intelligent ML-powered filter composition."""
     # Mock intelligent composition
     return {
@@ -1108,7 +1106,7 @@ async def _intelligent_filter_composition(
     }
 
 
-async def _union_filter_composition(filters: List[Dict], ctx) -> Dict[str, Any]:
+async def _union_filter_composition(filters: list[dict], ctx) -> dict[str, Any]:
     """Apply union (OR) filter composition."""
     return {
         "filter_type": "union",
@@ -1119,7 +1117,7 @@ async def _union_filter_composition(filters: List[Dict], ctx) -> Dict[str, Any]:
     }
 
 
-async def _intersection_filter_composition(filters: List[Dict], ctx) -> Dict[str, Any]:
+async def _intersection_filter_composition(filters: list[dict], ctx) -> dict[str, Any]:
     """Apply intersection (AND) filter composition."""
     return {
         "filter_type": "intersection",
@@ -1130,7 +1128,7 @@ async def _intersection_filter_composition(filters: List[Dict], ctx) -> Dict[str
     }
 
 
-async def _adaptive_filter_composition_impl(filters: List[Dict], ctx) -> Dict[str, Any]:
+async def _adaptive_filter_composition_impl(filters: list[dict], ctx) -> dict[str, Any]:
     """Apply adaptive filter composition."""
     return {
         "filter_type": "adaptive",
@@ -1141,21 +1139,20 @@ async def _adaptive_filter_composition_impl(filters: List[Dict], ctx) -> Dict[st
     }
 
 
-def _calculate_composition_complexity(composed_filter: Dict) -> str:
+def _calculate_composition_complexity(composed_filter: dict) -> str:
     """Calculate complexity of composed filter."""
     sub_filter_count = len(composed_filter.get("sub_filters", []))
 
     if sub_filter_count <= 2:
         return "low"
-    elif sub_filter_count <= 4:
+    if sub_filter_count <= 4:
         return "medium"
-    else:
-        return "high"
+    return "high"
 
 
 async def _optimize_composed_filter_performance(
-    composed_filters: Dict, performance_target: Optional[float], ctx
-) -> Dict[str, Any]:
+    composed_filters: dict, performance_target: float | None, ctx
+) -> dict[str, Any]:
     """Optimize performance of composed filters."""
 
     optimizations_applied = []
@@ -1182,8 +1179,8 @@ async def _optimize_composed_filter_performance(
 
 
 async def _validate_composition_quality(
-    composed_filters: Dict, quality_threshold: float, filter_analysis: Dict, ctx
-) -> Dict[str, Any]:
+    composed_filters: dict, quality_threshold: float, filter_analysis: dict, ctx
+) -> dict[str, Any]:
     """Validate quality of filter composition."""
 
     # Mock quality validation
@@ -1210,13 +1207,13 @@ async def _validate_composition_quality(
 
 
 async def _generate_composition_insights(
-    filter_analysis: Dict,
-    strategy: Dict,
-    composed_filters: Dict,
-    performance_optimization: Dict,
-    quality_validation: Dict,
+    filter_analysis: dict,
+    strategy: dict,
+    composed_filters: dict,
+    performance_optimization: dict,
+    quality_validation: dict,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate insights from filter composition process."""
     return {
         "composition_summary": {
@@ -1246,8 +1243,8 @@ async def _generate_composition_insights(
 
 
 async def _validate_learning_inputs(
-    query_patterns: List[str], result_feedback: List[Dict], ctx
-) -> Dict[str, Any]:
+    query_patterns: list[str], result_feedback: list[dict], ctx
+) -> dict[str, Any]:
     """Validate inputs for filter learning."""
     validation_issues = []
 
@@ -1276,7 +1273,7 @@ async def _validate_learning_inputs(
     }
 
 
-async def _analyze_query_patterns(query_patterns: List[str], ctx) -> Dict[str, Any]:
+async def _analyze_query_patterns(query_patterns: list[str], ctx) -> dict[str, Any]:
     """Analyze query patterns for common characteristics."""
     pattern_characteristics = []
 
@@ -1321,8 +1318,8 @@ async def _analyze_query_patterns(query_patterns: List[str], ctx) -> Dict[str, A
 
 
 async def _analyze_result_feedback(
-    result_feedback: List[Dict], query_patterns: List[str], ctx
-) -> Dict[str, Any]:
+    result_feedback: list[dict], query_patterns: list[str], ctx
+) -> dict[str, Any]:
     """Analyze result feedback for learning insights."""
     relevance_scores = [fb.get("relevance_score", 0.5) for fb in result_feedback]
     quality_scores = [fb.get("quality_score", 0.5) for fb in result_feedback]
@@ -1357,7 +1354,7 @@ async def _analyze_result_feedback(
     }
 
 
-def _calculate_variance(values: List[float]) -> float:
+def _calculate_variance(values: list[float]) -> float:
     """Calculate variance of values."""
     if not values:
         return 0.0
@@ -1365,7 +1362,7 @@ def _calculate_variance(values: List[float]) -> float:
     return sum((x - mean) ** 2 for x in values) / len(values)
 
 
-def _calculate_correlation(x_values: List[float], y_values: List[float]) -> float:
+def _calculate_correlation(x_values: list[float], y_values: list[float]) -> float:
     """Calculate correlation between two value lists."""
     if not x_values or not y_values or len(x_values) != len(y_values):
         return 0.0
@@ -1374,7 +1371,7 @@ def _calculate_correlation(x_values: List[float], y_values: List[float]) -> floa
     n = len(x_values)
     sum_x = sum(x_values)
     sum_y = sum(y_values)
-    sum_xy = sum(x * y for x, y in zip(x_values, y_values))
+    sum_xy = sum(x * y for x, y in zip(x_values, y_values, strict=False))
     sum_x2 = sum(x * x for x in x_values)
     sum_y2 = sum(y * y for y in y_values)
 
@@ -1385,8 +1382,8 @@ def _calculate_correlation(x_values: List[float], y_values: List[float]) -> floa
 
 
 async def _learn_filter_rules(
-    pattern_analysis: Dict, feedback_analysis: Dict, learning_mode: str, ctx
-) -> List[Dict[str, Any]]:
+    pattern_analysis: dict, feedback_analysis: dict, learning_mode: str, ctx
+) -> list[dict[str, Any]]:
     """Learn filter rules from patterns and feedback."""
     learned_rules = []
 
@@ -1456,8 +1453,8 @@ async def _learn_filter_rules(
 
 
 async def _generate_adaptive_filter_templates(
-    learned_rules: List[Dict], pattern_analysis: Dict, ctx
-) -> List[Dict[str, Any]]:
+    learned_rules: list[dict], pattern_analysis: dict, ctx
+) -> list[dict[str, Any]]:
     """Generate adaptive filter templates from learned rules."""
     templates = []
 
@@ -1476,7 +1473,7 @@ async def _generate_adaptive_filter_templates(
     return templates
 
 
-def _calculate_template_applicability(rule: Dict, pattern_analysis: Dict) -> float:
+def _calculate_template_applicability(rule: dict, pattern_analysis: dict) -> float:
     """Calculate applicability score for a filter template."""
     # Mock applicability calculation
     base_score = rule["confidence"]
@@ -1486,16 +1483,15 @@ def _calculate_template_applicability(rule: Dict, pattern_analysis: Dict) -> flo
             pattern_analysis["total_patterns"], 1
         )
         return base_score * domain_coverage
-    elif rule["rule_type"] == "temporal_filtering":
+    if rule["rule_type"] == "temporal_filtering":
         temporal_coverage = pattern_analysis["temporal_patterns"] / max(
             pattern_analysis["total_patterns"], 1
         )
         return base_score * temporal_coverage
-    else:
-        return base_score * 0.8  # Default applicability
+    return base_score * 0.8  # Default applicability
 
 
-def _extract_template_parameters(filter_config: Dict) -> List[str]:
+def _extract_template_parameters(filter_config: dict) -> list[str]:
     """Extract parameterizable parts of filter configuration."""
     parameters = []
 
@@ -1507,11 +1503,11 @@ def _extract_template_parameters(filter_config: Dict) -> List[str]:
 
 
 async def _validate_learned_filters(
-    filter_templates: List[Dict],
-    query_patterns: List[str],
-    result_feedback: List[Dict],
+    filter_templates: list[dict],
+    query_patterns: list[str],
+    result_feedback: list[dict],
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Validate learned filters using cross-validation."""
     # Mock cross-validation
     validation_scores = []
@@ -1536,8 +1532,8 @@ async def _validate_learned_filters(
 
 
 async def _apply_learning_updates(
-    filter_templates: List[Dict], learned_rules: List[Dict], update_frequency: str, ctx
-) -> Dict[str, Any]:
+    filter_templates: list[dict], learned_rules: list[dict], update_frequency: str, ctx
+) -> dict[str, Any]:
     """Apply learning updates based on frequency setting."""
 
     if update_frequency == "real_time":
@@ -1571,7 +1567,7 @@ def _get_next_update_time(frequency: str) -> str:
 
     if frequency == "real_time":
         return "immediate"
-    elif frequency == "batch":
+    if frequency == "batch":
         # Next batch update in 1 hour
         next_update = now + datetime.timedelta(hours=1)
     else:  # scheduled
@@ -1582,12 +1578,12 @@ def _get_next_update_time(frequency: str) -> str:
 
 
 async def _generate_learning_insights(
-    pattern_analysis: Dict,
-    feedback_analysis: Dict,
-    learned_rules: List[Dict],
-    validation_metrics: Dict,
+    pattern_analysis: dict,
+    feedback_analysis: dict,
+    learned_rules: list[dict],
+    validation_metrics: dict,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate insights from filter learning process."""
     return {
         "learning_summary": {

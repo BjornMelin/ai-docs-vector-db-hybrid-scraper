@@ -5,7 +5,7 @@ circuit breaker patterns, and async service lifecycle management.
 """
 
 import asyncio
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -80,10 +80,8 @@ class TestDependencyLifecycle:
             assert cache_client == mock_instance
 
             # Complete the generator to trigger cleanup
-            try:
+            with suppress(StopAsyncIteration):
                 await cache_generator.__anext__()
-            except StopAsyncIteration:
-                pass
 
             # Verify CacheManager was initialized with correct config
             MockCacheManager.assert_called_once()
@@ -116,10 +114,8 @@ class TestDependencyLifecycle:
             assert embedding_client == mock_instance
 
             # Complete the generator to trigger cleanup
-            try:
+            with suppress(StopAsyncIteration):
                 await embedding_generator.__anext__()
-            except StopAsyncIteration:
-                pass
 
             # Verify EmbeddingManager was initialized correctly
             MockEmbeddingManager.assert_called_once_with(
@@ -153,10 +149,8 @@ class TestDependencyLifecycle:
             assert vector_db_client == mock_instance
 
             # Complete the generator to trigger cleanup
-            try:
+            with suppress(StopAsyncIteration):
                 await vector_db_generator.__anext__()
-            except StopAsyncIteration:
-                pass
 
             # Verify initialization and cleanup
             MockQdrantService.assert_called_once_with(mock_config)
@@ -186,10 +180,8 @@ class TestDependencyLifecycle:
             assert crawling_client == mock_instance
 
             # Complete the generator to trigger cleanup
-            try:
+            with suppress(StopAsyncIteration):
                 await crawling_generator.__anext__()
-            except StopAsyncIteration:
-                pass
 
             # Verify initialization
             MockCrawlManager.assert_called_once_with(
@@ -631,6 +623,7 @@ class TestErrorHandlingPatterns:
                         raise
                     delay = base_delay * (2**attempt)
                     await asyncio.sleep(delay)
+            return None
 
         result = await retry_with_backoff(flaky_service)
         assert result == "success"

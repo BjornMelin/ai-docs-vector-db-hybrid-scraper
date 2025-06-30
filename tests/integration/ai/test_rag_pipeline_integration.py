@@ -5,7 +5,9 @@ demonstrating modern testing patterns with realistic service mocking and
 end-to-end workflow validation.
 """
 
-from typing import Any, Dict
+import asyncio
+import time
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -266,8 +268,6 @@ class TestRAGPipelineIntegration:
         self, mock_services, mock_rag_components
     ):
         """Test RAG pipeline performance characteristics in integration."""
-        import time
-
         embedding_manager = mock_rag_components["embedding_manager"]
         vector_db = mock_rag_components["vector_db"]
         text_generator = mock_rag_components["text_generator"]
@@ -281,9 +281,7 @@ class TestRAGPipelineIntegration:
         query_embedding = await embedding_manager.generate_single(query)
         search_results = await vector_db.search(query_vector=query_embedding, limit=5)
         contexts = [result["payload"]["text"] for result in search_results["result"]]
-        response = await text_generator.generate_response(
-            query=query, contexts=contexts
-        )
+        await text_generator.generate_response(query=query, contexts=contexts)
 
         end_time = time.perf_counter()
         total_latency = end_time - start_time
@@ -301,8 +299,6 @@ class TestRAGPipelineIntegration:
     @integration_test
     async def test_concurrent_rag_requests(self, mock_services, mock_rag_components):
         """Test RAG pipeline under concurrent load."""
-        import asyncio
-
         embedding_manager = mock_rag_components["embedding_manager"]
         vector_db = mock_rag_components["vector_db"]
         text_generator = mock_rag_components["text_generator"]
@@ -315,7 +311,7 @@ class TestRAGPipelineIntegration:
             "Describe natural language processing",
         ]
 
-        async def process_query(query: str) -> Dict[str, Any]:
+        async def process_query(query: str) -> dict[str, Any]:
             """Process a single query through the RAG pipeline."""
             query_embedding = await embedding_manager.generate_single(query)
             search_results = await vector_db.search(

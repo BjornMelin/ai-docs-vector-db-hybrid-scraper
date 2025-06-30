@@ -24,7 +24,7 @@ if src_path not in sys.path:
     sys.path.insert(0, src_path)
 
 try:
-    from dotenv import load_dotenv  # type: ignore
+    from dotenv import load_dotenv  # type: ignore[import-untyped]
 except ModuleNotFoundError:  # pragma: no cover - fallback for offline envs
 
     def load_dotenv(*_args, **__kwargs):
@@ -33,12 +33,12 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for offline envs
 
 
 try:
-    from qdrant_client.models import PointStruct  # type: ignore
+    from qdrant_client.models import PointStruct  # type: ignore[import-untyped]
 except ModuleNotFoundError:  # pragma: no cover - basic fallback
     from dataclasses import dataclass
 
     @dataclass
-    class PointStruct:  # type: ignore
+    class PointStruct:  # type: ignore[misc]
         """Simplified stand-in for qdrant_client.models.PointStruct."""
 
         id: int
@@ -582,7 +582,11 @@ def _check_browser_availability() -> bool:
             shell=False,  # Explicitly disable shell
         )
 
-    except Exception:
+    except (
+        subprocess.TimeoutExpired,
+        subprocess.CalledProcessError,
+        FileNotFoundError,
+    ):
         return False
     else:
         return result.returncode == 0 and "available" in result.stdout
@@ -618,11 +622,11 @@ def mock_multi_level_circuit_breaker():
 
     # Set core attributes
     breaker.state = ClientState.HEALTHY
-    breaker._failure_count = 0
+    breaker._failure_count = 0  # noqa: SLF001
 
     # Add the expected _failure_count property that connection_manager looks for
     # This is a compatibility shim for what appears to be incorrect usage in the real code
-    breaker._failure_count = 0
+    breaker._failure_count = 0  # noqa: SLF001
 
     # Configure async methods with realistic behavior
     async def mock_call(func, *_args, **__kwargs):
@@ -856,11 +860,11 @@ def ai_test_utilities():
             assert len(embedding) == expected_dim, (
                 f"Expected {expected_dim}D, got {len(embedding)}D"
             )
-            assert all(isinstance(x, (int, float)) for x in embedding), (
+            assert all(isinstance(x, int | float) for x in embedding), (
                 "All values must be numeric"
             )
 
-            import math
+            import math  # noqa: PLC0415
 
             assert not any(math.isnan(x) or math.isinf(x) for x in embedding), (
                 "No NaN/Inf values"
@@ -879,7 +883,8 @@ def ai_test_utilities():
         def calculate_cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
             """Calculate cosine similarity between vectors."""
             if len(vec1) != len(vec2):
-                raise ValueError(f"Dimension mismatch: {len(vec1)} vs {len(vec2)}")
+                msg = f"Dimension mismatch: {len(vec1)} vs {len(vec2)}"
+                raise ValueError(msg)
 
             dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=False))
             norm1 = sum(a * a for a in vec1) ** 0.5
@@ -895,7 +900,7 @@ def ai_test_utilities():
             count: int = 10, dim: int = 1536
         ) -> list[list[float]]:
             """Generate deterministic test embeddings."""
-            import random
+            import random  # noqa: PLC0415
 
             embeddings = []
 
@@ -993,7 +998,7 @@ except ImportError:
     # Fallback if Hypothesis not available
     def embedding_strategy(*args, **kwargs):
         """Fallback embedding strategy when Hypothesis not available."""
-        import random
+        import random  # noqa: PLC0415
 
         dim = kwargs.get("max_dim", 384)
         normalized = kwargs.get("normalized", True)
@@ -1009,7 +1014,7 @@ except ImportError:
         """Fallback document strategy when Hypothesis not available."""
         min_length = kwargs.get("min_length", 10)
         max_length = kwargs.get("max_length", 500)
-        import random
+        import random  # noqa: PLC0415
 
         words = [
             "test",

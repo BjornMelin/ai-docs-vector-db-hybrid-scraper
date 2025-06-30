@@ -17,14 +17,14 @@ from hypothesis import given, strategies as st
 from pydantic import ValidationError
 
 # Import auto-detection components
-from src.config.auto_detect import (
+from src.config import (
     AutoDetectedServices,
     AutoDetectionConfig,
     DetectedEnvironment,
     DetectedService,
     EnvironmentDetector,
 )
-from src.config.enums import Environment
+from src.config import Environment
 from src.services.auto_detection.connection_pools import (
     ConnectionPoolManager,
     PoolHealthMetrics,

@@ -7,6 +7,7 @@ result quality assessment, and autonomous stage optimization.
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -39,9 +40,9 @@ def register_tools(mcp, client_manager: ClientManager):
         quality_threshold: float = 0.7,
         limit_per_stage: int = 20,
         final_limit: int = 10,
-        filters: Optional[Dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform multi-stage search with progressive query refinement.
 
         Implements intelligent multi-stage search that progressively refines
@@ -216,9 +217,9 @@ def register_tools(mcp, client_manager: ClientManager):
         auto_optimize: bool = True,
         performance_target: str = "quality",
         max_stages: int = 5,
-        filters: Optional[Dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform adaptive multi-stage search with ML-powered optimization.
 
         Automatically determines optimal number of stages, refinement strategies,
@@ -297,12 +298,12 @@ def register_tools(mcp, client_manager: ClientManager):
     async def contextual_refinement_search(
         query: str,
         collection_name: str,
-        context_sources: List[str],
+        context_sources: list[str],
         refinement_depth: int = 2,
         context_weight: float = 0.3,
-        filters: Optional[Dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform multi-stage search with contextual refinement from multiple sources.
 
         Uses context from multiple collections or sources to progressively
@@ -438,7 +439,7 @@ def register_tools(mcp, client_manager: ClientManager):
             }
 
     @mcp.tool()
-    async def get_multi_stage_capabilities() -> Dict[str, Any]:
+    async def get_multi_stage_capabilities() -> dict[str, Any]:
         """Get multi-stage search capabilities and configuration options.
 
         Returns:
@@ -503,10 +504,10 @@ async def _perform_stage_search(
     query: str,
     collection_name: str,
     limit: int,
-    filters: Optional[Dict],
+    filters: dict | None,
     stage_num: int,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Perform search for a single stage."""
     try:
         # Generate embedding for query
@@ -548,7 +549,7 @@ async def _perform_stage_search(
         }
 
 
-def _calculate_result_quality(result: Dict[str, Any]) -> float:
+def _calculate_result_quality(result: dict[str, Any]) -> float:
     """Calculate quality score for a search result."""
     # Simple quality calculation based on score and content
     base_score = result.get("score", 0.0)
@@ -567,8 +568,8 @@ def _calculate_result_quality(result: Dict[str, Any]) -> float:
 
 
 async def _assess_stage_quality(
-    results: List[Dict], quality_threshold: float, ctx
-) -> Dict[str, Any]:
+    results: list[dict], quality_threshold: float, ctx
+) -> dict[str, Any]:
     """Assess quality of results from a stage."""
     if not results:
         return {
@@ -609,8 +610,8 @@ async def _assess_stage_quality(
 
 
 async def _refine_query_for_next_stage(
-    current_query: str, stage_results: List[Dict], strategy: str, ctx
-) -> Dict[str, Any]:
+    current_query: str, stage_results: list[dict], strategy: str, ctx
+) -> dict[str, Any]:
     """Refine query for the next stage based on current results."""
     try:
         if not stage_results:
@@ -661,7 +662,7 @@ async def _refine_query_for_next_stage(
         }
 
 
-async def _adaptive_query_refinement(query: str, results: List[Dict], ctx) -> str:
+async def _adaptive_query_refinement(query: str, results: list[dict], ctx) -> str:
     """Apply adaptive query refinement based on result analysis."""
     # Extract common terms from high-quality results
     common_terms = []
@@ -695,7 +696,7 @@ async def _adaptive_query_refinement(query: str, results: List[Dict], ctx) -> st
     return refined_query
 
 
-async def _semantic_query_refinement(query: str, results: List[Dict], ctx) -> str:
+async def _semantic_query_refinement(query: str, results: list[dict], ctx) -> str:
     """Apply semantic query refinement."""
     # For semantic refinement, expand with related concepts
     semantic_expansions = {
@@ -721,7 +722,7 @@ async def _semantic_query_refinement(query: str, results: List[Dict], ctx) -> st
     return refined_query
 
 
-async def _contextual_query_refinement(query: str, results: List[Dict], ctx) -> str:
+async def _contextual_query_refinement(query: str, results: list[dict], ctx) -> str:
     """Apply contextual query refinement."""
     # Extract contextual terms from result titles and metadata
     contextual_terms = []
@@ -751,8 +752,8 @@ async def _contextual_query_refinement(query: str, results: List[Dict], ctx) -> 
 
 
 async def _fuse_multi_stage_results(
-    cumulative_results: List[Dict], stage_results: List[Dict], final_limit: int, ctx
-) -> Dict[str, Any]:
+    cumulative_results: list[dict], stage_results: list[dict], final_limit: int, ctx
+) -> dict[str, Any]:
     """Fuse results from multiple stages."""
     # Remove duplicates based on document ID
     seen_ids = set()
@@ -795,7 +796,7 @@ async def _fuse_multi_stage_results(
 
 
 def _calculate_multi_stage_confidence(
-    results: List[Dict], stage_results: List[Dict]
+    results: list[dict], stage_results: list[dict]
 ) -> float:
     """Calculate confidence in multi-stage fusion."""
     if not results or not stage_results:
@@ -815,8 +816,8 @@ def _calculate_multi_stage_confidence(
 
 
 def _calculate_multi_stage_metrics(
-    stage_results: List[Dict], fused_results: Dict
-) -> Dict[str, Any]:
+    stage_results: list[dict], fused_results: dict
+) -> dict[str, Any]:
     """Calculate overall metrics for multi-stage search."""
     return {
         "total_stages": len(stage_results),
@@ -840,8 +841,8 @@ def _calculate_multi_stage_metrics(
 
 
 async def _generate_multi_stage_insights(
-    original_query: str, stage_results: List[Dict], fused_results: Dict, ctx
-) -> Dict[str, Any]:
+    original_query: str, stage_results: list[dict], fused_results: dict, ctx
+) -> dict[str, Any]:
     """Generate optimization insights for multi-stage search."""
     insights = {
         "stage_analysis": {
@@ -893,7 +894,7 @@ async def _generate_multi_stage_insights(
     return insights
 
 
-def _detect_diminishing_returns(stage_results: List[Dict]) -> bool:
+def _detect_diminishing_returns(stage_results: list[dict]) -> bool:
     """Detect if stages show diminishing returns."""
     if len(stage_results) < 3:
         return False
@@ -910,7 +911,7 @@ def _detect_diminishing_returns(stage_results: List[Dict]) -> bool:
     return False
 
 
-def _estimate_optimal_stage_count(stage_results: List[Dict]) -> int:
+def _estimate_optimal_stage_count(stage_results: list[dict]) -> int:
     """Estimate optimal number of stages based on results."""
     if not stage_results:
         return 3
@@ -925,7 +926,7 @@ def _estimate_optimal_stage_count(stage_results: List[Dict]) -> int:
     return len(stage_results)
 
 
-async def _analyze_query_for_multi_stage(query: str, ctx) -> Dict[str, Any]:
+async def _analyze_query_for_multi_stage(query: str, ctx) -> dict[str, Any]:
     """Analyze query characteristics for multi-stage optimization."""
     words = query.split()
 
@@ -954,12 +955,12 @@ async def _analyze_query_for_multi_stage(query: str, ctx) -> Dict[str, Any]:
 
 
 async def _select_optimal_multi_stage_parameters(
-    query_analysis: Dict,
+    query_analysis: dict,
     performance_target: str,
     auto_optimize: bool,
     max_stages: int,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Select optimal parameters for multi-stage search."""
     params = {
         "stages": 3,
@@ -995,8 +996,8 @@ async def _select_optimal_multi_stage_parameters(
 
 
 async def _gather_contextual_data(
-    qdrant_service, embedding_manager, query: str, context_sources: List[str], ctx
-) -> Dict[str, Any]:
+    qdrant_service, embedding_manager, query: str, context_sources: list[str], ctx
+) -> dict[str, Any]:
     """Gather contextual data from multiple sources."""
     context_data = {
         "sources": {},
@@ -1053,8 +1054,8 @@ async def _gather_contextual_data(
 
 
 async def _apply_contextual_refinement(
-    query: str, context_data: Dict, context_weight: float, iteration: int, ctx
-) -> Dict[str, Any]:
+    query: str, context_data: dict, context_weight: float, iteration: int, ctx
+) -> dict[str, Any]:
     """Apply contextual refinement to query."""
     try:
         # Extract key terms from context
@@ -1111,8 +1112,8 @@ async def _apply_contextual_refinement(
 
 
 def _calculate_contextual_metrics(
-    context_data: Dict, refinement_results: List[Dict], final_search: Dict
-) -> Dict[str, Any]:
+    context_data: dict, refinement_results: list[dict], final_search: dict
+) -> dict[str, Any]:
     """Calculate metrics for contextual refinement."""
     return {
         "context_sources_used": len(context_data["sources"]),

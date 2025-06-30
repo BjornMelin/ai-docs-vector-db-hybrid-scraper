@@ -92,7 +92,7 @@ class DistributedStateManager:
         return shared_state
 
     async def read_state(
-        self, state_id: str, agent_id: str, key_path: str = None
+        self, state_id: str, agent_id: str, key_path: str | None = None
     ) -> Any:
         """Read state value with synchronization."""
         update = StateUpdate(
@@ -105,7 +105,8 @@ class DistributedStateManager:
 
         try:
             if state_id not in self.shared_states:
-                raise ValueError(f"State {state_id} does not exist")
+                msg = f"State {state_id} does not exist"
+                raise ValueError(msg)
 
             state = self.shared_states[state_id]
             state.access_count += 1
@@ -126,7 +127,7 @@ class DistributedStateManager:
 
         except Exception as e:
             update.success = False
-            raise e
+            raise
         finally:
             self.update_history.append(update)
 
@@ -150,7 +151,8 @@ class DistributedStateManager:
 
         try:
             if state_id not in self.shared_states:
-                raise ValueError(f"State {state_id} does not exist")
+                msg = f"State {state_id} does not exist"
+                raise ValueError(msg)
 
             # Check for lock requirement
             if require_lock and not await self._check_lock(state_id, agent_id):
@@ -196,7 +198,7 @@ class DistributedStateManager:
 
         except Exception as e:
             update.success = False
-            raise e
+            raise
         finally:
             self.update_history.append(update)
 
@@ -219,7 +221,8 @@ class DistributedStateManager:
 
         try:
             if state_id not in self.shared_states:
-                raise ValueError(f"State {state_id} does not exist")
+                msg = f"State {state_id} does not exist"
+                raise ValueError(msg)
 
             state = self.shared_states[state_id]
             update.old_value = state.data.copy()
@@ -230,7 +233,8 @@ class DistributedStateManager:
             elif merge_strategy == "shallow_merge":
                 state.data.update(updates)
             else:
-                raise ValueError(f"Unknown merge strategy: {merge_strategy}")
+                msg = f"Unknown merge strategy: {merge_strategy}"
+                raise ValueError(msg)
 
             # Update metadata
             state.version += 1
@@ -242,7 +246,7 @@ class DistributedStateManager:
 
         except Exception as e:
             update.success = False
-            raise e
+            raise
         finally:
             self.update_history.append(update)
 
@@ -882,7 +886,7 @@ class TestHighLoadScenarios:
     ):
         """Test state synchronization under high-frequency updates."""
         # Initialize agents
-        for i, agent in enumerate(large_agent_pool):
+        for _i, agent in enumerate(large_agent_pool):
             if hasattr(agent, "initialize"):
                 await agent.initialize(agent_dependencies)
             else:
@@ -998,7 +1002,7 @@ class TestHighLoadScenarios:
     ):
         """Test coordination efficiency under high load."""
         # Initialize agents
-        for i, agent in enumerate(large_agent_pool):
+        for _i, agent in enumerate(large_agent_pool):
             if hasattr(agent, "initialize"):
                 await agent.initialize(agent_dependencies)
             else:
@@ -1153,7 +1157,7 @@ class TestHighLoadScenarios:
     ):
         """Test overall state synchronization performance."""
         # Initialize agents
-        for i, agent in enumerate(large_agent_pool):
+        for _i, agent in enumerate(large_agent_pool):
             if hasattr(agent, "initialize"):
                 await agent.initialize(agent_dependencies)
             else:

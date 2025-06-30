@@ -557,7 +557,7 @@ class TestMCPServicesQualityAndReliability:
         services = e2e_services_environment
 
         # Test each service multiple times to verify consistency
-        for service_name, service in services.items():
+        for service in services.values():
             results = []
 
             # Perform multiple operations

@@ -245,6 +245,7 @@ class TestBatchGenerateEmbeddings:
                 raise TestError(msg)
                 msg = "Provider error"
                 raise TestError(msg)
+            return None
 
         mock_client.generate_embeddings.side_effect = mock_generate
 

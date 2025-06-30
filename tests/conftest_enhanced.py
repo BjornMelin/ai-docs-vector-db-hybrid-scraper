@@ -15,14 +15,14 @@ import logging
 import os
 import tempfile
 import time
-from typing import Any, , Generator, , Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import httpx
 import pytest
 import respx
-from hypothesis import HealthCheck, assume, given, settings
-from hypothesis import strategies as st
+from hypothesis import HealthCheck, settings, strategies as st
+
 
 # Configure logging for tests
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -31,10 +31,11 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 # ===== Enhanced HTTP Mocking with respx =====
 
+
 @pytest.fixture
 async def respx_mock():
     """Enhanced respx mock fixture with comprehensive HTTP mocking capabilities.
-    
+
     This fixture provides a properly configured respx mock instance that:
     - Handles async operations correctly
     - Provides realistic response mocking
@@ -44,7 +45,7 @@ async def respx_mock():
     async with respx.mock(
         base_url="https://api.openai.com",
         assert_all_called=False,  # Allow uncalled mocks for flexibility
-        assert_all_mocked=True,   # Ensure all HTTP calls are mocked
+        assert_all_mocked=True,  # Ensure all HTTP calls are mocked
     ) as mock:
         # Setup default OpenAI embedding mock
         mock.post("/v1/embeddings").mock(
@@ -53,11 +54,7 @@ async def respx_mock():
                 json={
                     "object": "list",
                     "data": [
-                        {
-                            "object": "embedding",
-                            "index": 0,
-                            "embedding": [0.1] * 1536
-                        }
+                        {"object": "embedding", "index": 0, "embedding": [0.1] * 1536}
                     ],
                     "model": "text-embedding-3-small",
                     "usage": {"prompt_tokens": 10, "total_tokens": 10},
@@ -81,29 +78,33 @@ def mock_qdrant_service():
 
     # Point operations
     mock.upsert_points = AsyncMock()
-    mock.search_points = AsyncMock(return_value={
-        "result": [
-            {
-                "id": "test_id",
-                "score": 0.95,
-                "payload": {
-                    "content": "Test document content",
-                    "title": "Test Document",
-                    "url": "https://example.com"
-                },
-                "vector": [0.1] * 1536
-            }
-        ]
-    })
+    mock.search_points = AsyncMock(
+        return_value={
+            "result": [
+                {
+                    "id": "test_id",
+                    "score": 0.95,
+                    "payload": {
+                        "content": "Test document content",
+                        "title": "Test Document",
+                        "url": "https://example.com",
+                    },
+                    "vector": [0.1] * 1536,
+                }
+            ]
+        }
+    )
     mock.count_points = AsyncMock(return_value={"count": 100})
 
     # Health and info
     mock.health_check = AsyncMock(return_value={"status": "ok"})
-    mock.get_collection_info = AsyncMock(return_value={
-        "status": "ready",
-        "vectors_count": 100,
-        "indexed_vectors_count": 100
-    })
+    mock.get_collection_info = AsyncMock(
+        return_value={
+            "status": "ready",
+            "vectors_count": 100,
+            "indexed_vectors_count": 100,
+        }
+    )
 
     return mock
 
@@ -117,7 +118,8 @@ def mock_embedding_service():
         """Generate deterministic mock embedding based on text."""
         # Use text hash for deterministic results
         seed = hash(text) % 1000000
-        import random
+        import random  # noqa: PLC0415
+
         random.seed(seed)
         embedding = [random.uniform(-1, 1) for _ in range(1536)]
         # Normalize to unit vector
@@ -135,12 +137,10 @@ def mock_embedding_service():
 
 # ===== Property-Based Testing with Hypothesis =====
 
+
 @st.composite
 def embedding_strategy(
-    draw,
-    min_dim: int = 128,
-    max_dim: int = 1536,
-    normalized: bool = True
+    draw, min_dim: int = 128, max_dim: int = 1536, normalized: bool = True
 ):
     """Hypothesis strategy for generating realistic embedding vectors."""
     # Use common embedding dimensions
@@ -160,7 +160,7 @@ def embedding_strategy(
                 max_value=1.0,
                 allow_nan=False,
                 allow_infinity=False,
-                width=32  # Use 32-bit floats for consistency
+                width=32,  # Use 32-bit floats for consistency
             ),
             min_size=dim,
             max_size=dim,
@@ -189,13 +189,13 @@ def document_strategy(draw, min_length: int = 10, max_length: int = 500):
                 alphabet=st.characters(
                     whitelist_categories=("Lu", "Ll"),
                     min_codepoint=65,
-                    max_codepoint=122
+                    max_codepoint=122,
                 ),
                 min_size=2,
-                max_size=12
+                max_size=12,
             ),
             min_size=2,
-            max_size=max_length // 5  # Approximate word count
+            max_size=max_length // 5,  # Approximate word count
         )
     )
 
@@ -212,6 +212,7 @@ def document_strategy(draw, min_length: int = 10, max_length: int = 500):
 
 # ===== Performance Testing Infrastructure =====
 
+
 @pytest.fixture
 def performance_monitor():
     """Performance monitoring fixture for latency and throughput testing."""
@@ -227,7 +228,7 @@ def performance_monitor():
                 result = await operation(*args, **kwargs)
                 success = True
                 error = None
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 result = None
                 success = False
                 error = str(e)
@@ -238,7 +239,7 @@ def performance_monitor():
                 "duration_ms": (end_time - start_time) * 1000,
                 "success": success,
                 "error": error,
-                "timestamp": start_time
+                "timestamp": start_time,
             }
             self.measurements.append(measurement)
             return result, measurement
@@ -252,22 +253,26 @@ def performance_monitor():
             if not durations:
                 return {"success_rate": 0.0}
 
-            import statistics
+            import statistics  # noqa: PLC0415
+
             return {
                 "count": len(self.measurements),
-                "success_rate": sum(1 for m in self.measurements if m["success"]) / len(self.measurements),
+                "success_rate": sum(1 for m in self.measurements if m["success"])
+                / len(self.measurements),
                 "min_duration_ms": min(durations),
                 "max_duration_ms": max(durations),
                 "mean_duration_ms": statistics.mean(durations),
                 "median_duration_ms": statistics.median(durations),
-                "p95_duration_ms": statistics.quantiles(durations, n=20)[18] if len(durations) >= 20 else max(durations),
-                "p99_duration_ms": statistics.quantiles(durations, n=100)[98] if len(durations) >= 100 else max(durations),
+                "p95_duration_ms": statistics.quantiles(durations, n=20)[18]
+                if len(durations) >= 20
+                else max(durations),
+                "p99_duration_ms": statistics.quantiles(durations, n=100)[98]
+                if len(durations) >= 100
+                else max(durations),
             }
 
         def assert_performance_requirements(
-            self,
-            max_p95_ms: float = 100.0,
-            min_success_rate: float = 0.95
+            self, max_p95_ms: float = 100.0, min_success_rate: float = 0.95
         ):
             """Assert performance requirements are met."""
             stats = self.get_statistics()
@@ -284,6 +289,7 @@ def performance_monitor():
 
 
 # ===== Integration Test Service Isolation =====
+
 
 @pytest.fixture
 async def isolated_test_environment():
@@ -309,18 +315,18 @@ async def isolated_test_environment():
 
         async def cleanup(self):
             """Clean up test environment."""
-            import shutil
-            try:
+            import contextlib  # noqa: PLC0415
+            import shutil  # noqa: PLC0415
+
+            with contextlib.suppress(Exception):
                 shutil.rmtree(self.temp_dir, ignore_errors=True)
-            except Exception:
-                pass
 
             for task in self._cleanup_tasks:
                 try:
                     if not task.done():
                         task.cancel()
                         await asyncio.sleep(0.1)
-                except Exception:
+                except Exception:  # noqa: S110, BLE001
                     pass
 
     env = IsolatedEnvironment()
@@ -333,23 +339,32 @@ async def isolated_test_environment():
 
 # ===== AI/ML Testing Utilities =====
 
+
 @pytest.fixture
 def ai_test_utilities():
     """AI/ML testing utilities for embeddings, similarity, and model validation."""
 
     class AITestUtilities:
-
         @staticmethod
         def assert_valid_embedding(embedding: list[float], expected_dim: int = 1536):
             """Assert embedding meets quality criteria."""
-            assert len(embedding) == expected_dim, f"Expected {expected_dim}D, got {len(embedding)}D"
-            assert all(isinstance(x, (int, float)) for x in embedding), "All values must be numeric"
+            assert len(embedding) == expected_dim, (
+                f"Expected {expected_dim}D, got {len(embedding)}D"
+            )
+            assert all(isinstance(x, int | float) for x in embedding), (
+                "All values must be numeric"
+            )
 
-            import math
-            assert not any(math.isnan(x) or math.isinf(x) for x in embedding), "No NaN/Inf values"
+            import math  # noqa: PLC0415
+
+            assert not any(math.isnan(x) or math.isinf(x) for x in embedding), (
+                "No NaN/Inf values"
+            )
 
             # Check for reasonable value range (normalized embeddings should be < 1)
-            assert all(abs(x) <= 2.0 for x in embedding), "Values outside reasonable range"
+            assert all(abs(x) <= 2.0 for x in embedding), (
+                "Values outside reasonable range"
+            )
 
             # Check vector is not zero
             norm = sum(x**2 for x in embedding) ** 0.5
@@ -359,10 +374,10 @@ def ai_test_utilities():
         def calculate_cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
             """Calculate cosine similarity between vectors."""
             if len(vec1) != len(vec2):
-                raise ValueError(f"Dimension mismatch: {len(vec1)} vs {len(vec2)}")
+                msg = f"Dimension mismatch: {len(vec1)} vs {len(vec2)}"
+                raise ValueError(msg)
 
-
-            dot_product = sum(a * b for a, b in zip(vec1, vec2))
+            dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=True))
             norm1 = sum(a * a for a in vec1) ** 0.5
             norm2 = sum(b * b for b in vec2) ** 0.5
 
@@ -372,9 +387,12 @@ def ai_test_utilities():
             return dot_product / (norm1 * norm2)
 
         @staticmethod
-        def generate_test_embeddings(count: int = 10, dim: int = 1536) -> list[list[float]]:
+        def generate_test_embeddings(
+            count: int = 10, dim: int = 1536
+        ) -> list[list[float]]:
             """Generate deterministic test embeddings."""
-            import random
+            import random  # noqa: PLC0415
+
             embeddings = []
 
             for i in range(count):
@@ -395,18 +413,17 @@ def ai_test_utilities():
 
 # ===== Test Data Factories =====
 
+
 @pytest.fixture
 def test_data_factory():
     """Factory for generating test data with realistic patterns."""
 
     class TestDataFactory:
-
         @staticmethod
         def create_mock_documents(count: int = 10) -> list[dict[str, Any]]:
             """Create mock documents for testing."""
-            documents = []
-            for i in range(count):
-                documents.append({
+            return [
+                {
                     "id": f"doc_{i}",
                     "title": f"Test Document {i}",
                     "content": f"This is test content for document {i}. " * (i + 2),
@@ -416,9 +433,10 @@ def test_data_factory():
                         "tags": [f"tag_{i}", f"tag_{i % 2}"],
                         "timestamp": "2025-06-28T00:00:00Z",
                         "word_count": (i + 2) * 10,
-                    }
-                })
-            return documents
+                    },
+                }
+                for i in range(count)
+            ]
 
         @staticmethod
         def create_search_queries(count: int = 5) -> list[str]:
@@ -428,16 +446,15 @@ def test_data_factory():
                 "Vector database performance optimization",
                 "Best practices for API design",
                 "Machine learning model deployment",
-                "Database connection pooling strategies"
+                "Database connection pooling strategies",
             ]
             return queries[:count]
 
         @staticmethod
         def create_mock_crawl_results(count: int = 5) -> list[dict[str, Any]]:
             """Create mock crawl results."""
-            results = []
-            for i in range(count):
-                results.append({
+            return [
+                {
                     "url": f"https://example.com/page_{i}",
                     "title": f"Page {i}",
                     "content": f"Content for page {i} with relevant information.",
@@ -449,14 +466,18 @@ def test_data_factory():
                         "keywords": [f"keyword_{i}", "test"],
                         "content_type": "text/html",
                     },
-                    "links": [f"https://example.com/page_{i+1}"] if i < count - 1 else [],
-                })
-            return results
+                    "links": [f"https://example.com/page_{i + 1}"]
+                    if i < count - 1
+                    else [],
+                }
+                for i in range(count)
+            ]
 
     return TestDataFactory()
 
 
 # ===== Enhanced Pytest Configuration =====
+
 
 def pytest_configure(config):
     """Enhanced pytest configuration with comprehensive marker support."""
@@ -470,7 +491,6 @@ def pytest_configure(config):
         "unit: Unit tests",
         "performance: Performance and benchmark tests",
         "benchmark: Benchmark tests",
-
         # AI/ML markers
         "ai: AI/ML specific tests",
         "embedding: Embedding-related tests",
@@ -478,13 +498,11 @@ def pytest_configure(config):
         "rag: RAG system tests",
         "property: Property-based tests using Hypothesis",
         "hypothesis: Property-based tests using Hypothesis",
-
         # Infrastructure markers
         "browser: Browser automation tests",
         "network: Tests requiring network access",
         "database: Tests requiring database connection",
         "asyncio: Async tests",
-
         # Quality markers
         "security: Security tests",
         "accessibility: Accessibility tests",
@@ -492,7 +510,6 @@ def pytest_configure(config):
         "chaos: Chaos engineering tests",
         "load: Load tests",
         "stress: Stress tests",
-
         # Platform markers
         "windows: Windows-only tests",
         "macos: macOS-only tests",
@@ -511,12 +528,12 @@ def pytest_configure(config):
 settings.register_profile(
     "test",
     max_examples=20,  # Reduced for faster tests
-    deadline=5000,    # 5 second deadline
+    deadline=5000,  # 5 second deadline
     suppress_health_check=[
         HealthCheck.too_slow,
         HealthCheck.data_too_large,
         HealthCheck.large_base_example,
-    ]
+    ],
 )
 
 settings.register_profile(
@@ -527,7 +544,7 @@ settings.register_profile(
         HealthCheck.too_slow,
         HealthCheck.data_too_large,
         HealthCheck.large_base_example,
-    ]
+    ],
 )
 
 # Use appropriate profile

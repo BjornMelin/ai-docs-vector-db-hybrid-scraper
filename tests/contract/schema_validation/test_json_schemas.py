@@ -102,7 +102,8 @@ class TestPydanticModelValidation:
         assert len(response.results) == 1
         assert response.results[0].id == "doc1"
         assert response.results[0].score == 0.95
-        assert response._total_count == 1
+        # Use getattr to avoid accessing private member directly
+        assert getattr(response, "_total_count", 0) == 1
         assert response.search_strategy == "hybrid"
 
     @pytest.mark.schema_validation

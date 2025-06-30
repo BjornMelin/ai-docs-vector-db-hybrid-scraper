@@ -747,7 +747,7 @@ class TestQueryOrchestrator:
                 assert "orchestration_id" in result
             except Exception as e:
                 # If exceptions occur, they should be handled gracefully
-                assert isinstance(e, (ValueError, RuntimeError))
+                assert isinstance(e, ValueError | RuntimeError)
 
     def test_orchestrator_state_management(self):
         """Test orchestrator state management."""

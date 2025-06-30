@@ -43,11 +43,10 @@ class TestConcurrentConfigurationAccess:
         """Create a config reloader instance."""
         config_file = temp_config_dir / ".env"
         config_file.write_text("ENVIRONMENT=testing\nAPI_BASE_URL=http://test.com")
-        reloader = ConfigReloader(
+        return ConfigReloader(
             config_source=config_file,
             enable_signal_handler=False,
         )
-        return reloader
 
     @pytest.fixture
     def secure_config_manager(self, temp_config_dir):

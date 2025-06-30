@@ -80,7 +80,7 @@ class LoadTestRunner:
     ) -> dict:
         """Run load test using Locust."""
         logger.info(
-            f"Starting Locust load test with config: {config}"
+            "Starting Locust load test with config: %s", config
         )  # TODO: Convert f-string to logging format
 
         # Create environment
@@ -94,7 +94,7 @@ class LoadTestRunner:
             if load_profile:
                 env.shape_class = load_profile
                 logger.info(
-                    f"Applied load profile: {profile}"
+                    "Applied load profile: %s", profile
                 )  # TODO: Convert f-string to logging format
 
         if headless:
@@ -129,16 +129,16 @@ class LoadTestRunner:
                 # Save report
                 report_file = self._save_report(report)
                 logger.info(
-                    f"Test report saved to: {report_file}"
+                    "Test report saved to: %s", report_file
                 )  # TODO: Convert f-string to logging format
 
             return report
         # Run with web UI
         logger.info(
-            f"Starting Locust web UI on port {web_port}"
+            "Starting Locust web UI on port %s", web_port
         )  # TODO: Convert f-string to logging format
         logger.info(
-            f"Visit http://localhost:{web_port} to control the test"
+            "Visit http://localhost:%s to control the test", web_port
         )  # TODO: Convert f-string to logging format
 
         # Set up Locust arguments for web mode
@@ -170,7 +170,7 @@ class LoadTestRunner:
     ) -> dict:
         """Run load tests using pytest."""
         logger.info(
-            f"Running pytest load tests: {test_type}"
+            "Running pytest load tests: %s", test_type
         )  # TODO: Convert f-string to logging format
 
         # Build pytest command
@@ -233,7 +233,7 @@ class LoadTestRunner:
     def run_custom_scenario(self, scenario_file: str) -> dict:
         """Run a custom load test scenario from JSON file."""
         logger.info(
-            f"Running custom scenario: {scenario_file}"
+            "Running custom scenario: %s", scenario_file
         )  # TODO: Convert f-string to logging format
 
         try:
@@ -282,14 +282,14 @@ class LoadTestRunner:
     def benchmark_endpoints(self, endpoints: list[str], config: dict) -> dict:
         """Benchmark specific endpoints."""
         logger.info(
-            f"Benchmarking endpoints: {endpoints}"
+            "Benchmarking endpoints: %s", endpoints
         )  # TODO: Convert f-string to logging format
 
         results = {}
 
         for endpoint in endpoints:
             logger.info(
-                f"Benchmarking endpoint: {endpoint}"
+                "Benchmarking endpoint: %s", endpoint
             )  # TODO: Convert f-string to logging format
 
             # Create custom user class for this endpoint
@@ -306,7 +306,7 @@ class LoadTestRunner:
         # Save report
         report_file = self._save_report(comparative_report, "endpoint_benchmark")
         logger.info(
-            f"Endpoint benchmark report saved to: {report_file}"
+            "Endpoint benchmark report saved to: %s", report_file
         )  # TODO: Convert f-string to logging format
 
         return comparative_report
@@ -316,7 +316,7 @@ class LoadTestRunner:
     ) -> dict:
         """Validate performance against a baseline."""
         logger.info(
-            f"Running performance regression test against baseline: {baseline_file}"
+            "Running performance regression test against baseline: %s", baseline_file
         )
 
         try:
@@ -335,7 +335,7 @@ class LoadTestRunner:
             # Save regression report
             report_file = self._save_report(regression_analysis, "regression_analysis")
             logger.info(
-                f"Regression analysis saved to: {report_file}"
+                "Regression analysis saved to: %s", report_file
             )  # TODO: Convert f-string to logging format
 
         except Exception:
@@ -359,15 +359,15 @@ class LoadTestRunner:
         """Generate comprehensive test report."""
         stats = env.stats
 
-        if not stats or stats._total.num_requests == 0:
+        if not stats or stats.total.num_requests == 0:
             return {
                 "status": "no_data",
                 "message": "No requests were made during the test",
             }
 
         # Calculate key metrics
-        _total_requests = stats._total.num_requests
-        _total_failures = stats._total.num_failures
+        _total_requests = stats.total.num_requests
+        _total_failures = stats.total.num_failures
         success_rate = (
             ((_total_requests - _total_failures) / _total_requests) * 100
             if _total_requests > 0
@@ -397,10 +397,10 @@ class LoadTestRunner:
                 "_total_requests": _total_requests,
                 "_total_failures": _total_failures,
                 "success_rate_percent": success_rate,
-                "avg_response_time_ms": stats._total.avg_response_time,
-                "min_response_time_ms": stats._total.min_response_time,
-                "max_response_time_ms": stats._total.max_response_time,
-                "requests_per_second": stats._total.current_rps,
+                "avg_response_time_ms": stats.total.avg_response_time,
+                "min_response_time_ms": stats.total.min_response_time,
+                "max_response_time_ms": stats.total.max_response_time,
+                "requests_per_second": stats.total.current_rps,
                 "percentiles": percentiles,
             },
             "endpoint_breakdown": {},
@@ -531,22 +531,22 @@ class LoadTestRunner:
 
     def _calculate_performance_grade(self, stats) -> str:
         """Calculate performance grade based on test results."""
-        if stats._total.num_requests == 0:
+        if stats.total.num_requests == 0:
             return "N/A"
 
         score = 100
 
         # Deduct for high response times
-        avg_response_time = stats._total.avg_response_time
+        avg_response_time = stats.total.avg_response_time
         if avg_response_time > 100:
             score -= min(40, (avg_response_time - 100) / 25)
 
         # Deduct for errors
-        error_rate = (stats._total.num_failures / stats._total.num_requests) * 100
+        error_rate = (stats.total.num_failures / stats.total.num_requests) * 100
         score -= error_rate * 10
 
         # Deduct for low throughput
-        rps = stats._total.current_rps
+        rps = stats.total.current_rps
         if rps < 10:
             score -= (10 - rps) * 2
 
@@ -565,11 +565,11 @@ class LoadTestRunner:
         """Generate performance recommendations based on test results."""
         recommendations = []
 
-        if stats._total.num_requests == 0:
+        if stats.total.num_requests == 0:
             return ["No requests were made - check test configuration"]
 
         # Response time recommendations
-        avg_response_time = stats._total.avg_response_time
+        avg_response_time = stats.total.avg_response_time
         if avg_response_time > 1000:
             recommendations.append(
                 "High response times detected - consider optimizing database queries and adding caching"
@@ -580,7 +580,7 @@ class LoadTestRunner:
             )
 
         # Error rate recommendations
-        error_rate = (stats._total.num_failures / stats._total.num_requests) * 100
+        error_rate = (stats.total.num_failures / stats.total.num_requests) * 100
         if error_rate > 5:
             recommendations.append(
                 "High error rate - implement better error handling and retry mechanisms"
@@ -591,7 +591,7 @@ class LoadTestRunner:
             )
 
         # Throughput recommendations
-        rps = stats._total.current_rps
+        rps = stats.total.current_rps
         if rps < 10:
             recommendations.append(
                 "Low throughput - consider horizontal scaling or performance optimization"

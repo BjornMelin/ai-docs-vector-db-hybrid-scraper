@@ -74,8 +74,9 @@ class TestCascadeFailures:
             "storage": ServiceNode("storage", dependencies=[]),
         }
 
+    @pytest.mark.usefixtures("fault_injector", "resilience_validator")
     async def test_downstream_failure_propagation(
-        self, service_topology, _fault_injector, _resilience_validator
+        self, service_topology
     ):
         """Test how downstream failures propagate upstream."""
         # Simulate storage failure (bottom of dependency chain)
@@ -91,8 +92,6 @@ class TestCascadeFailures:
 
             # Check if service itself has failed
             if service.state == ServiceState.FAILED:
-                msg = f"Service {service_name} is failed"
-                raise TestError(msg)
                 msg = f"Service {service_name} is failed"
                 raise TestError(msg)
 
@@ -129,7 +128,7 @@ class TestCascadeFailures:
         for service_name in dependent_services:
             try:
                 await simulate_service_call(service_name, service_topology)
-            except Exception:
+            except TestError:
                 affected_services.append(service_name)
 
         # Verify cascade failure occurred
@@ -143,8 +142,9 @@ class TestCascadeFailures:
             "user_db should fail due to storage dependency"
         )
 
+    @pytest.mark.usefixtures("fault_injector", "resilience_validator")
     async def test_circuit_breaker_cascade_prevention(
-        self, service_topology, _fault_injector, _resilience_validator
+        self, service_topology
     ):
         """Test circuit breakers preventing cascade failures."""
         failure_counts = {}
@@ -193,9 +193,9 @@ class TestCascadeFailures:
             try:
                 result = await resilient_service_call("api_gateway", service_topology)
                 results.append(result)
-            except Exception:
+            except TestError:
                 # Count failed attempts
-                logger.debug("Exception suppressed during cleanup/testing")
+                logger.debug("TestError suppressed during cleanup/testing")
 
         # Verify circuit breaker provided degraded service
         degraded_responses = [r for r in results if r.get("status") == "degraded"]
@@ -203,7 +203,8 @@ class TestCascadeFailures:
             "Expected degraded service from circuit breaker"
         )
 
-    async def test_bulkhead_pattern_isolation(self, _fault_injector):
+    @pytest.mark.usefixtures("fault_injector")
+    async def test_bulkhead_pattern_isolation(self):
         """Test bulkhead pattern for failure isolation."""
         # Simulate thread/resource pools for different operations
         search_pool = {"size": 10, "used": 0}
@@ -254,8 +255,9 @@ class TestCascadeFailures:
             "Admin operations should succeed despite search failures"
         )
 
+    @pytest.mark.usefixtures("fault_injector")
     async def test_graceful_degradation_cascade(
-        self, service_topology, _fault_injector
+        self, service_topology
     ):
         """Test graceful degradation preventing _total system failure."""
         # Service capabilities matrix
@@ -324,7 +326,8 @@ class TestCascadeFailures:
         assert text_search_result["status"] == "success"
         assert text_search_result["level"] == "degraded"
 
-    async def test_timeout_cascade_prevention(self, _fault_injector):
+    @pytest.mark.usefixtures("fault_injector")
+    async def test_timeout_cascade_prevention(self):
         """Test timeout configuration preventing cascade failures."""
         # Service timeout configuration
         timeouts = {
@@ -351,13 +354,14 @@ class TestCascadeFailures:
                     }
                 # Simulate slow operation
                 await asyncio.sleep(service_timeout + 0.5)  # Longer than timeout
-                return {"service": service_name, "status": "success"}
             except TimeoutError:
                 return {
                     "service": service_name,
                     "status": "timeout",
                     "fallback": "using_cached_data",
                 }
+            else:
+                return {"service": service_name, "status": "success"}
 
         # Create dependency chain with timeouts
         async def slow_vector_db():
@@ -376,7 +380,8 @@ class TestCascadeFailures:
         assert result["status"] == "timeout"
         assert "fallback" in result
 
-    async def test_retry_storm_prevention(self, _fault_injector):
+    @pytest.mark.usefixtures("fault_injector")
+    async def test_retry_storm_prevention(self):
         """Test prevention of retry storms during failures."""
         failure_start_time = time.time()
         request_counts = {}
@@ -404,7 +409,7 @@ class TestCascadeFailures:
                         "result": result,
                         "attempts": attempt + 1,
                     }
-                except Exception:
+                except TestError:
                     if attempt < max_retries - 1:
                         # Exponential backoff with jitter
                         delay = base_delay * (2**attempt)
@@ -416,6 +421,9 @@ class TestCascadeFailures:
                             "status": "failed",
                             "attempts": attempt + 1,
                         }
+
+            # This should not be reached due to the loop structure above
+            return {"client": client_id, "status": "failed", "attempts": max_retries}
 
         # Simulate multiple clients making requests
         clients = [f"client_{i}" for i in range(10)]
@@ -435,7 +443,8 @@ class TestCascadeFailures:
             "Some clients should succeed after service recovery"
         )
 
-    async def test_distributed_system_partition(self, _fault_injector):
+    @pytest.mark.usefixtures("fault_injector")
+    async def test_distributed_system_partition(self):
         """Test distributed system behavior during network partitions."""
         # Simulate 3-node distributed system
         nodes = {
@@ -475,6 +484,10 @@ class TestCascadeFailures:
                 msg = f"Key {key} not found"
                 raise KeyError(msg)
 
+            # This should not be reached due to conditional structure above
+            msg = f"Unknown consistency level: {consistency_level}"
+            raise ValueError(msg)
+
         # Test reads during partition
         # Should succeed for keys in accessible partition
         result1 = await distributed_read("key1", "strong")
@@ -489,7 +502,8 @@ class TestCascadeFailures:
         with pytest.raises(KeyError):
             await distributed_read("key3", "eventual")
 
-    async def test_memory_leak_cascade(self, _fault_injector):
+    @pytest.mark.usefixtures("fault_injector")
+    async def test_memory_leak_cascade(self):
         """Test cascade failures due to memory leaks."""
         # Simulate memory usage tracking
         memory_usage = {"current": 0, "limit": 1000}
@@ -539,8 +553,9 @@ class TestCascadeFailures:
             "Should complete some operations before exhaustion"
         )
 
+    @pytest.mark.usefixtures("fault_injector", "resilience_validator")
     async def test_dependency_health_monitoring(
-        self, service_topology, _fault_injector, _resilience_validator
+        self, service_topology
     ):
         """Test dependency health monitoring and automatic recovery."""
         health_status = {}
@@ -566,7 +581,7 @@ class TestCascadeFailures:
                 try:
                     result = await health_check_service(service_name)
                     health_results[service_name] = result["status"]
-                except Exception:
+                except (TestError, ValueError, TypeError):
                     health_results[service_name] = "error"
 
             return health_results

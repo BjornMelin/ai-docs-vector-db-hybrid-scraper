@@ -7,7 +7,6 @@ system including validation, rollback, observability, and API integration.
 import asyncio
 import json
 import tempfile
-import time
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -16,7 +15,16 @@ from fastapi.testclient import TestClient
 
 from src.api.main import app
 from src.config import Config
-from src.config.reload import ConfigReloader, ReloadStatus, ReloadTrigger
+from src.config.reload import (
+    ConfigReloader,
+    ReloadOperation,
+    ReloadStatus,
+    ReloadTrigger,
+)
+from src.services.observability.config_instrumentation import (
+    ConfigOperationType,
+    instrument_config_operation,
+)
 
 
 class TestConfigReloader:
@@ -202,14 +210,14 @@ class TestConfigReloader:
 
         # Add listener
         reloader.add_change_listener("test_listener", test_callback, priority=100)
-        assert len(reloader._change_listeners) == 1
-        assert reloader._change_listeners[0].name == "test_listener"
-        assert reloader._change_listeners[0].priority == 100
+        assert len(reloader._change_listeners) == 1  # noqa: SLF001
+        assert reloader._change_listeners[0].name == "test_listener"  # noqa: SLF001
+        assert reloader._change_listeners[0].priority == 100  # noqa: SLF001
 
         # Remove listener
         success = reloader.remove_change_listener("test_listener")
         assert success
-        assert len(reloader._change_listeners) == 0
+        assert len(reloader._change_listeners) == 0  # noqa: SLF001
 
         # Try to remove non-existent listener
         success = reloader.remove_change_listener("non_existent")
@@ -222,7 +230,6 @@ class TestConfigReloader:
         assert stats["total_operations"] == 0
 
         # Add some mock operations
-        from src.config.reload import ReloadOperation
 
         successful_op = ReloadOperation(trigger=ReloadTrigger.MANUAL)
         successful_op.complete(True)
@@ -230,7 +237,7 @@ class TestConfigReloader:
         failed_op = ReloadOperation(trigger=ReloadTrigger.API)
         failed_op.complete(False, "Test error")
 
-        reloader._reload_history.extend([successful_op, failed_op])
+        reloader._reload_history.extend([successful_op, failed_op])  # noqa: SLF001
 
         # Check updated stats
         stats = reloader.get_reload_stats()
@@ -288,7 +295,6 @@ class TestConfigurationAPI:
 
     def test_reload_endpoint(self, client: TestClient, mock_reloader: Mock):
         """Test configuration reload API endpoint."""
-        from src.config.reload import ReloadOperation, ReloadStatus, ReloadTrigger
 
         # Mock successful reload operation
         mock_operation = ReloadOperation(trigger=ReloadTrigger.API)
@@ -306,7 +312,6 @@ class TestConfigurationAPI:
 
     def test_reload_endpoint_failure(self, client: TestClient, mock_reloader: Mock):
         """Test configuration reload API endpoint with failure."""
-        from src.config.reload import ReloadOperation, ReloadStatus, ReloadTrigger
 
         # Mock failed reload operation
         mock_operation = ReloadOperation(trigger=ReloadTrigger.API)
@@ -323,7 +328,6 @@ class TestConfigurationAPI:
 
     def test_rollback_endpoint(self, client: TestClient, mock_reloader: Mock):
         """Test configuration rollback API endpoint."""
-        from src.config.reload import ReloadOperation, ReloadStatus
 
         # Mock successful rollback operation
         mock_operation = ReloadOperation()
@@ -339,7 +343,6 @@ class TestConfigurationAPI:
 
     def test_history_endpoint(self, client: TestClient, mock_reloader: Mock):
         """Test configuration reload history API endpoint."""
-        from src.config.reload import ReloadOperation, ReloadTrigger
 
         # Mock history data
         mock_operations = [
@@ -390,7 +393,7 @@ class TestConfigurationAPI:
         }
         mock_reloader.get_reload_stats.return_value = mock_stats
         mock_reloader.enable_signal_handler = True
-        mock_reloader._file_watch_enabled = False
+        mock_reloader._file_watch_enabled = False  # noqa: SLF001
 
         response = client.get("/api/v1/config/status")
 
@@ -466,8 +469,7 @@ class TestConfigurationIntegration:
                 "debug": False,
             }
 
-            with open(config_file, "w") as f:
-                json.dump(updated_config, f)
+            config_file.write_text(json.dumps(updated_config))
 
             # Perform reload
             operation = await reloader.reload_config(
@@ -502,11 +504,6 @@ class TestConfigurationIntegration:
         """Test configuration reloading with observability tracking."""
         # This test would require actual observability setup
         # For now, we'll test that the instrumentation decorators work
-
-        from src.services.observability.config_instrumentation import (
-            ConfigOperationType,
-            instrument_config_operation,
-        )
 
         call_count = 0
 

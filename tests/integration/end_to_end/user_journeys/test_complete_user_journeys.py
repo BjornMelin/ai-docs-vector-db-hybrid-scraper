@@ -156,13 +156,16 @@ class TestCompleteUserJourneys:
         # Validate API endpoints
         validated_endpoints = []
         for step in result.step_results:
-            if "validate" in step["step_name"] and step["success"]:
-                if (
+            if (
+                "validate" in step["step_name"]
+                and step["success"]
+                and (
                     "result" in step
                     and "result" in step["result"]
                     and "endpoint" in step["result"]["result"]
-                ):
-                    validated_endpoints.append(step["result"]["result"]["endpoint"])
+                )
+            ):
+                validated_endpoints.append(step["result"]["result"]["endpoint"])
 
         assert len(validated_endpoints) >= 3, "Not enough API endpoints validated"
 

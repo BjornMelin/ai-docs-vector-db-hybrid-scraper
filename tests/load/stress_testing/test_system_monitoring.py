@@ -161,7 +161,7 @@ class SystemMonitor:
 
             except Exception as e:
                 logger.warning(
-                    f"Error during monitoring: {e}"
+                    "Error during monitoring: %s", e
                 )  # TODO: Convert f-string to logging format
 
             time.sleep(self.collection_interval)
@@ -321,7 +321,7 @@ class SystemMonitor:
             )
             self.performance_alerts.append(alert)
             logger.warning(
-                f"Performance alert: {message}"
+                "Performance alert: %s", message
             )  # TODO: Convert f-string to logging format
 
     def get_metrics_summary(self) -> dict[str, Any]:
@@ -554,7 +554,7 @@ class TestSystemMonitoring:
                     except Exception as e:
                         # Handle stress operation errors
                         logger.warning(
-                            f"Stress operation failed: {e}"
+                            "Stress operation failed: %s", e
                         )  # TODO: Convert f-string to logging format
                         raise
                     else:
@@ -599,7 +599,7 @@ class TestSystemMonitoring:
 
             for pattern in stress_patterns:
                 logger.info(
-                    f"Running stress pattern: {pattern['name']}"
+                    "Running stress pattern: %s", pattern["name"]
                 )  # TODO: Convert f-string to logging format
 
                 # Configure stress test
@@ -638,7 +638,7 @@ class TestSystemMonitoring:
                 )
 
                 logger.info(
-                    f"Completed stress pattern: {pattern['name']}"
+                    "Completed stress pattern: %s", pattern["name"]
                 )  # TODO: Convert f-string to logging format
 
                 # Brief pause between patterns
@@ -682,24 +682,28 @@ class TestSystemMonitoring:
             if monitor.performance_alerts:
                 alert_types = {alert.severity for alert in monitor.performance_alerts}
                 logger.info(
-                    f"Performance alerts generated: {len(monitor.performance_alerts)} ({alert_types})"
+                    "Performance alerts generated: %s (%s)",
+                    len(monitor.performance_alerts),
+                    alert_types,
                 )
 
             logger.info("System monitoring test completed:")
             logger.info(
-                f"  - Total metrics collected: {final_metrics['_total_data_points']}"
+                "  - Total metrics collected: %s", final_metrics["_total_data_points"]
             )
             logger.info(
-                f"  - Performance alerts: {final_metrics['_total_alerts']}"
+                "  - Performance alerts: %s", final_metrics["_total_alerts"]
             )  # TODO: Convert f-string to logging format
             logger.info(
-                f"  - Peak CPU: {final_metrics['system_metrics']['cpu']['max']:.2f}%"
+                "  - Peak CPU: %.2f%%", final_metrics["system_metrics"]["cpu"]["max"]
             )
             logger.info(
-                f"  - Peak memory: {final_metrics['system_metrics']['memory']['max']:.2f}%"
+                "  - Peak memory: %.2f%%",
+                final_metrics["system_metrics"]["memory"]["max"],
             )
             logger.info(
-                f"  - Response time P95: {performance_analysis['response_times']['p95_ms']:.2f}ms"
+                "  - Response time P95: %.2fms",
+                performance_analysis["response_times"]["p95_ms"],
             )
 
         finally:
@@ -734,7 +738,8 @@ class TestSystemMonitoring:
                     if self.call_count % 100 == 0:
                         self.degradation_factor *= 1.2  # 20% slower each time
                         logger.info(
-                            f"Performance degraded: factor = {self.degradation_factor:.2f}"
+                            "Performance degraded: factor = %.2f",
+                            self.degradation_factor,
                         )
 
                     # Calculate current latency
@@ -867,20 +872,20 @@ class TestSystemMonitoring:
                 )
 
             logger.info("Performance degradation detected:")
+            logger.info("  - Degradation ratio: %.2fx", degradation_ratio)
             logger.info(
-                f"  - Degradation ratio: {degradation_ratio:.2f}x"
-            )  # TODO: Convert f-string to logging format
-            logger.info(
-                f"  - Initial response time: {first_sample['avg_response_time_ms']:.2f}ms"
+                "  - Initial response time: %.2fms",
+                first_sample["avg_response_time_ms"],
             )
             logger.info(
-                f"  - Final response time: {last_sample['avg_response_time_ms']:.2f}ms"
+                "  - Final response time: %.2fms", last_sample["avg_response_time_ms"]
             )
             logger.info(
-                f"  - Error rate: {performance_analysis['error_rate_percent']:.2f}%"
+                "  - Error rate: %.2f%%", performance_analysis["error_rate_percent"]
             )
             logger.info(
-                f"  - P95 response time: {performance_analysis['response_times']['p95_ms']:.2f}ms"
+                "  - P95 response time: %.2fms",
+                performance_analysis["response_times"]["p95_ms"],
             )
 
         finally:

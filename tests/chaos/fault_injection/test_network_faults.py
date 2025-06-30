@@ -24,7 +24,7 @@ class TestNetworkFaultInjection:
     """Test network fault injection scenarios."""
 
     async def test_network_timeout_injection(
-        self, fault_injector, _resilience_validator, _mock_resilient_service
+        self, fault_injector, resilience_validator, _mock_resilient_service
     ):
         """Test network timeout fault injection."""
 
@@ -76,7 +76,7 @@ class TestNetworkFaultInjection:
         # Clean up
         fault_injector.remove_fault(fault_id)
 
-    async def test_partial_network_failure(self, fault_injector, _resilience_validator):
+    async def test_partial_network_failure(self, fault_injector, resilience_validator):
         """Test partial network failure with intermittent connectivity."""
         # Inject partial failure (70% success rate)
         fault_id = await fault_injector.inject_partial_failure(
@@ -220,7 +220,7 @@ class TestNetworkFaultInjection:
         assert len(fault_injector.get_fault_history()) == 3
 
     async def test_network_fault_with_circuit_breaker(
-        self, _fault_injector, resilience_validator
+        self, fault_injector, resilience_validator
     ):
         """Test network fault injection with circuit breaker validation."""
         failure_count = 0
@@ -310,7 +310,7 @@ class TestNetworkChaosWithRealServices:
         return service
 
     async def test_vector_db_connection_failure_scenario(
-        self, _fault_injector, resilience_validator, mock_vector_db_service
+        self, fault_injector, resilience_validator, mock_vector_db_service
     ):
         """Test vector database connection failure and recovery."""
         # Simulate connection failure
@@ -339,7 +339,7 @@ class TestNetworkChaosWithRealServices:
         assert result["fallback_successful"], "Fallback should succeed"
 
     async def test_embedding_service_timeout_with_retry(
-        self, _fault_injector, resilience_validator, __mock_embedding_service
+        self, fault_injector, resilience_validator, __mock_embedding_service
     ):
         """Test embedding service timeout with retry mechanism."""
         call_count = 0
@@ -370,7 +370,7 @@ class TestNetworkChaosWithRealServices:
 
     async def test_cascade_failure_prevention(
         self,
-        _fault_injector,
+        fault_injector,
         resilience_validator,
         mock_vector_db_service,
         _mock_embedding_service,
@@ -415,7 +415,7 @@ class TestNetworkChaosWithRealServices:
         )
 
     async def test_network_partition_simulation(
-        self, _fault_injector, _resilience_validator
+        self, fault_injector, resilience_validator
     ):
         """Test network partition simulation and split-brain prevention."""
         # Simulate network partition between services
@@ -450,7 +450,7 @@ class TestNetworkChaosWithRealServices:
         assert result_a["status"] == "success"
         assert result_b["status"] == "success"
 
-    async def test_bandwidth_limitation_simulation(self, _fault_injector):
+    async def test_bandwidth_limitation_simulation(self, fault_injector):
         """Test bandwidth limitation simulation."""
 
         # Simulate bandwidth limitation by adding delays
@@ -474,7 +474,7 @@ class TestNetworkChaosWithRealServices:
         )
         assert result["transferred"] == "10MB"
 
-    async def test_dns_failure_simulation(self, _fault_injector):
+    async def test_dns_failure_simulation(self, fault_injector):
         """Test DNS failure simulation."""
         dns_failure_active = True
 

@@ -13,14 +13,14 @@ import pytest
 import yaml
 from hypothesis import given, strategies as st
 
-from src.config.core import (
+from src.config import (
     Config,
     DocumentationSite,
     get_config,
     reset_config,
     set_config,
 )
-from src.config.enums import CrawlProvider, EmbeddingProvider, Environment, LogLevel
+from src.config import CrawlProvider, EmbeddingProvider, Environment, LogLevel
 
 
 class TestEnvironmentVariableLoading:

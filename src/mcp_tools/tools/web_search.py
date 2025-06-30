@@ -7,6 +7,7 @@ intelligent result fusion, and adaptive search strategy optimization.
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -33,13 +34,13 @@ def register_tools(mcp, client_manager: ClientManager):
     @mcp.tool()
     async def autonomous_web_search(
         query: str,
-        providers: Optional[List[str]] = None,
+        providers: list[str] | None = None,
         max_results: int = 20,
         fusion_strategy: str = "intelligent",
         quality_threshold: float = 0.7,
         auto_expand: bool = True,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform autonomous web search with multi-provider orchestration.
 
         Implements I5 research findings for intelligent web search orchestration
@@ -185,7 +186,7 @@ def register_tools(mcp, client_manager: ClientManager):
         max_iterations: int = 3,
         learning_enabled: bool = True,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform adaptive web search with ML-powered orchestration optimization.
 
         Implements advanced adaptive orchestration that learns from search patterns
@@ -334,11 +335,11 @@ def register_tools(mcp, client_manager: ClientManager):
     @mcp.tool()
     async def multi_provider_result_synthesis(
         query: str,
-        provider_preferences: Optional[Dict[str, float]] = None,
+        provider_preferences: dict[str, float] | None = None,
         synthesis_depth: str = "comprehensive",
         deduplication_strategy: str = "semantic",
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Synthesize results from multiple web search providers with intelligent deduplication.
 
         Implements advanced result synthesis with semantic deduplication,
@@ -439,7 +440,7 @@ def register_tools(mcp, client_manager: ClientManager):
             }
 
     @mcp.tool()
-    async def get_web_search_capabilities() -> Dict[str, Any]:
+    async def get_web_search_capabilities() -> dict[str, Any]:
         """Get web search orchestration capabilities and configuration options.
 
         Returns:
@@ -531,7 +532,7 @@ def register_tools(mcp, client_manager: ClientManager):
 # Helper functions
 
 
-async def _analyze_optimal_providers(query: str, ctx) -> Dict[str, Any]:
+async def _analyze_optimal_providers(query: str, ctx) -> dict[str, Any]:
     """Analyze query to select optimal search providers."""
     query_lower = query.lower()
 
@@ -562,7 +563,7 @@ async def _analyze_optimal_providers(query: str, ctx) -> Dict[str, Any]:
     }
 
 
-async def _autonomous_query_expansion(query: str, ctx) -> Dict[str, Any]:
+async def _autonomous_query_expansion(query: str, ctx) -> dict[str, Any]:
     """Perform autonomous query expansion for better coverage."""
     try:
         query_words = query.split()
@@ -573,12 +574,11 @@ async def _autonomous_query_expansion(query: str, ctx) -> Dict[str, Any]:
             # Add context for short queries
             expanded_queries.append(f"{query} guide")
             expanded_queries.append(f"{query} tutorial")
-        else:
-            # Create variations for longer queries
-            if "how to" in query.lower():
-                expanded_queries.append(query.replace("how to", "steps to"))
-            elif "what is" in query.lower():
-                expanded_queries.append(query.replace("what is", "definition of"))
+        # Create variations for longer queries
+        elif "how to" in query.lower():
+            expanded_queries.append(query.replace("how to", "steps to"))
+        elif "what is" in query.lower():
+            expanded_queries.append(query.replace("what is", "definition of"))
 
         # Add domain-specific expansions
         if any(
@@ -601,8 +601,8 @@ async def _autonomous_query_expansion(query: str, ctx) -> Dict[str, Any]:
 
 
 async def _perform_provider_search(
-    provider: str, queries: List[str], max_results: int, ctx
-) -> Dict[str, Any]:
+    provider: str, queries: list[str], max_results: int, ctx
+) -> dict[str, Any]:
     """Perform search using a specific provider."""
     try:
         # Mock provider search implementation
@@ -641,7 +641,7 @@ async def _perform_provider_search(
 
 def _generate_mock_provider_results(
     provider: str, query: str, limit: int
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Generate mock results for a provider (replace with actual API calls)."""
     base_results = []
 
@@ -678,11 +678,11 @@ def _generate_mock_provider_results(
 
 
 async def _apply_intelligent_fusion(
-    provider_results: Dict[str, Dict],
+    provider_results: dict[str, dict],
     fusion_strategy: str,
     quality_threshold: float,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Apply intelligent fusion strategy to combine provider results."""
     all_results = []
 
@@ -730,7 +730,7 @@ async def _apply_intelligent_fusion(
     }
 
 
-async def _intelligent_fusion(results: List[Dict], ctx) -> List[Dict]:
+async def _intelligent_fusion(results: list[dict], ctx) -> list[dict]:
     """Apply intelligent ML-powered fusion."""
     # Remove URL duplicates first
     seen_urls = set()
@@ -764,7 +764,7 @@ async def _intelligent_fusion(results: List[Dict], ctx) -> List[Dict]:
     return fused_results
 
 
-async def _weighted_fusion(results: List[Dict], ctx) -> List[Dict]:
+async def _weighted_fusion(results: list[dict], ctx) -> list[dict]:
     """Apply weighted fusion based on provider weights."""
     provider_weights = {
         "google": 0.4,
@@ -791,7 +791,7 @@ async def _weighted_fusion(results: List[Dict], ctx) -> List[Dict]:
     return weighted_results
 
 
-async def _ranked_fusion(results: List[Dict], ctx) -> List[Dict]:
+async def _ranked_fusion(results: list[dict], ctx) -> list[dict]:
     """Apply rank-based fusion."""
     # Simple rank-based fusion using reciprocal rank
     for result in results:
@@ -818,7 +818,7 @@ def _get_provider_weight(provider: str) -> float:
     return weights.get(provider, 0.1)
 
 
-def _calculate_fusion_confidence(results: List[Dict], total_results: int) -> float:
+def _calculate_fusion_confidence(results: list[dict], total_results: int) -> float:
     """Calculate confidence in fusion results."""
     if not results or total_results == 0:
         return 0.0
@@ -841,8 +841,8 @@ def _calculate_fusion_confidence(results: List[Dict], total_results: int) -> flo
 
 
 def _calculate_orchestration_metrics(
-    provider_results: Dict, fused_results: Dict, total_raw_results: int
-) -> Dict[str, Any]:
+    provider_results: dict, fused_results: dict, total_raw_results: int
+) -> dict[str, Any]:
     """Calculate metrics for orchestration performance."""
     return {
         "providers_used": len(provider_results),
@@ -860,8 +860,8 @@ def _calculate_orchestration_metrics(
 
 
 async def _generate_web_search_insights(
-    query: str, provider_results: Dict, fused_results: Dict, ctx
-) -> Dict[str, Any]:
+    query: str, provider_results: dict, fused_results: dict, ctx
+) -> dict[str, Any]:
     """Generate insights for web search optimization."""
     # Analyze provider performance
     provider_performance = {}
@@ -933,7 +933,7 @@ async def _generate_web_search_insights(
 
 async def _analyze_query_characteristics(
     query: str, search_intent: str, ctx
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Analyze query characteristics for adaptive optimization."""
     words = query.split()
 
@@ -957,17 +957,16 @@ def _classify_question_type(query: str) -> str:
 
     if any(word in query_lower for word in ["how", "implement", "build", "create"]):
         return "procedural"
-    elif any(word in query_lower for word in ["what", "define", "explain", "describe"]):
+    if any(word in query_lower for word in ["what", "define", "explain", "describe"]):
         return "definitional"
-    elif any(word in query_lower for word in ["why", "reason", "cause", "purpose"]):
+    if any(word in query_lower for word in ["why", "reason", "cause", "purpose"]):
         return "causal"
-    elif any(word in query_lower for word in ["compare", "difference", "vs", "versus"]):
+    if any(word in query_lower for word in ["compare", "difference", "vs", "versus"]):
         return "comparative"
-    else:
-        return "informational"
+    return "informational"
 
 
-def _detect_domain_indicators(query: str) -> List[str]:
+def _detect_domain_indicators(query: str) -> list[str]:
     """Detect domain-specific indicators in query."""
     technical_terms = [
         "algorithm",
@@ -1003,19 +1002,18 @@ def _detect_temporal_indicators(query: str) -> str:
         term in query_lower for term in ["latest", "recent", "current", "new", "today"]
     ):
         return "recent"
-    elif any(term in query_lower for term in ["historical", "past", "before", "old"]):
+    if any(term in query_lower for term in ["historical", "past", "before", "old"]):
         return "historical"
-    else:
-        return "neutral"
+    return "neutral"
 
 
 async def _select_adaptive_parameters(
-    query_analysis: Dict,
+    query_analysis: dict,
     performance_target: str,
     iteration: int,
-    best_result: Optional[Dict],
+    best_result: dict | None,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Select optimal parameters for adaptive iteration."""
     base_params = {
         "providers": ["google", "bing"],
@@ -1066,7 +1064,7 @@ async def _select_adaptive_parameters(
 
 
 async def _evaluate_iteration_performance(
-    search_result: Dict, performance_target: str, query_analysis: Dict, ctx
+    search_result: dict, performance_target: str, query_analysis: dict, ctx
 ) -> float:
     """Evaluate performance of a search iteration."""
     # Base performance factors
@@ -1103,8 +1101,8 @@ async def _evaluate_iteration_performance(
 
 
 async def _apply_adaptive_learning(
-    query_analysis: Dict, iteration_results: List[Dict], best_result: Dict, ctx
-) -> Dict[str, Any]:
+    query_analysis: dict, iteration_results: list[dict], best_result: dict, ctx
+) -> dict[str, Any]:
     """Apply adaptive learning from iteration results."""
     # Analyze what worked best
     best_params = best_result.get("iteration_metadata", {}).get("parameters_used", {})
@@ -1128,7 +1126,7 @@ async def _apply_adaptive_learning(
     return learning_insights
 
 
-def _analyze_provider_count_impact(iteration_results: List[Dict]) -> float:
+def _analyze_provider_count_impact(iteration_results: list[dict]) -> float:
     """Analyze impact of provider count on performance."""
     if len(iteration_results) < 2:
         return 0.0
@@ -1148,8 +1146,8 @@ def _analyze_provider_count_impact(iteration_results: List[Dict]) -> float:
 
 
 def _analyze_fusion_strategy_effectiveness(
-    iteration_results: List[Dict],
-) -> Dict[str, float]:
+    iteration_results: list[dict],
+) -> dict[str, float]:
     """Analyze effectiveness of different fusion strategies."""
     strategy_performance = {}
 
@@ -1170,7 +1168,7 @@ def _analyze_fusion_strategy_effectiveness(
     return strategy_avg
 
 
-def _analyze_quality_threshold_impact(iteration_results: List[Dict]) -> float:
+def _analyze_quality_threshold_impact(iteration_results: list[dict]) -> float:
     """Analyze impact of quality threshold on performance."""
     if len(iteration_results) < 2:
         return 0.7  # Default threshold
@@ -1181,15 +1179,15 @@ def _analyze_quality_threshold_impact(iteration_results: List[Dict]) -> float:
     return optimal_threshold
 
 
-async def _get_available_providers(ctx) -> List[str]:
+async def _get_available_providers(ctx) -> list[str]:
     """Get list of available search providers."""
     # In real implementation, this would check actual provider availability
     return ["google", "bing", "duckduckgo", "searx"]
 
 
 async def _apply_intelligent_deduplication(
-    provider_results: Dict, strategy: str, ctx
-) -> Dict[str, Any]:
+    provider_results: dict, strategy: str, ctx
+) -> dict[str, Any]:
     """Apply intelligent deduplication to provider results."""
     all_results = []
 
@@ -1219,7 +1217,7 @@ async def _apply_intelligent_deduplication(
     }
 
 
-def _url_deduplication(results: List[Dict]) -> List[Dict]:
+def _url_deduplication(results: list[dict]) -> list[dict]:
     """Remove duplicates based on URL."""
     seen_urls = set()
     unique_results = []
@@ -1233,7 +1231,7 @@ def _url_deduplication(results: List[Dict]) -> List[Dict]:
     return unique_results
 
 
-async def _semantic_deduplication(results: List[Dict], ctx) -> List[Dict]:
+async def _semantic_deduplication(results: list[dict], ctx) -> list[dict]:
     """Remove duplicates based on semantic similarity."""
     # Simple semantic deduplication using title and snippet similarity
     unique_results = []
@@ -1268,7 +1266,7 @@ async def _semantic_deduplication(results: List[Dict], ctx) -> List[Dict]:
     return unique_results
 
 
-async def _hybrid_deduplication(results: List[Dict], ctx) -> List[Dict]:
+async def _hybrid_deduplication(results: list[dict], ctx) -> list[dict]:
     """Apply hybrid deduplication combining URL and semantic approaches."""
     # First apply URL deduplication
     url_deduplicated = _url_deduplication(results)
@@ -1280,11 +1278,11 @@ async def _hybrid_deduplication(results: List[Dict], ctx) -> List[Dict]:
 
 
 async def _apply_result_synthesis(
-    deduplicated_results: Dict,
+    deduplicated_results: dict,
     synthesis_depth: str,
-    provider_preferences: Optional[Dict[str, float]],
+    provider_preferences: dict[str, float] | None,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Apply result synthesis based on specified depth."""
     results = deduplicated_results["results"]
 
@@ -1298,7 +1296,7 @@ async def _apply_result_synthesis(
     return synthesized
 
 
-async def _basic_synthesis(results: List[Dict], ctx) -> Dict[str, Any]:
+async def _basic_synthesis(results: list[dict], ctx) -> dict[str, Any]:
     """Apply basic synthesis - simple ranking."""
     # Sort by quality score
     sorted_results = sorted(
@@ -1312,7 +1310,7 @@ async def _basic_synthesis(results: List[Dict], ctx) -> Dict[str, Any]:
     }
 
 
-async def _standard_synthesis(results: List[Dict], ctx) -> Dict[str, Any]:
+async def _standard_synthesis(results: list[dict], ctx) -> dict[str, Any]:
     """Apply standard synthesis with moderate sophistication."""
     # Combine quality score and relevance
     for result in results:
@@ -1334,8 +1332,8 @@ async def _standard_synthesis(results: List[Dict], ctx) -> Dict[str, Any]:
 
 
 async def _comprehensive_synthesis(
-    results: List[Dict], provider_preferences: Optional[Dict[str, float]], ctx
-) -> Dict[str, Any]:
+    results: list[dict], provider_preferences: dict[str, float] | None, ctx
+) -> dict[str, Any]:
     """Apply comprehensive synthesis with full sophistication."""
     preferences = provider_preferences or {}
 
@@ -1365,8 +1363,8 @@ async def _comprehensive_synthesis(
 
 
 def _calculate_synthesis_metrics(
-    provider_results: Dict, deduplicated_results: Dict, synthesized_results: Dict
-) -> Dict[str, Any]:
+    provider_results: dict, deduplicated_results: dict, synthesized_results: dict
+) -> dict[str, Any]:
     """Calculate metrics for synthesis process."""
     total_original = sum(
         provider_data["total_results"] for provider_data in provider_results.values()
