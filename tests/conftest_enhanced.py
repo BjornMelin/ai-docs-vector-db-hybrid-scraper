@@ -13,8 +13,11 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import math
 import os
+import random
 import shutil
+import statistics
 import tempfile
 import time
 from typing import Any
@@ -120,7 +123,6 @@ def mock_embedding_service():
         """Generate deterministic mock embedding based on text."""
         # Use text hash for deterministic results
         seed = hash(text) % 1000000
-        import random
 
         random.seed(seed)
         embedding = [random.uniform(-1, 1) for _ in range(1536)]
@@ -230,7 +232,7 @@ def performance_monitor():
                 result = await operation(*args, **kwargs)
                 success = True
                 error = None
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 result = None
                 success = False
                 error = str(e)
@@ -254,8 +256,6 @@ def performance_monitor():
             durations = [m["duration_ms"] for m in self.measurements if m["success"]]
             if not durations:
                 return {"success_rate": 0.0}
-
-            import statistics
 
             return {
                 "count": len(self.measurements),
@@ -351,11 +351,9 @@ def ai_test_utilities():
             assert len(embedding) == expected_dim, (
                 f"Expected {expected_dim}D, got {len(embedding)}D"
             )
-            assert all(isinstance(x, (int, float)) for x in embedding), (
+            assert all(isinstance(x, int | float) for x in embedding), (
                 "All values must be numeric"
             )
-
-            import math
 
             assert not any(math.isnan(x) or math.isinf(x) for x in embedding), (
                 "No NaN/Inf values"
@@ -374,7 +372,8 @@ def ai_test_utilities():
         def calculate_cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
             """Calculate cosine similarity between vectors."""
             if len(vec1) != len(vec2):
-                raise ValueError(f"Dimension mismatch: {len(vec1)} vs {len(vec2)}")
+                msg = f"Dimension mismatch: {len(vec1)} vs {len(vec2)}"
+                raise ValueError(msg)
 
             dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=False))
             norm1 = sum(a * a for a in vec1) ** 0.5
@@ -390,8 +389,6 @@ def ai_test_utilities():
             count: int = 10, dim: int = 1536
         ) -> list[list[float]]:
             """Generate deterministic test embeddings."""
-            import random
-
             embeddings = []
 
             for i in range(count):
@@ -421,23 +418,21 @@ def test_data_factory():
         @staticmethod
         def create_mock_documents(count: int = 10) -> list[dict[str, Any]]:
             """Create mock documents for testing."""
-            documents = []
-            for i in range(count):
-                documents.append(
-                    {
-                        "id": f"doc_{i}",
-                        "title": f"Test Document {i}",
-                        "content": f"This is test content for document {i}. " * (i + 2),
-                        "url": f"https://example.com/docs/doc_{i}",
-                        "metadata": {
-                            "category": f"category_{i % 3}",
-                            "tags": [f"tag_{i}", f"tag_{i % 2}"],
-                            "timestamp": "2025-06-28T00:00:00Z",
-                            "word_count": (i + 2) * 10,
-                        },
-                    }
-                )
-            return documents
+            return [
+                {
+                    "id": f"doc_{i}",
+                    "title": f"Test Document {i}",
+                    "content": f"This is test content for document {i}. " * (i + 2),
+                    "url": f"https://example.com/docs/doc_{i}",
+                    "metadata": {
+                        "category": f"category_{i % 3}",
+                        "tags": [f"tag_{i}", f"tag_{i % 2}"],
+                        "timestamp": "2025-06-28T00:00:00Z",
+                        "word_count": (i + 2) * 10,
+                    },
+                }
+                for i in range(count)
+            ]
 
         @staticmethod
         def create_search_queries(count: int = 5) -> list[str]:
@@ -454,27 +449,25 @@ def test_data_factory():
         @staticmethod
         def create_mock_crawl_results(count: int = 5) -> list[dict[str, Any]]:
             """Create mock crawl results."""
-            results = []
-            for i in range(count):
-                results.append(
-                    {
-                        "url": f"https://example.com/page_{i}",
-                        "title": f"Page {i}",
-                        "content": f"Content for page {i} with relevant information.",
-                        "markdown": f"# Page {i}\n\nContent for page {i}.",
-                        "success": True,
-                        "status_code": 200,
-                        "metadata": {
-                            "description": f"Description for page {i}",
-                            "keywords": [f"keyword_{i}", "test"],
-                            "content_type": "text/html",
-                        },
-                        "links": [f"https://example.com/page_{i + 1}"]
-                        if i < count - 1
-                        else [],
-                    }
-                )
-            return results
+            return [
+                {
+                    "url": f"https://example.com/page_{i}",
+                    "title": f"Page {i}",
+                    "content": f"Content for page {i} with relevant information.",
+                    "markdown": f"# Page {i}\\n\\nContent for page {i}.",
+                    "success": True,
+                    "status_code": 200,
+                    "metadata": {
+                        "description": f"Description for page {i}",
+                        "keywords": [f"keyword_{i}", "test"],
+                        "content_type": "text/html",
+                    },
+                    "links": [f"https://example.com/page_{i + 1}"]
+                    if i < count - 1
+                    else [],
+                }
+                for i in range(count)
+            ]
 
     return TestDataFactory()
 

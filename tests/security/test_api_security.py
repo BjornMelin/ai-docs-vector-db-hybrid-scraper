@@ -10,14 +10,13 @@ This module provides comprehensive security testing for AI/ML systems including:
 """
 
 import asyncio
+
+import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
 from src.services.security import (
-import pytest
     AISecurityValidator,
-    SecurityManager,
-    SecurityThreat,
     ThreatLevel,
 )
 from tests.utils.modern_ai_testing import SecurityTestingPatterns
@@ -365,8 +364,6 @@ class TestSecurityIntegration:
 # Custom security exception for testing
 class SecurityException(Exception):
     """Custom exception for security violations."""
-
-    pass
 
 
 # Additional security testing fixtures

@@ -7,7 +7,7 @@ demonstrating modern testing patterns without external dependencies.
 import math
 import random
 import time
-from typing import Any, , , Optional, 
+from typing import Any
 from unittest.mock import MagicMock
 
 

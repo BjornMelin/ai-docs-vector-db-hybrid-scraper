@@ -6,12 +6,14 @@ following 2025 performance testing best practices.
 """
 
 import asyncio
+import math
+import random
 import time
+from unittest.mock import MagicMock
+
+import pytest
 
 from tests.utils.modern_ai_testing import (
-import pytest
-from unittest.mock import MagicMock
-    ModernAITestingUtils,
     PerformanceTestingFramework,
     performance_critical_test,
 )
@@ -81,8 +83,6 @@ class TestSearchPerformance:
         # Configure mock service for realistic latency
         async def search_func(query: str):
             # Simulate variable latency (most requests fast, some slower)
-            import random
-
             if random.random() < 0.95:  # 95% of requests
                 latency = random.uniform(20, 80)  # Fast requests
             else:  # 5% of requests
@@ -241,8 +241,6 @@ class TestSearchPerformance:
             # Simulate search in dataset of given size
             async def search_func(query: str):
                 # Latency increases logarithmically with dataset size (realistic)
-                import math
-
                 base_latency = 30.0
                 scale_factor = math.log10(dataset_size / 100.0 + 1) * 20.0
                 latency = base_latency + scale_factor
@@ -310,12 +308,11 @@ class TestSearchPerformance:
                 # Cache hit - very fast response
                 await asyncio.sleep(0.001)  # 1ms for cache hit
                 return cache[query]
-            else:
-                cache_misses += 1
-                # Cache miss - normal search latency
-                result = await mock_search_service.search(query, latency_ms=60.0)
-                cache[query] = result
-                return result
+            cache_misses += 1
+            # Cache miss - normal search latency
+            result = await mock_search_service.search(query, latency_ms=60.0)
+            cache[query] = result
+            return result
 
         # Test with repeated queries (should benefit from caching)
         repeated_queries = test_queries * 3  # Each query appears 3 times
