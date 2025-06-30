@@ -110,9 +110,8 @@ def _setup_demo_environment() -> tuple[dict[str, Any], DriftDetector]:
     )
 
     detector = initialize_drift_detector(drift_config)
-    print(
-        f"✅ Initialized drift detector with {len(drift_config.monitored_paths)} monitored paths"
-    )
+    paths_count = len(drift_config.monitored_paths)
+    print(f"✅ Initialized drift detector with {paths_count} monitored paths")
 
     return configs, detector
 
@@ -185,9 +184,8 @@ def _display_drift_events(detector: DriftDetector, events: list) -> None:
                 "critical": "🔴",
             }.get(event.severity.value, "❔")
 
-            print(
-                f"   {severity_emoji} {event.severity.value.upper()}: {event.description}"
-            )
+            severity_text = event.severity.value.upper()
+            print(f"   {severity_emoji} {severity_text}: {event.description}")
             print(f"      📍 Type: {event.drift_type.value}")
             print(
                 f"      🔧 Auto-remediable: {'Yes' if event.auto_remediable else 'No'}"
@@ -215,9 +213,8 @@ def _display_drift_summary(detector: DriftDetector) -> None:
 
     summary = detector.get_drift_summary()
 
-    print(
-        f"🟢 Detection Status: {'Enabled' if summary['detection_enabled'] else 'Disabled'}"
-    )
+    status = 'Enabled' if summary['detection_enabled'] else 'Disabled'
+    print(f"🟢 Detection Status: {status}")
     print(f"📁 Monitored Sources: {summary['monitored_sources']}")
     print(f"📸 Snapshots Stored: {summary['snapshots_stored']}")
     print(f"⚡ Recent Events (24h): {summary['recent_events_24h']}")

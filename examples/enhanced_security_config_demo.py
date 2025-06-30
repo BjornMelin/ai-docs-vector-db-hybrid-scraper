@@ -312,9 +312,8 @@ def demo_security_monitoring_integration():
             f"  Total Configurations: {security_status.get('total_configurations')}"
         )
         logger.info(f"  Key Version: {security_status.get('key_version')}")
-        logger.info(
-            f"  Security Monitoring: {security_status.get('security_monitoring_integration')}"
-        )
+        monitoring_integration = security_status.get('security_monitoring_integration')
+        logger.info(f"  Security Monitoring: {monitoring_integration}")
         logger.info(
             f"  Threat Detection: {security_status.get('threat_detection_enabled')}"
         )

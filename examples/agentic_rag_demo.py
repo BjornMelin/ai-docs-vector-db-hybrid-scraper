@@ -54,13 +54,21 @@ async def demo_query_orchestration():
                 "description": "Simple factual query",
             },
             {
-                "query": "How do I implement a scalable RAG system with multiple embedding models?",
+                "query": (
+                    "How do I implement a scalable RAG system with multiple "
+                    "embedding models?"
+                ),
                 "collection": "documentation",
                 "expected_complexity": "complex",
-                "description": "Complex technical query requiring multi-step processing",
+                "description": (
+                    "Complex technical query requiring multi-step processing"
+                ),
             },
             {
-                "query": "Compare the performance of different search strategies for code documentation",
+                "query": (
+                    "Compare the performance of different search strategies for "
+                    "code documentation"
+                ),
                 "collection": "documentation",
                 "expected_complexity": "moderate",
                 "description": "Analytical query requiring comparison",
@@ -87,9 +95,10 @@ async def demo_query_orchestration():
                 if "result" in result:
                     result_data = result["result"]
                     print(f"Analysis: {result_data.get('analysis', {})}")
-                    print(
-                        f"Plan: {result_data.get('orchestration_plan', 'No plan available')}"
+                    orchestration_plan = result_data.get(
+                        'orchestration_plan', 'No plan available'
                     )
+                    print(f"Plan: {orchestration_plan}")
             else:
                 print(f"Error: {result.get('error')}")
 
@@ -116,9 +125,8 @@ async def demo_tool_composition():
         engine = ToolCompositionEngine(client_manager)
         await engine.initialize()
 
-        print(
-            f"Initialized tool composition engine with {len(engine.tool_registry)} tools"
-        )
+        tool_count = len(engine.tool_registry)
+        print(f"Initialized tool composition engine with {tool_count} tools")
 
         # Demonstrate tool discovery
         print("\n--- Available Tools by Category ---")
@@ -164,9 +172,11 @@ async def demo_tool_composition():
 
             print(f"Composed chain with {len(tool_chain)} steps:")
             for j, step in enumerate(tool_chain):
-                print(
-                    f"  {j + 1}. {step.tool_name} (parallel: {step.parallel}, optional: {step.optional})"
+                step_info = (
+                    f"  {j + 1}. {step.tool_name} "
+                    f"(parallel: {step.parallel}, optional: {step.optional})"
                 )
+                print(step_info)
 
             # Execute tool chain with mock data
             input_data = {
@@ -182,9 +192,11 @@ async def demo_tool_composition():
             if result["success"]:
                 metadata = result["metadata"]
                 print(f"Total time: {metadata['total_execution_time_ms']:.1f}ms")
-                print(
-                    f"Steps executed: {metadata['steps_executed']}/{metadata['chain_length']}"
+                steps_info = (
+                    f"Steps executed: {metadata['steps_executed']}/"
+                    f"{metadata['chain_length']}"
                 )
+                print(steps_info)
             else:
                 print(f"Execution error: {result.get('error')}")
 
@@ -254,12 +266,11 @@ async def demo_agent_learning():
                 print("✓ Query processed successfully")
 
                 # Show session state evolution
-                print(
-                    f"  Conversation history length: {len(deps.session_state.conversation_history)}"
-                )
-                print(
-                    f"  Performance metrics count: {len(deps.session_state.performance_metrics)}"
-                )
+                history_count = len(deps.session_state.conversation_history)
+                print(f"  Conversation history length: {history_count}")
+                
+                metrics_count = len(deps.session_state.performance_metrics)
+                print(f"  Performance metrics count: {metrics_count}")
                 print(f"  Tool usage stats: {deps.session_state.tool_usage_stats}")
             else:
                 print(f"✗ Query failed: {result.get('error')}")

@@ -228,11 +228,15 @@ async def demonstrate_document_processing():
                     "url": "test1.html",
                 },
                 {
-                    "content": "Another document about parallel processing and optimization.",
+                    "content": (
+                        "Another document about parallel processing and optimization."
+                    ),
                     "url": "test2.html",
                 },
                 {
-                    "content": "Document about performance improvements and scalability.",
+                    "content": (
+                        "Document about performance improvements and scalability."
+                    ),
                     "url": "test3.html",
                 },
             ]
@@ -256,12 +260,11 @@ async def demonstrate_document_processing():
             # Display results
             print("📊 Processing Results:")
             print(f"   • Documents processed: {len(results['documents'])}")
-            print(
-                f"   • Processing time: {results['processing_stats']['processing_time_ms']:.2f}ms"
-            )
-            print(
-                f"   • Throughput: {results['processing_stats']['throughput_docs_per_second']:.2f} docs/sec"
-            )
+            processing_time = results['processing_stats']['processing_time_ms']
+            print(f"   • Processing time: {processing_time:.2f}ms")
+            
+            throughput = results['processing_stats']['throughput_docs_per_second']
+            print(f"   • Throughput: {throughput:.2f} docs/sec")
 
             # Display optimization status
             opt_status = results["optimization_enabled"]
@@ -310,9 +313,9 @@ async def main():
         if success:
             success_count += 1
 
-    print(
-        f"\nOverall Success Rate: {success_count}/{len(results)} ({success_count / len(results) * 100:.1f}%)"
-    )
+    total_tests = len(results)
+    success_rate = success_count / total_tests * 100
+    print(f"\nOverall Success Rate: {success_count}/{total_tests} ({success_rate:.1f}%)")
 
     if success_count == len(results):
         print("\n🎉 ALL INTEGRATION TESTS PASSED!")
