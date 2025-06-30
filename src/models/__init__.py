@@ -6,7 +6,7 @@ the application, organized by domain and purpose.
 Usage:
     from models import Config, SearchRequest, VectorSearchConfig
     from models.configuration import QdrantConfig, CacheConfig
-    from models.vector_search import SearchParams, PrefetchConfig
+    from models.vector_search import SecureSearchParamsModel, PrefetchConfig
 """
 
 # Configuration models
@@ -49,6 +49,7 @@ from .api_contracts import (
     MCPResponse,
     MetricData,
     SearchRequest,
+    SearchResponse,
     SearchResultItem,
     ValidationRequest,
     ValidationResponse,
@@ -94,29 +95,22 @@ from .validators import (
 
 # Vector search models
 from .vector_search import (
+    # Request models
+    AdvancedFilteredSearchRequest,
+    AdvancedHybridSearchRequest,
     # Async models
     AsyncSearchContext,
-    # Request models
     BasicSearchRequest,
     BatchSearchRequest,
     BatchSearchResponse,
     DimensionError,
-    FilteredSearchRequest,
-    FilterModel,
     FilterValidationError,
     FusionAlgorithm,
-    HybridSearchRequest,
     HyDESearchRequest,
-    MetadataModel,
     MultiStageSearchRequest,
-    PayloadModel,
     SearchAccuracy,
     SearchConfigurationError,
-    # Legacy aliases
-    SearchParams,
     SearchResponse,
-    # Response models
-    SearchResult,
     # Stage models
     SearchStage,
     # Base classes and enums
@@ -127,43 +121,28 @@ from .vector_search import (
     SecureMetadataModel,
     SecurePayloadModel,
     SecureSearchParamsModel,
+    # Response models
+    SecureSearchResult,
     SecureSparseVectorModel,
     # Vector models
     SecureVectorModel,
     SecurityValidationError,
-    SparseVectorModel,
-    VectorModel,
     # Exception classes
     VectorSearchError,
     VectorType,
 )
 
 
-# Legacy compatibility - these were removed in consolidation
-class CollectionHNSWConfigs:
-    """Legacy compatibility - removed during config simplification."""
-
-
-class HNSWConfig:
-    """Legacy compatibility - removed during config simplification."""
-
-
-class ModelBenchmark:
-    """Legacy compatibility - removed during config simplification."""
-
-
-class SmartSelectionConfig:
-    """Legacy compatibility - removed during config simplification."""
-
-
 # Commonly used exports
 __all__ = [
+    # Vector Search - Request models
+    "AdvancedFilteredSearchRequest",
+    "AdvancedHybridSearchRequest",
     # API Contracts
     "AnalyticsRequest",
     "AnalyticsResponse",
     # Vector Search - Async models
     "AsyncSearchContext",
-    # Vector Search - Request models
     "BasicSearchRequest",
     "BatchSearchRequest",
     "BatchSearchResponse",
@@ -179,7 +158,6 @@ __all__ = [
     "ChunkingConfig",
     "CodeBlock",
     "CodeLanguage",
-    "CollectionHNSWConfigs",
     "CollectionInfo",
     "CollectionRequest",
     "CollectionResponse",
@@ -195,38 +173,27 @@ __all__ = [
     "EmbeddingConfig",
     "ErrorResponse",
     "FastEmbedConfig",
-    "FilterModel",
     "FilterValidationError",
-    "FilteredSearchRequest",
     "FirecrawlConfig",
     "FusionAlgorithm",
-    "HNSWConfig",
     "HealthCheckResponse",
     "HyDEConfig",
     "HyDESearchRequest",
-    "HybridSearchRequest",
     "ListCollectionsResponse",
     "MCPRequest",
     "MCPResponse",
-    "MetadataModel",
     "MetricData",
-    "ModelBenchmark",
     "MultiStageSearchRequest",
     "OpenAIConfig",
-    "PayloadModel",
     "PerformanceConfig",
     "ProcessedDocument",
     "QdrantConfig",
     "ScrapingStats",
     "SearchAccuracy",
     "SearchConfigurationError",
-    # Vector Search - Legacy aliases
-    "SearchParams",
     # API Contracts
     "SearchRequest",
     "SearchResponse",
-    # Vector Search - Response models
-    "SearchResult",
     "SearchResultItem",
     # Vector Search - Stage models
     "SearchStage",
@@ -238,17 +205,16 @@ __all__ = [
     "SecureMetadataModel",
     "SecurePayloadModel",
     "SecureSearchParamsModel",
+    # Vector Search - Response models
+    "SecureSearchResult",
     "SecureSparseVectorModel",
     # Vector Search - Vector models
     "SecureVectorModel",
     "SecurityConfig",
     "SecurityValidationError",
-    "SmartSelectionConfig",
-    "SparseVectorModel",
     "ValidationRequest",
     "ValidationResponse",
     "VectorMetrics",
-    "VectorModel",
     # Vector Search - Exception classes
     "VectorSearchError",
     "VectorType",

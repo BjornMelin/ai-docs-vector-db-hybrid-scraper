@@ -33,6 +33,7 @@ from pydantic import (
 if TYPE_CHECKING:
     from datetime import datetime
 
+
 # =============================================================================
 # BASE CONFIGURATION & ENUMS
 # =============================================================================
@@ -408,7 +409,7 @@ class SecurePayloadModel(SecureBaseModel):
     def validate_content_security(cls, v: str) -> str:
         """Validate content for security (lazy import to avoid circular dependency)."""
         try:
-            from src.services.security.ai_security import (  # noqa: PLC0415
+            from src.services.security.ai_security import (
                 AISecurityValidator,
             )
 
@@ -459,7 +460,7 @@ class BasicSearchRequest(SecureBaseModel):
         return values
 
 
-class FilteredSearchRequest(BasicSearchRequest):
+class AdvancedFilteredSearchRequest(BasicSearchRequest):
     """Search request with advanced filtering."""
 
     filter_groups: list[SecureFilterGroupModel] = Field(
@@ -470,7 +471,7 @@ class FilteredSearchRequest(BasicSearchRequest):
     )
 
 
-class HybridSearchRequest(FilteredSearchRequest):
+class AdvancedHybridSearchRequest(AdvancedFilteredSearchRequest):
     """Hybrid search combining dense and sparse vectors."""
 
     sparse_vector: SecureSparseVectorModel | None = None
@@ -490,7 +491,7 @@ class HybridSearchRequest(FilteredSearchRequest):
         return self
 
 
-class HyDESearchRequest(FilteredSearchRequest):
+class HyDESearchRequest(AdvancedFilteredSearchRequest):
     """Hypothetical Document Embeddings search request."""
 
     query_text: str = Field(..., max_length=2000, description="Natural language query")
@@ -502,7 +503,7 @@ class HyDESearchRequest(FilteredSearchRequest):
     def validate_query_security(cls, v: str) -> str:
         """Validate query text for security."""
         try:
-            from src.services.security.ai_security import (  # noqa: PLC0415
+            from src.services.security.ai_security import (
                 AISecurityValidator,
             )
 
@@ -524,7 +525,7 @@ class HyDESearchRequest(FilteredSearchRequest):
 # =============================================================================
 
 
-class SearchResult(SecureBaseModel):
+class SecureSearchResult(SecureBaseModel):
     """Individual search result with secure payload."""
 
     id: str = Field(..., description="Result identifier")
@@ -546,7 +547,7 @@ class SearchResult(SecureBaseModel):
 class SearchResponse(SecureBaseModel):
     """Complete search response with metadata."""
 
-    results: list[SearchResult] = Field(..., description="Search results")
+    results: list[SecureSearchResult] = Field(..., description="Search results")
     total_count: int = Field(..., ge=0, description="Total available results")
     search_time_ms: int = Field(..., ge=0, description="Search execution time")
     accuracy: SearchAccuracy = Field(..., description="Achieved search accuracy")
@@ -571,7 +572,7 @@ class SearchResponse(SecureBaseModel):
 
 
 class SearchStage(SecureBaseModel):
-    """Individual search stage in a multi-stage operation."""
+    """Individual search stage for multi-stage search operations."""
 
     stage_name: str = Field(..., max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")
     query_vector: SecureVectorModel = Field(..., description="Stage query vector")
@@ -586,20 +587,6 @@ class SearchStage(SecureBaseModel):
         if values.get("search_params") is None:
             values["search_params"] = SecureSearchParamsModel()
         return values
-
-    # Validation for vector security (reuse the existing pattern)
-    @field_validator("query_vector", mode="before")
-    @classmethod
-    def validate_stage_vector(cls, v: Any) -> SecureVectorModel:
-        """Validate stage vector security."""
-        if isinstance(v, dict):
-            return SecureVectorModel(**v)
-        if isinstance(v, SecureVectorModel):
-            return v
-        if isinstance(v, list):
-            return SecureVectorModel(values=v)
-        msg = "Invalid vector format for search stage"
-        raise ValueError(msg)
 
 
 class MultiStageSearchRequest(SecureBaseModel):
@@ -651,7 +638,9 @@ class AsyncSearchContext(SecureBaseModel):
 class BatchSearchRequest(SecureBaseModel):
     """Batch search request for multiple queries."""
 
-    queries: list[BasicSearchRequest | HybridSearchRequest | HyDESearchRequest] = Field(
+    queries: list[
+        BasicSearchRequest | AdvancedHybridSearchRequest | HyDESearchRequest
+    ] = Field(
         ...,
         min_length=1,
         max_length=100,  # DoS prevention
@@ -693,51 +682,39 @@ class BatchSearchResponse(SecureBaseModel):
 
 # Core models
 __all__ = [
+    "AdvancedFilteredSearchRequest",
+    "AdvancedHybridSearchRequest",
     # Async models
     "AsyncSearchContext",
     # Request models
     "BasicSearchRequest",
     "BatchSearchRequest",
     "BatchSearchResponse",
-    # Exception classes
     "DimensionError",
     "FilterValidationError",
-    "FilteredSearchRequest",
-    # Base classes and enums
     "FusionAlgorithm",
-    # Response models
     "HyDESearchRequest",
-    "HybridSearchRequest",
     "MultiStageSearchRequest",
-    # Search configuration
     "SearchAccuracy",
     "SearchConfigurationError",
     "SearchResponse",
-    "SearchResult",
+    # Search stage models
     "SearchStage",
+    # Base classes and enums
     "SecureBaseModel",
-    # Security models
     "SecureFilterGroupModel",
     "SecureFilterModel",
+    # Security models
     "SecureMetadataModel",
     "SecurePayloadModel",
     "SecureSearchParamsModel",
-    # Vector models
+    # Response models
+    "SecureSearchResult",
     "SecureSparseVectorModel",
+    # Vector models
     "SecureVectorModel",
     "SecurityValidationError",
+    # Exception classes
     "VectorSearchError",
     "VectorType",
 ]
-
-# Legacy compatibility aliases (for gradual migration)
-SearchParams = SecureSearchParamsModel
-VectorModel = SecureVectorModel
-SparseVectorModel = SecureSparseVectorModel
-FilterModel = SecureFilterModel
-MetadataModel = SecureMetadataModel
-PayloadModel = SecurePayloadModel
-
-# Backward compatibility for existing imports
-BasicFilteredSearchRequest = FilteredSearchRequest
-BasicHybridSearchRequest = HybridSearchRequest
