@@ -126,7 +126,7 @@ contract = [
     "responses>=0.25.0,<0.26.0", # HTTP request mocking
     "httpx>=0.28.1,<0.29.0",     # HTTP client for testing
     "factory-boy>=3.3.1,<4.0.0", # Test data generation
-    "faker>=36.1.0,<37.0.0",     # Fake data generation
+    "faker>=36.1.0,<38.0.0",     # Fake data generation
 ]
 
 # Accessibility testing tools
