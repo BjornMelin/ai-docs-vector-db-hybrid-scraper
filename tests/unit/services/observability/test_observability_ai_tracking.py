@@ -147,8 +147,7 @@ class TestEmbeddingTracking:
                 input_texts="Test text",
             ),
         ):
-            msg = "API rate limit exceeded"
-            raise ValueError(msg)
+            raise ValueError("API rate limit exceeded")
 
     def test_track_embedding_generation_cache_hit(self):
         """Test tracking embedding generation with cache hit."""
@@ -218,8 +217,7 @@ class TestLLMTracking:
                 provider="openai", model="gpt-4", operation="completion"
             ),
         ):
-            msg = "API service unavailable"
-            raise ConnectionError(msg)
+            raise ConnectionError("API service unavailable")
 
     def test_track_llm_call_multiple_choices(self):
         """Test LLM call tracking with multiple response choices."""
@@ -339,8 +337,7 @@ class TestRAGPipelineTracking:
                 query="Test query", retrieval_method="hybrid", generation_model="gpt-4"
             ),
         ):
-            msg = "Generation model failed"
-            raise ValueError(msg)
+            raise ValueError("Generation model failed")
 
     def test_track_rag_pipeline_with_timing_breakdown(self):
         """Test RAG pipeline with detailed timing breakdown."""

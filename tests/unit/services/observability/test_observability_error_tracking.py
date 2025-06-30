@@ -263,8 +263,7 @@ class TestErrorTracking:
                 input_texts=["test text"],
             ),
         ):
-            msg = "OpenAI API unavailable"
-            raise ConnectionError(msg)
+            raise ConnectionError("OpenAI API unavailable")
 
         # Test vector search error
         with (
@@ -273,16 +272,14 @@ class TestErrorTracking:
                 collection_name="documents", query_type="semantic"
             ),
         ):
-            msg = "Vector database timeout"
-            raise TimeoutError(msg)
+            raise TimeoutError("Vector database timeout")
 
         # Test LLM call error
         with (
             pytest.raises(ValueError),
             ai_tracker.track_llm_call(provider="openai", model="gpt-4"),
         ):
-            msg = "Invalid API response"
-            raise ValueError(msg)
+            raise ValueError("Invalid API response")
 
         assert request_id is not None
 
