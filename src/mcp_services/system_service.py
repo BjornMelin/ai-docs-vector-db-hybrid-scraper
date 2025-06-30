@@ -10,11 +10,15 @@ from typing import Any
 from fastmcp import FastMCP
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tools import (
+    analytics,
+    cache,
     configuration,
     cost_estimation,
     embeddings,
     filtering,
+    filtering_tools,
     system_health,
+    utilities,
 )
 
 

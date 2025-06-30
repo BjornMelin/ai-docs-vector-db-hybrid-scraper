@@ -10,7 +10,11 @@ from typing import Any
 
 from fastmcp import FastMCP
 from src.infrastructure.client_manager import ClientManager
-from src.services.agents import AgenticOrchestrator, create_agent_dependencies, get_discovery_engine
+from src.services.agents import (
+    AgenticOrchestrator,
+    create_agent_dependencies,
+    get_discovery_engine,
+)
 
 from .analytics_service import AnalyticsService
 from .document_service import DocumentService

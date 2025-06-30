@@ -14,6 +14,8 @@ from src.mcp_tools.tools import (
     content_intelligence,
     crawling,
     document_management,
+    documents,
+    lightweight_scrape,
     projects,
 )
 
