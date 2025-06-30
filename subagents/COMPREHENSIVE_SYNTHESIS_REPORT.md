@@ -505,12 +505,12 @@ LLM Providers
 - `F1_tool_composition_final_decision.md` → Archived (previous final decision superseded)
 
 ### Research Reports Preserved and Applied
-- `A1_pydantic_ai_integration_analysis.md` → **Applied** in Priority 1
-- `A2_pydantic_ai_integration_analysis_dual.md` → **Applied** in Priority 1
-- `B1_mcp_framework_optimization_analysis.md` → **Applied** in Priority 3
-- `B2_mcp_framework_optimization_dual.md` → **Applied** in Priority 3
-- `C1_fastmcp_integration_analysis.md` → **Applied** in Priority 2
-- `C2_fastmcp_integration_analysis_dual.md` → **Applied** in Priority 2
+- `planned-research/A1_pydantic_ai_integration_analysis.md` → **Applied** in Priority 1
+- `planned-research/A2_pydantic_ai_integration_analysis_dual.md` → **Applied** in Priority 1
+- `planned-research/B1_mcp_framework_optimization_analysis.md` → **Applied** in Priority 3
+- `planned-research/B2_mcp_framework_optimization_dual.md` → **Applied** in Priority 3
+- `planned-research/C1_fastmcp_integration_analysis.md` → **Applied** in Priority 2
+- `planned-research/C2_fastmcp_integration_analysis_dual.md` → **Applied** in Priority 2
 
 ## Comprehensive Success Metrics & Quantified Benefits
 
