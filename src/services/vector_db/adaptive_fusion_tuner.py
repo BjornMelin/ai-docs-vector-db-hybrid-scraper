@@ -9,7 +9,8 @@ import time
 from typing import Any
 
 from src.config import Config
-from src.models.vector_search import QueryClassification
+# TODO: Fix import - QueryClassification doesn't exist in vector_search models
+# from src.models.vector_search import QueryClassification
 
 
 logger = logging.getLogger(__name__)
