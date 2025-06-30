@@ -427,7 +427,7 @@ class PerformanceTracker:
             )
 
         except Exception as e:
-            logger.warning(f"Failed to setup performance metrics: {e}")
+            logger.warning("Failed to setup performance metrics: %s", e)
 
     def start_operation(
         self,
@@ -485,7 +485,7 @@ class PerformanceTracker:
             Operation performance data or None if operation not found
         """
         if operation_id not in self.current_operations:
-            logger.warning(f"Operation {operation_id} not found in current operations")
+            logger.warning("Operation %s not found in current operations", operation_id)
             return None
 
         import time
@@ -544,7 +544,7 @@ class PerformanceTracker:
                 self.performance_gauge.record(performance_score, attrs)
 
         except Exception as e:
-            logger.warning(f"Failed to record performance metrics: {e}")
+            logger.warning("Failed to record performance metrics: %s", e)
 
         return performance_record
 
@@ -632,7 +632,7 @@ class PerformanceTracker:
     def clear_history(self) -> None:
         """Clear operation history."""
         self.execution_history.clear()
-        logger.info(f"Performance history cleared for {self.component_name}")
+        logger.info("Performance history cleared for %s", self.component_name)
 
     def get_active_operations(self) -> dict[str, dict[str, Any]]:
         """Get currently active operations.

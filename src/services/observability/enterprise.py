@@ -10,16 +10,14 @@ import contextlib
 import json
 import logging
 import statistics
-import time
 from collections import defaultdict, deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 import numpy as np
-from pydantic import BaseModel, Field
 
 from src.config.enterprise import EnterpriseConfig
 
@@ -498,13 +496,13 @@ class AlertManager:
     def add_alert(self, alert: Alert) -> None:
         """Add an alert definition."""
         self.alerts[alert.name] = alert
-        logger.info(f"Added alert: {alert.name}")
+        logger.info("Added alert: %s", alert.name)
 
     def remove_alert(self, alert_name: str) -> None:
         """Remove an alert definition."""
         if alert_name in self.alerts:
             del self.alerts[alert_name]
-            logger.info(f"Removed alert: {alert_name}")
+            logger.info("Removed alert: %s", alert_name)
 
     def check_alerts(self, metrics_collector: MetricsCollector) -> list[Alert]:
         """Check all alerts against current metrics."""
