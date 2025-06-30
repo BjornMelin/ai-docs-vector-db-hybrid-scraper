@@ -203,7 +203,7 @@ class LoadTestRunner:
             }
 
         except subprocess.TimeoutExpired:
-            logger.error("Pytest execution timed out after 1 hour")
+            logger.exception("Pytest execution timed out after 1 hour")
             return {
                 "status": "timeout",
                 "error": "Test execution exceeded 1 hour timeout",
@@ -610,7 +610,8 @@ class LoadTestRunner:
     def _validate_test_type(self, test_type: str) -> str:
         """Validate and sanitize test type parameter against injection attacks."""
         if not isinstance(test_type, str):
-            raise ValueError("Test type must be a string")
+            msg = "Test type must be a string"
+            raise TypeError(msg)
 
         # Security: Allowlist of valid test types
         valid_test_types = {
@@ -627,19 +628,20 @@ class LoadTestRunner:
         sanitized = re.sub(r"[^a-zA-Z0-9_]", "", test_type.strip())
 
         if not sanitized:
-            raise ValueError("Invalid test type: empty after sanitization")
+            msg = "Invalid test type: empty after sanitization"
+            raise ValueError(msg)
 
         if sanitized not in valid_test_types:
-            raise ValueError(
-                f"Invalid test type: {sanitized}. Must be one of: {valid_test_types}"
-            )
+            msg = f"Invalid test type: {sanitized}. Must be one of: {valid_test_types}"
+            raise ValueError(msg)
 
         return sanitized
 
     def _validate_markers(self, markers: list[str]) -> list[str]:
         """Validate and sanitize pytest markers against injection attacks."""
         if not isinstance(markers, list):
-            raise ValueError("Markers must be a list")
+            msg = "Markers must be a list"
+            raise TypeError(msg)
 
         sanitized_markers = []
         # Security: Allowlist of valid marker patterns
@@ -647,7 +649,8 @@ class LoadTestRunner:
 
         for marker in markers:
             if not isinstance(marker, str):
-                raise ValueError("Each marker must be a string")
+                msg = "Each marker must be a string"
+                raise TypeError(msg)
 
             # Security: Remove any dangerous characters
             sanitized = re.sub(r"[^a-zA-Z0-9_-]", "", marker.strip())
@@ -656,17 +659,20 @@ class LoadTestRunner:
                 continue  # Skip empty markers
 
             if not valid_marker_pattern.match(sanitized):
-                raise ValueError(f"Invalid marker format: {marker}")
+                msg = f"Invalid marker format: {marker}"
+                raise ValueError(msg)
 
             # Security: Limit marker length to prevent buffer overflow
             if len(sanitized) > 50:
-                raise ValueError(f"Marker too long: {marker}")
+                msg = f"Marker too long: {marker}"
+                raise ValueError(msg)
 
             sanitized_markers.append(sanitized)
 
         # Security: Limit total number of markers
         if len(sanitized_markers) > 10:
-            raise ValueError("Too many markers specified (maximum 10)")
+            msg = "Too many markers specified (maximum 10)"
+            raise ValueError(msg)
 
         return sanitized_markers
 
@@ -707,15 +713,18 @@ class LoadTestRunner:
     def _validate_command_security(self, cmd: list[str]) -> None:
         """Perform comprehensive security validation on the command."""
         if not isinstance(cmd, list):
-            raise ValueError("Command must be a list")
+            msg = "Command must be a list"
+            raise TypeError(msg)
 
         if not cmd:
-            raise ValueError("Command cannot be empty")
+            msg = "Command cannot be empty"
+            raise ValueError(msg)
 
         # Security: Validate executable
         allowed_executables = {"uv", "python", "python3"}
         if cmd[0] not in allowed_executables:
-            raise ValueError(f"Executable '{cmd[0]}' not allowed")
+            msg = f"Executable '{cmd[0]}' not allowed"
+            raise ValueError(msg)
 
         # Security: Validate all command components
         dangerous_patterns = [
@@ -730,29 +739,33 @@ class LoadTestRunner:
 
         for component in cmd:
             if not isinstance(component, str):
-                raise ValueError("All command components must be strings")
+                msg = "All command components must be strings"
+                raise TypeError(msg)
 
             # Security: Check for dangerous patterns
             for pattern in dangerous_patterns:
                 if re.search(pattern, component):
-                    raise ValueError(
-                        f"Dangerous pattern detected in command: {component}"
-                    )
+                    msg = f"Dangerous pattern detected in command: {component}"
+                    raise ValueError(msg)
 
             # Security: Validate path components
             if component.startswith("/") and not component.startswith("tests/"):
                 # Allow absolute paths only if they're in the tests directory
-                if not component.startswith(str(project_root / "tests")):
-                    raise ValueError(f"Absolute path not allowed: {component}")
+                tests_path = str(project_root / "tests")
+                if not component.startswith(tests_path):
+                    msg = f"Absolute path not allowed: {component}"
+                    raise ValueError(msg)
 
         # Security: Validate command length to prevent argument overflow
         if len(cmd) > 50:
-            raise ValueError("Command too long (maximum 50 arguments)")
+            msg = "Command too long (maximum 50 arguments)"
+            raise ValueError(msg)
 
         # Security: Validate total command string length
         cmd_str = " ".join(cmd)
         if len(cmd_str) > 2000:
-            raise ValueError("Command string too long (maximum 2000 characters)")
+            msg = "Command string too long (maximum 2000 characters)"
+            raise ValueError(msg)
 
     def _get_secure_environment(self) -> dict[str, str]:
         """Get a secure environment for subprocess execution."""
