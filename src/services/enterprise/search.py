@@ -7,7 +7,7 @@ and portfolio demonstrations.
 import asyncio
 import logging
 import time
-from typing import Any, Optional
+from typing import Any
 
 from src.architecture.service_factory import BaseService
 from src.models.vector_search import SearchRequest, SearchResponse
@@ -94,7 +94,7 @@ class EnterpriseSearchService(BaseService):
             cache_key = self._generate_cache_key(request)
             cached_result = await self._get_cached_result(cache_key)
             if cached_result:
-                logger.debug(f"Cache hit for query: {request.query[:50]}...")
+                logger.debug("Cache hit for query: %s...", request.query[:50])
                 return cached_result
 
             # Perform query expansion if enabled
@@ -168,10 +168,10 @@ class EnterpriseSearchService(BaseService):
 
         # Handle exceptions
         if isinstance(vector_results, Exception):
-            logger.error(f"Vector search failed: {vector_results}")
+            logger.error("Vector search failed: %s", vector_results)
             vector_results = []
         if isinstance(keyword_results, Exception):
-            logger.error(f"Keyword search failed: {keyword_results}")
+            logger.error("Keyword search failed: %s", keyword_results)
             keyword_results = []
 
         # Fusion ranking (simplified)

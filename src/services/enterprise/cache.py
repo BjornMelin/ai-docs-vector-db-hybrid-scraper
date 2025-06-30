@@ -172,7 +172,7 @@ class EnterpriseCacheService(BaseService):
             self._track_access(key)
             self._record_operation_time("set", time.time() - start_time)
 
-            logger.debug(f"Cached value for key: {key} in {tier} tier(s)")
+            logger.debug("Cached value for key: %s in %s tier(s)", key, tier)
 
         except Exception as e:
             logger.exception("Cache set failed for key {key}")
@@ -264,7 +264,7 @@ class EnterpriseCacheService(BaseService):
         if not self.distributed_cache:
             return
 
-        logger.info(f"Warming cache with {len(keys)} keys")
+        logger.info("Warming cache with %s keys", len(keys))
 
         # Batch load from distributed cache to local cache
         for key in keys:

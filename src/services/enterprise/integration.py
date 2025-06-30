@@ -10,13 +10,13 @@ import asyncio
 import contextlib
 import logging
 import time
-from collections.abc import Callable
+# Callable import removed (unused)
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional, Set
+from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, Field
+# BaseModel and Field imports removed (unused)
 
 from src.architecture.service_factory import BaseService
 from src.config.modern import Config
@@ -351,7 +351,7 @@ class EnterpriseServiceRegistry:
         # Update dependency graph
         self.dependency_graph.add_service(service_name, dependencies)
 
-        logger.info(f"Registered enterprise service: {service_name}")
+        logger.info("Registered enterprise service: %s", service_name)
 
     async def orchestrate_startup(self) -> None:
         """Start services in dependency order with health validation."""
@@ -382,7 +382,7 @@ class EnterpriseServiceRegistry:
             self.startup_order = self.dependency_graph.resolve_startup_order()
             self.shutdown_order = self.dependency_graph.resolve_shutdown_order()
 
-            logger.info(f"Starting services in order: {self.startup_order}")
+            logger.info("Starting services in order: %s", self.startup_order)
 
             # Start services
             for service_name in self.startup_order:
@@ -477,7 +477,7 @@ class EnterpriseServiceRegistry:
             descriptor.status = ServiceStatus.STARTING
             start_time = time.time()
 
-            logger.info(f"Starting service: {service_name}")
+            logger.info("Starting service: %s", service_name)
 
             # Initialize service
             await descriptor.service.initialize()
@@ -488,7 +488,7 @@ class EnterpriseServiceRegistry:
             if health_result["status"] == "healthy":
                 descriptor.status = ServiceStatus.HEALTHY
                 descriptor.startup_time = start_time
-                logger.info(f"Service {service_name} started successfully")
+                logger.info("Service %s started successfully", service_name)
             else:
                 descriptor.status = ServiceStatus.UNHEALTHY
                 msg = f"Service {service_name} failed health check: {health_result}"
@@ -507,13 +507,13 @@ class EnterpriseServiceRegistry:
         try:
             descriptor.status = ServiceStatus.STOPPING
 
-            logger.info(f"Stopping service: {service_name}")
+            logger.info("Stopping service: %s", service_name)
 
             # Cleanup service
             await descriptor.service.cleanup()
 
             descriptor.status = ServiceStatus.STOPPED
-            logger.info(f"Service {service_name} stopped successfully")
+            logger.info("Service %s stopped successfully", service_name)
 
         except Exception as e:
             descriptor.status = ServiceStatus.FAILED
