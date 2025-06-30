@@ -40,8 +40,8 @@ class TestAPISecurityFramework:
 
         for payload in injection_payloads:
             # Test search endpoint with malicious SQL
+            validator = AISecurityValidator()
             with pytest.raises(ValueError, match="Invalid input detected"):
-                validator = AISecurityValidator()
                 await validator.validate_search_query(payload)
 
     @security_test

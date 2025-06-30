@@ -253,7 +253,7 @@ def index_documents(
 
     except Exception as e:
         rich_cli.show_error("Batch indexing failed", str(e))
-        raise click.Abort() from e
+        raise click.Abort from e
 
 
 def _show_indexing_preview(

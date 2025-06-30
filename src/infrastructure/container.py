@@ -321,7 +321,7 @@ class ContainerManager:
             return {
                 key: self._serialize_config_dict(value) for key, value in data.items()
             }
-        if isinstance(data, (list, tuple)):
+        if isinstance(data, list | tuple):
             return [self._serialize_config_dict(item) for item in data]
         return data
 

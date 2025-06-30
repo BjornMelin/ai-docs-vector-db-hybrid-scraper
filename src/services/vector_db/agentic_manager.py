@@ -281,9 +281,8 @@ class AgenticVectorManager:
             Optimization results
         """
         if collection_name not in self.agent_collections:
-            raise ValueError(
-                f"Collection {collection_name} not managed by agentic system"
-            )
+            msg = f"Collection {collection_name} not managed by agentic system"
+            raise ValueError(msg)
 
         config = self.agent_collections[collection_name]
         metrics = self.collection_metrics[collection_name]
@@ -404,9 +403,8 @@ class AgenticVectorManager:
             # Check circuit breaker
             circuit_breaker = self.circuit_breakers.get(collection_name)
             if circuit_breaker and circuit_breaker.is_open():
-                raise RuntimeError(
-                    f"Circuit breaker open for collection {collection_name}"
-                )
+                msg = f"Circuit breaker open for collection {collection_name}"
+                raise RuntimeError(msg)
 
             # Get collection configuration
             config = self.agent_collections.get(collection_name)
@@ -541,7 +539,7 @@ class AgenticVectorManager:
             except Exception as e:
                 error_msg = f"Failed to delete collection {collection_name}: {e}"
                 cleanup_results["errors"].append(error_msg)
-                logger.error(error_msg)
+                logger.exception(error_msg)
 
         return cleanup_results
 
@@ -554,7 +552,7 @@ class AgenticVectorManager:
         total_collections = len(self.agent_collections)
         healthy_collections = sum(
             1
-            for name in self.agent_collections.keys()
+            for name in self.agent_collections
             if not self.circuit_breakers[name].is_open()
         )
 
@@ -678,7 +676,7 @@ class AgenticVectorManager:
                     )
 
             except Exception as e:
-                logger.error(
+                logger.exception(
                     f"Health check failed for collection {collection_name}: {e}"
                 )
 
@@ -703,7 +701,7 @@ class AgenticVectorManager:
                 try:
                     await self.optimize_collection(collection_name)
                 except Exception as e:
-                    logger.error(
+                    logger.exception(
                         f"Periodic optimization failed for {collection_name}: {e}"
                     )
 

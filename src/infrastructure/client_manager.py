@@ -105,7 +105,7 @@ class ClientManager:
                     "Cannot initialize parallel processing system: container not available"
                 )
         except Exception as e:
-            logger.error(
+            logger.exception(
                 f"Failed to initialize parallel processing system: {e}"
             )  # TODO: Convert f-string to logging format
             # Continue without parallel processing
@@ -131,13 +131,15 @@ class ClientManager:
     async def get_qdrant_client(self):
         provider = self._providers.get("qdrant")
         if not provider:
-            raise APIError("Qdrant client provider not available")
+            msg = "Qdrant client provider not available"
+            raise APIError(msg)
         return provider.client
 
     async def get_redis_client(self):
         provider = self._providers.get("redis")
         if not provider:
-            raise APIError("Redis client provider not available")
+            msg = "Redis client provider not available"
+            raise APIError(msg)
         return provider.client
 
     async def get_firecrawl_client(self):
@@ -147,7 +149,8 @@ class ClientManager:
     async def get_http_client(self):
         provider = self._providers.get("http")
         if not provider:
-            raise APIError("HTTP client provider not available")
+            msg = "HTTP client provider not available"
+            raise APIError(msg)
         return provider.client
 
     # Function-based dependency access methods (backward compatibility)
@@ -245,9 +248,10 @@ class ClientManager:
             "parallel_processing": self.get_parallel_processing_system,
         }
         if client_type not in getters:
-            raise ValueError(
+            msg = (
                 f"Unknown client type: {client_type}. Available: {list(getters.keys())}"
             )
+            raise ValueError(msg)
         try:
             yield await getters[client_type]()
         except Exception:

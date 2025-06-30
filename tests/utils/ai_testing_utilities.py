@@ -35,12 +35,12 @@ class EmbeddingTestUtils:
             ValueError: If vectors have different dimensions or are empty
         """
         if len(vec1) != len(vec2):
-            raise ValueError(
-                f"Vector dimensions don't match: {len(vec1)} vs {len(vec2)}"
-            )
+            msg = f"Vector dimensions don't match: {len(vec1)} vs {len(vec2)}"
+            raise ValueError(msg)
 
         if len(vec1) == 0:
-            raise ValueError("Cannot compute similarity for empty vectors")
+            msg = "Cannot compute similarity for empty vectors"
+            raise ValueError(msg)
 
         arr1, arr2 = np.array(vec1), np.array(vec2)
 
@@ -63,9 +63,8 @@ class EmbeddingTestUtils:
             Euclidean distance (always non-negative)
         """
         if len(vec1) != len(vec2):
-            raise ValueError(
-                f"Vector dimensions don't match: {len(vec1)} vs {len(vec2)}"
-            )
+            msg = f"Vector dimensions don't match: {len(vec1)} vs {len(vec2)}"
+            raise ValueError(msg)
 
         return float(np.linalg.norm(np.array(vec1) - np.array(vec2)))
 
@@ -84,10 +83,10 @@ class EmbeddingTestUtils:
         Returns:
             list of embedding vectors
         """
-        if seed is not None:
-            np.random.seed(seed)
-
-        embeddings = np.random.random((count, dim)).astype(np.float32)
+        rng = (
+            np.random.default_rng(seed) if seed is not None else np.random.default_rng()
+        )
+        embeddings = rng.random((count, dim)).astype(np.float32)
 
         if normalized:
             # Normalize to unit vectors
@@ -116,16 +115,16 @@ class EmbeddingTestUtils:
         Returns:
             list of similar embedding vectors
         """
-        if seed is not None:
-            np.random.seed(seed)
-
+        rng = (
+            np.random.default_rng(seed) if seed is not None else np.random.default_rng()
+        )
         base_arr = np.array(base_embedding)
         dim = len(base_embedding)
         similar_embeddings = []
 
         for _ in range(count):
             # Generate random noise
-            noise = np.random.normal(0, 0.1, dim)
+            noise = rng.normal(0, 0.1, dim)
 
             # Create similar vector
             similar = base_arr + noise
@@ -135,7 +134,7 @@ class EmbeddingTestUtils:
             current_sim = EmbeddingTestUtils.cosine_similarity(
                 base_embedding, similar.tolist()
             )
-            target_sim = np.random.uniform(*similarity_range)
+            target_sim = rng.uniform(*similarity_range)
 
             # Linear interpolation to achieve target similarity
             alpha = math.acos(target_sim) / math.acos(current_sim)

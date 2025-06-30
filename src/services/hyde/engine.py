@@ -298,7 +298,7 @@ class HyDEQueryEngine(BaseService):
         try:
             # Use the existing hyde_search method in QdrantService
             # but we need to call it differently since it expects hypothetical_embeddings as a list
-            results = await self.qdrant_service.hyde_search(
+            return await self.qdrant_service.hyde_search(
                 collection_name=collection_name,
                 query="HyDE search",  # This parameter isn't actually used in the implementation
                 query_embedding=query_embedding,
@@ -307,8 +307,6 @@ class HyDEQueryEngine(BaseService):
                 fusion_algorithm=self.config.fusion_algorithm,
                 search_accuracy=search_accuracy,
             )
-
-            return results
 
         except Exception as e:
             logger.exception("Query API search failed")
@@ -322,10 +320,7 @@ class HyDEQueryEngine(BaseService):
         try:
             # Use embedding manager's reranking if available
             if hasattr(self.embedding_manager, "rerank_results"):
-                reranked_results = await self.embedding_manager.rerank_results(
-                    query, results
-                )
-                return reranked_results
+                return await self.embedding_manager.rerank_results(query, results)
             # Basic reranking fallback (could implement BGE reranking here)
             logger.debug("Reranking not available, returning original results")
             return results
@@ -348,15 +343,13 @@ class HyDEQueryEngine(BaseService):
             query_embedding = await self._generate_query_embedding(query)
 
             # Perform regular filtered search
-            results = await self.qdrant_service.filtered_search(
+            return await self.qdrant_service.filtered_search(
                 collection_name=collection_name,
                 query_vector=query_embedding,
                 filters=filters or {},
                 limit=limit,
                 search_accuracy=search_accuracy,
             )
-
-            return results
 
         except Exception as e:
             logger.exception("Fallback search failed")

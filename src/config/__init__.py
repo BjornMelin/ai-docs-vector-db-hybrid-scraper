@@ -11,6 +11,8 @@ All 27 previous configuration files have been consolidated into settings.py
 while maintaining full backward compatibility for existing code.
 """
 
+from pydantic import BaseModel
+
 # Import everything from the unified settings system
 from .settings import *
 
@@ -137,70 +139,128 @@ class TierCapability:
     """Mock tier capability for backward compatibility."""
 
 
-
 class TierConfiguration:
     """Mock tier configuration for backward compatibility."""
-
 
 
 class TierManager:
     """Mock tier manager for backward compatibility."""
 
 
-
 class ConfigError(Exception):
     """Configuration error."""
-
 
 
 class ConfigFileWatchError(ConfigError):
     """Configuration file watch error."""
 
 
-
 class ConfigLoadError(ConfigError):
     """Configuration load error."""
-
 
 
 class ConfigReloadError(ConfigError):
     """Configuration reload error."""
 
 
-
 class ConfigValidationError(ConfigError):
     """Configuration validation error."""
-
 
 
 class ErrorContext:
     """Mock error context for backward compatibility."""
 
 
-
 class GracefulDegradationHandler:
     """Mock graceful degradation handler for backward compatibility."""
-
 
 
 class RetryableConfigOperation:
     """Mock retryable config operation for backward compatibility."""
 
 
-
 class SafeConfigLoader:
     """Mock safe config loader for backward compatibility."""
-
 
 
 class ConfigManager:
     """Mock config manager for backward compatibility."""
 
 
-
 class ConfigMigrator:
     """Mock config migrator for backward compatibility."""
 
+
+class AutoDetectedServices:
+    """Mock auto-detected services for backward compatibility."""
+
+
+class DetectedEnvironment:
+    """Mock detected environment for backward compatibility."""
+
+
+class DetectedService(BaseModel):
+    """Mock detected service for backward compatibility."""
+
+    name: str = "mock_service"
+    url: str = "http://localhost"
+    healthy: bool = True
+
+
+class EnvironmentDetector:
+    """Mock environment detector for backward compatibility."""
+
+
+class AutoDetectionConfig(BaseModel):
+    """Mock auto-detection config for backward compatibility."""
+
+    enabled: bool = True
+    timeout: float = 30.0
+
+
+class ReloadOperation:
+    """Mock reload operation for backward compatibility."""
+
+
+class ReloadTrigger:
+    """Mock reload trigger for backward compatibility."""
+
+
+class ConfigReloader:
+    """Mock config reloader for backward compatibility."""
+
+
+class ReloadStatus:
+    """Mock reload status for backward compatibility."""
+
+
+class ConfigDriftDetector:
+    """Mock config drift detector for backward compatibility."""
+
+
+class ConfigSnapshot:
+    """Mock config snapshot for backward compatibility."""
+
+
+class DriftEvent:
+    """Mock drift event for backward compatibility."""
+
+
+class DriftSeverity:
+    """Mock drift severity for backward compatibility."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class DriftType:
+    """Mock drift type for backward compatibility."""
+
+    ADDED = "added"
+    REMOVED = "removed"
+    MODIFIED = "modified"
 
 
 # Mock functions for backward compatibility
@@ -260,135 +320,156 @@ def retry_config_operation(*args, **kwargs):
     """Mock retry operation."""
 
 
+def get_config_reloader():
+    """Mock config reloader getter."""
+    return ConfigManager()
+
+
 # Update __all__ to include everything for full backward compatibility
 __all__ = [
-    # Main configuration class
-    "Settings",
-    "Config",
+    "ABTestVariant",
     # Enums
     "ApplicationMode",
-    "Environment",
-    "LogLevel",
-    "EmbeddingProvider",
-    "EmbeddingModel",
-    "CrawlProvider",
-    "ChunkingStrategy",
-    "SearchStrategy",
-    "CacheType",
-    "DocumentStatus",
-    "QueryComplexity",
-    "ModelType",
-    "VectorType",
-    "QueryType",
-    "SearchAccuracy",
-    "FusionAlgorithm",
-    "ABTestVariant",
-    "OptimizationStrategy",
-    "DeploymentTier",
+    # Auto-detection classes
+    "AutoDetectedServices",
+    "AutoDetectionConfig",
+    "AutoDetectionConfig",
+    "BrowserUseConfig",
     # Configuration sections
     "CacheConfig",
-    "QdrantConfig",
-    "OpenAIConfig",
+    "CacheType",
+    "ChunkingConfig",
+    "ChunkingStrategy",
+    "CircuitBreakerConfig",
+    "Config",
+    "ConfigDriftDetector",
+    "ConfigError",
+    "ConfigFileWatchError",
+    "ConfigLoadError",
+    "ConfigManager",
+    "ConfigMigrator",
+    "ConfigReloadError",
+    "ConfigReloader",
+    "ConfigSnapshot",
+    "ConfigValidationError",
+    "Crawl4AIConfig",
+    "CrawlProvider",
+    "DatabaseConfig",
+    "DeploymentConfig",
+    "DeploymentTier",
+    "DetectedEnvironment",
+    "DetectedService",
+    "DocumentStatus",
+    "DocumentationSite",
+    "DriftDetectionConfig",
+    "DriftEvent",
+    "DriftSeverity",
+    "DriftType",
+    "EmbeddingConfig",
+    "EmbeddingModel",
+    "EmbeddingProvider",
+    "Environment",
+    "EnvironmentDetector",
+    "ErrorContext",
     "FastEmbedConfig",
     "FirecrawlConfig",
-    "Crawl4AIConfig",
-    "PlaywrightConfig",
-    "BrowserUseConfig",
-    "ChunkingConfig",
-    "EmbeddingConfig",
+    "FusionAlgorithm",
+    "GracefulDegradationHandler",
     "HyDEConfig",
-    "ReRankingConfig",
-    "SecurityConfig",
-    "PerformanceConfig",
-    "CircuitBreakerConfig",
-    "DatabaseConfig",
-    "SQLAlchemyConfig",  # Alias
+    "LegacyCacheConfig",
+    "LegacyChunkingConfig",
+    "LegacyConfig",
+    "LegacyFirecrawlConfig",
+    "LegacyHyDEConfig",
+    "LegacyOpenAIConfig",
+    "LegacyPerformanceConfig",
+    "LegacyQdrantConfig",
+    "LegacySecurityConfig",
+    "LogLevel",
+    "ModelType",
+    "ModernCacheConfig",
+    "ModernChunkingConfig",
+    "ModernConfig",
+    "ModernFirecrawlConfig",
+    "ModernHyDEConfig",
+    "ModernOpenAIConfig",
+    "ModernPerformanceConfig",
+    "ModernQdrantConfig",
+    "ModernSecurityConfig",
     "MonitoringConfig",
     "ObservabilityConfig",
-    "TaskQueueConfig",
+    "OpenAIConfig",
+    "OptimizationStrategy",
+    "PerformanceConfig",
+    "PlaywrightConfig",
+    "QdrantConfig",
+    "QueryComplexity",
+    "QueryType",
     "RAGConfig",
-    "DeploymentConfig",
-    "AutoDetectionConfig",
-    "DriftDetectionConfig",
-    "DocumentationSite",
-    # Configuration management
-    "get_settings",
-    "set_settings",
-    "reset_settings",
-    "create_settings_from_env",
-    "get_config",
-    "set_config",
-    "reset_config",
-    "settings",
-    # Convenience functions
-    "get_qdrant_config",
-    "get_embedding_config",
-    "get_cache_config",
-    "get_performance_config",
-    "get_openai_config",
-    "get_security_config",
-    # Mode-specific factories
-    "create_simple_config",
-    "create_enterprise_config",
-    # Legacy compatibility
-    "UnifiedConfig",
-    "LegacyConfig",
-    "LegacyCacheConfig",
-    "LegacyPerformanceConfig",
-    "LegacyOpenAIConfig",
-    "LegacyQdrantConfig",
-    "LegacyFirecrawlConfig",
-    "LegacySecurityConfig",
-    "LegacyChunkingConfig",
-    "LegacyHyDEConfig",
-    "ModernConfig",
-    "ModernCacheConfig",
-    "ModernPerformanceConfig",
-    "ModernOpenAIConfig",
-    "ModernQdrantConfig",
-    "ModernFirecrawlConfig",
-    "ModernSecurityConfig",
-    "ModernChunkingConfig",
-    "ModernHyDEConfig",
-    # Legacy functions
-    "get_legacy_config",
-    "get_modern_config",
-    "get_config_with_auto_detection",
-    "get_modern_config_with_auto_detection",
-    "get_legacy_config_with_auto_detection",
-    "set_legacy_config",
-    "set_modern_config",
-    "reset_legacy_config",
-    "reset_modern_config",
-    "is_using_modern_config",
-    "migrate_to_modern_config",
-    "get_migration_status",
+    "ReRankingConfig",
+    "ReloadOperation",
+    "ReloadStatus",
+    "ReloadTrigger",
+    "RetryableConfigOperation",
+    "SQLAlchemyConfig",  # Alias
+    "SafeConfigLoader",
+    "SearchAccuracy",
+    "SearchStrategy",
+    "SecurityConfig",
+    # Main configuration class
+    "Settings",
+    "TaskQueueConfig",
     # Mock classes for compatibility
     "TierCapability",
     "TierConfiguration",
     "TierManager",
-    "ConfigError",
-    "ConfigFileWatchError",
-    "ConfigLoadError",
-    "ConfigReloadError",
-    "ConfigValidationError",
-    "ErrorContext",
-    "GracefulDegradationHandler",
-    "RetryableConfigOperation",
-    "SafeConfigLoader",
-    "ConfigManager",
-    "ConfigMigrator",
-    # Mock functions for compatibility
-    "default_tier_manager",
-    "get_current_tier_config",
-    "is_feature_enabled",
+    # Legacy compatibility
+    "UnifiedConfig",
+    "VectorType",
     "async_error_context",
     "create_and_load_config_async",
+    "create_enterprise_config",
     "create_migration_compatibility_wrapper",
-    "migrate_legacy_config",
+    "create_settings_from_env",
+    # Mode-specific factories
+    "create_simple_config",
+    # Mock functions for compatibility
+    "default_tier_manager",
+    "get_cache_config",
+    "get_config",
     "get_config_manager",
-    "set_config_manager",
+    "get_config_reloader",
+    "get_config_with_auto_detection",
+    "get_current_tier_config",
     "get_degradation_handler",
+    "get_embedding_config",
+    # Legacy functions
+    "get_legacy_config",
+    "get_legacy_config_with_auto_detection",
+    "get_migration_status",
+    "get_modern_config",
+    "get_modern_config_with_auto_detection",
+    "get_openai_config",
+    "get_performance_config",
+    # Convenience functions
+    "get_qdrant_config",
+    "get_security_config",
+    # Configuration management
+    "get_settings",
     "handle_validation_error",
+    "is_feature_enabled",
+    "is_using_modern_config",
+    "migrate_legacy_config",
+    "migrate_to_modern_config",
+    "reset_config",
+    "reset_legacy_config",
+    "reset_modern_config",
+    "reset_settings",
     "retry_config_operation",
+    "set_config",
+    "set_config_manager",
+    "set_legacy_config",
+    "set_modern_config",
+    "set_settings",
+    "settings",
 ]

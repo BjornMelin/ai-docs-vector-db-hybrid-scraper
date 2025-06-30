@@ -63,7 +63,8 @@ class RedisClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("Redis client is not available or unhealthy")
+            msg = "Redis client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.get(key)
 
@@ -82,7 +83,8 @@ class RedisClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("Redis client is not available or unhealthy")
+            msg = "Redis client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.set(key, value, ex=ex)
 
@@ -99,7 +101,8 @@ class RedisClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("Redis client is not available or unhealthy")
+            msg = "Redis client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.delete(*keys)
 
@@ -116,6 +119,7 @@ class RedisClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("Redis client is not available or unhealthy")
+            msg = "Redis client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.exists(*keys)

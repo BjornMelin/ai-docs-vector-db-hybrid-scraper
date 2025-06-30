@@ -163,11 +163,11 @@ class TestConfigurationSections:
         assert validated.chunk_size == 1000
 
         # Invalid: overlap >= chunk_size should fail
+        from src.config.settings import ChunkingConfig
+
         with pytest.raises(
             ValueError, match="chunk_overlap must be less than chunk_size"
         ):
-            from src.config.settings import ChunkingConfig
-
             ChunkingConfig(chunk_size=1000, chunk_overlap=1000)
 
 

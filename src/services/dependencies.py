@@ -16,13 +16,14 @@ from fastapi import Depends
 from pydantic import BaseModel
 
 from src.config import (
+    AutoDetectedServices,
     CacheType,
     Config,
+    DetectedEnvironment,
     Environment,
     get_config,
     get_config_with_auto_detection,
 )
-from src.config.auto_detect import AutoDetectedServices, DetectedEnvironment
 from src.infrastructure.client_manager import ClientManager
 from src.services.auto_detection import (
     ConnectionPoolManager,
@@ -462,7 +463,7 @@ async def cache_get(
         cache_type_enum = CacheType(cache_type)
         return await cache_manager.get(key, cache_type_enum)
     except Exception:
-        logger.exception(f"Cache get failed for key {key}")
+        logger.exception("Cache get failed for key %s", key)
         return None
 
 
@@ -483,7 +484,7 @@ async def cache_set(
         cache_type_enum = CacheType(cache_type)
         return await cache_manager.set(key, value, cache_type_enum, ttl)
     except Exception:
-        logger.exception(f"Cache set failed for key {key}")
+        logger.exception("Cache set failed for key %s", key)
         return False
 
 
@@ -502,7 +503,7 @@ async def cache_delete(
         cache_type_enum = CacheType(cache_type)
         return await cache_manager.delete(key, cache_type_enum)
     except Exception:
-        logger.exception(f"Cache delete failed for key {key}")
+        logger.exception("Cache delete failed for key %s", key)
         return False
 
 
@@ -576,7 +577,7 @@ async def scrape_url(
         )
         return CrawlResponse(**result)
     except Exception as e:
-        logger.exception(f"URL scraping failed for {request.url}")
+        logger.exception("URL scraping failed for %s", request.url)
         msg = f"Failed to scrape URL: {e}"
         raise CrawlServiceError(msg) from e
 
@@ -596,7 +597,7 @@ async def crawl_site(
             preferred_provider=request.preferred_provider,
         )
     except Exception as e:
-        logger.exception(f"Site crawling failed for {request.url}")
+        logger.exception("Site crawling failed for %s", request.url)
         msg = f"Failed to crawl site: {e}"
         raise CrawlServiceError(msg) from e
     else:
@@ -644,7 +645,7 @@ async def enqueue_task(
             **request.kwargs,
         )
     except Exception as e:
-        logger.exception(f"Task enqueue failed for {request.task_name}")
+        logger.exception("Task enqueue failed for %s", request.task_name)
         msg = f"Failed to enqueue task: {e}"
         raise TaskQueueServiceError(msg) from e
     else:
@@ -662,7 +663,7 @@ async def get_task_status(
     try:
         status = await task_manager.get_job_status(job_id)
     except Exception as e:
-        logger.exception(f"Task status check failed for {job_id}")
+        logger.exception("Task status check failed for %s", job_id)
         return {"status": "error", "message": str(e)}
     else:
         return status
@@ -1023,7 +1024,7 @@ async def reset_circuit_breaker(service_name: str) -> dict[str, Any]:
             "new_status": breaker.get_status(),
         }
     except Exception as e:
-        logger.exception(f"Failed to reset circuit breaker for {service_name}")
+        logger.exception("Failed to reset circuit breaker for %s", service_name)
         return {
             "success": False,
             "error": str(e),
@@ -1325,7 +1326,7 @@ async def get_service_metrics() -> dict[str, Any]:
             cache_manager = await client_manager.get_cache_manager()
             cache_stats = await cache_manager.get_performance_stats()
             metrics["cache_service"] = cache_stats
-        except Exception as e:
+        except (ConnectionError, TimeoutError, ValueError) as e:
             logger.debug("Cache metrics unavailable", exc_info=e)
 
         # Get crawl metrics if available
@@ -1333,7 +1334,7 @@ async def get_service_metrics() -> dict[str, Any]:
             crawl_manager = await client_manager.get_crawl_manager()
             crawl_metrics = crawl_manager.get_tier_metrics()
             metrics["crawl_service"] = crawl_metrics
-        except Exception as e:
+        except (ConnectionError, TimeoutError, ValueError) as e:
             logger.debug("Crawl metrics unavailable", exc_info=e)
 
     except Exception as e:
@@ -1400,11 +1401,12 @@ async def store_qdrant_embeddings(
     """
     try:
         await qdrant_service.upsert_points(collection_name, points)
-        return True
     except Exception as e:
-        logger.exception(f"Failed to store embeddings in {collection_name}")
+        logger.exception("Failed to store embeddings in %s", collection_name)
         msg = f"Failed to store embeddings: {e}"
         raise EmbeddingServiceError(msg) from e
+    else:
+        return True
 
 
 async def search_qdrant_similar(
@@ -1419,15 +1421,14 @@ async def search_qdrant_similar(
     Function-based replacement for DatabaseManager.search_similar().
     """
     try:
-        results = await qdrant_service.search(
+        return await qdrant_service.search(
             collection_name=collection_name,
             query_vector=query_vector,
             limit=limit,
             filter_conditions=filter_conditions,
         )
-        return results
     except Exception as e:
-        logger.exception(f"Failed to search vectors in {collection_name}")
+        logger.exception("Failed to search vectors in %s", collection_name)
         msg = f"Failed to search vectors: {e}"
         raise EmbeddingServiceError(msg) from e
 
@@ -1445,10 +1446,11 @@ async def redis_ping(
 
     try:
         await redis_client.ping()
-        return True
-    except Exception as e:
-        logger.warning(f"Redis ping failed: {e}")
+    except (ConnectionError, TimeoutError) as e:
+        logger.warning("Redis ping failed: %s", e)
         return False
+    else:
+        return True
 
 
 async def redis_set_value(
@@ -1466,10 +1468,11 @@ async def redis_set_value(
 
     try:
         await redis_client.set(key, value, ex=ex)
-        return True
-    except Exception as e:
-        logger.warning(f"Redis set failed for {key}: {e}")
+    except (ConnectionError, TimeoutError) as e:
+        logger.warning("Redis set failed for %s: %s", key, e)
         return False
+    else:
+        return True
 
 
 async def redis_get_value(
@@ -1485,8 +1488,8 @@ async def redis_get_value(
 
     try:
         return await redis_client.get(key)
-    except Exception as e:
-        logger.warning(f"Redis get failed for {key}: {e}")
+    except (ConnectionError, TimeoutError) as e:
+        logger.warning("Redis get failed for %s: %s", key, e)
         return None
 
 
@@ -1548,11 +1551,12 @@ async def bulk_scrape_urls(
 
             results = processed_results
 
-        return results
     except Exception as e:
         logger.exception("Bulk scraping failed")
         msg = f"Failed to scrape URLs: {e}"
         raise CrawlServiceError(msg) from e
+    else:
+        return results
 
 
 async def get_crawl_recommended_tool(
@@ -1565,8 +1569,8 @@ async def get_crawl_recommended_tool(
     """
     try:
         return await crawl_manager.get_recommended_tool(url)
-    except Exception as e:
-        logger.warning(f"Tool recommendation failed for {url}: {e}")
+    except (ConnectionError, TimeoutError, ValueError) as e:
+        logger.warning("Tool recommendation failed for %s: %s", url, e)
         return "crawl4ai"  # Default fallback
 
 
@@ -1581,8 +1585,8 @@ async def map_website_urls(
     """
     try:
         return await crawl_manager.map_url(url, include_subdomains)
-    except Exception as e:
-        logger.warning(f"URL mapping failed for {url}: {e}")
+    except (ConnectionError, TimeoutError, ValueError) as e:
+        logger.warning("URL mapping failed for %s: %s", url, e)
         return {
             "success": False,
             "error": f"URL mapping failed: {e}",
@@ -1600,8 +1604,8 @@ async def get_crawl_tier_metrics(
     """
     try:
         return crawl_manager.get_tier_metrics()
-    except Exception as e:
-        logger.warning(f"Failed to get tier metrics: {e}")
+    except (ConnectionError, TimeoutError, ValueError) as e:
+        logger.warning("Failed to get tier metrics: %s", e)
         return {}
 
 
@@ -1642,16 +1646,17 @@ async def register_health_check_function(
             "last_error": None,
             "state": "healthy",
         }
-        logger.info(f"Registered health check for {request.service_name}")
-        return {
-            "status": "success",
-            "message": f"Health check registered for {request.service_name}",
-        }
+        logger.info("Registered health check for %s", request.service_name)
     except Exception as e:
-        logger.exception(f"Failed to register health check for {request.service_name}")
+        logger.exception("Failed to register health check for %s", request.service_name)
         return {
             "status": "error",
             "message": str(e),
+        }
+    else:
+        return {
+            "status": "success",
+            "message": f"Health check registered for {request.service_name}",
         }
 
 
@@ -1661,7 +1666,7 @@ async def check_service_health_function(service_name: str) -> bool:
     Function-based replacement for MonitoringManager.check_service_health().
     """
     if service_name not in _health_checks:
-        logger.warning(f"No health check registered for {service_name}")
+        logger.warning("No health check registered for %s", service_name)
         return False
 
     health = _health_checks[service_name]
@@ -1686,7 +1691,7 @@ async def check_service_health_function(service_name: str) -> bool:
 
             return is_healthy
     except Exception as e:
-        logger.error(f"Health check failed for {service_name}: {e}")
+        logger.exception("Health check failed for %s: %s", service_name, e)
         health["last_check"] = time.time()
         health["last_error"] = str(e)
         health["consecutive_failures"] = health.get("consecutive_failures", 0) + 1
@@ -1757,17 +1762,18 @@ async def track_operation_performance(
 
     try:
         result = await operation_func(*args, **kwargs)
-
-        # Record success metrics (could integrate with metrics system)
-        duration_ms = (time.time() - start_time) * 1000
-        logger.debug(f"Operation {operation_name} completed in {duration_ms:.2f}ms")
-
-        return result
     except Exception as e:
         # Record failure metrics
         duration_ms = (time.time() - start_time) * 1000
-        logger.error(f"Operation {operation_name} failed in {duration_ms:.2f}ms: {e}")
+        logger.exception(
+            "Operation %s failed in %.2fms: %s", operation_name, duration_ms, e
+        )
         raise
+    else:
+        # Record success metrics (could integrate with metrics system)
+        duration_ms = (time.time() - start_time) * 1000
+        logger.debug("Operation %s completed in %.2fms", operation_name, duration_ms)
+        return result
 
 
 # Direct Embedding Operations (extending existing embedding dependencies)
@@ -1789,7 +1795,7 @@ async def rerank_search_results(
     try:
         return await embedding_manager.rerank_results(request.query, request.results)
     except Exception as e:
-        logger.error(f"Result reranking failed: {e}")
+        logger.exception("Result reranking failed: %s", e)
         # Return original results on failure
         return request.results
 
@@ -1860,16 +1866,6 @@ async def analyze_text_characteristics(
     """
     try:
         analysis = embedding_manager.analyze_text_characteristics(request.texts)
-
-        # Convert TextAnalysis to dict for service boundary
-        return {
-            "total_length": analysis.total_length,
-            "avg_length": analysis.avg_length,
-            "complexity_score": analysis.complexity_score,
-            "estimated_tokens": analysis.estimated_tokens,
-            "text_type": analysis.text_type,
-            "requires_high_quality": analysis.requires_high_quality,
-        }
     except Exception as e:
         logger.exception("Text analysis failed")
         return {
@@ -1880,6 +1876,16 @@ async def analyze_text_characteristics(
             "text_type": "general",
             "requires_high_quality": False,
             "error": str(e),
+        }
+    else:
+        # Convert TextAnalysis to dict for service boundary
+        return {
+            "total_length": analysis.total_length,
+            "avg_length": analysis.avg_length,
+            "complexity_score": analysis.complexity_score,
+            "estimated_tokens": analysis.estimated_tokens,
+            "text_type": analysis.text_type,
+            "requires_high_quality": analysis.requires_high_quality,
         }
 
 

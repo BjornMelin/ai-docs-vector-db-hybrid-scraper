@@ -213,7 +213,7 @@ class QdrantOptimizer:
                 collection_info.config.params.vectors.quantization_config is not None
             )
 
-            recommendations = {
+            return {
                 "current_performance": current_performance,
                 "optimal_ef": optimal_ef,
                 "quantization_enabled": has_quantization,
@@ -221,8 +221,6 @@ class QdrantOptimizer:
                     current_performance, target_p95_ms, has_quantization
                 ),
             }
-
-            return recommendations
 
         except Exception as e:
             logger.exception(f"Failed to optimize collection '{collection_name}': {e}")
@@ -352,7 +350,7 @@ class QdrantOptimizer:
             collection_info = await self.client.get_collection(collection_name)
             config = collection_info.config
 
-            metrics = {
+            return {
                 "collection_name": collection_name,
                 "vector_count": collection_info.vectors_count,
                 "indexed_vectors": collection_info.indexed_vectors_count,
@@ -369,8 +367,6 @@ class QdrantOptimizer:
                 is not None,
                 "distance_metric": config.params.vectors.distance.value,
             }
-
-            return metrics
 
         except Exception as e:
             logger.exception(f"Failed to get optimization metrics: {e}")

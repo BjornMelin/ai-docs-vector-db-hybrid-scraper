@@ -212,7 +212,7 @@ class SearchAnalyticsDashboard(BaseService):
             # Get performance trends
             trends = await self._calculate_performance_trends()
 
-            dashboard_data = {
+            return {
                 "realtime_stats": self.realtime_stats.copy(),
                 "query_patterns": [
                     pattern.model_dump() for pattern in self.detected_patterns[:10]
@@ -225,8 +225,6 @@ class SearchAnalyticsDashboard(BaseService):
                 "optimization_opportunities": await self._identify_optimization_opportunities(),
                 "last_updated": datetime.now().isoformat(),
             }
-
-            return dashboard_data
 
         except Exception:
             self._logger.exception("Failed to generate realtime dashboard")
@@ -279,7 +277,7 @@ class SearchAnalyticsDashboard(BaseService):
             for feature in set(all_features):
                 feature_usage[feature] = all_features.count(feature)
 
-            analytics = {
+            return {
                 "time_range_hours": time_range_hours,
                 "user_id": user_id,
                 "total_queries": total_queries,
@@ -308,8 +306,6 @@ class SearchAnalyticsDashboard(BaseService):
                 ),
                 "generated_at": datetime.now().isoformat(),
             }
-
-            return analytics
 
         except Exception:
             self._logger.exception("Failed to generate query analytics")
@@ -425,7 +421,7 @@ class SearchAnalyticsDashboard(BaseService):
                         / len(recent_queries),
                         "error_rate": sum(1 for q in recent_queries if not q["success"])
                         / len(recent_queries),
-                        "active_users": len(set(q["user_id"] for q in recent_queries)),
+                        "active_users": len({q["user_id"] for q in recent_queries}),
                     }
                 )
 

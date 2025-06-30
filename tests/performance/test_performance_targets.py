@@ -5,6 +5,7 @@ the specified performance targets for portfolio demonstrations.
 """
 
 import asyncio
+import contextlib
 import logging
 import statistics
 import time
@@ -304,6 +305,9 @@ class TestPerformanceTargets:
             trends = monitor.get_performance_trends(minutes=1)
             recommendations = monitor.get_optimization_recommendations()
 
+            # Verify trends data structure
+            assert isinstance(trends, dict), "Trends should be a dictionary"
+
             logger.info("Monitoring performance test results:")
             logger.info(
                 f"  Snapshots collected: {len(monitor.snapshots)}"
@@ -325,10 +329,8 @@ class TestPerformanceTargets:
         finally:
             await monitor.stop_monitoring()
             monitoring_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await monitoring_task
-            except asyncio.CancelledError:
-                pass
 
     @pytest.mark.asyncio
     async def test_end_to_end_performance_pipeline(
@@ -387,6 +389,10 @@ class TestPerformanceTargets:
             cache_stats = await cache.get_cache_stats()
             performance_summary = monitor.get_performance_summary()
 
+            # Verify performance summary contains expected metrics
+            assert "total_requests" in performance_summary
+            assert "avg_latency_ms" in performance_summary
+
             overall_throughput = total_requests / total_time
             cache_hit_rate = cached_requests / total_requests
 
@@ -425,10 +431,8 @@ class TestPerformanceTargets:
             await cache.cleanup()
             await monitor.stop_monitoring()
             monitoring_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await monitoring_task
-            except asyncio.CancelledError:
-                pass
 
 
 @pytest.mark.performance

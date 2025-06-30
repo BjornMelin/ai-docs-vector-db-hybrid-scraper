@@ -192,7 +192,7 @@ maintaining high performance and reliability. Always explain your reasoning."""
             return response
 
         except Exception as e:
-            logger.error(f"Autonomous orchestration failed: {e}")
+            logger.exception(f"Autonomous orchestration failed: {e}")
             return ToolResponse(
                 success=False,
                 results={"error": str(e)},

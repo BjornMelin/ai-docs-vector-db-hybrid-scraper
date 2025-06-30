@@ -694,7 +694,7 @@ async def _generate_autonomous_insights(
     ctx,
 ) -> dict[str, Any]:
     """Generate autonomous insights from optimization process."""
-    insights = {
+    return {
         "configuration_health": {
             "overall_score": 0.78,
             "optimization_potential": "medium",
@@ -725,14 +725,12 @@ async def _generate_autonomous_insights(
         ],
     }
 
-    return insights
-
 
 def _get_timestamp() -> str:
     """Get current timestamp."""
     import datetime
 
-    return datetime.datetime.now().isoformat()
+    return datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
 
 
 async def _establish_monitoring_baseline(
@@ -896,7 +894,7 @@ async def _generate_adaptive_monitoring_insights(
     drift_analysis: dict, anomaly_detection: dict, monitoring_metrics: dict, ctx
 ) -> dict[str, Any]:
     """Generate adaptive insights from monitoring results."""
-    insights = {
+    return {
         "system_health_assessment": {
             "overall_health": monitoring_metrics["overall_system_health"],
             "health_trend": "stable"
@@ -929,8 +927,6 @@ async def _generate_adaptive_monitoring_insights(
             "Expand monitoring coverage to include new metrics",
         ],
     }
-
-    return insights
 
 
 async def _create_configuration_profile(

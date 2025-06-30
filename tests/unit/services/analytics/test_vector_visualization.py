@@ -65,40 +65,40 @@ def sample_embeddings():
 @pytest.fixture
 def sample_documents():
     """Create sample documents corresponding to embeddings."""
-    documents = []
-
     # Documents for cluster 1 (machine learning topics)
-    for i in range(10):
-        documents.append(
-            {
-                "id": f"ml_{i}",
-                "text": f"Machine learning algorithm {i} for data analysis",
-                "metadata": {
-                    "category": "machine_learning",
-                    "difficulty": "intermediate",
-                },
-            }
-        )
+    ml_docs = [
+        {
+            "id": f"ml_{i}",
+            "text": f"Machine learning algorithm {i} for data analysis",
+            "metadata": {
+                "category": "machine_learning",
+                "difficulty": "intermediate",
+            },
+        }
+        for i in range(10)
+    ]
 
     # Documents for cluster 2 (programming topics)
-    for i in range(10):
-        documents.append(
-            {
-                "id": f"prog_{i}",
-                "text": f"Programming language tutorial {i} for beginners",
-                "metadata": {"category": "programming", "difficulty": "beginner"},
-            }
-        )
+    prog_docs = [
+        {
+            "id": f"prog_{i}",
+            "text": f"Programming language tutorial {i} for beginners",
+            "metadata": {"category": "programming", "difficulty": "beginner"},
+        }
+        for i in range(10)
+    ]
 
     # Documents for cluster 3 (data science topics)
-    for i in range(10):
-        documents.append(
-            {
-                "id": f"ds_{i}",
-                "text": f"Data science methodology {i} for research",
-                "metadata": {"category": "data_science", "difficulty": "advanced"},
-            }
-        )
+    ds_docs = [
+        {
+            "id": f"ds_{i}",
+            "text": f"Data science methodology {i} for research",
+            "metadata": {"category": "data_science", "difficulty": "advanced"},
+        }
+        for i in range(10)
+    ]
+
+    documents = ml_docs + prog_docs + ds_docs
 
     return documents
 
@@ -416,6 +416,11 @@ class TestVectorVisualizationEngine:
 
         points = visualization["points"]
         clusters = visualization["clusters"]
+
+        # Verify clusters structure
+        assert isinstance(clusters, list), "Clusters should be a list"
+        for cluster in clusters:
+            assert "center" in cluster, "Each cluster should have a center"
 
         # Check 3D coordinates - points are dictionaries now
         for point in points:

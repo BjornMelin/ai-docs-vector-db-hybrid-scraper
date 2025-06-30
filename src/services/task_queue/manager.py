@@ -236,7 +236,7 @@ class TaskQueueManager(BaseService):
         try:
             # Get job counts by status
             # ARQ stores jobs with different key patterns
-            stats = {
+            return {
                 "pending": 0,
                 "running": 0,
                 "complete": 0,
@@ -245,8 +245,6 @@ class TaskQueueManager(BaseService):
 
             # This is a simplified version - in production you might want
             # to implement more detailed statistics gathering
-
-            return stats
 
         except Exception:
             logger.exception("Error getting queue stats")

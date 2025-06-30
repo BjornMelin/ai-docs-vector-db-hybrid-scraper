@@ -239,7 +239,7 @@ class VectorVisualizationEngine(BaseService):
                 points, clusters_info, quality_metrics, similarities
             )
 
-            visualization_data = {
+            return {
                 "points": [point.model_dump() for point in points],
                 "clusters": clusters_info["clusters"] if clusters_info else [],
                 "relationships": [rel.model_dump() for rel in relationships],
@@ -274,8 +274,6 @@ class VectorVisualizationEngine(BaseService):
                     else None,
                 },
             }
-
-            return visualization_data
 
         except Exception:
             self._logger.exception("Failed to create embedding visualization")
@@ -325,7 +323,7 @@ class VectorVisualizationEngine(BaseService):
             # Density analysis
             density_analysis = await self._analyze_embedding_density(embeddings_array)
 
-            analysis = {
+            return {
                 "space_overview": {
                     "num_embeddings": len(embeddings),
                     "embedding_dimension": len(embeddings[0]),
@@ -343,8 +341,6 @@ class VectorVisualizationEngine(BaseService):
                     embeddings_array, dimensionality_analysis, coherence_analysis
                 ),
             }
-
-            return analysis
 
         except Exception:
             self._logger.exception("Failed to analyze embedding space")

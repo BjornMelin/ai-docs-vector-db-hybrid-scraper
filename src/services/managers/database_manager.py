@@ -104,16 +104,18 @@ class DatabaseManager:
             APIError: If Qdrant client not available
         """
         if not self._qdrant_client:
-            raise APIError("Qdrant client not available")
+            msg = "Qdrant client not available"
+            raise APIError(msg)
 
         try:
             collections = await self._qdrant_client.get_collections()
             return [col.name for col in collections.collections]
         except Exception as e:
-            logger.error(
+            logger.exception(
                 f"Failed to get collections: {e}"
             )  # TODO: Convert f-string to logging format
-            raise APIError(f"Failed to get collections: {e}") from e
+            msg = f"Failed to get collections: {e}"
+            raise APIError(msg) from e
 
     async def store_embeddings(
         self, collection_name: str, points: list[dict[str, Any]]
@@ -131,16 +133,18 @@ class DatabaseManager:
             APIError: If storage fails
         """
         if not self._qdrant_service:
-            raise APIError("Qdrant service not available")
+            msg = "Qdrant service not available"
+            raise APIError(msg)
 
         try:
             await self._qdrant_service.upsert_points(collection_name, points)
             return True
         except Exception as e:
-            logger.error(
+            logger.exception(
                 f"Failed to store embeddings: {e}"
             )  # TODO: Convert f-string to logging format
-            raise APIError(f"Failed to store embeddings: {e}") from e
+            msg = f"Failed to store embeddings: {e}"
+            raise APIError(msg) from e
 
     async def search_similar(
         self,
@@ -164,25 +168,26 @@ class DatabaseManager:
             APIError: If search fails
         """
         if not self._qdrant_service:
-            raise APIError("Qdrant service not available")
+            msg = "Qdrant service not available"
+            raise APIError(msg)
 
         try:
-            results = await self._qdrant_service.search(
+            return await self._qdrant_service.search(
                 collection_name=collection_name,
                 query_vector=query_vector,
                 limit=limit,
                 filter_conditions=filter_conditions,
             )
-            return results
         except Exception as e:
-            logger.error(
+            logger.exception(
                 f"Failed to search vectors: {e}"
             )  # TODO: Convert f-string to logging format
-            raise APIError(f"Failed to search vectors: {e}") from e
+            msg = f"Failed to search vectors: {e}"
+            raise APIError(msg) from e
 
     # Cache Operations
     async def cache_get(
-        self, key: str, cache_type: CacheType = CacheType.CRAWL, default: Any = None
+        self, key: str, cache_type: CacheType = CacheType.LOCAL, default: Any = None
     ) -> Any:
         """Get value from cache.
 
@@ -209,7 +214,7 @@ class DatabaseManager:
         self,
         key: str,
         value: Any,
-        cache_type: CacheType = CacheType.CRAWL,
+        cache_type: CacheType = CacheType.LOCAL,
         ttl: int | None = None,
     ) -> bool:
         """Set value in cache.
@@ -235,7 +240,7 @@ class DatabaseManager:
             return False
 
     async def cache_delete(
-        self, key: str, cache_type: CacheType = CacheType.CRAWL
+        self, key: str, cache_type: CacheType = CacheType.LOCAL
     ) -> bool:
         """Delete value from cache.
 

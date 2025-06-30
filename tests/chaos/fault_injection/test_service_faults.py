@@ -71,8 +71,16 @@ class TestServiceFaultInjection:
             try:
                 await active_fault["fault_func"]()
             except MemoryError as e:
-                assert "Simulated memory pressure" in str(e)
-                assert pressure_level in str(e)
+                # Move assertions outside the except block
+                error_message = str(e)
+
+            # Check error message if MemoryError was raised
+            try:
+                assert "Simulated memory pressure" in error_message
+                assert pressure_level in error_message
+            except NameError:
+                # No MemoryError was raised, which is acceptable due to randomness
+                pass
 
             # Clean up
             fault_injector.remove_fault(fault_id)

@@ -255,50 +255,49 @@ class TestFastAPIObservabilityIntegration:
         mock_meter.create_up_down_counter.return_value = mock_up_down_counter
 
         # Mock the tracking module before importing middleware
-        with patch.dict(
-            "sys.modules",
-            {
-                "opentelemetry": MagicMock(),
-                "opentelemetry.trace": MagicMock(),
-                "opentelemetry.metrics": MagicMock(),
-            },
+        with (
+            patch.dict(
+                "sys.modules",
+                {
+                    "opentelemetry": MagicMock(),
+                    "opentelemetry.trace": MagicMock(),
+                    "opentelemetry.metrics": MagicMock(),
+                },
+            ),
+            patch(
+                "src.services.observability.tracking.get_tracer",
+                return_value=mock_tracer,
+            ),
+            patch(
+                "src.services.observability.tracking.get_meter",
+                return_value=mock_meter,
+            ),
         ):
-            # Patch tracking functions
-            with (
-                patch(
-                    "src.services.observability.tracking.get_tracer",
-                    return_value=mock_tracer,
-                ),
-                patch(
-                    "src.services.observability.tracking.get_meter",
-                    return_value=mock_meter,
-                ),
-            ):
-                # Force reload of middleware module to pick up mocked functions
+            # Force reload of middleware module to pick up mocked functions
 
-                importlib.reload(src.services.observability.middleware)
+            importlib.reload(src.services.observability.middleware)
 
-                # Add middleware with metrics
-                self.app.add_middleware(
-                    FastAPIObservabilityMiddleware,
-                    service_name="test-service",
-                    record_request_metrics=True,
-                )
+            # Add middleware with metrics
+            self.app.add_middleware(
+                FastAPIObservabilityMiddleware,
+                service_name="test-service",
+                record_request_metrics=True,
+            )
 
-                client = TestClient(self.app)
+            client = TestClient(self.app)
 
-                # Make request
-                response = client.get("/test")
+            # Make request
+            response = client.get("/test")
 
-                assert response.status_code == 200
+            assert response.status_code == 200
 
-                # Verify span was created during request
-                mock_tracer.start_as_current_span.assert_called()
+            # Verify span was created during request
+            mock_tracer.start_as_current_span.assert_called()
 
-                # Verify metrics were recorded
-                mock_up_down_counter.add.assert_called()  # Active requests
-                mock_histogram.record.assert_called()  # Duration
-                mock_counter.add.assert_called()  # Request count
+            # Verify metrics were recorded
+            mock_up_down_counter.add.assert_called()  # Active requests
+            mock_histogram.record.assert_called()  # Duration
+            mock_counter.add.assert_called()  # Request count
 
     def test_middleware_integration_error_handling(self):
         """Test middleware error handling integration."""

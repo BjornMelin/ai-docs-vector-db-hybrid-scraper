@@ -1061,7 +1061,7 @@ async def _apply_contextual_refinement(
         # Extract key terms from context
         context_terms = []
 
-        for source, source_data in context_data["sources"].items():
+        for source_data in context_data["sources"].values():
             for result in source_data["results"]:
                 content = result.get("payload", {}).get("content", "")
                 title = result.get("payload", {}).get("title", "")

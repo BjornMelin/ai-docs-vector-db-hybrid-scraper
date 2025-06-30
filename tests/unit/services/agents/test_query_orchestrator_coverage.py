@@ -739,6 +739,7 @@ class TestQueryOrchestratorComprehensive:
         # Test that session state is properly accessed
         session_state = mock_deps.session_state
         initial_tool_usage = session_state.tool_usage_stats.copy()
+        initial_total_usage = sum(initial_tool_usage.values())
 
         # Simulate tool usage tracking
         session_state.increment_tool_usage("analyze_query_intent")
@@ -751,6 +752,10 @@ class TestQueryOrchestratorComprehensive:
         assert session_state.tool_usage_stats["delegate_to_specialist"] == 1
         assert session_state.tool_usage_stats["coordinate_multi_stage_search"] == 1
         assert session_state.tool_usage_stats["evaluate_strategy_performance"] == 1
+
+        # Verify total usage increased
+        final_total_usage = sum(session_state.tool_usage_stats.values())
+        assert final_total_usage == initial_total_usage + 4
 
     def test_multi_step_query_detection(self, orchestrator):
         """Test multi-step query detection logic."""

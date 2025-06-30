@@ -6,6 +6,7 @@ intelligent alerting, and AI-powered anomaly detection.
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 import statistics
@@ -235,7 +236,7 @@ class MetricsCollector:
     def get_metric_values(
         self,
         metric_name: str,
-        tags: dict[str, str] = None,
+        tags: dict[str, str] | None = None,
         since: datetime | None = None,
     ) -> list[float]:
         """Get metric values matching criteria."""
@@ -255,7 +256,7 @@ class MetricsCollector:
         return [m.value for m in metrics]
 
     def get_metric_statistics(
-        self, metric_name: str, tags: dict[str, str] = None
+        self, metric_name: str, tags: dict[str, str] | None = None
     ) -> dict[str, float]:
         """Get statistical summary of metric."""
         values = self.get_metric_values(metric_name, tags)
@@ -375,7 +376,7 @@ class DistributedTracer:
                 "trace_id": trace_id,
                 "status": "in_progress",
                 "span_count": len(spans),
-                "services": list(set(s.service_name for s in spans)),
+                "services": list({s.service_name for s in spans}),
             }
 
         total_duration = max(s.end_time for s in completed_spans) - min(
@@ -387,7 +388,7 @@ class DistributedTracer:
             "status": "completed",
             "span_count": len(spans),
             "total_duration_ms": total_duration.total_seconds() * 1000,
-            "services": list(set(s.service_name for s in spans)),
+            "services": list({s.service_name for s in spans}),
             "errors": sum(1 for s in completed_spans if s.status == TraceStatus.ERROR),
             "root_operation": spans[0].operation_name if spans else None,
         }
@@ -647,17 +648,13 @@ class EnterpriseObservabilityPlatform:
         """Cleanup observability platform resources."""
         if self.cleanup_task:
             self.cleanup_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.cleanup_task
-            except asyncio.CancelledError:
-                pass
 
         if self.monitoring_task:
             self.monitoring_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.monitoring_task
-            except asyncio.CancelledError:
-                pass
 
         self.is_initialized = False
         logger.info("Enterprise observability platform cleanup completed")
@@ -667,7 +664,7 @@ class EnterpriseObservabilityPlatform:
         name: str,
         value: float,
         metric_type: MetricType = MetricType.GAUGE,
-        tags: dict[str, str] = None,
+        tags: dict[str, str] | None = None,
         service_name: str = "unknown",
     ) -> None:
         """Record a metric."""
@@ -770,10 +767,7 @@ class EnterpriseObservabilityPlatform:
         # Get all metrics for the service
         service_metrics = {}
 
-        for (
-            metric_key,
-            metric_metadata,
-        ) in self.metrics_collector.metric_metadata.items():
+        for metric_metadata in self.metrics_collector.metric_metadata.values():
             if metric_metadata["tags"].get("service") == service_name:
                 stats = self.metrics_collector.get_metric_statistics(
                     metric_metadata["name"], metric_metadata["tags"]

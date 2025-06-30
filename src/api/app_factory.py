@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.architecture.modes import ApplicationMode, get_current_mode, get_mode_config
 from src.architecture.service_factory import ModeAwareServiceFactory
 from src.config import get_config
+from src.services.fastapi.middleware import manager as middleware_manager
 
 
 logger = logging.getLogger(__name__)
@@ -111,7 +112,6 @@ def _configure_cors(app: FastAPI, mode: ApplicationMode) -> None:
 
 def _apply_middleware_stack(app: FastAPI, middleware_stack: list[str]) -> None:
     """Apply mode-specific middleware stack."""
-    from src.services.fastapi.middleware import manager as middleware_manager
 
     for middleware_name in middleware_stack:
         try:

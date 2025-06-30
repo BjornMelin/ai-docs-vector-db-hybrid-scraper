@@ -19,7 +19,7 @@ import redis.asyncio as redis
 from pydantic import BaseModel
 from qdrant_client import AsyncQdrantClient
 
-from src.config.auto_detect import AutoDetectionConfig, DetectedService
+from src.config import AutoDetectionConfig, DetectedService
 from src.services.errors import circuit_breaker
 
 

@@ -287,7 +287,7 @@ async def get_drift_config():
         with monitor_operation("api_config_drift_config", category="api"):
             config = get_config()
 
-            drift_config = {
+            return {
                 "enabled": config.drift_detection.enabled,
                 "snapshot_interval_minutes": config.drift_detection.snapshot_interval_minutes,
                 "comparison_interval_minutes": config.drift_detection.comparison_interval_minutes,
@@ -303,8 +303,6 @@ async def get_drift_config():
                     "performance_monitoring": config.drift_detection.use_performance_monitoring,
                 },
             }
-
-            return drift_config
 
     except Exception as e:
         logger.exception("Failed to get drift config")

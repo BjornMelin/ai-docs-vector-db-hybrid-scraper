@@ -29,7 +29,7 @@ class BatchConfig:
     performance_target_ms: float = 100.0  # Target processing time per batch
 
 
-class BatchProcessor(Generic[T, R]):
+class BatchProcessor[T, R]:
     """Intelligent batch processing for optimal throughput."""
 
     def __init__(

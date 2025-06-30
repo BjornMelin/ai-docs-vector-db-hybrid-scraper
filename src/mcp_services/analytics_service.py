@@ -44,10 +44,10 @@ class AnalyticsService:
             name,
             instructions="""
             Advanced analytics service with agentic observability capabilities.
-            
+
             Extends existing enterprise observability infrastructure with agentic-specific metrics:
             - Agent decision metrics with confidence and quality tracking
-            - Multi-agent workflow visualization and dependency mapping  
+            - Multi-agent workflow visualization and dependency mapping
             - Auto-RAG performance monitoring with convergence analysis
             - Self-healing capabilities with predictive failure detection
             - Cost estimation and optimization analytics
@@ -58,7 +58,7 @@ class AnalyticsService:
             - Self-learning performance optimization patterns
             - Intelligent cost and resource optimization
             - Agent decision quality correlation and improvement
-            
+
             Integration Features:
             - Extends existing OpenTelemetry infrastructure
             - Integrates with AIOperationTracker for agent-specific metrics
@@ -176,7 +176,7 @@ class AnalyticsService:
                 return {"error": "Correlation manager not available"}
 
             # Leverage existing trace correlation for multi-agent workflows
-            visualization = {
+            return {
                 "integration_status": "using_existing_correlation_manager",
                 "workflow_data": {
                     "total_workflows": 23,
@@ -204,8 +204,6 @@ class AnalyticsService:
                 },
             }
 
-            return visualization
-
         @self.mcp.tool()
         async def get_auto_rag_performance_monitoring() -> dict[str, Any]:
             """Get Auto-RAG performance monitoring using existing performance infrastructure.
@@ -217,7 +215,7 @@ class AnalyticsService:
                 return {"error": "Performance monitor not available"}
 
             # Leverage existing performance monitoring for Auto-RAG
-            performance_data = {
+            return {
                 "integration_status": "using_existing_performance_monitor",
                 "auto_rag_metrics": {
                     "iteration_count": 3.2,
@@ -236,8 +234,6 @@ class AnalyticsService:
                     "cost_attribution_enabled": True,
                 },
             }
-
-            return performance_data
 
         logger.info(
             "Registered enhanced observability tools with enterprise integration"

@@ -116,9 +116,8 @@ class SecurityManager:
             Configured security middleware
         """
         if not all([self.rate_limiter, self.ai_validator, self.security_monitor]):
-            raise RuntimeError(
-                "Security components not initialized. Call initialize_components() first."
-            )
+            msg = "Security components not initialized. Call initialize_components() first."
+            raise RuntimeError(msg)
 
         # Create security middleware
         self.middleware = SecurityMiddleware(

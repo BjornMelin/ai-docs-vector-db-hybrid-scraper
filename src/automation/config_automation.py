@@ -13,7 +13,7 @@ import logging
 import os
 import platform
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import psutil
 from pydantic import Field, field_validator

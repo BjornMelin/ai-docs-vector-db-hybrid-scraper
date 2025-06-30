@@ -15,15 +15,20 @@ import asyncio
 import logging
 import sys
 import time
+import traceback
+import unittest.mock
 from pathlib import Path
-
-
-# Add src to path for importing
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from src.config.core import Config
 from src.infrastructure.client_manager import ClientManager
-from src.infrastructure.container import DependencyContext
+from src.infrastructure.container import (
+    DependencyContext,
+    initialize_container,
+    shutdown_container,
+)
+
+# Add src to path for importing
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 
 # Configure logging
@@ -102,7 +107,6 @@ async def demonstrate_client_manager_integration():
     print("-" * 40)
 
     # Mock the service managers to avoid complex initialization
-    import unittest.mock
 
     with (
         unittest.mock.patch("src.services.managers.DatabaseManager") as mock_db_manager,
@@ -151,7 +155,6 @@ async def demonstrate_client_manager_integration():
         try:
             # Initialize container first
             config = Config()
-            from src.infrastructure.container import initialize_container
 
             await initialize_container(config)
             print("✅ DI Container initialized")
@@ -189,8 +192,6 @@ async def demonstrate_client_manager_integration():
             await client_manager.cleanup()
             print("✅ ClientManager cleanup completed")
 
-            from src.infrastructure.container import shutdown_container
-
             await shutdown_container()
             print("✅ Container shutdown completed")
 
@@ -198,8 +199,6 @@ async def demonstrate_client_manager_integration():
 
         except Exception as e:
             print(f"❌ ClientManager integration failed: {e}")
-            import traceback
-
             traceback.print_exc()
             return False
 
@@ -274,8 +273,6 @@ async def demonstrate_document_processing():
 
     except Exception as e:
         print(f"❌ Document processing failed: {e}")
-        import traceback
-
         traceback.print_exc()
         return False
 

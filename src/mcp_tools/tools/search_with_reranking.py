@@ -857,8 +857,8 @@ async def _generate_reranking_insights(
             if reranked_results and original_results
             else False,
             "top_3_stability": len(
-                set(r.get("id") for r in reranked_results[:3]).intersection(
-                    set(r.get("id") for r in original_results[:3])
+                {r.get("id") for r in reranked_results[:3]}.intersection(
+                    {r.get("id") for r in original_results[:3]}
                 )
             )
             / 3
@@ -898,8 +898,7 @@ def _calculate_quality_correlation(results: list[dict]) -> float:
         if quality_scores[i] <= quality_scores[i - 1]:
             decreasing_count += 1
 
-    correlation = decreasing_count / (len(quality_scores) - 1)
-    return correlation
+    return decreasing_count / (len(quality_scores) - 1)
 
 
 async def _analyze_optimal_criteria_weights(
@@ -1090,9 +1089,7 @@ def _analyze_top_criteria_consistency(results: list[dict]) -> float:
         return 0.0
 
     most_common = max(set(top_criteria), key=top_criteria.count)
-    consistency = top_criteria.count(most_common) / len(top_criteria)
-
-    return consistency
+    return top_criteria.count(most_common) / len(top_criteria)
 
 
 async def _apply_contextual_assessment(

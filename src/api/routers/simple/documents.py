@@ -4,7 +4,7 @@ Simplified document management endpoints optimized for solo developers.
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field

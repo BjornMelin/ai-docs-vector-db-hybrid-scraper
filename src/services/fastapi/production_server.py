@@ -13,19 +13,23 @@ from contextlib import asynccontextmanager
 
 from starlette.applications import Starlette
 
-from fastmcp import FastMCP
-
 
 try:
     import uvicorn
 except ImportError:
     uvicorn = None
+from typing import TYPE_CHECKING
+
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from src.config import get_config
 from src.services.fastapi.middleware.manager import get_middleware_manager
 from src.services.logging_config import configure_logging
+
+
+if TYPE_CHECKING:
+    from fastmcp import FastMCP
 
 
 logger = logging.getLogger(__name__)

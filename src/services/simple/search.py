@@ -5,7 +5,9 @@ Focuses on core vector search functionality without advanced features.
 """
 
 import logging
-from typing import Any, from src.architecture.features import conditional_feature
+from typing import Any
+
+from src.architecture.features import conditional_feature
 from src.architecture.service_factory import BaseService
 from src.models.vector_search import SearchRequest, SearchResponse
 
@@ -122,13 +124,11 @@ class SimpleSearchService(BaseService):
         query_embedding = await embedding_manager.generate_embedding(request.query)
 
         # Perform vector search
-        search_results = await self.vector_db.search(
+        return await self.vector_db.search(
             query_vector=query_embedding,
             limit=request.limit,
             collection_name=request.collection_name,
         )
-
-        return search_results
 
     def _cache_result(self, key: str, response: SearchResponse) -> None:
         """Cache search result with simple LRU-like behavior."""

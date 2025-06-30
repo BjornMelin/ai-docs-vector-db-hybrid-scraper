@@ -463,7 +463,7 @@ class PerformanceTracker:
 
         if metadata:
             for key, value in metadata.items():
-                if isinstance(value, (str, int, float, bool)):
+                if isinstance(value, str | int | float | bool):
                     span.set_attribute(f"metadata.{key}", str(value)[:100])
 
     def end_operation(
@@ -504,7 +504,7 @@ class PerformanceTracker:
 
         if result_metadata:
             for key, value in result_metadata.items():
-                if isinstance(value, (str, int, float, bool)):
+                if isinstance(value, str | int | float | bool):
                     span.set_attribute(f"result.{key}", str(value)[:100])
 
         span.__exit__(None, None, None)

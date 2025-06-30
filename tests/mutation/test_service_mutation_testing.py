@@ -334,6 +334,7 @@ class TestServiceLogicMutationTesting:
                     if attempt == max_retries - 1:
                         raise
                     await asyncio.sleep(0.001)
+            return None
 
         result = await retry_operation()
         assert result == "success"
@@ -587,7 +588,7 @@ def run_mutation_tests():
     like mutmut or cosmic-ray to systematically introduce mutations
     and verify test detection.
     """
-    mutation_results = {
+    return {
         "_total_mutations": 0,
         "detected_mutations": 0,
         "undetected_mutations": 0,
@@ -597,8 +598,6 @@ def run_mutation_tests():
     # This would be implemented by the mutation testing framework
     # For now, we provide the structure for manual testing
 
-    return mutation_results
-
 
 def analyze_mutation_coverage():
     """Analyze mutation coverage for service logic.
@@ -606,15 +605,13 @@ def analyze_mutation_coverage():
     Identifies areas of service logic that may need additional tests
     to catch potential mutations.
     """
-    coverage_analysis = {
+    return {
         "circuit_breaker_logic": "well_covered",
         "dependency_injection": "needs_improvement",
         "error_handling": "well_covered",
         "caching_logic": "needs_improvement",
         "async_patterns": "well_covered",
     }
-
-    return coverage_analysis
 
 
 if __name__ == "__main__":

@@ -206,7 +206,7 @@ async def get_observability_health(
         config = observability_service["config"]
         enabled = observability_service["enabled"]
 
-        health = {
+        return {
             "enabled": enabled,
             "service_name": config.service_name,
             "otlp_endpoint": config.otlp_endpoint if enabled else None,
@@ -222,8 +222,6 @@ async def get_observability_health(
             },
             "status": "healthy" if enabled else "disabled",
         }
-
-        return health
 
     except Exception as e:
         logger.exception("Failed to get observability health")

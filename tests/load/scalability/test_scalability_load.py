@@ -183,8 +183,7 @@ class TestScalabilityLoad:
                 )
 
                 # Return processing capacity (higher resources = faster processing)
-                capacity = (self.cpu_cores * 0.6) + (self.memory_gb * 0.4)
-                return capacity
+                return (self.cpu_cores * 0.6) + (self.memory_gb * 0.4)
 
             def get_scaling_stats(self) -> dict:
                 """Get scaling statistics."""

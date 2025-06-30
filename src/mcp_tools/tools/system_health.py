@@ -763,7 +763,7 @@ def _get_timestamp() -> str:
     """Get current timestamp."""
     import datetime
 
-    return datetime.datetime.now().isoformat()
+    return datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
 
 
 async def _detect_issues_for_healing(healing_scope: str, ctx) -> dict[str, Any]:

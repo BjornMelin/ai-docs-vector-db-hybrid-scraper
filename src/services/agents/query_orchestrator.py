@@ -159,7 +159,7 @@ Always provide structured decisions with confidence scores and reasoning."""
                 indicator in query_lower for indicator in multi_step_indicators
             )
 
-            analysis_result = {
+            return {
                 "query": query,
                 "complexity": complexity,
                 "domain": domain,
@@ -170,8 +170,6 @@ Always provide structured decisions with confidence scores and reasoning."""
                 "estimated_tokens": len(query.split()) * 4,  # Rough estimate
                 "recommended_tools": self._recommend_tools(complexity, domain),
             }
-
-            return analysis_result
 
         @self.agent.tool
         async def delegate_to_specialist(
@@ -246,7 +244,7 @@ Always provide structured decisions with confidence scores and reasoning."""
 
                 # This would use the existing SearchOrchestrator
                 # For now, return a structured response
-                coordination_result = {
+                return {
                     "query": query,
                     "collection": collection,
                     "stages_executed": len(stages),
@@ -254,8 +252,6 @@ Always provide structured decisions with confidence scores and reasoning."""
                     "results_count": 0,  # Would be populated by actual search
                     "processing_time_ms": 0.0,
                 }
-
-                return coordination_result
 
             except Exception as e:
                 logger.exception("Multi-stage search coordination failed")
@@ -320,7 +316,7 @@ Always provide structured decisions with confidence scores and reasoning."""
                 "avg_quality"
             ] + alpha * quality_score
 
-            evaluation = {
+            return {
                 "strategy": strategy,
                 "performance_score": performance_score,
                 "metrics": {
@@ -331,8 +327,6 @@ Always provide structured decisions with confidence scores and reasoning."""
                 "strategy_stats": stats.copy(),
                 "recommendation": self._get_strategy_recommendation(stats),
             }
-
-            return evaluation
 
     def _recommend_tools(self, complexity: str, domain: str) -> list[str]:
         """Recommend tools based on query characteristics.
@@ -438,11 +432,11 @@ Always provide structured decisions with confidence scores and reasoning."""
                 # Use Pydantic-AI for orchestration
                 result = await self.agent.run(
                     f"""Orchestrate processing for this query: {query}
-                    
+
                     Collection: {collection}
                     User context: {user_context}
                     Performance requirements: {performance_requirements}
-                    
+
                     Provide a complete orchestration plan and execute it."""
                 )
 

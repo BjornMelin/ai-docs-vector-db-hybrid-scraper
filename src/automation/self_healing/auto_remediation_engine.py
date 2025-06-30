@@ -277,7 +277,8 @@ class MemoryLeakRemediationStrategy(RemediationStrategy):
                 return await self._execute_service_restart(
                     action, checkpoint, start_time
                 )
-            raise ValueError(f"Unknown action type: {action.action_type}")
+            msg = f"Unknown action type: {action.action_type}"
+            raise ValueError(msg)
 
         except Exception as e:
             return RemediationResult(
@@ -492,7 +493,8 @@ class CPUOverloadRemediationStrategy(RemediationStrategy):
                 )
             if action.action_type == "scale_cpu_resources":
                 return await self._execute_cpu_scaling(action, checkpoint, start_time)
-            raise ValueError(f"Unknown action type: {action.action_type}")
+            msg = f"Unknown action type: {action.action_type}"
+            raise ValueError(msg)
 
         except Exception as e:
             return RemediationResult(
@@ -724,7 +726,8 @@ class ServiceDegradationRemediationStrategy(RemediationStrategy):
                 return await self._execute_service_restart(
                     action, checkpoint, start_time
                 )
-            raise ValueError(f"Unknown action type: {action.action_type}")
+            msg = f"Unknown action type: {action.action_type}"
+            raise ValueError(msg)
 
         except Exception as e:
             return RemediationResult(
@@ -943,8 +946,12 @@ class RollbackManager:
         """Capture current process states."""
         processes = []
         try:
-            for proc in psutil.process_iter(["pid", "name", "status", "cpu_percent"]):
-                processes.append(proc.info)
+            processes.extend(
+                proc.info
+                for proc in psutil.process_iter(
+                    ["pid", "name", "status", "cpu_percent"]
+                )
+            )
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass
 

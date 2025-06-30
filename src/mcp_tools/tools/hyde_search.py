@@ -923,7 +923,7 @@ async def _extract_expansion_queries(
 
         # Extract noun phrases and key terms (mock implementation)
         key_phrases = []
-        for j, word in enumerate(words):
+        for _j, word in enumerate(words):
             if len(word) > 6 and word.isalpha():  # Simple heuristic for key terms
                 key_phrases.append(word)
                 if len(key_phrases) >= 3:
@@ -973,7 +973,7 @@ def _calculate_expansion_metrics(
         / len(expanded_queries)
         if expanded_queries
         else 0.0,
-        "diversity_score": len(set(q["expansion_type"] for q in expanded_queries))
+        "diversity_score": len({q["expansion_type"] for q in expanded_queries})
         / len(expanded_queries)
         if expanded_queries
         else 0.0,

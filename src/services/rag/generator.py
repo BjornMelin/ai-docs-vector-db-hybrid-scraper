@@ -456,11 +456,9 @@ Provide a clear, accurate answer based solely on the information provided above.
             {"input": 0.002, "output": 0.002},  # Default fallback
         )
 
-        cost = (input_tokens / 1000) * model_costs["input"] + (
+        return (input_tokens / 1000) * model_costs["input"] + (
             output_tokens / 1000
         ) * model_costs["output"]
-
-        return cost
 
     def _generate_follow_up_questions(self, answer: str, _query: str) -> list[str]:
         """Generate relevant follow-up questions based on the answer."""

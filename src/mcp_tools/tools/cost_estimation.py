@@ -400,7 +400,7 @@ async def _collect_current_cost_data(
 ) -> dict[str, Any]:
     """Collect current cost data for the specified scope and period."""
     # Mock cost data collection
-    cost_data = {
+    return {
         "total_cost": 2547.83,
         "cost_breakdown": {
             "compute_resources": 1456.32,
@@ -425,8 +425,6 @@ async def _collect_current_cost_data(
         "time_period": time_period,
         "analysis_scope": analysis_scope,
     }
-
-    return cost_data
 
 
 async def _analyze_cost_patterns(
@@ -575,7 +573,7 @@ def _get_timestamp() -> str:
     """Get current timestamp."""
     import datetime
 
-    return datetime.datetime.now().isoformat()
+    return datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
 
 
 async def _analyze_current_allocation(ctx) -> dict[str, Any]:

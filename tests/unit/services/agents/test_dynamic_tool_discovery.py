@@ -1852,6 +1852,11 @@ class TestMemoryAndPerformanceOptimization:
         tools2 = await engine.discover_tools_for_task(task, requirements)
         second_time = time.time() - start_time
 
+        # Verify timing measurements are reasonable
+        assert first_time >= 0, "First discovery time should be non-negative"
+        assert second_time >= 0, "Second discovery time should be non-negative"
+        assert second_time <= first_time, "Second call should be faster due to caching"
+
         # Results should be consistent
         assert len(tools1) == len(tools2)
         if tools1 and tools2:

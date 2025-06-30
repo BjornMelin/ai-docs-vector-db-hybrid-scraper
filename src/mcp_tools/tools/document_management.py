@@ -159,7 +159,8 @@ def register_tools(mcp, client_manager: ClientManager):
             # Get collection info
             collection_info = await qdrant_service.get_collection_info(collection_name)
             if not collection_info:
-                raise ValueError(f"Collection {collection_name} not found")
+                msg = f"Collection {collection_name} not found"
+                raise ValueError(msg)
 
             results = {
                 "action": lifecycle_action,
@@ -197,7 +198,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 results["results"] = optimization_results
 
             else:
-                raise ValueError(f"Unknown lifecycle action: {lifecycle_action}")
+                msg = f"Unknown lifecycle action: {lifecycle_action}"
+                raise ValueError(msg)
 
             if ctx:
                 await ctx.info(
@@ -285,9 +287,8 @@ def register_tools(mcp, client_manager: ClientManager):
                     documents, parameters, ctx
                 )
             else:
-                raise ValueError(
-                    f"Unknown organization strategy: {organization_strategy}"
-                )
+                msg = f"Unknown organization strategy: {organization_strategy}"
+                raise ValueError(msg)
 
             # Update document metadata with organization results
             update_results = await _update_document_organization(
@@ -419,7 +420,7 @@ def _get_timestamp() -> str:
     """Get current timestamp."""
     import datetime
 
-    return datetime.datetime.now().isoformat()
+    return datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
 
 
 async def _analyze_document_collection(

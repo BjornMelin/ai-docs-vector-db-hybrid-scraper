@@ -50,7 +50,7 @@ class ProcessingMetrics:
     speedup_factor: float = 1.0
 
 
-class ParallelProcessor(Generic[T, R]):
+class ParallelProcessor[T, R]:
     """High-performance parallel processor for ML operations."""
 
     def __init__(
@@ -112,10 +112,11 @@ class ParallelProcessor(Generic[T, R]):
 
         except* Exception as eg:
             # Handle task group exceptions
-            logger.error(
+            logger.exception(
                 f"Parallel processing failed: {eg}"
             )  # TODO: Convert f-string to logging format
-            raise EmbeddingServiceError(f"Parallel processing failed: {eg}") from eg
+            msg = f"Parallel processing failed: {eg}"
+            raise EmbeddingServiceError(msg) from eg
 
         # Flatten results while preserving order
         results = []
@@ -185,15 +186,17 @@ class ParallelProcessor(Generic[T, R]):
                 return results
 
             except TimeoutError:
-                logger.error(
+                logger.exception(
                     f"Batch {batch_idx} processing timeout"
                 )  # TODO: Convert f-string to logging format
-                raise EmbeddingServiceError(f"Batch {batch_idx} processing timeout")
+                msg = f"Batch {batch_idx} processing timeout"
+                raise EmbeddingServiceError(msg)
             except Exception as e:
-                logger.error(
+                logger.exception(
                     f"Batch {batch_idx} processing failed: {e}"
                 )  # TODO: Convert f-string to logging format
-                raise EmbeddingServiceError(f"Batch processing failed: {e}") from e
+                msg = f"Batch processing failed: {e}"
+                raise EmbeddingServiceError(msg) from e
 
     def _calculate_optimal_batching(self, total_items: int) -> dict[str, Any]:
         """Calculate optimal batch configuration based on system resources and history.

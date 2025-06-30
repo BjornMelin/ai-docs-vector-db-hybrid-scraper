@@ -7,6 +7,7 @@ and ensures data structure compliance.
 from datetime import UTC, datetime
 
 import pytest
+from pydantic import ValidationError
 
 from src.models.api_contracts import (
     AdvancedSearchRequest,
@@ -48,13 +49,17 @@ class TestPydanticModelValidation:
         assert minimal_request.enable_hyde is False
 
         # Invalid data
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValidationError, match="String should have at least 1 character"
+        ):
             SearchRequest(query="")  # Empty query
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="Input should be greater than 0"):
             SearchRequest(query="test", limit=0)  # Invalid limit
 
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValidationError, match="Input should be less than or equal to 1"
+        ):
             SearchRequest(query="test", score_threshold=1.5)  # Invalid threshold
 
     @pytest.mark.schema_validation
@@ -143,15 +148,15 @@ class TestPydanticModelValidation:
         assert request.max_concurrent == 3
 
         # Invalid data
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="List should have at least 1 item"):
             BulkDocumentRequest(urls=[])  # Empty URLs
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="Input should be greater than 0"):
             BulkDocumentRequest(urls=["url"], max_concurrent=0)  # Invalid concurrent
 
         # Too many URLs
         too_many_urls = [f"https://example.com/doc{i}" for i in range(101)]
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="List should have at most 100 items"):
             BulkDocumentRequest(urls=too_many_urls)
 
     @pytest.mark.schema_validation
@@ -173,10 +178,12 @@ class TestPydanticModelValidation:
         assert request.enable_hybrid is True
 
         # Invalid data
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValidationError, match="String should have at least 1 character"
+        ):
             CollectionRequest(collection_name="")  # Empty name
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="Input should be greater than 0"):
             CollectionRequest(collection_name="test", vector_size=0)  # Invalid size
 
     @pytest.mark.schema_validation
@@ -421,10 +428,10 @@ class TestDataValidationEdgeCases:
         assert max_request.limit == 100
 
         # Invalid boundaries
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="limit.*greater"):
             SearchRequest(query="test", limit=0)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="limit.*100"):
             SearchRequest(query="test", limit=101)
 
         # Test score threshold boundaries
@@ -435,10 +442,10 @@ class TestDataValidationEdgeCases:
         assert max_score.score_threshold == 1.0
 
         # Invalid score boundaries
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="score_threshold.*0"):
             SearchRequest(query="test", score_threshold=-0.1)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="score_threshold.*1"):
             SearchRequest(query="test", score_threshold=1.1)
 
     @pytest.mark.schema_validation
@@ -468,9 +475,9 @@ class TestDataValidationEdgeCases:
         assert doc_request.metadata == {}
 
         # Empty string in query should fail
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="query.*empty"):
             SearchRequest(query="")
 
         # Whitespace-only query should fail
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="query.*empty"):
             SearchRequest(query="   ")

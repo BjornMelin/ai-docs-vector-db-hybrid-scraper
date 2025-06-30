@@ -585,6 +585,7 @@ class TestComplexWorkflowScenarios:
         search_tools = await discovery_agent.discover_tools_for_task(
             search_task, {"max_latency_ms": 2000}
         )
+        assert len(search_tools) > 0, "Should discover search tools"
 
         search_response = await search_agent.orchestrate(
             search_task, {"phase": "search"}, agent_dependencies
@@ -873,6 +874,11 @@ class TestComplexWorkflowScenarios:
             {"max_latency_ms": 2000, "min_accuracy": 0.85, "priority": "balanced"},
         )
 
+        # Verify tools were discovered for each optimization type
+        assert len(speed_tools) > 0, "Should discover speed-optimized tools"
+        assert len(quality_tools) > 0, "Should discover quality-optimized tools"
+        assert len(balanced_tools) > 0, "Should discover balanced tools"
+
         # Execute with different optimization targets
         performance_tests = [
             (speed_agent, "speed_optimized", {"max_latency_ms": 500}),
@@ -1082,3 +1088,7 @@ class TestComplexWorkflowScenarios:
         # Heavy load should still maintain reasonable performance
         assert heavy_load_result["success_rate"] >= 0.5  # At least 50% under heavy load
         assert heavy_load_result["results"]["efficiency_score"] > 0
+
+        # Light load should perform better than heavy load
+        assert light_load_result["success_rate"] >= heavy_load_result["success_rate"]
+        assert light_load_result["results"]["efficiency_score"] > 0

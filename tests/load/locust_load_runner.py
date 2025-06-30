@@ -527,7 +527,7 @@ class LoadTestMetricsCollector:
             return data[min(index, len(data) - 1)]
 
         # Performance analysis
-        summary = {
+        return {
             "test_duration_seconds": test_duration,
             "_total_requests": _total_requests,
             "successful_requests": len(successful_requests),
@@ -551,8 +551,6 @@ class LoadTestMetricsCollector:
             "performance_grade": self._calculate_performance_grade(),
             "threshold_violations": self._check_thresholds(),
         }
-
-        return summary
 
     def _calculate_performance_grade(self) -> str:
         """Calculate performance grade based on metrics."""
@@ -723,6 +721,4 @@ def create_load_test_environment(
         user_classes = [VectorDBUser, AdminUser]
 
     # Create environment
-    env = Environment(user_classes=user_classes, host=host, **_kwargs)
-
-    return env
+    return Environment(user_classes=user_classes, host=host, **_kwargs)

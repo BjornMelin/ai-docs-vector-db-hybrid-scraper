@@ -757,11 +757,9 @@ async def _intelligent_fusion(results: list[dict], ctx) -> list[dict]:
         result["fusion_score"] = fusion_score
 
     # Sort by fusion score
-    fused_results = sorted(
+    return sorted(
         unique_results, key=lambda x: x.get("fusion_score", 0.0), reverse=True
     )
-
-    return fused_results
 
 
 async def _weighted_fusion(results: list[dict], ctx) -> list[dict]:
@@ -784,11 +782,7 @@ async def _weighted_fusion(results: list[dict], ctx) -> list[dict]:
         result["weighted_score"] = weighted_score
 
     # Sort by weighted score
-    weighted_results = sorted(
-        results, key=lambda x: x.get("weighted_score", 0.0), reverse=True
-    )
-
-    return weighted_results
+    return sorted(results, key=lambda x: x.get("weighted_score", 0.0), reverse=True)
 
 
 async def _ranked_fusion(results: list[dict], ctx) -> list[dict]:
@@ -800,11 +794,7 @@ async def _ranked_fusion(results: list[dict], ctx) -> list[dict]:
         result["rank_score"] = rank_score
 
     # Sort by rank score
-    ranked_results = sorted(
-        results, key=lambda x: x.get("rank_score", 0.0), reverse=True
-    )
-
-    return ranked_results
+    return sorted(results, key=lambda x: x.get("rank_score", 0.0), reverse=True)
 
 
 def _get_provider_weight(provider: str) -> float:
@@ -825,10 +815,7 @@ def _calculate_fusion_confidence(results: list[dict], total_results: int) -> flo
 
     # Factor in result diversity and quality
     providers_represented = len(
-        set(
-            r.get("fusion_metadata", {}).get("source_provider", "")
-            for r in results[:10]
-        )
+        {r.get("fusion_metadata", {}).get("source_provider", "") for r in results[:10]}
     )
 
     avg_quality = sum(r.get("quality_score", 0.0) for r in results[:10]) / min(
@@ -1107,7 +1094,7 @@ async def _apply_adaptive_learning(
     # Analyze what worked best
     best_params = best_result.get("iteration_metadata", {}).get("parameters_used", {})
 
-    learning_insights = {
+    return {
         "optimal_providers": best_params.get("providers", []),
         "optimal_fusion_strategy": best_params.get("fusion_strategy", "intelligent"),
         "optimal_quality_threshold": best_params.get("quality_threshold", 0.7),
@@ -1122,8 +1109,6 @@ async def _apply_adaptive_learning(
         },
         "learning_confidence": 0.8,  # Mock learning confidence
     }
-
-    return learning_insights
 
 
 def _analyze_provider_count_impact(iteration_results: list[dict]) -> float:
@@ -1160,12 +1145,10 @@ def _analyze_fusion_strategy_effectiveness(
         strategy_performance[strategy].append(score)
 
     # Average performance by strategy
-    strategy_avg = {
+    return {
         strategy: sum(scores) / len(scores)
         for strategy, scores in strategy_performance.items()
     }
-
-    return strategy_avg
 
 
 def _analyze_quality_threshold_impact(iteration_results: list[dict]) -> float:
@@ -1174,9 +1157,7 @@ def _analyze_quality_threshold_impact(iteration_results: list[dict]) -> float:
         return 0.7  # Default threshold
 
     best_iteration = max(iteration_results, key=lambda x: x["performance_score"])
-    optimal_threshold = best_iteration["parameters"]["quality_threshold"]
-
-    return optimal_threshold
+    return best_iteration["parameters"]["quality_threshold"]
 
 
 async def _get_available_providers(ctx) -> list[str]:
@@ -1272,9 +1253,7 @@ async def _hybrid_deduplication(results: list[dict], ctx) -> list[dict]:
     url_deduplicated = _url_deduplication(results)
 
     # Then apply semantic deduplication
-    semantic_deduplicated = await _semantic_deduplication(url_deduplicated, ctx)
-
-    return semantic_deduplicated
+    return await _semantic_deduplication(url_deduplicated, ctx)
 
 
 async def _apply_result_synthesis(

@@ -220,10 +220,7 @@ class OptimizedTextAnalyzer:
         paragraph_count = len([p for p in paragraphs if p.strip()])
 
         # Calculate average sentence length
-        if sentence_count > 0:
-            avg_sentence_length = word_count / sentence_count
-        else:
-            avg_sentence_length = 0.0
+        avg_sentence_length = word_count / sentence_count if sentence_count > 0 else 0.0
 
         # Complexity score based on vocabulary diversity
         if word_count > 0:
@@ -382,8 +379,7 @@ class OptimizedTextAnalyzer:
             elif len(word) > 8:
                 english_indicators += 0.5  # Longer words indicate complexity
 
-        confidence = min(1.0, english_indicators / total_words)
-        return confidence
+        return min(1.0, english_indicators / total_words)
 
     @functools.lru_cache(maxsize=500)
     def calculate_document_similarity_optimized(
@@ -591,7 +587,7 @@ def classify_text_complexity_fast(text: str) -> dict[str, Any]:
 
     # Calculate metrics efficiently
     avg_word_length = sum(len(word) for word in words) / word_count
-    unique_words = len(set(word.lower() for word in words))
+    unique_words = len({word.lower() for word in words})
     vocabulary_ratio = unique_words / word_count
 
     # Sentence complexity

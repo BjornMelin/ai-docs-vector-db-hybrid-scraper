@@ -296,6 +296,8 @@ class PerformanceOptimizer:
 
         # Create more tasks than agents to test load balancing
         total_tasks = len(agents) * 2
+        expected_task_count = total_tasks
+        assert expected_task_count > len(agents), "Should have more tasks than agents"
 
         # Distribute tasks adaptively
         async def adaptive_task_execution():
@@ -728,20 +730,20 @@ class TestPerformanceOptimizationScenarios:
             )
 
             # Sequential execution (baseline)
-            async def sequential_execution():
+            async def sequential_execution(config=load_config):
                 start_time = time.time()
                 results = []
 
-                test_agents = agent_pool[: load_config["agents"]]
+                test_agents = agent_pool[: config["agents"]]
 
                 for agent in test_agents:
-                    for task_id in range(load_config["tasks_per_agent"]):
+                    for task_id in range(config["tasks_per_agent"]):
                         if hasattr(agent, "orchestrate"):
                             response = await agent.orchestrate(
                                 f"load test task {task_id}",
                                 {
                                     "load_test": True,
-                                    "complexity": load_config["complexity"],
+                                    "complexity": config["complexity"],
                                     "sequential": True,
                                 },
                                 agent_dependencies,
@@ -752,7 +754,7 @@ class TestPerformanceOptimizationScenarios:
                                 f"load discovery {task_id}",
                                 {
                                     "load_test": True,
-                                    "complexity": load_config["complexity"],
+                                    "complexity": config["complexity"],
                                 },
                             )
                             results.append(len(tools) > 0)
@@ -766,21 +768,21 @@ class TestPerformanceOptimizationScenarios:
                 }
 
             # Parallel execution (optimized)
-            async def parallel_execution():
+            async def parallel_execution(config=load_config):
                 start_time = time.time()
 
-                test_agents = agent_pool[: load_config["agents"]]
+                test_agents = agent_pool[: config["agents"]]
 
                 # Create all tasks
                 all_tasks = []
                 for agent in test_agents:
-                    for task_id in range(load_config["tasks_per_agent"]):
+                    for task_id in range(config["tasks_per_agent"]):
                         if hasattr(agent, "orchestrate"):
                             task = agent.orchestrate(
                                 f"parallel load test {task_id}",
                                 {
                                     "load_test": True,
-                                    "complexity": load_config["complexity"],
+                                    "complexity": config["complexity"],
                                     "parallel": True,
                                 },
                                 agent_dependencies,
@@ -790,7 +792,7 @@ class TestPerformanceOptimizationScenarios:
                                 f"parallel discovery {task_id}",
                                 {
                                     "load_test": True,
-                                    "complexity": load_config["complexity"],
+                                    "complexity": config["complexity"],
                                     "parallel": True,
                                 },
                             )

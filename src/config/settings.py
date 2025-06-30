@@ -17,7 +17,7 @@ import logging
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -288,7 +288,8 @@ class OpenAIConfig(BaseModel):
     @classmethod
     def validate_api_key(cls, v: str | None) -> str | None:
         if v and not v.startswith("sk-"):
-            raise ValueError("OpenAI API key must start with 'sk-'")
+            msg = "OpenAI API key must start with 'sk-'"
+            raise ValueError(msg)
         return v
 
 
@@ -319,7 +320,8 @@ class FirecrawlConfig(BaseModel):
     @classmethod
     def validate_api_key(cls, v: str | None) -> str | None:
         if v and not v.startswith("fc-"):
-            raise ValueError("Firecrawl API key must start with 'fc-'")
+            msg = "Firecrawl API key must start with 'fc-'"
+            raise ValueError(msg)
         return v
 
 
@@ -397,11 +399,14 @@ class ChunkingConfig(BaseModel):
     @model_validator(mode="after")
     def validate_chunk_sizes(self) -> "ChunkingConfig":
         if self.chunk_overlap >= self.chunk_size:
-            raise ValueError("chunk_overlap must be less than chunk_size")
+            msg = "chunk_overlap must be less than chunk_size"
+            raise ValueError(msg)
         if self.min_chunk_size > self.chunk_size:
-            raise ValueError("min_chunk_size must be <= chunk_size")
+            msg = "min_chunk_size must be <= chunk_size"
+            raise ValueError(msg)
         if self.max_chunk_size < self.chunk_size:
-            raise ValueError("max_chunk_size must be >= chunk_size")
+            msg = "max_chunk_size must be >= chunk_size"
+            raise ValueError(msg)
         return self
 
 
@@ -709,14 +714,16 @@ class DeploymentConfig(BaseModel):
     def validate_tier(cls, v: str) -> str:
         valid_tiers = {"personal", "professional", "enterprise"}
         if v.lower() not in valid_tiers:
-            raise ValueError(f"Tier must be one of {valid_tiers}")
+            msg = f"Tier must be one of {valid_tiers}"
+            raise ValueError(msg)
         return v.lower()
 
     @field_validator("flagsmith_api_key")
     @classmethod
     def validate_flagsmith_key(cls, v: str | None) -> str | None:
         if v and not (v.startswith(("fs_", "env_"))):
-            raise ValueError("Flagsmith API key must start with 'fs_' or 'env_'")
+            msg = "Flagsmith API key must start with 'fs_' or 'env_'"
+            raise ValueError(msg)
         return v
 
 
@@ -977,14 +984,14 @@ class Settings(BaseSettings):
             self.embedding_provider == EmbeddingProvider.OPENAI
             and not self.openai_api_key
         ):
-            raise ValueError(
-                "OpenAI API key required when using OpenAI embedding provider"
-            )
+            msg = "OpenAI API key required when using OpenAI embedding provider"
+            raise ValueError(msg)
         if (
             self.crawl_provider == CrawlProvider.FIRECRAWL
             and not self.firecrawl_api_key
         ):
-            raise ValueError("Firecrawl API key required when using Firecrawl provider")
+            msg = "Firecrawl API key required when using Firecrawl provider"
+            raise ValueError(msg)
         return self
 
     @model_validator(mode="after")
@@ -1179,71 +1186,71 @@ settings = get_settings()
 
 # Export all important classes and functions
 __all__ = [
-    # Main configuration class
-    "Settings",
-    "Config",  # Backward compatibility
+    "ABTestVariant",
     # Enums
     "ApplicationMode",
-    "Environment",
-    "LogLevel",
-    "EmbeddingProvider",
-    "EmbeddingModel",
-    "CrawlProvider",
-    "ChunkingStrategy",
-    "SearchStrategy",
-    "CacheType",
-    "DocumentStatus",
-    "QueryComplexity",
-    "ModelType",
-    "VectorType",
-    "QueryType",
-    "SearchAccuracy",
-    "FusionAlgorithm",
-    "ABTestVariant",
-    "OptimizationStrategy",
-    "DeploymentTier",
+    "AutoDetectionConfig",
+    "BrowserUseConfig",
     # Configuration sections
     "CacheConfig",
-    "QdrantConfig",
-    "OpenAIConfig",
+    "CacheType",
+    "ChunkingConfig",
+    "ChunkingStrategy",
+    "CircuitBreakerConfig",
+    "Config",  # Backward compatibility
+    "Crawl4AIConfig",
+    "CrawlProvider",
+    "DatabaseConfig",
+    "DeploymentConfig",
+    "DeploymentTier",
+    "DocumentStatus",
+    "DocumentationSite",
+    "DriftDetectionConfig",
+    "EmbeddingConfig",
+    "EmbeddingModel",
+    "EmbeddingProvider",
+    "Environment",
     "FastEmbedConfig",
     "FirecrawlConfig",
-    "Crawl4AIConfig",
-    "PlaywrightConfig",
-    "BrowserUseConfig",
-    "ChunkingConfig",
-    "EmbeddingConfig",
+    "FusionAlgorithm",
     "HyDEConfig",
-    "ReRankingConfig",
-    "SecurityConfig",
-    "PerformanceConfig",
-    "CircuitBreakerConfig",
-    "DatabaseConfig",
+    "LogLevel",
+    "ModelType",
     "MonitoringConfig",
     "ObservabilityConfig",
-    "TaskQueueConfig",
+    "OpenAIConfig",
+    "OptimizationStrategy",
+    "PerformanceConfig",
+    "PlaywrightConfig",
+    "QdrantConfig",
+    "QueryComplexity",
+    "QueryType",
     "RAGConfig",
-    "DeploymentConfig",
-    "AutoDetectionConfig",
-    "DriftDetectionConfig",
-    "DocumentationSite",
-    # Configuration management
-    "get_settings",
-    "set_settings",
-    "reset_settings",
+    "ReRankingConfig",
+    "SearchAccuracy",
+    "SearchStrategy",
+    "SecurityConfig",
+    # Main configuration class
+    "Settings",
+    "TaskQueueConfig",
+    "VectorType",
+    "create_enterprise_config",
     "create_settings_from_env",
-    "get_config",  # Backward compatibility
-    "set_config",  # Backward compatibility
-    "reset_config",  # Backward compatibility
-    "settings",  # Global instance
-    # Convenience functions
-    "get_qdrant_config",
-    "get_embedding_config",
-    "get_cache_config",
-    "get_performance_config",
-    "get_openai_config",
-    "get_security_config",
     # Mode-specific factories
     "create_simple_config",
-    "create_enterprise_config",
+    "get_cache_config",
+    "get_config",  # Backward compatibility
+    "get_embedding_config",
+    "get_openai_config",
+    "get_performance_config",
+    # Convenience functions
+    "get_qdrant_config",
+    "get_security_config",
+    # Configuration management
+    "get_settings",
+    "reset_config",  # Backward compatibility
+    "reset_settings",
+    "set_config",  # Backward compatibility
+    "set_settings",
+    "settings",  # Global instance
 ]

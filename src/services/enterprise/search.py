@@ -190,8 +190,7 @@ class EnterpriseSearchService(BaseService):
                 return await self.query_expander.expand(query)
 
             # Fallback: simple synonym expansion (placeholder)
-            expanded = query  # Would implement actual expansion logic
-            return expanded
+            return query  # Would implement actual expansion logic
 
         except Exception as e:
             logger.exception(f"Query expansion failed: {e}")

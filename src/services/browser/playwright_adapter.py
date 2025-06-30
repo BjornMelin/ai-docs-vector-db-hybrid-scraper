@@ -177,11 +177,9 @@ class PlaywrightAdapter(BaseService):
             )
 
             # Extract content and build result
-            result = await self._build_success_result(
+            return await self._build_success_result(
                 page, actions, action_results, start_time, site_profile, stealth_config
             )
-
-            return result
 
         except Exception as e:
             return await self._build_error_result(e, url, start_time, site_profile)
@@ -710,7 +708,7 @@ class PlaywrightAdapter(BaseService):
 
         """
         try:
-            metadata = await page.evaluate("""
+            return await page.evaluate("""
             () => {
                 const getMeta = (name) => {
                     const meta = document.querySelector(`meta[name="${name}"], meta[property="${name}"]`);
@@ -750,8 +748,6 @@ class PlaywrightAdapter(BaseService):
             }
             """)
 
-            return metadata
-
         except Exception:
             self.logger.warning("Failed to extract metadata")
             return {
@@ -772,7 +768,7 @@ class PlaywrightAdapter(BaseService):
 
         """
         try:
-            metrics = await page.evaluate("""
+            return await page.evaluate("""
             () => {
                 if (!window.performance) return {};
 
@@ -789,8 +785,6 @@ class PlaywrightAdapter(BaseService):
                 };
             }
             """)
-
-            return metrics
 
         except Exception:
             self.logger.debug("Failed to get performance metrics")

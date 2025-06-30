@@ -165,7 +165,8 @@ def register_tools(mcp, client_manager: ClientManager):
             )
 
             if not crawl_result or not crawl_result.get("success"):
-                raise ValueError(f"Crawling failed for tier {tier}")
+                msg = f"Crawling failed for tier {tier}"
+                raise ValueError(msg)
 
             # Quality assessment and enhancement
             quality_metrics = _assess_content_quality(crawl_result)
@@ -227,7 +228,7 @@ def register_tools(mcp, client_manager: ClientManager):
         try:
             browser_manager = await client_manager.get_browser_manager()
 
-            capabilities = {
+            return {
                 "available_tiers": [
                     "lightweight",
                     "crawl4ai",
@@ -282,8 +283,6 @@ def register_tools(mcp, client_manager: ClientManager):
                 },
                 "status": "active",
             }
-
-            return capabilities
 
         except Exception as e:
             logger.exception("Failed to get crawling capabilities")

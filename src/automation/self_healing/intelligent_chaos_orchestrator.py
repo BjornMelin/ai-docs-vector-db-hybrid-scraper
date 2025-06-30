@@ -690,7 +690,7 @@ class AdaptiveChaosTestGenerator:
             failure_rate_base = 0.5 + (0.5 * weakness.confidence)
 
             # Generate experiment
-            experiment = ChaosExperiment(
+            return ChaosExperiment(
                 name=f"{template.name.lower().replace(' ', '_')}_{weakness.component}_{int(time.time())}",
                 description=template.description_template.format(
                     component=weakness.component
@@ -713,8 +713,6 @@ class AdaptiveChaosTestGenerator:
                     "confidence": weakness.confidence,
                 },
             )
-
-            return experiment
 
         except Exception as e:
             logger.exception(
@@ -1421,14 +1419,11 @@ class IntelligentChaosOrchestrator:
         current_metrics = (
             await self.health_monitor.collect_comprehensive_health_metrics()
         )
-        if (
+        return not (
             current_metrics.cpu_percent > 80
             or current_metrics.memory_percent > 80
             or current_metrics.error_rate > 0.05
-        ):
-            return False
-
-        return True
+        )
 
     async def _calculate_component_resilience_scores(
         self, metrics: SystemMetrics, weaknesses: list[SystemWeakness]
@@ -1530,7 +1525,7 @@ class IntelligentChaosOrchestrator:
             weakness_types[weakness.weakness_type].append(weakness)
 
         # Generate improvement recommendations
-        for weakness_type, weakness_list in weakness_types.items():
+        for weakness_type in weakness_types:
             if weakness_type == WeaknessType.RESOURCE_CONTENTION:
                 improvement_areas.append(
                     "Resource allocation and scaling optimization needed"

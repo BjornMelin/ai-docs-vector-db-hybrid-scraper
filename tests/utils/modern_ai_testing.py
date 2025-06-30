@@ -6,6 +6,7 @@ following 2025 best practices.
 """
 
 import asyncio
+import json
 import time
 from typing import Any
 
@@ -32,7 +33,8 @@ class ModernAITestingUtils:
             list of normalized embedding vectors
         """
         # Generate embeddings with realistic distribution
-        embeddings = np.random.normal(0, 0.1, (count, dimensions)).astype(np.float32)
+        rng = np.random.default_rng()
+        embeddings = rng.normal(0, 0.1, (count, dimensions)).astype(np.float32)
 
         # Normalize to unit vectors (common in modern embedding models)
         norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
@@ -53,9 +55,8 @@ class ModernAITestingUtils:
             Cosine similarity score (-1 to 1)
         """
         if len(vec1) != len(vec2):
-            raise ValueError(
-                f"Vector dimensions don't match: {len(vec1)} vs {len(vec2)}"
-            )
+            msg = f"Vector dimensions don't match: {len(vec1)} vs {len(vec2)}"
+            raise ValueError(msg)
 
         arr1, arr2 = np.array(vec1), np.array(vec2)
 
@@ -138,8 +139,6 @@ class ModernAITestingUtils:
             # Parse request to get input texts
             request_data = request.content
             if hasattr(request_data, "decode"):
-                import json
-
                 try:
                     data = json.loads(request_data.decode())
                     input_texts = data.get("input", [])
@@ -354,8 +353,6 @@ class PerformanceTestingFramework:
             return {"error": "No valid measurements"}
 
         # Calculate metrics
-        sorted_latencies = sorted(valid_latencies)
-
         return {
             "total_requests": concurrent_requests,
             "successful_requests": len(valid_latencies),
@@ -466,8 +463,7 @@ class SecurityTestingPatterns:
         sanitized = sanitized.replace("<", "&lt;")
         sanitized = sanitized.replace(">", "&gt;")
         sanitized = sanitized.replace("../", "")
-        sanitized = sanitized.replace("DROP TABLE", "")
-        return sanitized
+        return sanitized.replace("DROP TABLE", "")
 
     @staticmethod
     def sanitize_html_input(html_input: str) -> str:
@@ -485,8 +481,7 @@ class SecurityTestingPatterns:
         sanitized = sanitized.replace("javascript:", "")
         sanitized = sanitized.replace("onerror=", "")
         sanitized = sanitized.replace("onload=", "")
-        sanitized = sanitized.replace("onclick=", "")
-        return sanitized
+        return sanitized.replace("onclick=", "")
 
     @staticmethod
     def injection_payloads() -> list[str]:

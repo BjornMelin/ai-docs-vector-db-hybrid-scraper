@@ -501,21 +501,24 @@ class TestCompleteUserJourneys:
                 )
 
         # Validate data at each stage
-        assert crawl_result and "content" in crawl_result, (
-            "Crawl did not produce content"
+        assert crawl_result, "Crawl did not produce content"
+        assert "content" in crawl_result, "Crawl result missing content field"
+
+        assert process_result, "Processing did not produce chunks"
+        assert "chunks" in process_result, "Process result missing chunks field"
+
+        assert embedding_result, "Embedding generation failed"
+        assert "embeddings" in embedding_result, (
+            "Embedding result missing embeddings field"
         )
-        assert process_result and "chunks" in process_result, (
-            "Processing did not produce chunks"
+
+        assert storage_result, "Vector storage failed"
+        assert "stored_count" in storage_result, (
+            "Storage result missing stored_count field"
         )
-        assert embedding_result and "embeddings" in embedding_result, (
-            "Embedding generation failed"
-        )
-        assert storage_result and "stored_count" in storage_result, (
-            "Vector storage failed"
-        )
-        assert search_result and "results" in search_result, (
-            "Search did not return results"
-        )
+
+        assert search_result, "Search did not return results"
+        assert "results" in search_result, "Search result missing results field"
 
         # Validate data consistency
         assert process_result["chunk_count"] == len(embedding_result["embeddings"]), (

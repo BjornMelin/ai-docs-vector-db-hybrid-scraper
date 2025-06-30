@@ -517,8 +517,6 @@ class TestQueryOrchestrator:
 
     def test_performance_metrics_calculation(self):
         """Test performance metrics calculation."""
-        orchestrator = QueryOrchestrator()
-
         # Test performance score calculation
         test_cases = [
             # (latency, quality, cost, expected_range)
@@ -541,8 +539,6 @@ class TestQueryOrchestrator:
 
     def test_query_analysis_logic(self):
         """Test query analysis and classification logic."""
-        orchestrator = QueryOrchestrator()
-
         # Test different query types
         test_queries = [
             ("What is machine learning?", "simple", "general"),
@@ -600,8 +596,6 @@ class TestQueryOrchestrator:
 
     def test_multi_step_query_detection(self):
         """Test multi-step query detection logic."""
-        orchestrator = QueryOrchestrator()
-
         # Test queries that should be detected as multi-step
         multi_step_queries = [
             "First, analyze the data and then generate a report",

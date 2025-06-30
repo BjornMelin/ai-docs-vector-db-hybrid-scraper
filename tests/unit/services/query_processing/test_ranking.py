@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 import pytest
+from pydantic import ValidationError
 
 from src.services.query_processing.ranking import (
     ContentCategory,

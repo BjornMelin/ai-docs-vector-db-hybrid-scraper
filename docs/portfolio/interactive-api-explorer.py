@@ -86,7 +86,8 @@ def make_api_request(
         elif method == "POST":
             response = requests.post(url, json=data, timeout=DEFAULT_TIMEOUT)
         else:
-            raise ValueError(f"Unsupported method: {method}")
+            msg = f"Unsupported method: {method}"
+            raise ValueError(msg)
 
         end_time = time.time()
         response_time = round((end_time - start_time) * 1000, 2)
@@ -220,7 +221,7 @@ def main():
                     if result["success"]:
                         st.session_state.performance_metrics.append(
                             {
-                                "timestamp": datetime.now(),
+                                "timestamp": datetime.now(tz=datetime.timezone.utc),
                                 "endpoint": "search",
                                 "response_time_ms": result["response_time_ms"],
                                 "success": True,
@@ -427,7 +428,10 @@ def main():
             with col3:
                 st.metric("Response Time", f"{result['response_time_ms']}ms")
             with col4:
-                st.metric("Timestamp", datetime.now().strftime("%H:%M:%S"))
+                st.metric(
+                    "Timestamp",
+                    datetime.now(tz=datetime.timezone.utc).strftime("%H:%M:%S"),
+                )
 
             # Component health
             if data.get("components"):

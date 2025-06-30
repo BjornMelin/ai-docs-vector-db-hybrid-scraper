@@ -251,7 +251,8 @@ class ModeAwareFeatureManager:
     def get_feature_config(self, name: str) -> dict[str, Any]:
         """Get configuration for a feature in the current mode."""
         if name not in self._feature_registry:
-            raise ValueError(f"Feature '{name}' not registered")
+            msg = f"Feature '{name}' not registered"
+            raise ValueError(msg)
 
         mode_key = (
             "enterprise" if self._feature_flags.is_enterprise_mode() else "simple"

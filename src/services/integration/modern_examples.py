@@ -6,7 +6,9 @@ caching, and rate limiting implementations in your application code.
 
 import asyncio
 import logging
-from typing import Any, from src.config import Config
+from typing import Any
+
+from src.config import Config
 from src.services.cache.modern import ModernCacheManager
 from src.services.circuit_breaker.modern import ModernCircuitBreakerManager
 from src.services.middleware.rate_limiting import setup_rate_limiting
@@ -88,7 +90,8 @@ class EmbeddingServiceWithProtection:
 
         # Simulate potential failure
         if len(text) > 1000:
-            raise ValueError("Text too long for embedding")
+            msg = "Text too long for embedding"
+            raise ValueError(msg)
 
         # Return mock embedding
         return [0.1] * 1536
@@ -234,8 +237,7 @@ def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
         """Search documents with rate limiting and caching."""
         service = request.app.state.modern_service
         try:
-            results = await service.search_service.search_documents(query, limit=limit)
-            return results
+            return await service.search_service.search_documents(query, limit=limit)
         except Exception as e:
             logger.exception(f"Search failed: {e}")
             raise HTTPException(status_code=500, detail=str(e))

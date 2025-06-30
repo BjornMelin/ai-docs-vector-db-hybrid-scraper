@@ -690,7 +690,7 @@ class TestDistributedWorkflowExecution:
         # Verify performance optimization
         assert completed_workflow.state == WorkflowState.COMPLETED
         metrics = completed_workflow.performance_metrics
-        
+
         # Verify measured execution time is reasonable
         assert total_execution_time > 0, "Execution time should be positive"
         assert total_execution_time < 30, "Execution time should be reasonable for test"
@@ -782,6 +782,8 @@ class TestDistributedWorkflowExecution:
         )
 
         # Verify load balancing
+        # Check that loads were tracked properly
+        assert len(initial_loads) > 0, "Should have tracked initial agent loads"
         assert completed_workflow.state == WorkflowState.COMPLETED
         assert all(
             node.state == WorkflowState.COMPLETED for node in completed_workflow.nodes

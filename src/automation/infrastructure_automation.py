@@ -85,7 +85,8 @@ class AdaptiveCircuitBreaker:
     async def call(self, func: Callable, *args, **kwargs):
         """Execute function with circuit breaker protection."""
         if self._should_reject():
-            raise CircuitBreakerOpenError(f"Circuit breaker {self.name} is open")
+            msg = f"Circuit breaker {self.name} is open"
+            raise CircuitBreakerOpenError(msg)
 
         try:
             start_time = time.time()
@@ -253,7 +254,8 @@ class SelfHealingDatabaseManager:
                 )
                 await asyncio.sleep(delay)
 
-        raise RuntimeError("Failed to establish database connection after retries")
+        msg = "Failed to establish database connection after retries"
+        raise RuntimeError(msg)
 
     @asynccontextmanager
     async def get_session(self):
@@ -286,7 +288,8 @@ class SelfHealingDatabaseManager:
     async def _create_session(self) -> AsyncSession:
         """Create a new database session."""
         if not self.engine:
-            raise DatabaseNotAvailableError("Database engine not available")
+            msg = "Database engine not available"
+            raise DatabaseNotAvailableError(msg)
 
         return AsyncSession(self.engine)
 

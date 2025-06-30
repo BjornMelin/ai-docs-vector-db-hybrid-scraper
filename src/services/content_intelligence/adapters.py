@@ -247,8 +247,7 @@ class SiteAdapter:
             parsed = urlparse(url)
             domain = parsed.netloc.lower()
             # Remove 'www.' prefix
-            domain = domain.removeprefix("www.")
-            return domain
+            return domain.removeprefix("www.")
         except Exception:
             return ""
 

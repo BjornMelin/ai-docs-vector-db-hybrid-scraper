@@ -530,12 +530,14 @@ def _classify_query_type(query: str) -> str:
 def _detect_entities(query: str) -> list[str]:
     """Detect named entities and important terms in query."""
     # Simple entity detection (can be enhanced with NLP models)
-    entities = []
     words = query.split()
 
-    for word in words:
-        if (word.istitle() and len(word) > 2) or (word.upper() == word and len(word) > 2):  # Potential proper noun
-            entities.append(word)
+    entities = [
+        word
+        for word in words
+        if (word.istitle() and len(word) > 2)
+        or (word.upper() == word and len(word) > 2)  # Potential proper noun
+    ]
 
     return entities
 
@@ -939,7 +941,7 @@ def _get_timestamp() -> str:
     """Get current timestamp."""
     import datetime
 
-    return datetime.datetime.now().isoformat()
+    return datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
 
 
 async def _validate_filter_consistency(filters: list[dict], ctx) -> dict[str, Any]:
@@ -988,7 +990,7 @@ async def _analyze_filter_relationships(filters: list[dict], ctx) -> dict[str, A
     """Analyze relationships and dependencies between filters."""
     return {
         "filter_count": len(filters),
-        "unique_fields": len(set(f.get("field", "") for f in filters)),
+        "unique_fields": len({f.get("field", "") for f in filters}),
         "operator_distribution": {
             "equals": len([f for f in filters if f.get("operator") == "equals"]),
             "range": len(
@@ -1563,7 +1565,7 @@ def _get_next_update_time(frequency: str) -> str:
     """Get next update time based on frequency."""
     import datetime
 
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
 
     if frequency == "real_time":
         return "immediate"

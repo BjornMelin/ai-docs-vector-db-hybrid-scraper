@@ -248,12 +248,12 @@ class TestSearchPerformance:
 
         for dataset_size in dataset_sizes:
             # Simulate search in dataset of given size
-            async def search_func(query: str):
+            async def search_func(query: str, size=dataset_size):
                 # Latency increases logarithmically with dataset size (realistic)
                 import math
 
                 base_latency = 30.0
-                scale_factor = math.log10(dataset_size / 100.0 + 1) * 20.0
+                scale_factor = math.log10(size / 100.0 + 1) * 20.0
                 latency = base_latency + scale_factor
 
                 return await mock_search_service.search(query, latency_ms=latency)

@@ -1,6 +1,7 @@
 """Monitoring manager for observability coordination."""
 
 import asyncio
+import contextlib
 import logging
 import time
 from typing import Any
@@ -77,10 +78,8 @@ class MonitoringManager:
         # Cancel health check task
         if self._health_check_task and not self._health_check_task.done():
             self._health_check_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._health_check_task
-            except asyncio.CancelledError:
-                pass
 
         # Cleanup performance monitor
         if self._performance_monitor and hasattr(self._performance_monitor, "cleanup"):
@@ -163,7 +162,7 @@ class MonitoringManager:
 
                 return is_healthy
         except Exception as e:
-            logger.error(
+            logger.exception(
                 f"Health check failed for {service_name}: {e}"
             )  # TODO: Convert f-string to logging format
             health.last_check = time.time()
@@ -319,7 +318,7 @@ class MonitoringManager:
             self.increment_counter(f"{operation_name}_total", {"status": "error"})
             self.increment_counter(f"{operation_name}_errors")
 
-            logger.error(
+            logger.exception(
                 f"Operation {operation_name} failed: {e}"
             )  # TODO: Convert f-string to logging format
             raise
@@ -470,7 +469,7 @@ class MonitoringManager:
 
                 # Run health checks for all registered services
                 tasks = []
-                for service_name in self._health_checks.keys():
+                for service_name in self._health_checks:
                     task = asyncio.create_task(
                         self.check_service_health(service_name),
                         name=f"health_check_{service_name}",

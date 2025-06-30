@@ -439,7 +439,7 @@ class LoadTestRunner:
 
     def _generate_endpoint_comparison(self, results: dict) -> dict:
         """Generate comparative analysis of endpoint performance."""
-        comparison = {
+        return {
             "timestamp": time.time(),
             "endpoints": results,
             "analysis": {
@@ -457,8 +457,6 @@ class LoadTestRunner:
                 ),
             },
         }
-
-        return comparison
 
     def _analyze_performance_regression(self, baseline: dict, current: dict) -> dict:
         """Analyze performance regression between baseline and current results."""

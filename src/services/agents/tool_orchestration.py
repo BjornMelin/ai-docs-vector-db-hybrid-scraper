@@ -429,7 +429,8 @@ class AdvancedToolOrchestrator:
         start_time = datetime.now()
 
         if tool_id not in self.registered_tools:
-            raise ValueError(f"Tool {tool_id} not registered")
+            msg = f"Tool {tool_id} not registered"
+            raise ValueError(msg)
 
         tool_def = self.registered_tools[tool_id]
         timeout_seconds = timeout_seconds or (tool_def.timeout_ms or 30000) / 1000.0
@@ -447,7 +448,8 @@ class AdvancedToolOrchestrator:
                         timeout_seconds,
                         execution_id,
                     )
-                raise RuntimeError(f"Circuit breaker open for tool {tool_id}")
+                msg = f"Circuit breaker open for tool {tool_id}"
+                raise RuntimeError(msg)
 
             # Execute tool with timeout
             if tool_def.executor:
@@ -517,7 +519,7 @@ class AdvancedToolOrchestrator:
                 except:
                     pass  # Expected to fail
 
-            logger.error(f"Tool {tool_id} execution failed: {e}")
+            logger.exception(f"Tool {tool_id} execution failed: {e}")
 
             # Try fallback if available
             if fallback_enabled and tool_def.fallback_tools:
@@ -547,7 +549,7 @@ class AdvancedToolOrchestrator:
         total_tools = len(self.registered_tools)
         healthy_tools = sum(
             1
-            for tool_id in self.registered_tools.keys()
+            for tool_id in self.registered_tools
             if not (
                 self.circuit_breakers.get(tool_id, CircuitBreakerPattern()).is_open()
             )
@@ -925,7 +927,7 @@ class AdvancedToolOrchestrator:
             node.error = str(e)
             execution_state["failed_nodes"].add(node.node_id)
 
-            logger.error(f"Node {node.node_id} execution failed: {e}")
+            logger.exception(f"Node {node.node_id} execution failed: {e}")
 
             return {"error": str(e)}
 

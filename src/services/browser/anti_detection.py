@@ -570,7 +570,7 @@ class EnhancedAntiDetection:
         stealth_config = self.get_stealth_config(site_profile)
 
         # Create enhanced config
-        enhanced_config = PlaywrightConfig(
+        return PlaywrightConfig(
             browser=config.browser,
             headless=config.headless,
             viewport={
@@ -580,8 +580,6 @@ class EnhancedAntiDetection:
             user_agent=stealth_config.user_agent,
             timeout=config.timeout,
         )
-
-        return enhanced_config
 
     async def get_human_like_delay(self, site_profile: str = "default") -> float:
         """Get human-like delay for interactions.

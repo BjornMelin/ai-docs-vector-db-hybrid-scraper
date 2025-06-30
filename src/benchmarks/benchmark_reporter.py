@@ -30,8 +30,7 @@ class BenchmarkReporter:
             HTML report string
 
         """
-        html_content = self._build_html_template(results)
-        return html_content
+        return self._build_html_template(results)
 
     def _build_html_template(self, results: Any) -> str:
         """Build HTML template with benchmark results."""
@@ -53,7 +52,7 @@ class BenchmarkReporter:
         )
 
         # Build complete HTML
-        html = f"""
+        return f"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -141,8 +140,6 @@ class BenchmarkReporter:
     </script>
 </body>
 </html>"""
-
-        return html
 
     def _get_css_styles(self) -> str:
         """Get CSS styles for HTML report."""
