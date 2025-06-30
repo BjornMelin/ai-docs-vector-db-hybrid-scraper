@@ -1,4 +1,3 @@
-import typing
 """API contract models for MCP (Model Context Protocol) requests and responses.
 
 This module consolidates all request and response models used in the MCP server
@@ -7,9 +6,7 @@ and API endpoints, providing clear contracts for external interfaces.
 
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # Base Models

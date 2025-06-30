@@ -1,6 +1,3 @@
-import typing
-
-
 """Centralized Pydantic v2 models for the AI Documentation Vector DB.
 
 This module provides a unified import location for all Pydantic models used throughout
@@ -14,7 +11,7 @@ Usage:
 
 # Configuration models
 # API contract models
-from ..config import (
+from src.config import (
     CacheConfig,
     ChunkingConfig,
     Config,
@@ -33,25 +30,7 @@ from ..config import (
     set_config,
 )
 
-
-# Legacy compatibility - these were removed in consolidation
-class CollectionHNSWConfigs:
-    """Legacy compatibility - removed during config simplification."""
-    pass
-
-class HNSWConfig:
-    """Legacy compatibility - removed during config simplification."""
-    pass
-
-class ModelBenchmark:
-    """Legacy compatibility - removed during config simplification."""
-    pass
-
-class SmartSelectionConfig:
-    """Legacy compatibility - removed during config simplification."""
-    pass
 from .api_contracts import (
-    SearchRequest,
     AnalyticsRequest,
     AnalyticsResponse,
     BulkDocumentRequest,
@@ -142,12 +121,27 @@ from .vector_search import (
 )
 
 
+# Legacy compatibility - these were removed in consolidation
+class CollectionHNSWConfigs:
+    """Legacy compatibility - removed during config simplification."""
+
+
+class HNSWConfig:
+    """Legacy compatibility - removed during config simplification."""
+
+
+class ModelBenchmark:
+    """Legacy compatibility - removed during config simplification."""
+
+
+class SmartSelectionConfig:
+    """Legacy compatibility - removed during config simplification."""
+
+
 # Commonly used exports
 __all__ = [
     # Vector Search
     "AdaptiveSearchParams",
-    # API Contracts
-    "SearchRequest",
     "AnalyticsRequest",
     "AnalyticsResponse",
     "BulkDocumentRequest",
@@ -169,6 +163,7 @@ __all__ = [
     "CollectionRequest",
     "CollectionResponse",
     "CollectionStats",
+    "Config",
     "ContentFilter",
     "ContentTypeSearchCriteria",
     "Crawl4AIConfig",
@@ -178,11 +173,11 @@ __all__ = [
     "DocumentResponse",
     "DocumentationSite",
     "EmbeddingConfig",
+    "ErrorResponse",
+    "FastEmbedConfig",
     "FilteredSearchRequest",
     "FilteredSearchResponse",
     "FilteredSearchResult",
-    "ErrorResponse",
-    "FastEmbedConfig",
     "FirecrawlConfig",
     "FusionConfig",
     "HNSWConfig",
@@ -212,6 +207,8 @@ __all__ = [
     "RetrievalMetrics",
     "ScrapingStats",
     "SearchParams",
+    # API Contracts
+    "SearchRequest",
     "SearchRequest",
     "SearchResponse",
     "SearchResult",
@@ -221,7 +218,6 @@ __all__ = [
     "SimilarityThresholdCriteria",
     "SmartSelectionConfig",
     "TemporalSearchCriteria",
-    "Config",
     "ValidationRequest",
     "ValidationResponse",
     "VectorMetrics",

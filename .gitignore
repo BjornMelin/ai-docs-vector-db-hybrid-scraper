@@ -219,3 +219,6 @@ dev-debug.log
 .github/instructions
 .trae
 .windsurf
+
+# Project specific
+!src/models/

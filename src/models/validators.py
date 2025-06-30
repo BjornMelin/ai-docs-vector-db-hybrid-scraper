@@ -1,4 +1,3 @@
-import typing
 """Shared validators and custom types for Pydantic models.
 
 This module contains reusable validators, custom field types, and validation
@@ -45,27 +44,30 @@ def validate_api_key_common(
     try:
         value.encode("ascii")
     except UnicodeEncodeError as err:
-        raise ValueError(
-            f"{service_name} API key contains non-ASCII characters"
-        ) from err
+        msg = f"{service_name} API key contains non-ASCII characters"
+        raise ValueError(msg) from err
 
     # Check required prefix
     if not value.startswith(prefix):
-        raise ValueError(f"{service_name} API key must start with '{prefix}'")
+        msg = f"{service_name} API key must start with '{prefix}'"
+        raise ValueError(msg)
 
     # Length validation with DoS protection
     # Allow test keys for OpenAI
     if service_name == "OpenAI" and value.startswith("sk-test"):
         pass  # Skip length validation for test keys
     elif len(value) < min_length:
-        raise ValueError(f"{service_name} API key appears to be too short")
+        msg = f"{service_name} API key appears to be too short"
+        raise ValueError(msg)
 
     if len(value) > max_length:
-        raise ValueError(f"{service_name} API key appears to be too long")
+        msg = f"{service_name} API key appears to be too long"
+        raise ValueError(msg)
 
     # Character validation
     if not re.match(f"^{re.escape(prefix)}{allowed_chars}$", value):
-        raise ValueError(f"{service_name} API key contains invalid characters")
+        msg = f"{service_name} API key contains invalid characters"
+        raise ValueError(msg)
 
     return value
 
@@ -83,7 +85,8 @@ def validate_url_format(value: str) -> str:
         ValueError: If URL format is invalid
     """
     if not value.startswith(("http://", "https://")):
-        raise ValueError("URL must start with http:// or https://")
+        msg = "URL must start with http:// or https://"
+        raise ValueError(msg)
     return value.rstrip("/")
 
 
@@ -101,7 +104,8 @@ def validate_positive_int(value: int, field_name: str = "value") -> int:
         ValueError: If value is not positive
     """
     if value <= 0:
-        raise ValueError(f"{field_name} must be positive")
+        msg = f"{field_name} must be positive"
+        raise ValueError(msg)
     return value
 
 
@@ -119,7 +123,8 @@ def validate_percentage(value: float, field_name: str = "value") -> float:
         ValueError: If value is not a valid percentage
     """
     if not 0.0 <= value <= 1.0:
-        raise ValueError(f"{field_name} must be between 0.0 and 1.0")
+        msg = f"{field_name} must be between 0.0 and 1.0"
+        raise ValueError(msg)
     return value
 
 
@@ -139,22 +144,24 @@ def validate_rate_limit_config(
     """
     for provider, limits in value.items():
         if not isinstance(limits, dict):
-            raise ValueError(
-                f"Rate limits for provider '{provider}' must be a dictionary"
-            )
+            msg = f"Rate limits for provider '{provider}' must be a dictionary"
+            raise TypeError(msg)
 
         required_keys = {"max_calls", "time_window"}
         if not required_keys.issubset(limits.keys()):
-            raise ValueError(
-                f"Rate limits for provider '{provider}' must contain "
+            msg = (
+                f"Rat   e limits for provider '{provider}' must contain "
                 f"keys: {required_keys}, got: {set(limits.keys())}"
             )
+            raise ValueError(msg)
 
         if limits["max_calls"] <= 0:
-            raise ValueError(f"max_calls for provider '{provider}' must be positive")
+            msg = f"max_calls for provider '{provider}' must be positive"
+            raise ValueError(msg)
 
         if limits["time_window"] <= 0:
-            raise ValueError(f"time_window for provider '{provider}' must be positive")
+            msg = f"time_window for provider '{provider}' must be positive"
+            raise ValueError(msg)
 
     return value
 
@@ -174,11 +181,14 @@ def validate_chunk_sizes(
         ValueError: If size relationships are invalid
     """
     if chunk_overlap >= chunk_size:
-        raise ValueError("chunk_overlap must be less than chunk_size")
+        msg = "chunk_overlap must be less than chunk_size"
+        raise ValueError(msg)
     if min_chunk_size >= max_chunk_size:
-        raise ValueError("min_chunk_size must be less than max_chunk_size")
+        msg = "min_chunk_size must be less than max_chunk_size"
+        raise ValueError(msg)
     if chunk_size > max_chunk_size:
-        raise ValueError("chunk_size cannot exceed max_chunk_size")
+        msg = "chunk_size cannot exceed max_chunk_size"
+        raise ValueError(msg)
 
 
 def validate_scoring_weights(
@@ -196,7 +206,8 @@ def validate_scoring_weights(
     """
     total = quality_weight + speed_weight + cost_weight
     if abs(total - 1.0) > 0.01:  # Allow small floating point errors
-        raise ValueError(f"Scoring weights must sum to 1.0, got {total}")
+        msg = f"Scoring weights must sum to 1.0, got {total}"
+        raise ValueError(msg)
 
 
 def validate_vector_dimensions(value: int, model_name: str = "") -> int:
@@ -213,9 +224,11 @@ def validate_vector_dimensions(value: int, model_name: str = "") -> int:
         ValueError: If dimensions are invalid
     """
     if value <= 0:
-        raise ValueError("Vector dimensions must be positive")
+        msg = "Vector dimensions must be positive"
+        raise ValueError(msg)
     if value > 10000:  # Reasonable upper bound
-        raise ValueError(f"Vector dimensions too large: {value}")
+        msg = f"Vector dimensions too large: {value}"
+        raise ValueError(msg)
 
     # Check for common dimension sizes
     common_dims = [128, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096]
@@ -240,11 +253,12 @@ def validate_model_benchmark_consistency(key: str, model_name: str) -> str:
         ValueError: If key doesn't match model name
     """
     if key != model_name:
-        raise ValueError(
+        msg = (
             f"Dictionary key '{key}' does not match "
             f"ModelBenchmark.model_name '{model_name}'. "
             f"Keys must be consistent for proper model identification."
         )
+        raise ValueError(msg)
     return key
 
 
@@ -261,20 +275,24 @@ def validate_collection_name(value: str) -> str:
         ValueError: If name format is invalid
     """
     if not value:
-        raise ValueError("Collection name cannot be empty")
+        msg = "Collection name cannot be empty"
+        raise ValueError(msg)
 
     # Check for valid characters (alphanumeric, underscore, hyphen)
     if not re.match(r"^[a-zA-Z0-9_-]+$", value):
-        raise ValueError(
+        msg = (
             "Collection name can only contain alphanumeric characters, "
             "underscores, and hyphens"
         )
+        raise ValueError(msg)
 
     # Check length
     if len(value) < 2:
-        raise ValueError("Collection name must be at least 2 characters")
+        msg = "Collection name must be at least 2 characters"
+        raise ValueError(msg)
     if len(value) > 64:
-        raise ValueError("Collection name cannot exceed 64 characters")
+        msg = "Collection name cannot exceed 64 characters"
+        raise ValueError(msg)
 
     return value
 
@@ -293,15 +311,18 @@ def validate_embedding_model_name(value: str, provider: str = "") -> str:
         ValueError: If model name is invalid
     """
     if not value:
-        raise ValueError("Model name cannot be empty")
+        msg = "Model name cannot be empty"
+        raise ValueError(msg)
 
     # Check for reasonable length
     if len(value) > 200:
-        raise ValueError("Model name is too long")
+        msg = "Model name is too long"
+        raise ValueError(msg)
 
     # Check for invalid characters that could cause issues
     if any(char in value for char in ["<", ">", "|", "&", ";"]):
-        raise ValueError("Model name contains invalid characters")
+        msg = "Model name contains invalid characters"
+        raise ValueError(msg)
 
     return value
 
@@ -321,9 +342,11 @@ def validate_cache_ttl(value: int, min_ttl: int = 60, max_ttl: int = 86400) -> i
         ValueError: If TTL is out of range
     """
     if value < min_ttl:
-        raise ValueError(f"Cache TTL must be at least {min_ttl} seconds")
+        msg = f"Cache TTL must be at least {min_ttl} seconds"
+        raise ValueError(msg)
     if value > max_ttl:
-        raise ValueError(f"Cache TTL cannot exceed {max_ttl} seconds")
+        msg = f"Cache TTL cannot exceed {max_ttl} seconds"
+        raise ValueError(msg)
     return value
 
 
