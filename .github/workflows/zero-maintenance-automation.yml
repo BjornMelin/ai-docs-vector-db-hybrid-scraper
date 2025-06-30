@@ -226,7 +226,7 @@ jobs:
           
       - name: Create issue on failure
         if: failure()
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const title = `🚨 Automated Dependency Update Failed - ${new Date().toISOString().split('T')[0]}`;
