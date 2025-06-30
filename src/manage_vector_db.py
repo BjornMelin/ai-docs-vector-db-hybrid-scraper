@@ -333,7 +333,7 @@ def cli(ctx, url, log_level):
 @cli.command()
 @click.pass_context
 @async_command
-async def list(ctx):
+async def list_collections(ctx):
     """List all collections."""
     manager = _create_manager_from_context(ctx)
     try:
