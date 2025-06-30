@@ -50,7 +50,7 @@ class SimpleSearchService(BaseService):
             logger.info("Simple search service initialized successfully")
 
         except Exception as e:
-            logger.exception(f"Failed to initialize simple search service: {e}")
+            logger.exception("Failed to initialize simple search service")
             raise
 
     async def cleanup(self) -> None:
@@ -103,7 +103,7 @@ class SimpleSearchService(BaseService):
             return response
 
         except Exception as e:
-            logger.exception(f"Search failed: {e}")
+            logger.exception("Search failed")
             return SearchResponse(
                 query=request.query,
                 results=[],
@@ -124,13 +124,11 @@ class SimpleSearchService(BaseService):
         query_embedding = await embedding_manager.generate_embedding(request.query)
 
         # Perform vector search
-        search_results = await self.vector_db.search(
+        return await self.vector_db.search(
             query_vector=query_embedding,
             limit=request.limit,
             collection_name=request.collection_name,
         )
-
-        return search_results
 
     def _cache_result(self, key: str, response: SearchResponse) -> None:
         """Cache search result with simple LRU-like behavior."""

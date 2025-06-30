@@ -57,12 +57,11 @@ class EmbeddingManager:
             logger.info("EmbeddingManager service initialized")
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 f"Failed to initialize EmbeddingManager: {e}"
             )  # TODO: Convert f-string to logging format
-            raise EmbeddingServiceError(
-                f"Failed to initialize embedding manager: {e}"
-            ) from e
+            msg = f"Failed to initialize embedding manager: {e}"
+            raise EmbeddingServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup embedding manager resources."""
@@ -101,7 +100,8 @@ class EmbeddingManager:
             EmbeddingServiceError: If manager not initialized or generation fails
         """
         if not self._initialized or not self._core_manager:
-            raise EmbeddingServiceError("Embedding manager not initialized")
+            msg = "Embedding manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         try:
             # Convert quality tier string to enum if provided
@@ -126,10 +126,11 @@ class EmbeddingManager:
                 generate_sparse=generate_sparse,
             )
         except Exception as e:
-            logger.error(
+            logger.exception(
                 f"Embedding generation failed: {e}"
             )  # TODO: Convert f-string to logging format
-            raise EmbeddingServiceError(f"Embedding generation failed: {e}") from e
+            msg = f"Embedding generation failed: {e}"
+            raise EmbeddingServiceError(msg) from e
 
     async def rerank_results(
         self, query: str, results: list[dict[str, Any]]
@@ -147,12 +148,13 @@ class EmbeddingManager:
             EmbeddingServiceError: If manager not initialized
         """
         if not self._initialized or not self._core_manager:
-            raise EmbeddingServiceError("Embedding manager not initialized")
+            msg = "Embedding manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         try:
             return await self._core_manager.rerank_results(query, results)
         except Exception as e:
-            logger.error(
+            logger.exception(
                 f"Result reranking failed: {e}"
             )  # TODO: Convert f-string to logging format
             # Return original results on failure
@@ -176,7 +178,8 @@ class EmbeddingManager:
             EmbeddingServiceError: If manager not initialized
         """
         if not self._initialized or not self._core_manager:
-            raise EmbeddingServiceError("Embedding manager not initialized")
+            msg = "Embedding manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         return self._core_manager.estimate_cost(texts, provider_name)
 
@@ -190,7 +193,8 @@ class EmbeddingManager:
             EmbeddingServiceError: If manager not initialized
         """
         if not self._initialized or not self._core_manager:
-            raise EmbeddingServiceError("Embedding manager not initialized")
+            msg = "Embedding manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         return self._core_manager.get_provider_info()
 
@@ -214,7 +218,8 @@ class EmbeddingManager:
             EmbeddingServiceError: If manager not initialized or no provider meets constraints
         """
         if not self._initialized or not self._core_manager:
-            raise EmbeddingServiceError("Embedding manager not initialized")
+            msg = "Embedding manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         return await self._core_manager.get_optimal_provider(
             text_length, quality_required, budget_limit
@@ -233,7 +238,8 @@ class EmbeddingManager:
             EmbeddingServiceError: If manager not initialized
         """
         if not self._initialized or not self._core_manager:
-            raise EmbeddingServiceError("Embedding manager not initialized")
+            msg = "Embedding manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         analysis = self._core_manager.analyze_text_characteristics(texts)
 
@@ -269,7 +275,8 @@ class EmbeddingManager:
             EmbeddingServiceError: If manager not initialized
         """
         if not self._initialized or not self._core_manager:
-            raise EmbeddingServiceError("Embedding manager not initialized")
+            msg = "Embedding manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         # Convert dict back to TextAnalysis for core manager
         from src.services.embeddings.manager import QualityTier, TextAnalysis
@@ -306,7 +313,8 @@ class EmbeddingManager:
             EmbeddingServiceError: If manager not initialized
         """
         if not self._initialized or not self._core_manager:
-            raise EmbeddingServiceError("Embedding manager not initialized")
+            msg = "Embedding manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         return self._core_manager.get_usage_report()
 

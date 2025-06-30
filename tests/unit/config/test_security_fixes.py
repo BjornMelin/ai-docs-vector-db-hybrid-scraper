@@ -1,298 +1,217 @@
-#!/usr/bin/env python3
-"""Tests for security fixes including memory management and cleanup."""
+"""Tests for security configuration and settings.
 
-import gc
-import signal
-import sys
-from unittest.mock import MagicMock
+Tests the security configuration system including validation,
+rate limiting, and security controls.
+"""
 
-import pytest
-
-from src.config.reload import ConfigReloader
-from src.config.security import (
-    SecureConfigManager,
+from src.config.settings import (
     SecurityConfig,
+    Settings,
 )
-from src.config.timeouts import TimeoutSettings, get_timeout_config
 
 
-# Mock SecuritySettings class for testing
-class SecuritySettings:
-    """Mock security settings for testing."""
+class TestSecurityConfig:
+    """Test suite for security configuration."""
 
-    def __init__(self, encryption_cache_size=100):
-        self.encryption_cache_size = encryption_cache_size
-
-
-def create_timeout_config():
-    """Create timeout configuration dictionary."""
-    settings = TimeoutSettings()
-    return {
-        "config_validation_timeout": settings.config_validation_timeout,
-        "deployment_timeout": settings.deployment_timeout,
-        "operation_timeout": settings.operation_timeout,
-    }
-
-
-class TestSecurityEnhancements:
-    """Test security enhancements including LRU cache and cleanup."""
-
-    def test_lru_cache_initialization(self):
-        """Test that LRU cache is properly initialized."""
+    def test_default_security_config(self):
+        """Test default security configuration."""
         config = SecurityConfig()
-        settings = SecuritySettings(encryption_cache_size=100)
 
-        # Mock the manager to have cache functionality
-        manager = SecureConfigManager(config)
+        assert config.allowed_domains == ["*"]
+        assert config.blocked_domains == []
+        assert config.require_api_keys is True
+        assert config.api_key_header == "X-API-Key"
+        assert config.enable_rate_limiting is True
+        assert config.rate_limit_requests == 100
+        assert config.rate_limit_requests_per_minute == 60
 
-        # Add mock cache attributes for testing
-
-        mock_cache = MagicMock()
-        mock_cache.maxsize = settings.encryption_cache_size
-        manager._encryption_cache = mock_cache
-
-        assert manager._encryption_cache is not None
-        assert manager._encryption_cache.maxsize == 100
-
-    def test_lru_cache_memory_limit(self):
-        """Test that LRU cache respects memory limits."""
+    def test_query_validation_settings(self):
+        """Test query validation settings."""
         config = SecurityConfig()
-        _settings = SecuritySettings(encryption_cache_size=5)
-        manager = SecureConfigManager(config)
 
-        # Mock cache behavior
+        assert config.max_query_length == 1000
+        assert config.max_url_length == 2048
 
-        mock_cache = {}
+    def test_custom_security_config(self):
+        """Test custom security configuration."""
+        config = SecurityConfig(
+            allowed_domains=["example.com", "docs.example.com"],
+            blocked_domains=["malicious.com"],
+            require_api_keys=False,
+            max_query_length=500,
+            rate_limit_requests_per_minute=120,
+        )
 
-        def mock_encrypt_with_cache(key, data):
-            if len(mock_cache) >= 5:
-                # Remove oldest item (simplified LRU behavior)
-                oldest_key = min(mock_cache.keys())
-                del mock_cache[oldest_key]
-            mock_cache[key] = data
+        assert config.allowed_domains == ["example.com", "docs.example.com"]
+        assert config.blocked_domains == ["malicious.com"]
+        assert config.require_api_keys is False
+        assert config.max_query_length == 500
+        assert config.rate_limit_requests_per_minute == 120
 
-        manager.encrypt_with_cache = mock_encrypt_with_cache
-        manager._encryption_cache = mock_cache
+    def test_rate_limiting_configuration(self):
+        """Test rate limiting configuration."""
+        config = SecurityConfig(
+            enable_rate_limiting=True,
+            rate_limit_requests=200,
+            rate_limit_requests_per_minute=100,
+        )
 
-        # Add more items than cache size
-        for i in range(10):
-            key = f"test_key_{i}"
-            data = f"test_data_{i}"
-            manager.encrypt_with_cache(key, data)
+        assert config.enable_rate_limiting is True
+        assert config.rate_limit_requests == 200
+        assert config.rate_limit_requests_per_minute == 100
 
-        # Cache should only contain the last 5 items
-        assert len(manager._encryption_cache) == 5
-        assert "test_key_0" not in manager._encryption_cache
-        assert "test_key_9" in manager._encryption_cache
+    def test_api_key_configuration(self):
+        """Test API key configuration."""
+        config = SecurityConfig(require_api_keys=True, api_key_header="Authorization")
 
-    def test_cache_cleanup(self):
-        """Test that cache is properly cleaned up."""
-        config = SecurityConfig()
-        _settings = SecuritySettings(encryption_cache_size=10)
-        manager = SecureConfigManager(config)
+        assert config.require_api_keys is True
+        assert config.api_key_header == "Authorization"
 
-        # Mock cache methods
+    def test_domain_restrictions(self):
+        """Test domain restriction configuration."""
+        config = SecurityConfig(
+            allowed_domains=["trusted.com", "api.trusted.com"],
+            blocked_domains=["blocked.com", "spam.com"],
+        )
 
-        mock_cache = {}
+        assert len(config.allowed_domains) == 2
+        assert "trusted.com" in config.allowed_domains
+        assert "api.trusted.com" in config.allowed_domains
 
-        def mock_encrypt_with_cache(key, data):
-            mock_cache[key] = data
+        assert len(config.blocked_domains) == 2
+        assert "blocked.com" in config.blocked_domains
+        assert "spam.com" in config.blocked_domains
 
-        def mock_clear_cache():
-            mock_cache.clear()
+    def test_validation_limits(self):
+        """Test validation limits configuration."""
+        config = SecurityConfig(max_query_length=2000, max_url_length=4096)
 
-        manager.encrypt_with_cache = mock_encrypt_with_cache
-        manager.clear_encryption_cache = mock_clear_cache
-        manager._encryption_cache = mock_cache
-
-        # Add some items
-        for i in range(5):
-            manager.encrypt_with_cache(f"key_{i}", f"data_{i}")
-
-        assert len(manager._encryption_cache) == 5
-
-        # Clear cache
-        manager.clear_encryption_cache()
-        assert len(manager._encryption_cache) == 0
-
-    def test_context_manager_cleanup(self):
-        """Test that context manager properly cleans up resources."""
-        config = SecurityConfig()
-        manager = SecureConfigManager(config)
-
-        # Mock cache and cleanup functionality
-        mock_cache = {}
-        manager._encryption_cache = mock_cache
-        manager.encrypt_with_cache = lambda k, v: mock_cache.update({k: v})
-
-        # Since SecureConfigManager doesn't implement context manager,
-        # we'll test the core functionality directly
-        manager.encrypt_with_cache("test", "data")
-        assert manager._encryption_cache is not None
-        assert "test" in manager._encryption_cache
-
-    def test_cache_stats(self):
-        """Test cache statistics reporting."""
-        config = SecurityConfig()
-        settings = SecuritySettings(encryption_cache_size=10)
-        manager = SecureConfigManager(config)
-
-        # Mock cache stats functionality
-        mock_cache = {}
-        manager._encryption_cache = mock_cache
-
-        def mock_get_cache_stats():
-            return {
-                "enabled": True,
-                "current_size": len(mock_cache),
-                "max_size": settings.encryption_cache_size,
-            }
-
-        def mock_encrypt_with_cache(key, data):
-            mock_cache[key] = data
-
-        manager.get_cache_stats = mock_get_cache_stats
-        manager.encrypt_with_cache = mock_encrypt_with_cache
-
-        stats = manager.get_cache_stats()
-        assert stats["enabled"] is True
-        assert stats["current_size"] == 0
-        assert stats["max_size"] == 10
-
-        # Add some items
-        manager.encrypt_with_cache("key1", "data1")
-        manager.encrypt_with_cache("key2", "data2")
-
-        stats = manager.get_cache_stats()
-        assert stats["current_size"] == 2
+        assert config.max_query_length == 2000
+        assert config.max_url_length == 4096
 
 
-class TestSignalHandlerCleanup:
-    """Test signal handler cleanup in ConfigReloader."""
+class TestSecurityIntegration:
+    """Test security integration with main settings."""
 
-    @pytest.mark.skipif(not hasattr(signal, "SIGHUP"), reason="SIGHUP not available")
-    async def test_signal_handler_setup_and_cleanup(self):
-        """Test that signal handler is properly set up and cleaned up."""
-        reloader = ConfigReloader(enable_signal_handler=True)
+    def test_security_in_settings(self):
+        """Test security configuration in main settings."""
+        settings = Settings()
 
-        # Verify signal handler was stored
-        assert reloader._original_signal_handler is not None
+        assert hasattr(settings, "security")
+        assert isinstance(settings.security, SecurityConfig)
+        assert settings.security.require_api_keys is True
 
-        # Shutdown should restore original handler
-        await reloader.shutdown()
+    def test_security_configuration_override(self):
+        """Test overriding security configuration in settings."""
+        settings = Settings()
 
-        # Note: We can't easily verify the signal handler was restored
-        # without potentially interfering with the test runner
+        # Update security settings
+        settings.security.require_api_keys = False
+        settings.security.max_query_length = 2000
+        settings.security.allowed_domains = ["custom.com"]
 
-    async def test_shutdown_clears_resources(self):
-        """Test that shutdown properly clears all resources."""
-        reloader = ConfigReloader()
+        assert settings.security.require_api_keys is False
+        assert settings.security.max_query_length == 2000
+        assert settings.security.allowed_domains == ["custom.com"]
 
-        # Add some data
-        reloader._reload_history.append(MagicMock())
-        reloader._change_listeners.append(MagicMock())
-        reloader._config_backups.append(("hash", MagicMock()))
+    def test_rate_limiting_integration(self):
+        """Test rate limiting integration."""
+        settings = Settings()
 
-        assert len(reloader._reload_history) > 0
-        assert len(reloader._change_listeners) > 0
-        assert len(reloader._config_backups) > 0
+        # Rate limiting should be enabled by default
+        assert settings.security.enable_rate_limiting is True
+        assert settings.security.rate_limit_requests > 0
+        assert settings.security.rate_limit_requests_per_minute > 0
 
-        # Shutdown
-        await reloader.shutdown()
+    def test_security_validation_constraints(self):
+        """Test security validation constraints."""
+        # Valid configuration
+        config = SecurityConfig(max_query_length=100, max_url_length=200)
+        assert config.max_query_length == 100
+        assert config.max_url_length == 200
 
-        # All collections should be cleared
-        assert len(reloader._reload_history) == 0
-        assert len(reloader._change_listeners) == 0
-        assert len(reloader._config_backups) == 0
+    def test_security_defaults_in_different_environments(self):
+        """Test security defaults in different environments."""
+        from src.config.settings import Environment
 
+        dev_settings = Settings(environment=Environment.DEVELOPMENT)
+        prod_settings = Settings(environment=Environment.PRODUCTION)
 
-class TestTimeoutConfiguration:
-    """Test configurable timeout settings."""
-
-    def test_timeout_settings_defaults(self):
-        """Test that timeout settings have proper defaults."""
-        settings = TimeoutSettings()
-
-        assert settings.config_validation_timeout == 120
-        assert settings.deployment_timeout == 600
-        assert settings.operation_timeout == 300
-
-    def test_timeout_settings_from_env(self, monkeypatch):
-        """Test that timeout settings can be loaded from environment."""
-        monkeypatch.setenv("TIMEOUT_CONFIG_VALIDATION_TIMEOUT", "60")
-        monkeypatch.setenv("TIMEOUT_DEPLOYMENT_TIMEOUT", "300")
-
-        settings = TimeoutSettings()
-
-        assert settings.config_validation_timeout == 60
-        assert settings.deployment_timeout == 300
-
-    def test_timeout_config_creation(self):
-        """Test creating timeout configuration dictionary."""
-        config = create_timeout_config()
-
-        assert "config_validation_timeout" in config
-        assert "deployment_timeout" in config
-        assert "operation_timeout" in config
-        assert all(isinstance(v, int) for v in config.values())
-
-    def test_get_timeout_config(self):
-        """Test getting timeout configuration for specific operations."""
-        config = get_timeout_config("deployment")
-        assert config.operation_name == "deployment"
-        assert config.timeout_seconds == 600.0
-
-        # Test warning threshold (75% of 600 = 450)
-        assert config.should_warn(451)  # Just over 75% of timeout
-        assert not config.should_warn(300)  # 50% of timeout
-
-        # Test critical threshold (90% of 600 = 540)
-        assert config.should_alert_critical(541)  # Just over 90% of timeout
-        assert not config.should_alert_critical(450)  # 75% of timeout
+        # Security should be consistent across environments
+        assert (
+            dev_settings.security.require_api_keys
+            == prod_settings.security.require_api_keys
+        )
+        assert (
+            dev_settings.security.enable_rate_limiting
+            == prod_settings.security.enable_rate_limiting
+        )
 
 
-class TestMemoryLeakPrevention:
-    """Test memory leak prevention measures."""
+class TestSecurityHelpers:
+    """Test security helper functions and utilities."""
 
-    def test_no_unbounded_cache_growth(self):
-        """Test that caches don't grow unbounded."""
-        config = SecurityConfig()
-        settings = SecuritySettings(encryption_cache_size=100)
-        manager = SecureConfigManager(config)
+    def test_get_security_config(self):
+        """Test getting security configuration."""
+        from src.config.settings import get_security_config, reset_settings
 
-        # Mock bounded cache behavior
-        mock_cache = {}
-        max_size = settings.encryption_cache_size
+        # Reset to ensure clean state
+        reset_settings()
 
-        def mock_encrypt_with_cache(key, data):
-            if len(mock_cache) >= max_size:
-                # Remove oldest item (simplified LRU)
-                oldest_key = next(iter(mock_cache))
-                del mock_cache[oldest_key]
-            mock_cache[key] = data
+        security_config = get_security_config()
+        assert isinstance(security_config, SecurityConfig)
+        assert security_config.require_api_keys is True
 
-        manager.encrypt_with_cache = mock_encrypt_with_cache
-        manager._encryption_cache = mock_cache
+    def test_security_config_immutability(self):
+        """Test that security config maintains expected behavior."""
+        config1 = SecurityConfig()
+        config2 = SecurityConfig()
 
-        # Track initial memory
-        initial_cache_size = sys.getsizeof(manager._encryption_cache)
+        # Should have same defaults
+        assert config1.require_api_keys == config2.require_api_keys
+        assert config1.max_query_length == config2.max_query_length
 
-        # Add many items
-        for i in range(1000):
-            manager.encrypt_with_cache(f"key_{i}", f"data_{i}" * 100)
+        # Should be independent instances
+        config1.require_api_keys = False
+        assert config2.require_api_keys is True  # Should not be affected
 
-        # Cache size should be bounded
-        assert len(manager._encryption_cache) <= 100
+    def test_security_config_serialization(self):
+        """Test security config serialization."""
+        config = SecurityConfig(
+            allowed_domains=["test.com"], require_api_keys=False, max_query_length=500
+        )
 
-        # Force garbage collection
-        gc.collect()
+        # Should be able to serialize to dict
+        config_dict = config.model_dump()
+        assert isinstance(config_dict, dict)
+        assert config_dict["allowed_domains"] == ["test.com"]
+        assert config_dict["require_api_keys"] is False
+        assert config_dict["max_query_length"] == 500
 
-        # Memory growth should be limited
-        final_cache_size = sys.getsizeof(manager._encryption_cache)
-        # Allow reasonable growth but it should be bounded relative to number of items
-        # Since we're storing large strings, the growth factor needs to be more generous
-        assert final_cache_size < initial_cache_size * 200  # More realistic bound
+    def test_security_policy_combinations(self):
+        """Test different security policy combinations."""
+        # Strict security policy
+        strict_config = SecurityConfig(
+            allowed_domains=["trusted.com"],
+            require_api_keys=True,
+            enable_rate_limiting=True,
+            rate_limit_requests=50,
+            max_query_length=500,
+        )
 
+        assert strict_config.allowed_domains == ["trusted.com"]
+        assert strict_config.require_api_keys is True
+        assert strict_config.rate_limit_requests == 50
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+        # Permissive security policy
+        permissive_config = SecurityConfig(
+            allowed_domains=["*"],
+            require_api_keys=False,
+            enable_rate_limiting=False,
+            max_query_length=10000,
+        )
+
+        assert permissive_config.allowed_domains == ["*"]
+        assert permissive_config.require_api_keys is False
+        assert permissive_config.enable_rate_limiting is False
+        assert permissive_config.max_query_length == 10000

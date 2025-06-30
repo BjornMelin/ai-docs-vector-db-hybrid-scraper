@@ -4,6 +4,7 @@ Provides comprehensive system health monitoring with ML-powered diagnostics,
 autonomous issue detection, and intelligent self-healing capabilities.
 """
 
+import datetime
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
@@ -761,9 +762,7 @@ async def _generate_health_recommendations(
 
 def _get_timestamp() -> str:
     """Get current timestamp."""
-    import datetime
-
-    return datetime.datetime.now().isoformat()
+    return datetime.datetime.now(tz=datetime.UTC).isoformat()
 
 
 async def _detect_issues_for_healing(healing_scope: str, ctx) -> dict[str, Any]:

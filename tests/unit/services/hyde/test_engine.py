@@ -86,8 +86,7 @@ class TestHyDEQueryEngine:
     @pytest.fixture
     def mock_llm_client(self):
         """Create mock LLM client."""
-        client = MagicMock()
-        return client
+        return MagicMock()
 
     @pytest.fixture
     def engine(

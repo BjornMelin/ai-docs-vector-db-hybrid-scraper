@@ -146,7 +146,7 @@ class BatchProcessor(Generic[T, R]):
             )
 
         except Exception as e:
-            logger.exception(f"Batch processing failed: {e}")
+            logger.exception("Batch processing failed")
             # Propagate error to all waiting coroutines
             for future in futures:
                 if not future.done():

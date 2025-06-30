@@ -10,7 +10,7 @@ from collections.abc import Awaitable, Callable
 from functools import wraps
 from typing import Any, TypeVar
 
-from .modes import ModeConfig, get_current_mode, get_mode_config
+from .modes import ApplicationMode, ModeConfig, get_current_mode, get_mode_config
 
 
 logger = logging.getLogger(__name__)
@@ -33,15 +33,11 @@ class FeatureFlag:
 
     def is_enterprise_mode(self) -> bool:
         """Check if running in enterprise mode."""
-        from .modes import ApplicationMode
-
         # Use get_current_mode() to allow for runtime testing/mocking
         return get_current_mode() == ApplicationMode.ENTERPRISE
 
     def is_simple_mode(self) -> bool:
         """Check if running in simple mode."""
-        from .modes import ApplicationMode
-
         # Use get_current_mode() to allow for runtime testing/mocking
         return get_current_mode() == ApplicationMode.SIMPLE
 
@@ -251,7 +247,8 @@ class ModeAwareFeatureManager:
     def get_feature_config(self, name: str) -> dict[str, Any]:
         """Get configuration for a feature in the current mode."""
         if name not in self._feature_registry:
-            raise ValueError(f"Feature '{name}' not registered")
+            msg = f"Feature '{name}' not registered"
+            raise ValueError(msg)
 
         mode_key = (
             "enterprise" if self._feature_flags.is_enterprise_mode() else "simple"

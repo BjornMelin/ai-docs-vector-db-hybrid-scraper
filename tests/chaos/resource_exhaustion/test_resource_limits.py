@@ -222,9 +222,7 @@ class TestResourceExhaustion:
         """Create resource exhaustion simulator."""
         return ResourceExhaustionSimulator()
 
-    async def test_memory_exhaustion_scenario(
-        self, resource_simulator, _fault_injector
-    ):
+    async def test_memory_exhaustion_scenario(self, resource_simulator, fault_injector):
         """Test system behavior under memory exhaustion."""
         # Monitor initial memory state
         memory_monitor = resource_simulator.get_monitor(ResourceType.MEMORY)
@@ -348,7 +346,7 @@ class TestResourceExhaustion:
             """Connection request with fallback strategy."""
             try:
                 return await request_database_connection()
-            except Exception:
+            except (ConnectionError, RuntimeError, MemoryError, OSError):
                 # Fallback to read-only replica or cached data
                 return {
                     "connection_id": "fallback_readonly",

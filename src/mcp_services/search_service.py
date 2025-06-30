@@ -44,7 +44,7 @@ class SearchService:
             name,
             instructions="""
             Advanced search service with intelligent orchestration capabilities.
-            
+
             Features:
             - Hybrid vector + text search with DBSF score fusion
             - HyDE (Hypothetical Document Embeddings) search
@@ -52,7 +52,7 @@ class SearchService:
             - Autonomous web search orchestration (I5 research)
             - Search result reranking and quality assessment
             - Real-time search strategy optimization
-            
+
             Autonomous Capabilities:
             - Intelligent search provider selection
             - Dynamic strategy adaptation based on query type

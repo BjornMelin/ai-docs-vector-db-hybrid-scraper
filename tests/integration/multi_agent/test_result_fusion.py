@@ -7,24 +7,20 @@ focusing on complex workflow scenarios and performance optimization.
 import asyncio
 import statistics
 import time
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
-from unittest.mock import AsyncMock, MagicMock, patch
+from collections import Counter
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.infrastructure.client_manager import ClientManager
 from src.services.agents.agentic_orchestrator import (
     AgenticOrchestrator,
-    ToolRequest,
     ToolResponse,
 )
 from src.services.agents.core import BaseAgentDependencies, create_agent_dependencies
 from src.services.agents.dynamic_tool_discovery import (
     DynamicToolDiscovery,
-    ToolCapability,
-    ToolCapabilityType,
-    ToolMetrics,
 )
 
 
@@ -47,7 +43,8 @@ class ResultFusionEngine:
     ) -> dict[str, Any]:
         """Fuse multiple agent results using specified strategy."""
         if strategy not in self.fusion_strategies:
-            raise ValueError(f"Unknown fusion strategy: {strategy}")
+            msg = f"Unknown fusion strategy: {strategy}"
+            raise ValueError(msg)
 
         return await self.fusion_strategies[strategy](results, metadata or {})
 
@@ -75,7 +72,7 @@ class ResultFusionEngine:
         # Compute weighted aggregates
         final_results = {}
         for key, weighted_values in fused_data.items():
-            if all(isinstance(wv["value"], (int, float)) for wv in weighted_values):
+            if all(isinstance(wv["value"], int | float) for wv in weighted_values):
                 # Numerical weighted average
                 final_results[key] = sum(
                     wv["value"] * wv["weight"] for wv in weighted_values
@@ -121,13 +118,11 @@ class ResultFusionEngine:
             if all(isinstance(v, bool) for v in values):
                 # Boolean majority
                 majority_results[key] = sum(values) > len(values) / 2
-            elif all(isinstance(v, (int, float)) for v in values):
+            elif all(isinstance(v, int | float) for v in values):
                 # Numerical median
                 majority_results[key] = statistics.median(values)
             else:
                 # Most common value
-                from collections import Counter
-
                 counter = Counter(str(v) for v in values)
                 most_common = counter.most_common(1)[0]
                 majority_results[key] = most_common[0]
@@ -140,8 +135,7 @@ class ResultFusionEngine:
             "consensus_strength": self._calculate_consensus_strength(results),
             "fusion_metadata": {
                 "vote_distributions": {
-                    key: len(set(str(v) for v in values))
-                    for key, values in votes.items()
+                    key: len({str(v) for v in values}) for key, values in votes.items()
                 },
             },
         }
@@ -185,7 +179,7 @@ class ResultFusionEngine:
         # Compute weighted results
         final_results = {}
         for key, weighted_values in fused_results.items():
-            if all(isinstance(wv["value"], (int, float)) for wv in weighted_values):
+            if all(isinstance(wv["value"], int | float) for wv in weighted_values):
                 final_results[key] = sum(
                     wv["value"] * wv["weight"] for wv in weighted_values
                 )
@@ -290,7 +284,7 @@ class ResultFusionEngine:
                 if key in r.get("results", {})
             ]
             if values:
-                unique_values = len(set(str(v) for v in values))
+                unique_values = len({str(v) for v in values})
                 consensus_scores.append(
                     1.0 / unique_values
                 )  # Higher consensus = fewer unique values
@@ -587,6 +581,7 @@ class TestComplexWorkflowScenarios:
         search_tools = await discovery_agent.discover_tools_for_task(
             search_task, {"max_latency_ms": 2000}
         )
+        assert len(search_tools) > 0, "Should discover search tools"
 
         search_response = await search_agent.orchestrate(
             search_task, {"phase": "search"}, agent_dependencies
@@ -875,6 +870,11 @@ class TestComplexWorkflowScenarios:
             {"max_latency_ms": 2000, "min_accuracy": 0.85, "priority": "balanced"},
         )
 
+        # Verify tools were discovered for each optimization type
+        assert len(speed_tools) > 0, "Should discover speed-optimized tools"
+        assert len(quality_tools) > 0, "Should discover quality-optimized tools"
+        assert len(balanced_tools) > 0, "Should discover balanced tools"
+
         # Execute with different optimization targets
         performance_tests = [
             (speed_agent, "speed_optimized", {"max_latency_ms": 500}),
@@ -953,7 +953,8 @@ class TestComplexWorkflowScenarios:
 
         # Speed optimization should have lower latency
         # Quality optimization should have higher confidence
-        assert speed_result["success"] and quality_result["success"]
+        assert speed_result["success"]
+        assert quality_result["success"]
 
         # Balanced approach should be represented in final fusion
         performance_weights = optimization_fusion["fusion_metadata"][
@@ -1083,3 +1084,7 @@ class TestComplexWorkflowScenarios:
         # Heavy load should still maintain reasonable performance
         assert heavy_load_result["success_rate"] >= 0.5  # At least 50% under heavy load
         assert heavy_load_result["results"]["efficiency_score"] > 0
+
+        # Light load should perform better than heavy load
+        assert light_load_result["success_rate"] >= heavy_load_result["success_rate"]
+        assert light_load_result["results"]["efficiency_score"] > 0

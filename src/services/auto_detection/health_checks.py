@@ -26,7 +26,7 @@ except ImportError:
 
 from pydantic import BaseModel
 
-from src.config.auto_detect import AutoDetectionConfig, DetectedService
+from src.config import AutoDetectionConfig, DetectedService
 from src.services.errors import circuit_breaker
 
 

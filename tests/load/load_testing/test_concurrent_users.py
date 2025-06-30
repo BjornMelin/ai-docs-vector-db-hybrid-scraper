@@ -4,8 +4,6 @@ This module tests various concurrent user scenarios to validate system
 behavior under different concurrency levels and user interaction patterns.
 """
 
-import random
-
 import pytest
 
 from tests.load.conftest import LoadTestConfig, LoadTestType
@@ -42,9 +40,9 @@ class TestConcurrentUsersLoad:
         assert result.success, (
             f"Low concurrency test failed: {result.bottlenecks_identified}"
         )
-        assert result.metrics._total_requests > 0
+        assert result.metrics.total_requests > 0
         assert (
-            result.metrics.successful_requests >= result.metrics._total_requests * 0.98
+            result.metrics.successful_requests >= result.metrics.total_requests * 0.98
         )
 
     async def test_moderate_concurrency(self, load_test_runner, mock_load_test_service):
@@ -65,7 +63,7 @@ class TestConcurrentUsersLoad:
             config=config, target_function=mock_load_test_service.process_request
         )
 
-        assert result.metrics._total_requests > 0
+        assert result.metrics.total_requests > 0
         assert result.metrics.peak_concurrent_users <= config.concurrent_users
 
     async def test_high_concurrency_scaling(
@@ -92,7 +90,7 @@ class TestConcurrentUsersLoad:
         )
 
         # Under high load, some degradation is expected but should not fail completely
-        assert result.metrics._total_requests > 0
+        assert result.metrics.total_requests > 0
         assert result.metrics.successful_requests > 0
 
     async def test_concurrent_user_ramp_up(
@@ -135,7 +133,7 @@ class TestConcurrentUsersLoad:
                     step_metrics = {
                         "step": step,
                         "concurrent_users": current_users,
-                        "_total_requests": result.metrics._total_requests,
+                        "_total_requests": result.metrics.total_requests,
                         "successful_requests": result.metrics.successful_requests,
                         "throughput_rps": result.metrics.throughput_rps,
                         "avg_response_time": sum(result.metrics.response_times)
@@ -144,7 +142,7 @@ class TestConcurrentUsersLoad:
                         else 0,
                         "error_rate": (
                             result.metrics.failed_requests
-                            / max(result.metrics._total_requests, 1)
+                            / max(result.metrics.total_requests, 1)
                         )
                         * 100,
                     }
@@ -152,7 +150,7 @@ class TestConcurrentUsersLoad:
                     self.metrics_history.append(step_metrics)
 
                     # Verify basic functionality
-                    assert result.metrics._total_requests > 0, (
+                    assert result.metrics.total_requests > 0, (
                         f"No requests in step {step}"
                     )
 
@@ -216,10 +214,10 @@ class TestConcurrentUsersLoad:
                         "pattern": pattern["name"],
                         "users": pattern["users"],
                         "duration": pattern["duration"],
-                        "requests": result.metrics._total_requests,
+                        "requests": result.metrics.total_requests,
                         "success_rate": (
                             result.metrics.successful_requests
-                            / max(result.metrics._total_requests, 1)
+                            / max(result.metrics.total_requests, 1)
                         )
                         * 100,
                         "avg_response_time": sum(result.metrics.response_times)
@@ -231,7 +229,7 @@ class TestConcurrentUsersLoad:
                     results.append(pattern_result)
 
                     # Verify requests were made
-                    assert result.metrics._total_requests > 0, (
+                    assert result.metrics.total_requests > 0, (
                         f"No requests in {pattern['name']}"
                     )
 
@@ -314,7 +312,7 @@ class TestConcurrentUsersLoad:
             duration_minutes=1
         )  # Short test for CI
 
-        assert result.metrics._total_requests > 0
+        assert result.metrics.total_requests > 0
         assert result.metrics.successful_requests > 0
 
         # Verify stability analysis was performed
@@ -393,7 +391,7 @@ class TestConcurrentUsersLoad:
 
             workload_result = {
                 "workload": workload_config["name"],
-                "_total_requests": result.metrics._total_requests,
+                "_total_requests": result.metrics.total_requests,
                 "throughput": result.metrics.throughput_rps,
                 "avg_response_time": sum(result.metrics.response_times)
                 / len(result.metrics.response_times)
@@ -401,14 +399,14 @@ class TestConcurrentUsersLoad:
                 else 0,
                 "error_rate": (
                     result.metrics.failed_requests
-                    / max(result.metrics._total_requests, 1)
+                    / max(result.metrics.total_requests, 1)
                 )
                 * 100,
             }
 
             workload_results.append(workload_result)
 
-            assert result.metrics._total_requests > 0, (
+            assert result.metrics.total_requests > 0, (
                 f"No requests for {workload_config['name']}"
             )
 

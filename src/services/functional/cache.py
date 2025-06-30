@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 @circuit_breaker(CircuitBreakerConfig.simple_mode())
 async def cache_get(
     key: str,
-    cache_type: CacheType = CacheType.CRAWL,
+    cache_type: CacheType = CacheType.LOCAL,
     default: Any = None,
     cache_client: Annotated[object, Depends(get_cache_client)] = None,
 ) -> Any:
@@ -70,7 +70,7 @@ async def cache_get(
 async def cache_set(
     key: str,
     value: Any,
-    cache_type: CacheType = CacheType.CRAWL,
+    cache_type: CacheType = CacheType.LOCAL,
     ttl: int | None = None,
     cache_client: Annotated[object, Depends(get_cache_client)] = None,
 ) -> bool:
@@ -119,7 +119,7 @@ async def cache_set(
 @circuit_breaker(CircuitBreakerConfig.simple_mode())
 async def cache_delete(
     key: str,
-    cache_type: CacheType = CacheType.CRAWL,
+    cache_type: CacheType = CacheType.LOCAL,
     cache_client: Annotated[object, Depends(get_cache_client)] = None,
 ) -> bool:
     """Delete value from both cache layers.

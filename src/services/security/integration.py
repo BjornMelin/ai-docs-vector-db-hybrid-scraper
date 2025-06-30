@@ -86,7 +86,7 @@ class SecurityManager:
             logger.info("All security components initialized successfully")
 
         except Exception as e:
-            logger.exception(f"Failed to initialize security components: {e}")
+            logger.exception("Failed to initialize security components")
             # Set fallback configurations
             self._setup_fallback_security()
 
@@ -116,9 +116,8 @@ class SecurityManager:
             Configured security middleware
         """
         if not all([self.rate_limiter, self.ai_validator, self.security_monitor]):
-            raise RuntimeError(
-                "Security components not initialized. Call initialize_components() first."
-            )
+            msg = "Security components not initialized. Call initialize_components() first."
+            raise RuntimeError(msg)
 
         # Create security middleware
         self.middleware = SecurityMiddleware(
@@ -263,7 +262,7 @@ class SecurityManager:
             logger.info("Security resources cleaned up")
 
         except Exception as e:
-            logger.exception(f"Error during security cleanup: {e}")
+            logger.exception("Error during security cleanup")
 
 
 # Global security manager instance

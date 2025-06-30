@@ -106,7 +106,7 @@ class TestSystemService:
             "filtering": Mock(),
         }
 
-        for tool_name, mock_tool in mock_tools.items():
+        for mock_tool in mock_tools.values():
             mock_tool.register_tools = Mock()
 
         # Patch the tool imports
@@ -121,7 +121,7 @@ class TestSystemService:
             await service._register_system_tools()
 
             # Verify all tools were registered
-            for tool_name, mock_tool in mock_tools.items():
+            for mock_tool in mock_tools.values():
                 mock_tool.register_tools.assert_called_once_with(
                     service.mcp, mock_client_manager
                 )
@@ -134,21 +134,22 @@ class TestSystemService:
         service.client_manager = mock_client_manager
 
         # Mock tool modules
-        with patch.multiple(
-            "src.mcp_services.system_service",
-            system_health=Mock(register_tools=Mock()),
-            configuration=Mock(register_tools=Mock()),
-            cost_estimation=Mock(register_tools=Mock()),
-            embeddings=Mock(register_tools=Mock()),
-            filtering=Mock(register_tools=Mock()),
+        with (
+            patch.multiple(
+                "src.mcp_services.system_service",
+                system_health=Mock(register_tools=Mock()),
+                configuration=Mock(register_tools=Mock()),
+                cost_estimation=Mock(register_tools=Mock()),
+                embeddings=Mock(register_tools=Mock()),
+                filtering=Mock(register_tools=Mock()),
+            ),
+            caplog.at_level(logging.INFO),
         ):
-            with caplog.at_level(logging.INFO):
-                await service._register_system_tools()
+            await service._register_system_tools()
 
-                assert (
-                    "Registered system tools with self-healing capabilities"
-                    in caplog.text
-                )
+            assert (
+                "Registered system tools with self-healing capabilities" in caplog.text
+            )
 
     def test_get_mcp_server_returns_configured_instance(self):
         """Test that get_mcp_server returns the configured FastMCP instance."""
@@ -309,22 +310,24 @@ class TestSystemServiceCostAndResourceOptimization:
         mock_cost_estimation = Mock()
         mock_cost_estimation.register_tools = Mock()
 
-        with patch(
-            "src.mcp_services.system_service.cost_estimation", mock_cost_estimation
-        ):
-            with patch.multiple(
+        with (
+            patch(
+                "src.mcp_services.system_service.cost_estimation", mock_cost_estimation
+            ),
+            patch.multiple(
                 "src.mcp_services.system_service",
                 system_health=Mock(register_tools=Mock()),
                 configuration=Mock(register_tools=Mock()),
                 embeddings=Mock(register_tools=Mock()),
                 filtering=Mock(register_tools=Mock()),
-            ):
-                await service._register_system_tools()
+            ),
+        ):
+            await service._register_system_tools()
 
-                # Verify cost estimation tools were registered
-                mock_cost_estimation.register_tools.assert_called_once_with(
-                    service.mcp, mock_client_manager
-                )
+            # Verify cost estimation tools were registered
+            mock_cost_estimation.register_tools.assert_called_once_with(
+                service.mcp, mock_client_manager
+            )
 
     async def test_cost_optimization_capability(self):
         """Test that service supports cost optimization."""
@@ -589,7 +592,6 @@ class TestSystemServicePerformanceAndIntegration:
 
     async def test_service_initialization_is_efficient(self, mock_client_manager):
         """Test that service initialization is efficient and doesn't block."""
-        import time
 
         service = SystemService()
 
@@ -605,7 +607,6 @@ class TestSystemServicePerformanceAndIntegration:
 
     async def test_get_service_info_performance(self):
         """Test that get_service_info is performant for capability discovery."""
-        import time
 
         service = SystemService()
 
@@ -622,7 +623,6 @@ class TestSystemServicePerformanceAndIntegration:
 
     async def test_service_supports_concurrent_access(self, mock_client_manager):
         """Test that service supports concurrent access patterns."""
-        import asyncio
 
         service = SystemService()
 

@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from src.config.reload import ReloadOperation, ReloadTrigger, get_config_reloader
+from src.config import ReloadOperation, ReloadTrigger, get_config_reloader
 from src.services.observability.config_instrumentation import (
     ConfigOperationType,
     instrument_config_operation,

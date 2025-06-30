@@ -119,6 +119,7 @@ class TestModernCircuitBreakerManager:
             # Mock the context manager behavior
             with patch.object(manager, "get_breaker", return_value=mock_breaker):
                 result = await manager.protected_call("service1", test_func, 2, 3)
+                assert result == 5, "Function should return sum of arguments"
 
                 # Verify the function was called through the circuit breaker
                 mock_breaker.__aenter__.assert_called_once()
@@ -182,7 +183,7 @@ class TestModernCacheManager:
     @pytest.mark.asyncio
     async def test_initialization(self, redis_url, config):
         """Test cache manager initialization."""
-        with patch("src.services.cache.modern.Cache") as mock_cache:
+        with patch("src.services.cache.modern.Cache"):
             manager = ModernCacheManager(redis_url, config=config)
 
             assert manager.redis_url == redis_url
@@ -192,7 +193,7 @@ class TestModernCacheManager:
     @pytest.mark.asyncio
     async def test_get_cache_for_type(self, redis_url, config):
         """Test getting cache instance for different types."""
-        with patch("src.services.cache.modern.Cache") as mock_cache:
+        with patch("src.services.cache.modern.Cache"):
             manager = ModernCacheManager(redis_url, config=config)
 
             embedding_cache = manager.get_cache_for_type(CacheType.EMBEDDINGS)
@@ -205,13 +206,13 @@ class TestModernCacheManager:
     async def test_cache_decorators(self, redis_url, config):
         """Test cache decorator functionality."""
         with (
-            patch("src.services.cache.modern.Cache") as mock_cache,
+            patch("src.services.cache.modern.Cache"),
             patch("src.services.cache.modern.cached") as mock_cached,
         ):
             manager = ModernCacheManager(redis_url, config=config)
 
             # Test embedding cache decorator
-            embedding_decorator = manager.cache_embeddings(ttl=3600)
+            _embedding_decorator = manager.cache_embeddings(ttl=3600)
             mock_cached.assert_called_with(
                 ttl=3600,
                 cache=manager.embedding_cache,
@@ -219,13 +220,13 @@ class TestModernCacheManager:
             )
 
             # Test search cache decorator
-            search_decorator = manager.cache_search_results(ttl=1800)
+            _search_decorator = manager.cache_search_results(ttl=1800)
             assert mock_cached.call_count == 2
 
     @pytest.mark.asyncio
     async def test_get_set_operations(self, redis_url, config):
         """Test cache get and set operations."""
-        with patch("src.services.cache.modern.Cache") as mock_cache:
+        with patch("src.services.cache.modern.Cache"):
             mock_cache_instance = AsyncMock()
             mock_cache_instance.get.return_value = "cached_value"
             mock_cache_instance.set.return_value = None
@@ -250,7 +251,7 @@ class TestModernCacheManager:
     @pytest.mark.asyncio
     async def test_get_set_error_handling(self, redis_url, config):
         """Test error handling in cache operations."""
-        with patch("src.services.cache.modern.Cache") as mock_cache:
+        with patch("src.services.cache.modern.Cache"):
             mock_cache_instance = AsyncMock()
             mock_cache_instance.get.side_effect = Exception("Cache error")
             mock_cache_instance.set.side_effect = Exception("Cache error")
@@ -269,7 +270,7 @@ class TestModernCacheManager:
     @pytest.mark.asyncio
     async def test_clear_operations(self, redis_url, config):
         """Test cache clear operations."""
-        with patch("src.services.cache.modern.Cache") as mock_cache:
+        with patch("src.services.cache.modern.Cache"):
             mock_embedding_cache = AsyncMock()
             mock_search_cache = AsyncMock()
 
@@ -290,7 +291,7 @@ class TestModernCacheManager:
 
     def test_key_builders(self, redis_url, config):
         """Test cache key builder functions."""
-        with patch("src.services.cache.modern.Cache") as mock_cache:
+        with patch("src.services.cache.modern.Cache"):
             manager = ModernCacheManager(redis_url, config=config)
 
             # Test embedding key builder
@@ -322,10 +323,8 @@ class TestLibraryMigrationManager:
         with (
             patch(
                 "src.services.migration.library_migration.ModernCircuitBreakerManager"
-            ) as mock_cb,
-            patch(
-                "src.services.migration.library_migration.ModernCacheManager"
-            ) as mock_cache,
+            ),
+            patch("src.services.migration.library_migration.ModernCacheManager"),
         ):
             manager = LibraryMigrationManager(
                 config=config,
@@ -462,7 +461,7 @@ class TestIntegrationScenarios:
             patch(
                 "src.services.circuit_breaker.modern.AsyncCircuitBreakerFactory"
             ) as mock_factory,
-            patch("src.services.cache.modern.Cache") as mock_cache,
+            patch("src.services.cache.modern.Cache"),
         ):
             # Setup mocks
             mock_storage.from_url.return_value = Mock()

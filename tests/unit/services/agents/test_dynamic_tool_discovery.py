@@ -4,9 +4,7 @@ This module provides thorough testing of the J3 research implementation
 for autonomous tool orchestration with intelligent capability assessment.
 """
 
-import asyncio
 import sys
-import time
 from unittest.mock import Mock
 from uuid import uuid4
 
@@ -1851,6 +1849,11 @@ class TestMemoryAndPerformanceOptimization:
         start_time = time.time()
         tools2 = await engine.discover_tools_for_task(task, requirements)
         second_time = time.time() - start_time
+
+        # Verify timing measurements are reasonable
+        assert first_time >= 0, "First discovery time should be non-negative"
+        assert second_time >= 0, "Second discovery time should be non-negative"
+        assert second_time <= first_time, "Second call should be faster due to caching"
 
         # Results should be consistent
         assert len(tools1) == len(tools2)

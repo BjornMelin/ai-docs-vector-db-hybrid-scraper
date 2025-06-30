@@ -6,23 +6,16 @@ focusing on hierarchical and parallel coordination patterns identified in J4 res
 
 import asyncio
 import time
-from datetime import datetime, timedelta
-from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.infrastructure.client_manager import ClientManager
 from src.services.agents.agentic_orchestrator import (
-    AgenticOrchestrator,
     ToolRequest,
     ToolResponse,
 )
-from src.services.agents.core import BaseAgentDependencies, create_agent_dependencies
 from src.services.agents.dynamic_tool_discovery import (
-    DynamicToolDiscovery,
     ToolCapability,
-    ToolMetrics,
 )
 
 
@@ -113,6 +106,7 @@ class TestHierarchicalCoordination:
 
         stage_results = []
         for stage_name, task, tools in workflow_tasks:
+            # Build stage context for orchestration
             stage_context = {
                 "stage": stage_name,
                 "available_tools": [tool.name for tool in tools],
@@ -120,7 +114,7 @@ class TestHierarchicalCoordination:
             }
 
             response = await coordinator_agent.orchestrate(
-                task, {"stage": stage_name}, agent_dependencies
+                task, stage_context, agent_dependencies
             )
 
             stage_results.append(
@@ -482,6 +476,10 @@ class TestParallelAgentCoordination:
             {"phase": 2, **shared_context},
             agent_dependencies,
         )
+
+        # Verify both tasks completed successfully
+        assert task1_response.success, "Phase 1 task should complete successfully"
+        assert task2_response.success, "Phase 2 task should complete successfully"
 
         # Verify state synchronization through session state
         session_history = agent_dependencies.session_state.conversation_history

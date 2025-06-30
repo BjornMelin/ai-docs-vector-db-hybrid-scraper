@@ -303,14 +303,12 @@ class HypotheticalDocumentGenerator(BaseService):
         documents = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Filter out exceptions and empty documents
-        valid_documents = [
+        return [
             doc
             for doc in documents
             if isinstance(doc, str)
             and len(doc.strip()) >= self.config.min_generation_length
         ]
-
-        return valid_documents
 
     async def _generate_sequential(self, prompts: list[str]) -> list[str]:
         """Generate documents sequentially."""
@@ -392,11 +390,9 @@ class HypotheticalDocumentGenerator(BaseService):
         input_tokens = tokens * 0.7
         output_tokens = tokens * 0.3
 
-        cost = (input_tokens / 1000) * model_costs["input"] + (
+        return (input_tokens / 1000) * model_costs["input"] + (
             output_tokens / 1000
         ) * model_costs["output"]
-
-        return cost
 
     def _calculate_diversity_score(self, documents: list[str]) -> float:
         """Calculate diversity score between generated documents."""

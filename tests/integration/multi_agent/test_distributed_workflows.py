@@ -5,28 +5,22 @@ and autonomous capabilities enabling 3-10x performance improvements.
 """
 
 import asyncio
-import random
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.infrastructure.client_manager import ClientManager
 from src.services.agents.agentic_orchestrator import (
     AgenticOrchestrator,
-    ToolRequest,
-    ToolResponse,
 )
 from src.services.agents.core import BaseAgentDependencies, create_agent_dependencies
 from src.services.agents.dynamic_tool_discovery import (
     DynamicToolDiscovery,
-    ToolCapability,
-    ToolCapabilityType,
-    ToolMetrics,
 )
 
 
@@ -92,7 +86,7 @@ class WorkflowOrchestrator:
             "role": role,
             "load": 0,
             "capabilities": [],
-            "last_activity": datetime.now(),
+            "last_activity": datetime.now(tz=timezone.utc),
         }
 
     async def execute_workflow(
@@ -102,7 +96,7 @@ class WorkflowOrchestrator:
     ) -> DistributedWorkflow:
         """Execute a distributed workflow."""
         workflow.state = WorkflowState.RUNNING
-        workflow.start_time = datetime.now()
+        workflow.start_time = datetime.now(tz=timezone.utc)
 
         try:
             # Build dependency graph
@@ -118,7 +112,8 @@ class WorkflowOrchestrator:
                 )
 
                 if not ready_nodes:
-                    raise RuntimeError("Circular dependency or deadlock detected")
+                    msg = "Circular dependency or deadlock detected"
+                    raise RuntimeError(msg)
 
                 # Execute ready nodes in parallel
                 node_tasks = []
@@ -136,11 +131,11 @@ class WorkflowOrchestrator:
             workflow.performance_metrics = self._calculate_workflow_metrics(workflow)
             workflow.state = WorkflowState.COMPLETED
 
-        except Exception as e:
+        except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
             workflow.state = WorkflowState.FAILED
             workflow.error = str(e)
         finally:
-            workflow.end_time = datetime.now()
+            workflow.end_time = datetime.now(tz=timezone.utc)
 
         return workflow
 
@@ -182,7 +177,8 @@ class WorkflowOrchestrator:
             # Find suitable agent for the node
             agent_id = self._select_agent_for_node(node)
             if not agent_id:
-                raise RuntimeError(f"No suitable agent found for node {node.node_id}")
+                msg = f"No suitable agent found for node {node.node_id}"
+                raise RuntimeError(msg)
 
             agent_info = self.agent_pool[agent_id]
             agent = agent_info["agent"]
@@ -223,7 +219,7 @@ class WorkflowOrchestrator:
 
             node.state = WorkflowState.COMPLETED
 
-        except Exception as e:
+        except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
             node.state = WorkflowState.FAILED
             node.error = str(e)
             node.result = {"success": False, "error": str(e)}
@@ -543,7 +539,8 @@ class TestDistributedWorkflowExecution:
 
         async def failing_orchestrate(task, constraints, deps):
             if "fail_task" in task:
-                raise Exception("Simulated agent failure")
+                msg = "Simulated agent failure"
+                raise Exception(msg)
             return await original_orchestrate(task, constraints, deps)
 
         unreliable_agent.orchestrate = failing_orchestrate
@@ -694,6 +691,10 @@ class TestDistributedWorkflowExecution:
         assert completed_workflow.state == WorkflowState.COMPLETED
         metrics = completed_workflow.performance_metrics
 
+        # Verify measured execution time is reasonable
+        assert total_execution_time > 0, "Execution time should be positive"
+        assert total_execution_time < 30, "Execution time should be reasonable for test"
+
         # Check performance improvement metrics
         assert metrics["performance_improvement"] >= 1.0  # At least some improvement
         assert metrics["parallelization_factor"] > 1.0  # Benefit from parallelization
@@ -766,7 +767,7 @@ class TestDistributedWorkflowExecution:
 
         workflow = DistributedWorkflow(
             workflow_id="load_balance_001",
-            nodes=parallel_tasks + [aggregation_task],
+            nodes=[*parallel_tasks, aggregation_task],
             global_constraints={"load_balancing": True},
         )
 
@@ -781,6 +782,8 @@ class TestDistributedWorkflowExecution:
         )
 
         # Verify load balancing
+        # Check that loads were tracked properly
+        assert len(initial_loads) > 0, "Should have tracked initial agent loads"
         assert completed_workflow.state == WorkflowState.COMPLETED
         assert all(
             node.state == WorkflowState.COMPLETED for node in completed_workflow.nodes
@@ -881,7 +884,8 @@ class TestAutonomousCapabilities:
             nonlocal call_count
             call_count += 1
             if call_count > 1:  # Fail after first successful call
-                raise Exception("Primary agent failure - triggering self-healing")
+                msg = "Primary agent failure - triggering self-healing"
+                raise Exception(msg)
             return await original_orchestrate(task, constraints, deps)
 
         primary_agent.orchestrate = failing_primary_orchestrate
@@ -1141,7 +1145,7 @@ class TestAutonomousCapabilities:
             failure_history.append(
                 {
                     "agent_id": agent_id,
-                    "timestamp": datetime.now(),
+                    "timestamp": datetime.now(tz=timezone.utc),
                     "error": str(error),
                 }
             )
@@ -1206,11 +1210,12 @@ class TestAutonomousCapabilities:
             try:
                 if node.constraints.get("will_fail"):
                     # Simulate failure
-                    raise Exception("Simulated critical failure")
+                    msg = "Simulated critical failure"
+                    raise Exception(msg)
 
                 return await original_execute_node(node, workflow, deps)
 
-            except Exception as e:
+            except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
                 # Autonomous failure detection
                 agent_id = autonomous_orchestrator._select_agent_for_node(node)
                 replacement_agent = detect_agent_failure(agent_id, e)

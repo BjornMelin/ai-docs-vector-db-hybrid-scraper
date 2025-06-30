@@ -1,7 +1,7 @@
 """HTTP client provider."""
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 import aiohttp
 
@@ -63,7 +63,8 @@ class HTTPClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("HTTP client is not available or unhealthy")
+            msg = "HTTP client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.get(url, headers=headers, **kwargs)
 
@@ -91,7 +92,8 @@ class HTTPClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("HTTP client is not available or unhealthy")
+            msg = "HTTP client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.post(
             url, data=data, json=json, headers=headers, **kwargs
@@ -121,7 +123,8 @@ class HTTPClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("HTTP client is not available or unhealthy")
+            msg = "HTTP client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.put(
             url, data=data, json=json, headers=headers, **kwargs
@@ -144,7 +147,8 @@ class HTTPClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("HTTP client is not available or unhealthy")
+            msg = "HTTP client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.delete(url, headers=headers, **kwargs)
 
@@ -166,6 +170,7 @@ class HTTPClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("HTTP client is not available or unhealthy")
+            msg = "HTTP client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.request(method, url, headers=headers, **kwargs)

@@ -1,7 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-
 """Tests for Qdrant alias manager service."""
 
 from unittest.mock import AsyncMock, MagicMock
@@ -17,6 +13,10 @@ from src.services.core.qdrant_alias_manager import (
     QdrantAliasManager,
 )
 from src.services.errors import QdrantServiceError
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
 
 
 class TestQdrantAliasManagerValidation:

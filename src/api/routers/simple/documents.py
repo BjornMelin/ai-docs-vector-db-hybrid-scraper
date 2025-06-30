@@ -66,10 +66,6 @@ async def add_document(request: SimpleDocumentRequest) -> SimpleDocumentResponse
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-def _raise_document_not_found():
-    raise HTTPException(status_code=404, detail="Document not found")
-
-
 @router.get("/documents/{document_id}")
 async def get_document(
     document_id: str,
@@ -83,17 +79,13 @@ async def get_document(
             document_id=document_id,
             collection_name=collection_name,
         )
-
-        if not document:
-            _raise_document_not_found()
-        else:
-            return document
-
-    except HTTPException:
-        raise
     except Exception as e:
         logger.exception("Document retrieval failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
+    else:
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+        return document
 
 
 @router.delete("/documents/{document_id}")
@@ -109,17 +101,13 @@ async def delete_document(
             document_id=document_id,
             collection_name=collection_name,
         )
-
-        if not success:
-            _raise_document_not_found()
-        else:
-            return {"status": "success", "message": "Document deleted successfully"}
-
-    except HTTPException:
-        raise
     except Exception as e:
         logger.exception("Document deletion failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
+    else:
+        if not success:
+            raise HTTPException(status_code=404, detail="Document not found")
+        return {"status": "success", "message": "Document deleted successfully"}
 
 
 @router.get("/documents")

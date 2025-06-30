@@ -186,9 +186,8 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
             )
 
             if not orchestration_result["success"]:
-                raise RuntimeError(
-                    f"Orchestration failed: {orchestration_result.get('error')}"
-                )
+                msg = f"Orchestration failed: {orchestration_result.get('error')}"
+                raise RuntimeError(msg)
 
             # Extract results from orchestration
             result_data = orchestration_result["result"]
@@ -291,9 +290,8 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
             )
 
             if not orchestration_result.success:
-                raise RuntimeError(
-                    f"Analysis execution failed: {orchestration_result.results.get('error')}"
-                )
+                msg = f"Analysis execution failed: {orchestration_result.results.get('error')}"
+                raise RuntimeError(msg)
 
             # Extract insights from orchestration results
             analysis_results = orchestration_result.results
@@ -337,7 +335,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
                     confidence + 0.05, 1.0
                 )  # Focused analysis = higher confidence
 
-            response = AgenticAnalysisResponse(
+            return AgenticAnalysisResponse(
                 success=True,
                 analysis_id=analysis_id,
                 insights=insights,
@@ -347,8 +345,6 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
                 confidence=confidence,
                 processing_time_ms=orchestration_result.latency_ms,
             )
-
-            return response
 
         except Exception as e:
             logger.error(f"Agentic analysis failed: {e}", exc_info=True)
@@ -378,7 +374,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
             # This would integrate with actual agent registry and monitoring
             # For now, return mock metrics structure
 
-            metrics = {
+            return {
                 "system_overview": {
                     "total_sessions": 150,
                     "active_agents": 3,
@@ -430,10 +426,8 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
                 },
             }
 
-            return metrics
-
         except Exception as e:
-            logger.error(f"Failed to get agent performance metrics: {e}")
+            logger.exception("Failed to get agent performance metrics")
             return {
                 "error": str(e),
                 "message": "Failed to retrieve performance metrics",
@@ -460,7 +454,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
             }
 
         except Exception as e:
-            logger.error(f"Failed to reset agent learning: {e}")
+            logger.exception("Failed to reset agent learning")
             return {
                 "status": "error",
                 "message": f"Failed to reset agent learning: {e!s}",
@@ -487,7 +481,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
             constraints = constraints or {}
 
             # Mock optimization process
-            optimization_results = {
+            return {
                 "target": optimization_target,
                 "optimization_id": str(uuid4()),
                 "improvements": {
@@ -520,10 +514,8 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
                 "rollback_available": True,
             }
 
-            return optimization_results
-
         except Exception as e:
-            logger.error(f"Agent configuration optimization failed: {e}")
+            logger.exception("Agent configuration optimization failed")
             return {"status": "error", "message": f"Optimization failed: {e!s}"}
 
     @mcp.tool()
@@ -540,7 +532,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
             # This would integrate with the actual orchestrator instance
             # For now, return structured metrics showing native capabilities
 
-            orchestration_metrics = {
+            return {
                 "system_status": {
                     "architecture": "pure_pydantic_ai_native",
                     "total_requests_processed": 245,
@@ -578,10 +570,8 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
                 },
             }
 
-            return orchestration_metrics
-
         except Exception as e:
-            logger.error(f"Failed to get orchestration metrics: {e}")
+            logger.exception("Failed to get orchestration metrics")
             return {
                 "error": str(e),
                 "message": "Failed to retrieve orchestration metrics",

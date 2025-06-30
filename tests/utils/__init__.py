@@ -1,3 +1,1 @@
-"""
-This module is used to test the utils package.
-"""
+"""Test utilities and helpers package."""

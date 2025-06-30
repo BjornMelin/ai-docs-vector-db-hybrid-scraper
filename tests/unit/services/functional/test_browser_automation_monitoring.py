@@ -1,7 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-
 """Tests for 5-tier browser automation health monitoring.
 
 This module tests the comprehensive browser automation monitoring system
@@ -14,6 +10,10 @@ import time
 from typing import Any
 
 import pytest
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
 
 
 class MockBrowserTier:
@@ -186,7 +186,7 @@ class MockBrowserMonitoringSystem:
                 result["attempts"] = tier_order.index(tier_name) + 1
                 return result
 
-            except Exception as e:
+            except (ConnectionError, RuntimeError, OSError) as e:
                 last_error = e
                 continue
 
@@ -471,7 +471,7 @@ class TestBrowserAutomationMonitoring:
                     "test_request", tier_name
                 )
                 response_times[tier_name] = result["response_time_ms"]
-            except Exception:
+            except (ConnectionError, RuntimeError, OSError):
                 response_times[tier_name] = float("inf")
 
         # Verify tier hierarchy (lighter tiers should be faster)

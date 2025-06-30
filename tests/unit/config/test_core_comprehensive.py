@@ -11,26 +11,25 @@ import time
 from unittest.mock import patch
 
 import pytest
+from pydantic import ValidationError
 
-from src.config.core import (
+from src.config import (
     CacheConfig,
     ChunkingConfig,
+    ChunkingStrategy,
     Config,
     EmbeddingConfig,
-    OpenAIConfig,
-    QdrantConfig,
-    SecurityConfig,
-    get_config,
-    reset_config,
-    set_config,
-)
-from src.config.enums import (
-    ChunkingStrategy,
     EmbeddingModel,
     EmbeddingProvider,
     Environment,
     LogLevel,
+    OpenAIConfig,
+    QdrantConfig,
     SearchStrategy,
+    SecurityConfig,
+    get_config,
+    reset_config,
+    set_config,
 )
 
 
@@ -68,13 +67,13 @@ class TestCacheConfig:
     def test_cache_config_validation(self):
         """Test cache configuration validation."""
         # Test invalid values
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="local_max_size.*greater"):
             CacheConfig(local_max_size=0)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="local_max_memory_mb.*greater"):
             CacheConfig(local_max_memory_mb=-1)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="ttl_seconds.*greater"):
             CacheConfig(ttl_seconds=0)
 
 
@@ -176,13 +175,13 @@ class TestChunkingConfig:
     def test_chunking_config_validation(self):
         """Test chunking configuration validation."""
         # Test invalid values
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="chunk_size.*greater"):
             ChunkingConfig(chunk_size=0)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="chunk_overlap.*greater"):
             ChunkingConfig(chunk_overlap=-1)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="min_chunk_size.*greater"):
             ChunkingConfig(min_chunk_size=0)
 
         # Test validation rules
@@ -366,18 +365,18 @@ class TestConfigValidation:
     @patch.dict(os.environ, {"ENVIRONMENT": "invalid_env"})
     def test_invalid_environment_variable(self):
         """Test handling of invalid environment variable values."""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="invalid_env"):
             Config()
 
     @patch.dict(os.environ, {"LOG_LEVEL": "invalid_level"})
     def test_invalid_log_level(self):
         """Test handling of invalid log level values."""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="invalid_level"):
             Config()
 
     def test_config_with_invalid_nested_config(self):
         """Test Config validation with invalid nested configuration."""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="cache.*local_max_size"):
             Config(cache__local_max_size=-1)  # Invalid value using nested syntax
 
 

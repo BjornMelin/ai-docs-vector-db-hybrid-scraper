@@ -3,6 +3,7 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from pydantic import ValidationError
 
 from src.services.vector_db.filters.base import FilterError, FilterResult
 from src.services.vector_db.filters.temporal import (
@@ -88,10 +89,10 @@ class TestTemporalCriteria:
     def test_validation_relative_days(self):
         """Test validation of relative days."""
         # Zero or negative days should raise validation error
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="created_within_days.*greater"):
             TemporalCriteria(created_within_days=0)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="updated_within_days.*greater"):
             TemporalCriteria(updated_within_days=-1)
 
     def test_validation_freshness_threshold(self):
@@ -104,10 +105,10 @@ class TestTemporalCriteria:
         assert criteria2.freshness_threshold == 1.0
 
         # Invalid range
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="freshness_threshold.*0"):
             TemporalCriteria(freshness_threshold=-0.1)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="freshness_threshold.*1"):
             TemporalCriteria(freshness_threshold=1.1)
 
 
@@ -144,18 +145,18 @@ class TestFreshnessScore:
         assert score2.score == 1.0
 
         # Invalid score range
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="score.*0"):
             FreshnessScore(score=-0.1, age_days=10)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="score.*1"):
             FreshnessScore(score=1.1, age_days=10)
 
         # Invalid age
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="age_days.*greater"):
             FreshnessScore(score=0.5, age_days=-1)
 
         # Invalid half-life
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError, match="half_life_days.*greater"):
             FreshnessScore(score=0.5, age_days=10, half_life_days=0)
 
 

@@ -352,8 +352,7 @@ class TestPerformanceTracking:
 
         async def run_concurrent_test():
             tasks = [concurrent_task(i) for i in range(3)]
-            results = await asyncio.gather(*tasks)
-            return results
+            return await asyncio.gather(*tasks)
 
         results = asyncio.run(run_concurrent_test())
         assert len(results) == 3

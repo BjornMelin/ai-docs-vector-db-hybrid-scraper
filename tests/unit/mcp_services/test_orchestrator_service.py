@@ -74,21 +74,23 @@ class TestOrchestratorService:
         """Test service initialization with client manager."""
         service = OrchestratorService()
 
-        with patch.object(
-            service, "_initialize_domain_services", new_callable=AsyncMock
-        ) as mock_domain_init:
-            with patch.object(
+        with (
+            patch.object(
+                service, "_initialize_domain_services", new_callable=AsyncMock
+            ) as mock_domain_init,
+            patch.object(
                 service, "_initialize_agentic_orchestration", new_callable=AsyncMock
-            ) as mock_agentic_init:
-                with patch.object(
-                    service, "_register_orchestrator_tools", new_callable=AsyncMock
-                ) as mock_register:
-                    await service.initialize(mock_client_manager)
+            ) as mock_agentic_init,
+            patch.object(
+                service, "_register_orchestrator_tools", new_callable=AsyncMock
+            ) as mock_register,
+        ):
+            await service.initialize(mock_client_manager)
 
-                    assert service.client_manager == mock_client_manager
-                    mock_domain_init.assert_called_once()
-                    mock_agentic_init.assert_called_once()
-                    mock_register.assert_called_once()
+            assert service.client_manager == mock_client_manager
+            mock_domain_init.assert_called_once()
+            mock_agentic_init.assert_called_once()
+            mock_register.assert_called_once()
 
     async def test_initialize_logs_success_message(self, mock_client_manager, caplog):
         """Test that initialization logs success message with multi-service coordination."""
@@ -189,21 +191,23 @@ class TestOrchestratorServiceDomainServicesInitialization:
         mock_system_service = Mock()
         mock_system_service.initialize = AsyncMock()
 
-        with patch.multiple(
-            "src.mcp_services.orchestrator_service",
-            SearchService=Mock(return_value=mock_search_service),
-            DocumentService=Mock(return_value=mock_document_service),
-            AnalyticsService=Mock(return_value=mock_analytics_service),
-            SystemService=Mock(return_value=mock_system_service),
+        with (
+            patch.multiple(
+                "src.mcp_services.orchestrator_service",
+                SearchService=Mock(return_value=mock_search_service),
+                DocumentService=Mock(return_value=mock_document_service),
+                AnalyticsService=Mock(return_value=mock_analytics_service),
+                SystemService=Mock(return_value=mock_system_service),
+            ),
+            caplog.at_level(logging.ERROR),
         ):
-            with caplog.at_level(logging.ERROR):
-                await service._initialize_domain_services()
+            await service._initialize_domain_services()
 
-                # Verify that failure was logged but other services still initialized
-                assert "Failed to initialize search service" in caplog.text
-                assert service.document_service == mock_document_service
-                assert service.analytics_service == mock_analytics_service
-                assert service.system_service == mock_system_service
+            # Verify that failure was logged but other services still initialized
+            assert "Failed to initialize search service" in caplog.text
+            assert service.document_service == mock_document_service
+            assert service.analytics_service == mock_analytics_service
+            assert service.system_service == mock_system_service
 
     async def test_initialize_domain_services_logs_individual_service_success(
         self, mock_client_manager, caplog
@@ -219,19 +223,21 @@ class TestOrchestratorServiceDomainServicesInitialization:
             mock_service.initialize = AsyncMock()
             mock_services[service_name] = mock_service
 
-        with patch.multiple(
-            "src.mcp_services.orchestrator_service",
-            SearchService=Mock(return_value=mock_services["search"]),
-            DocumentService=Mock(return_value=mock_services["document"]),
-            AnalyticsService=Mock(return_value=mock_services["analytics"]),
-            SystemService=Mock(return_value=mock_services["system"]),
+        with (
+            patch.multiple(
+                "src.mcp_services.orchestrator_service",
+                SearchService=Mock(return_value=mock_services["search"]),
+                DocumentService=Mock(return_value=mock_services["document"]),
+                AnalyticsService=Mock(return_value=mock_services["analytics"]),
+                SystemService=Mock(return_value=mock_services["system"]),
+            ),
+            caplog.at_level(logging.INFO),
         ):
-            with caplog.at_level(logging.INFO):
-                await service._initialize_domain_services()
+            await service._initialize_domain_services()
 
-                # Verify all services logged successful initialization
-                for service_name in ["search", "document", "analytics", "system"]:
-                    assert f"Initialized {service_name} service" in caplog.text
+            # Verify all services logged successful initialization
+            for service_name in ["search", "document", "analytics", "system"]:
+                assert f"Initialized {service_name} service" in caplog.text
 
 
 class TestOrchestratorServiceAgenticOrchestration:
@@ -275,18 +281,20 @@ class TestOrchestratorServiceAgenticOrchestration:
         service = OrchestratorService()
         service.client_manager = mock_client_manager
 
-        with patch.multiple(
-            "src.mcp_services.orchestrator_service",
-            create_agent_dependencies=Mock(return_value=Mock()),
-            AgenticOrchestrator=Mock(return_value=Mock(initialize=AsyncMock())),
-            get_discovery_engine=Mock(
-                return_value=Mock(initialize_discovery=AsyncMock())
+        with (
+            patch.multiple(
+                "src.mcp_services.orchestrator_service",
+                create_agent_dependencies=Mock(return_value=Mock()),
+                AgenticOrchestrator=Mock(return_value=Mock(initialize=AsyncMock())),
+                get_discovery_engine=Mock(
+                    return_value=Mock(initialize_discovery=AsyncMock())
+                ),
             ),
+            caplog.at_level(logging.INFO),
         ):
-            with caplog.at_level(logging.INFO):
-                await service._initialize_agentic_orchestration()
+            await service._initialize_agentic_orchestration()
 
-                assert "Initialized agentic orchestration components" in caplog.text
+            assert "Initialized agentic orchestration components" in caplog.text
 
 
 class TestOrchestratorServiceToolRegistration:
@@ -707,31 +715,33 @@ class TestOrchestratorServiceErrorHandling:
         """Test that multiple initialization calls are handled safely."""
         service = OrchestratorService()
 
-        with patch.object(
-            service, "_initialize_domain_services", new_callable=AsyncMock
-        ) as mock_domain_init:
-            with patch.object(
+        with (
+            patch.object(
+                service, "_initialize_domain_services", new_callable=AsyncMock
+            ) as mock_domain_init,
+            patch.object(
                 service, "_initialize_agentic_orchestration", new_callable=AsyncMock
-            ) as mock_agentic_init:
-                with patch.object(
-                    service, "_register_orchestrator_tools", new_callable=AsyncMock
-                ) as mock_register:
-                    # First initialization
-                    await service.initialize(mock_client_manager)
-                    first_domain_calls = mock_domain_init.call_count
-                    first_agentic_calls = mock_agentic_init.call_count
-                    first_register_calls = mock_register.call_count
+            ) as mock_agentic_init,
+            patch.object(
+                service, "_register_orchestrator_tools", new_callable=AsyncMock
+            ) as mock_register,
+        ):
+            # First initialization
+            await service.initialize(mock_client_manager)
+            first_domain_calls = mock_domain_init.call_count
+            first_agentic_calls = mock_agentic_init.call_count
+            first_register_calls = mock_register.call_count
 
-                    # Second initialization
-                    await service.initialize(mock_client_manager)
-                    second_domain_calls = mock_domain_init.call_count
-                    second_agentic_calls = mock_agentic_init.call_count
-                    second_register_calls = mock_register.call_count
+            # Second initialization
+            await service.initialize(mock_client_manager)
+            second_domain_calls = mock_domain_init.call_count
+            second_agentic_calls = mock_agentic_init.call_count
+            second_register_calls = mock_register.call_count
 
-                    # Should handle multiple calls gracefully
-                    assert second_domain_calls >= first_domain_calls
-                    assert second_agentic_calls >= first_agentic_calls
-                    assert second_register_calls >= first_register_calls
+            # Should handle multiple calls gracefully
+            assert second_domain_calls >= first_domain_calls
+            assert second_agentic_calls >= first_agentic_calls
+            assert second_register_calls >= first_register_calls
 
     async def test_service_handles_partial_service_initialization_failures(
         self, mock_client_manager, caplog
@@ -749,19 +759,21 @@ class TestOrchestratorServiceErrorHandling:
         mock_document_service = Mock()
         mock_document_service.initialize = AsyncMock()
 
-        with patch.multiple(
-            "src.mcp_services.orchestrator_service",
-            SearchService=Mock(return_value=mock_search_service),
-            DocumentService=Mock(return_value=mock_document_service),
-            AnalyticsService=Mock(return_value=Mock(initialize=AsyncMock())),
-            SystemService=Mock(return_value=Mock(initialize=AsyncMock())),
+        with (
+            patch.multiple(
+                "src.mcp_services.orchestrator_service",
+                SearchService=Mock(return_value=mock_search_service),
+                DocumentService=Mock(return_value=mock_document_service),
+                AnalyticsService=Mock(return_value=Mock(initialize=AsyncMock())),
+                SystemService=Mock(return_value=Mock(initialize=AsyncMock())),
+            ),
+            caplog.at_level(logging.ERROR),
         ):
-            with caplog.at_level(logging.ERROR):
-                await service._initialize_domain_services()
+            await service._initialize_domain_services()
 
-                # Should continue despite failures
-                assert "Failed to initialize search service" in caplog.text
-                assert service.document_service is not None
+            # Should continue despite failures
+            assert "Failed to initialize search service" in caplog.text
+            assert service.document_service is not None
 
 
 class TestOrchestratorServicePerformanceAndIntegration:
@@ -769,22 +781,23 @@ class TestOrchestratorServicePerformanceAndIntegration:
 
     async def test_service_initialization_is_efficient(self, mock_client_manager):
         """Test that service initialization is efficient and doesn't block."""
-        import time
 
         service = OrchestratorService()
 
         start_time = time.time()
 
-        with patch.object(
-            service, "_initialize_domain_services", new_callable=AsyncMock
-        ):
-            with patch.object(
+        with (
+            patch.object(
+                service, "_initialize_domain_services", new_callable=AsyncMock
+            ),
+            patch.object(
                 service, "_initialize_agentic_orchestration", new_callable=AsyncMock
-            ):
-                with patch.object(
-                    service, "_register_orchestrator_tools", new_callable=AsyncMock
-                ):
-                    await service.initialize(mock_client_manager)
+            ),
+            patch.object(
+                service, "_register_orchestrator_tools", new_callable=AsyncMock
+            ),
+        ):
+            await service.initialize(mock_client_manager)
 
         end_time = time.time()
 
@@ -793,7 +806,6 @@ class TestOrchestratorServicePerformanceAndIntegration:
 
     async def test_service_supports_concurrent_access(self, mock_client_manager):
         """Test that service supports concurrent access patterns."""
-        import asyncio
 
         service = OrchestratorService()
 
@@ -802,23 +814,25 @@ class TestOrchestratorServicePerformanceAndIntegration:
             await service.initialize(mock_client_manager)
             return await service.get_service_info()
 
-        with patch.object(
-            service, "_initialize_domain_services", new_callable=AsyncMock
-        ):
-            with patch.object(
+        with (
+            patch.object(
+                service, "_initialize_domain_services", new_callable=AsyncMock
+            ),
+            patch.object(
                 service, "_initialize_agentic_orchestration", new_callable=AsyncMock
-            ):
-                with patch.object(
-                    service, "_register_orchestrator_tools", new_callable=AsyncMock
-                ):
-                    # Run multiple concurrent operations
-                    tasks = [concurrent_operation() for _ in range(3)]
-                    results = await asyncio.gather(*tasks, return_exceptions=True)
+            ),
+            patch.object(
+                service, "_register_orchestrator_tools", new_callable=AsyncMock
+            ),
+        ):
+            # Run multiple concurrent operations
+            tasks = [concurrent_operation() for _ in range(3)]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
 
-                    # All operations should succeed
-                    for result in results:
-                        assert not isinstance(result, Exception)
-                        assert result["service"] == "orchestrator"
+            # All operations should succeed
+            for result in results:
+                assert not isinstance(result, Exception)
+                assert result["service"] == "orchestrator"
 
     async def test_comprehensive_capability_reporting(self):
         """Test comprehensive capability reporting for service discovery."""

@@ -4,12 +4,11 @@ This test module provides thorough coverage of the DynamicToolDiscovery function
 focusing on tool detection, capability analysis, and adaptive discovery mechanisms.
 """
 
-from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.services.agents.core import AgentState, BaseAgentDependencies
+from src.services.agents.core import BaseAgentDependencies
 from src.services.agents.dynamic_tool_discovery import (
     DynamicToolDiscovery,
     ToolCapability,
@@ -365,7 +364,7 @@ class TestDiscoverToolsForTask:
             try:
                 tools = await discover_tools_for_task(task, mock_client_manager)
                 assert isinstance(tools, list)
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError) as e:
                 assert "discovery" in str(e).lower() or "error" in str(e).lower()
 
 
@@ -494,7 +493,6 @@ class TestDiscoveryIntegration:
     @pytest.mark.asyncio
     async def test_discovery_performance_with_multiple_tasks(self):
         """Test discovery performance with concurrent tasks."""
-        import asyncio
 
         deps = BaseAgentDependencies(client_manager=MagicMock(), config=MagicMock())
 
@@ -509,7 +507,7 @@ class TestDiscoveryIntegration:
         # All tasks should complete
         assert len(results) == 5
         for result in results:
-            assert isinstance(result, list) or isinstance(result, Exception)
+            assert isinstance(result, list | Exception)
 
     @pytest.mark.asyncio
     async def test_discovery_with_real_tool_registry(self):

@@ -356,8 +356,8 @@ async def main():
         logger.info("✅ Comprehensive performance monitoring")
 
     except Exception as e:
-        logger.error(
-            f"❌ Demonstration failed: {e}"
+        logger.exception(
+            "❌ Demonstration failed"
         )  # TODO: Convert f-string to logging format
         raise
 

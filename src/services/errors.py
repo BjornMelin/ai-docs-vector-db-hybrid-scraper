@@ -782,6 +782,7 @@ def tenacity_circuit_breaker(
                             "{max_attempts} failed for {service_name}"
                         )
                         raise
+            return None
 
         # Add circuit breaker management methods
         wrapper.circuit_breaker = breaker  # type: ignore

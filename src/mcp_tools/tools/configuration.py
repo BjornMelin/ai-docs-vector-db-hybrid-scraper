@@ -4,6 +4,7 @@ Provides intelligent configuration management with autonomous parameter
 optimization, drift detection, and adaptive configuration learning.
 """
 
+import datetime
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
@@ -510,32 +511,36 @@ async def _generate_optimization_recommendations(
             )
 
     # Cost-based recommendations
-    if optimization_target in ["cost", "balanced"]:
-        if baseline["memory_usage_mb"] > 400:
-            recommendations.append(
-                {
-                    "parameter": "quantization_enabled",
-                    "current_value": current_config.get("quantization_enabled", True),
-                    "recommended_value": True,
-                    "expected_improvement": "25-30% memory reduction",
-                    "confidence": 0.92,
-                    "impact": "high",
-                }
-            )
+    if (
+        optimization_target in ["cost", "balanced"]
+        and baseline["memory_usage_mb"] > 400
+    ):
+        recommendations.append(
+            {
+                "parameter": "quantization_enabled",
+                "current_value": current_config.get("quantization_enabled", True),
+                "recommended_value": True,
+                "expected_improvement": "25-30% memory reduction",
+                "confidence": 0.92,
+                "impact": "high",
+            }
+        )
 
     # Quality-based recommendations
-    if optimization_target in ["quality", "balanced"]:
-        if baseline["quality_score"] < 0.85:
-            recommendations.append(
-                {
-                    "parameter": "quality_threshold",
-                    "current_value": current_config.get("quality_threshold", 0.7),
-                    "recommended_value": 0.8,
-                    "expected_improvement": "5-10% quality improvement",
-                    "confidence": 0.75,
-                    "impact": "medium",
-                }
-            )
+    if (
+        optimization_target in ["quality", "balanced"]
+        and baseline["quality_score"] < 0.85
+    ):
+        recommendations.append(
+            {
+                "parameter": "quality_threshold",
+                "current_value": current_config.get("quality_threshold", 0.7),
+                "recommended_value": 0.8,
+                "expected_improvement": "5-10% quality improvement",
+                "confidence": 0.75,
+                "impact": "medium",
+            }
+        )
 
     # Learning-based recommendations
     if learning_enabled:
@@ -694,7 +699,7 @@ async def _generate_autonomous_insights(
     ctx,
 ) -> dict[str, Any]:
     """Generate autonomous insights from optimization process."""
-    insights = {
+    return {
         "configuration_health": {
             "overall_score": 0.78,
             "optimization_potential": "medium",
@@ -725,14 +730,10 @@ async def _generate_autonomous_insights(
         ],
     }
 
-    return insights
-
 
 def _get_timestamp() -> str:
     """Get current timestamp."""
-    import datetime
-
-    return datetime.datetime.now().isoformat()
+    return datetime.datetime.now(tz=datetime.UTC).isoformat()
 
 
 async def _establish_monitoring_baseline(
@@ -896,7 +897,7 @@ async def _generate_adaptive_monitoring_insights(
     drift_analysis: dict, anomaly_detection: dict, monitoring_metrics: dict, ctx
 ) -> dict[str, Any]:
     """Generate adaptive insights from monitoring results."""
-    insights = {
+    return {
         "system_health_assessment": {
             "overall_health": monitoring_metrics["overall_system_health"],
             "health_trend": "stable"
@@ -929,8 +930,6 @@ async def _generate_adaptive_monitoring_insights(
             "Expand monitoring coverage to include new metrics",
         ],
     }
-
-    return insights
 
 
 async def _create_configuration_profile(

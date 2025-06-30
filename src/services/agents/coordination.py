@@ -335,7 +335,8 @@ class ParallelAgentCoordinator:
                     tasks, optimal_strategy, timeout_seconds
                 )
             else:
-                raise ValueError(f"Unknown coordination strategy: {strategy}")
+                msg = f"Unknown coordination strategy: {strategy}"
+                raise ValueError(msg)
 
             execution_time = time.time() - start_time
 
@@ -401,7 +402,7 @@ class ParallelAgentCoordinator:
                         else False
                     ),
                 }
-                for name in self.available_agents.keys()
+                for name in self.available_agents
             },
         }
 
@@ -461,8 +462,8 @@ class ParallelAgentCoordinator:
             assignment = AgentAssignment(
                 agent_name=agent_name,
                 task_id=task.task_id,
-                assigned_at=datetime.now(),
-                estimated_completion=datetime.now()
+                assigned_at=datetime.now(tz=datetime.timezone.utc),
+                estimated_completion=datetime.now(tz=datetime.timezone.utc)
                 + timedelta(milliseconds=task.estimated_duration_ms),
             )
 
@@ -492,7 +493,7 @@ class ParallelAgentCoordinator:
         agent_name = assignment.agent_name
         agent = self.available_agents[agent_name]
 
-        assignment.actual_start = datetime.now()
+        assignment.actual_start = datetime.now(tz=datetime.timezone.utc)
         assignment.status = "running"
 
         try:
@@ -501,7 +502,8 @@ class ParallelAgentCoordinator:
                 self.enable_circuit_breaker
                 and self.circuit_breakers[agent_name].is_open()
             ):
-                raise RuntimeError(f"Circuit breaker open for agent {agent_name}")
+                msg = f"Circuit breaker open for agent {agent_name}"
+                raise RuntimeError(msg)
 
             # Create agent dependencies
             deps = BaseAgentDependencies(
@@ -518,7 +520,7 @@ class ParallelAgentCoordinator:
                 timeout=timeout_seconds,
             )
 
-            assignment.actual_completion = datetime.now()
+            assignment.actual_completion = datetime.now(tz=datetime.timezone.utc)
             assignment.status = "completed"
 
             # Track success in circuit breaker
@@ -534,7 +536,7 @@ class ParallelAgentCoordinator:
 
         except TimeoutError:
             assignment.status = "failed"
-            assignment.actual_completion = datetime.now()
+            assignment.actual_completion = datetime.now(tz=datetime.timezone.utc)
 
             self.failed_tasks.append(assignment)
             self.metrics.failed_tasks += 1
@@ -551,12 +553,12 @@ class ParallelAgentCoordinator:
 
         except Exception as e:
             assignment.status = "failed"
-            assignment.actual_completion = datetime.now()
+            assignment.actual_completion = datetime.now(tz=datetime.timezone.utc)
 
             self.failed_tasks.append(assignment)
             self.metrics.failed_tasks += 1
 
-            logger.error(f"Task {task.task_id} failed for agent {agent_name}: {e}")
+            logger.exception("Task {task.task_id} failed for agent {agent_name}")
 
             # Track failure in circuit breaker
             if self.enable_circuit_breaker:
@@ -564,8 +566,8 @@ class ParallelAgentCoordinator:
                     await self.circuit_breakers[agent_name].call(
                         lambda: (_ for _ in ()).throw(e)
                     )
-                except:
-                    pass  # Expected to fail
+                except Exception:  # nosec # Expected to fail for circuit breaker testing
+                    pass
 
         finally:
             # Remove from running tasks
@@ -636,7 +638,7 @@ class ParallelAgentCoordinator:
 
     async def _monitor_running_tasks(self) -> None:
         """Monitor running tasks for completion and timeouts."""
-        current_time = datetime.now()
+        current_time = datetime.now(tz=datetime.timezone.utc)
 
         for task_id, assignment in list(self.running_tasks.items()):
             # Check for timeouts
@@ -698,7 +700,7 @@ class ParallelAgentCoordinator:
         if task_id in self.running_tasks:
             assignment = self.running_tasks[task_id]
             assignment.status = "cancelled"
-            assignment.actual_completion = datetime.now()
+            assignment.actual_completion = datetime.now(tz=datetime.timezone.utc)
 
             self.failed_tasks.append(assignment)
             self.running_tasks.pop(task_id)

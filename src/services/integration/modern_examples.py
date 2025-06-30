@@ -90,7 +90,8 @@ class EmbeddingServiceWithProtection:
 
         # Simulate potential failure
         if len(text) > 1000:
-            raise ValueError("Text too long for embedding")
+            msg = "Text too long for embedding"
+            raise ValueError(msg)
 
         # Return mock embedding
         return [0.1] * 1536
@@ -106,7 +107,7 @@ class EmbeddingServiceWithProtection:
                 embedding = await self.generate_embedding(text, model)
                 embeddings.append(embedding)
             except Exception as e:
-                logger.exception(f"Failed to generate embedding for text: {e}")
+                logger.exception("Failed to generate embedding for text")
                 # Use fallback embedding or skip
                 embeddings.append([0.0] * 1536)
 
@@ -166,7 +167,7 @@ class SearchServiceWithCaching:
             logger.info(f"Invalidated {count} search cache entries")
             return True
         except Exception as e:
-            logger.exception(f"Failed to invalidate search cache: {e}")
+            logger.exception("Failed to invalidate search cache")
             return False
 
 
@@ -223,7 +224,7 @@ def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
             embedding = await service.embedding_service.generate_embedding(text, model)
             return {"embedding": embedding, "model": model}
         except Exception as e:
-            logger.exception(f"Embedding generation failed: {e}")
+            logger.exception("Embedding generation failed")
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.get("/search")
@@ -236,10 +237,9 @@ def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
         """Search documents with rate limiting and caching."""
         service = request.app.state.modern_service
         try:
-            results = await service.search_service.search_documents(query, limit=limit)
-            return results
+            return await service.search_service.search_documents(query, limit=limit)
         except Exception as e:
-            logger.exception(f"Search failed: {e}")
+            logger.exception("Search failed")
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.get("/health/modern")
@@ -272,7 +272,7 @@ def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
             success = await service.cache_manager.clear()
             return {"success": success, "message": "Cache cleared"}
         except Exception as e:
-            logger.exception(f"Cache clear failed: {e}")
+            logger.exception("Cache clear failed")
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.post("/admin/circuit-breaker/{service_name}/reset")
@@ -287,7 +287,7 @@ def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
             success = await service.circuit_breaker_manager.reset_breaker(service_name)
             return {"success": success, "service": service_name}
         except Exception as e:
-            logger.exception(f"Circuit breaker reset failed: {e}")
+            logger.exception("Circuit breaker reset failed")
             raise HTTPException(status_code=500, detail=str(e))
 
     return app

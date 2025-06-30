@@ -146,7 +146,7 @@ class TestCircuitBreakers:
         )
 
     async def test_circuit_breaker_state_transitions(
-        self, circuit_breaker_config, _fault_injector
+        self, circuit_breaker_config, fault_injector
     ):
         """Test circuit breaker state transitions."""
         circuit_breaker = CircuitBreaker(circuit_breaker_config)
@@ -219,7 +219,7 @@ class TestCircuitBreakers:
             try:
                 await circuit_breaker.call(intermittent_service)
                 successes += 1
-            except Exception as e:
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
                 if "Circuit breaker is open" in str(e):
                     circuit_breaker_activations += 1
                 else:
@@ -323,7 +323,9 @@ class TestCircuitBreakers:
             return {"status": "success"}
 
         # First call with ValueError - should not count toward circuit breaker
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError, match="Value error - should not trigger circuit breaker"
+        ):
             await circuit_breaker.call(service_with_different_errors)
 
         assert circuit_breaker.state == CircuitState.CLOSED
@@ -482,7 +484,7 @@ class TestCircuitBreakers:
             for attempt in range(max_retries + 1):
                 try:
                     result = await circuit_breaker.call(unreliable_service)
-                except Exception as e:
+                except (ConnectionError, RuntimeError, TimeoutError) as e:
                     last_exception = e
 
                     # Don't retry if circuit breaker is open

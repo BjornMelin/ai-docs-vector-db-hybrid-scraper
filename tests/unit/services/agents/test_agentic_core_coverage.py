@@ -4,7 +4,7 @@ This test module provides thorough coverage of the agentic core functionality,
 focusing on behavior validation rather than implementation details.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 

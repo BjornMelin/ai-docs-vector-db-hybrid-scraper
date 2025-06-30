@@ -14,18 +14,22 @@ from hypothesis import given, strategies as st
 from pydantic import TypeAdapter, ValidationError
 
 # Import all configuration models
-from src.config.core import (
+from src.config import (
     BrowserUseConfig,
     CacheConfig,
     ChunkingConfig,
     CircuitBreakerConfig,
     Config,
     Crawl4AIConfig,
+    CrawlProvider,
     DeploymentConfig,
     EmbeddingConfig,
+    EmbeddingProvider,
+    Environment,
     FastEmbedConfig,
     FirecrawlConfig,
     HyDEConfig,
+    LogLevel,
     MonitoringConfig,
     ObservabilityConfig,
     OpenAIConfig,
@@ -38,7 +42,6 @@ from src.config.core import (
     get_config,
     reset_config,
 )
-from src.config.enums import CrawlProvider, EmbeddingProvider, Environment, LogLevel
 
 
 # Hypothesis strategies for property-based testing

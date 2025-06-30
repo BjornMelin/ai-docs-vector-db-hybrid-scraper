@@ -54,15 +54,13 @@ def mock_client_manager():
 @pytest.fixture
 def mock_openai_client():
     """Create mock OpenAI client."""
-    client = AsyncMock()
-    return client
+    return AsyncMock()
 
 
 @pytest.fixture
 async def embedding_manager(mock_config, mock_client_manager):
     """Create EmbeddingManager instance."""
-    manager = EmbeddingManager(config=mock_config, client_manager=mock_client_manager)
-    return manager
+    return EmbeddingManager(config=mock_config, client_manager=mock_client_manager)
 
 
 class TestEmbeddingManagerInitialization:

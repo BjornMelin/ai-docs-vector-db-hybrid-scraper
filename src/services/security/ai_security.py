@@ -535,8 +535,7 @@ class AISecurityValidator:
         """
         if isinstance(value, str):
             # Limit string length and remove dangerous patterns
-            clean_value = re.sub(r'[<>"\']', "", str(value))[:500]
-            return clean_value
+            return re.sub(r'[<>"\']', "", str(value))[:500]
         if isinstance(value, int | float | bool):
             return value
         if isinstance(value, list | tuple):

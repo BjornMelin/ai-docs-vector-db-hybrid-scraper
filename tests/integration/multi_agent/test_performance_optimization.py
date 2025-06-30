@@ -8,25 +8,12 @@ import asyncio
 import statistics
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import datetime
+from typing import Any
 
 import pytest
 
-from src.infrastructure.client_manager import ClientManager
-from src.services.agents.agentic_orchestrator import (
-    AgenticOrchestrator,
-    ToolRequest,
-    ToolResponse,
-)
-from src.services.agents.core import BaseAgentDependencies, create_agent_dependencies
-from src.services.agents.dynamic_tool_discovery import (
-    DynamicToolDiscovery,
-    ToolCapability,
-    ToolCapabilityType,
-    ToolMetrics,
-)
+from src.services.agents.core import BaseAgentDependencies
 
 
 @dataclass
@@ -75,7 +62,7 @@ class PerformanceOptimizer:
         dependencies: BaseAgentDependencies,
     ) -> PerformanceMetrics:
         """Run baseline benchmark to establish performance baseline."""
-        start_time = datetime.now()
+        start_time = datetime.now(tz=timezone.utc)
 
         # Simple sequential processing (baseline)
         task_results = []
@@ -101,11 +88,11 @@ class PerformanceOptimizer:
                     task_results.append(len(tools) > 0)
                     task_latencies.append((time.time() - task_start) * 1000)
 
-            except Exception:
+            except (TimeoutError, ConnectionError, RuntimeError, ValueError):
                 task_results.append(False)
                 task_latencies.append((time.time() - task_start) * 1000)
 
-        end_time = datetime.now()
+        end_time = datetime.now(tz=timezone.utc)
         duration = (end_time - start_time).total_seconds()
 
         baseline_metrics = PerformanceMetrics(
@@ -135,7 +122,7 @@ class PerformanceOptimizer:
         optimization_strategy: str = "parallel_with_coordination",
     ) -> PerformanceMetrics:
         """Run optimized benchmark using multi-agent coordination."""
-        start_time = datetime.now()
+        start_time = datetime.now(tz=timezone.utc)
 
         if optimization_strategy == "parallel_with_coordination":
             return await self._parallel_coordinated_execution(
@@ -192,7 +179,7 @@ class PerformanceOptimizer:
                     "latency_ms": (time.time() - task_start) * 1000,
                     "agent_type": "discovery",
                 }
-            except Exception:
+            except (TimeoutError, ConnectionError, RuntimeError, ValueError):
                 return {
                     "success": False,
                     "latency_ms": (time.time() - task_start) * 1000,
@@ -203,13 +190,13 @@ class PerformanceOptimizer:
         tasks = [coordinated_task(agent, i) for i, agent in enumerate(agents)]
         results = await asyncio.gather(*tasks)
 
-        end_time = datetime.now()
+        end_time = datetime.now(tz=timezone.utc)
         duration = (end_time - start_time).total_seconds()
 
         success_results = [r["success"] for r in results]
         latencies = [r["latency_ms"] for r in results]
 
-        optimized_metrics = PerformanceMetrics(
+        return PerformanceMetrics(
             operation_name=f"optimized_{scenario.scenario_id}_parallel",
             start_time=start_time,
             end_time=end_time,
@@ -226,8 +213,6 @@ class PerformanceOptimizer:
             if len(latencies) > 5
             else (latencies[0] if latencies else 0),
         )
-
-        return optimized_metrics
 
     async def _hierarchical_optimized_execution(
         self,
@@ -269,7 +254,7 @@ class PerformanceOptimizer:
 
         coordination_results = await asyncio.gather(*coordination_tasks)
 
-        end_time = datetime.now()
+        end_time = datetime.now(tz=timezone.utc)
         duration = (end_time - start_time).total_seconds()
 
         # Combine results
@@ -311,6 +296,8 @@ class PerformanceOptimizer:
 
         # Create more tasks than agents to test load balancing
         total_tasks = len(agents) * 2
+        expected_task_count = total_tasks
+        assert expected_task_count > len(agents), "Should have more tasks than agents"
 
         # Distribute tasks adaptively
         async def adaptive_task_execution():
@@ -343,7 +330,7 @@ class PerformanceOptimizer:
 
         results = await adaptive_task_execution()
 
-        end_time = datetime.now()
+        end_time = datetime.now(tz=timezone.utc)
         duration = (end_time - start_time).total_seconds()
 
         # Process results
@@ -743,20 +730,20 @@ class TestPerformanceOptimizationScenarios:
             )
 
             # Sequential execution (baseline)
-            async def sequential_execution():
+            async def sequential_execution(config=load_config):
                 start_time = time.time()
                 results = []
 
-                test_agents = agent_pool[: load_config["agents"]]
+                test_agents = agent_pool[: config["agents"]]
 
                 for agent in test_agents:
-                    for task_id in range(load_config["tasks_per_agent"]):
+                    for task_id in range(config["tasks_per_agent"]):
                         if hasattr(agent, "orchestrate"):
                             response = await agent.orchestrate(
                                 f"load test task {task_id}",
                                 {
                                     "load_test": True,
-                                    "complexity": load_config["complexity"],
+                                    "complexity": config["complexity"],
                                     "sequential": True,
                                 },
                                 agent_dependencies,
@@ -767,7 +754,7 @@ class TestPerformanceOptimizationScenarios:
                                 f"load discovery {task_id}",
                                 {
                                     "load_test": True,
-                                    "complexity": load_config["complexity"],
+                                    "complexity": config["complexity"],
                                 },
                             )
                             results.append(len(tools) > 0)
@@ -781,21 +768,21 @@ class TestPerformanceOptimizationScenarios:
                 }
 
             # Parallel execution (optimized)
-            async def parallel_execution():
+            async def parallel_execution(config=load_config):
                 start_time = time.time()
 
-                test_agents = agent_pool[: load_config["agents"]]
+                test_agents = agent_pool[: config["agents"]]
 
                 # Create all tasks
                 all_tasks = []
                 for agent in test_agents:
-                    for task_id in range(load_config["tasks_per_agent"]):
+                    for task_id in range(config["tasks_per_agent"]):
                         if hasattr(agent, "orchestrate"):
                             task = agent.orchestrate(
                                 f"parallel load test {task_id}",
                                 {
                                     "load_test": True,
-                                    "complexity": load_config["complexity"],
+                                    "complexity": config["complexity"],
                                     "parallel": True,
                                 },
                                 agent_dependencies,
@@ -805,7 +792,7 @@ class TestPerformanceOptimizationScenarios:
                                 f"parallel discovery {task_id}",
                                 {
                                     "load_test": True,
-                                    "complexity": load_config["complexity"],
+                                    "complexity": config["complexity"],
                                     "parallel": True,
                                 },
                             )

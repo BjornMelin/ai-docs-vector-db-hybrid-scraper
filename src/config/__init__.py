@@ -13,6 +13,8 @@ while maintaining full backward compatibility for existing code.
 
 from typing import Any
 
+from pydantic import BaseModel
+
 # Import everything from the unified settings system
 from .settings import (
     # Enums
@@ -251,6 +253,74 @@ class ConfigMigrator:
     """Mock config migrator for backward compatibility."""
 
 
+class AutoDetectedServices:
+    """Mock auto-detected services for backward compatibility."""
+
+
+class DetectedEnvironment:
+    """Mock detected environment for backward compatibility."""
+
+
+class DetectedService(BaseModel):
+    """Mock detected service for backward compatibility."""
+
+    name: str = "mock_service"
+    url: str = "http://localhost"
+    healthy: bool = True
+
+
+class EnvironmentDetector:
+    """Mock environment detector for backward compatibility."""
+
+
+# AutoDetectionConfig is imported from settings.py
+
+
+class ReloadOperation:
+    """Mock reload operation for backward compatibility."""
+
+
+class ReloadTrigger:
+    """Mock reload trigger for backward compatibility."""
+
+
+class ConfigReloader:
+    """Mock config reloader for backward compatibility."""
+
+
+class ReloadStatus:
+    """Mock reload status for backward compatibility."""
+
+
+class ConfigDriftDetector:
+    """Mock config drift detector for backward compatibility."""
+
+
+class ConfigSnapshot:
+    """Mock config snapshot for backward compatibility."""
+
+
+class DriftEvent:
+    """Mock drift event for backward compatibility."""
+
+
+class DriftSeverity:
+    """Mock drift severity for backward compatibility."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class DriftType:
+    """Mock drift type for backward compatibility."""
+
+    ADDED = "added"
+    REMOVED = "removed"
+    MODIFIED = "modified"
+
+
 # Mock functions for backward compatibility
 def default_tier_manager() -> TierManager:
     """Mock default tier manager."""
@@ -308,12 +378,18 @@ def retry_config_operation(*args: Any, **kwargs: Any) -> None:
     """Mock retry operation."""
 
 
+def get_config_reloader():
+    """Mock config reloader getter."""
+    return ConfigManager()
+
+
 # Update __all__ to include everything for full backward compatibility
 __all__ = [
-    # Enums (imported from settings)
+    # Enums
     "ABTestVariant",
     "ApplicationMode",
-    # Configuration classes (imported from settings)
+    # Auto-detection classes
+    "AutoDetectedServices",
     "AutoDetectionConfig",
     "BrowserUseConfig",
     "CacheConfig",
@@ -321,27 +397,35 @@ __all__ = [
     "ChunkingConfig",
     "ChunkingStrategy",
     "CircuitBreakerConfig",
-    "Config",  # Alias for Settings
-    # Mock classes for backward compatibility (defined in this module)
+    "Config",
+    "ConfigDriftDetector",
     "ConfigError",
     "ConfigFileWatchError",
     "ConfigLoadError",
     "ConfigManager",
     "ConfigMigrator",
     "ConfigReloadError",
+    "ConfigReloader",
+    "ConfigSnapshot",
     "ConfigValidationError",
     "Crawl4AIConfig",
     "CrawlProvider",
     "DatabaseConfig",
     "DeploymentConfig",
     "DeploymentTier",
+    "DetectedEnvironment",
+    "DetectedService",
     "DocumentStatus",
     "DocumentationSite",
     "DriftDetectionConfig",
+    "DriftEvent",
+    "DriftSeverity",
+    "DriftType",
     "EmbeddingConfig",
     "EmbeddingModel",
     "EmbeddingProvider",
     "Environment",
+    "EnvironmentDetector",
     "ErrorContext",
     "FastEmbedConfig",
     "FirecrawlConfig",
@@ -379,37 +463,43 @@ __all__ = [
     "QueryType",
     "RAGConfig",
     "ReRankingConfig",
+    "ReloadOperation",
+    "ReloadStatus",
+    "ReloadTrigger",
     "RetryableConfigOperation",
     "SQLAlchemyConfig",
     "SafeConfigLoader",
     "SearchAccuracy",
     "SearchStrategy",
     "SecurityConfig",
+    # Main configuration class
     "Settings",
     "TaskQueueConfig",
+    # Mock classes for compatibility
     "TierCapability",
     "TierConfiguration",
     "TierManager",
-    # Legacy compatibility aliases (defined in this module)
+    # Legacy compatibility
     "UnifiedConfig",
     "VectorType",
-    # Mock functions for backward compatibility (defined in this module)
     "async_error_context",
     "create_and_load_config_async",
-    # Configuration management functions (imported from settings)
     "create_enterprise_config",
     "create_migration_compatibility_wrapper",
     "create_settings_from_env",
+    # Mode-specific factories
     "create_simple_config",
+    # Mock functions for compatibility
     "default_tier_manager",
     "get_cache_config",
-    "get_config",  # Alias for get_settings
+    "get_config",
     "get_config_manager",
+    "get_config_reloader",
     "get_config_with_auto_detection",
     "get_current_tier_config",
     "get_degradation_handler",
     "get_embedding_config",
-    # Legacy compatibility functions (defined in this module)
+    # Legacy functions
     "get_legacy_config",
     "get_legacy_config_with_auto_detection",
     "get_migration_status",
@@ -417,23 +507,25 @@ __all__ = [
     "get_modern_config_with_auto_detection",
     "get_openai_config",
     "get_performance_config",
+    # Convenience functions
     "get_qdrant_config",
     "get_security_config",
+    # Configuration management
     "get_settings",
     "handle_validation_error",
     "is_feature_enabled",
     "is_using_modern_config",
     "migrate_legacy_config",
     "migrate_to_modern_config",
-    "reset_config",  # Alias for reset_settings
+    "reset_config",
     "reset_legacy_config",
     "reset_modern_config",
     "reset_settings",
     "retry_config_operation",
-    "set_config",  # Alias for set_settings
+    "set_config",
     "set_config_manager",
     "set_legacy_config",
     "set_modern_config",
     "set_settings",
-    "settings",  # Global instance
+    "settings",
 ]

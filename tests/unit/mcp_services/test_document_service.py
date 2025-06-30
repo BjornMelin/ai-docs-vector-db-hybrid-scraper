@@ -72,14 +72,16 @@ class TestDocumentService:
         """Test that initialization logs success message with 5-tier capabilities."""
         service = DocumentService()
 
-        with patch.object(service, "_register_document_tools", new_callable=AsyncMock):
-            with caplog.at_level(logging.INFO):
-                await service.initialize(mock_client_manager)
+        with (
+            patch.object(service, "_register_document_tools", new_callable=AsyncMock),
+            caplog.at_level(logging.INFO),
+        ):
+            await service.initialize(mock_client_manager)
 
-                assert (
-                    "DocumentService initialized with 5-tier crawling capabilities"
-                    in caplog.text
-                )
+            assert (
+                "DocumentService initialized with 5-tier crawling capabilities"
+                in caplog.text
+            )
 
     async def test_register_document_tools_raises_error_when_not_initialized(self):
         """Test that tool registration raises error when service not initialized."""
@@ -104,7 +106,7 @@ class TestDocumentService:
             "content_intelligence": Mock(),
         }
 
-        for tool_name, mock_tool in mock_tools.items():
+        for mock_tool in mock_tools.values():
             mock_tool.register_tools = Mock()
 
         # Patch the tool imports
@@ -145,21 +147,23 @@ class TestDocumentService:
         service.client_manager = mock_client_manager
 
         # Mock tool modules
-        with patch.multiple(
-            "src.mcp_services.document_service",
-            document_management=Mock(register_tools=Mock()),
-            collections=Mock(register_tools=Mock()),
-            projects=Mock(register_tools=Mock()),
-            crawling=Mock(register_tools=Mock()),
-            content_intelligence=Mock(register_tools=Mock()),
+        with (
+            patch.multiple(
+                "src.mcp_services.document_service",
+                document_management=Mock(register_tools=Mock()),
+                collections=Mock(register_tools=Mock()),
+                projects=Mock(register_tools=Mock()),
+                crawling=Mock(register_tools=Mock()),
+                content_intelligence=Mock(register_tools=Mock()),
+            ),
+            caplog.at_level(logging.INFO),
         ):
-            with caplog.at_level(logging.INFO):
-                await service._register_document_tools()
+            await service._register_document_tools()
 
-                assert (
-                    "Registered document tools with intelligent crawling capabilities"
-                    in caplog.text
-                )
+            assert (
+                "Registered document tools with intelligent crawling capabilities"
+                in caplog.text
+            )
 
     def test_get_mcp_server_returns_configured_instance(self):
         """Test that get_mcp_server returns the configured FastMCP instance."""
@@ -216,20 +220,22 @@ class TestDocumentServiceCrawlingCapabilities:
         mock_crawling = Mock()
         mock_crawling.register_tools = Mock()
 
-        with patch("src.mcp_services.document_service.crawling", mock_crawling):
-            with patch.multiple(
+        with (
+            patch("src.mcp_services.document_service.crawling", mock_crawling),
+            patch.multiple(
                 "src.mcp_services.document_service",
                 document_management=Mock(register_tools=Mock()),
                 collections=Mock(register_tools=Mock()),
                 projects=Mock(register_tools=Mock()),
                 content_intelligence=Mock(register_tools=Mock()),
-            ):
-                await service._register_document_tools()
+            ),
+        ):
+            await service._register_document_tools()
 
-                # Verify crawling tools were registered (I3 research implementation)
-                mock_crawling.register_tools.assert_called_once_with(
-                    service.mcp, mock_client_manager
-                )
+            # Verify crawling tools were registered (I3 research implementation)
+            mock_crawling.register_tools.assert_called_once_with(
+                service.mcp, mock_client_manager
+            )
 
     async def test_content_intelligence_tool_registration(self, mock_client_manager):
         """Test that content intelligence tools are properly registered."""
@@ -240,23 +246,25 @@ class TestDocumentServiceCrawlingCapabilities:
         mock_content_intelligence = Mock()
         mock_content_intelligence.register_tools = Mock()
 
-        with patch(
-            "src.mcp_services.document_service.content_intelligence",
-            mock_content_intelligence,
-        ):
-            with patch.multiple(
+        with (
+            patch(
+                "src.mcp_services.document_service.content_intelligence",
+                mock_content_intelligence,
+            ),
+            patch.multiple(
                 "src.mcp_services.document_service",
                 document_management=Mock(register_tools=Mock()),
                 collections=Mock(register_tools=Mock()),
                 projects=Mock(register_tools=Mock()),
                 crawling=Mock(register_tools=Mock()),
-            ):
-                await service._register_document_tools()
+            ),
+        ):
+            await service._register_document_tools()
 
-                # Verify content intelligence tools were registered
-                mock_content_intelligence.register_tools.assert_called_once_with(
-                    service.mcp, mock_client_manager
-                )
+            # Verify content intelligence tools were registered
+            mock_content_intelligence.register_tools.assert_called_once_with(
+                service.mcp, mock_client_manager
+            )
 
     def test_service_instructions_contain_i3_research_features(self):
         """Test that service instructions reference I3 research features."""
@@ -347,23 +355,25 @@ class TestDocumentServiceProjectOrganization:
         mock_document_management = Mock()
         mock_document_management.register_tools = Mock()
 
-        with patch(
-            "src.mcp_services.document_service.document_management",
-            mock_document_management,
-        ):
-            with patch.multiple(
+        with (
+            patch(
+                "src.mcp_services.document_service.document_management",
+                mock_document_management,
+            ),
+            patch.multiple(
                 "src.mcp_services.document_service",
                 collections=Mock(register_tools=Mock()),
                 projects=Mock(register_tools=Mock()),
                 crawling=Mock(register_tools=Mock()),
                 content_intelligence=Mock(register_tools=Mock()),
-            ):
-                await service._register_document_tools()
+            ),
+        ):
+            await service._register_document_tools()
 
-                # Verify document management tools were registered
-                mock_document_management.register_tools.assert_called_once_with(
-                    service.mcp, mock_client_manager
-                )
+            # Verify document management tools were registered
+            mock_document_management.register_tools.assert_called_once_with(
+                service.mcp, mock_client_manager
+            )
 
     async def test_collection_management_capability(self):
         """Test that service supports collection management."""
@@ -422,19 +432,22 @@ class TestDocumentServiceErrorHandling:
             "Tool registration failed"
         )
 
-        with patch(
-            "src.mcp_services.document_service.document_management", mock_failing_tool
-        ):
-            with patch.multiple(
+        with (
+            patch(
+                "src.mcp_services.document_service.document_management",
+                mock_failing_tool,
+            ),
+            patch.multiple(
                 "src.mcp_services.document_service",
                 collections=Mock(register_tools=Mock()),
                 projects=Mock(register_tools=Mock()),
                 crawling=Mock(register_tools=Mock()),
                 content_intelligence=Mock(register_tools=Mock()),
-            ):
-                # Tool registration should raise the exception
-                with pytest.raises(Exception, match="Tool registration failed"):
-                    await service._register_document_tools()
+            ),
+        ):
+            # Tool registration should raise the exception
+            with pytest.raises(Exception, match="Tool registration failed"):
+                await service._register_document_tools()
 
     async def test_service_recovery_after_tool_registration_failure(
         self, mock_client_manager
@@ -533,7 +546,6 @@ class TestDocumentServiceIntegrationScenarios:
 
     async def test_service_supports_concurrent_access(self, mock_client_manager):
         """Test that service supports concurrent access patterns."""
-        import asyncio
 
         service = DocumentService()
 

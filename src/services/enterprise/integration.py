@@ -7,22 +7,26 @@ security framework, and observability platform.
 """
 
 import asyncio
+import contextlib
 import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
 
 from pydantic import BaseModel, Field
 
 from src.architecture.service_factory import BaseService
 from src.config.modern import Config
-from src.services.deployment.blue_green import BlueGreenDeployment
 from src.services.deployment.feature_flags import FeatureFlagManager
 from src.services.observability.performance import PerformanceMonitor
 from src.services.security.integration import SecurityManager
+
+
+if TYPE_CHECKING:
+    from src.services.deployment.blue_green import BlueGreenDeployment
 
 
 logger = logging.getLogger(__name__)
@@ -142,7 +146,7 @@ class HealthMonitor:
                     "details": {"reason": "health_check_exception", "error": str(e)},
                 }
             )
-            logger.exception(f"Health check failed for {self.service_name}: {e}")
+            logger.exception("Health check failed for {self.service_name}")
 
         # Update descriptor status
         self.descriptor.status = ServiceStatus(health_result["status"])
@@ -222,7 +226,8 @@ class ServiceDependencyGraph:
 
         def visit(node: str) -> None:
             if node in temp_visited:
-                raise ValueError(f"Circular dependency detected involving {node}")
+                msg = f"Circular dependency detected involving {node}"
+                raise ValueError(msg)
             if node in visited:
                 return
 
@@ -237,7 +242,7 @@ class ServiceDependencyGraph:
             result.append(node)
 
         # Visit all nodes
-        for service in self.graph.keys():
+        for service in self.graph:
             if service not in visited:
                 visit(service)
 
@@ -257,7 +262,7 @@ class ServiceDependencyGraph:
             if node in path:
                 # Found a cycle
                 cycle_start = path.index(node)
-                cycle = path[cycle_start:] + [node]
+                cycle = [*path[cycle_start:], node]
                 cycles.append(cycle)
                 return
 
@@ -272,7 +277,7 @@ class ServiceDependencyGraph:
 
             path.remove(node)
 
-        for service in self.graph.keys():
+        for service in self.graph:
             if service not in visited:
                 dfs(service)
 
@@ -319,8 +324,8 @@ class EnterpriseServiceRegistry:
     async def register_service(
         self,
         service: BaseService,
-        dependencies: list[str] = None,
-        config: dict[str, Any] = None,
+        dependencies: list[str] | None = None,
+        config: dict[str, Any] | None = None,
         **kwargs,
     ) -> None:
         """Register enterprise service with dependency tracking."""
@@ -351,7 +356,8 @@ class EnterpriseServiceRegistry:
     async def orchestrate_startup(self) -> None:
         """Start services in dependency order with health validation."""
         if self.is_orchestrating:
-            raise RuntimeError("Service orchestration already in progress")
+            msg = "Service orchestration already in progress"
+            raise RuntimeError(msg)
 
         self.is_orchestrating = True
 
@@ -363,12 +369,14 @@ class EnterpriseServiceRegistry:
             )
 
             if missing_deps:
-                raise ValueError(f"Missing service dependencies: {missing_deps}")
+                msg = f"Missing service dependencies: {missing_deps}"
+                raise ValueError(msg)
 
             # Detect circular dependencies
             cycles = self.dependency_graph.detect_circular_dependencies()
             if cycles:
-                raise ValueError(f"Circular dependencies detected: {cycles}")
+                msg = f"Circular dependencies detected: {cycles}"
+                raise ValueError(msg)
 
             # Resolve startup order
             self.startup_order = self.dependency_graph.resolve_startup_order()
@@ -386,7 +394,7 @@ class EnterpriseServiceRegistry:
             logger.info("Enterprise service orchestration completed successfully")
 
         except Exception as e:
-            logger.exception(f"Service orchestration failed: {e}")
+            logger.exception("Service orchestration failed")
             await self.coordinate_shutdown()
             raise
         finally:
@@ -399,10 +407,8 @@ class EnterpriseServiceRegistry:
         # Stop health monitoring
         if self.health_check_task:
             self.health_check_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.health_check_task
-            except asyncio.CancelledError:
-                pass
 
         # Shutdown services in reverse order
         for service_name in self.shutdown_order:
@@ -457,7 +463,8 @@ class EnterpriseServiceRegistry:
     async def validate_service_health(self, service_name: str) -> dict[str, Any]:
         """Perform detailed health validation for specific service."""
         if service_name not in self.health_monitors:
-            raise ValueError(f"Service {service_name} not registered")
+            msg = f"Service {service_name} not registered"
+            raise ValueError(msg)
 
         health_monitor = self.health_monitors[service_name]
         return await health_monitor.check_health()
@@ -484,14 +491,13 @@ class EnterpriseServiceRegistry:
                 logger.info(f"Service {service_name} started successfully")
             else:
                 descriptor.status = ServiceStatus.UNHEALTHY
-                raise RuntimeError(
-                    f"Service {service_name} failed health check: {health_result}"
-                )
+                msg = f"Service {service_name} failed health check: {health_result}"
+                raise RuntimeError(msg)
 
         except Exception as e:
             descriptor.status = ServiceStatus.FAILED
             descriptor.error_count += 1
-            logger.exception(f"Failed to start service {service_name}: {e}")
+            logger.exception("Failed to start service {service_name}")
             raise
 
     async def _stop_service(self, service_name: str) -> None:
@@ -512,7 +518,7 @@ class EnterpriseServiceRegistry:
         except Exception as e:
             descriptor.status = ServiceStatus.FAILED
             descriptor.error_count += 1
-            logger.exception(f"Failed to stop service {service_name}: {e}")
+            logger.exception("Failed to stop service {service_name}")
 
     async def _health_check_loop(self) -> None:
         """Background health monitoring for all services."""
@@ -523,14 +529,14 @@ class EnterpriseServiceRegistry:
                     try:
                         await self.health_monitors[service_name].check_health()
                     except Exception as e:
-                        logger.exception(f"Health check failed for {service_name}: {e}")
+                        logger.exception("Health check failed for {service_name}")
 
                 await asyncio.sleep(self.health_check_interval)
 
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.exception(f"Error in health check loop: {e}")
+                logger.exception("Error in health check loop")
                 await asyncio.sleep(self.health_check_interval)
 
 
@@ -587,7 +593,7 @@ class EnterpriseIntegrationManager:
 
         except Exception as e:
             self.integration_phase = IntegrationPhase.FAILED
-            logger.exception(f"Enterprise integration failed: {e}")
+            logger.exception("Enterprise integration failed")
             await self.cleanup_enterprise_features()
             raise
 
@@ -608,13 +614,13 @@ class EnterpriseIntegrationManager:
             logger.info("Enterprise feature cleanup completed")
 
         except Exception as e:
-            logger.exception(f"Error during enterprise cleanup: {e}")
+            logger.exception("Error during enterprise cleanup")
 
     async def get_integration_status(self) -> dict[str, Any]:
         """Get comprehensive integration status."""
         system_status = await self.service_registry.get_system_status()
 
-        integration_status = {
+        return {
             "integration_phase": self.integration_phase.value,
             "integration_uptime": (
                 time.time() - self.integration_start_time
@@ -629,8 +635,6 @@ class EnterpriseIntegrationManager:
                 "blue_green_deployment": self.deployment_manager is not None,
             },
         }
-
-        return integration_status
 
     async def _initialize_core_infrastructure(self) -> None:
         """Initialize core infrastructure components."""
@@ -675,15 +679,15 @@ class EnterpriseIntegrationManager:
         system_status = await self.service_registry.get_system_status()
 
         if system_status["health_summary"]["overall_status"] != "healthy":
-            raise RuntimeError(
-                "Enterprise integration validation failed: unhealthy services"
-            )
+            msg = "Enterprise integration validation failed: unhealthy services"
+            raise RuntimeError(msg)
 
         # Validate security framework
         if self.security_manager:
             security_status = await self.security_manager.get_security_status()
             if not security_status.get("components_initialized", False):
-                raise RuntimeError("Security framework validation failed")
+                msg = "Security framework validation failed"
+                raise RuntimeError(msg)
 
         logger.info("Enterprise integration validation passed")
 

@@ -420,9 +420,7 @@ class ComponentHealthAnalyzer:
         avg_deviation = sum(deviations) / len(deviations)
 
         # Convert to health score (1.0 = perfect health, 0.0 = critical)
-        health_score = max(0.0, 1.0 - avg_deviation)
-
-        return health_score
+        return max(0.0, 1.0 - avg_deviation)
 
     def _determine_health_status(self, health_score: float) -> ComponentHealth:
         """Determine health status based on health score."""
@@ -596,7 +594,7 @@ class ComponentHealthAnalyzer:
         # Calculate trends
         health_scores = [assessment.health_score for assessment in history[-20:]]
 
-        patterns = {
+        return {
             "average_health_score": sum(health_scores) / len(health_scores),
             "health_trend": "improving"
             if health_scores[-1] > health_scores[0]
@@ -611,8 +609,6 @@ class ComponentHealthAnalyzer:
             ),  # Last day
             "common_risk_factors": self._find_common_risk_factors(history),
         }
-
-        return patterns
 
     def _find_common_risk_factors(
         self, history: list[ComponentHealthAssessment]
@@ -670,7 +666,7 @@ class PredictiveMaintenanceScheduler:
         try:
             await self.continuous_prediction_loop()
         except Exception as e:
-            logger.exception(f"Predictive maintenance monitoring failed: {e}")
+            logger.exception("Predictive maintenance monitoring failed")
             self.monitoring_enabled = False
             raise
 
@@ -721,7 +717,7 @@ class PredictiveMaintenanceScheduler:
                     )
 
             except Exception as e:
-                logger.exception(f"Error in predictive maintenance loop: {e}")
+                logger.exception("Error in predictive maintenance loop")
 
             # Wait for next cycle
             await asyncio.sleep(self.prediction_interval)
@@ -1003,7 +999,7 @@ class PredictiveMaintenanceScheduler:
             return execution
 
         except Exception as e:
-            logger.exception(f"Maintenance execution failed: {e}")
+            logger.exception("Maintenance execution failed")
             execution.status = "failed"
             execution.success = False
             execution.end_time = datetime.utcnow()

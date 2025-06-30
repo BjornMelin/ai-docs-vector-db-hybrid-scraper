@@ -123,7 +123,6 @@ def mock_embedding_service():
         """Generate deterministic mock embedding based on text."""
         # Use text hash for deterministic results
         seed = hash(text) % 1000000
-
         random.seed(seed)
         embedding = [random.uniform(-1, 1) for _ in range(1536)]
         # Normalize to unit vector
@@ -232,7 +231,7 @@ def performance_monitor():
                 result = await operation(*args, **kwargs)
                 success = True
                 error = None
-            except Exception as e:  # noqa: BLE001
+            except (ImportError, AttributeError, RuntimeError) as e:
                 result = None
                 success = False
                 error = str(e)
@@ -317,7 +316,6 @@ async def isolated_test_environment():
 
         async def cleanup(self):
             """Clean up test environment."""
-
             with contextlib.suppress(Exception):
                 shutil.rmtree(self.temp_dir, ignore_errors=True)
 
@@ -326,7 +324,7 @@ async def isolated_test_environment():
                     if not task.done():
                         task.cancel()
                         await asyncio.sleep(0.1)
-                except Exception:
+                except (ImportError, AttributeError, RuntimeError):
                     pass
 
     env = IsolatedEnvironment()
@@ -375,7 +373,7 @@ def ai_test_utilities():
                 msg = f"Dimension mismatch: {len(vec1)} vs {len(vec2)}"
                 raise ValueError(msg)
 
-            dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=False))
+            dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=True))
             norm1 = sum(a * a for a in vec1) ** 0.5
             norm2 = sum(b * b for b in vec2) ** 0.5
 

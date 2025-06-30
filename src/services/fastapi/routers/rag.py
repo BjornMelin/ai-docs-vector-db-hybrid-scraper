@@ -62,8 +62,7 @@ async def generate_answer(
 
     try:
         # Use function-based dependency injection for RAG generation
-        response = await generate_rag_answer(request)
-        return response
+        return await generate_rag_answer(request)
 
     except Exception as e:
         logger.exception("RAG answer generation failed")
@@ -126,8 +125,7 @@ async def clear_cache(
 
     """
     try:
-        result = await clear_rag_cache(rag_generator)
-        return result
+        return await clear_rag_cache(rag_generator)
     except Exception as e:
         logger.exception("Failed to clear RAG cache")
         raise HTTPException(

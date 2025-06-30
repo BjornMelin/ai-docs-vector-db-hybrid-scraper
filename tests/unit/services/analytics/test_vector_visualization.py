@@ -1,6 +1,6 @@
 """Tests for vector embeddings visualization functionality."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -32,8 +32,7 @@ def visualization_engine(mock_config):
         "src.services.analytics.vector_visualization.get_config",
         return_value=mock_config,
     ):
-        engine = VectorVisualizationEngine()
-        return engine
+        return VectorVisualizationEngine()
 
 
 @pytest.fixture
@@ -47,63 +46,59 @@ async def initialized_engine(visualization_engine):
 def sample_embeddings():
     """Create sample embeddings for testing."""
     # Create diverse embeddings to test clustering
-    np.random.seed(42)  # For reproducible tests
+    rng = np.random.default_rng(42)  # For reproducible tests
 
     # Cluster 1: Similar embeddings around [0.5, 0.5, ...]
-    cluster1 = np.random.normal(0.5, 0.1, (10, 768))
+    cluster1 = rng.normal(0.5, 0.1, (10, 768))
 
     # Cluster 2: Similar embeddings around [-0.5, -0.5, ...]
-    cluster2 = np.random.normal(-0.5, 0.1, (10, 768))
+    cluster2 = rng.normal(-0.5, 0.1, (10, 768))
 
     # Cluster 3: Similar embeddings around [0.0, 1.0, ...]
-    cluster3 = np.random.normal(0.0, 0.1, (10, 768))
-    cluster3[:, 1] = np.random.normal(1.0, 0.1, 10)
+    cluster3 = rng.normal(0.0, 0.1, (10, 768))
+    cluster3[:, 1] = rng.normal(1.0, 0.1, 10)
 
     # Combine all clusters
-    embeddings = np.vstack([cluster1, cluster2, cluster3])
-
-    return embeddings
+    return np.vstack([cluster1, cluster2, cluster3])
 
 
 @pytest.fixture
 def sample_documents():
     """Create sample documents corresponding to embeddings."""
-    documents = []
-
     # Documents for cluster 1 (machine learning topics)
-    for i in range(10):
-        documents.append(
-            {
-                "id": f"ml_{i}",
-                "text": f"Machine learning algorithm {i} for data analysis",
-                "metadata": {
-                    "category": "machine_learning",
-                    "difficulty": "intermediate",
-                },
-            }
-        )
+    ml_docs = [
+        {
+            "id": f"ml_{i}",
+            "text": f"Machine learning algorithm {i} for data analysis",
+            "metadata": {
+                "category": "machine_learning",
+                "difficulty": "intermediate",
+            },
+        }
+        for i in range(10)
+    ]
 
     # Documents for cluster 2 (programming topics)
-    for i in range(10):
-        documents.append(
-            {
-                "id": f"prog_{i}",
-                "text": f"Programming language tutorial {i} for beginners",
-                "metadata": {"category": "programming", "difficulty": "beginner"},
-            }
-        )
+    prog_docs = [
+        {
+            "id": f"prog_{i}",
+            "text": f"Programming language tutorial {i} for beginners",
+            "metadata": {"category": "programming", "difficulty": "beginner"},
+        }
+        for i in range(10)
+    ]
 
     # Documents for cluster 3 (data science topics)
-    for i in range(10):
-        documents.append(
-            {
-                "id": f"ds_{i}",
-                "text": f"Data science methodology {i} for research",
-                "metadata": {"category": "data_science", "difficulty": "advanced"},
-            }
-        )
+    ds_docs = [
+        {
+            "id": f"ds_{i}",
+            "text": f"Data science methodology {i} for research",
+            "metadata": {"category": "data_science", "difficulty": "advanced"},
+        }
+        for i in range(10)
+    ]
 
-    return documents
+    return ml_docs + prog_docs + ds_docs
 
 
 class TestVectorVisualizationModels:
@@ -299,7 +294,7 @@ class TestVectorVisualizationEngine:
             sample_embeddings
         )  # Some points might not have cluster assignments
         assert all(
-            isinstance(cluster_id, (int, np.integer)) for cluster_id in cluster_ids
+            isinstance(cluster_id, int | np.integer) for cluster_id in cluster_ids
         )
         if cluster_ids:  # Only check min if we have cluster IDs
             assert min(cluster_ids) >= 0
@@ -318,7 +313,8 @@ class TestVectorVisualizationEngine:
     ):
         """Test similarity calculation via compare_query_embeddings."""
         # Test with query vector (similar to first cluster)
-        query_vector = np.random.normal(0.5, 0.05, 768)
+        rng = np.random.default_rng(42)
+        query_vector = rng.normal(0.5, 0.05, 768)
 
         # Convert to required format
         query_embeddings = [query_vector.tolist()]
@@ -420,6 +416,11 @@ class TestVectorVisualizationEngine:
         points = visualization["points"]
         clusters = visualization["clusters"]
 
+        # Verify clusters structure
+        assert isinstance(clusters, list), "Clusters should be a list"
+        for cluster in clusters:
+            assert "center" in cluster, "Each cluster should have a center"
+
         # Check 3D coordinates - points are dictionaries now
         for point in points:
             assert isinstance(point, dict)
@@ -431,7 +432,8 @@ class TestVectorVisualizationEngine:
         self, initialized_engine, sample_embeddings, sample_documents
     ):
         """Test visualization with query vector."""
-        query_vector = np.random.normal(0.5, 0.05, 768)  # Similar to cluster 1
+        rng = np.random.default_rng(42)
+        query_vector = rng.normal(0.5, 0.05, 768)  # Similar to cluster 1
 
         # Convert to required format
         embeddings_list = sample_embeddings.tolist()
@@ -552,7 +554,6 @@ class TestVectorVisualizationEngine:
         assert "quality_metrics" in visualization
 
         # Test that the data can be serialized (equivalent to export)
-        import json
 
         try:
             # Data should already be in serializable format (dictionaries)
@@ -571,6 +572,7 @@ class TestVectorVisualizationEngine:
 
     async def test_error_handling(self, initialized_engine):
         """Test error handling."""
+        rng = np.random.default_rng(42)
         # Test with empty embeddings
         result = await initialized_engine.create_embedding_visualization(
             embeddings=[], texts=[], method="pca", dimensions=2
@@ -579,7 +581,7 @@ class TestVectorVisualizationEngine:
         assert "required" in result["error"].lower()
 
         # Test with mismatched embeddings and documents
-        embeddings = np.random.random((5, 768)).tolist()
+        embeddings = rng.random((5, 768)).tolist()
         texts = ["test"]  # Only 1 text for 5 embeddings
 
         result = await initialized_engine.create_embedding_visualization(
@@ -628,8 +630,9 @@ class TestVectorVisualizationEngine:
 
     async def test_large_dataset_handling(self, initialized_engine):
         """Test handling of large datasets."""
+        rng = np.random.default_rng(42)
         # Create dataset larger than max_points
-        large_embeddings = np.random.random((1200, 768)).tolist()
+        large_embeddings = rng.random((1200, 768)).tolist()
         large_texts = [f"Document {i}" for i in range(1200)]
         large_metadata = [{"id": f"doc_{i}"} for i in range(1200)]
 

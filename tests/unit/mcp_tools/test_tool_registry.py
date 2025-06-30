@@ -34,7 +34,7 @@ class TestRegisterAllTools:
     @pytest.fixture
     def mock_tool_modules(self):
         """Create mock tool modules with register_tools functions."""
-        modules = {
+        return {
             "search": Mock(register_tools=Mock()),
             "documents": Mock(register_tools=Mock()),
             "embeddings": Mock(register_tools=Mock()),
@@ -52,7 +52,6 @@ class TestRegisterAllTools:
             "utilities": Mock(register_tools=Mock()),
             "content_intelligence": Mock(register_tools=Mock()),
         }
-        return modules
 
     @pytest.mark.asyncio
     async def test_registers_all_tool_modules(
@@ -437,7 +436,7 @@ class TestModuleRegistrationPatterns:
     @pytest.fixture
     def mock_tool_modules(self):
         """Create mock tool modules with register_tools functions."""
-        modules = {
+        return {
             "search": Mock(register_tools=Mock()),
             "documents": Mock(register_tools=Mock()),
             "embeddings": Mock(register_tools=Mock()),
@@ -455,7 +454,6 @@ class TestModuleRegistrationPatterns:
             "utilities": Mock(register_tools=Mock()),
             "content_intelligence": Mock(register_tools=Mock()),
         }
-        return modules
 
     @pytest.fixture
     def sample_tool_module(self):
@@ -524,7 +522,7 @@ class TestErrorScenarios:
     @pytest.fixture
     def mock_tool_modules(self):
         """Create mock tool modules with register_tools functions."""
-        modules = {
+        return {
             "search": Mock(register_tools=Mock()),
             "documents": Mock(register_tools=Mock()),
             "embeddings": Mock(register_tools=Mock()),
@@ -542,7 +540,6 @@ class TestErrorScenarios:
             "utilities": Mock(register_tools=Mock()),
             "content_intelligence": Mock(register_tools=Mock()),
         }
-        return modules
 
     @pytest.mark.asyncio
     async def test_handles_import_error(self, mock_mcp, mock_client_manager, _caplog):
@@ -608,7 +605,7 @@ class TestLoggingBehavior:
     @pytest.fixture
     def mock_tool_modules(self):
         """Create mock tool modules with register_tools functions."""
-        modules = {
+        return {
             "search": Mock(register_tools=Mock()),
             "documents": Mock(register_tools=Mock()),
             "embeddings": Mock(register_tools=Mock()),
@@ -626,7 +623,6 @@ class TestLoggingBehavior:
             "utilities": Mock(register_tools=Mock()),
             "content_intelligence": Mock(register_tools=Mock()),
         }
-        return modules
 
     @pytest.mark.asyncio
     async def test_logger_name_is_correct(

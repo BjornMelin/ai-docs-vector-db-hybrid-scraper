@@ -59,9 +59,8 @@ class MinimalEmbeddingTestUtils:
             Cosine similarity score (-1 to 1)
         """
         if len(vec1) != len(vec2):
-            raise ValueError(
-                f"Vector dimensions don't match: {len(vec1)} vs {len(vec2)}"
-            )
+            msg = f"Vector dimensions don't match: {len(vec1)} vs {len(vec2)}"
+            raise ValueError(msg)
 
         # Calculate dot product
         dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=False))

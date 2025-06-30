@@ -1234,15 +1234,13 @@ class DocumentChunker:
             for child in node.children:
                 if child.type == ":":
                     sig_end = child.start_byte
-                    signature = content[node.start_byte : sig_end].strip()
-                    return signature
+                    return content[node.start_byte : sig_end].strip()
         elif language in ["javascript", "typescript"]:
             # Find the opening brace of the function body
             for child in node.children:
                 if child.type == "statement_block":
                     sig_end = child.start_byte
-                    signature = content[node.start_byte : sig_end].strip()
-                    return signature
+                    return content[node.start_byte : sig_end].strip()
 
         # Fallback: just get the first line
         first_line_end = content.find("\n", node.start_byte)

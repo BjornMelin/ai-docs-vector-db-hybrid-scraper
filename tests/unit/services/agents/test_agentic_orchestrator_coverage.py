@@ -4,7 +4,6 @@ This test module provides thorough coverage of the AgenticOrchestrator functiona
 focusing on autonomous decision-making, tool composition, and error handling.
 """
 
-from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -103,7 +102,7 @@ class TestAgenticOrchestrator:
             result = await orchestrator._analyze_query_intent(query, state)
             assert isinstance(result, dict)
             assert "intent" in result
-            assert isinstance(result["confidence"], (int, float))
+            assert isinstance(result["confidence"], int | float)
 
     @pytest.mark.asyncio
     async def test_orchestrator_select_tools(self):
@@ -328,7 +327,7 @@ class TestOrchestrateTools:
                 result = await orchestrate_tools(query, mock_client_manager)
                 # If it returns a result, it should be an error response
                 assert isinstance(result, dict)
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError) as e:
                 # If it raises, that's also acceptable error handling
                 assert "error" in str(e).lower() or "orchestration" in str(e).lower()
 
@@ -421,7 +420,6 @@ class TestOrchestratorIntegration:
     @pytest.mark.asyncio
     async def test_orchestrator_concurrent_queries(self):
         """Test orchestrator handling concurrent queries."""
-        import asyncio
 
         deps = BaseAgentDependencies(client_manager=MagicMock(), config=MagicMock())
 
@@ -442,4 +440,4 @@ class TestOrchestratorIntegration:
         # All queries should complete successfully
         assert len(results) == 3
         for result in results:
-            assert isinstance(result, dict) or isinstance(result, Exception)
+            assert isinstance(result, dict | Exception)

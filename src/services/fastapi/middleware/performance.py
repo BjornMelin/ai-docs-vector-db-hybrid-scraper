@@ -477,7 +477,7 @@ async def _warm_services():
         logger.info("Service warm-up completed")
 
     except Exception as e:
-        logger.exception(f"Service warm-up failed: {e}")
+        logger.exception("Service warm-up failed")
 
 
 async def _cleanup_services():

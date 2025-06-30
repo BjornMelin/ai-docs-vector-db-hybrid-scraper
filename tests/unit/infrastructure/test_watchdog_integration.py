@@ -162,7 +162,7 @@ class TestWatchdogIntegration:
                 # Simulate config reload that fails
                 msg = "Invalid configuration format"
                 raise ValueError(msg)
-            except Exception:
+            except (TimeoutError, ConnectionError, RuntimeError, ValueError):
                 error_count += 1
                 # In real implementation, this would be logged
                 # logger.error(f"Config reload failed: {e}")
@@ -214,7 +214,7 @@ class TestWatchdogIntegration:
         mock_observer = MagicMock()
         mock_observer.is_alive.return_value = True
 
-        async def shutdown_watcher(observer, timeout=5.0):  # noqa: ASYNC109
+        async def shutdown_watcher(observer, timeout=5.0):
             """Gracefully shutdown file watcher."""
             observer.stop()
 

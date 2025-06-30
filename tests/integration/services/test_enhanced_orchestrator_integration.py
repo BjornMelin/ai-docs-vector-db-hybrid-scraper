@@ -1,8 +1,16 @@
 """Integration tests for enhanced query processing orchestrator with portfolio features."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
+
+
+try:
+    import numpy as np
+except ImportError:
+    np = None
+
+import random
 
 from src.services.analytics.search_dashboard import SearchAnalyticsDashboard
 from src.services.analytics.vector_visualization import VectorVisualizationEngine
@@ -223,12 +231,16 @@ class TestEnhancedOrchestratorIntegration:
         result = await orchestrator.search(request)
 
         # Simulate embeddings for visualization
-        import numpy as np
-
-        np.random.seed(42)
-
-        # Create sample embeddings and documents based on search results
-        embeddings = np.random.random((len(result.results), 768))
+        if np is not None:
+            rng = np.random.default_rng(42)
+            # Create sample embeddings and documents based on search results
+            embeddings = rng.random((len(result.results), 768))
+        else:
+            rng = random.Random(42)
+            # Create sample embeddings using regular random
+            embeddings = [
+                [rng.random() for _ in range(768)] for _ in range(len(result.results))
+            ]
         documents = [
             {
                 "id": doc["id"],
@@ -253,7 +265,7 @@ class TestEnhancedOrchestratorIntegration:
             assert len(points) == len(result.results)
 
             # Test similarity analysis
-            query_embedding = np.random.random(768)
+            query_embedding = rng.random(768)
             similar_relations = await viz_engine.find_similar_vectors(
                 embeddings=embeddings,
                 documents=documents,
@@ -337,9 +349,10 @@ class TestEnhancedOrchestratorIntegration:
         assert len(top_queries) > 0
 
         # Test visualization of aggregated results
-        import numpy as np
-
-        np.random.seed(42)
+        if np is not None:
+            rng = np.random.default_rng(42)
+        else:
+            rng = random.Random(42)
 
         # Simulate embeddings for all results
         all_documents = []
@@ -354,7 +367,13 @@ class TestEnhancedOrchestratorIntegration:
                 )
 
         if len(all_documents) > 0:
-            embeddings = np.random.random((len(all_documents), 768))
+            if np is not None:
+                embeddings = rng.random((len(all_documents), 768))
+            else:
+                embeddings = [
+                    [rng.random() for _ in range(768)]
+                    for _ in range(len(all_documents))
+                ]
 
             visualization = await viz_engine.create_visualization(
                 embeddings=embeddings, documents=all_documents, dimension="2d"
@@ -467,7 +486,7 @@ class TestEnhancedOrchestratorIntegration:
                     "error": "Invalid query",
                 }
             )
-        except Exception:
+        except (TimeoutError, ConnectionError, RuntimeError, ValueError):
             # Should not propagate unhandled exceptions
             pass
 

@@ -40,8 +40,8 @@ class TestAPISecurityFramework:
 
         for payload in injection_payloads:
             # Test search endpoint with malicious SQL
+            validator = AISecurityValidator()
             with pytest.raises(ValueError, match="Invalid input detected"):
-                validator = AISecurityValidator()
                 await validator.validate_search_query(payload)
 
     @security_test
@@ -384,7 +384,8 @@ async def mock_security_validator():
 
         for pattern in dangerous_patterns:
             if pattern.lower() in value.lower():
-                raise SecurityException(f"Dangerous pattern detected: {pattern}")
+                msg = f"Dangerous pattern detected: {pattern}"
+                raise SecurityException(msg)
 
         return True
 

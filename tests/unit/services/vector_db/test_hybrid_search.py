@@ -33,7 +33,6 @@ from src.services.query_processing.models import (
 from src.services.query_processing.orchestrator import (
     SearchMode,
     SearchPipeline,
-    SearchRequest as AdvancedSearchRequest,
     SearchResult as AdvancedSearchResult,
 )
 from src.services.vector_db.hybrid_search import HybridSearchService

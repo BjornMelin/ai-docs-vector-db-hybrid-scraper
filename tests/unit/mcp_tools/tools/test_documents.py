@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from src.config.enums import ChunkingStrategy
+from src.config.settings import ChunkingStrategy
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
@@ -232,7 +232,7 @@ class TestAddDocument:
                 await tool_func(sample_document_request, mock_context)
                 msg = "Expected ValueError to be raised"
                 raise AssertionError(msg)
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError) as e:
                 # Verify error is propagated correctly
                 assert "URL not allowed" in str(e)
 
@@ -333,7 +333,7 @@ class TestAddDocument:
                 await tool_func(sample_document_request, mock_context)
                 msg = "Expected Exception to be raised"
                 raise AssertionError(msg)
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError) as e:
                 # Verify error relates to embedding failure
                 assert "Embedding service error" in str(e)
 
@@ -377,7 +377,7 @@ class TestAddDocument:
                 await tool_func(sample_document_request, mock_context)
                 msg = "Expected Exception to be raised"
                 raise AssertionError(msg)
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError) as e:
                 # Verify error relates to vector DB failure
                 assert "Vector DB storage error" in str(e)
 

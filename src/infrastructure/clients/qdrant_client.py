@@ -1,7 +1,7 @@
 """Qdrant client provider."""
 
 import logging
-from typing import List
+from typing import Any
 
 
 try:
@@ -63,7 +63,8 @@ class QdrantClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("Qdrant client is not available or unhealthy")
+            msg = "Qdrant client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         response = await self.client.get_collections()
         return response.collections
@@ -81,7 +82,8 @@ class QdrantClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("Qdrant client is not available or unhealthy")
+            msg = "Qdrant client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         try:
             await self.client.get_collection(collection_name)
@@ -107,7 +109,8 @@ class QdrantClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("Qdrant client is not available or unhealthy")
+            msg = "Qdrant client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.search(
             collection_name=collection_name,

@@ -13,14 +13,9 @@ The AgenticOrchestrator replaced a 950-line ToolCompositionEngine with ~200 line
 of native patterns, so tests focus on clean autonomous capabilities.
 """
 
-import asyncio
-import time
-from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
-from uuid import uuid4
 
 import pytest
-import respx
 from hypothesis import given, strategies as st
 
 from src.config import get_config
@@ -244,7 +239,7 @@ class TestToolDiscoveryAndSelection:
         assert "content_analysis" in tools
 
         # Verify tool metadata structure
-        for tool_name, tool_info in tools.items():
+        for tool_info in tools.values():
             assert "capabilities" in tool_info
             assert "performance" in tool_info
             assert "description" in tool_info
@@ -493,7 +488,8 @@ class TestAutonomousOrchestration:
         # Mock mixed success/failure
         async def mock_execute_tool(tool_name, context, deps):
             if tool_name == "failing_tool":
-                raise Exception("Tool execution failed")
+                msg = "Tool execution failed"
+                raise Exception(msg)
             return {
                 "tool": tool_name,
                 "result": f"{tool_name} result",
@@ -1001,7 +997,7 @@ class TestErrorHandlingAndEdgeCases:
                     )
                     # Should not crash, may succeed or fail gracefully
                     assert isinstance(response, ToolResponse)
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError) as e:
                 # If it does raise an exception, it should be handled gracefully
                 assert "error" in str(e).lower() or "invalid" in str(e).lower()
 

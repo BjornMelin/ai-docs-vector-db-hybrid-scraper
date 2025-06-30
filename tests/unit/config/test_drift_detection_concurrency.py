@@ -17,7 +17,7 @@ from typing import Any
 
 import pytest
 
-from src.config.drift_detection import (
+from src.config import (
     ConfigDriftDetector,
     ConfigSnapshot,
     DriftDetectionConfig,
@@ -300,8 +300,7 @@ class TestDriftDetectionConcurrency:
             # In a real async scenario, we might need to use asyncio locks
             # For now, the threading locks work fine with async code
             await asyncio.sleep(0.01)
-            summary = detector.get_drift_summary()
-            return summary
+            return detector.get_drift_summary()
 
         # Run multiple async operations
         tasks = [async_snapshot_operation() for _ in range(5)]

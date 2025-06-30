@@ -215,7 +215,7 @@ def mock_completion_items():
     ]
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def event_loop():
     """Create an event loop for async testing."""
     loop = asyncio.new_event_loop()

@@ -7,14 +7,18 @@ across the entire AI Documentation Vector DB Hybrid Scraper system.
 from __future__ import annotations
 
 import asyncio
+import shutil
 import tempfile
 import time
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 import pytest
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @dataclass
@@ -160,7 +164,7 @@ def journey_executor():
                         if isinstance(step_result, dict):
                             context.update(step_result.get("context_updates", {}))
 
-                    except Exception as e:
+                    except (ImportError, AttributeError, RuntimeError) as e:
                         error_msg = f"Step '{step.name}' failed: {e!s}"
                         errors.append(error_msg)
                         step_results.append(
@@ -265,13 +269,14 @@ def journey_executor():
                         await asyncio.sleep(1.0 * (attempt + 1))  # Exponential backoff
                         continue
                     raise
+            return None
 
         async def _perform_action(
             self,
             action: str,
             params: dict[str, Any],
             context: dict[str, Any],
-            timeout: float,  # noqa: ASYNC109
+            timeout: float,
         ) -> dict[str, Any]:
             """Perform the specified action."""
             # Replace context variables in params
@@ -885,16 +890,14 @@ def journey_data_manager():
                         await cleanup_func()
                     else:
                         cleanup_func()
-                except Exception as e:
+                except (RuntimeError, ValueError, OSError) as e:
                     print(f"Cleanup error: {e}")
 
             # Remove temp directories
-            import shutil
-
             for temp_dir in self.temp_dirs:
                 try:
                     shutil.rmtree(temp_dir)
-                except Exception as e:
+                except OSError as e:
                     print(f"Failed to remove temp dir {temp_dir}: {e}")
 
             # Clear artifacts

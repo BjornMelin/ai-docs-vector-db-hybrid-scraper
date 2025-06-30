@@ -24,6 +24,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from src.config.security import SecurityConfig
+from src.services.security.ai_security import AISecurityValidator
 from src.services.security.monitoring import SecurityMonitor
 from src.services.security.rate_limiter import DistributedRateLimiter
 
@@ -147,7 +148,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         except Exception as e:
             # Handle unexpected errors securely
-            logger.exception(f"Unexpected error in security middleware: {e}")
+            logger.exception("Unexpected error in security middleware")
 
             response = JSONResponse(
                 status_code=500, content={"error": "Internal server error"}
@@ -372,7 +373,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             HTTPException: If headers contain threats
         """
         # Check for header injection
-        for _name, value in headers.items():
+        for value in headers.values():
             if not isinstance(value, str):
                 continue
 

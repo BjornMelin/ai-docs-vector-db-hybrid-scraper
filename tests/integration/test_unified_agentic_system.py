@@ -5,13 +5,11 @@ and tool orchestration systems based on I4 research findings.
 """
 
 import asyncio
-from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.infrastructure.client_manager import ClientManager
-from src.services.agents.coordination import CoordinationStrategy, TaskDefinition
 from src.services.agents.integration import (
     AgenticSystemStatus,
     UnifiedAgenticSystem,
@@ -20,11 +18,8 @@ from src.services.agents.integration import (
 )
 from src.services.agents.tool_orchestration import (
     ToolCapability,
-    ToolDefinition,
     ToolExecutionMode,
-    ToolPriority,
 )
-from src.services.vector_db.agentic_manager import OptimizationStrategy
 
 
 @pytest.fixture
@@ -541,12 +536,12 @@ class TestErrorHandlingAndRecovery:
                 unified_system.vector_manager,
                 "create_agent_collection",
                 side_effect=Exception("Vector service down"),
-            ) as mock_vector,
+            ),
             patch.object(
                 unified_system.coordinator,
                 "execute_coordinated_workflow",
                 return_value={"success": True},
-            ) as mock_coord,
+            ),
         ):
             response = await unified_system.execute_unified_request(sample_request)
 

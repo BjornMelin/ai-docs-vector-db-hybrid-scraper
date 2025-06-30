@@ -4,8 +4,9 @@ Provides autonomous filtering capabilities with ML-powered filter optimization,
 adaptive filter selection, and intelligent query enhancement.
 """
 
+import datetime
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
@@ -530,16 +531,14 @@ def _classify_query_type(query: str) -> str:
 def _detect_entities(query: str) -> list[str]:
     """Detect named entities and important terms in query."""
     # Simple entity detection (can be enhanced with NLP models)
-    entities = []
     words = query.split()
 
-    for word in words:
-        if (word.istitle() and len(word) > 2) or (
-            word.upper() == word and len(word) > 2
-        ):  # Potential proper noun
-            entities.append(word)
-
-    return entities
+    return [
+        word
+        for word in words
+        if (word.istitle() and len(word) > 2)
+        or (word.upper() == word and len(word) > 2)  # Potential proper noun
+    ]
 
 
 def _detect_temporal_indicators(query: str) -> dict[str, Any]:
@@ -939,9 +938,7 @@ async def _generate_filter_optimization_insights(
 
 def _get_timestamp() -> str:
     """Get current timestamp."""
-    import datetime
-
-    return datetime.datetime.now().isoformat()
+    return datetime.datetime.now(tz=datetime.UTC).isoformat()
 
 
 async def _validate_filter_consistency(filters: list[dict], ctx) -> dict[str, Any]:
@@ -967,14 +964,14 @@ async def _validate_filter_consistency(filters: list[dict], ctx) -> dict[str, An
             field_operators[field] = operator
 
     # Check for logical inconsistencies
-    for filter_def in filters:
-        if "value" not in filter_def:
-            validation_issues.append(
-                {
-                    "issue": "missing_value",
-                    "filter": filter_def,
-                }
-            )
+    validation_issues.extend(
+        {
+            "issue": "missing_value",
+            "filter": filter_def,
+        }
+        for filter_def in filters
+        if "value" not in filter_def
+    )
 
     return {
         "valid": len(validation_issues) == 0,
@@ -990,7 +987,7 @@ async def _analyze_filter_relationships(filters: list[dict], ctx) -> dict[str, A
     """Analyze relationships and dependencies between filters."""
     return {
         "filter_count": len(filters),
-        "unique_fields": len(set(f.get("field", "") for f in filters)),
+        "unique_fields": len({f.get("field", "") for f in filters}),
         "operator_distribution": {
             "equals": len([f for f in filters if f.get("operator") == "equals"]),
             "range": len(
@@ -1563,9 +1560,7 @@ async def _apply_learning_updates(
 
 def _get_next_update_time(frequency: str) -> str:
     """Get next update time based on frequency."""
-    import datetime
-
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(tz=datetime.UTC)
 
     if frequency == "real_time":
         return "immediate"

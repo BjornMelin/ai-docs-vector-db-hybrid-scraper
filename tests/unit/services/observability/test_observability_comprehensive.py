@@ -198,7 +198,7 @@ class TestObservabilitySystemCoverage:
             ) as correlation_id:
                 try:
                     raise error
-                except Exception as e:
+                except (AttributeError, RuntimeError, ImportError) as e:
                     error_id = record_error(
                         error=e,
                         error_type=error_type,
@@ -264,7 +264,7 @@ class TestObservabilitySystemCoverage:
                 service_name="ai_service",
             )
 
-        except Exception:
+        except (AttributeError, RuntimeError, ImportError):
             pytest.skip("Metrics bridge not available")
 
     def test_distributed_tracing_coverage(self):

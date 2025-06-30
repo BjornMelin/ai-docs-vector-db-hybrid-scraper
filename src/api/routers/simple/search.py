@@ -94,13 +94,6 @@ async def search_health() -> dict[str, Any]:
     try:
         search_service = await get_service("search_service")
         stats = search_service.get_search_stats()
-
-        return {
-            "status": "healthy",
-            "service_type": "simple",
-            "stats": stats,
-        }
-
     except Exception as e:
         logger.exception("Search health check failed")
         return {

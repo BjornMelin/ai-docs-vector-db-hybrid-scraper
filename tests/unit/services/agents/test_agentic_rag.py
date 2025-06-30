@@ -1,7 +1,7 @@
 """Tests for agentic RAG implementation."""
 
 import asyncio
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -517,8 +517,6 @@ class TestQueryOrchestrator:
 
     def test_performance_metrics_calculation(self):
         """Test performance metrics calculation."""
-        orchestrator = QueryOrchestrator()
-
         # Test performance score calculation
         test_cases = [
             # (latency, quality, cost, expected_range)
@@ -541,8 +539,6 @@ class TestQueryOrchestrator:
 
     def test_query_analysis_logic(self):
         """Test query analysis and classification logic."""
-        orchestrator = QueryOrchestrator()
-
         # Test different query types
         test_queries = [
             ("What is machine learning?", "simple", "general"),
@@ -600,8 +596,6 @@ class TestQueryOrchestrator:
 
     def test_multi_step_query_detection(self):
         """Test multi-step query detection logic."""
-        orchestrator = QueryOrchestrator()
-
         # Test queries that should be detected as multi-step
         multi_step_queries = [
             "First, analyze the data and then generate a report",
@@ -745,9 +739,9 @@ class TestQueryOrchestrator:
                 # Should handle gracefully
                 assert "success" in result
                 assert "orchestration_id" in result
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError) as e:
                 # If exceptions occur, they should be handled gracefully
-                assert isinstance(e, (ValueError, RuntimeError))
+                assert isinstance(e, ValueError | RuntimeError)
 
     def test_orchestrator_state_management(self):
         """Test orchestrator state management."""

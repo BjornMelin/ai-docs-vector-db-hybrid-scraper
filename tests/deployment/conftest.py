@@ -169,8 +169,7 @@ def temp_deployment_dir() -> Generator[Path]:
 def mock_docker_registry() -> Generator[str]:
     """Mock Docker registry for testing."""
     # In real scenarios, this would point to a test registry
-    registry_url = "localhost:5000"
-    return registry_url
+    return "localhost:5000"
 
 
 @pytest.fixture
@@ -254,7 +253,7 @@ class DeploymentHealthChecker:
                 "response_time_ms": 50.0,
                 "timestamp": datetime.now(tz=UTC).isoformat(),
             }
-        except Exception as e:
+        except (ImportError, AttributeError, RuntimeError) as e:
             return {
                 "endpoint": endpoint,
                 "status": "unhealthy",
@@ -262,7 +261,7 @@ class DeploymentHealthChecker:
                 "timestamp": datetime.now(tz=UTC).isoformat(),
             }
 
-    async def check_all_health(self, timeout: int = 30) -> dict[str, dict[str, Any]]:  # noqa: ASYNC109
+    async def check_all_health(self, timeout: int = 30) -> dict[str, dict[str, Any]]:
         """Check health of all registered endpoints."""
         results = {}
         for endpoint in self.health_endpoints:
@@ -342,7 +341,7 @@ class DeploymentRollbackManager:
             self.current_deployment = rollback_target.copy()
             self.current_deployment["rollback_info"] = rollback_info
 
-        except Exception as e:
+        except (ImportError, AttributeError, RuntimeError) as e:
             return {
                 "success": False,
                 "error": str(e),
@@ -389,7 +388,7 @@ class BlueGreenDeploymentManager:
                 "deployment_id": deployment_info["deployment_id"],
             }
 
-        except Exception as e:
+        except (ImportError, AttributeError, RuntimeError) as e:
             return {
                 "success": False,
                 "error": str(e),
@@ -431,7 +430,7 @@ class BlueGreenDeploymentManager:
                 "switch_time": datetime.now(tz=UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (ImportError, AttributeError, RuntimeError) as e:
             return {
                 "success": False,
                 "error": str(e),

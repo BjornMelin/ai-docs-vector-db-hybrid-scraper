@@ -84,7 +84,7 @@ class AgentState(BaseModel):
         """Add an interaction to the conversation history."""
         self.conversation_history.append(
             {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(tz=datetime.timezone.utc).isoformat(),
                 "role": role,
                 "content": content,
                 "metadata": metadata or {},

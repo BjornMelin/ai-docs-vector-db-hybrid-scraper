@@ -55,8 +55,7 @@ def tier_config():
 @pytest.fixture
 async def enhanced_router(mock_config):
     """Create EnhancedAutomationRouter instance for testing."""
-    router = EnhancedAutomationRouter(mock_config)
-    return router
+    return EnhancedAutomationRouter(mock_config)
 
 
 class TestCircuitBreakerState:

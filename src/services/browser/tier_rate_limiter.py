@@ -181,9 +181,7 @@ class TierRateLimiter:
         # Calculate when oldest request will expire
         oldest_request = history[0]
         current_time = time.time()
-        time_until_expire = max(0, (oldest_request + 60) - current_time)
-
-        return time_until_expire
+        return max(0, (oldest_request + 60) - current_time)
 
     def get_status(self, tier: str | None = None) -> dict[str, Any]:
         """Get rate limiter status.

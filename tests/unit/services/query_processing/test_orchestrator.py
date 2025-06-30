@@ -5,11 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from src.services.query_processing.models import (
-    MatryoshkaDimension,
-    QueryIntent,
     QueryProcessingRequest,
-    QueryProcessingResponse,
-    SearchStrategy,
 )
 from src.services.query_processing.orchestrator import (
     SearchMode,

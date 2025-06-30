@@ -592,7 +592,7 @@ class ConfigurationSmokeTestRunner:
         self, _environment: DeploymentEnvironment
     ) -> dict[str, dict[str, Any]]:
         """Test service configurations."""
-        services = {
+        return {
             "database": {
                 "configured": True,
                 "environment_appropriate": True,
@@ -609,8 +609,6 @@ class ConfigurationSmokeTestRunner:
                 "collection_settings_valid": True,
             },
         }
-
-        return services
 
 
 class MonitoringSmokeTestRunner:

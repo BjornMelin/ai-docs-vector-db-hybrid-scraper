@@ -5,21 +5,16 @@ that matches the structure and constraints of configuration models.
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-from urllib.parse import urlparse
+from typing import Any
 
 import hypothesis.strategies as st
-from hypothesis import assume
-from pydantic import HttpUrl
 
-from src.config.enums import (
+from src.config import (
     ChunkingStrategy,
     CrawlProvider,
-    EmbeddingModel,
     EmbeddingProvider,
     Environment,
     LogLevel,
-    SearchStrategy,
 )
 
 

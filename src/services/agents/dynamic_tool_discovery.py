@@ -659,7 +659,7 @@ for autonomous agent systems, enabling optimal tool selection and orchestration.
         # Get fallback tools
         fallback_tools = await self._fallback_discover_tools(task_type, constraints)
 
-        recommendations = {
+        return {
             "primary_tools": [
                 {
                     "name": tool.name,
@@ -692,8 +692,6 @@ for autonomous agent systems, enabling optimal tool selection and orchestration.
             ),
             "fallback_mode": True,
         }
-
-        return recommendations
 
 
 # Global discovery engine instance

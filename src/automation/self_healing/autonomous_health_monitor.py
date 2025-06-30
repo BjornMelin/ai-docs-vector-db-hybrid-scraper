@@ -405,8 +405,7 @@ class FailurePredictionEngine:
         if n * x2_sum - x_sum * x_sum == 0:
             return 0.0
 
-        slope = (n * xy_sum - x_sum * y_sum) / (n * x2_sum - x_sum * x_sum)
-        return slope
+        return (n * xy_sum - x_sum * y_sum) / (n * x2_sum - x_sum * x_sum)
 
     def _estimate_time_to_threshold(
         self, history: list[float], current: float, threshold: float
@@ -626,7 +625,7 @@ class AutonomousHealthMonitor:
         try:
             await self.continuous_monitoring_loop()
         except Exception as e:
-            logger.exception(f"Health monitoring loop failed: {e}")
+            logger.exception("Health monitoring loop failed")
             self.monitoring_active = False
             raise
 
@@ -670,7 +669,7 @@ class AutonomousHealthMonitor:
                 )
 
             except Exception as e:
-                logger.exception(f"Error in monitoring loop: {e}")
+                logger.exception("Error in monitoring loop")
 
             # Wait for next monitoring cycle
             await asyncio.sleep(self.monitoring_interval)
@@ -725,7 +724,7 @@ class AutonomousHealthMonitor:
             )
 
         except Exception as e:
-            logger.exception(f"Failed to collect health metrics: {e}")
+            logger.exception("Failed to collect health metrics")
             # Return minimal metrics on failure
             return SystemMetrics(
                 timestamp=datetime.utcnow(),
@@ -863,15 +862,13 @@ class AutonomousHealthMonitor:
         self, metrics: SystemMetrics, predictions: list[FailurePrediction]
     ) -> dict[str, Any]:
         """Generate health insights and recommendations."""
-        insights = {
+        return {
             "overall_health_score": self._calculate_overall_health_score(metrics),
             "critical_metrics": self._identify_critical_metrics(metrics),
             "trending_issues": self._identify_trending_issues(predictions),
             "recommendations": self._generate_recommendations(metrics, predictions),
             "system_stability": self._assess_system_stability(metrics, predictions),
         }
-
-        return insights
 
     async def log_health_status_summary(
         self,
@@ -993,10 +990,10 @@ class AutonomousHealthMonitor:
             if p.risk_level in [FailureRiskLevel.HIGH, FailureRiskLevel.CRITICAL]
         ]
 
-        for prediction in high_risk_predictions:
-            trending.append(
-                f"{prediction.failure_type} ({prediction.risk_level.value})"
-            )
+        trending.extend(
+            f"{prediction.failure_type} ({prediction.risk_level.value})"
+            for prediction in high_risk_predictions
+        )
 
         return trending
 

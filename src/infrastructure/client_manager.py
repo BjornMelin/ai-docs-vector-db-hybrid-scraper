@@ -19,6 +19,17 @@ from src.infrastructure.container import ApplicationContainer, get_container
 from src.services.errors import APIError
 
 
+# Import dependencies for health checks
+try:
+    from src.services.dependencies import (
+        get_health_status as deps_get_health_status,
+        get_overall_health as deps_get_overall_health,
+    )
+except ImportError:
+    deps_get_health_status = None
+    deps_get_overall_health = None
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -105,7 +116,7 @@ class ClientManager:
                     "Cannot initialize parallel processing system: container not available"
                 )
         except Exception as e:
-            logger.error(
+            logger.exception(
                 f"Failed to initialize parallel processing system: {e}"
             )  # TODO: Convert f-string to logging format
             # Continue without parallel processing
@@ -131,13 +142,15 @@ class ClientManager:
     async def get_qdrant_client(self):
         provider = self._providers.get("qdrant")
         if not provider:
-            raise APIError("Qdrant client provider not available")
+            msg = "Qdrant client provider not available"
+            raise APIError(msg)
         return provider.client
 
     async def get_redis_client(self):
         provider = self._providers.get("redis")
         if not provider:
-            raise APIError("Redis client provider not available")
+            msg = "Redis client provider not available"
+            raise APIError(msg)
         return provider.client
 
     async def get_firecrawl_client(self):
@@ -147,7 +160,8 @@ class ClientManager:
     async def get_http_client(self):
         provider = self._providers.get("http")
         if not provider:
-            raise APIError("HTTP client provider not available")
+            msg = "HTTP client provider not available"
+            raise APIError(msg)
         return provider.client
 
     # Function-based dependency access methods (backward compatibility)
@@ -198,27 +212,21 @@ class ClientManager:
 
     async def get_health_status(self) -> dict[str, dict[str, Any]]:
         """Get health status using function-based dependencies."""
-        try:
-            from src.services.dependencies import get_health_status
-
-            return await get_health_status()
-        except ImportError:
-            logger.warning(
-                "Health status monitoring not available - function-based dependency not found"
-            )
-            return {}
+        if deps_get_health_status:
+            return await deps_get_health_status()
+        logger.warning(
+            "Health status monitoring not available - function-based dependency not found"
+        )
+        return {}
 
     async def get_overall_health(self) -> dict[str, Any]:
         """Get overall health using function-based dependencies."""
-        try:
-            from src.services.dependencies import get_overall_health
-
-            return await get_overall_health()
-        except ImportError:
-            return {
-                "overall_healthy": False,
-                "error": "Health monitoring not available",
-            }
+        if deps_get_overall_health:
+            return await deps_get_overall_health()
+        return {
+            "overall_healthy": False,
+            "error": "Health monitoring not available",
+        }
 
     async def get_service_status(self) -> dict[str, Any]:
         """Get service status using function-based dependencies."""
@@ -245,9 +253,10 @@ class ClientManager:
             "parallel_processing": self.get_parallel_processing_system,
         }
         if client_type not in getters:
-            raise ValueError(
+            msg = (
                 f"Unknown client type: {client_type}. Available: {list(getters.keys())}"
             )
+            raise ValueError(msg)
         try:
             yield await getters[client_type]()
         except Exception:

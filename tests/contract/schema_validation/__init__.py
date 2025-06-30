@@ -1,0 +1,1 @@
+"""Schema validation testing module."""
