@@ -10,7 +10,9 @@ import logging
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from typing import Any, import psutil
+from typing import Any, Dict, List, Optional, Tuple
+
+import psutil
 
 
 logger = logging.getLogger(__name__)
