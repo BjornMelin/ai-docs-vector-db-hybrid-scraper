@@ -9,13 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.config import Config
-from src.config.enums import (
-    ABTestVariant,
-    ModelType,
-    OptimizationStrategy,
-    QueryType,
-)
+from src.config import ABTestVariant, Config, ModelType, OptimizationStrategy, QueryType
 from src.models.vector_search import (
     ABTestConfig,
     FusionConfig,

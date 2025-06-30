@@ -1,5 +1,6 @@
 """Tests for vector embeddings visualization functionality."""
 
+import json
 from unittest.mock import MagicMock, patch
 
 import numpy as np

@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import src.config.drift_detection
-from src.config.drift_detection import (
+import src.config
+from src.config import (
     ConfigDriftDetector,
     ConfigSnapshot,
     DriftDetectionConfig,

@@ -7,7 +7,7 @@ and autonomous capabilities enabling 3-10x performance improvements.
 import asyncio
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime, timezone
 from enum import Enum
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -86,7 +86,7 @@ class WorkflowOrchestrator:
             "role": role,
             "load": 0,
             "capabilities": [],
-            "last_activity": datetime.now(tz=timezone.utc),
+            "last_activity": datetime.now(tz=UTC),
         }
 
     async def execute_workflow(
@@ -96,7 +96,7 @@ class WorkflowOrchestrator:
     ) -> DistributedWorkflow:
         """Execute a distributed workflow."""
         workflow.state = WorkflowState.RUNNING
-        workflow.start_time = datetime.now(tz=timezone.utc)
+        workflow.start_time = datetime.now(tz=UTC)
 
         try:
             # Build dependency graph
@@ -135,7 +135,7 @@ class WorkflowOrchestrator:
             workflow.state = WorkflowState.FAILED
             workflow.error = str(e)
         finally:
-            workflow.end_time = datetime.now(tz=timezone.utc)
+            workflow.end_time = datetime.now(tz=UTC)
 
         return workflow
 
@@ -1145,7 +1145,7 @@ class TestAutonomousCapabilities:
             failure_history.append(
                 {
                     "agent_id": agent_id,
-                    "timestamp": datetime.now(tz=timezone.utc),
+                    "timestamp": datetime.now(tz=UTC),
                     "error": str(error),
                 }
             )

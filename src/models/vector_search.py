@@ -677,6 +677,45 @@ class BatchSearchResponse(SecureBaseModel):
 
 
 # =============================================================================
+# PREFETCH CONFIGURATION MODELS
+# =============================================================================
+
+
+class PrefetchConfig(SecureBaseModel):
+    """Configuration for prefetch operations with optimized limits."""
+
+    dense_multiplier: float = Field(default=2.0, ge=1.0, le=5.0)
+    sparse_multiplier: float = Field(default=1.5, ge=1.0, le=3.0)
+    hyde_multiplier: float = Field(default=2.5, ge=1.0, le=5.0)
+    max_prefetch_limit: int = Field(default=1000, ge=10, le=5000)
+
+    def calculate_prefetch_limit(
+        self, vector_type: VectorType, final_limit: int
+    ) -> int:
+        """Calculate optimal prefetch limit based on vector type and final limit.
+
+        Args:
+            vector_type: Type of vector operation
+            final_limit: Final result limit
+
+        Returns:
+            Optimal prefetch limit for the given vector type
+
+        """
+        if vector_type == VectorType.DENSE:
+            multiplier = self.dense_multiplier
+        elif vector_type == VectorType.SPARSE:
+            multiplier = self.sparse_multiplier
+        elif hasattr(VectorType, "HYDE") and vector_type == VectorType.HYDE:
+            multiplier = self.hyde_multiplier
+        else:
+            multiplier = self.dense_multiplier  # Default fallback
+
+        prefetch_limit = int(final_limit * multiplier)
+        return min(prefetch_limit, self.max_prefetch_limit)
+
+
+# =============================================================================
 # EXPORT DEFINITIONS
 # =============================================================================
 
@@ -695,6 +734,8 @@ __all__ = [
     "FusionAlgorithm",
     "HyDESearchRequest",
     "MultiStageSearchRequest",
+    # Prefetch models
+    "PrefetchConfig",
     "SearchAccuracy",
     "SearchConfigurationError",
     "SearchResponse",

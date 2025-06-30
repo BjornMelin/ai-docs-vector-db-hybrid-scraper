@@ -8,8 +8,10 @@ Tests the integration between different service layers including:
 - Circuit breaker coordination across services
 """
 
+import asyncio
 import contextlib
 import logging
+import time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

@@ -401,6 +401,7 @@ unfixable = [
     "S101",    # Allow assert statements
     "PLR",     # Skip complexity rules
     "UP035",   # Allow deprecated typing for compatibility
+    "N999",    # Allow invalid module names (e.g., build-config)
 ]
 
 # Configuration modules - allow global patterns
@@ -659,6 +660,7 @@ dev = [
     "coverage>=7.6.0",
     "ruff>=0.12.0",
     "pytest-benchmark>=5.1.0",
+    "testcontainers>=4.8.1",
     "hypothesis>=6.135.0,<7.0.0",
     "pytest-xdist>=3.7.0",
     "mutmut>=2.5.1",

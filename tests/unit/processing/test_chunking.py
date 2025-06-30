@@ -5,8 +5,7 @@ standardized assertions, and modern test patterns.
 """
 
 from src.chunking import DocumentChunker
-from src.config import ChunkingConfig
-from src.config.enums import ChunkingStrategy
+from src.config import ChunkingConfig, ChunkingStrategy
 from src.models.document_processing import Chunk, CodeBlock
 
 

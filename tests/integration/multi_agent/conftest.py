@@ -4,7 +4,7 @@ Provides fixtures for testing multi-agent coordination, result fusion,
 and performance optimization scenarios without making real API calls.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime, timezone
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
@@ -147,7 +147,7 @@ def mock_dynamic_tool_discovery(agent_dependencies):
     # Mock the discover_tools_for_task method
     async def mock_discover_tools(task_description, context=None):
         """Mock tool discovery method."""
-        current_time = datetime.now(tz=timezone.utc).isoformat()
+        current_time = datetime.now(tz=UTC).isoformat()
 
         return [
             ToolCapability(

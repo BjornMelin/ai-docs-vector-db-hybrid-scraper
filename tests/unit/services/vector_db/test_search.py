@@ -5,8 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from qdrant_client import AsyncQdrantClient, models
 
-from src.config import Config
-from src.config.enums import SearchAccuracy, VectorType
+from src.config import Config, SearchAccuracy, VectorType
 from src.models.vector_search import PrefetchConfig
 from src.services.errors import QdrantServiceError
 from src.services.vector_db.search import QdrantSearch

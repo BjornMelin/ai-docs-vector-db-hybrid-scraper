@@ -8,6 +8,7 @@ Tests cover:
 - Autonomous document processing patterns
 """
 
+import asyncio
 import logging
 from unittest.mock import AsyncMock, Mock, patch
 

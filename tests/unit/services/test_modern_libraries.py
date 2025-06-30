@@ -10,8 +10,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from src.config import Config
-from src.config.enums import CacheType
+from src.config import CacheType, Config
 from src.services.cache.modern import ModernCacheManager
 from src.services.circuit_breaker.modern import ModernCircuitBreakerManager
 from src.services.migration.library_migration import (

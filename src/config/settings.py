@@ -93,8 +93,13 @@ class SearchStrategy(str, Enum):
 
 
 class CacheType(str, Enum):
-    """Cache implementation types."""
+    """Cache purpose types for different data categories."""
 
+    EMBEDDINGS = "embeddings"
+    SEARCH = "search"
+    CRAWL = "crawl"
+    HYDE = "hyde"
+    # Implementation types (kept for backward compatibility)
     LOCAL = "local"
     REDIS = "redis"
     HYBRID = "hybrid"
@@ -463,6 +468,8 @@ class ReRankingConfig(BaseModel):
 class SecurityConfig(BaseModel):
     """Security configuration."""
 
+    # Core security settings
+    enabled: bool = Field(default=True, description="Enable security middleware")
     allowed_domains: list[str] = Field(
         default_factory=lambda: ["*"], description="Allowed domains"
     )
@@ -471,12 +478,35 @@ class SecurityConfig(BaseModel):
     )
     require_api_keys: bool = Field(default=True, description="Require API keys")
     api_key_header: str = Field(default="X-API-Key", description="API key header name")
+
+    # Rate limiting
     enable_rate_limiting: bool = Field(default=True, description="Enable rate limiting")
     rate_limit_requests: int = Field(
         default=100, gt=0, description="Rate limit per window"
     )
     rate_limit_requests_per_minute: int = Field(
         default=60, gt=0, description="Requests per minute"
+    )
+    default_rate_limit: int = Field(
+        default=100, gt=0, description="Default rate limit per window"
+    )
+    rate_limit_window: int = Field(
+        default=60, gt=0, description="Rate limit window in seconds"
+    )
+
+    # Security headers
+    x_frame_options: str = Field(default="DENY", description="X-Frame-Options header")
+    x_content_type_options: str = Field(
+        default="nosniff", description="X-Content-Type-Options header"
+    )
+    x_xss_protection: str = Field(
+        default="1; mode=block", description="X-XSS-Protection header"
+    )
+    strict_transport_security: str = Field(
+        default="max-age=31536000; includeSubDomains", description="HSTS header"
+    )
+    content_security_policy: str | None = Field(
+        default=None, description="Content Security Policy header"
     )
 
     # Query validation

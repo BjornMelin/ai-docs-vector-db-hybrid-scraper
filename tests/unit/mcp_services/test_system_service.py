@@ -8,7 +8,9 @@ Tests cover:
 - Autonomous fault tolerance and predictive maintenance
 """
 
+import asyncio
 import logging
+import time
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest

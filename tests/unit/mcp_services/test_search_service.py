@@ -8,7 +8,9 @@ Tests cover:
 - Error handling and service recovery
 """
 
+import asyncio
 import logging
+import time
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest

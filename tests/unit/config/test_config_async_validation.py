@@ -3,6 +3,9 @@
 Tests async configuration loading and validation patterns.
 """
 
+import asyncio
+import json
+
 import pytest
 
 from src.config import Config, get_config, reset_config

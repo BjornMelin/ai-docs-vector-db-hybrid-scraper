@@ -13,6 +13,8 @@ The AgenticOrchestrator replaced a 950-line ToolCompositionEngine with ~200 line
 of native patterns, so tests focus on clean autonomous capabilities.
 """
 
+import asyncio
+import time
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest

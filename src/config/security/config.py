@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Security configuration for the AI documentation system."""
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -71,6 +69,24 @@ class SecurityConfig(BaseModel):
     )
     max_content_length: int = Field(
         default=1024 * 1024, description="Max content length in bytes"
+    )
+
+    # HTTP Security Headers
+    x_frame_options: str | None = Field(
+        default="DENY", description="X-Frame-Options header value"
+    )
+    x_content_type_options: str | None = Field(
+        default="nosniff", description="X-Content-Type-Options header value"
+    )
+    x_xss_protection: str | None = Field(
+        default="1; mode=block", description="X-XSS-Protection header value"
+    )
+    strict_transport_security: str | None = Field(
+        default="max-age=31536000; includeSubDomains",
+        description="Strict-Transport-Security header value",
+    )
+    content_security_policy: str | None = Field(
+        default="default-src 'self'", description="Content-Security-Policy header value"
     )
 
     # Redis configuration for distributed features

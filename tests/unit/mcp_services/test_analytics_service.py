@@ -8,7 +8,9 @@ Tests cover:
 - Enterprise integration with existing AI tracker and correlation manager
 """
 
+import asyncio
 import logging
+import time
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
