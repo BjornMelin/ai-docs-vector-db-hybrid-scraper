@@ -45,7 +45,7 @@ class SPLADEProvider:
             logger.info("SPLADE provider initialized successfully")
         except Exception as e:
             logger.warning(
-                f"Failed to load SPLADE model: {e}. Using fallback sparse generation."
+                "Failed to load SPLADE model: %s. Using fallback sparse generation.", e
             )
             self._model = None
             self._tokenizer = None
@@ -109,7 +109,7 @@ class SPLADEProvider:
             return sparse_vector
 
         except Exception:
-            logger.error("Sparse vector generation failed", exc_info=True)
+            logger.exception("Sparse vector generation failed")
             # Return empty sparse vector as fallback
             return {}
 

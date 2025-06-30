@@ -193,7 +193,7 @@ class RealQdrantSession:
             execution_time = time.time() - start_time
             self.monitor.record_operation(execution_time * 1000, success=True)
             return RealQdrantResult(len(collections.collections))
-        except Exception as e:
+        except Exception:
             execution_time = time.time() - start_time
             self.monitor.record_operation(execution_time * 1000, success=False)
             raise

@@ -15,8 +15,6 @@ security validation. Tests include:
 
 import asyncio
 import time
-from collections.abc import AsyncGenerator
-from typing import Any
 
 import pytest
 import redis.asyncio as redis
@@ -68,7 +66,7 @@ class RealRedisFixture:
             try:
                 await self.client.ping()
                 break
-            except Exception:
+            except (ConnectionError, TimeoutError):
                 await asyncio.sleep(0.1)
 
         return self.client, self.redis_url
@@ -105,15 +103,13 @@ def real_starlette_app():
     async def protected_endpoint(request):
         return JSONResponse({"data": "sensitive", "user": "authenticated"})
 
-    app = Starlette(
+    return Starlette(
         routes=[
             Route("/health", health_endpoint, methods=["GET"]),
             Route("/api/test", test_endpoint, methods=["GET", "POST"]),
             Route("/api/protected", protected_endpoint, methods=["GET"]),
         ]
     )
-
-    return app
 
 
 @pytest.fixture
@@ -453,8 +449,6 @@ class TestSecurityMiddlewareIntegration:
         middleware = SecurityMiddleware(real_starlette_app, security_config)
 
         # Create real request using Starlette's Request constructor
-        from starlette.datastructures import URL, Headers
-
         request = Request(
             {
                 "type": "http",
@@ -484,8 +478,6 @@ class TestSecurityMiddlewareIntegration:
         middleware = SecurityMiddleware(real_starlette_app, security_config)
 
         # Create real request using Starlette's Request constructor
-        from starlette.datastructures import URL, Headers
-
         request = Request(
             {
                 "type": "http",

@@ -70,8 +70,9 @@ def enterprise_only(fallback_value: Any = None, log_access: bool = True):
 
             if log_access:
                 logger.info(
-                    f"Enterprise feature '{func.__name__}' accessed in simple mode, "
-                    f"returning fallback value: {fallback_value}"
+                    "Enterprise feature '%s' accessed in simple mode, returning fallback value: %s",
+                    func.__name__,
+                    fallback_value,
                 )
             return fallback_value
 
@@ -83,15 +84,16 @@ def enterprise_only(fallback_value: Any = None, log_access: bool = True):
 
             if log_access:
                 logger.info(
-                    f"Enterprise feature '{func.__name__}' accessed in simple mode, "
-                    f"returning fallback value: {fallback_value}"
+                    "Enterprise feature '%s' accessed in simple mode, returning fallback value: %s",
+                    func.__name__,
+                    fallback_value,
                 )
             return fallback_value
 
         # Return appropriate wrapper based on whether function is async
         if asyncio.iscoroutinefunction(func):
-            return async_wrapper  # type: ignore
-        return sync_wrapper  # type: ignore
+            return async_wrapper  # type: ignore[return-value]
+        return sync_wrapper  # type: ignore[return-value]
 
     return decorator
 
@@ -119,8 +121,10 @@ def conditional_feature(
 
             if log_access:
                 logger.info(
-                    f"Feature '{feature_name}' ({func.__name__}) disabled in current mode, "
-                    f"returning fallback value: {fallback_value}"
+                    "Feature '%s' (%s) disabled in current mode, returning fallback value: %s",
+                    feature_name,
+                    func.__name__,
+                    fallback_value,
                 )
             return fallback_value
 
@@ -132,15 +136,17 @@ def conditional_feature(
 
             if log_access:
                 logger.info(
-                    f"Feature '{feature_name}' ({func.__name__}) disabled in current mode, "
-                    f"returning fallback value: {fallback_value}"
+                    "Feature '%s' (%s) disabled in current mode, returning fallback value: %s",
+                    feature_name,
+                    func.__name__,
+                    fallback_value,
                 )
             return fallback_value
 
         # Return appropriate wrapper based on whether function is async
         if asyncio.iscoroutinefunction(func):
-            return async_wrapper  # type: ignore
-        return sync_wrapper  # type: ignore
+            return async_wrapper  # type: ignore[return-value]
+        return sync_wrapper  # type: ignore[return-value]
 
     return decorator
 
@@ -168,8 +174,10 @@ def service_required(
 
             if log_access:
                 logger.warning(
-                    f"Service '{service_name}' required for {func.__name__} "
-                    f"but not enabled in current mode, returning fallback: {fallback_value}"
+                    "Service '%s' required for %s but not enabled in current mode, returning fallback: %s",
+                    service_name,
+                    func.__name__,
+                    fallback_value,
                 )
             return fallback_value
 
@@ -181,15 +189,17 @@ def service_required(
 
             if log_access:
                 logger.warning(
-                    f"Service '{service_name}' required for {func.__name__} "
-                    f"but not enabled in current mode, returning fallback: {fallback_value}"
+                    "Service '%s' required for %s but not enabled in current mode, returning fallback: %s",
+                    service_name,
+                    func.__name__,
+                    fallback_value,
                 )
             return fallback_value
 
         # Return appropriate wrapper based on whether function is async
         if asyncio.iscoroutinefunction(func):
-            return async_wrapper  # type: ignore
-        return sync_wrapper  # type: ignore
+            return async_wrapper  # type: ignore[return-value]
+        return sync_wrapper  # type: ignore[return-value]
 
     return decorator
 

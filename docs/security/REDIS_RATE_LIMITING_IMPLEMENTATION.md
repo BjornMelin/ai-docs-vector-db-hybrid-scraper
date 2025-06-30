@@ -2,11 +2,16 @@
 
 ## Overview
 
-This document details the implementation of Redis-backed rate limiting in the SecurityMiddleware to address the critical security vulnerability identified in the [Security Architecture Assessment](./SECURITY_ARCHITECTURE_ASSESSMENT.md). The vulnerability involved stateful rate limiting using in-memory storage that doesn't persist across application restarts or scale horizontally in multi-instance deployments.
+This document details the implementation of Redis-backed rate limiting in the SecurityMiddleware
+to address the critical security vulnerability identified in the
+[Security Architecture Assessment](./SECURITY_ARCHITECTURE_ASSESSMENT.md). The vulnerability
+involved stateful rate limiting using in-memory storage that doesn't persist across application
+restarts or scale horizontally in multi-instance deployments.
 
 ## Security Vulnerability Addressed
 
 **Vulnerability**: Stateful rate limiting using in-memory storage
+
 - **Severity**: High
 - **Impact**: Rate limiting ineffective across application restarts and distributed deployments
 - **Risk**: Potential DoS attacks and resource exhaustion bypassing rate limits
@@ -41,12 +46,14 @@ This document details the implementation of Redis-backed rate limiting in the Se
 **File**: `src/services/fastapi/middleware/security.py`
 
 **New Features**:
+
 - Redis connection management with health monitoring
 - Distributed sliding window rate limiting
 - Automatic fallback to in-memory storage
 - Connection recovery and error handling
 
 **Key Methods**:
+
 - `_initialize_redis()`: Establishes Redis connection with health checks
 - `_check_rate_limit_redis()`: Implements Redis-based rate limiting
 - `_check_rate_limit_memory()`: Fallback in-memory rate limiting
@@ -56,6 +63,7 @@ This document details the implementation of Redis-backed rate limiting in the Se
 #### 2. Configuration Integration
 
 **Redis Configuration**:
+
 ```python
 SecurityMiddleware(
     app=app,
@@ -65,22 +73,24 @@ SecurityMiddleware(
 ```
 
 **Environment Variables**:
+
 - `REDIS_URL`: Redis connection string
 - `CONFIG_MASTER_PASSWORD`: Encryption key for secure config
 
 #### 3. Rate Limiting Algorithm
 
 **Sliding Window Implementation**:
+
 ```python
 # Redis key: rate_limit:{client_ip}
 # Algorithm: Sliding window with atomic operations
 
 async def _check_rate_limit_redis(self, client_ip: str) -> bool:
     rate_limit_key = f"rate_limit:{client_ip}"
-    
+
     async with self.redis_client.pipeline(transaction=True) as pipe:
         current_count = await pipe.get(rate_limit_key).execute()
-        
+
         if current_count and current_count[0]:
             count = int(current_count[0])
             if count >= self.config.rate_limit_requests:
@@ -92,7 +102,7 @@ async def _check_rate_limit_redis(self, client_ip: str) -> bool:
             await pipe.incr(rate_limit_key)
             await pipe.expire(rate_limit_key, self.config.rate_limit_window)
             await pipe.execute()
-        
+
         return True
 ```
 
@@ -107,7 +117,7 @@ dragonfly:
   image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
   container_name: dragonfly-cache
   ports:
-    - "6379:6379"  # Redis-compatible port
+    - "6379:6379" # Redis-compatible port
   environment:
     - DRAGONFLY_THREADS=8
     - DRAGONFLY_MEMORY_LIMIT=4gb
@@ -120,6 +130,7 @@ dragonfly:
 ```
 
 **Benefits of DragonflyDB**:
+
 - **Performance**: 25x faster than Redis for many workloads
 - **Memory Efficiency**: Up to 30x less memory usage
 - **Compatibility**: Drop-in Redis replacement
@@ -139,21 +150,25 @@ dependencies = [
 ## Security Benefits
 
 ### 1. Distributed Rate Limiting
+
 - **Persistence**: Rate limits persist across application restarts
 - **Scalability**: Works across multiple application instances
 - **Consistency**: Atomic operations ensure accurate counting
 
 ### 2. Fault Tolerance
+
 - **Graceful Degradation**: Automatic fallback to in-memory storage
 - **Health Monitoring**: Continuous Redis connection monitoring
 - **Recovery**: Automatic reconnection when Redis becomes available
 
 ### 3. Performance Optimization
+
 - **Pipeline Operations**: Atomic Redis operations for consistency
 - **Connection Pooling**: Efficient Redis connection management
 - **Memory Efficiency**: DragonflyDB's optimized memory usage
 
 ### 4. Security Enhancement
+
 - **DoS Protection**: Effective rate limiting across distributed deployments
 - **Resource Protection**: Prevents resource exhaustion attacks
 - **Attack Mitigation**: Consistent rate limiting regardless of deployment topology
@@ -167,8 +182,8 @@ class SecurityConfig(BaseSecurityConfig):
     # Rate limiting configuration
     rate_limit_window: int = Field(default=3600, description="Rate limit window in seconds")
     rate_limit_requests: int = Field(default=100, description="Maximum requests per window")
-    
-    # Redis configuration  
+
+    # Redis configuration
     redis_url: str = Field(default="redis://localhost:6379/1", description="Redis connection URL")
     redis_timeout: int = Field(default=5, description="Redis connection timeout")
     redis_retry: bool = Field(default=True, description="Enable Redis connection retry")
@@ -197,6 +212,7 @@ CONFIG_MASTER_PASSWORD=secure_encryption_key_here
 **File**: `tests/security/test_redis_rate_limiting.py`
 
 **Test Coverage**:
+
 - Redis connection initialization and failure handling
 - Rate limiting within and exceeding limits
 - Fallback to in-memory storage when Redis fails
@@ -206,6 +222,7 @@ CONFIG_MASTER_PASSWORD=secure_encryption_key_here
 ### 2. Integration Tests
 
 **Test Scenarios**:
+
 - End-to-end request processing with rate limiting
 - Multi-instance deployment simulation
 - Redis failure and recovery scenarios
@@ -214,6 +231,7 @@ CONFIG_MASTER_PASSWORD=secure_encryption_key_here
 ### 3. Security Tests
 
 **Security Validation**:
+
 - DoS attack mitigation effectiveness
 - Rate limit bypass prevention
 - Connection security and encryption
@@ -253,6 +271,7 @@ docker-compose -f docker-compose.prod.yml up -d
 ### 3. Monitoring Setup
 
 **Metrics to Monitor**:
+
 - Redis connection health
 - Rate limiting effectiveness
 - Request throughput and latency
@@ -260,6 +279,7 @@ docker-compose -f docker-compose.prod.yml up -d
 - Error rates and fallback events
 
 **Alerting**:
+
 - Redis connection failures
 - High rate limiting activation
 - Performance degradation
@@ -270,12 +290,14 @@ docker-compose -f docker-compose.prod.yml up -d
 ### Benchmarks
 
 **Test Environment**:
+
 - Application: FastAPI with SecurityMiddleware
 - Redis: DragonflyDB v1.x
 - Hardware: 4 CPU cores, 8GB RAM
 - Load: 1000 concurrent requests
 
 **Results**:
+
 - **Throughput**: 10,000 requests/second
 - **Latency**: P99 < 50ms for rate limit checks
 - **Memory**: 30x reduction vs. standard Redis
@@ -293,21 +315,25 @@ docker-compose -f docker-compose.prod.yml up -d
 ### OWASP Alignment
 
 **A06:2021 – Vulnerable and Outdated Components**:
+
 - ✅ Updated Redis client with latest security patches
 - ✅ DragonflyDB with modern security features
 
 **A09:2021 – Security Logging and Monitoring Failures**:
+
 - ✅ Comprehensive rate limiting event logging
 - ✅ Redis health monitoring and alerting
 
 ### Compliance Standards
 
 **SOC 2 Type II**:
+
 - ✅ Access controls with rate limiting
 - ✅ Monitoring and logging of security events
 - ✅ System availability and performance monitoring
 
 **ISO 27001**:
+
 - ✅ Risk assessment and mitigation (DoS protection)
 - ✅ Security controls implementation
 - ✅ Continuous monitoring and improvement
@@ -319,10 +345,12 @@ docker-compose -f docker-compose.prod.yml up -d
 #### 1. Redis Connection Failures
 
 **Symptoms**:
+
 - Rate limiting falls back to memory storage
 - Warning logs about Redis connection issues
 
 **Solutions**:
+
 ```bash
 # Check Redis service status
 docker-compose logs dragonfly
@@ -337,10 +365,12 @@ echo "CONFIG_REDIS_URL: $REDIS_URL"
 #### 2. Rate Limiting Not Working
 
 **Symptoms**:
+
 - Requests not being rate limited
 - No rate limiting logs
 
 **Solutions**:
+
 ```bash
 # Verify configuration
 echo "RATE_LIMIT_ENABLED: $RATE_LIMIT_ENABLED"
@@ -356,10 +386,12 @@ tail -f logs/security.log | grep "rate_limit"
 #### 3. Performance Issues
 
 **Symptoms**:
+
 - High latency on requests
 - Redis connection timeouts
 
 **Solutions**:
+
 ```bash
 # Monitor Redis performance
 redis-cli INFO stats
@@ -377,16 +409,19 @@ export REDIS_TIMEOUT=10
 ### Phase 2 Features
 
 1. **Advanced Rate Limiting**:
+
    - Token bucket algorithm option
    - Per-user and per-endpoint rate limits
    - Dynamic rate limit adjustment
 
 2. **Enhanced Security**:
+
    - IP whitelisting/blacklisting
    - Geolocation-based rate limiting
    - Machine learning-based anomaly detection
 
 3. **Monitoring Integration**:
+
    - Prometheus metrics export
    - Grafana dashboard templates
    - Real-time alerting systems

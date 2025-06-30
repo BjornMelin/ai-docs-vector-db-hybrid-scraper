@@ -83,9 +83,7 @@ class QdrantCollections(BaseService):
             # Check if collection exists
             collections = await self._client.get_collections()
             if any(col.name == collection_name for col in collections.collections):
-                logger.info(
-                    f"Collection {collection_name} already exists"
-                )  # TODO: Convert f-string to logging format
+                logger.info("Collection %s already exists", collection_name)
                 return True
 
             # Get HNSW configuration for collection type
@@ -142,9 +140,7 @@ class QdrantCollections(BaseService):
                 quantization_config=quantization_config,
             )
 
-            logger.info(
-                f"Created collection: {collection_name}"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Created collection: %s", collection_name)
 
             # Note: Payload indexes will be created by QdrantService after collection creation
 
@@ -157,9 +153,7 @@ class QdrantCollections(BaseService):
 
             error_msg = str(e).lower()
             if "already exists" in error_msg:
-                logger.info(
-                    f"Collection {collection_name} already exists, continuing"
-                )  # TODO: Convert f-string to logging format
+                logger.info("Collection %s already exists, continuing", collection_name)
                 return True
             if "invalid distance" in error_msg:
                 msg = f"Invalid distance metric '{distance}'. Valid options: Cosine, Euclidean, Dot"
@@ -184,9 +178,7 @@ class QdrantCollections(BaseService):
 
         try:
             await self._client.delete_collection(collection_name)
-            logger.info(
-                f"Deleted collection: {collection_name}"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Deleted collection: %s", collection_name)
             return True
         except Exception as e:
             msg = f"Failed to delete collection: {e}"
@@ -259,7 +251,7 @@ class QdrantCollections(BaseService):
                     )
                 except Exception as e:
                     logger.warning(
-                        f"Failed to get details for collection {col.name}: {e}"
+                        "Failed to get details for collection %s: %s", col.name, e
                     )
                     details.append(
                         {
@@ -297,9 +289,7 @@ class QdrantCollections(BaseService):
             # This is a no-op that forces Qdrant to check optimization
             await self._client.update_collection_aliases(change_aliases_operations=[])
 
-            logger.info(
-                f"Triggered optimization for collection: {collection_name}"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Triggered optimization for collection: %s", collection_name)
             return True
         except Exception as e:
             msg = f"Failed to optimize collection: {e}"
@@ -434,9 +424,7 @@ class QdrantCollections(BaseService):
             }
 
         except Exception as e:
-            logger.warning(
-                f"Failed to validate HNSW configuration: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Failed to validate HNSW configuration: %s", e)
             # Return default healthy status if HNSW validation fails
             return {
                 "health_score": 85.0,

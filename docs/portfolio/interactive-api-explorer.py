@@ -110,7 +110,7 @@ def make_api_request(
             "error": "Request timeout",
             "response_time_ms": DEFAULT_TIMEOUT * 1000,
         }
-    except Exception as e:
+    except (requests.exceptions.RequestException, ValueError) as e:
         return {"success": False, "error": str(e), "response_time_ms": 0}
 
 
@@ -119,15 +119,15 @@ def create_performance_chart(metrics: list[dict]) -> go.Figure:
     if not metrics:
         return go.Figure()
 
-    df = pd.DataFrame(metrics)
+    metrics_data = pd.DataFrame(metrics)
 
     fig = go.Figure()
 
     # Add response time line
     fig.add_trace(
         go.Scatter(
-            x=df["timestamp"],
-            y=df["response_time_ms"],
+            x=metrics_data["timestamp"],
+            y=metrics_data["response_time_ms"],
             mode="lines+markers",
             name="Response Time (ms)",
             line={"color": "#1f77b4", "width": 2},

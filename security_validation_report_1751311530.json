@@ -1,0 +1,39 @@
+{
+  "timestamp": 1751311511.0598788,
+  "validation_status": "CRITICAL",
+  "tests_passed": 1,
+  "tests_failed": 3,
+  "security_controls": {
+    "command_injection_prevention": {
+      "status": "PASS",
+      "blocked_attempts": 4,
+      "total_attempts": 4
+    },
+    "subprocess_security_tests": {
+      "status": "FAIL",
+      "output": "sts/security/penetration/test_api_security.py::TestSubprocessSecurity::test_path_sanitization_in_arguments\nFAILED tests/security/penetration/test_api_security.py::TestSubprocessSecurity::test_unicode_normalization_attacks\nFAILED tests/security/penetration/test_api_security.py::TestSubprocessSecurity::test_subprocess_chaining_prevention\n!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 10 failures !!!!!!!!!!!!!!!!!!!!!!!!!!\n============================== 10 failed in 0.39s ==============================\n"
+    },
+    "input_validation_tests": {
+      "status": "FAIL",
+      "output": "idationEnhanced::test_polyglot_attack_prevention\nFAILED tests/security/penetration/test_api_security.py::TestInputValidationEnhanced::test_mutation_testing_for_validation_bypass\nFAILED tests/security/penetration/test_api_security.py::TestInputValidationEnhanced::test_context_aware_validation\nFAILED tests/security/penetration/test_api_security.py::TestInputValidationEnhanced::test_validation_performance_under_attack\n========================= 4 failed, 1 passed in 0.32s ==========================\n"
+    },
+    "marker_validation": {
+      "status": "FAIL",
+      "blocked_attempts": 0,
+      "total_attempts": 4
+    },
+    "load_testing_integration": {
+      "status": "PARTIAL",
+      "return_code": 1,
+      "stderr": "level, None)\n    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/home/bjorn/repos/ai-docs-vector-db-hybrid-scraper/.venv/lib/python3.13/site-packages/locust/log.py\", line 24, in setup_logging\n    loglevel = loglevel.upper()\n               ^^^^^^^^^^^^^^\nAttributeError: 'int' object has no attribute 'upper'\n"
+    }
+  },
+  "vulnerabilities_found": [],
+  "recommendations": [
+    "Review failed security tests and address vulnerabilities",
+    "Implement additional security controls for failed test cases",
+    "Enhance monitoring and alerting for security events"
+  ],
+  "security_grade": "F",
+  "success_rate": 25.0
+}
