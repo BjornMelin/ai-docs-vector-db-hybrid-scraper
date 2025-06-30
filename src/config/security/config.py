@@ -1,7 +1,92 @@
 #!/usr/bin/env python3
 """Security configuration for the AI documentation system."""
 
+from datetime import datetime
+from enum import Enum
+from pathlib import Path
+from typing import Any
+
 from pydantic import BaseModel, Field
+
+
+class ConfigAccessLevel(str, Enum):
+    """Configuration access levels."""
+
+    READ_ONLY = "read_only"
+    READ_WRITE = "read_write"
+    ADMIN = "admin"
+    SYSTEM = "system"
+
+
+class ConfigDataClassification(str, Enum):
+    """Data classification levels for configuration items."""
+
+    PUBLIC = "public"
+    INTERNAL = "internal"
+    CONFIDENTIAL = "confidential"
+    SECRET = "secret"
+
+
+class ConfigOperationType(str, Enum):
+    """Types of configuration operations for auditing."""
+
+    READ = "read"
+    WRITE = "write"
+    UPDATE = "update"
+    DELETE = "delete"
+    ENCRYPT = "encrypt"
+    DECRYPT = "decrypt"
+    BACKUP = "backup"
+    RESTORE = "restore"
+    VALIDATE = "validate"
+
+
+class ConfigurationAuditEvent(BaseModel):
+    """Represents a configuration audit event."""
+
+    operation: ConfigOperationType
+    timestamp: datetime = Field(default_factory=datetime.now)
+    data_classification: ConfigDataClassification
+    user: str | None = None
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
+class EncryptedConfigItem(BaseModel):
+    """Represents an encrypted configuration item."""
+
+    key: str
+    encrypted_value: str
+    data_classification: ConfigDataClassification
+    created_at: datetime = Field(default_factory=datetime.now)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class SecureConfigManager:
+    """Manages secure configuration with encryption and auditing."""
+
+    def __init__(self, security_config: "SecurityConfig", config_dir: Path):
+        """Initialize the secure config manager."""
+        self.security_config = security_config
+        self.config_dir = config_dir
+        self.audit_events: list[ConfigurationAuditEvent] = []
+
+    def encrypt_value(
+        self, value: str, classification: ConfigDataClassification
+    ) -> str:
+        """Encrypt a configuration value."""
+        # Placeholder implementation for testing
+        return f"encrypted:{value}"
+
+    def decrypt_value(self, encrypted_value: str) -> str:
+        """Decrypt a configuration value."""
+        # Placeholder implementation for testing
+        if encrypted_value.startswith("encrypted:"):
+            return encrypted_value[10:]
+        return encrypted_value
+
+    def audit_operation(self, event: ConfigurationAuditEvent) -> None:
+        """Record an audit event."""
+        self.audit_events.append(event)
 
 
 class SecurityConfig(BaseModel):
@@ -9,16 +94,72 @@ class SecurityConfig(BaseModel):
 
     enabled: bool = Field(default=True, description="Enable security features")
 
+    # Enhanced security features
+    enable_config_encryption: bool = Field(
+        default=True, description="Enable configuration encryption"
+    )
+    audit_config_access: bool = Field(
+        default=True, description="Audit configuration access"
+    )
+    enable_config_integrity_checks: bool = Field(
+        default=True, description="Enable config integrity checks"
+    )
+    integrate_security_monitoring: bool = Field(
+        default=True, description="Integrate security monitoring"
+    )
+
     # Rate limiting configuration
     rate_limit_enabled: bool = Field(default=True, description="Enable rate limiting")
     default_rate_limit: int = Field(
         default=100, description="Default rate limit per window"
     )
     rate_limit_window: int = Field(
-        default=60, description="Rate limit window in seconds"
+        default=3600, description="Rate limit window in seconds"
     )
     burst_factor: float = Field(
         default=1.5, description="Burst factor for rate limiting"
+    )
+
+    # Security headers
+    x_frame_options: str = Field(default="DENY", description="X-Frame-Options header")
+    x_content_type_options: str = Field(
+        default="nosniff", description="X-Content-Type-Options header"
+    )
+    x_xss_protection: str = Field(
+        default="1; mode=block", description="X-XSS-Protection header"
+    )
+    strict_transport_security: str = Field(
+        default="max-age=31536000; includeSubDomains; preload",
+        description="Strict-Transport-Security header",
+    )
+    content_security_policy: str = Field(
+        default=(
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'"
+        ),
+        description="Content-Security-Policy header",
+    )
+
+    # Encryption configuration
+    encryption_key_rotation_days: int = Field(
+        default=90, description="Encryption key rotation interval"
+    )
+    use_hardware_security_module: bool = Field(
+        default=False, description="Use hardware security module"
+    )
+
+    # Secrets management
+    secrets_provider: str = Field(default="environment", description="Secrets provider")
+    vault_mount_path: str = Field(default="secret", description="Vault mount path")
+
+    # Data classification
+    default_data_classification: ConfigDataClassification = Field(
+        default=ConfigDataClassification.INTERNAL,
+        description="Default data classification level",
+    )
+    require_encrypted_transmission: bool = Field(
+        default=True, description="Require encrypted transmission"
     )
 
     # API security
