@@ -705,10 +705,8 @@ class ServiceDegradationRemediationStrategy(RemediationStrategy):
                 action, checkpoint, start_time
             )
         if action.action_type == "restart_unhealthy_services":
-            return await self._execute_service_restart(
-                action, checkpoint, start_time
-            )
-        
+            return await self._execute_service_restart(action, checkpoint, start_time)
+
         # Unknown action type - raise error
         msg = f"Unknown action type: {action.action_type}"
         raise ValueError(msg)
@@ -721,7 +719,9 @@ class ServiceDegradationRemediationStrategy(RemediationStrategy):
         timeout_seconds = action.parameters.get("timeout_seconds", 60)
 
         logger.info(
-            "Enabling circuit breakers: threshold=%s, timeout=%ss", failure_threshold, timeout_seconds
+            "Enabling circuit breakers: threshold=%s, timeout=%ss",
+            failure_threshold,
+            timeout_seconds,
         )
         await asyncio.sleep(0.5)  # Simulate configuration time
 
@@ -744,7 +744,9 @@ class ServiceDegradationRemediationStrategy(RemediationStrategy):
         cache_percentage = action.parameters.get("cache_percentage", 80)
 
         logger.info(
-            f"Enabling aggressive caching: duration={cache_duration}min, coverage={cache_percentage}%"
+            "Enabling aggressive caching: duration=%smin, coverage=%s%%",
+            cache_duration,
+            cache_percentage,
         )
         await asyncio.sleep(1.0)  # Simulate cache configuration time
 
@@ -774,7 +776,7 @@ class ServiceDegradationRemediationStrategy(RemediationStrategy):
                 await asyncio.sleep(3)  # Simulate graceful restart time
                 actions_taken.append(f"Gracefully restarted {service}")
             else:
-                logger.info(f"Force restarting degraded service: {service}")
+                logger.info("Force restarting degraded service: %s", service)
                 await asyncio.sleep(1)
                 actions_taken.append(f"Force restarted {service}")
 
@@ -861,12 +863,14 @@ class RollbackManager:
             await self._rollback_service_states(checkpoint.service_states)
             await self._rollback_configuration_state(checkpoint.configuration_state)
 
-            logger.info(f"Successfully rolled back to checkpoint: {checkpoint_id}")
-            return True
-
+            logger.info("Successfully rolled back to checkpoint: %s", checkpoint_id)
         except Exception as e:
-            logger.exception(f"Failed to rollback to checkpoint {checkpoint_id}: {e}")
+            logger.exception(
+                "Failed to rollback to checkpoint %s: %s", checkpoint_id, e
+            )
             return False
+        else:
+            return True
 
     async def _capture_configuration_state(self) -> dict[str, Any]:
         """Capture current configuration state."""

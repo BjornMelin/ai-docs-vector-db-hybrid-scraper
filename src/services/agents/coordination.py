@@ -566,7 +566,7 @@ class ParallelAgentCoordinator:
                     await self.circuit_breakers[agent_name].call(
                         lambda: (_ for _ in ()).throw(e)
                     )
-                except:  # nosec # Expected to fail for circuit breaker testing
+                except Exception:  # nosec # Expected to fail for circuit breaker testing
                     pass
 
         finally:

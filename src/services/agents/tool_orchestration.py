@@ -516,7 +516,7 @@ class AdvancedToolOrchestrator:
             if circuit_breaker:
                 try:
                     await circuit_breaker.call(lambda: (_ for _ in ()).throw(e))
-                except:  # nosec # Expected to fail for circuit breaker testing
+                except Exception:  # nosec # Expected to fail for circuit breaker testing
                     pass
 
             logger.exception(f"Tool {tool_id} execution failed: {e}")

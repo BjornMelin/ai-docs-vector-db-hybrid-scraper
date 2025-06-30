@@ -459,7 +459,7 @@ class AgenticVectorManager:
             if circuit_breaker:
                 try:
                     await circuit_breaker.call(lambda: (_ for _ in ()).throw(e))
-                except:
+                except Exception:
                     pass  # Expected to fail
 
             logger.error(f"Autonomous search failed: {e}", exc_info=True)
