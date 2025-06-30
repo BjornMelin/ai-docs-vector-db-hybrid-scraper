@@ -1,6 +1,7 @@
 """Pure Pydantic-AI native agentic orchestrator.
 
-This module implements the clean, optimal solution defined in our comprehensive research,
+This module implements the clean, optimal solution defined in our
+comprehensive research,
 replacing the 950-line ToolCompositionEngine with ~150-300 lines of native patterns.
 
 Based on research findings:
@@ -82,7 +83,8 @@ class AgenticOrchestrator(BaseAgent):
 
     def get_system_prompt(self) -> str:
         """Define autonomous orchestration behavior."""
-        return """You are an autonomous tool orchestrator with the following capabilities:
+        return """You are an autonomous tool orchestrator with the following
+capabilities:
 
 1. INTELLIGENT ANALYSIS
    - Analyze user requests to understand intent and requirements
@@ -109,7 +111,8 @@ maintaining high performance and reliability. Always explain your reasoning."""
 
         if not PYDANTIC_AI_AVAILABLE or self.agent is None:
             logger.warning(
-                f"AgenticOrchestrator using fallback mode (reason: {fallback_reason or 'pydantic_ai_unavailable'})"
+                "AgenticOrchestrator using fallback mode (reason: %s)",
+                fallback_reason or "pydantic_ai_unavailable"
             )
             return
 
@@ -322,7 +325,7 @@ maintaining high performance and reliability. Always explain your reasoning."""
                 context.update(tool_result)
 
             except Exception as e:
-                logger.warning(f"Tool {tool_name} failed: {e}")
+                logger.warning("Tool %s failed: %s", tool_name, e)
                 results[f"{tool_name}_error"] = str(e)
 
         return results
@@ -345,7 +348,10 @@ maintaining high performance and reliability. Always explain your reasoning."""
         self, task: str, tools_used: list[str], results: dict[str, Any]
     ) -> str:
         """Generate clear reasoning for tool selection and execution."""
-        reasoning = f"For task '{task}', I selected {len(tools_used)} tools: {', '.join(tools_used)}. "
+        reasoning = (
+            f"For task '{task}', I selected {len(tools_used)} tools: "
+            f"{', '.join(tools_used)}. "
+        )
 
         if "hybrid_search" in tools_used:
             reasoning += "Used hybrid search for information retrieval. "
@@ -385,7 +391,9 @@ maintaining high performance and reliability. Always explain your reasoning."""
     ) -> ToolResponse:
         """Fallback orchestration when Pydantic-AI unavailable."""
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
-        logger.warning(f"Using fallback orchestration mode (reason: {fallback_reason})")
+        logger.warning(
+            "Using fallback orchestration mode (reason: %s)", fallback_reason
+        )
         start_time = time.time()
 
         # Enhanced fallback logic with context-aware responses

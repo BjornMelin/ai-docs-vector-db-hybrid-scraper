@@ -14,7 +14,6 @@ from pydantic import BaseModel, Field
 
 from src.infrastructure.client_manager import ClientManager
 from src.services.agents.coordination import (
-    AgentCoordinationResult,
     CoordinationStrategy,
     ParallelAgentCoordinator,
     TaskDefinition,
@@ -23,14 +22,12 @@ from src.services.agents.tool_orchestration import (
     AdvancedToolOrchestrator,
     ToolCapability,
     ToolDefinition,
-    ToolExecutionMode,
     ToolOrchestrationPlan,
     ToolPriority,
 )
 from src.services.vector_db.agentic_manager import (
     AgentCollectionConfig,
     AgenticVectorManager,
-    AgentWorkflowConfig,
     OptimizationStrategy,
 )
 
@@ -156,7 +153,8 @@ class AgenticSystemStatus(BaseModel):
 
 
 class UnifiedAgenticSystem:
-    """Unified agentic system integrating coordination, vector management, and orchestration.
+    """Unified agentic system integrating coordination, vector management,
+    and orchestration.
 
     This system provides a single interface for complex autonomous AI operations,
     combining the capabilities of:
@@ -226,7 +224,7 @@ class UnifiedAgenticSystem:
 
         except Exception as e:
             logger.error(
-                f"Failed to initialize UnifiedAgenticSystem: {e}", exc_info=True
+                "Failed to initialize UnifiedAgenticSystem: %s", e, exc_info=True
             )
             raise
 
@@ -247,7 +245,9 @@ class UnifiedAgenticSystem:
         start_time = time.time()
         request_start = datetime.now(tz=datetime.timezone.utc)
 
-        logger.info(f"Executing unified request {request.request_id}: {request.goal}")
+        logger.info(
+            "Executing unified request %s: %s", request.request_id, request.goal
+        )
 
         # Track active request
         self.active_requests[request.request_id] = {
@@ -299,8 +299,10 @@ class UnifiedAgenticSystem:
                 completeness=quality_metrics["completeness"],
                 performance_metrics=quality_metrics["performance_metrics"],
                 resource_usage=quality_metrics["resource_usage"],
-                optimization_recommendations=await self._generate_optimization_recommendations(
-                    request, execution_results, quality_metrics
+                optimization_recommendations=(
+                    await self._generate_optimization_recommendations(
+                        request, execution_results, quality_metrics
+                    )
                 ),
             )
 
@@ -309,7 +311,9 @@ class UnifiedAgenticSystem:
             self.active_requests.pop(request.request_id, None)
 
             logger.info(
-                f"Unified request {request.request_id} completed successfully in {execution_time:.2f}s"
+                "Unified request %s completed successfully in %.2fs",
+                request.request_id,
+                execution_time,
             )
 
             return response
@@ -318,7 +322,7 @@ class UnifiedAgenticSystem:
             execution_time = time.time() - start_time
 
             logger.error(
-                f"Unified request {request.request_id} failed: {e}", exc_info=True
+                "Unified request %s failed: %s", request.request_id, e, exc_info=True
             )
 
             # Create error response
@@ -435,7 +439,7 @@ class UnifiedAgenticSystem:
             )
 
         except Exception as e:
-            logger.error(f"Failed to get system status: {e}", exc_info=True)
+            logger.error("Failed to get system status: %s", e, exc_info=True)
 
             return AgenticSystemStatus(
                 overall_health="unknown",
@@ -449,7 +453,7 @@ class UnifiedAgenticSystem:
         try:
             # Cancel active requests
             for request_id in list(self.active_requests.keys()):
-                logger.warning(f"Cancelling active request {request_id}")
+                logger.warning("Cancelling active request %s", request_id)
 
             # Cleanup subsystems
             await self.coordinator.cleanup()
@@ -459,7 +463,7 @@ class UnifiedAgenticSystem:
             logger.info("UnifiedAgenticSystem cleaned up")
 
         except Exception as e:
-            logger.error(f"Error during cleanup: {e}", exc_info=True)
+            logger.error("Error during cleanup: %s", e, exc_info=True)
 
     # Private implementation methods
 

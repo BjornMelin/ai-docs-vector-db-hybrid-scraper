@@ -178,7 +178,8 @@ class ParallelAgentCoordinator:
         self._coordination_task: asyncio.Task | None = None
 
         logger.info(
-            f"ParallelAgentCoordinator initialized with max_parallel={max_parallel_agents}"
+            "ParallelAgentCoordinator initialized with max_parallel=%s",
+            max_parallel_agents
         )
 
     async def register_agent(
@@ -208,7 +209,8 @@ class ParallelAgentCoordinator:
             )
 
         logger.info(
-            f"Agent {agent_name} registered with capabilities: {capabilities}, role: {role}"
+            "Agent %s registered with capabilities: %s, role: %s",
+            agent_name, capabilities, role
         )
 
     async def unregister_agent(self, agent_name: str) -> None:
@@ -234,7 +236,7 @@ class ParallelAgentCoordinator:
         self.agent_health_status.pop(agent_name, None)
         self.circuit_breakers.pop(agent_name, None)
 
-        logger.info(f"Agent {agent_name} unregistered")
+        logger.info("Agent %s unregistered", agent_name)
 
     async def submit_task(self, task: TaskDefinition) -> str:
         """Submit a task for coordinated execution.
@@ -248,7 +250,7 @@ class ParallelAgentCoordinator:
         self.pending_tasks.append(task)
         self.metrics.total_tasks += 1
 
-        logger.debug(f"Task {task.task_id} submitted with priority {task.priority}")
+        logger.debug("Task %s submitted with priority %s", task.task_id, task.priority)
 
         # Trigger coordination if not already active
         if not self._coordination_active:
@@ -308,7 +310,10 @@ class ParallelAgentCoordinator:
         start_time = time.time()
 
         logger.info(
-            f"Starting coordinated workflow {workflow_id} with {len(tasks)} tasks using {strategy} strategy"
+            "Starting coordinated workflow %s with %s tasks using %s strategy",
+            workflow_id,
+            len(tasks),
+            strategy,
         )
 
         try:
@@ -361,7 +366,7 @@ class ParallelAgentCoordinator:
 
         except Exception as e:
             logger.error(
-                f"Coordinated workflow {workflow_id} failed: {e}", exc_info=True
+                "Coordinated workflow %s failed: %s", workflow_id, e, exc_info=True
             )
             return {
                 "workflow_id": workflow_id,
@@ -419,7 +424,7 @@ class ParallelAgentCoordinator:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Error in coordination loop: {e}", exc_info=True)
+                logger.error("Error in coordination loop: %s", e, exc_info=True)
                 await asyncio.sleep(1.0)  # Longer delay on error
 
     async def _health_monitor_loop(self) -> None:
@@ -432,7 +437,7 @@ class ParallelAgentCoordinator:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Error in health monitor loop: {e}", exc_info=True)
+                logger.error("Error in health monitor loop: %s", e, exc_info=True)
                 await asyncio.sleep(5.0)  # Longer delay on error
 
     async def _process_pending_tasks(self) -> None:
@@ -530,7 +535,7 @@ class ParallelAgentCoordinator:
             self.metrics.completed_tasks += 1
 
             logger.debug(
-                f"Task {task.task_id} completed successfully by agent {agent_name}"
+                "Task %s completed successfully by agent %s", task.task_id, agent_name
             )
 
         except TimeoutError:
@@ -540,14 +545,14 @@ class ParallelAgentCoordinator:
             self.failed_tasks.append(assignment)
             self.metrics.failed_tasks += 1
 
-            logger.warning(f"Task {task.task_id} timed out for agent {agent_name}")
+            logger.warning("Task %s timed out for agent %s", task.task_id, agent_name)
 
             # Consider retry if within limits
             if task.retry_count < task.max_retries:
                 task.retry_count += 1
                 self.pending_tasks.append(task)
                 logger.info(
-                    f"Retrying task {task.task_id} (attempt {task.retry_count + 1})"
+                    "Retrying task %s (attempt %s)", task.task_id, task.retry_count + 1
                 )
 
         except Exception as e:
@@ -562,7 +567,8 @@ class ParallelAgentCoordinator:
             # Track failure in circuit breaker
             if self.enable_circuit_breaker:
                 try:
-                    # Create a lambda that captures the exception to test circuit breaker
+                    # Create a lambda that captures the exception to test
+                    # circuit breaker
                     exception_to_throw = e
                     await self.circuit_breakers[agent_name].call(
                         lambda: (_ for _ in ()).throw(exception_to_throw)
@@ -644,7 +650,7 @@ class ParallelAgentCoordinator:
         for task_id, assignment in list(self.running_tasks.items()):
             # Check for timeouts
             if assignment.estimated_completion < current_time:
-                logger.warning(f"Task {task_id} estimated completion exceeded")
+                logger.warning("Task %s estimated completion exceeded", task_id)
 
     async def _check_agent_health(self) -> None:
         """Check health status of all registered agents."""
@@ -655,7 +661,7 @@ class ParallelAgentCoordinator:
                 self.agent_health_status[agent_name] = is_healthy
 
             except Exception as e:
-                logger.warning(f"Health check failed for agent {agent_name}: {e}")
+                logger.warning("Health check failed for agent %s: %s", agent_name, e)
                 self.agent_health_status[agent_name] = False
 
     async def _update_metrics(self) -> None:
@@ -706,7 +712,7 @@ class ParallelAgentCoordinator:
             self.failed_tasks.append(assignment)
             self.running_tasks.pop(task_id)
 
-            logger.info(f"Task {task_id} cancelled: {reason}")
+            logger.info("Task %s cancelled: %s", task_id, reason)
 
     async def _execute_sequential(
         self, task_ids: list[str], timeout_seconds: float | None

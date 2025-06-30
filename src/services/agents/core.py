@@ -157,7 +157,10 @@ class BaseAgent(ABC):
                 logger.info(f"Agent {name} initialized with Pydantic-AI")
             except Exception as e:
                 logger.warning(
-                    f"Failed to initialize Pydantic-AI agent {name}: {e}. Using fallback mode."
+                    "Failed to initialize Pydantic-AI agent %s: %s. "
+                    "Using fallback mode.",
+                    name,
+                    e
                 )
                 self.agent = None
                 self._fallback_reason = f"initialization_failed: {e}"
@@ -297,7 +300,9 @@ class BaseAgent(ABC):
         """
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
         logger.info(
-            f"Using fallback execution for agent {self.name} (reason: {fallback_reason})"
+            "Using fallback execution for agent %s (reason: %s)",
+            self.name,
+            fallback_reason
         )
 
         # Enhanced fallback logic with context-aware responses

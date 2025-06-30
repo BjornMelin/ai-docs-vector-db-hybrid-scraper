@@ -103,25 +103,25 @@ class DynamicToolDiscovery(BaseAgent):
 
     def get_system_prompt(self) -> str:
         """Define autonomous tool discovery behavior."""
-        return """You are an autonomous tool discovery engine with the following capabilities:
-
-1. INTELLIGENT TOOL ASSESSMENT
-   - Analyze tool capabilities and performance characteristics
-   - Assess compatibility between different tools for chaining
-   - Evaluate tool suitability for specific task requirements
-
-2. DYNAMIC CAPABILITY EVALUATION
-   - Real-time assessment of tool performance and reliability
-   - Learning from execution feedback to improve capability models
-   - Adaptive scoring based on success patterns and failure analysis
-
-3. PERFORMANCE-DRIVEN SELECTION
-   - Select optimal tools based on performance requirements
-   - Balance speed, quality, cost, and reliability constraints
-   - Recommend tool combinations for complex workflows
-
-Your goal is to provide intelligent tool discovery and capability assessment
-for autonomous agent systems, enabling optimal tool selection and orchestration."""
+        return (
+            "You are an autonomous tool discovery engine with the following "
+            "capabilities:\n\n"
+            "1. INTELLIGENT TOOL ASSESSMENT\n"
+            "   - Analyze tool capabilities and performance characteristics\n"
+            "   - Assess compatibility between different tools for chaining\n"
+            "   - Evaluate tool suitability for specific task requirements\n\n"
+            "2. DYNAMIC CAPABILITY EVALUATION\n"
+            "   - Real-time assessment of tool performance and reliability\n"
+            "   - Learning from execution feedback to improve capability models\n"
+            "   - Adaptive scoring based on success patterns and failure analysis\n\n"
+            "3. PERFORMANCE-DRIVEN SELECTION\n"
+            "   - Select optimal tools based on performance requirements\n"
+            "   - Balance speed, quality, cost, and reliability constraints\n"
+            "   - Recommend tool combinations for complex workflows\n\n"
+            "Your goal is to provide intelligent tool discovery and capability "
+            "assessment for autonomous agent systems, enabling optimal tool "
+            "selection and orchestration."
+        )
 
     async def initialize_tools(self, deps: BaseAgentDependencies) -> None:
         """Initialize tool discovery capabilities.
@@ -133,7 +133,9 @@ for autonomous agent systems, enabling optimal tool selection and orchestration.
         fallback_reason = getattr(self, "_fallback_reason", None)
         if fallback_reason:
             logger.info(
-                f"DynamicToolDiscovery tools initialized in fallback mode (reason: {fallback_reason})"
+                "DynamicToolDiscovery tools initialized in fallback mode "
+                "(reason: %s)",
+                fallback_reason
             )
         else:
             logger.info("DynamicToolDiscovery tools initialized (discovery-based)")
@@ -553,7 +555,7 @@ for autonomous agent systems, enabling optimal tool selection and orchestration.
             List of mock suitable tools
         """
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
-        logger.info(f"Using fallback tool discovery (reason: {fallback_reason})")
+        logger.info("Using fallback tool discovery (reason: %s)", fallback_reason)
 
         # Create mock tools based on task analysis
         mock_tools = []
@@ -654,7 +656,7 @@ for autonomous agent systems, enabling optimal tool selection and orchestration.
             Mock tool recommendations
         """
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
-        logger.info(f"Using fallback tool recommendations (reason: {fallback_reason})")
+        logger.info("Using fallback tool recommendations (reason: %s)", fallback_reason)
 
         # Get fallback tools
         fallback_tools = await self._fallback_discover_tools(task_type, constraints)
@@ -687,8 +689,10 @@ for autonomous agent systems, enabling optimal tool selection and orchestration.
             else [],
             "reasoning": (
                 f"Using fallback mode recommendations (reason: {fallback_reason}). "
-                f"Identified {len(fallback_tools)} mock tools suitable for '{task_type}' tasks. "
-                "These are simulated capabilities that will provide basic functionality."
+                f"Identified {len(fallback_tools)} mock tools suitable for "
+                f"'{task_type}' tasks. "
+                "These are simulated capabilities that will provide basic "
+                "functionality."
             ),
             "fallback_mode": True,
         }

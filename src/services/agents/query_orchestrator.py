@@ -48,31 +48,34 @@ class QueryOrchestrator(BaseAgent):
 
     def get_system_prompt(self) -> str:
         """Define system prompt for the Query Orchestrator."""
-        return """You are a Query Orchestrator responsible for coordinating intelligent query processing.
-
-Your core responsibilities:
-1. Analyze incoming queries to determine complexity, intent, and optimal processing strategy
-2. Delegate to specialized agents based on query characteristics and performance requirements
-3. Coordinate multi-stage retrieval when single-stage search is insufficient
-4. Ensure response quality while optimizing for latency and cost
-5. Learn from past performance to improve future orchestration decisions
-
-Query Analysis Framework:
-- SIMPLE: Direct factual queries that can be answered with basic search
-- MODERATE: Queries requiring some analysis or multi-source information
-- COMPLEX: Queries needing deep analysis, reasoning, or multi-step processing
-
-Processing Strategies:
-- FAST: Prioritize speed over depth, use cached results when possible
-- BALANCED: Balance quality and performance for most queries
-- COMPREHENSIVE: Maximize quality for complex or critical queries
-
-Available Specialists:
-- retrieval_specialist: Optimize search strategies and parameters
-- answer_generator: Generate high-quality contextual answers
-- tool_selector: Choose optimal tools for specific tasks
-
-Always provide structured decisions with confidence scores and reasoning."""
+        return (
+            "You are a Query Orchestrator responsible for coordinating "
+            "intelligent query processing.\n\n"
+            "Your core responsibilities:\n"
+            "1. Analyze incoming queries to determine complexity, intent, and optimal "
+            "processing strategy\n"
+            "2. Delegate to specialized agents based on query characteristics and "
+            "performance requirements\n"
+            "3. Coordinate multi-stage retrieval when single-stage search is "
+            "insufficient\n"
+            "4. Ensure response quality while optimizing for latency and cost\n"
+            "5. Learn from past performance to improve future orchestration "
+            "decisions\n\n"
+            "Query Analysis Framework:\n"
+            "- SIMPLE: Direct factual queries that can be answered with basic search\n"
+            "- MODERATE: Queries requiring some analysis or multi-source information\n"
+            "- COMPLEX: Queries needing deep analysis, reasoning, or multi-step "
+            "processing\n\n"
+            "Processing Strategies:\n"
+            "- FAST: Prioritize speed over depth, use cached results when possible\n"
+            "- BALANCED: Balance quality and performance for most queries\n"
+            "- COMPREHENSIVE: Maximize quality for complex or critical queries\n\n"
+            "Available Specialists:\n"
+            "- retrieval_specialist: Optimize search strategies and parameters\n"
+            "- answer_generator: Generate high-quality contextual answers\n"
+            "- tool_selector: Choose optimal tools for specific tasks\n\n"
+            "Always provide structured decisions with confidence scores and reasoning."
+        )
 
     async def initialize_tools(self, deps: BaseAgentDependencies) -> None:  # noqa: ARG002
         """Initialize Query Orchestrator tools.
@@ -85,7 +88,8 @@ Always provide structured decisions with confidence scores and reasoning."""
 
         if not PYDANTIC_AI_AVAILABLE or self.agent is None:
             logger.warning(
-                f"QueryOrchestrator using fallback mode (reason: {fallback_reason or 'pydantic_ai_unavailable'})"
+                "QueryOrchestrator using fallback mode (reason: %s)",
+                fallback_reason or "pydantic_ai_unavailable"
             )
             return
 
@@ -468,7 +472,7 @@ Always provide structured decisions with confidence scores and reasoning."""
         query = context["query"]
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
 
-        logger.info(f"Using fallback query orchestration (reason: {fallback_reason})")
+        logger.info("Using fallback query orchestration (reason: %s)", fallback_reason)
 
         # Enhanced fallback logic with better analysis
         query_lower = query.lower()
@@ -508,7 +512,10 @@ Always provide structured decisions with confidence scores and reasoning."""
             "strategy": strategy,
             "recommended_tools": recommended_tools,
             "confidence": 0.7,
-            "reasoning": f"Fallback analysis based on keyword patterns (reason: {fallback_reason})",
+            "reasoning": (
+                f"Fallback analysis based on keyword patterns "
+                f"(reason: {fallback_reason})"
+            ),
             "fallback_mode": True,
         }
 

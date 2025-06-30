@@ -8,18 +8,18 @@ compose and coordinate complex tool workflows.
 import asyncio
 import logging
 import time
-from abc import ABC, abstractmethod
+
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any, Set, Tuple, Union
+from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
 from src.infrastructure.client_manager import ClientManager
-from src.services.agents.core import BaseAgent, BaseAgentDependencies
+# BaseAgent and BaseAgentDependencies imports removed (unused)
 from src.services.cache.patterns import CircuitBreakerPattern
 
 
@@ -237,7 +237,9 @@ class AdvancedToolOrchestrator:
             self.capability_performance[capability].append(tool_def.tool_id)
 
         logger.info(
-            f"Registered tool {tool_def.tool_id} with capabilities: {tool_def.capabilities}"
+            "Registered tool %s with capabilities: %s",
+            tool_def.tool_id,
+            tool_def.capabilities,
         )
 
     async def compose_tool_chain(
@@ -260,7 +262,7 @@ class AdvancedToolOrchestrator:
         constraints = constraints or {}
         preferences = preferences or {}
 
-        logger.info(f"Composing tool chain {plan_id} for goal: {goal}")
+        logger.info("Composing tool chain %s for goal: %s", plan_id, goal)
 
         try:
             # Analyze goal to determine required capabilities
@@ -294,12 +296,12 @@ class AdvancedToolOrchestrator:
 
             self.orchestration_plans[plan_id] = plan
 
-            logger.info(f"Composed tool chain {plan_id} with {len(nodes)} tools")
+            logger.info("Composed tool chain %s with %s tools", plan_id, len(nodes))
 
             return plan
 
         except Exception as e:
-            logger.error(f"Failed to compose tool chain: {e}", exc_info=True)
+            logger.error("Failed to compose tool chain: %s", e, exc_info=True)
             raise
 
     async def execute_tool_chain(
@@ -323,7 +325,9 @@ class AdvancedToolOrchestrator:
         start_time = time.time()
 
         logger.info(
-            f"Executing tool chain {plan.plan_id} with execution ID {execution_id}"
+            "Executing tool chain %s with execution ID %s",
+            plan.plan_id,
+            execution_id,
         )
 
         try:
@@ -386,7 +390,9 @@ class AdvancedToolOrchestrator:
             }
 
             logger.info(
-                f"Tool chain execution {execution_id} completed with {success_rate:.2%} success rate"
+                "Tool chain execution %s completed with %.2%% success rate",
+                execution_id,
+                success_rate * 100,
             )
 
             return final_results
@@ -395,7 +401,7 @@ class AdvancedToolOrchestrator:
             execution_time = time.time() - start_time
 
             logger.error(
-                f"Tool chain execution {execution_id} failed: {e}", exc_info=True
+                "Tool chain execution %s failed: %s", execution_id, e, exc_info=True
             )
 
             return {
@@ -435,7 +441,7 @@ class AdvancedToolOrchestrator:
         tool_def = self.registered_tools[tool_id]
         timeout_seconds = timeout_seconds or (tool_def.timeout_ms or 30000) / 1000.0
 
-        logger.debug(f"Executing tool {tool_id} with execution ID {execution_id}")
+        logger.debug("Executing tool %s with execution ID %s", tool_id, execution_id)
 
         try:
             # Check circuit breaker
@@ -487,7 +493,7 @@ class AdvancedToolOrchestrator:
             end_time = datetime.now(tz=datetime.timezone.utc)
             duration_ms = (end_time - start_time).total_seconds() * 1000
 
-            logger.warning(f"Tool {tool_id} execution timed out")
+            logger.warning("Tool %s execution timed out", tool_id)
 
             # Try fallback if available
             if fallback_enabled and tool_def.fallback_tools:
@@ -515,7 +521,8 @@ class AdvancedToolOrchestrator:
             # Track failure in circuit breaker
             if circuit_breaker:
                 try:
-                    # Create a lambda that captures the exception to test circuit breaker
+                    # Create a lambda that captures the exception to test
+                    # circuit breaker
                     exception_to_throw = e
                     await circuit_breaker.call(
                         lambda: (_ for _ in ()).throw(exception_to_throw)
@@ -523,7 +530,7 @@ class AdvancedToolOrchestrator:
                 except Exception:  # nosec # Expected to fail for circuit breaker testing
                     pass
 
-            logger.exception("Tool {tool_id} execution failed")
+            logger.exception("Tool %s execution failed", tool_id)
 
             # Try fallback if available
             if fallback_enabled and tool_def.fallback_tools:
@@ -944,7 +951,9 @@ class AdvancedToolOrchestrator:
     ) -> ToolExecutionResult:
         """Execute a fallback tool."""
         logger.info(
-            f"Executing fallback tool {fallback_tool_id} for execution {original_execution_id}"
+            "Executing fallback tool %s for execution %s",
+            fallback_tool_id,
+            original_execution_id,
         )
 
         result = await self.execute_single_tool(
@@ -1010,4 +1019,4 @@ class AdvancedToolOrchestrator:
         """Update performance history for the orchestration plan."""
         # This would implement comprehensive performance tracking
         # For now, just log the completion
-        logger.info(f"Updated performance history for plan {plan.plan_id}")
+        logger.info("Updated performance history for plan %s", plan.plan_id)
