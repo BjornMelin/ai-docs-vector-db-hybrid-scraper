@@ -293,7 +293,8 @@ class TestCircuitBreakers:
 
         for i, scenario in enumerate(failure_scenarios):
             logger.info(
-                "Testing circuit breaker with %.1f%% failure rate", scenario['rate'] * 100
+                "Testing circuit breaker with %.1f%% failure rate",
+                scenario["rate"] * 100,
             )
 
             # Set failure rate
@@ -444,7 +445,7 @@ class TestCircuitBreakers:
 
         for phase in phases:
             logger.info(
-                "Running recovery phase: %s", phase['name']
+                "Running recovery phase: %s", phase["name"]
             )  # TODO: Convert f-string to logging format
 
             # Set service health
@@ -612,7 +613,7 @@ class TestRateLimiters:
 
         for pattern in load_patterns:
             logger.info(
-                "Testing rate limiter with load pattern: %s", pattern['name']
+                "Testing rate limiter with load pattern: %s", pattern["name"]
             )  # TODO: Convert f-string to logging format
 
             # Reset rate limiter for clean test
@@ -797,9 +798,7 @@ class TestRateLimiters:
             )
 
         logger.info("Thundering herd protection successful:")
-        logger.info(
-            "  - %.2f%% requests rejected", rejection_rate
-        )
+        logger.info("  - %.2f%% requests rejected", rejection_rate)
         logger.info(
             "  - Max concurrent executions: %s", expensive_service.max_concurrent
         )

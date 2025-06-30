@@ -7,12 +7,11 @@ following 2025 best practices.
 
 import asyncio
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import httpx
 import numpy as np
 import pytest
-import respx
 from hypothesis import strategies as st
 
 
@@ -617,7 +616,7 @@ def performance_critical_test(p95_threshold_ms: float = 100.0):
     """Decorator for performance-critical tests with threshold."""
 
     def decorator(test_func):
-        test_func._p95_threshold = p95_threshold_ms  # noqa: SLF001
+        test_func._p95_threshold = p95_threshold_ms
         return pytest.mark.performance(test_func)
 
     return decorator

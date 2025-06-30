@@ -137,9 +137,11 @@ class TestChaosIntegration:
 
                 # Find services that depend on the failed service
                 for service, deps in dependencies.items():
-                    if (failed_service in deps
+                    if (
+                        failed_service in deps
                         and service not in self.active_failures
-                        and self.services[service]["status"] == "healthy"):
+                        and self.services[service]["status"] == "healthy"
+                    ):
                         # Dependent service may degrade
                         self.services[service]["status"] = "degraded"
                         self.services[service]["response_time"] *= 2
@@ -346,9 +348,7 @@ class TestChaosIntegration:
         assert final_health["status"] == "healthy"
 
     @pytest.mark.usefixtures("fault_injector", "resilience_validator")
-    async def test_real_world_failure_simulation(
-        self, integrated_system
-    ):
+    async def test_real_world_failure_simulation(self, integrated_system):
         """Test realistic failure simulation combining multiple chaos types."""
         # Capture baseline metrics
         baseline_metrics = await integrated_system.get_metrics()
@@ -467,8 +467,10 @@ class TestChaosIntegration:
             call_count += 1
 
             # Simulate search service issues
-            if ("search_service" in integrated_system.active_failures
-                and call_count <= 3):  # Fail first 3 attempts
+            if (
+                "search_service" in integrated_system.active_failures
+                and call_count <= 3
+            ):  # Fail first 3 attempts
                 msg = "Search service temporarily unavailable"
                 raise TestError(msg)
 

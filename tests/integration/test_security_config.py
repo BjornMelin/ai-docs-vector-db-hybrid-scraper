@@ -14,6 +14,30 @@ import pytest
 from src.config import SecurityConfig
 
 
+# Placeholder imports for future implementation
+try:
+    from src.security.enhanced_config import (
+        ConfigDataClassification,
+        ConfigOperationType,
+        SecureConfigManager,
+    )
+except ImportError:
+    # Create placeholder classes for testing
+    class SecureConfigManager:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class ConfigDataClassification:
+        PUBLIC = "public"
+        INTERNAL = "internal"
+        CONFIDENTIAL = "confidential"
+        SECRET = "secret"
+
+    class ConfigOperationType:
+        ENCRYPT = "encrypt"
+        DECRYPT = "decrypt"
+
+
 @pytest.mark.skip("SecureConfigManager and related classes not yet implemented")
 class TestSecureConfigManager:
     """Test suite for SecureConfigManager."""

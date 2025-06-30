@@ -620,7 +620,13 @@ def chaos_experiment_runner():
                     experiment, target_system
                 )
 
-            except (TimeoutError, ConnectionError, MemoryError, CustomError, ValueError) as e:
+            except (
+                TimeoutError,
+                ConnectionError,
+                MemoryError,
+                CustomError,
+                ValueError,
+            ) as e:
                 result.errors.append(str(e))
 
             finally:
@@ -652,8 +658,9 @@ def chaos_experiment_runner():
                 if hasattr(target_system, "simulate_service_unavailable"):
                     await target_system.simulate_service_unavailable()
 
-            elif (experiment.failure_type == FailureType.MEMORY_EXHAUSTION
-                  and hasattr(target_system, "simulate_memory_pressure")):
+            elif experiment.failure_type == FailureType.MEMORY_EXHAUSTION and hasattr(
+                target_system, "simulate_memory_pressure"
+            ):
                 # Simulate memory pressure
                 await target_system.simulate_memory_pressure()
 

@@ -10,19 +10,19 @@ from unittest.mock import patch
 import pytest
 from pydantic import ValidationError
 
-from src.config.modern import (
+from src.config.settings import (
     ApplicationMode,
     ChunkingStrategy,
-    Config,
     CrawlProvider,
     EmbeddingProvider,
     Environment,
     SearchStrategy,
+    Settings as Config,
     create_enterprise_config,
     create_simple_config,
-    get_config,
-    reset_config,
-    set_config,
+    get_settings as get_config,
+    reset_settings as reset_config,
+    set_settings as set_config,
 )
 
 

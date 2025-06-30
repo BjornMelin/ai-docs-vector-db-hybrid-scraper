@@ -12,7 +12,7 @@ import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import psutil
 import pytest
@@ -727,19 +727,19 @@ def mock_qdrant_client():
 def mock_performance_service():
     """Mock performance service for testing internal state access."""
     service = AsyncMock()
-    
+
     # Add private attributes for testing
-    service._connection_pool = MagicMock()  # noqa: SLF001
-    service._connection_pool.size = 5  # noqa: SLF001
-    service._internal_cache = {}  # noqa: SLF001
-    service._config = MagicMock()  # noqa: SLF001
-    service._stats = MagicMock()  # noqa: SLF001
-    service._stats.request_count = 0  # noqa: SLF001
-    
+    service._connection_pool = MagicMock()
+    service._connection_pool.size = 5
+    service._internal_cache = {}
+    service._config = MagicMock()
+    service._stats = MagicMock()
+    service._stats.request_count = 0
+
     async def mock_process_request():
-        service._stats.request_count += 1  # noqa: SLF001
+        service._stats.request_count += 1
         return {"processed": True}
-    
+
     service.process_request = mock_process_request
     return service
 

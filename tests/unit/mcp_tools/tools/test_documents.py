@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from src.config.enums import ChunkingStrategy
+from src.config.settings import ChunkingStrategy
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse

@@ -451,9 +451,7 @@ class TestNetworkPartitions:
         assert not minority_write["write_successful"]
         assert minority_write["successful_writes"] < minority_write["quorum_required"]
 
-    async def test_network_partition_detection(
-        self, network_simulator, fault_injector
-    ):
+    async def test_network_partition_detection(self, network_simulator, fault_injector):
         """Test network partition detection mechanisms."""
 
         class PartitionDetector:

@@ -545,7 +545,9 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "throughput: mark test as throughput test")
     config.addinivalue_line("markers", "latency: mark test as latency test")
     config.addinivalue_line("markers", "scalability: mark test as scalability test")
-    config.addinivalue_line("markers", "performance_critical: mark test as performance critical")
+    config.addinivalue_line(
+        "markers", "performance_critical: mark test as performance critical"
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -623,11 +625,11 @@ def mock_multi_level_circuit_breaker():
 
     # Set core attributes
     breaker.state = ClientState.HEALTHY
-    breaker._failure_count = 0  # noqa: SLF001
+    breaker._failure_count = 0
 
     # Add the expected _failure_count property that connection_manager looks for
     # This is a compatibility shim for what appears to be incorrect usage in the real code
-    breaker._failure_count = 0  # noqa: SLF001
+    breaker._failure_count = 0
 
     # Configure async methods with realistic behavior
     async def mock_call(func, *_args, **__kwargs):
@@ -865,7 +867,7 @@ def ai_test_utilities():
                 "All values must be numeric"
             )
 
-            import math  # noqa: PLC0415
+            import math
 
             assert not any(math.isnan(x) or math.isinf(x) for x in embedding), (
                 "No NaN/Inf values"
@@ -901,7 +903,7 @@ def ai_test_utilities():
             count: int = 10, dim: int = 1536
         ) -> list[list[float]]:
             """Generate deterministic test embeddings."""
-            import random  # noqa: PLC0415
+            import random
 
             embeddings = []
 
@@ -999,7 +1001,7 @@ except ImportError:
     # Fallback if Hypothesis not available
     def embedding_strategy(*args, **kwargs):
         """Fallback embedding strategy when Hypothesis not available."""
-        import random  # noqa: PLC0415
+        import random
 
         dim = kwargs.get("max_dim", 384)
         normalized = kwargs.get("normalized", True)
@@ -1015,7 +1017,7 @@ except ImportError:
         """Fallback document strategy when Hypothesis not available."""
         min_length = kwargs.get("min_length", 10)
         max_length = kwargs.get("max_length", 500)
-        import random  # noqa: PLC0415
+        import random
 
         words = [
             "test",

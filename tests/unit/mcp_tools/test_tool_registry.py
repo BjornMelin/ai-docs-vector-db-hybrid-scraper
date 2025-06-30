@@ -409,8 +409,8 @@ class TestToolRegistryIntegration:
         # This test verifies the function can be called with properly typed arguments
 
         if TYPE_CHECKING:
-            from fastmcp import FastMCP  # noqa: PLC0415
-            from src.infrastructure.client_manager import ClientManager  # noqa: PLC0415
+            from fastmcp import FastMCP
+            from src.infrastructure.client_manager import ClientManager
 
             # This should not raise type errors
             async def type_check():

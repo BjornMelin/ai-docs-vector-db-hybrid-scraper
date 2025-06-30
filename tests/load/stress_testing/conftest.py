@@ -144,7 +144,9 @@ class FailureInjector:
         }
 
         logger.warning(
-            "Injecting network failures: %.1f%% rate for %ss", failure_rate * 100, duration
+            "Injecting network failures: %.1f%% rate for %ss",
+            failure_rate * 100,
+            duration,
         )
 
         # Simulate network failure
@@ -283,7 +285,9 @@ class FailureInjector:
         }
 
         logger.warning(
-            "Injecting disk I/O stress: %.1f%% intensity for %ss", io_intensity * 100, duration
+            "Injecting disk I/O stress: %.1f%% intensity for %ss",
+            io_intensity * 100,
+            duration,
         )
 
         # Create temporary files and perform I/O operations
@@ -438,7 +442,10 @@ class StressTestOrchestrator:
 
         for i, phase in enumerate(phases):
             logger.info(
-                "Starting stress test phase %s/%s: %s", i + 1, len(phases), phase.get('name', f'Phase {i + 1}')
+                "Starting stress test phase %s/%s: %s",
+                i + 1,
+                len(phases),
+                phase.get("name", f"Phase {i + 1}"),
             )
 
             phase_start = time.time()
@@ -653,7 +660,9 @@ def stress_test_environment():
     # Log system information
     logger.info("Setting up stress testing environment")
     logger.info(
-        "System: %s CPUs, %.2f GB RAM", psutil.cpu_count(), psutil.virtual_memory().total / (1024**3)
+        "System: %s CPUs, %.2f GB RAM",
+        psutil.cpu_count(),
+        psutil.virtual_memory().total / (1024**3),
     )
 
     # Check resource limits
@@ -666,9 +675,7 @@ def stress_test_environment():
 
             mem_limit = resource.getrlimit(resource.RLIMIT_AS)
             if mem_limit[0] != resource.RLIM_INFINITY:
-                logger.info(
-                    "Memory limit: %.2f GB", mem_limit[0] / (1024**3)
-                )
+                logger.info("Memory limit: %.2f GB", mem_limit[0] / (1024**3))
             else:
                 logger.info("Memory limit: unlimited")
         except Exception:

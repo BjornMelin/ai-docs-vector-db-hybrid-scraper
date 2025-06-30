@@ -265,7 +265,7 @@ class AssertionHelpers:
         else:
             pytest.fail(f"Unsupported timestamp type: {type(timestamp)}")
 
-        age_seconds = (now - timestamp_dt)._total_seconds()  # noqa: SLF001
+        age_seconds = (now - timestamp_dt)._total_seconds()
         assert age_seconds <= max_age_seconds, (
             f"Timestamp is {age_seconds:.1f}s old, exceeds limit of {max_age_seconds}s"
         )
@@ -528,7 +528,7 @@ async def assert_async_operation_completes(
     """
     try:
         result = await asyncio.wait_for(async_operation(), timeout=timeout_seconds)
-        return result  # noqa: TRY300
+        return result
     except TimeoutError as e:
         msg = f"{operation_name} timed out after {timeout_seconds}s"
         raise AssertionError(msg) from e

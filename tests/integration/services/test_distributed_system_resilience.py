@@ -286,7 +286,7 @@ class TestNetworkPartitionTolerance:
 
         async def perform_cache_operation_with_timeout(
             operation: str,
-            timeout: float = 1.0,  # noqa: ASYNC109
+            timeout: float = 1.0,
         ):
             """Perform cache operation with timeout."""
             try:

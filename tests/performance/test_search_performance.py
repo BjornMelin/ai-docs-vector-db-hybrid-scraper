@@ -97,8 +97,8 @@ class TestSearchPerformance:
         )
 
         # Performance test: Verify internal framework state
-        assert len(performance_framework._latency_measurements) > 0  # noqa: SLF001
-        assert performance_framework._test_session.start_time is not None  # noqa: SLF001
+        assert len(performance_framework._latency_measurements) > 0
+        assert performance_framework._test_session.start_time is not None
 
         # Validate performance requirements
         performance_framework.assert_performance_requirements(
@@ -215,8 +215,8 @@ class TestSearchPerformance:
                 await asyncio.sleep(0.1)
 
         # Performance test: Verify internal tracker state
-        assert "sustained_search_load" in tracker._measurements  # noqa: SLF001
-        assert tracker._current_measurements > 0  # noqa: SLF001
+        assert "sustained_search_load" in tracker._measurements
+        assert tracker._current_measurements > 0
 
         # Analyze memory usage
         stats = tracker.get_statistics("sustained_search_load")

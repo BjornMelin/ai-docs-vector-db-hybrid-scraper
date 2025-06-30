@@ -96,9 +96,11 @@ class ChaosTestRunner:
             if self.global_config["safety_mode"]:
                 safety_check = await self._perform_safety_checks(experiment)
                 if not safety_check.get("passed", True):
+
                     def _raise_safety_error():
                         msg = f"Safety check failed: {safety_check['reason']}"
                         raise TestError(msg)
+
                     _raise_safety_error()
 
             # Execute the experiment
@@ -109,7 +111,13 @@ class ChaosTestRunner:
             execution.result = result
             execution.status = ExperimentStatus.COMPLETED
 
-        except (TestError, ValueError, TimeoutError, ConnectionError, RuntimeError) as e:
+        except (
+            TestError,
+            ValueError,
+            TimeoutError,
+            ConnectionError,
+            RuntimeError,
+        ) as e:
             execution.error = str(e)
             execution.status = ExperimentStatus.FAILED
 
@@ -174,17 +182,27 @@ class ChaosTestRunner:
                 "_total_experiments": len(suite.experiments),
                 "successful_experiments": suite_results["successful"],
                 "failed_experiments": suite_results["failed"],
-                "experiment_results": [asdict(execution) for execution in experiment_executions],
+                "experiment_results": [
+                    asdict(execution) for execution in experiment_executions
+                ],
                 "summary": suite_results,
             }
 
-        except (TestError, ValueError, TimeoutError, ConnectionError, RuntimeError) as e:
+        except (
+            TestError,
+            ValueError,
+            TimeoutError,
+            ConnectionError,
+            RuntimeError,
+        ) as e:
             return {
                 "status": "failed",
                 "suite_name": suite_name,
                 "error": str(e),
                 "execution_time": time.time() - suite_start_time,
-                "partial_results": [asdict(execution) for execution in experiment_executions],
+                "partial_results": [
+                    asdict(execution) for execution in experiment_executions
+                ],
             }
 
         finally:
@@ -298,7 +316,13 @@ class ChaosTestRunner:
                 experiment, target_system
             )
 
-        except (TestError, ValueError, TimeoutError, ConnectionError, RuntimeError) as e:
+        except (
+            TestError,
+            ValueError,
+            TimeoutError,
+            ConnectionError,
+            RuntimeError,
+        ) as e:
             result.errors.append(str(e))
 
         finally:

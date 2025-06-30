@@ -25,6 +25,7 @@ from src.config import Config
 # Mock classes for stress testing
 class ConfigReloader:
     """Mock config reloader for stress testing."""
+
     def __init__(self, config=None):
         self.config = config
 
@@ -32,8 +33,10 @@ class ConfigReloader:
         """Mock config reload."""
         return Config()
 
+
 class ReloadTrigger:
     """Mock reload trigger."""
+
     FILE_CHANGE = "file_change"
     TIME_BASED = "time_based"
     SIGNAL = "signal"
@@ -200,9 +203,7 @@ class TestConfigurationLoadStress:
         # Log detailed metrics
         print("\nHigh Frequency Reload Metrics:")
         print(f"  Total operations: {metrics._total_operations}")
-        success_rate = (
-            metrics.successful_operations / metrics._total_operations * 100
-        )
+        success_rate = metrics.successful_operations / metrics._total_operations * 100
         print(f"  Success rate: {success_rate:.1f}%")
         print(f"  Average reload time: {metrics.avg_duration_ms:.2f}ms")
         percentiles = (

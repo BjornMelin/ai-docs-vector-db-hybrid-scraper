@@ -47,13 +47,13 @@ class TestMCPServicesEndToEndWorkflows:
             pass
 
         # Configure services with mocks
-        search_service._register_search_tools = AsyncMock()  # noqa: SLF001
-        document_service._register_document_tools = AsyncMock()  # noqa: SLF001
-        system_service._register_system_tools = AsyncMock()  # noqa: SLF001
+        search_service._register_search_tools = AsyncMock()
+        document_service._register_document_tools = AsyncMock()
+        system_service._register_system_tools = AsyncMock()
 
         # Configure analytics service with observability mocks
-        analytics_service._register_analytics_tools = AsyncMock()  # noqa: SLF001
-        analytics_service._register_enhanced_observability_tools = AsyncMock()  # noqa: SLF001
+        analytics_service._register_analytics_tools = AsyncMock()
+        analytics_service._register_enhanced_observability_tools = AsyncMock()
 
         with patch.multiple(
             "src.mcp_services.analytics_service",
@@ -67,7 +67,7 @@ class TestMCPServicesEndToEndWorkflows:
                 return_value=mock_observability_components["performance_monitor"]
             ),
         ):
-            analytics_service._initialize_observability_integration = AsyncMock()  # noqa: SLF001
+            analytics_service._initialize_observability_integration = AsyncMock()
             await analytics_service.initialize(mock_client_manager)
 
         # Initialize other services
@@ -84,9 +84,9 @@ class TestMCPServicesEndToEndWorkflows:
         orchestrator_service.agentic_orchestrator = mock_agentic_orchestrator
         orchestrator_service.discovery_engine = mock_discovery_engine
 
-        orchestrator_service._initialize_domain_services = AsyncMock()  # noqa: SLF001
-        orchestrator_service._initialize_agentic_orchestration = AsyncMock()  # noqa: SLF001
-        orchestrator_service._register_orchestrator_tools = AsyncMock()  # noqa: SLF001
+        orchestrator_service._initialize_domain_services = AsyncMock()
+        orchestrator_service._initialize_agentic_orchestration = AsyncMock()
+        orchestrator_service._register_orchestrator_tools = AsyncMock()
 
         await orchestrator_service.initialize(mock_client_manager)
 
@@ -111,7 +111,7 @@ class TestMCPServicesEndToEndWorkflows:
             return func
 
         orchestrator.mcp.tool = Mock(side_effect=mock_tool_decorator)
-        await orchestrator._register_orchestrator_tools()  # noqa: SLF001
+        await orchestrator._register_orchestrator_tools()
 
         # Execute complete research workflow
         workflow_description = """
@@ -170,7 +170,7 @@ class TestMCPServicesEndToEndWorkflows:
             return func
 
         orchestrator.mcp.tool = Mock(side_effect=mock_tool_decorator)
-        await orchestrator._register_orchestrator_tools()  # noqa: SLF001
+        await orchestrator._register_orchestrator_tools()
 
         # Test service capability discovery
         get_capabilities = workflow_tools["get_service_capabilities"]
@@ -229,7 +229,7 @@ class TestMCPServicesEndToEndWorkflows:
             return func
 
         analytics.mcp.tool = Mock(side_effect=mock_analytics_tool_decorator)
-        await analytics._register_enhanced_observability_tools()  # noqa: SLF001
+        await analytics._register_enhanced_observability_tools()
 
         # Test agent decision metrics (autonomous capability)
         if "get_agentic_decision_metrics" in analytics_tools:
@@ -345,7 +345,7 @@ class TestMCPServicesEndToEndWorkflows:
             return func
 
         analytics.mcp.tool = Mock(side_effect=mock_analytics_tool_decorator)
-        await analytics._register_enhanced_observability_tools()  # noqa: SLF001
+        await analytics._register_enhanced_observability_tools()
 
         # Test enterprise observability tools
         expected_enterprise_tools = [
@@ -493,7 +493,7 @@ class TestMCPServicesRealWorldScenarios:
             return func
 
         orchestrator.mcp.tool = Mock(side_effect=mock_tool_decorator)
-        await orchestrator._register_orchestrator_tools()  # noqa: SLF001
+        await orchestrator._register_orchestrator_tools()
 
         # Test multi-service coordination
         if "orchestrate_multi_service_workflow" in coordination_tools:

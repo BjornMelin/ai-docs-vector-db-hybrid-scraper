@@ -214,7 +214,7 @@ class TestWatchdogIntegration:
         mock_observer = MagicMock()
         mock_observer.is_alive.return_value = True
 
-        async def shutdown_watcher(observer, timeout=5.0):  # noqa: ASYNC109
+        async def shutdown_watcher(observer, timeout=5.0):
             """Gracefully shutdown file watcher."""
             observer.stop()
 

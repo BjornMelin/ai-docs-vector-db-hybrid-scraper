@@ -5,7 +5,7 @@ that matches the structure and constraints of configuration models.
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from urllib.parse import urlparse
 
 import hypothesis.strategies as st

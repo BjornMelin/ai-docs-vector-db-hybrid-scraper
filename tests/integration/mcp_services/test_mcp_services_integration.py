@@ -10,7 +10,7 @@ Tests cover:
 """
 
 import asyncio
-import logging
+import time
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -831,7 +831,6 @@ class TestMCPServicesPerformanceAndScalability:
     ):
         """Test memory efficiency during service operations."""
         import gc
-        import sys
 
         services = complete_mcp_services_setup
 

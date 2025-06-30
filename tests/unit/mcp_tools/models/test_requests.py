@@ -2,11 +2,13 @@
 
 import pytest
 from pydantic import ValidationError
-from src.config.enums import ChunkingStrategy
-from src.config.enums import FusionAlgorithm
-from src.config.enums import SearchAccuracy
-from src.config.enums import SearchStrategy
-from src.config.enums import VectorType
+from src.config.settings import (
+    ChunkingStrategy,
+    FusionAlgorithm,
+    SearchAccuracy,
+    SearchStrategy,
+    VectorType,
+)
 from src.mcp_tools.models.requests import AnalyticsRequest
 from src.mcp_tools.models.requests import BatchRequest
 from src.mcp_tools.models.requests import CostEstimateRequest

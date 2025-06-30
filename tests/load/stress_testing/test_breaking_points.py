@@ -68,7 +68,9 @@ class BreakingPointAnalyzer:
         """Add a performance measurement point."""
         self.performance_points.append(point)
         logger.debug(
-            "Added performance point: %s users, %.2f%% errors", point.users, point.error_rate
+            "Added performance point: %s users, %.2f%% errors",
+            point.users,
+            point.error_rate,
         )
 
     def identify_breaking_point(self) -> BreakingPointMetrics:
@@ -241,7 +243,10 @@ class TestBreakingPoints:
         # Run each load step
         for i, step in enumerate(load_steps):
             logger.info(
-                "Running load step %s/%s: %s users", i + 1, len(load_steps), step['users']
+                "Running load step %s/%s: %s users",
+                i + 1,
+                len(load_steps),
+                step["users"],
             )
 
             # Configure step test
@@ -299,7 +304,10 @@ class TestBreakingPoints:
                 )
 
                 logger.info(
-                    "Step %s completed: %.2f%% errors, %.2fms avg response time", i + 1, error_rate, avg_response_time
+                    "Step %s completed: %.2f%% errors, %.2fms avg response time",
+                    i + 1,
+                    error_rate,
+                    avg_response_time,
                 )
 
                 # Stop if we've clearly hit the breaking point
@@ -490,7 +498,10 @@ class TestBreakingPoints:
                 )
 
                 logger.info(
-                    "Spike %s: %.2f%% errors, %.2fms response time", scenario['name'], error_rate, avg_response_time
+                    "Spike %s: %.2f%% errors, %.2fms response time",
+                    scenario["name"],
+                    error_rate,
+                    avg_response_time,
                 )
 
             except Exception:
@@ -724,8 +735,12 @@ class TestBreakingPoints:
         )
         logger.info("Recovery efficiency")
         logger.info(
-            "Baseline vs Recovery - Errors: %.2f%% -> %.2f%%", baseline_performance['error_rate'], recovery_performance['error_rate']
+            "Baseline vs Recovery - Errors: %.2f%% -> %.2f%%",
+            baseline_performance["error_rate"],
+            recovery_performance["error_rate"],
         )
         logger.info(
-            "Baseline vs Recovery - Response time: %.2fms -> %.2fms", baseline_performance['response_time'], recovery_performance['response_time']
+            "Baseline vs Recovery - Response time: %.2fms -> %.2fms",
+            baseline_performance["response_time"],
+            recovery_performance["response_time"],
         )

@@ -75,9 +75,7 @@ class TestCascadeFailures:
         }
 
     @pytest.mark.usefixtures("fault_injector", "resilience_validator")
-    async def test_downstream_failure_propagation(
-        self, service_topology
-    ):
+    async def test_downstream_failure_propagation(self, service_topology):
         """Test how downstream failures propagate upstream."""
         # Simulate storage failure (bottom of dependency chain)
         service_topology["storage"].state = ServiceState.FAILED
@@ -143,9 +141,7 @@ class TestCascadeFailures:
         )
 
     @pytest.mark.usefixtures("fault_injector", "resilience_validator")
-    async def test_circuit_breaker_cascade_prevention(
-        self, service_topology
-    ):
+    async def test_circuit_breaker_cascade_prevention(self, service_topology):
         """Test circuit breakers preventing cascade failures."""
         failure_counts = {}
         circuit_breakers = {}
@@ -256,9 +252,7 @@ class TestCascadeFailures:
         )
 
     @pytest.mark.usefixtures("fault_injector")
-    async def test_graceful_degradation_cascade(
-        self, service_topology
-    ):
+    async def test_graceful_degradation_cascade(self, service_topology):
         """Test graceful degradation preventing _total system failure."""
         # Service capabilities matrix
         service_capabilities = {
@@ -554,9 +548,7 @@ class TestCascadeFailures:
         )
 
     @pytest.mark.usefixtures("fault_injector", "resilience_validator")
-    async def test_dependency_health_monitoring(
-        self, service_topology
-    ):
+    async def test_dependency_health_monitoring(self, service_topology):
         """Test dependency health monitoring and automatic recovery."""
         health_status = {}
 

@@ -80,9 +80,9 @@ class TestDriftDetectionConcurrency:
             t.join()
 
         # Verify snapshots were created correctly
-        with detector._snapshots_lock:  # noqa: SLF001
-            assert str(temp_config_file) in detector._snapshots  # noqa: SLF001
-            snapshots = detector._snapshots[str(temp_config_file)]  # noqa: SLF001
+        with detector._snapshots_lock:
+            assert str(temp_config_file) in detector._snapshots
+            snapshots = detector._snapshots[str(temp_config_file)]
             # Should have at least some snapshots (not necessarily all due to deduplication)
             assert len(snapshots) > 0
             # Verify all snapshots have valid structure
@@ -124,10 +124,10 @@ class TestDriftDetectionConcurrency:
             t.join()
 
         # Verify drift events were recorded correctly
-        with detector._events_lock:  # noqa: SLF001
-            assert len(detector._drift_events) > 0  # noqa: SLF001
+        with detector._events_lock:
+            assert len(detector._drift_events) > 0
             # Verify event structure
-            for event in detector._drift_events:  # noqa: SLF001
+            for event in detector._drift_events:
                 assert event.id is not None
                 assert event.timestamp is not None
                 assert event.drift_type is not None
@@ -169,19 +169,19 @@ class TestDriftDetectionConcurrency:
             t.join()
 
         # Verify alert tracking is consistent
-        with detector._alerts_lock:  # noqa: SLF001
+        with detector._alerts_lock:
             alert_key = f"{test_event.source}_{test_event.drift_type.value}"
-            assert alert_key in detector._last_alert_times  # noqa: SLF001
+            assert alert_key in detector._last_alert_times
             # Should have recorded the alert time
-            assert isinstance(detector._last_alert_times[alert_key], datetime)  # noqa: SLF001
+            assert isinstance(detector._last_alert_times[alert_key], datetime)
 
     def test_concurrent_cleanup_operations(self, detector: ConfigDriftDetector):
         """Test concurrent cleanup operations don't corrupt data."""
 
         # Add test data
         test_source = "test_cleanup"
-        with detector._snapshots_lock:  # noqa: SLF001
-            detector._snapshots[test_source] = [  # noqa: SLF001
+        with detector._snapshots_lock:
+            detector._snapshots[test_source] = [
                 ConfigSnapshot(
                     timestamp=datetime.now(tz=UTC),
                     config_hash=f"hash_{i}",
@@ -191,8 +191,8 @@ class TestDriftDetectionConcurrency:
                 for i in range(20)
             ]
 
-        with detector._events_lock:  # noqa: SLF001
-            detector._drift_events = [  # noqa: SLF001
+        with detector._events_lock:
+            detector._drift_events = [
                 DriftEvent(
                     id=f"event_{i}",
                     timestamp=datetime.now(tz=UTC),
@@ -211,8 +211,8 @@ class TestDriftDetectionConcurrency:
 
         def cleanup_operations():
             """Worker function to perform cleanup."""
-            detector._cleanup_old_snapshots(test_source)  # noqa: SLF001
-            detector._cleanup_old_events()  # noqa: SLF001
+            detector._cleanup_old_snapshots(test_source)
+            detector._cleanup_old_events()
 
         # Run concurrent cleanup
         threads = []
@@ -226,16 +226,16 @@ class TestDriftDetectionConcurrency:
             t.join()
 
         # Verify data integrity after cleanup
-        with detector._snapshots_lock:  # noqa: SLF001
-            if test_source in detector._snapshots:  # noqa: SLF001
+        with detector._snapshots_lock:
+            if test_source in detector._snapshots:
                 # All remaining snapshots should be valid
-                for snapshot in detector._snapshots[test_source]:  # noqa: SLF001
+                for snapshot in detector._snapshots[test_source]:
                     assert snapshot.config_hash is not None
                     assert snapshot.timestamp is not None
 
-        with detector._events_lock:  # noqa: SLF001
+        with detector._events_lock:
             # All remaining events should be valid
-            for event in detector._drift_events:  # noqa: SLF001
+            for event in detector._drift_events:
                 assert event.id is not None
                 assert event.timestamp is not None
 
@@ -243,8 +243,8 @@ class TestDriftDetectionConcurrency:
         """Test concurrent access to drift summary doesn't cause issues."""
 
         # Add some test events
-        with detector._events_lock:  # noqa: SLF001
-            detector._drift_events = [  # noqa: SLF001
+        with detector._events_lock:
+            detector._drift_events = [
                 DriftEvent(
                     id=f"event_{i}",
                     timestamp=datetime.now(tz=UTC),
@@ -375,9 +375,9 @@ class TestDriftDetectionConcurrency:
         duration = time.time() - start_time
 
         # Verify system remained stable
-        with detector._snapshots_lock:  # noqa: SLF001
-            assert str(temp_config_file) in detector._snapshots  # noqa: SLF001
-            assert len(detector._snapshots[str(temp_config_file)]) > 0  # noqa: SLF001
+        with detector._snapshots_lock:
+            assert str(temp_config_file) in detector._snapshots
+            assert len(detector._snapshots[str(temp_config_file)]) > 0
 
         # Performance check - should complete in reasonable time even with locks
         assert duration < 30  # 30 seconds for stress test

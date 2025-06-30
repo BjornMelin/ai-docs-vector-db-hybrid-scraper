@@ -116,7 +116,7 @@ class MockFactory:
         transitions = state_transitions or {}
 
         mock = Mock()
-        mock._state = state  # noqa: SLF001
+        mock._state = state
 
         def create_stateful_method(method_name):
             def method(*args, **_kwargs):
@@ -161,7 +161,7 @@ def create_mock_vector_db(
     mock_db = Mock()
     mock_db.collection_name = collection_name
     mock_db.dimension = dimension
-    mock_db._documents = mock_documents  # noqa: SLF001
+    mock_db._documents = mock_documents
 
     def mock_search(_query_vector: list[float], limit: int = 10, **__kwargs):
         """Mock search implementation."""
@@ -238,12 +238,12 @@ def create__mock_embedding_service(
     async def mock_embed_text(_text: str) -> list[float]:
         """Mock text embedding."""
         await asyncio.sleep(processing_delay)
-        return generator._generate_normalized_vector(dimension)  # noqa: SLF001
+        return generator._generate_normalized_vector(dimension)
 
     async def mock_embed_batch(texts: list[str]) -> list[list[float]]:
         """Mock batch text embedding."""
         await asyncio.sleep(processing_delay * len(texts) * 0.1)  # Batch efficiency
-        return [generator._generate_normalized_vector(dimension) for _ in texts]  # noqa: SLF001
+        return [generator._generate_normalized_vector(dimension) for _ in texts]
 
     def mock_get_model_info():
         """Mock model info."""
@@ -293,7 +293,7 @@ def create_mock_web_scraper(
             raise CustomError(msg)
 
         # Generate mock scraped content
-        content = generator._generate_content(content_length_range)  # noqa: SLF001
+        content = generator._generate_content(content_length_range)
 
         return {
             "url": url,
@@ -409,7 +409,7 @@ def create_mock_cache_service(hit_rate: float = 0.8, storage_limit: int = 1000) 
     mock_cache.exists = mock_exists
     mock_cache.clear = mock_clear
     mock_cache.stats = mock_stats
-    mock_cache._storage = cache_storage  # For testing purposes  # noqa: SLF001
+    mock_cache._storage = cache_storage  # For testing purposes
 
     return mock_cache
 

@@ -205,8 +205,8 @@ def measure_execution_time(func: Callable | None = None, *, name: str | None = N
 
                     # Store measurement in function attribute
                     if not hasattr(f, "_performance_measurements"):
-                        f._performance_measurements = []  # noqa: SLF001
-                    f._performance_measurements.append(  # noqa: SLF001
+                        f._performance_measurements = []
+                    f._performance_measurements.append(
                         {
                             "operation": operation_name,
                             "execution_time": execution_time,
@@ -228,8 +228,8 @@ def measure_execution_time(func: Callable | None = None, *, name: str | None = N
 
                 # Store measurement in function attribute
                 if not hasattr(f, "_performance_measurements"):
-                    f._performance_measurements = []  # noqa: SLF001
-                f._performance_measurements.append(  # noqa: SLF001
+                    f._performance_measurements = []
+                f._performance_measurements.append(
                     {
                         "operation": operation_name,
                         "execution_time": execution_time,
@@ -288,8 +288,8 @@ def memory_profiler(func: Callable | None = None, *, detailed: bool = False):
 
                     # Store measurement in function attribute
                     if not hasattr(f, "_memory_measurements"):
-                        f._memory_measurements = []  # noqa: SLF001
-                    f._memory_measurements.append(memory_info)  # noqa: SLF001
+                        f._memory_measurements = []
+                    f._memory_measurements.append(memory_info)
 
             return async_wrapper
 
@@ -323,8 +323,8 @@ def memory_profiler(func: Callable | None = None, *, detailed: bool = False):
 
                 # Store measurement in function attribute
                 if not hasattr(f, "_memory_measurements"):
-                    f._memory_measurements = []  # noqa: SLF001
-                f._memory_measurements.append(memory_info)  # noqa: SLF001
+                    f._memory_measurements = []
+                f._memory_measurements.append(memory_info)
 
         return sync_wrapper
 

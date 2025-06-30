@@ -118,7 +118,7 @@ def mock_embedding_service():
         """Generate deterministic mock embedding based on text."""
         # Use text hash for deterministic results
         seed = hash(text) % 1000000
-        import random  # noqa: PLC0415
+        import random
 
         random.seed(seed)
         embedding = [random.uniform(-1, 1) for _ in range(1536)]
@@ -228,7 +228,7 @@ def performance_monitor():
                 result = await operation(*args, **kwargs)
                 success = True
                 error = None
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 result = None
                 success = False
                 error = str(e)
@@ -253,7 +253,7 @@ def performance_monitor():
             if not durations:
                 return {"success_rate": 0.0}
 
-            import statistics  # noqa: PLC0415
+            import statistics
 
             return {
                 "count": len(self.measurements),
@@ -315,8 +315,8 @@ async def isolated_test_environment():
 
         async def cleanup(self):
             """Clean up test environment."""
-            import contextlib  # noqa: PLC0415
-            import shutil  # noqa: PLC0415
+            import contextlib
+            import shutil
 
             with contextlib.suppress(Exception):
                 shutil.rmtree(self.temp_dir, ignore_errors=True)
@@ -326,7 +326,7 @@ async def isolated_test_environment():
                     if not task.done():
                         task.cancel()
                         await asyncio.sleep(0.1)
-                except Exception:  # noqa: S110, BLE001
+                except Exception:
                     pass
 
     env = IsolatedEnvironment()
@@ -355,7 +355,7 @@ def ai_test_utilities():
                 "All values must be numeric"
             )
 
-            import math  # noqa: PLC0415
+            import math
 
             assert not any(math.isnan(x) or math.isinf(x) for x in embedding), (
                 "No NaN/Inf values"
@@ -391,7 +391,7 @@ def ai_test_utilities():
             count: int = 10, dim: int = 1536
         ) -> list[list[float]]:
             """Generate deterministic test embeddings."""
-            import random  # noqa: PLC0415
+            import random
 
             embeddings = []
 

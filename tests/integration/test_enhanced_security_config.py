@@ -13,6 +13,35 @@ from unittest.mock import patch
 import pytest
 
 
+# Placeholder imports for future implementation
+try:
+    from src.security.enhanced_config import (
+        ConfigDataClassification,
+        ConfigOperationType,
+        EnhancedSecurityConfig,
+        SecureConfigManager,
+    )
+except ImportError:
+    # Create placeholder classes for testing
+    class EnhancedSecurityConfig:
+        def __init__(self, **kwargs):
+            pass
+
+    class SecureConfigManager:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class ConfigDataClassification:
+        PUBLIC = "public"
+        INTERNAL = "internal"
+        CONFIDENTIAL = "confidential"
+        SECRET = "secret"
+
+    class ConfigOperationType:
+        ENCRYPT = "encrypt"
+        DECRYPT = "decrypt"
+
+
 @pytest.mark.skip("Enhanced security classes not yet implemented")
 class TestSecureConfigManager:
     """Test suite for SecureConfigManager."""

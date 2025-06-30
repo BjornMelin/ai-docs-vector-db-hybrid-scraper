@@ -19,6 +19,7 @@ from src.config import Config, SecurityConfig
 # Mock classes for testing concurrent config operations
 class ConfigDriftDetector:
     """Mock drift detector for testing."""
+
     def __init__(self, config=None):
         self.config = config
 
@@ -26,14 +27,18 @@ class ConfigDriftDetector:
         """Mock drift detection."""
         return {"drift_detected": False, "changes": []}
 
+
 class DriftDetectionConfig:
     """Mock drift detection config."""
+
     def __init__(self, **kwargs):
-        self.enabled = kwargs.get('enabled', True)
-        self.interval = kwargs.get('interval', 60)
+        self.enabled = kwargs.get("enabled", True)
+        self.interval = kwargs.get("interval", 60)
+
 
 class ConfigReloader:
     """Mock config reloader for testing."""
+
     def __init__(self, config=None):
         self.config = config
 
@@ -41,14 +46,18 @@ class ConfigReloader:
         """Mock config reload."""
         return Config()
 
+
 class ReloadTrigger:
     """Mock reload trigger."""
+
     FILE_CHANGE = "file_change"
     TIME_BASED = "time_based"
     SIGNAL = "signal"
 
+
 class SecureConfigManager:
     """Mock secure config manager."""
+
     def __init__(self, config=None):
         self.config = config
 

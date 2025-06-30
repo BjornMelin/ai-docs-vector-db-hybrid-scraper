@@ -210,14 +210,14 @@ class TestConfigReloader:
 
         # Add listener
         reloader.add_change_listener("test_listener", test_callback, priority=100)
-        assert len(reloader._change_listeners) == 1  # noqa: SLF001
-        assert reloader._change_listeners[0].name == "test_listener"  # noqa: SLF001
-        assert reloader._change_listeners[0].priority == 100  # noqa: SLF001
+        assert len(reloader._change_listeners) == 1
+        assert reloader._change_listeners[0].name == "test_listener"
+        assert reloader._change_listeners[0].priority == 100
 
         # Remove listener
         success = reloader.remove_change_listener("test_listener")
         assert success
-        assert len(reloader._change_listeners) == 0  # noqa: SLF001
+        assert len(reloader._change_listeners) == 0
 
         # Try to remove non-existent listener
         success = reloader.remove_change_listener("non_existent")
@@ -237,7 +237,7 @@ class TestConfigReloader:
         failed_op = ReloadOperation(trigger=ReloadTrigger.API)
         failed_op.complete(False, "Test error")
 
-        reloader._reload_history.extend([successful_op, failed_op])  # noqa: SLF001
+        reloader._reload_history.extend([successful_op, failed_op])
 
         # Check updated stats
         stats = reloader.get_reload_stats()
@@ -393,7 +393,7 @@ class TestConfigurationAPI:
         }
         mock_reloader.get_reload_stats.return_value = mock_stats
         mock_reloader.enable_signal_handler = True
-        mock_reloader._file_watch_enabled = False  # noqa: SLF001
+        mock_reloader._file_watch_enabled = False
 
         response = client.get("/api/v1/config/status")
 

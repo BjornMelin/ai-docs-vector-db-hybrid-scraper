@@ -261,7 +261,7 @@ class DeploymentHealthChecker:
                 "timestamp": datetime.now(tz=UTC).isoformat(),
             }
 
-    async def check_all_health(self, timeout: int = 30) -> dict[str, dict[str, Any]]:  # noqa: ASYNC109
+    async def check_all_health(self, timeout: int = 30) -> dict[str, dict[str, Any]]:
         """Check health of all registered endpoints."""
         results = {}
         for endpoint in self.health_endpoints:

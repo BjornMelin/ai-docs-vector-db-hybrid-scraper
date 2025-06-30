@@ -4,8 +4,7 @@ Provides fixtures for testing multi-agent coordination, result fusion,
 and performance optimization scenarios without making real API calls.
 """
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
 import pytest

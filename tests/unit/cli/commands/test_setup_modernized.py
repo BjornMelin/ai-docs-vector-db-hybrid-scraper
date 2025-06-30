@@ -722,7 +722,7 @@ class TestSetupIntegrationModernized:
     def test_configuration_wizard_import_safety(self):
         """Test that ConfigurationWizard imports safely."""
         try:
-            from src.cli.commands.setup import ConfigurationWizard  # noqa: PLC0415
+            from src.cli.commands.setup import ConfigurationWizard
 
             wizard = ConfigurationWizard()
             assert wizard is not None
@@ -735,7 +735,7 @@ class TestSetupIntegrationModernized:
     def test_setup_command_import_safety(self):
         """Test that setup command imports safely."""
         try:
-            from src.cli.commands.setup import setup  # noqa: PLC0415
+            from src.cli.commands.setup import setup
 
             assert setup is not None
             assert hasattr(setup, "invoke")

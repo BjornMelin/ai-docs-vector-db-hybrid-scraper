@@ -5,28 +5,22 @@ and autonomous capabilities enabling 3-10x performance improvements.
 """
 
 import asyncio
-import random
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.infrastructure.client_manager import ClientManager
 from src.services.agents.agentic_orchestrator import (
     AgenticOrchestrator,
-    ToolRequest,
-    ToolResponse,
 )
 from src.services.agents.core import BaseAgentDependencies, create_agent_dependencies
 from src.services.agents.dynamic_tool_discovery import (
     DynamicToolDiscovery,
-    ToolCapability,
-    ToolCapabilityType,
-    ToolMetrics,
 )
 
 
@@ -696,6 +690,10 @@ class TestDistributedWorkflowExecution:
         # Verify performance optimization
         assert completed_workflow.state == WorkflowState.COMPLETED
         metrics = completed_workflow.performance_metrics
+        
+        # Verify measured execution time is reasonable
+        assert total_execution_time > 0, "Execution time should be positive"
+        assert total_execution_time < 30, "Execution time should be reasonable for test"
 
         # Check performance improvement metrics
         assert metrics["performance_improvement"] >= 1.0  # At least some improvement

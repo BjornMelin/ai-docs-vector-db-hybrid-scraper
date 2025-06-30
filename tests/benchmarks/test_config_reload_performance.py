@@ -209,10 +209,10 @@ class TestConfigReloadPerformance:
         assert result.success
 
         # Validate performance
-        assert result._total_duration_ms < 100, (  # noqa: SLF001
-            f"Reload took {result._total_duration_ms:.2f}ms (target: <100ms)"  # noqa: SLF001
+        assert result._total_duration_ms < 100, (
+            f"Reload took {result._total_duration_ms:.2f}ms (target: <100ms)"
         )
-        print(f"\n✅ Basic reload performance: {result._total_duration_ms:.2f}ms")  # noqa: SLF001
+        print(f"\n✅ Basic reload performance: {result._total_duration_ms:.2f}ms")
 
     def test_reload_with_validation(self, benchmark, config_reloader, test_config):
         """Benchmark reload with configuration validation."""
@@ -244,7 +244,7 @@ class TestConfigReloadPerformance:
 
         # Add listeners
         for listener in mock_listeners:
-            config_reloader._change_listeners.append(listener)  # noqa: SLF001
+            config_reloader._change_listeners.append(listener)
 
         async def reload_with_listeners():
             return await config_reloader.reload_config(
@@ -259,10 +259,10 @@ class TestConfigReloadPerformance:
         assert len(result.services_notified) == 3
 
         # Even with listeners, should meet target
-        assert result._total_duration_ms < 100, (  # noqa: SLF001
-            f"Reload with listeners took {result._total_duration_ms:.2f}ms"  # noqa: SLF001
+        assert result._total_duration_ms < 100, (
+            f"Reload with listeners took {result._total_duration_ms:.2f}ms"
         )
-        print(f"\n✅ Reload with listeners: {result._total_duration_ms:.2f}ms")  # noqa: SLF001
+        print(f"\n✅ Reload with listeners: {result._total_duration_ms:.2f}ms")
         print(f"   Apply duration: {result.apply_duration_ms:.2f}ms")
 
     def test_concurrent_reload_rejection(self, benchmark, config_reloader, test_config):
@@ -296,7 +296,7 @@ class TestConfigReloadPerformance:
 
         # Rejections should be instant
         for result in rejected:
-            assert result._total_duration_ms < 1, "Rejection should be instant"  # noqa: SLF001
+            assert result._total_duration_ms < 1, "Rejection should be instant"
 
         print("\n✅ Concurrent reload handling: 1 success, 4 instant rejections")
 
@@ -323,8 +323,8 @@ class TestConfigReloadPerformance:
 
         result = benchmark(modify_and_reload)
         assert result.success
-        assert result._total_duration_ms < 100  # noqa: SLF001
-        print(f"\n✅ File-based reload: {result._total_duration_ms:.2f}ms")  # noqa: SLF001
+        assert result._total_duration_ms < 100
+        print(f"\n✅ File-based reload: {result._total_duration_ms:.2f}ms")
 
     def test_reload_history_performance(self, benchmark, config_reloader, test_config):
         """Benchmark reload history tracking performance."""
@@ -528,8 +528,8 @@ class TestEncryptionPerformance:
         security_config = SecurityConfig()
         encryption = SecureConfigManager(security_config)
         # Mock the encryption functionality for testing
-        encryption._encryption_keys = [Fernet(encryption_key)]  # noqa: SLF001
-        encryption._current_key_version = 1  # noqa: SLF001
+        encryption._encryption_keys = [Fernet(encryption_key)]
+        encryption._current_key_version = 1
         return encryption
 
     @pytest.fixture
@@ -550,7 +550,7 @@ class TestEncryptionPerformance:
             encrypted = {}
             for key, value in test_secrets.items():
                 # Use the Fernet instance directly for simple value encryption
-                fernet = config_encryption._get_encryption_fernet()  # noqa: SLF001
+                fernet = config_encryption._get_encryption_fernet()
                 encrypted[key] = fernet.encrypt(value.encode()).decode()
             return encrypted
 
@@ -570,7 +570,7 @@ class TestEncryptionPerformance:
     def test_decryption_performance(self, benchmark, config_encryption, test_secrets):
         """Benchmark secret decryption performance."""
         # Pre-encrypt secrets
-        fernet = config_encryption._get_encryption_fernet()  # noqa: SLF001
+        fernet = config_encryption._get_encryption_fernet()
         encrypted_secrets = {
             key: fernet.encrypt(value.encode()).decode()
             for key, value in test_secrets.items()
@@ -603,7 +603,7 @@ class TestEncryptionPerformance:
 
         def load_config_with_encryption():
             # Simulate loading config with encrypted values
-            fernet = config_encryption._get_encryption_fernet()  # noqa: SLF001
+            fernet = config_encryption._get_encryption_fernet()
             config_data = {
                 "app_name": "encrypted-app",
                 "database_password": fernet.encrypt(b"db_password").decode(),
@@ -625,7 +625,7 @@ class TestEncryptionPerformance:
 
         result = benchmark(load_config_with_encryption)
         assert result["app_name"] == "encrypted-app"
-        assert result["database_password"] == "db_password"  # Test data  # noqa: S105
+        assert result["database_password"] == "db_password"  # Test data
 
         print("\n✅ Config with encryption: Minimal overhead for secure configuration")
 
