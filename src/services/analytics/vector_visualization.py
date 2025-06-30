@@ -5,11 +5,8 @@ semantic similarity analysis, and embedding quality assessment. Portfolio featur
 showcasing deep ML understanding and data visualization expertise.
 """
 
-import asyncio
-import json
 import logging
-import math
-from typing import Any, Tuple
+from typing import Any
 
 import numpy as np
 from pydantic import BaseModel, Field
@@ -22,7 +19,7 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.metrics.pairwise import cosine_similarity
 
-from src.config import get_config
+# get_config import removed (unused)
 from src.services.base import BaseService
 
 
@@ -652,9 +649,9 @@ class VectorVisualizationEngine(BaseService):
             # Cluster separation (if clusters available)
             cluster_separation = 0.5  # Default
             if clusters_info and len(clusters_info["clusters"]) > 1:
-                cluster_centers = []
-                for cluster in clusters_info["clusters"]:
-                    cluster_centers.append(cluster["centroid"])
+                cluster_centers = [
+                    cluster["centroid"] for cluster in clusters_info["clusters"]
+                ]
 
                 if len(cluster_centers) > 1:
                     center_distances = []
@@ -990,15 +987,14 @@ class VectorVisualizationEngine(BaseService):
 
             outlier_indices = np.where(distances > outlier_threshold)[0]
 
-            outliers_info = []
-            for idx in outlier_indices[:10]:  # Top 10 outliers
-                outliers_info.append(
-                    {
-                        "text": texts[idx],
-                        "distance_from_center": float(distances[idx]),
-                        "z_score": float((distances[idx] - mean_dist) / std_dist),
-                    }
-                )
+            outliers_info = [
+                {
+                    "text": texts[idx],
+                    "distance_from_center": float(distances[idx]),
+                    "z_score": float((distances[idx] - mean_dist) / std_dist),
+                }
+                for idx in outlier_indices[:10]  # Top 10 outliers
+            ]
 
             return {
                 "num_outliers": len(outlier_indices),

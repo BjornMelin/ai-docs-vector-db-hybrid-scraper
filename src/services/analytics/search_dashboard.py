@@ -6,16 +6,16 @@ Portfolio feature showcasing data analytics and visualization capabilities.
 """
 
 import asyncio
-import json
+# json import removed (unused)
 import logging
 import re
 import time
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.config import get_config
+# get_config import removed (unused)
 from src.services.base import BaseService
 
 
