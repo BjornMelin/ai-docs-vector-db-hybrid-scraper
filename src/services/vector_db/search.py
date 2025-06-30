@@ -42,7 +42,7 @@ class QdrantSearch:
                 self.metrics_registry = get_metrics_registry()
             else:
                 self.metrics_registry = None
-        except Exception:
+        except (AttributeError, ImportError, ValueError):
             logger.warning(
                 "Metrics registry not available - search monitoring disabled"
             )
@@ -192,7 +192,9 @@ class QdrantSearch:
 
         except Exception as e:
             logger.error(
-                f"Hybrid search failed in collection {collection_name}: {e}",
+                "Hybrid search failed in collection %s: %s",
+                collection_name,
+                e,
                 exc_info=True,
             )
 
@@ -203,10 +205,16 @@ class QdrantSearch:
                 )
                 raise QdrantServiceError(msg) from e
             if "wrong vector size" in error_msg:
-                msg = f"Vector dimension mismatch. Expected size for collection '{collection_name}'."
+                msg = (
+                    f"Vector dimension mismatch. Expected size for "
+                    f"collection '{collection_name}'."
+                )
                 raise QdrantServiceError(msg) from e
             if "timeout" in error_msg:
-                msg = "Search request timed out. Try reducing the limit or simplifying the query."
+                msg = (
+                    "Search request timed out. Try reducing the limit or "
+                    "simplifying the query."
+                )
                 raise QdrantServiceError(msg) from e
             msg = f"Hybrid search failed: {e}"
             raise QdrantServiceError(msg) from e
@@ -337,7 +345,9 @@ class QdrantSearch:
 
         except Exception as e:
             logger.error(
-                f"Multi-stage search failed in collection {collection_name}: {e}",
+                "Multi-stage search failed in collection %s: %s",
+                collection_name,
+                e,
                 exc_info=True,
             )
             msg = f"Multi-stage search failed: {e}"
@@ -467,7 +477,9 @@ class QdrantSearch:
 
         except Exception as e:
             logger.error(
-                f"HyDE search failed in collection {collection_name}: {e}",
+                "HyDE search failed in collection %s: %s",
+                collection_name,
+                e,
                 exc_info=True,
             )
             msg = f"HyDE search failed: {e}"
@@ -538,7 +550,10 @@ class QdrantSearch:
         # Validate vector dimensions (assuming 1536 for OpenAI embeddings)
         expected_dim = 1536
         if len(query_vector) != expected_dim:
-            msg = f"query_vector dimension {len(query_vector)} does not match expected {expected_dim}"
+            msg = (
+                f"query_vector dimension {len(query_vector)} does not match "
+                f"expected {expected_dim}"
+            )
             raise ValueError(msg)
 
         try:
@@ -569,7 +584,9 @@ class QdrantSearch:
 
         except Exception as e:
             logger.error(
-                f"Filtered search failed in collection {collection_name}: {e}",
+                "Filtered search failed in collection %s: %s",
+                collection_name,
+                e,
                 exc_info=True,
             )
             msg = f"Filtered search failed: {e}"

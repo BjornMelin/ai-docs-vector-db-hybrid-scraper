@@ -1,6 +1,7 @@
 """Advanced hybrid search service - backward compatibility wrapper.
 
-This module provides a backward compatibility wrapper around the new AdvancedSearchOrchestrator.
+This module provides a backward compatibility wrapper around the new
+AdvancedSearchOrchestrator.
 It maps the old AdvancedHybridSearchService API to the new unified orchestrator.
 """
 
@@ -14,11 +15,10 @@ from qdrant_client import AsyncQdrantClient
 
 from src.config import ABTestVariant, Config, OptimizationStrategy
 from src.models.vector_search import (
-    # TODO: Fix imports - use existing classes or create missing ones
-    AdvancedHybridSearchRequest,  # Use existing class instead of HybridSearchRequest
-    SearchResponse,  # Use existing class instead of HybridSearchResponse
-    SecureSearchResult,  # Use existing class instead of SearchResult
-    # RetrievalMetrics,  # TODO: Create this class or use alternative
+    HybridSearchRequest,
+    HybridSearchResponse,
+    RetrievalMetrics,
+    SearchResult,
 )
 from src.services.errors import QdrantServiceError
 from src.services.query_processing import (
@@ -88,8 +88,8 @@ class HybridSearchService:
             await self.splade_provider.initialize()
             logger.info("Advanced hybrid search service initialized successfully")
         except Exception as e:
-            logger.error(
-                f"Failed to initialize advanced search service: {e}", exc_info=True
+            logger.exception(
+                "Failed to initialize advanced search service: %s", e
             )
             if not self.enable_fallback:
                 raise
@@ -219,9 +219,7 @@ class HybridSearchService:
             return response
 
         except Exception as e:
-            logger.error(
-                f"Advanced hybrid search failed: {e}", exc_info=True
-            )  # TODO: Convert f-string to logging format
+            logger.exception("Advanced hybrid search failed: %s", e)
 
             # Fallback to basic search
             if self.enable_fallback:
@@ -264,9 +262,7 @@ class HybridSearchService:
             )
             return None
         except Exception as e:
-            logger.warning(
-                f"Query classification failed: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Query classification failed: %s", e)
             return None
 
     async def _select_model_with_timeout(
@@ -284,9 +280,7 @@ class HybridSearchService:
             logger.warning("Model selection timed out, using default model")
             return None
         except Exception as e:
-            logger.warning(
-                f"Model selection failed: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Model selection failed: %s", e)
             return None
 
     async def _generate_sparse_vector_with_timeout(
@@ -302,9 +296,7 @@ class HybridSearchService:
             logger.warning("SPLADE generation timed out, skipping sparse vector")
             return None
         except Exception as e:
-            logger.warning(
-                f"SPLADE generation failed: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("SPLADE generation failed: %s", e)
             return None
 
     def _assign_ab_test_variant(self, request: HybridSearchRequest) -> ABTestVariant:
@@ -359,9 +351,7 @@ class HybridSearchService:
             )
 
         except Exception as e:
-            logger.error(
-                f"Fallback search also failed: {e}", exc_info=True
-            )  # TODO: Convert f-string to logging format
+            logger.exception("Fallback search also failed: %s", e)
             return HybridSearchResponse(
                 results=[],
                 retrieval_metrics=RetrievalMetrics(
@@ -409,14 +399,10 @@ class HybridSearchService:
                     performance_score,
                 )
 
-            logger.debug(
-                f"Stored search data for learning: {query_id}"
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Stored search data for learning: %s", query_id)
 
         except Exception as e:
-            logger.error(
-                f"Failed to store search for learning: {e}", exc_info=True
-            )  # TODO: Convert f-string to logging format
+            logger.exception("Failed to store search for learning: %s", e)
 
     async def update_with_user_feedback(
         self, query_id: str, _user_feedback: dict[str, Any]
@@ -425,14 +411,10 @@ class HybridSearchService:
         try:
             # This would update the adaptive fusion tuner and other components
             # with user feedback for continuous improvement
-            logger.debug(
-                f"Processing user feedback for query {query_id}"
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Processing user feedback for query %s", query_id)
 
         except Exception as e:
-            logger.error(
-                f"Failed to process user feedback: {e}", exc_info=True
-            )  # TODO: Convert f-string to logging format
+            logger.exception("Failed to process user feedback: %s", e)
 
     def get_performance_statistics(self) -> dict[str, Any]:
         """Get performance statistics for monitoring."""

@@ -79,25 +79,38 @@ class QdrantDocuments:
                 )
 
                 logger.info(
-                    f"Upserted batch {i // batch_size + 1} "
-                    f"({len(point_structs)} points)"
+                    "Upserted batch %d (%d points)",
+                    i // batch_size + 1,
+                    len(point_structs),
                 )
 
         except Exception as e:
             logger.error(
-                f"Failed to upsert {len(points)} points to {collection_name}: {e}",
+                "Failed to upsert %d points to %s: %s",
+                len(points),
+                collection_name,
+                e,
                 exc_info=True,
             )
 
             error_msg = str(e).lower()
             if "collection not found" in error_msg:
-                msg = f"Collection '{collection_name}' not found. Create it before upserting."
+                msg = (
+                    f"Collection '{collection_name}' not found. "
+                    "Create it before upserting."
+                )
                 raise QdrantServiceError(msg) from e
             if "wrong vector size" in error_msg:
-                msg = "Vector dimension mismatch. Check that vectors match collection configuration."
+                msg = (
+                    "Vector dimension mismatch. Check that vectors match "
+                    "collection configuration."
+                )
                 raise QdrantServiceError(msg) from e
             if "payload too large" in error_msg:
-                msg = f"Payload too large. Try reducing batch size (current: {batch_size})."
+                msg = (
+                    f"Payload too large. Try reducing batch size "
+                    f"(current: {batch_size})."
+                )
                 raise QdrantServiceError(msg) from e
             msg = f"Failed to upsert points: {e}"
             raise QdrantServiceError(msg) from e
@@ -152,7 +165,9 @@ class QdrantDocuments:
 
         except Exception as e:
             logger.error(
-                f"Failed to retrieve points from {collection_name}: {e}",
+                "Failed to retrieve points from %s: %s",
+                collection_name,
+                e,
                 exc_info=True,
             )
             msg = f"Failed to retrieve points: {e}"
@@ -192,9 +207,7 @@ class QdrantDocuments:
                     points_selector=models.PointIdsList(points=point_ids),
                     wait=True,
                 )
-                logger.info(
-                    f"Deleted {len(point_ids)} points by ID"
-                )  # TODO: Convert f-string to logging format
+                logger.info("Deleted %d points by ID", len(point_ids))
             else:
                 # Delete by filter
                 filter_obj = build_filter(filter_condition)
@@ -205,15 +218,17 @@ class QdrantDocuments:
                 )
                 logger.info("Deleted points by filter condition")
 
-            return True
-
         except Exception as e:
             logger.error(
-                f"Failed to delete points from {collection_name}: {e}",
+                "Failed to delete points from %s: %s",
+                collection_name,
+                e,
                 exc_info=True,
             )
             msg = f"Failed to delete points: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return True
 
     async def update_point_payload(
         self,
@@ -246,9 +261,7 @@ class QdrantDocuments:
                     payload=payload,
                     wait=True,
                 )
-                logger.info(
-                    f"Replaced payload for point {point_id}"
-                )  # TODO: Convert f-string to logging format
+                logger.info("Replaced payload for point %s", point_id)
             else:
                 # Merge with existing payload
                 await self.client.set_payload(
@@ -257,19 +270,19 @@ class QdrantDocuments:
                     payload=payload,
                     wait=True,
                 )
-                logger.info(
-                    f"Updated payload for point {point_id}"
-                )  # TODO: Convert f-string to logging format
-
-            return True
+                logger.info("Updated payload for point %s", point_id)
 
         except Exception as e:
             logger.error(
-                f"Failed to update payload for point {point_id}: {e}",
+                "Failed to update payload for point %s: %s",
+                point_id,
+                e,
                 exc_info=True,
             )
             msg = f"Failed to update point payload: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return True
 
     async def count_points(
         self,
@@ -299,11 +312,10 @@ class QdrantDocuments:
                 count_filter=filter_obj,
                 exact=exact,
             )
-            return result.count
 
         except Exception as e:
             logger.error(
-                f"Failed to count points in {collection_name}: {e}", exc_info=True
+                "Failed to count points in %s: %s", collection_name, e, exc_info=True
             )
             msg = f"Failed to count points: {e}"
             raise QdrantServiceError(msg) from e
@@ -366,7 +378,9 @@ class QdrantDocuments:
 
         except Exception as e:
             logger.error(
-                f"Failed to scroll points in {collection_name}: {e}",
+                "Failed to scroll points in %s: %s",
+                collection_name,
+                e,
                 exc_info=True,
             )
             msg = f"Failed to scroll points: {e}"
@@ -395,14 +409,14 @@ class QdrantDocuments:
                 wait=True,
             )
 
-            logger.info(
-                f"Cleared all points from collection: {collection_name}"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Cleared all points from collection: %s", collection_name)
             return True
 
         except Exception as e:
             logger.error(
-                f"Failed to clear collection {collection_name}: {e}",
+                "Failed to clear collection %s: %s",
+                collection_name,
+                e,
                 exc_info=True,
             )
             msg = f"Failed to clear collection: {e}"

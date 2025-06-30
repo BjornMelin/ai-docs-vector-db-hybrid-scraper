@@ -11,7 +11,7 @@ from src.services.errors import QdrantServiceError
 
 
 if TYPE_CHECKING:
-    from src.config import Config, get_config
+    from src.config import Config
 
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,8 @@ class QdrantCollections(BaseService):
             distance: Distance metric (Cosine, Euclidean, Dot)
             sparse_vector_name: Optional sparse vector field name for hybrid search
             enable_quantization: Enable INT8 quantization for ~75% storage reduction
-            collection_type: Type of collection for HNSW optimization (api_reference, tutorials, etc.)
+            collection_type: Type of collection for HNSW optimization
+                (api_reference, tutorials, etc.)
 
         Returns:
             True if collection created or already exists
@@ -101,7 +102,10 @@ class QdrantCollections(BaseService):
             try:
                 distance_enum = getattr(models.Distance, distance.upper())
             except AttributeError:
-                msg = f"Invalid distance metric '{distance}'. Valid options: Cosine, Euclidean, Dot"
+                msg = (
+                    f"Invalid distance metric '{distance}'. "
+                    "Valid options: Cosine, Euclidean, Dot"
+                )
                 raise QdrantServiceError(msg) from None
 
             vectors_config = {
@@ -142,13 +146,12 @@ class QdrantCollections(BaseService):
 
             logger.info("Created collection: %s", collection_name)
 
-            # Note: Payload indexes will be created by QdrantService after collection creation
-
-            return True
+            # Note: Payload indexes will be created by QdrantService
+            # after collection creation
 
         except ResponseHandlingException as e:
             logger.error(
-                f"Failed to create collection {collection_name}: {e}", exc_info=True
+                "Failed to create collection %s: %s", collection_name, e, exc_info=True
             )
 
             error_msg = str(e).lower()
@@ -156,13 +159,18 @@ class QdrantCollections(BaseService):
                 logger.info("Collection %s already exists, continuing", collection_name)
                 return True
             if "invalid distance" in error_msg:
-                msg = f"Invalid distance metric '{distance}'. Valid options: Cosine, Euclidean, Dot"
+                msg = (
+                    f"Invalid distance metric '{distance}'. "
+                    "Valid options: Cosine, Euclidean, Dot"
+                )
                 raise QdrantServiceError(msg) from e
             if "unauthorized" in error_msg:
                 msg = "Unauthorized access to Qdrant. Please check your API key."
                 raise QdrantServiceError(msg) from e
             msg = f"Failed to create collection: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return True
 
     async def delete_collection(self, collection_name: str) -> bool:
         """Delete a collection.
@@ -179,10 +187,11 @@ class QdrantCollections(BaseService):
         try:
             await self._client.delete_collection(collection_name)
             logger.info("Deleted collection: %s", collection_name)
-            return True
         except Exception as e:
             msg = f"Failed to delete collection: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return True
 
     async def get_collection_info(self, collection_name: str) -> dict[str, Any]:
         """Get collection information.
@@ -249,7 +258,7 @@ class QdrantCollections(BaseService):
                             "config": info.get("config", {}),
                         }
                     )
-                except Exception as e:
+                except (AttributeError, ValueError, RuntimeError, ConnectionError) as e:
                     logger.warning(
                         "Failed to get details for collection %s: %s", col.name, e
                     )
@@ -260,10 +269,11 @@ class QdrantCollections(BaseService):
                         }
                     )
 
-            return details
         except Exception as e:
             msg = f"Failed to list collection details: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return details
 
     async def trigger_collection_optimization(self, collection_name: str) -> bool:
         """Trigger optimization for a collection.
@@ -290,10 +300,11 @@ class QdrantCollections(BaseService):
             await self._client.update_collection_aliases(change_aliases_operations=[])
 
             logger.info("Triggered optimization for collection: %s", collection_name)
-            return True
         except Exception as e:
             msg = f"Failed to optimize collection: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return True
 
     def _get_hnsw_config_for_collection_type(self, collection_type: str):
         """Get HNSW configuration for a specific collection type.
@@ -339,7 +350,9 @@ class QdrantCollections(BaseService):
                 "max_indexing_threads": hnsw_config.max_indexing_threads,
                 "on_disk": hnsw_config.on_disk,
             },
-            "description": f"Optimized HNSW configuration for {collection_type} collections",
+            "description": (
+                f"Optimized HNSW configuration for {collection_type} collections"
+            ),
         }
 
     async def _validate_hnsw_configuration(
@@ -393,8 +406,9 @@ class QdrantCollections(BaseService):
             hnsw_recommendations = []
             if optimality_score < 80:
                 hnsw_recommendations.append(
-                    f"Consider updating HNSW parameters for {collection_type} collections: "
-                    f"m={optimal_hnsw.m}, ef_construct={optimal_hnsw.ef_construct}"
+                    f"Consider updating HNSW parameters for {collection_type} "
+                    f"collections: m={optimal_hnsw.m}, "
+                    f"ef_construct={optimal_hnsw.ef_construct}"
                 )
 
             if not adaptive_ef_available:
@@ -406,9 +420,23 @@ class QdrantCollections(BaseService):
             points_count = collection_info.points_count or 0
             if points_count > 100000 and not current_hnsw.get("on_disk", False):
                 hnsw_recommendations.append(
-                    f"Consider enabling on_disk storage for large collection ({points_count:,} points)"
+                    f"Consider enabling on_disk storage for large collection "
+                    f"({points_count:,} points)"
                 )
 
+        except (AttributeError, ValueError, RuntimeError, ConnectionError) as e:
+            logger.warning("Failed to validate HNSW configuration: %s", e)
+            # Return default healthy status if HNSW validation fails
+            return {
+                "health_score": 85.0,
+                "collection_type": "unknown",
+                "current_configuration": {},
+                "optimal_configuration": {},
+                "adaptive_ef_enabled": False,
+                "recommendations": ["Could not validate HNSW configuration"],
+                "points_count": 0,
+            }
+        else:
             return {
                 "health_score": optimality_score,
                 "collection_type": collection_type,
@@ -421,19 +449,6 @@ class QdrantCollections(BaseService):
                 "adaptive_ef_enabled": adaptive_ef_available,
                 "recommendations": hnsw_recommendations,
                 "points_count": points_count,
-            }
-
-        except Exception as e:
-            logger.warning("Failed to validate HNSW configuration: %s", e)
-            # Return default healthy status if HNSW validation fails
-            return {
-                "health_score": 85.0,
-                "collection_type": "unknown",
-                "current_configuration": {},
-                "optimal_configuration": {},
-                "adaptive_ef_enabled": False,
-                "recommendations": ["Could not validate HNSW configuration"],
-                "points_count": 0,
             }
 
     def _infer_collection_type(self, collection_name: str) -> str:

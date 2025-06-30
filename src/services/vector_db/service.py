@@ -26,7 +26,28 @@ logger = logging.getLogger(__name__)
 
 
 class QdrantService(BaseService):
-    """Unified Qdrant service facade delegating to focused modules."""
+    """Enterprise-grade Qdrant vector database service with advanced search
+    capabilities.
+
+    This service provides a unified interface to Qdrant vector database operations with
+    sophisticated search algorithms, deployment infrastructure, and performance
+    optimization:
+
+    - **Hybrid Search**: Dense + sparse vector fusion with configurable algorithms
+      (RRF, DBSF)
+    - **Multi-Stage Retrieval**: Advanced retrieval strategies with weighted fusion
+    - **HyDE Search**: Hypothetical Document Embeddings for enhanced semantic matching
+    - **Enterprise Deployment**: A/B testing, blue-green deployment, canary releases
+    - **Performance Optimization**: HNSW tuning, quantization, payload indexing
+    - **Modular Architecture**: Focused modules for collections, search, indexing,
+      documents
+
+    The service automatically routes requests through deployment infrastructure when
+    enabled,
+    supporting enterprise features like feature flags, A/B testing, and canary
+    deployments
+    for production-grade vector search systems.
+    """
 
     def __init__(self, config: Config, client_manager: "ClientManager"):
         """Initialize Qdrant service with modular components.
@@ -129,9 +150,11 @@ class QdrantService(BaseService):
 
                 logger.info("Initialized deployment services for QdrantService routing")
 
-        except Exception as e:
+        except (AttributeError, ConnectionError, ValueError, RuntimeError) as e:
             logger.warning(
-                f"Failed to initialize deployment services: {e}. Continuing with standard mode."
+                "Failed to initialize deployment services: %s. "
+                "Continuing with standard mode.",
+                e,
             )
             # Don't raise exception - deployment services are optional
 
@@ -173,7 +196,8 @@ class QdrantService(BaseService):
             vector_size: Dimension of the vectors to be stored
             distance: Distance metric for similarity search (Cosine, Euclid, Dot)
             sparse_vector_name: Optional name for sparse vector field
-            enable_quantization: Whether to enable vector quantization for storage efficiency
+            enable_quantization: Whether to enable vector quantization for storage
+                efficiency
             collection_type: Type of collection for specialized configurations
 
         Returns:
@@ -200,12 +224,14 @@ class QdrantService(BaseService):
             try:
                 await self._indexing.create_payload_indexes(collection_name)
                 logger.info(
-                    f"Payload indexes created for collection: {collection_name}"
+                    "Payload indexes created for collection: %s", collection_name
                 )
-            except Exception as e:
+            except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
                 logger.warning(
-                    f"Failed to create payload indexes for {collection_name}: {e}. "
-                    "Collection created successfully but filtering may be slower."
+                    "Failed to create payload indexes for %s: %s. "
+                    "Collection created successfully but filtering may be slower.",
+                    collection_name,
+                    e,
                 )
 
         return result
@@ -329,25 +355,31 @@ class QdrantService(BaseService):
         """
         self._validate_initialized()
 
-        # Route search through deployment infrastructure if enabled
+        # Enterprise deployment routing: A/B testing and canary deployments
+        # This enables sophisticated production deployment strategies
+        # with gradual rollouts
         if self._ab_testing_manager and user_id:
-            # Check for active A/B tests and route accordingly
+            # Check for active A/B tests and route users to test variants
+            # This allows testing different search parameters and algorithms
             variant = await self._ab_testing_manager.assign_user_to_variant(
                 test_id="hybrid_search_test", user_id=user_id
             )
             if variant and variant == "variant":
-                # Use alternative search parameters for A/B testing
-                search_accuracy = "accurate"  # Example: use higher accuracy for variant
+                # Apply variant-specific search parameters for A/B testing
+                # Example: use higher accuracy for variant group to measure impact
+                search_accuracy = "accurate"
 
-        # Check canary deployment routing
+        # Canary deployment routing for gradual rollout of search improvements
+        # Routes a percentage of users to the new version for safety validation
         if self._canary_deployment and user_id:
             canary_assignment = await self._canary_deployment.should_route_to_canary(
                 user_id
             )
             if canary_assignment:
-                # Route to canary version with enhanced monitoring
+                # Route to canary version with enhanced monitoring and metrics
+                # This enables safe deployment of search algorithm changes
                 logger.debug(
-                    f"Routing user {user_id} to canary deployment for hybrid search"
+                    "Routing user %s to canary deployment for hybrid search", user_id
                 )
 
         # Execute search with deployment tracking
@@ -422,7 +454,8 @@ class QdrantService(BaseService):
             )
             if canary_assignment:
                 logger.debug(
-                    f"Routing user {user_id} to canary deployment for multi-stage search"
+                    "Routing user %s to canary deployment for multi-stage search",
+                    user_id,
                 )
 
         # Execute search with deployment tracking
@@ -471,7 +504,8 @@ class QdrantService(BaseService):
             request_id: Optional request ID for canary metrics tracking
 
         Returns:
-            list[dict[str, object]]: Search results combining query and hypothetical matches
+            list[dict[str, object]]: Search results combining query and hypothetical
+                matches
 
         Raises:
             QdrantServiceError: If HyDE search fails
@@ -496,7 +530,7 @@ class QdrantService(BaseService):
             )
             if canary_assignment:
                 logger.debug(
-                    f"Routing user {user_id} to canary deployment for HyDE search"
+                    "Routing user %s to canary deployment for HyDE search", user_id
                 )
 
         # Execute search with deployment tracking
@@ -568,7 +602,7 @@ class QdrantService(BaseService):
             )
             if canary_assignment:
                 logger.debug(
-                    f"Routing user {user_id} to canary deployment for filtered search"
+                    "Routing user %s to canary deployment for filtered search", user_id
                 )
 
         # Execute search with deployment tracking
@@ -922,7 +956,8 @@ class QdrantService(BaseService):
         Args:
             collection_name: Name of the collection to create
             vector_size: Dimension of the vectors to be stored
-            collection_type: Type for optimized HNSW settings ("general", "code", "scientific")
+            collection_type: Type for optimized HNSW settings
+                ("general", "code", "scientific")
             distance: Distance metric for similarity search (Cosine, Euclid, Dot)
             sparse_vector_name: Optional name for sparse vector field
             enable_quantization: Whether to enable vector quantization

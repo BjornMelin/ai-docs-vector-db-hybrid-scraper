@@ -6,7 +6,7 @@ including HNSW parameter tuning, quantization configuration, and real-time bench
 
 import logging
 import time
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 
@@ -167,7 +167,7 @@ class QdrantOptimizer:
                     latencies.append(latency)
 
                 except Exception as e:
-                    logger.warning(f"Search failed for ef={ef}: {e}")
+                    logger.warning("Search failed for ef=%s: %s", ef, e)
                     continue
 
             if latencies:
@@ -180,7 +180,7 @@ class QdrantOptimizer:
                     "max_latency": float(np.max(latencies)),
                 }
 
-        logger.info(f"Benchmark completed for collection '{collection_name}'")
+        logger.info("Benchmark completed for collection '%s'", collection_name)
         return results
 
     async def optimize_existing_collection(
@@ -333,7 +333,7 @@ class QdrantOptimizer:
                 quantization_config=quantization_config,
             )
 
-            logger.info(f"Enabled quantization for collection '{collection_name}'")
+            logger.info("Enabled quantization for collection '%s'", collection_name)
             return {"status": "success", "quantization_enabled": True}
 
         except Exception as e:

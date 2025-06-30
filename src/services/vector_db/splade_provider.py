@@ -43,7 +43,7 @@ class SPLADEProvider:
             # Try to import and load SPLADE model
             await self._load_splade_model()
             logger.info("SPLADE provider initialized successfully")
-        except Exception as e:
+        except (ImportError, ValueError, AttributeError, RuntimeError) as e:
             logger.warning(
                 "Failed to load SPLADE model: %s. Using fallback sparse generation.", e
             )

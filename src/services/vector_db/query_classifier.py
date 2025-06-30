@@ -9,6 +9,8 @@ import re
 from typing import Any
 
 from src.config import Config, QueryComplexity, QueryType
+
+
 # TODO: Fix imports - QueryClassification and QueryFeatures don't exist
 # from src.models.vector_search import QueryClassification, QueryFeatures
 
@@ -167,7 +169,8 @@ class QueryClassifier:
             context: Optional context information (user history, session data)
 
         Returns:
-            Any  # TODO: Replace with proper QueryClassification type with type, complexity, and features
+            Any  # TODO: Replace with proper QueryClassification type with type,
+            # complexity, and features
 
         """
         try:
@@ -205,7 +208,7 @@ class QueryClassifier:
 
         except Exception as e:
             # TODO: Convert f-string to logging format
-            logger.error(f"Query classification failed: {e}", exc_info=True)
+            logger.error("Query classification failed: %s", e, exc_info=True)
             # Return default classification
             # TODO: Replace with proper QueryClassification type
             return {

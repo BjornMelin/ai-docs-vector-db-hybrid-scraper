@@ -8,30 +8,26 @@ based on the I4 Vector Database Modernization research.
 import asyncio
 import logging
 import time
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
-from qdrant_client import AsyncQdrantClient
+
+# AsyncQdrantClient import removed (unused)
 from qdrant_client.models import (
-    CollectionInfo,
     Distance,
-    FieldCondition,
-    Filter,
     HnswConfigDiff,
     OptimizersConfigDiff,
-    PointStruct,
-    Range,
     ScalarQuantization,
     SearchParams,
     VectorParams,
     WalConfigDiff,
 )
 
-from src.config import get_config
-from src.services.agents.core import BaseAgent, BaseAgentDependencies
+# get_config import removed (unused)
+# BaseAgent and BaseAgentDependencies imports removed (unused)
 from src.services.cache.patterns import CircuitBreakerPattern
 from src.services.observability.tracking import PerformanceTracker
 from src.services.vector_db.service import QdrantService
@@ -258,15 +254,16 @@ class AgenticVectorManager:
                 failure_threshold=5, recovery_timeout=60.0, expected_exception=Exception
             )
 
+        except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
+            logger.error("Failed to create agent collection: %s", e, exc_info=True)
+            raise
+        else:
             logger.info(
-                f"Created agent collection {collection_name} for agent {config.agent_id}"
+                f"Created agent collection {collection_name} for agent "
+                f"{config.agent_id}"
             )
 
             return collection_name
-
-        except Exception as e:
-            logger.error(f"Failed to create agent collection: {e}", exc_info=True)
-            raise
 
     async def optimize_collection(
         self, collection_name: str, target_strategy: OptimizationStrategy | None = None
@@ -364,19 +361,19 @@ class AgenticVectorManager:
 
             self.optimization_history.append(optimization_result)
 
-            logger.info(
-                f"Optimization {optimization_id} completed in {optimization_time:.2f}s"
-            )
-
-            return optimization_result
-
-        except Exception as e:
-            logger.error(f"Collection optimization failed: {e}", exc_info=True)
+        except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
+            logger.error("Collection optimization failed: %s", e, exc_info=True)
             return {
                 "optimization_id": optimization_id,
                 "error": str(e),
                 "timestamp": datetime.now(tz=UTC).isoformat(),
             }
+        else:
+            logger.info(
+                f"Optimization {optimization_id} completed in {optimization_time:.2f}s"
+            )
+
+            return optimization_result
 
     async def autonomous_search(
         self,
@@ -458,15 +455,16 @@ class AgenticVectorManager:
             # Track failure in circuit breaker
             if circuit_breaker:
                 try:
-                    # Create a lambda that captures the exception to test circuit breaker
+                    # Create a lambda that captures the exception
+                    # to test circuit breaker
                     exception_to_throw = e
                     await circuit_breaker.call(
                         lambda: (_ for _ in ()).throw(exception_to_throw)
                     )
-                except Exception:
+                except (ConnectionError, ValueError, AttributeError, RuntimeError):
                     pass  # Expected to fail
 
-            logger.error(f"Autonomous search failed: {e}", exc_info=True)
+            logger.error("Autonomous search failed: %s", e, exc_info=True)
 
             return {
                 "search_id": search_id,
@@ -633,8 +631,8 @@ class AgenticVectorManager:
                 f"Discovered {len(self.agent_collections)} existing agent collections"
             )
 
-        except Exception as e:
-            logger.warning(f"Failed to discover existing collections: {e}")
+        except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
+            logger.warning("Failed to discover existing collections: %s", e)
 
     async def _health_monitoring_loop(self) -> None:
         """Background health monitoring loop."""
@@ -646,7 +644,7 @@ class AgenticVectorManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Error in health monitoring loop: {e}", exc_info=True)
+                logger.error("Error in health monitoring loop: %s", e, exc_info=True)
                 await asyncio.sleep(self.health_check_interval_seconds * 2)
 
     async def _optimization_loop(self) -> None:
@@ -659,7 +657,7 @@ class AgenticVectorManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Error in optimization loop: {e}", exc_info=True)
+                logger.error("Error in optimization loop: %s", e, exc_info=True)
                 await asyncio.sleep(3600)  # Wait 1 hour on error
 
     async def _check_collection_health(self) -> None:
@@ -816,22 +814,22 @@ class AgenticVectorManager:
     ) -> bool:
         """Optimize HNSW parameters based on performance."""
         # Implementation would adjust HNSW parameters dynamically
-        logger.info(f"Optimizing HNSW parameters for {collection_name}")
+        logger.info("Optimizing HNSW parameters for %s", collection_name)
         return True
 
     async def _optimize_memory_usage(self, collection_name: str) -> bool:
         """Optimize memory usage for collection."""
-        logger.info(f"Optimizing memory usage for {collection_name}")
+        logger.info("Optimizing memory usage for %s", collection_name)
         return True
 
     async def _optimize_quantization(self, collection_name: str) -> bool:
         """Optimize quantization settings."""
-        logger.info(f"Optimizing quantization for {collection_name}")
+        logger.info("Optimizing quantization for %s", collection_name)
         return True
 
     async def _defragment_collection(self, collection_name: str) -> None:
         """Defragment collection to improve performance."""
-        logger.info(f"Defragmenting collection {collection_name}")
+        logger.info("Defragmenting collection %s", collection_name)
         # This would implement actual defragmentation
 
     async def _get_adaptive_search_params(
@@ -871,7 +869,7 @@ class AgenticVectorManager:
                 "fallback_used": True,
             }
 
-        except Exception as e:
+        except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
             return {"error": str(e), "fallback_used": True}
 
     async def _update_search_metrics(
