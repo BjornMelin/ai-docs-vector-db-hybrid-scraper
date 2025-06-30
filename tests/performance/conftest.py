@@ -7,6 +7,7 @@ API response times, and throughput measurement.
 
 import asyncio
 import gc
+import os
 import random
 import resource
 import time

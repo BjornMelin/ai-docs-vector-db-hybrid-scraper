@@ -4,9 +4,11 @@ This module contains comprehensive performance tests to ensure the system meets
 the specified performance targets for portfolio demonstrations.
 """
 
+import asyncio
 import contextlib
 import logging
 import statistics
+import time
 
 import pytest
 

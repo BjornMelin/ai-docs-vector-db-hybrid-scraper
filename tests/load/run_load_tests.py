@@ -7,9 +7,13 @@ with different configurations, profiles, and reporting options.
 
 import argparse
 import contextlib
+import json
 import logging
+import os
+import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 
@@ -165,50 +169,29 @@ class LoadTestRunner:
     def run_pytest_load_tests(
         self, test_type: str = "all", markers: list[str] | None = None
     ) -> dict:
-        """Run load tests using pytest."""
-        logger.info(
-            "Running pytest load tests: %s", test_type
-        )  # TODO: Convert f-string to logging format
+        """Run load tests using pytest with comprehensive security validation."""
+        logger.info("Running pytest load tests: %s", test_type)
 
-        # Build pytest command
-        cmd = ["uv", "run", "pytest", "tests/load/", "-v"]
+        # Security: Validate and sanitize all inputs
+        sanitized_test_type = self._validate_test_type(test_type)
+        sanitized_markers = self._validate_markers(markers) if markers else None
 
-        # Add markers if specified
-        if markers:
-            for marker in markers:
-                cmd.extend(["-m", marker])
-        elif test_type != "all":
-            cmd.extend(["-m", test_type])
+        # Build secure pytest command with validated inputs
+        cmd = self._build_secure_pytest_command(sanitized_test_type, sanitized_markers)
 
-        # Add specific test directories based on type
-        if test_type == "load":
-            cmd = ["uv", "run", "pytest", "tests/load/load_testing/", "-v"]
-        elif test_type == "stress":
-            cmd = ["uv", "run", "pytest", "tests/load/stress_testing/", "-v"]
-        elif test_type == "spike":
-            cmd = ["uv", "run", "pytest", "tests/load/spike_testing/", "-v"]
-        elif test_type == "endurance":
-            cmd = ["uv", "run", "pytest", "tests/load/endurance_testing/", "-v"]
-        elif test_type == "volume":
-            cmd = ["uv", "run", "pytest", "tests/load/volume_testing/", "-v"]
-        elif test_type == "scalability":
-            cmd = ["uv", "run", "pytest", "tests/load/scalability/", "-v"]
+        # Enhanced security validation
+        self._validate_command_security(cmd)
 
-        # Add output options
-        cmd.extend(["--tb=short", "--disable-warnings"])
-
-        # Validate command components for security
-        allowed_executables = ["uv", "python", "python3"]
-        if cmd[0] not in allowed_executables:
-            msg = f"Executable '{cmd[0]}' not allowed"
-            raise ValueError(msg)
-
-        # Run tests
+        # Run tests with security constraints
         try:
-            result = (
-                subprocess.run(  # Secure: validated executable, no shell, no user input
-                    cmd, capture_output=True, text=True, cwd=project_root, check=False
-                )
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                cwd=project_root,
+                check=False,
+                timeout=3600,  # Security: Prevent hanging processes
+                env=self._get_secure_environment(),  # Security: Clean environment
             )
 
             return {
@@ -219,6 +202,13 @@ class LoadTestRunner:
                 "command": " ".join(cmd),
             }
 
+        except subprocess.TimeoutExpired:
+            logger.error("Pytest execution timed out after 1 hour")
+            return {
+                "status": "timeout",
+                "error": "Test execution exceeded 1 hour timeout",
+                "command": " ".join(cmd),
+            }
         except Exception as e:
             logger.exception("Failed to run pytest tests")
             return {
@@ -616,6 +606,194 @@ class LoadTestRunner:
             json.dump(report, f, indent=2)
 
         return str(filepath)
+
+    def _validate_test_type(self, test_type: str) -> str:
+        """Validate and sanitize test type parameter against injection attacks."""
+        if not isinstance(test_type, str):
+            raise ValueError("Test type must be a string")
+
+        # Security: Allowlist of valid test types
+        valid_test_types = {
+            "all",
+            "load",
+            "stress",
+            "spike",
+            "endurance",
+            "volume",
+            "scalability",
+        }
+
+        # Security: Remove any non-alphanumeric characters except underscore
+        sanitized = re.sub(r"[^a-zA-Z0-9_]", "", test_type.strip())
+
+        if not sanitized:
+            raise ValueError("Invalid test type: empty after sanitization")
+
+        if sanitized not in valid_test_types:
+            raise ValueError(
+                f"Invalid test type: {sanitized}. Must be one of: {valid_test_types}"
+            )
+
+        return sanitized
+
+    def _validate_markers(self, markers: list[str]) -> list[str]:
+        """Validate and sanitize pytest markers against injection attacks."""
+        if not isinstance(markers, list):
+            raise ValueError("Markers must be a list")
+
+        sanitized_markers = []
+        # Security: Allowlist of valid marker patterns
+        valid_marker_pattern = re.compile(r"^[a-zA-Z0-9_][a-zA-Z0-9_-]*$")
+
+        for marker in markers:
+            if not isinstance(marker, str):
+                raise ValueError("Each marker must be a string")
+
+            # Security: Remove any dangerous characters
+            sanitized = re.sub(r"[^a-zA-Z0-9_-]", "", marker.strip())
+
+            if not sanitized:
+                continue  # Skip empty markers
+
+            if not valid_marker_pattern.match(sanitized):
+                raise ValueError(f"Invalid marker format: {marker}")
+
+            # Security: Limit marker length to prevent buffer overflow
+            if len(sanitized) > 50:
+                raise ValueError(f"Marker too long: {marker}")
+
+            sanitized_markers.append(sanitized)
+
+        # Security: Limit total number of markers
+        if len(sanitized_markers) > 10:
+            raise ValueError("Too many markers specified (maximum 10)")
+
+        return sanitized_markers
+
+    def _build_secure_pytest_command(
+        self, test_type: str, markers: list[str] | None
+    ) -> list[str]:
+        """Build pytest command with security constraints."""
+        # Security: Start with hardcoded base command
+        cmd = ["uv", "run", "pytest"]
+
+        # Security: Map test types to secure paths within tests/load/
+        test_type_paths = {
+            "all": "tests/load/",
+            "load": "tests/load/load_testing/",
+            "stress": "tests/load/stress_testing/",
+            "spike": "tests/load/spike_testing/",
+            "endurance": "tests/load/endurance_testing/",
+            "volume": "tests/load/volume_testing/",
+            "scalability": "tests/load/scalability/",
+        }
+
+        # Security: Use predefined path mapping instead of dynamic construction
+        test_path = test_type_paths.get(test_type, "tests/load/")
+        cmd.append(test_path)
+
+        # Security: Add hardcoded safe options
+        cmd.extend(["-v", "--tb=short", "--disable-warnings"])
+
+        # Security: Add validated markers
+        if markers:
+            for marker in markers:
+                cmd.extend(["-m", marker])
+        elif test_type != "all":
+            cmd.extend(["-m", test_type])
+
+        return cmd
+
+    def _validate_command_security(self, cmd: list[str]) -> None:
+        """Perform comprehensive security validation on the command."""
+        if not isinstance(cmd, list):
+            raise ValueError("Command must be a list")
+
+        if not cmd:
+            raise ValueError("Command cannot be empty")
+
+        # Security: Validate executable
+        allowed_executables = {"uv", "python", "python3"}
+        if cmd[0] not in allowed_executables:
+            raise ValueError(f"Executable '{cmd[0]}' not allowed")
+
+        # Security: Validate all command components
+        dangerous_patterns = [
+            r"[;&|`$(){}[\]<>]",  # Shell metacharacters
+            r"\.\.",  # Directory traversal
+            r"/dev/",  # Device files
+            r"/proc/",  # Process files
+            r"/sys/",  # System files
+            r"~",  # Home directory expansion
+            r"\$[A-Za-z_]",  # Environment variable expansion
+        ]
+
+        for component in cmd:
+            if not isinstance(component, str):
+                raise ValueError("All command components must be strings")
+
+            # Security: Check for dangerous patterns
+            for pattern in dangerous_patterns:
+                if re.search(pattern, component):
+                    raise ValueError(
+                        f"Dangerous pattern detected in command: {component}"
+                    )
+
+            # Security: Validate path components
+            if component.startswith("/") and not component.startswith("tests/"):
+                # Allow absolute paths only if they're in the tests directory
+                if not component.startswith(str(project_root / "tests")):
+                    raise ValueError(f"Absolute path not allowed: {component}")
+
+        # Security: Validate command length to prevent argument overflow
+        if len(cmd) > 50:
+            raise ValueError("Command too long (maximum 50 arguments)")
+
+        # Security: Validate total command string length
+        cmd_str = " ".join(cmd)
+        if len(cmd_str) > 2000:
+            raise ValueError("Command string too long (maximum 2000 characters)")
+
+    def _get_secure_environment(self) -> dict[str, str]:
+        """Get a secure environment for subprocess execution."""
+        # Security: Start with minimal environment
+        secure_env = {
+            "PATH": os.environ.get("PATH", ""),
+            "HOME": os.environ.get("HOME", ""),
+            "USER": os.environ.get("USER", ""),
+            "PYTHONPATH": str(project_root),
+        }
+
+        # Security: Add only safe environment variables
+        safe_vars = {
+            "TERM",
+            "LANG",
+            "LC_ALL",
+            "TZ",
+            "UV_CACHE_DIR",
+            "PYTEST_CURRENT_TEST",
+            "CI",
+            "GITHUB_ACTIONS",
+        }
+
+        for var in safe_vars:
+            if var in os.environ:
+                secure_env[var] = os.environ[var]
+
+        # Security: Remove any variables that could be used for injection
+        dangerous_vars = {
+            "LD_PRELOAD",
+            "LD_LIBRARY_PATH",
+            "DYLD_INSERT_LIBRARIES",
+            "PYTHONINSPECT",
+            "PYTHONSTARTUP",
+            "PYTHONEXECUTABLE",
+        }
+
+        for var in dangerous_vars:
+            secure_env.pop(var, None)
+
+        return secure_env
 
 
 def main():

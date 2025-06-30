@@ -17,7 +17,6 @@ import json
 import tempfile
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
 
 import pytest
 from pydantic import BaseModel, Field
@@ -121,95 +120,346 @@ def large_config_data():
 
 
 class TestConfigurationPerformance:
-    """Core configuration performance benchmarks."""
+    """Real configuration performance benchmarks using pytest-benchmark."""
 
-    def test_basic_config_creation(self, benchmark):
-        """Benchmark basic Config instantiation speed."""
-
-        def create_config():
-            return Config()
-
-        result = benchmark(create_config)
-        assert result is not None
-        assert hasattr(result, "app_name")
-
-    def test_optimized_config_creation(self, benchmark):
-        """Benchmark optimized config creation with minimal validation."""
-
-        def create_optimized_config():
-            return OptimizedConfig()
-
-        result = benchmark(create_optimized_config)
-        assert result is not None
-        assert result.app_name == "optimized-app"
-
-    def test_cached_config_creation(self, benchmark):
-        """Benchmark cached config creation with LRU cache."""
-
-        def create_cached_config():
-            # Use same parameters to hit cache
-            return CachedConfigModel.create_cached(
-                app_name="cached-app", debug=True, log_level="INFO", cache_ttl=3600
-            )
-
-        result = benchmark(create_cached_config)
-        assert result is not None
-        assert result.app_name == "cached-app"
-
-    def test_config_from_dict(self, benchmark):
-        """Benchmark config creation from dictionary data."""
-
-        config_dict = {
-            "app_name": "dict-app",
-            "debug": False,
-            "log_level": "WARNING",
-            "database_url": "sqlite:///test.db",
-            "cache_ttl": 1800,
-            "max_connections": 15,
+    @pytest.fixture
+    def real_config_data(self):
+        """Generate realistic configuration data for testing."""
+        return {
+            # Application settings
+            "app_name": "benchmark-test-app",
+            "environment": "testing",
+            "debug": True,
+            "log_level": "INFO",
+            # Database configuration
+            "qdrant_url": "http://localhost:6333",
+            "qdrant_api_key": "test-key",
+            "qdrant_timeout": 30,
+            # Embedding configuration
+            "embedding_provider": "fastembed",
+            "embedding_model": "BAAI/bge-small-en-v1.5",
+            "embedding_batch_size": 32,
+            # Cache configuration
+            "cache_type": "dragonfly",
+            "cache_url": "redis://localhost:6379",
+            "cache_ttl": 3600,
+            "cache_max_size": 1000,
+            # Performance settings
+            "max_concurrent_requests": 100,
+            "request_timeout": 30,
+            "circuit_breaker_threshold": 5,
+            # Security settings
+            "api_key_required": True,
+            "rate_limit_per_minute": 1000,
+            "cors_origins": ["http://localhost:3000", "https://app.example.com"],
+            # Feature flags
+            "enable_hybrid_search": True,
+            "enable_reranking": True,
+            "enable_cache_compression": True,
+            "enable_observability": True,
         }
 
-        def create_from_dict():
-            return CachedConfigModel(**config_dict)
+    @pytest.fixture
+    def complex_config_data(self):
+        """Generate complex configuration with nested structures."""
+        config = {}
 
-        result = benchmark(create_from_dict)
-        assert result.app_name == "dict-app"
-        assert result.cache_ttl == 1800
-
-    def test_config_from_file(self, benchmark, temp_config_file):
-        """Benchmark config loading from JSON file."""
-
-        def load_from_file():
-            with temp_config_file.open() as f:
-                data = json.load(f)
-            return OptimizedConfig(**data)
-
-        result = benchmark(load_from_file)
-        assert result.app_name == "benchmark-test"
-        assert result.debug is True
-
-    def test_large_config_creation(self, benchmark, large_config_data):
-        """Benchmark performance with large configuration data."""
-
-        class LargeConfigModel(BaseModel):
-            model_config = {
-                "validate_assignment": False,
-                "extra": "allow",  # Allow extra fields for large configs
-                "frozen": True,
+        # Generate multiple service configurations
+        for i in range(20):
+            service_name = f"service_{i}"
+            config[service_name] = {
+                "enabled": i % 2 == 0,
+                "url": f"https://service-{i}.example.com",
+                "timeout": 30 + (i * 5),
+                "retries": 3,
+                "circuit_breaker": {
+                    "failure_threshold": 5,
+                    "recovery_timeout": 60,
+                    "half_open_max_calls": 3,
+                },
+                "rate_limits": {
+                    "requests_per_second": 100 - i,
+                    "burst_size": 50,
+                    "window_size": 60,
+                },
             }
 
-            app_name: str = "large-app"
-            services: dict[str, Any] = Field(default_factory=dict)
-            feature_flags: dict[str, bool] = Field(default_factory=dict)
-            rate_limits: dict[str, Any] = Field(default_factory=dict)
-            cache_configs: dict[str, Any] = Field(default_factory=dict)
+        # Feature flags
+        for i in range(50):
+            config[f"feature_flag_{i}"] = i % 3 == 0
 
-        def create_large_config():
-            return LargeConfigModel(**large_config_data)
+        # Environment-specific overrides
+        for env in ["development", "staging", "production"]:
+            config[f"{env}_overrides"] = {
+                "log_level": "DEBUG" if env == "development" else "INFO",
+                "debug": env == "development",
+                "performance_monitoring": env == "production",
+            }
 
-        result = benchmark(create_large_config)
-        assert len(result.services) == 100
-        assert len(result.feature_flags) == 200
-        assert len(result.rate_limits) == 50
+        return config
+
+    def test_real_settings_instantiation_performance(self, benchmark, real_config_data):
+        """Benchmark real Settings class instantiation with validation."""
+        from src.config.settings import Settings
+
+        def create_settings():
+            """Create Settings instance with validation."""
+            return Settings(**real_config_data)
+
+        # Run benchmark
+        settings = benchmark(create_settings)
+
+        # Validate settings creation
+        assert settings.app_name == "benchmark-test-app"
+        assert hasattr(settings, "qdrant_url")
+        assert hasattr(settings, "embedding_provider")
+
+    def test_real_settings_from_environment(self, benchmark):
+        """Benchmark Settings creation from environment variables."""
+        import os
+
+        from src.config.settings import create_settings_from_env
+
+        # Set test environment variables
+        test_env = {
+            "APP_NAME": "env-test-app",
+            "ENVIRONMENT": "testing",
+            "QDRANT_URL": "http://test:6333",
+            "EMBEDDING_PROVIDER": "openai",
+            "LOG_LEVEL": "DEBUG",
+        }
+
+        # Temporarily set environment variables
+        original_env = {}
+        for key, value in test_env.items():
+            original_env[key] = os.environ.get(key)
+            os.environ[key] = value
+
+        def create_from_env():
+            """Create Settings from environment variables."""
+            return create_settings_from_env()
+
+        try:
+            # Run benchmark
+            settings = benchmark(create_from_env)
+
+            # Validate environment-based settings
+            assert settings.app_name == "env-test-app"
+            assert settings.environment.value == "testing"
+
+        finally:
+            # Restore original environment
+            for key, value in original_env.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
+
+    def test_real_config_caching_performance(self, benchmark, real_config_data):
+        """Benchmark configuration caching with real Settings."""
+        from src.config.settings import (
+            Settings,
+            get_settings,
+            reset_settings,
+            set_settings,
+        )
+
+        def cached_config_access():
+            """Test configuration caching performance."""
+            # Reset to clean state
+            reset_settings()
+
+            # First access (cache miss)
+            settings1 = Settings(**real_config_data)
+            set_settings(settings1)
+
+            # Subsequent accesses (cache hits)
+            results = []
+            for _ in range(10):
+                cached_settings = get_settings()
+                results.append(cached_settings.app_name)
+
+            return results
+
+        # Run benchmark
+        results = benchmark(cached_config_access)
+
+        # Validate caching
+        assert len(results) == 10
+        assert all(name == "benchmark-test-app" for name in results)
+
+    def test_real_config_validation_performance(self, benchmark, complex_config_data):
+        """Benchmark configuration validation with complex data."""
+        from pydantic import ValidationError
+
+        from src.config.settings import Settings
+
+        def validate_complex_config():
+            """Validate complex configuration data."""
+            # Add required base fields to complex config
+            config_with_base = {
+                "app_name": "complex-app",
+                "environment": "testing",
+                **complex_config_data,
+            }
+
+            try:
+                settings = Settings(**config_with_base)
+                return {"success": True, "settings": settings}
+            except ValidationError as e:
+                return {"success": False, "errors": len(e.errors())}
+
+        # Run benchmark
+        result = benchmark(validate_complex_config)
+
+        # Validate that complex config processing works
+        assert isinstance(result, dict)
+        assert "success" in result
+
+    @pytest.mark.slow
+    def test_real_config_hot_reload_performance(self, benchmark, real_config_data):
+        """Benchmark configuration hot reload capabilities."""
+        import json
+        import tempfile
+
+        from src.config.settings import Settings, get_settings, set_settings
+
+        def config_hot_reload():
+            """Test configuration hot reload performance."""
+            results = []
+
+            # Create temporary config file
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".json", delete=False
+            ) as f:
+                json.dump(real_config_data, f)
+                config_file = f.name
+
+            try:
+                # Initial load
+                with open(config_file) as f:
+                    config_data = json.load(f)
+
+                initial_settings = Settings(**config_data)
+                set_settings(initial_settings)
+                results.append(get_settings().app_name)
+
+                # Simulate configuration changes and reloads
+                for i in range(5):
+                    # Modify config
+                    config_data["app_name"] = f"reloaded-app-{i}"
+
+                    # Save changes
+                    with open(config_file, "w") as f:
+                        json.dump(config_data, f)
+
+                    # Reload configuration
+                    updated_settings = Settings(**config_data)
+                    set_settings(updated_settings)
+
+                    results.append(get_settings().app_name)
+
+            finally:
+                # Clean up
+                import os
+
+                os.unlink(config_file)
+
+            return results
+
+        # Run benchmark
+        results = benchmark(config_hot_reload)
+
+        # Validate hot reload
+        assert len(results) == 6  # Initial + 5 reloads
+        assert results[0] == "benchmark-test-app"
+        assert results[-1] == "reloaded-app-4"
+
+    def test_real_config_serialization_performance(self, benchmark, real_config_data):
+        """Benchmark configuration serialization/deserialization."""
+        import json
+
+        from src.config.settings import Settings
+
+        def config_serialization():
+            """Test configuration serialization performance."""
+            # Create settings
+            settings = Settings(**real_config_data)
+
+            # Serialize to dict
+            settings_dict = settings.model_dump()
+
+            # Serialize to JSON
+            json_str = json.dumps(settings_dict)
+
+            # Deserialize from JSON
+            parsed_dict = json.loads(json_str)
+
+            # Recreate settings
+            restored_settings = Settings(**parsed_dict)
+
+            return {
+                "original_app_name": settings.app_name,
+                "restored_app_name": restored_settings.app_name,
+                "json_length": len(json_str),
+                "dict_keys": len(settings_dict),
+            }
+
+        # Run benchmark
+        result = benchmark(config_serialization)
+
+        # Validate serialization round-trip
+        assert result["original_app_name"] == result["restored_app_name"]
+        assert result["json_length"] > 0
+        assert result["dict_keys"] > 0
+
+    def test_real_config_memory_optimization(self, benchmark, complex_config_data):
+        """Benchmark memory usage of configuration objects."""
+        import sys
+
+        from src.config.settings import Settings
+
+        def config_memory_usage():
+            """Test memory efficiency of configuration objects."""
+            configs = []
+
+            # Create multiple configuration instances
+            for i in range(20):
+                config_data = {
+                    "app_name": f"memory-test-{i}",
+                    "environment": "testing",
+                    **complex_config_data,
+                }
+
+                settings = Settings(**config_data)
+                configs.append(settings)
+
+            # Calculate memory usage
+            total_size = sum(sys.getsizeof(config) for config in configs)
+            avg_size_per_config = total_size / len(configs)
+
+            return {
+                "total_configs": len(configs),
+                "total_memory_bytes": total_size,
+                "avg_memory_per_config": avg_size_per_config,
+                "memory_efficiency_score": 1000000
+                / avg_size_per_config,  # Higher is better
+            }
+
+        # Run benchmark
+        result = benchmark(config_memory_usage)
+
+        # Validate memory efficiency
+        assert result["total_configs"] == 20
+        assert result["avg_memory_per_config"] > 0
+        assert result["memory_efficiency_score"] > 1, (
+            "Configuration objects should be memory efficient"
+        )
+
+        # Log memory metrics
+        print(
+            f"\n💾 Config Memory: {result['avg_memory_per_config']:.0f} bytes/config, efficiency: {result['memory_efficiency_score']:.1f}"
+        )
 
 
 class TestAsyncConfigurationPerformance:

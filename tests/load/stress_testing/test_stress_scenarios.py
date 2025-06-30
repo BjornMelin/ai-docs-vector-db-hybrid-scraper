@@ -5,6 +5,10 @@ breaking points, resource exhaustion conditions, and failure modes under
 extreme load conditions.
 """
 
+import asyncio
+import random
+import time
+
 import pytest
 
 from tests.load.conftest import LoadTestConfig, LoadTestType
