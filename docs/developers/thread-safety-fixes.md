@@ -18,18 +18,19 @@ Fixed race conditions in the configuration drift detection system by implementin
   - `self._snapshots_lock`: Protects snapshot dictionary access
   - `self._events_lock`: Protects drift events list access
   - `self._alerts_lock`: Protects alert tracking dictionary access
-  
 - **`asyncio.Lock`**: Added for future async operation compatibility
   - `self._async_lock`: Ready for async method implementations
 
 ### Protected Operations
 
 1. **Snapshot Management**
+
    - `take_snapshot()`: Protected snapshot storage with `_snapshots_lock`
    - `compare_snapshots()`: Protected snapshot reading with `_snapshots_lock`
    - `_cleanup_old_snapshots()`: Protected cleanup operations with `_snapshots_lock`
 
 2. **Event Management**
+
    - Event appending in `compare_snapshots()`: Protected with `_events_lock`
    - `_cleanup_old_events()`: Protected cleanup with `_events_lock`
    - `get_drift_summary()`: Protected event reading with `_events_lock`
