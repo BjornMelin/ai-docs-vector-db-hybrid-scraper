@@ -166,7 +166,7 @@ class TestQueryOrchestrator:
     def test_orchestrator_custom_initialization(self):
         """Test query orchestrator with custom parameters."""
         orchestrator = QueryOrchestrator(model="gpt-3.5-turbo")
-        
+
         assert orchestrator.model == "gpt-3.5-turbo"
         assert orchestrator.temperature == 0.1
         assert orchestrator.max_tokens == 1500
@@ -181,12 +181,12 @@ class TestQueryOrchestrator:
         assert "Delegate to specialized agents" in prompt
         assert "Coordinate multi-stage retrieval" in prompt
         assert "Learn from past performance" in prompt
-        
+
         # Check analysis framework
         assert "SIMPLE:" in prompt
         assert "MODERATE:" in prompt
         assert "COMPLEX:" in prompt
-        
+
         # Check processing strategies
         assert "FAST:" in prompt
         assert "BALANCED:" in prompt
@@ -220,23 +220,23 @@ class TestQueryOrchestrator:
     async def test_orchestrate_query_with_context(self):
         """Test query orchestration with user context and performance requirements."""
         orchestrator = QueryOrchestrator()
-        
+
         mock_client_manager = Mock(spec=ClientManager)
         mock_config = get_config()
         state = AgentState(session_id="test_session")
         deps = BaseAgentDependencies(
             client_manager=mock_client_manager, config=mock_config, session_state=state
         )
-        
+
         await orchestrator.initialize(deps)
-        
+
         result = await orchestrator.orchestrate_query(
             query="How to implement neural networks?",
             collection="docs",
             user_context={"user_id": "test_user", "expertise": "beginner"},
-            performance_requirements={"max_latency": 1000, "min_quality": 0.8}
+            performance_requirements={"max_latency": 1000, "min_quality": 0.8},
         )
-        
+
         assert result["success"] is True
         assert "orchestration_id" in result
 
@@ -244,7 +244,7 @@ class TestQueryOrchestrator:
     async def test_orchestrate_query_uninitialized(self):
         """Test orchestrate_query raises error when not initialized."""
         orchestrator = QueryOrchestrator()
-        
+
         with pytest.raises(RuntimeError, match="Agent not initialized"):
             await orchestrator.orchestrate_query("test query")
 
@@ -252,20 +252,22 @@ class TestQueryOrchestrator:
     async def test_orchestrate_query_error_handling(self):
         """Test orchestrate_query error handling."""
         orchestrator = QueryOrchestrator()
-        
+
         mock_client_manager = Mock(spec=ClientManager)
         mock_config = get_config()
         state = AgentState(session_id="test_session")
         deps = BaseAgentDependencies(
             client_manager=mock_client_manager, config=mock_config, session_state=state
         )
-        
+
         await orchestrator.initialize(deps)
-        
+
         # Simulate error in fallback orchestration
-        with patch.object(orchestrator, '_fallback_orchestration', side_effect=Exception("Test error")):
+        with patch.object(
+            orchestrator, "_fallback_orchestration", side_effect=Exception("Test error")
+        ):
             result = await orchestrator.orchestrate_query("test query")
-            
+
             assert result["success"] is False
             assert "error" in result
             assert "Test error" in result["error"]
@@ -275,17 +277,17 @@ class TestQueryOrchestrator:
     async def test_fallback_orchestration(self):
         """Test fallback orchestration method."""
         orchestrator = QueryOrchestrator()
-        
+
         context = {
             "query": "What is Python?",
             "collection": "docs",
             "user_context": {"user_id": "test"},
             "performance_requirements": {"max_latency": 500},
-            "orchestration_id": str(uuid4())
+            "orchestration_id": str(uuid4()),
         }
-        
+
         result = await orchestrator._fallback_orchestration(context)
-        
+
         assert result["success"] is True
         assert "analysis" in result["result"]
         assert "orchestration_plan" in result["result"]
@@ -333,11 +335,11 @@ class TestQueryOrchestrator:
     def test_recommend_tools_edge_cases(self):
         """Test tool recommendation with edge cases."""
         orchestrator = QueryOrchestrator()
-        
+
         # Test with empty inputs
         tools = orchestrator._recommend_tools("", "")
         assert "hybrid_search" in tools
-        
+
         # Test with invalid complexity/domain
         tools = orchestrator._recommend_tools("invalid", "invalid")
         assert "hybrid_search" in tools
@@ -347,9 +349,14 @@ class TestQueryOrchestrator:
         orchestrator = QueryOrchestrator()
 
         # Test all agent types
-        agent_types = ["retrieval_specialist", "answer_generator", "tool_selector", "unknown_agent"]
+        agent_types = [
+            "retrieval_specialist",
+            "answer_generator",
+            "tool_selector",
+            "unknown_agent",
+        ]
         complexities = ["simple", "moderate", "complex", "unknown_complexity"]
-        
+
         for agent_type in agent_types:
             for complexity in complexities:
                 time_estimate = orchestrator._estimate_completion_time(
@@ -365,61 +372,82 @@ class TestQueryOrchestrator:
         complex_generation = orchestrator._estimate_completion_time(
             "answer_generator", {"complexity": "complex"}
         )
-        
+
         assert simple_retrieval == 1.0  # 2.0 * 0.5
         assert complex_generation == 6.0  # 3.0 * 2.0
 
     def test_estimate_completion_time_edge_cases(self):
         """Test completion time estimation edge cases."""
         orchestrator = QueryOrchestrator()
-        
+
         # Test with empty task data
         time_estimate = orchestrator._estimate_completion_time("unknown_agent", {})
         assert time_estimate == 2.0  # Default time
-        
+
         # Test with missing complexity
-        time_estimate = orchestrator._estimate_completion_time("retrieval_specialist", {})
+        time_estimate = orchestrator._estimate_completion_time(
+            "retrieval_specialist", {}
+        )
         assert time_estimate == 2.0  # Default base time * default multiplier
 
     def test_get_strategy_recommendation(self):
         """Test strategy recommendation logic."""
         orchestrator = QueryOrchestrator()
-        
+
         # Test high performance - continue using
         high_perf_stats = {"avg_performance": 0.9}
-        assert orchestrator._get_strategy_recommendation(high_perf_stats) == "continue_using"
-        
+        assert (
+            orchestrator._get_strategy_recommendation(high_perf_stats)
+            == "continue_using"
+        )
+
         # Test medium performance - monitor
         medium_perf_stats = {"avg_performance": 0.7}
-        assert orchestrator._get_strategy_recommendation(medium_perf_stats) == "monitor_performance"
-        
+        assert (
+            orchestrator._get_strategy_recommendation(medium_perf_stats)
+            == "monitor_performance"
+        )
+
         # Test low performance - consider alternative
         low_perf_stats = {"avg_performance": 0.5}
-        assert orchestrator._get_strategy_recommendation(low_perf_stats) == "consider_alternative"
-        
+        assert (
+            orchestrator._get_strategy_recommendation(low_perf_stats)
+            == "consider_alternative"
+        )
+
         # Test edge cases
         edge_high_stats = {"avg_performance": 0.8}
-        assert orchestrator._get_strategy_recommendation(edge_high_stats) == "monitor_performance"
-        
+        assert (
+            orchestrator._get_strategy_recommendation(edge_high_stats)
+            == "monitor_performance"
+        )
+
         edge_low_stats = {"avg_performance": 0.6}
-        assert orchestrator._get_strategy_recommendation(edge_low_stats) == "consider_alternative"
+        assert (
+            orchestrator._get_strategy_recommendation(edge_low_stats)
+            == "consider_alternative"
+        )
 
     def test_get_strategy_recommendation_edge_cases(self):
         """Test strategy recommendation with edge cases."""
         orchestrator = QueryOrchestrator()
-        
+
         # Test with missing keys
         recommendation = orchestrator._get_strategy_recommendation({})
         # Should handle missing keys gracefully
-        assert recommendation in ["continue_using", "monitor_performance", "consider_alternative"]
+        assert recommendation in [
+            "continue_using",
+            "monitor_performance",
+            "consider_alternative",
+        ]
 
     def test_strategy_performance_tracking(self):
         """Test strategy performance tracking and learning."""
         orchestrator = QueryOrchestrator()
-        
+
         # Test initial state
         assert orchestrator.strategy_performance == {}
-        
+
         # Test strategy performance tracking
         strategy = "test_strategy"
         stats = {
@@ -428,12 +456,12 @@ class TestQueryOrchestrator:
             "avg_latency": 300.0,
             "avg_quality": 0.8,
         }
-        
+
         orchestrator.strategy_performance[strategy] = stats
-        
+
         # Verify state persistence
         assert orchestrator.strategy_performance[strategy] == stats
-        
+
         # Test recommendation generation
         recommendation = orchestrator._get_strategy_recommendation(stats)
         assert recommendation == "monitor_performance"
@@ -442,25 +470,25 @@ class TestQueryOrchestrator:
         """Test strategy performance learning and adaptation."""
         orchestrator = QueryOrchestrator()
         strategy = "fast"
-        
+
         # Simulate multiple evaluations
         evaluations = [
             {"latency": 200.0, "quality": 0.7, "cost": 0.02},
             {"latency": 300.0, "quality": 0.8, "cost": 0.03},
             {"latency": 250.0, "quality": 0.75, "cost": 0.025},
         ]
-        
+
         for eval_data in evaluations:
             latency = eval_data["latency"]
             quality = eval_data["quality"]
             cost = eval_data["cost"]
-            
+
             performance_score = (
                 (1.0 - min(latency / 1000.0, 1.0)) * 0.3
                 + quality * 0.6
                 + (1.0 - min(cost / 0.1, 1.0)) * 0.1
             )
-            
+
             if strategy not in orchestrator.strategy_performance:
                 orchestrator.strategy_performance[strategy] = {
                     "total_uses": 0,
@@ -468,16 +496,18 @@ class TestQueryOrchestrator:
                     "avg_latency": 0.0,
                     "avg_quality": 0.0,
                 }
-            
+
             stats = orchestrator.strategy_performance[strategy]
             stats["total_uses"] += 1
-            
+
             # Update running averages
             alpha = 0.1
-            stats["avg_performance"] = (1 - alpha) * stats["avg_performance"] + alpha * performance_score
+            stats["avg_performance"] = (1 - alpha) * stats[
+                "avg_performance"
+            ] + alpha * performance_score
             stats["avg_latency"] = (1 - alpha) * stats["avg_latency"] + alpha * latency
             stats["avg_quality"] = (1 - alpha) * stats["avg_quality"] + alpha * quality
-        
+
         # Verify learning occurred
         final_stats = orchestrator.strategy_performance[strategy]
         assert final_stats["total_uses"] == 3
@@ -488,7 +518,7 @@ class TestQueryOrchestrator:
     def test_performance_metrics_calculation(self):
         """Test performance metrics calculation."""
         orchestrator = QueryOrchestrator()
-        
+
         # Test performance score calculation
         test_cases = [
             # (latency, quality, cost, expected_range)
@@ -497,135 +527,157 @@ class TestQueryOrchestrator:
             (1000.0, 0.5, 0.1, (0.25, 0.35)),  # Average performance
             (2000.0, 0.3, 0.2, (0.15, 0.25)),  # Poor performance
         ]
-        
+
         for latency, quality, cost, expected_range in test_cases:
             performance_score = (
                 (1.0 - min(latency / 1000.0, 1.0)) * 0.3
                 + quality * 0.6
                 + (1.0 - min(cost / 0.1, 1.0)) * 0.1
             )
-            
-            assert expected_range[0] <= performance_score <= expected_range[1], \
+
+            assert expected_range[0] <= performance_score <= expected_range[1], (
                 f"Performance score {performance_score} not in expected range {expected_range}"
+            )
 
     def test_query_analysis_logic(self):
         """Test query analysis and classification logic."""
         orchestrator = QueryOrchestrator()
-        
+
         # Test different query types
         test_queries = [
             ("What is machine learning?", "simple", "general"),
-            ("How to implement a neural network algorithm?", "moderate", "technical"),  # 'algorithm' makes it technical
-            ("Analyze the market trends and evaluate investment strategies", "complex", "business"),
+            (
+                "How to implement a neural network algorithm?",
+                "moderate",
+                "technical",
+            ),  # 'algorithm' makes it technical
+            (
+                "Analyze the market trends and evaluate investment strategies",
+                "complex",
+                "business",
+            ),
             ("Define artificial intelligence", "simple", "general"),
             ("Compare different database systems", "moderate", "technical"),
-            ("Research the academic literature on quantum computing", "moderate", "academic")
+            (
+                "Research the academic literature on quantum computing",
+                "moderate",
+                "academic",
+            ),
         ]
-        
+
         for query, expected_complexity, expected_domain in test_queries:
             # Simulate the query analysis logic from the tool
             query_lower = query.lower()
-            
+
             # Test complexity detection logic
             complexity_indicators = {
                 "simple": ["what is", "who is", "when did", "where is", "define"],
                 "moderate": ["how to", "why does", "compare", "difference between"],
                 "complex": ["analyze", "evaluate", "recommend", "strategy", "multiple"],
             }
-            
+
             detected_complexity = "moderate"  # Default
             for level, indicators in complexity_indicators.items():
                 if any(indicator in query_lower for indicator in indicators):
                     detected_complexity = level
                     break
-            
+
             # Test domain detection logic
             domains = {
                 "technical": ["code", "programming", "api", "database", "algorithm"],
                 "business": ["market", "revenue", "strategy", "customer", "sales"],
                 "academic": ["research", "study", "theory", "academic", "paper"],
             }
-            
+
             detected_domain = "general"
             for domain_name, keywords in domains.items():
                 if any(keyword in query_lower for keyword in keywords):
                     detected_domain = domain_name
                     break
-            
+
             assert detected_complexity == expected_complexity
             assert detected_domain == expected_domain
 
     def test_multi_step_query_detection(self):
         """Test multi-step query detection logic."""
         orchestrator = QueryOrchestrator()
-        
+
         # Test queries that should be detected as multi-step
         multi_step_queries = [
             "First, analyze the data and then generate a report",
             "Step by step implementation guide",
             "Process the input and after that validate the results",
             "Finally, summarize the findings",
-            "First step is to collect data, second step is analysis"
+            "First step is to collect data, second step is analysis",
         ]
-        
+
         # Test queries that should NOT be detected as multi-step
         single_step_queries = [
             "What is machine learning?",
             "How to implement a neural network?",
             "Define artificial intelligence",
-            "Compare different algorithms"
+            "Compare different algorithms",
         ]
-        
+
         # Simulate the multi-step detection logic
         multi_step_indicators = [
-            "and then", "after that", "step by step", "process",
-            "first", "second", "finally"
+            "and then",
+            "after that",
+            "step by step",
+            "process",
+            "first",
+            "second",
+            "finally",
         ]
-        
+
         for query in multi_step_queries:
             query_lower = query.lower()
             requires_multi_step = any(
                 indicator in query_lower for indicator in multi_step_indicators
             )
-            assert requires_multi_step, f"Query should be detected as multi-step: {query}"
-        
+            assert requires_multi_step, (
+                f"Query should be detected as multi-step: {query}"
+            )
+
         for query in single_step_queries:
             query_lower = query.lower()
             requires_multi_step = any(
                 indicator in query_lower for indicator in multi_step_indicators
             )
-            assert not requires_multi_step, f"Query should NOT be detected as multi-step: {query}"
+            assert not requires_multi_step, (
+                f"Query should NOT be detected as multi-step: {query}"
+            )
 
     @pytest.mark.asyncio
     async def test_concurrent_orchestration(self):
         """Test concurrent query orchestration."""
         orchestrator = QueryOrchestrator()
-        
+
         mock_client_manager = Mock(spec=ClientManager)
         mock_config = get_config()
         state = AgentState(session_id="test_session")
         deps = BaseAgentDependencies(
             client_manager=mock_client_manager, config=mock_config, session_state=state
         )
-        
+
         await orchestrator.initialize(deps)
-        
+
         queries = [
             "What is Python?",
             "How to implement sorting algorithms?",
             "Analyze machine learning trends",
             "Define data structures",
-            "Compare database systems"
+            "Compare database systems",
         ]
-        
+
         # Run multiple orchestrations concurrently
         tasks = [
             orchestrator.orchestrate_query(query, collection="docs")
             for query in queries
         ]
-        
+
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         # Verify all orchestrations completed
         assert len(results) == len(queries)
         for result in results:
@@ -633,36 +685,36 @@ class TestQueryOrchestrator:
             assert "success" in result
             assert "orchestration_id" in result
 
-    @pytest.mark.asyncio 
+    @pytest.mark.asyncio
     async def test_performance_constraint_handling(self):
         """Test handling of performance constraints."""
         orchestrator = QueryOrchestrator()
-        
+
         mock_client_manager = Mock(spec=ClientManager)
         mock_config = get_config()
         state = AgentState(session_id="test_session")
         deps = BaseAgentDependencies(
             client_manager=mock_client_manager, config=mock_config, session_state=state
         )
-        
+
         await orchestrator.initialize(deps)
-        
+
         # Test with various performance requirements
         performance_requirements = [
             {"max_latency": 500},
             {"max_cost": 0.1},
             {"min_quality": 0.8},
             {"max_latency": 1000, "max_cost": 0.05, "min_quality": 0.7},
-            {}  # No requirements
+            {},  # No requirements
         ]
-        
+
         for requirements in performance_requirements:
             result = await orchestrator.orchestrate_query(
                 query="test query",
                 collection="docs",
-                performance_requirements=requirements
+                performance_requirements=requirements,
             )
-            
+
             assert result["success"] is True
             assert "orchestration_id" in result
 
@@ -670,23 +722,23 @@ class TestQueryOrchestrator:
     async def test_error_recovery_scenarios(self):
         """Test orchestrator error recovery and graceful degradation."""
         orchestrator = QueryOrchestrator()
-        
+
         mock_client_manager = Mock(spec=ClientManager)
         mock_config = get_config()
         state = AgentState(session_id="test_session")
         deps = BaseAgentDependencies(
             client_manager=mock_client_manager, config=mock_config, session_state=state
         )
-        
+
         await orchestrator.initialize(deps)
-        
+
         # Test various error scenarios
         error_scenarios = [
             {"query": "", "collection": "docs"},  # Empty query
             {"query": "test", "collection": ""},  # Empty collection
             {"query": "test", "collection": "nonexistent"},  # Invalid collection
         ]
-        
+
         for scenario in error_scenarios:
             try:
                 result = await orchestrator.orchestrate_query(**scenario)
@@ -700,12 +752,12 @@ class TestQueryOrchestrator:
     def test_orchestrator_state_management(self):
         """Test orchestrator state management."""
         orchestrator = QueryOrchestrator()
-        
+
         # Test initial state
         assert orchestrator.strategy_performance == {}
         assert orchestrator.name == "query_orchestrator"
         assert not orchestrator._initialized
-        
+
         # Test configuration validation
         assert orchestrator.model == "gpt-4"
         assert orchestrator.temperature == 0.1
@@ -718,7 +770,7 @@ class TestQueryOrchestrator:
             {"model": "gpt-4"},
             {"model": "gpt-3.5-turbo"},
         ]
-        
+
         for config in valid_configs:
             orchestrator = QueryOrchestrator(**config)
             assert orchestrator.model == config["model"]

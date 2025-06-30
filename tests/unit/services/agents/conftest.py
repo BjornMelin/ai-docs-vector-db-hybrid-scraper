@@ -11,13 +11,11 @@ def mock_dependencies():
     from src.services.agents.core import AgentState, BaseAgentDependencies
     from src.infrastructure.client_manager import ClientManager
     from uuid import uuid4
-    
+
     mock_client_manager = Mock(spec=ClientManager)
     config = get_config()
     session_state = AgentState(session_id=str(uuid4()))
-    
+
     return BaseAgentDependencies(
-        client_manager=mock_client_manager,
-        config=config,
-        session_state=session_state
+        client_manager=mock_client_manager, config=config, session_state=session_state
     )
