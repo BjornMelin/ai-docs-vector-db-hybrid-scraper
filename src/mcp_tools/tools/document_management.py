@@ -420,7 +420,7 @@ def _get_timestamp() -> str:
     """Get current timestamp."""
     import datetime
 
-    return datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+    return datetime.datetime.now(tz=datetime.UTC).isoformat()
 
 
 async def _analyze_document_collection(

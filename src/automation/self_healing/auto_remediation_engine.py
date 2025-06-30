@@ -5,6 +5,7 @@ rollback capabilities, and comprehensive validation for autonomous system healin
 """
 
 import asyncio
+import contextlib
 import logging
 import time
 from abc import ABC, abstractmethod
@@ -264,31 +265,18 @@ class MemoryLeakRemediationStrategy(RemediationStrategy):
         """Execute memory leak remediation action."""
         start_time = time.time()
 
-        try:
-            if action.action_type == "clear_cache":
-                return await self._execute_cache_clearing(
-                    action, checkpoint, start_time
-                )
-            if action.action_type == "force_garbage_collection":
-                return await self._execute_garbage_collection(
-                    action, checkpoint, start_time
-                )
-            if action.action_type == "restart_service":
-                return await self._execute_service_restart(
-                    action, checkpoint, start_time
-                )
-            msg = f"Unknown action type: {action.action_type}"
-            raise ValueError(msg)
-
-        except Exception as e:
-            return RemediationResult(
-                action_id=action.action_id,
-                status=RemediationStatus.FAILED,
-                success=False,
-                execution_time_seconds=time.time() - start_time,
-                error_message=str(e),
-                rollback_point=checkpoint.checkpoint_id,
+        if action.action_type == "clear_cache":
+            return await self._execute_cache_clearing(action, checkpoint, start_time)
+        if action.action_type == "force_garbage_collection":
+            return await self._execute_garbage_collection(
+                action, checkpoint, start_time
             )
+        if action.action_type == "restart_service":
+            return await self._execute_service_restart(action, checkpoint, start_time)
+
+        # Unknown action type - raise error
+        msg = f"Unknown action type: {action.action_type}"
+        raise ValueError(msg)
 
     async def _execute_cache_clearing(
         self, action: RemediationAction, checkpoint: SystemCheckpoint, start_time: float
@@ -301,7 +289,7 @@ class MemoryLeakRemediationStrategy(RemediationStrategy):
 
         # Simulate cache clearing
         for cache_type in cache_types:
-            logger.info(f"Clearing {percentage}% of {cache_type}")
+            logger.info("Clearing %s%% of %s", percentage, cache_type)
             await asyncio.sleep(0.1)  # Simulate clearing time
             actions_taken.append(f"Cleared {percentage}% of {cache_type}")
 
@@ -351,12 +339,12 @@ class MemoryLeakRemediationStrategy(RemediationStrategy):
 
         for service in services:
             if graceful:
-                logger.info(f"Gracefully restarting {service}")
+                logger.info("Gracefully restarting %s", service)
                 # Simulate graceful restart
                 await asyncio.sleep(2)
                 actions_taken.append(f"Gracefully restarted {service}")
             else:
-                logger.info(f"Force restarting {service}")
+                logger.info("Force restarting %s", service)
                 await asyncio.sleep(1)
                 actions_taken.append(f"Force restarted {service}")
 
@@ -482,29 +470,20 @@ class CPUOverloadRemediationStrategy(RemediationStrategy):
         """Execute CPU overload remediation action."""
         start_time = time.time()
 
-        try:
-            if action.action_type == "throttle_requests":
-                return await self._execute_request_throttling(
-                    action, checkpoint, start_time
-                )
-            if action.action_type == "optimize_database_queries":
-                return await self._execute_query_optimization(
-                    action, checkpoint, start_time
-                )
-            if action.action_type == "scale_cpu_resources":
-                return await self._execute_cpu_scaling(action, checkpoint, start_time)
-            msg = f"Unknown action type: {action.action_type}"
-            raise ValueError(msg)
-
-        except Exception as e:
-            return RemediationResult(
-                action_id=action.action_id,
-                status=RemediationStatus.FAILED,
-                success=False,
-                execution_time_seconds=time.time() - start_time,
-                error_message=str(e),
-                rollback_point=checkpoint.checkpoint_id,
+        if action.action_type == "throttle_requests":
+            return await self._execute_request_throttling(
+                action, checkpoint, start_time
             )
+        if action.action_type == "optimize_database_queries":
+            return await self._execute_query_optimization(
+                action, checkpoint, start_time
+            )
+        if action.action_type == "scale_cpu_resources":
+            return await self._execute_cpu_scaling(action, checkpoint, start_time)
+
+        # Unknown action type - raise error
+        msg = f"Unknown action type: {action.action_type}"
+        raise ValueError(msg)
 
     async def _execute_request_throttling(
         self, action: RemediationAction, checkpoint: SystemCheckpoint, start_time: float
@@ -514,7 +493,9 @@ class CPUOverloadRemediationStrategy(RemediationStrategy):
         duration = action.parameters.get("duration_minutes", 10)
 
         logger.info(
-            f"Enabling request throttling: {max_requests} req/min for {duration} minutes"
+            "Enabling request throttling: %s req/min for %s minutes",
+            max_requests,
+            duration,
         )
         await asyncio.sleep(0.5)  # Simulate configuration time
 
@@ -537,7 +518,9 @@ class CPUOverloadRemediationStrategy(RemediationStrategy):
         query_timeout = action.parameters.get("query_timeout", 30)
 
         logger.info(
-            f"Optimizing database: max_connections={max_connections}, timeout={query_timeout}s"
+            "Optimizing database: max_connections=%s, timeout=%ss",
+            max_connections,
+            query_timeout,
         )
         await asyncio.sleep(1.0)  # Simulate optimization time
 
@@ -561,7 +544,7 @@ class CPUOverloadRemediationStrategy(RemediationStrategy):
         duration = action.parameters.get("duration_minutes", 30)
 
         logger.info(
-            f"Scaling CPU resources by factor {scale_factor} for {duration} minutes"
+            "Scaling CPU resources by factor %s for %s minutes", scale_factor, duration
         )
         await asyncio.sleep(2.0)  # Simulate scaling time
 
@@ -713,31 +696,22 @@ class ServiceDegradationRemediationStrategy(RemediationStrategy):
         """Execute service degradation remediation action."""
         start_time = time.time()
 
-        try:
-            if action.action_type == "enable_circuit_breaker":
-                return await self._execute_circuit_breaker_enablement(
-                    action, checkpoint, start_time
-                )
-            if action.action_type == "enable_aggressive_caching":
-                return await self._execute_aggressive_caching(
-                    action, checkpoint, start_time
-                )
-            if action.action_type == "restart_unhealthy_services":
-                return await self._execute_service_restart(
-                    action, checkpoint, start_time
-                )
-            msg = f"Unknown action type: {action.action_type}"
-            raise ValueError(msg)
-
-        except Exception as e:
-            return RemediationResult(
-                action_id=action.action_id,
-                status=RemediationStatus.FAILED,
-                success=False,
-                execution_time_seconds=time.time() - start_time,
-                error_message=str(e),
-                rollback_point=checkpoint.checkpoint_id,
+        if action.action_type == "enable_circuit_breaker":
+            return await self._execute_circuit_breaker_enablement(
+                action, checkpoint, start_time
             )
+        if action.action_type == "enable_aggressive_caching":
+            return await self._execute_aggressive_caching(
+                action, checkpoint, start_time
+            )
+        if action.action_type == "restart_unhealthy_services":
+            return await self._execute_service_restart(
+                action, checkpoint, start_time
+            )
+        
+        # Unknown action type - raise error
+        msg = f"Unknown action type: {action.action_type}"
+        raise ValueError(msg)
 
     async def _execute_circuit_breaker_enablement(
         self, action: RemediationAction, checkpoint: SystemCheckpoint, start_time: float
@@ -747,7 +721,7 @@ class ServiceDegradationRemediationStrategy(RemediationStrategy):
         timeout_seconds = action.parameters.get("timeout_seconds", 60)
 
         logger.info(
-            f"Enabling circuit breakers: threshold={failure_threshold}, timeout={timeout_seconds}s"
+            "Enabling circuit breakers: threshold=%s, timeout=%ss", failure_threshold, timeout_seconds
         )
         await asyncio.sleep(0.5)  # Simulate configuration time
 
@@ -796,7 +770,7 @@ class ServiceDegradationRemediationStrategy(RemediationStrategy):
 
         for service in services:
             if graceful:
-                logger.info(f"Gracefully restarting degraded service: {service}")
+                logger.info("Gracefully restarting degraded service: %s", service)
                 await asyncio.sleep(3)  # Simulate graceful restart time
                 actions_taken.append(f"Gracefully restarted {service}")
             else:
@@ -945,15 +919,13 @@ class RollbackManager:
     async def _capture_process_states(self) -> list[dict[str, Any]]:
         """Capture current process states."""
         processes = []
-        try:
+        with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
             processes.extend(
                 proc.info
                 for proc in psutil.process_iter(
                     ["pid", "name", "status", "cpu_percent"]
                 )
             )
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            pass
 
         return processes[:100]  # Limit to first 100 processes
 

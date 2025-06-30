@@ -27,6 +27,7 @@ from src.infrastructure.container import (
     shutdown_container,
 )
 
+
 # Add src to path for importing
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 

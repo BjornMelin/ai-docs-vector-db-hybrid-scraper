@@ -248,7 +248,7 @@ class UnifiedAgenticSystem:
             await self.initialize()
 
         start_time = time.time()
-        request_start = datetime.now()
+        request_start = datetime.now(tz=datetime.timezone.utc)
 
         logger.info(f"Executing unified request {request.request_id}: {request.goal}")
 
@@ -375,7 +375,7 @@ class UnifiedAgenticSystem:
             )
 
             # Calculate 24h metrics
-            cutoff_time = datetime.now() - timedelta(hours=24)
+            cutoff_time = datetime.now(tz=datetime.timezone.utc) - timedelta(hours=24)
             recent_requests = [
                 req
                 for req in self.request_history
@@ -637,7 +637,9 @@ class UnifiedAgenticSystem:
                         "vector_manager",
                         "orchestrator",
                     ],
-                    "integration_time": datetime.now().isoformat(),
+                    "integration_time": datetime.now(
+                        tz=datetime.timezone.utc
+                    ).isoformat(),
                     "success": execution_results.get("integration_success", False),
                 },
             }
@@ -850,11 +852,13 @@ class UnifiedAgenticSystem:
             self.performance_metrics["avg_execution_time"] = new_avg
 
             # Track 24h requests
-            response.start_time = datetime.now()  # Add timestamp
+            response.start_time = datetime.now(
+                tz=datetime.timezone.utc
+            )  # Add timestamp
             self.performance_metrics["last_24h_requests"].append(response)
 
             # Keep only last 24 hours
-            cutoff = datetime.now() - timedelta(hours=24)
+            cutoff = datetime.now(tz=datetime.timezone.utc) - timedelta(hours=24)
             self.performance_metrics["last_24h_requests"] = [
                 req
                 for req in self.performance_metrics["last_24h_requests"]

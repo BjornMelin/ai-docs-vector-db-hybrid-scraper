@@ -532,14 +532,12 @@ def _detect_entities(query: str) -> list[str]:
     # Simple entity detection (can be enhanced with NLP models)
     words = query.split()
 
-    entities = [
+    return [
         word
         for word in words
         if (word.istitle() and len(word) > 2)
         or (word.upper() == word and len(word) > 2)  # Potential proper noun
     ]
-
-    return entities
 
 
 def _detect_temporal_indicators(query: str) -> dict[str, Any]:
@@ -941,7 +939,7 @@ def _get_timestamp() -> str:
     """Get current timestamp."""
     import datetime
 
-    return datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+    return datetime.datetime.now(tz=datetime.UTC).isoformat()
 
 
 async def _validate_filter_consistency(filters: list[dict], ctx) -> dict[str, Any]:
@@ -967,14 +965,14 @@ async def _validate_filter_consistency(filters: list[dict], ctx) -> dict[str, An
             field_operators[field] = operator
 
     # Check for logical inconsistencies
-    for filter_def in filters:
-        if "value" not in filter_def:
-            validation_issues.append(
-                {
-                    "issue": "missing_value",
-                    "filter": filter_def,
-                }
-            )
+    validation_issues.extend(
+        {
+            "issue": "missing_value",
+            "filter": filter_def,
+        }
+        for filter_def in filters
+        if "value" not in filter_def
+    )
 
     return {
         "valid": len(validation_issues) == 0,
@@ -1565,7 +1563,7 @@ def _get_next_update_time(frequency: str) -> str:
     """Get next update time based on frequency."""
     import datetime
 
-    now = datetime.datetime.now(tz=datetime.timezone.utc)
+    now = datetime.datetime.now(tz=datetime.UTC)
 
     if frequency == "real_time":
         return "immediate"

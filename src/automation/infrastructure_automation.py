@@ -124,10 +124,12 @@ class AdaptiveCircuitBreaker:
         self.state.success_count += 1
         self.state.total_requests += 1
 
-        if self.state.state == "half_open":
-            if self.state.success_count >= self.half_open_max_calls:
-                self.state.state = "closed"
-                self.state.failure_count = 0
+        if (
+            self.state.state == "half_open"
+            and self.state.success_count >= self.half_open_max_calls
+        ):
+            self.state.state = "closed"
+            self.state.failure_count = 0
 
         # Adapt thresholds based on success patterns
         self._adapt_thresholds(success=True, response_time=response_time)

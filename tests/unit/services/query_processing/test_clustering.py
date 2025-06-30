@@ -750,7 +750,8 @@ class TestResultClusteringService:
 
     def test_estimate_eps(self, clustering_service):
         """Test eps estimation for DBSCAN."""
-        embeddings = np.random.rand(10, 5)
+        rng = np.random.default_rng(42)
+        embeddings = rng.random((10, 5))
         min_cluster_size = 3
 
         eps = clustering_service._estimate_eps(embeddings, min_cluster_size)
@@ -764,9 +765,9 @@ class TestResultClusteringService:
     ):
         """Test building cluster groups."""
         # Use controlled embeddings to ensure coherence stays within bounds
-        np.random.seed(42)  # Set seed for reproducible test
+        rng = np.random.default_rng(42)  # Set seed for reproducible test
         embeddings = (
-            np.random.rand(10, 5) * 0.5
+            rng.random((10, 5)) * 0.5
         )  # Smaller values to keep coherence reasonable
         cluster_labels = np.array([0, 0, 0, 1, 1, 1, 2, 2, -1, -1])
         request = ResultClusteringRequest(
@@ -795,7 +796,8 @@ class TestResultClusteringService:
         self, clustering_service, sample_results_with_embeddings
     ):
         """Test identifying outliers."""
-        embeddings = np.random.rand(10, 5)
+        rng = np.random.default_rng(42)
+        embeddings = rng.random((10, 5))
         cluster_labels = np.array([0, 0, 1, 1, 2, 2, -1, -1, -1, 0])
         request = ResultClusteringRequest(results=sample_results_with_embeddings)
 
@@ -825,14 +827,16 @@ class TestResultClusteringService:
         assert coherence == 1.0
 
         # Random embeddings
-        random_embeddings = np.random.rand(5, 3)
+        rng = np.random.default_rng(42)
+        random_embeddings = rng.random((5, 3))
         coherence = clustering_service._calculate_coherence(random_embeddings)
         assert 0.0 <= coherence <= 1.0
 
     def test_calculate_cluster_confidence(self, clustering_service):
         """Test calculating cluster confidence."""
-        cluster_embeddings = np.random.rand(5, 3)
-        all_embeddings = np.random.rand(20, 3)
+        rng = np.random.default_rng(42)
+        cluster_embeddings = rng.random((5, 3))
+        all_embeddings = rng.random((20, 3))
         request = ResultClusteringRequest(
             results=[
                 SearchResult(id=str(i), title="T", content="C", score=0.5)

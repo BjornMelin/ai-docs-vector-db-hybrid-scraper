@@ -336,7 +336,7 @@ class AdvancedToolOrchestrator:
                 "execution_metadata": {
                     "execution_id": execution_id,
                     "plan_id": plan.plan_id,
-                    "start_time": datetime.now(),
+                    "start_time": datetime.now(tz=datetime.timezone.utc),
                     "goal": plan.goal,
                 },
             }
@@ -426,7 +426,7 @@ class AdvancedToolOrchestrator:
             Tool execution result
         """
         execution_id = str(uuid4())
-        start_time = datetime.now()
+        start_time = datetime.now(tz=datetime.timezone.utc)
 
         if tool_id not in self.registered_tools:
             msg = f"Tool {tool_id} not registered"
@@ -459,7 +459,7 @@ class AdvancedToolOrchestrator:
             else:
                 result = await self._mock_tool_execution(tool_def, input_data)
 
-            end_time = datetime.now()
+            end_time = datetime.now(tz=datetime.timezone.utc)
             duration_ms = (end_time - start_time).total_seconds() * 1000
 
             # Track success in circuit breaker
@@ -484,7 +484,7 @@ class AdvancedToolOrchestrator:
             return execution_result
 
         except TimeoutError:
-            end_time = datetime.now()
+            end_time = datetime.now(tz=datetime.timezone.utc)
             duration_ms = (end_time - start_time).total_seconds() * 1000
 
             logger.warning(f"Tool {tool_id} execution timed out")
@@ -509,15 +509,15 @@ class AdvancedToolOrchestrator:
             )
 
         except Exception as e:
-            end_time = datetime.now()
+            end_time = datetime.now(tz=datetime.timezone.utc)
             duration_ms = (end_time - start_time).total_seconds() * 1000
 
             # Track failure in circuit breaker
             if circuit_breaker:
                 try:
                     await circuit_breaker.call(lambda: (_ for _ in ()).throw(e))
-                except:
-                    pass  # Expected to fail
+                except:  # nosec # Expected to fail for circuit breaker testing
+                    pass
 
             logger.exception(f"Tool {tool_id} execution failed: {e}")
 

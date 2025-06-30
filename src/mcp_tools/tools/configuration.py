@@ -510,32 +510,36 @@ async def _generate_optimization_recommendations(
             )
 
     # Cost-based recommendations
-    if optimization_target in ["cost", "balanced"]:
-        if baseline["memory_usage_mb"] > 400:
-            recommendations.append(
-                {
-                    "parameter": "quantization_enabled",
-                    "current_value": current_config.get("quantization_enabled", True),
-                    "recommended_value": True,
-                    "expected_improvement": "25-30% memory reduction",
-                    "confidence": 0.92,
-                    "impact": "high",
-                }
-            )
+    if (
+        optimization_target in ["cost", "balanced"]
+        and baseline["memory_usage_mb"] > 400
+    ):
+        recommendations.append(
+            {
+                "parameter": "quantization_enabled",
+                "current_value": current_config.get("quantization_enabled", True),
+                "recommended_value": True,
+                "expected_improvement": "25-30% memory reduction",
+                "confidence": 0.92,
+                "impact": "high",
+            }
+        )
 
     # Quality-based recommendations
-    if optimization_target in ["quality", "balanced"]:
-        if baseline["quality_score"] < 0.85:
-            recommendations.append(
-                {
-                    "parameter": "quality_threshold",
-                    "current_value": current_config.get("quality_threshold", 0.7),
-                    "recommended_value": 0.8,
-                    "expected_improvement": "5-10% quality improvement",
-                    "confidence": 0.75,
-                    "impact": "medium",
-                }
-            )
+    if (
+        optimization_target in ["quality", "balanced"]
+        and baseline["quality_score"] < 0.85
+    ):
+        recommendations.append(
+            {
+                "parameter": "quality_threshold",
+                "current_value": current_config.get("quality_threshold", 0.7),
+                "recommended_value": 0.8,
+                "expected_improvement": "5-10% quality improvement",
+                "confidence": 0.75,
+                "impact": "medium",
+            }
+        )
 
     # Learning-based recommendations
     if learning_enabled:
@@ -730,7 +734,7 @@ def _get_timestamp() -> str:
     """Get current timestamp."""
     import datetime
 
-    return datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+    return datetime.datetime.now(tz=datetime.UTC).isoformat()
 
 
 async def _establish_monitoring_baseline(

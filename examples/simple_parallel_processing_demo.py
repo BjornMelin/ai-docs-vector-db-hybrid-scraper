@@ -22,6 +22,7 @@ from pathlib import Path
 from src.config.core import Config
 from src.infrastructure.container import DependencyContext
 
+
 # Add src to path for importing
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 

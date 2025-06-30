@@ -98,9 +98,7 @@ def sample_documents():
         for i in range(10)
     ]
 
-    documents = ml_docs + prog_docs + ds_docs
-
-    return documents
+    return ml_docs + prog_docs + ds_docs
 
 
 class TestVectorVisualizationModels:
