@@ -188,7 +188,8 @@ def main():
     with tab1:
         st.header("🔍 Hybrid Vector Search")
         st.markdown(
-            "Demonstrate advanced search capabilities with dense + sparse vectors and neural reranking"
+            "Demonstrate advanced search capabilities with dense + sparse vectors "
+            "and neural reranking"
         )
 
         col1, col2 = st.columns([2, 1])
@@ -296,7 +297,8 @@ def main():
     with tab2:
         st.header("🌐 Multi-Tier Web Scraping")
         st.markdown(
-            "Showcase intelligent tier selection from lightweight HTTP to full browser automation"
+            "Showcase intelligent tier selection from lightweight HTTP "
+            "to full browser automation"
         )
 
         col1, col2 = st.columns([2, 1])
@@ -489,7 +491,11 @@ def main():
         with col1:
             texts = st.text_area(
                 "Texts to Embed (one per line)",
-                value="machine learning optimization\nvector database performance\nRAG system architecture",
+                value=(
+                    "machine learning optimization\n"
+                    "vector database performance\n"
+                    "RAG system architecture"
+                ),
                 height=100,
             )
 
@@ -563,7 +569,8 @@ def main():
 
         elif "result" in locals() and not result["success"]:
             st.error(
-                f"❌ Embedding generation failed: {result.get('error', 'Unknown error')}"
+                f"❌ Embedding generation failed: "
+                f"{result.get('error', 'Unknown error')}"
             )
 
     with tab5:
@@ -650,7 +657,8 @@ def main():
     with col3:
         st.markdown("**🔗 Links**")
         st.markdown(
-            "[GitHub](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper) | [Docs](docs/portfolio/)"
+            "[GitHub](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper)"
+            " | [Docs](docs/portfolio/)"
         )
 
 
