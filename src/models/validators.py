@@ -210,7 +210,7 @@ def validate_scoring_weights(
         raise ValueError(msg)
 
 
-def validate_vector_dimensions(value: int, model_name: str = "") -> int:
+def validate_vector_dimensions(value: int) -> int:
     """Validate vector dimensions are within reasonable bounds.
 
     Args:
@@ -297,7 +297,7 @@ def validate_collection_name(value: str) -> str:
     return value
 
 
-def validate_embedding_model_name(value: str, provider: str = "") -> str:
+def validate_embedding_model_name(value: str) -> str:
     """Validate embedding model name format.
 
     Args:
@@ -351,27 +351,27 @@ def validate_cache_ttl(value: int, min_ttl: int = 60, max_ttl: int = 86400) -> i
 
 
 # Custom field types with built-in validation
-def PositiveInt(description: str = "Positive integer") -> int:
+def positive_int(description: str = "Positive integer") -> int:
     """Create a positive integer field."""
     return Field(gt=0, description=description)
 
 
-def NonNegativeInt(description: str = "Non-negative integer") -> int:
+def non_negative_int(description: str = "Non-negative integer") -> int:
     """Create a non-negative integer field."""
     return Field(ge=0, description=description)
 
 
-def Percentage(description: str = "Percentage (0.0 to 1.0)") -> float:
+def percentage(description: str = "Percentage (0.0 to 1.0)") -> float:
     """Create a percentage field."""
     return Field(ge=0.0, le=1.0, description=description)
 
 
-def PortNumber(description: str = "Port number") -> int:
+def port_number(description: str = "Port number") -> int:
     """Create a port number field."""
     return Field(ge=1, le=65535, description=description)
 
 
-def CollectionName(description: str = "Collection name") -> str:
+def collection_name_field(description: str = "Collection name") -> str:
     """Create a collection name field."""
     return Field(
         min_length=2,
@@ -382,14 +382,14 @@ def CollectionName(description: str = "Collection name") -> str:
 
 
 # Validation decorators for common patterns
-def openai_api_key_validator(cls, v: str | None) -> str | None:
+def openai_api_key_validator(v: str | None) -> str | None:
     """Validator for OpenAI API keys."""
     return validate_api_key_common(
         v, prefix="sk-", service_name="OpenAI", min_length=20, max_length=200
     )
 
 
-def firecrawl_api_key_validator(cls, v: str | None) -> str | None:
+def firecrawl_api_key_validator(v: str | None) -> str | None:
     """Validator for Firecrawl API keys."""
     return validate_api_key_common(
         v,
@@ -401,20 +401,20 @@ def firecrawl_api_key_validator(cls, v: str | None) -> str | None:
     )
 
 
-def url_validator(cls, v: str) -> str:
+def url_validator(v: str) -> str:
     """Validator for URL fields."""
     return validate_url_format(v)
 
 
 # Export all validators and utilities
 __all__ = [
-    "CollectionName",
-    "NonNegativeInt",
-    "Percentage",
-    "PortNumber",
-    "PositiveInt",
+    "collection_name_field",
     "firecrawl_api_key_validator",
+    "non_negative_int",
     "openai_api_key_validator",
+    "percentage",
+    "port_number",
+    "positive_int",
     "url_validator",
     "validate_api_key_common",
     "validate_cache_ttl",

@@ -717,7 +717,8 @@ class DeploymentConfig(BaseModel):
         return v.lower()
 
     @field_validator("flagsmith_api_key", mode="before")
-    def validate_flagsmith_key(self, v: str | None) -> str | None:
+    @classmethod
+    def validate_flagsmith_key(cls, v: str | None) -> str | None:
         if v and not (v.startswith(("fs_", "env_"))):
             msg = "Flagsmith API key must start with 'fs_' or 'env_'"
             raise ValueError(msg)
