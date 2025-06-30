@@ -9,15 +9,16 @@ The AI Docs Vector DB implements a sophisticated dual-mode architecture that res
 **Problem**: Enterprise-grade projects showcase advanced capabilities but become too complex for daily use.
 
 **Solution**: Dual-mode architecture that provides:
+
 - **Simple Mode**: 25K lines optimized for solo developers (64% complexity reduction)
 - **Enterprise Mode**: 70K lines with full enterprise capabilities
 
 ### Core Architecture Components
 
-```
+```text
 src/architecture/
 ├── modes.py              # Application mode definitions and configs
-├── features.py           # Feature flag system for mode-aware functionality  
+├── features.py           # Feature flag system for mode-aware functionality
 ├── service_factory.py    # Mode-aware service instantiation
 └── __init__.py           # Architecture module exports
 
@@ -35,17 +36,17 @@ src/services/
 
 ## Mode Comparison
 
-| Feature | Simple Mode | Enterprise Mode |
-|---------|-------------|-----------------|
-| **Target Users** | Solo developers | Enterprise teams |
-| **Lines of Code** | ~25K | ~70K |
-| **Memory Usage** | 500MB | 4GB |
-| **Concurrent Requests** | 5 | 100 |
-| **Cache Size** | 50MB | 1GB |
-| **Monitoring** | Basic health checks | Full observability stack |
-| **Search** | Vector search only | Hybrid search + reranking |
-| **Deployment** | Single container | Blue-green, canary, A/B testing |
-| **Dependencies** | Minimal (Qdrant only) | Full stack (Redis, PostgreSQL, etc.) |
+| Feature                 | Simple Mode           | Enterprise Mode                      |
+| ----------------------- | --------------------- | ------------------------------------ |
+| **Target Users**        | Solo developers       | Enterprise teams                     |
+| **Lines of Code**       | ~25K                  | ~70K                                 |
+| **Memory Usage**        | 500MB                 | 4GB                                  |
+| **Concurrent Requests** | 5                     | 100                                  |
+| **Cache Size**          | 50MB                  | 1GB                                  |
+| **Monitoring**          | Basic health checks   | Full observability stack             |
+| **Search**              | Vector search only    | Hybrid search + reranking            |
+| **Deployment**          | Single container      | Blue-green, canary, A/B testing      |
+| **Dependencies**        | Minimal (Qdrant only) | Full stack (Redis, PostgreSQL, etc.) |
 
 ## Getting Started
 
@@ -65,6 +66,7 @@ uvicorn src.api.main:app --reload
 ```
 
 **Simple Mode Features:**
+
 - ✅ Basic vector search
 - ✅ Document management
 - ✅ Simple caching
@@ -89,6 +91,7 @@ uvicorn src.api.main:app --reload
 ```
 
 **Enterprise Mode Features:**
+
 - ✅ Hybrid search with reranking
 - ✅ Advanced analytics
 - ✅ Distributed caching
@@ -108,7 +111,7 @@ The application automatically detects the mode from the `AI_DOCS_MODE` environme
 # Simple mode
 export AI_DOCS_MODE=simple
 
-# Enterprise mode  
+# Enterprise mode
 export AI_DOCS_MODE=enterprise
 ```
 
@@ -181,6 +184,7 @@ async def hybrid_search(query):
 - **Authentication**: Optional
 
 Example endpoints:
+
 ```
 GET  /search?q=query&limit=10
 POST /documents
@@ -189,12 +193,13 @@ GET  /health
 
 ### Enterprise Mode API
 
-- **Endpoints**: Full feature set with advanced capabilities  
+- **Endpoints**: Full feature set with advanced capabilities
 - **Documentation**: `/docs` and `/redoc`
 - **Rate Limiting**: Adaptive (1000 req/min)
 - **Authentication**: Required
 
 Additional endpoints:
+
 ```
 POST /search/hybrid
 GET  /analytics/dashboard
@@ -235,7 +240,7 @@ pytest tests/unit/architecture/test_dual_mode.py
 # Test simple mode
 AI_DOCS_MODE=simple pytest tests/integration/
 
-# Test enterprise mode  
+# Test enterprise mode
 AI_DOCS_MODE=enterprise pytest tests/integration/
 ```
 
@@ -250,7 +255,7 @@ services:
     environment:
       - AI_DOCS_MODE=simple
     depends_on:
-      - qdrant  # Minimal dependencies
+      - qdrant # Minimal dependencies
 ```
 
 ### Enterprise Mode Docker
@@ -263,9 +268,9 @@ services:
       - AI_DOCS_MODE=enterprise
     depends_on:
       - qdrant
-      - redis      # Caching
-      - postgres   # Data persistence
-      - jaeger     # Tracing
+      - redis # Caching
+      - postgres # Data persistence
+      - jaeger # Tracing
       - prometheus # Metrics
 ```
 
@@ -297,6 +302,7 @@ services:
 - No distributed tracing
 
 Access:
+
 - Health: `http://localhost:8000/health`
 - Mode info: `http://localhost:8000/mode`
 
@@ -309,6 +315,7 @@ Access:
 - Performance profiling
 
 Access:
+
 - Prometheus: `http://localhost:9090`
 - Grafana: `http://localhost:3000`
 - Jaeger: `http://localhost:16686`
@@ -319,12 +326,14 @@ Access:
 ### Simple to Enterprise
 
 1. Update configuration:
+
    ```bash
    cp .env.enterprise .env
    export AI_DOCS_MODE=enterprise
    ```
 
 2. Start additional services:
+
    ```bash
    docker-compose -f docker-compose.enterprise.yml up -d
    ```
@@ -337,12 +346,14 @@ Access:
 ### Enterprise to Simple
 
 1. Update configuration:
+
    ```bash
    cp .env.simple .env
    export AI_DOCS_MODE=simple
    ```
 
 2. Stop additional services:
+
    ```bash
    docker-compose -f docker-compose.enterprise.yml down
    ```
@@ -411,18 +422,21 @@ curl http://localhost:8000/mode | jq '.enabled_services'
 ## Architecture Benefits
 
 ### Complexity Management
+
 - ✅ 64% reduction in daily-use complexity
 - ✅ Maintains full enterprise capabilities
 - ✅ Clean separation of concerns
 - ✅ Gradual feature adoption
 
 ### Developer Experience
+
 - ✅ Fast startup for development
 - ✅ Minimal resource usage
 - ✅ Easy debugging and testing
 - ✅ Portfolio demonstration ready
 
 ### Operational Benefits
+
 - ✅ Production-ready enterprise mode
 - ✅ Development-optimized simple mode
 - ✅ Flexible deployment options

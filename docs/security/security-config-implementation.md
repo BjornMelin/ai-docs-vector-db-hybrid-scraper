@@ -319,7 +319,7 @@ tests/
     └── test_enhanced_security_config.py      # Integration tests
 
 docs/
-└── enhanced_security_config_implementation.md    # This document
+└── enhanced-security-config-implementation.md    # This document
 ```
 
 ## Performance Considerations
