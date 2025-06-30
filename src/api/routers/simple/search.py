@@ -6,10 +6,11 @@ Simplified search endpoints optimized for solo developers.
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from src.architecture.service_factory import get_service
+from src.services.search.models import SearchRequest
 
 
 logger = logging.getLogger(__name__)
@@ -68,8 +69,8 @@ async def search_documents(request: SimpleSearchRequest) -> SimpleSearchResponse
         )
 
     except Exception as e:
-        logger.exception(f"Search failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Search failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/search")
@@ -101,8 +102,14 @@ async def search_health() -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.exception(f"Search health check failed: {e}")
+        logger.exception("Search health check failed")
         return {
             "status": "unhealthy",
             "error": str(e),
+        }
+    else:
+        return {
+            "status": "healthy",
+            "service_type": "simple",
+            "stats": stats,
         }

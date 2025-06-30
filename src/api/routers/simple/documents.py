@@ -4,9 +4,9 @@ Simplified document management endpoints optimized for solo developers.
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from src.architecture.service_factory import get_service
@@ -62,8 +62,12 @@ async def add_document(request: SimpleDocumentRequest) -> SimpleDocumentResponse
         )
 
     except Exception as e:
-        logger.exception(f"Document addition failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Document addition failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+def _raise_document_not_found():
+    raise HTTPException(status_code=404, detail="Document not found")
 
 
 @router.get("/documents/{document_id}")
@@ -81,15 +85,15 @@ async def get_document(
         )
 
         if not document:
-            raise HTTPException(status_code=404, detail="Document not found")
-
-        return document
+            _raise_document_not_found()
+        else:
+            return document
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Document retrieval failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Document retrieval failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/documents/{document_id}")
@@ -107,15 +111,15 @@ async def delete_document(
         )
 
         if not success:
-            raise HTTPException(status_code=404, detail="Document not found")
-
-        return {"status": "success", "message": "Document deleted successfully"}
+            _raise_document_not_found()
+        else:
+            return {"status": "success", "message": "Document deleted successfully"}
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Document deletion failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Document deletion failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/documents")
@@ -142,8 +146,8 @@ async def list_documents(
         }
 
     except Exception as e:
-        logger.exception(f"Document listing failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Document listing failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/collections")
@@ -160,8 +164,8 @@ async def list_collections() -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.exception(f"Collection listing failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Collection listing failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/documents/health")
@@ -180,7 +184,7 @@ async def documents_health() -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.exception(f"Documents health check failed: {e}")
+        logger.exception("Documents health check failed")
         return {
             "status": "unhealthy",
             "error": str(e),

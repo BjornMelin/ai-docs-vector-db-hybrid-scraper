@@ -12,7 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.architecture.modes import ApplicationMode, get_current_mode, get_mode_config
 from src.architecture.service_factory import ModeAwareServiceFactory
-from src.config import get_config
 
 
 logger = logging.getLogger(__name__)
@@ -31,18 +30,15 @@ def create_app(mode: ApplicationMode | None = None) -> FastAPI:
         mode = get_current_mode()
 
     mode_config = get_mode_config(mode)
-    config = get_config()
 
     # Create app with mode-specific configuration
     app = FastAPI(
         title=f"AI Docs Vector DB ({mode.value.title()} Mode)",
         description=_get_app_description(mode),
         version="0.1.0",
-        docs_url="/docs" if mode == ApplicationMode.ENTERPRISE else "/docs",
+        docs_url="/docs",
         redoc_url="/redoc" if mode == ApplicationMode.ENTERPRISE else None,
-        openapi_url="/openapi.json"
-        if mode == ApplicationMode.ENTERPRISE
-        else "/openapi.json",
+        openapi_url="/openapi.json",
     )
 
     # Store mode information in app state
@@ -62,9 +58,7 @@ def create_app(mode: ApplicationMode | None = None) -> FastAPI:
     # Add startup and shutdown events
     _configure_lifecycle_events(app)
 
-    logger.info(
-        f"Created FastAPI app in {mode.value} mode"
-    )  # TODO: Convert f-string to logging format
+    logger.info("Created FastAPI app in %s mode", mode.value)
 
     return app
 
@@ -116,13 +110,9 @@ def _apply_middleware_stack(app: FastAPI, middleware_stack: list[str]) -> None:
     for middleware_name in middleware_stack:
         try:
             middleware_manager.apply_middleware(app, middleware_name)
-            logger.debug(
-                f"Applied middleware: {middleware_name}"
-            )  # TODO: Convert f-string to logging format
-        except Exception as e:
-            logger.warning(
-                f"Failed to apply middleware {middleware_name}: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Applied middleware: %s", middleware_name)
+        except ValueError as e:
+            logger.warning("Failed to apply middleware %s: %s", middleware_name, e)
 
 
 def _configure_routes(app: FastAPI, mode: ApplicationMode) -> None:
@@ -242,7 +232,6 @@ def _configure_common_routes(app: FastAPI) -> None:
     @app.get("/mode")
     async def mode_info():
         """Detailed mode configuration information."""
-        mode = app.state.mode
         service_factory: ModeAwareServiceFactory = app.state.service_factory
 
         return service_factory.get_mode_info()
@@ -250,8 +239,6 @@ def _configure_common_routes(app: FastAPI) -> None:
 
 def _get_mode_features(mode: ApplicationMode) -> dict[str, Any]:
     """Get feature summary for the current mode."""
-    mode_config = get_mode_config(mode)
-
     if mode == ApplicationMode.SIMPLE:
         return {
             "advanced_monitoring": False,
@@ -282,19 +269,15 @@ def _configure_lifecycle_events(app: FastAPI) -> None:
         mode = app.state.mode
         service_factory: ModeAwareServiceFactory = app.state.service_factory
 
-        logger.info(
-            f"Starting application in {mode.value} mode"
-        )  # TODO: Convert f-string to logging format
+        logger.info("Starting application in %s mode", mode.value)
 
         # Register mode-specific services
-        _register_mode_services(service_factory, mode)
+        _register_mode_services(service_factory)
 
         # Initialize critical services
         await _initialize_critical_services(service_factory)
 
-        logger.info(
-            f"Application startup complete in {mode.value} mode"
-        )  # TODO: Convert f-string to logging format
+        logger.info("Application startup complete in %s mode", mode.value)
 
     @app.on_event("shutdown")
     async def shutdown_event():
@@ -306,9 +289,7 @@ def _configure_lifecycle_events(app: FastAPI) -> None:
         logger.info("Application shutdown complete")
 
 
-def _register_mode_services(
-    factory: ModeAwareServiceFactory, mode: ApplicationMode
-) -> None:
+def _register_mode_services(factory: ModeAwareServiceFactory) -> None:
     """Register services for the specified mode."""
     # Import service implementations
     try:
@@ -333,9 +314,7 @@ def _register_mode_services(
         )
 
     except ImportError as e:
-        logger.warning(
-            f"Some service implementations not available: {e}"
-        )  # TODO: Convert f-string to logging format
+        logger.warning("Some service implementations not available: %s", e)
 
     # Register universal services (work in both modes)
     try:
@@ -346,9 +325,7 @@ def _register_mode_services(
         factory.register_universal_service("vector_db_service", VectorDBService)
 
     except ImportError as e:
-        logger.warning(
-            f"Universal services not available: {e}"
-        )  # TODO: Convert f-string to logging format
+        logger.warning("Universal services not available: %s", e)
 
 
 async def _initialize_critical_services(factory: ModeAwareServiceFactory) -> None:
@@ -364,17 +341,11 @@ async def _initialize_critical_services(factory: ModeAwareServiceFactory) -> Non
         try:
             service = await factory.get_service_optional(service_name)
             if service:
-                logger.info(
-                    f"Initialized critical service: {service_name}"
-                )  # TODO: Convert f-string to logging format
+                logger.info("Initialized critical service: %s", service_name)
             else:
-                logger.warning(
-                    f"Critical service not available: {service_name}"
-                )  # TODO: Convert f-string to logging format
-        except Exception as e:
-            logger.exception(
-                f"Failed to initialize critical service {service_name}: {e}"
-            )
+                logger.warning("Critical service not available: %s", service_name)
+        except Exception:
+            logger.exception("Failed to initialize critical service %s", service_name)
 
 
 def get_app_mode(app: FastAPI) -> ApplicationMode:

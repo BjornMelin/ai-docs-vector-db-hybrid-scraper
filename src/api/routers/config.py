@@ -145,9 +145,7 @@ async def reload_configuration(request: ReloadRequest) -> ReloadResponse:
         if not operation.success:
             # Return detailed error information but don't raise exception
             # This allows clients to get full operation details
-            logger.warning(
-                f"Configuration reload failed: {operation.error_message}"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Configuration reload failed: %s", operation.error_message)
 
     except Exception as e:
         logger.exception("Unexpected error during configuration reload")
@@ -293,8 +291,7 @@ async def get_config_status() -> dict[str, Any]:
             "current_config_hash": stats.get("current_config_hash"),
             "registered_listeners": stats.get("listeners_registered", 0),
             "available_backups": stats.get("backups_available", 0),
-            "file_watching_enabled": hasattr(reloader, "_file_watch_enabled")
-            and reloader._file_watch_enabled,
+            "file_watching_enabled": reloader.is_file_watch_enabled(),
             "signal_handler_enabled": reloader.enable_signal_handler,
             "reload_statistics": {
                 "total_operations": stats.get("total_operations", 0),
@@ -401,7 +398,7 @@ async def list_config_backups() -> dict[str, Any]:
                     if hasattr(backup_config, "environment")
                     else "unknown",
                 }
-                for backup_hash, backup_config in reloader._config_backups
+                for backup_hash, backup_config in reloader.get_config_backups()
             ]
         else:
             backups = []
