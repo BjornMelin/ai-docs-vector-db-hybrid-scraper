@@ -764,7 +764,7 @@ def redis_url():
         except (ImportError, AttributeError, RuntimeError):
             # Fall back to fakeredis for testing
             pass
-    
+
     # Fall back to fakeredis for testing
     return "redis://fake:6379/0"
 
@@ -775,9 +775,8 @@ def performance_test_vectors():
     if np is not None:
         # Generate 100 test vectors of dimension 384
         return [np.random.random(384).tolist() for _ in range(100)]
-    else:
-        # Fallback to Python random if numpy not available
-        return [[random.random() for _ in range(384)] for _ in range(100)]
+    # Fallback to Python random if numpy not available
+    return [[random.random() for _ in range(384)] for _ in range(100)]
 
 
 @pytest.fixture

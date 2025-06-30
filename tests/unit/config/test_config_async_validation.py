@@ -3,7 +3,6 @@
 Tests async configuration loading and validation patterns.
 """
 
-
 import pytest
 
 from src.config import Config, get_config, reset_config
@@ -200,7 +199,6 @@ class TestAsyncConfigurationLoading:
             data = config.model_dump(mode="json")  # Use JSON mode for serialization
 
             if format_type == "json":
-
                 return json.dumps(data, indent=2)
             if format_type == "dict":
                 return data

@@ -421,7 +421,6 @@ class TestBenchmarkTargets:
                 await cache.cleanup()
 
         def run_cache_benchmark():
-
             return asyncio.run(cache_operations())
 
         result = benchmark(run_cache_benchmark)

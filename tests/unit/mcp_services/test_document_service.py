@@ -235,7 +235,7 @@ class TestDocumentServiceCrawlingCapabilities:
             # Verify crawling tools were registered (I3 research implementation)
             mock_crawling.register_tools.assert_called_once_with(
                 service.mcp, mock_client_manager
-                )
+            )
 
     async def test_content_intelligence_tool_registration(self, mock_client_manager):
         """Test that content intelligence tools are properly registered."""

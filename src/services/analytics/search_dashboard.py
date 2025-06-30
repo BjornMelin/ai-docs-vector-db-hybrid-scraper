@@ -244,9 +244,7 @@ class SearchAnalyticsDashboard(BaseService):
             Detailed analytics data
         """
         try:
-            cutoff_time = datetime.now(tz=UTC) - timedelta(
-                hours=time_range_hours
-            )
+            cutoff_time = datetime.now(tz=UTC) - timedelta(hours=time_range_hours)
 
             # Filter queries by time range and user
             filtered_queries = [

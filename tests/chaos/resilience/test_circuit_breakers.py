@@ -323,7 +323,9 @@ class TestCircuitBreakers:
             return {"status": "success"}
 
         # First call with ValueError - should not count toward circuit breaker
-        with pytest.raises(ValueError, match="Value error - should not trigger circuit breaker"):
+        with pytest.raises(
+            ValueError, match="Value error - should not trigger circuit breaker"
+        ):
             await circuit_breaker.call(service_with_different_errors)
 
         assert circuit_breaker.state == CircuitState.CLOSED

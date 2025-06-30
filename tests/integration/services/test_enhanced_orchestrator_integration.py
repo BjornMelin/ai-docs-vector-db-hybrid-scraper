@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+
 try:
     import numpy as np
 except ImportError:
@@ -237,7 +238,9 @@ class TestEnhancedOrchestratorIntegration:
         else:
             rng = random.Random(42)
             # Create sample embeddings using regular random
-            embeddings = [[rng.random() for _ in range(768)] for _ in range(len(result.results))]
+            embeddings = [
+                [rng.random() for _ in range(768)] for _ in range(len(result.results))
+            ]
         documents = [
             {
                 "id": doc["id"],
@@ -367,7 +370,10 @@ class TestEnhancedOrchestratorIntegration:
             if np is not None:
                 embeddings = rng.random((len(all_documents), 768))
             else:
-                embeddings = [[rng.random() for _ in range(768)] for _ in range(len(all_documents))]
+                embeddings = [
+                    [rng.random() for _ in range(768)]
+                    for _ in range(len(all_documents))
+                ]
 
             visualization = await viz_engine.create_visualization(
                 embeddings=embeddings, documents=all_documents, dimension="2d"

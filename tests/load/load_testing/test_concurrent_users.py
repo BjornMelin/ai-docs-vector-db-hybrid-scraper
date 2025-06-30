@@ -4,7 +4,6 @@ This module tests various concurrent user scenarios to validate system
 behavior under different concurrency levels and user interaction patterns.
 """
 
-
 import pytest
 
 from tests.load.conftest import LoadTestConfig, LoadTestType
