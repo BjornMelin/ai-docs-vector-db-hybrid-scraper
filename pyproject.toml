@@ -558,6 +558,10 @@ markers = [
     "spike: mark test as spike test",
     "endurance: mark test as endurance test",
     "volume: mark test as volume test",
+    
+    # Deployment and reporting markers
+    "post_deployment: mark test as post-deployment test",
+    "reporting: mark test as reporting test",
 ]
 
 # Logging configuration for tests
@@ -623,6 +627,9 @@ directory = "htmlcov"
 output = "coverage.xml"
 
 [dependency-groups]
+contract = [
+    "schemathesis>=3.39.16",
+]
 dev = [
     "pytest>=8.3.5",
     "pytest-asyncio>=1.0.0",
