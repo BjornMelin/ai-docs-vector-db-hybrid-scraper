@@ -61,8 +61,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         # Security headers to inject
         self._security_headers = self._build_security_headers()
 
-        # Initialize Redis connection
-        asyncio.create_task(self._initialize_redis())
+        # Note: Redis initialization is done lazily or explicitly via _initialize_redis()
 
     async def _initialize_redis(self) -> None:
         """Initialize Redis connection for distributed rate limiting.
@@ -204,6 +203,10 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             True if request is allowed, False if rate limited
 
         """
+        # Initialize Redis lazily if not already done
+        if self.redis_client is None and not self._redis_healthy:
+            await self._initialize_redis()
+
         # Use Redis rate limiting if available and healthy
         if self._redis_healthy and self.redis_client:
             return await self._check_rate_limit_redis(client_ip)
@@ -227,28 +230,25 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             # Create rate limiting key
             rate_limit_key = f"rate_limit:{client_ip}"
 
-            # Use Redis pipeline for atomic operations
-            async with self.redis_client.pipeline(transaction=True) as pipe:
-                # Get current request count
-                current_count = await pipe.get(rate_limit_key).execute()
+            # Check current count first
+            current_count = await self.redis_client.get(rate_limit_key)
 
-                if current_count and current_count[0]:
-                    count = int(current_count[0])
+            if current_count:
+                count = int(current_count)
 
-                    # Check if limit exceeded
-                    if count >= self.config.rate_limit_requests:
-                        return False
+                # Check if limit exceeded
+                if count >= self.config.default_rate_limit:
+                    return False
 
-                    # Increment counter
-                    await pipe.incr(rate_limit_key).execute()
-                else:
-                    # First request in window - set counter and expiry
-                    await pipe.multi()
-                    await pipe.incr(rate_limit_key)
-                    await pipe.expire(rate_limit_key, self.config.rate_limit_window)
-                    await pipe.execute()
-
+                # Increment counter atomically
+                new_count = await self.redis_client.incr(rate_limit_key)
                 return True
+            # First request in window - set counter and expiry atomically
+            async with self.redis_client.pipeline(transaction=True) as pipe:
+                pipe.incr(rate_limit_key)
+                pipe.expire(rate_limit_key, self.config.rate_limit_window)
+                await pipe.execute()
+            return True
 
         except Exception as e:
             logger.warning(
@@ -286,7 +286,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             client_data["window_start"] = current_time
 
         # Check if client has exceeded rate limit
-        if client_data["requests"] >= self.config.rate_limit_requests:
+        if client_data["requests"] >= self.config.default_rate_limit:
             return False
 
         # Increment request counter
@@ -329,8 +329,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 logger.info("Redis connection closed")
             except Exception as e:
                 logger.warning(
-                    f"Error closing Redis connection: {e}"
-                )  # TODO: Convert f-string to logging format
+                    "Error closing Redis connection: %s", e
+                )
             finally:
                 self.redis_client = None
                 self._redis_healthy = False
@@ -379,8 +379,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         if expired_ips:
             logger.debug(
-                f"Cleaned {len(expired_ips)} expired rate limit entries"
-            )  # TODO: Convert f-string to logging format
+                "Cleaned %d expired rate limit entries", len(expired_ips)
+            )
 
 
 class CSRFProtectionMiddleware(BaseHTTPMiddleware):
