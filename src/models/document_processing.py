@@ -5,16 +5,13 @@ and content representation in the vector database system.
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
-from ..config import ChunkingStrategy
-from ..config import DocumentStatus
+from src.config import ChunkingStrategy, DocumentStatus
 
 
 class CodeLanguage(str, Enum):

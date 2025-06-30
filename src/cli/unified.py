@@ -74,13 +74,17 @@ def setup():
     # Install pre-commit hooks
     click.echo("🪝 Installing pre-commit hooks...")
     subprocess.run(
-        ["uv", "run", "pre-commit", "install"], check=False, capture_output=True  # noqa: S607
+        ["uv", "run", "pre-commit", "install"],  # noqa: S607
+        check=False,
+        capture_output=True,
     )
 
     # Validate configuration
     click.echo("✅ Validating configuration...")
     subprocess.run(
-        ["python", "scripts/validate_config.py"], check=False, capture_output=True  # noqa: S607
+        ["python", "scripts/validate_config.py"],  # noqa: S607
+        check=False,
+        capture_output=True,
     )
 
     click.echo("✅ Setup complete! Run 'task dev' to start development.")
@@ -103,7 +107,8 @@ def quality():
     # Type check
     click.echo("🔍 Type checking...")
     result = subprocess.run(
-        ["mypy", "src/", "--config-file", "pyproject.toml"], check=False  # noqa: S607
+        ["mypy", "src/", "--config-file", "pyproject.toml"],  # noqa: S607
+        check=False,
     )
 
     if result.returncode == 0:
@@ -120,7 +125,8 @@ def docs(host: str, port: int):
     """Serve documentation locally"""
     click.echo(f"📚 Starting documentation server at http://{host}:{port}")
     subprocess.run(
-        ["mkdocs", "serve", "--host", host, "--port", str(port)], check=False  # noqa: S607
+        ["mkdocs", "serve", "--host", host, "--port", str(port)],  # noqa: S607
+        check=False,
     )
 
 
@@ -137,7 +143,8 @@ def benchmark(profile: str):
     """Run performance benchmarks"""
     click.echo(f"⚡ Running {profile} benchmark profile...")
     subprocess.run(
-        ["python", "scripts/run_benchmarks.py", "--profile", profile], check=False  # noqa: S607
+        ["python", "scripts/run_benchmarks.py", "--profile", profile],  # noqa: S607
+        check=False,
     )
 
 
