@@ -113,7 +113,8 @@ class TestVectorSecurityValidation:
 
         for model_name, constructor in model_constructors.items():
             with pytest.raises(
-                (ValueError, DimensionError), match=r"Vector cannot be empty.*security: DoS prevention"
+                (ValueError, DimensionError),
+                match=r"Vector cannot be empty.*security: DoS prevention",
             ):
                 constructor(empty_vector)
 
@@ -204,7 +205,8 @@ class TestVectorSecurityFuzzing:
         """Property-based test that all valid finite vectors are accepted."""
         try:
             stage = SearchStage(
-                stage_name="property-test", query_vector=SecureVectorModel(values=vector)
+                stage_name="property-test",
+                query_vector=SecureVectorModel(values=vector),
             )
             assert len(stage.query_vector.values) == len(vector)
             assert all(math.isfinite(v) for v in stage.query_vector.values)
@@ -214,9 +216,12 @@ class TestVectorSecurityFuzzing:
     @given(st.lists(st.floats(), min_size=4097, max_size=10000))
     def test_oversized_vectors_property_based(self, vector: list[float]) -> None:
         """Property-based test that oversized vectors are rejected."""
-        with pytest.raises((ValueError, DimensionError), match=r"security: DoS prevention"):
+        with pytest.raises(
+            (ValueError, DimensionError), match=r"security: DoS prevention"
+        ):
             SearchStage(
-                stage_name="oversized-property-test", query_vector=SecureVectorModel(values=vector)
+                stage_name="oversized-property-test",
+                query_vector=SecureVectorModel(values=vector),
             )
 
     @given(
@@ -249,7 +254,8 @@ class TestVectorSecurityFuzzing:
         else:
             # Should succeed if all values are valid
             stage = SearchStage(
-                stage_name="valid-property-test", query_vector=SecureVectorModel(values=vector)
+                stage_name="valid-property-test",
+                query_vector=SecureVectorModel(values=vector),
             )
             assert len(stage.query_vector.values) == len(vector)
 
@@ -265,7 +271,8 @@ class TestVectorSecurityPerformanceImpact:
         start_time = time.perf_counter()
         for i in range(iterations):
             SearchStage(
-                stage_name=f"perf-small-{i}", query_vector=SecureVectorModel(values=vector)
+                stage_name=f"perf-small-{i}",
+                query_vector=SecureVectorModel(values=vector),
             )
         end_time = time.perf_counter()
 
@@ -282,7 +289,8 @@ class TestVectorSecurityPerformanceImpact:
         start_time = time.perf_counter()
         for i in range(iterations):
             SearchStage(
-                stage_name=f"perf-large-{i}", query_vector=SecureVectorModel(values=vector)
+                stage_name=f"perf-large-{i}",
+                query_vector=SecureVectorModel(values=vector),
             )
         end_time = time.perf_counter()
 
@@ -392,9 +400,12 @@ class TestVectorSecurityBoundaryConditions:
 
         for vector, description in boundary_cases:
             stage = SearchStage(
-                stage_name="boundary-test", query_vector=SecureVectorModel(values=vector)
+                stage_name="boundary-test",
+                query_vector=SecureVectorModel(values=vector),
             )
-            assert len(stage.query_vector.values) == len(vector), f"Failed for {description}"
+            assert len(stage.query_vector.values) == len(vector), (
+                f"Failed for {description}"
+            )
 
     def test_boundary_numeric_limits(self) -> None:
         """Test vectors with boundary numeric values."""
@@ -410,7 +421,8 @@ class TestVectorSecurityBoundaryConditions:
         for value in boundary_values:
             vector = [value]
             stage = SearchStage(
-                stage_name="numeric-boundary-test", query_vector=SecureVectorModel(values=vector)
+                stage_name="numeric-boundary-test",
+                query_vector=SecureVectorModel(values=vector),
             )
             assert len(stage.query_vector.values) == 1
             assert math.isfinite(stage.query_vector.values[0])
@@ -554,15 +566,23 @@ class TestVectorSecurityIntegration:
 
         model_classes = [
             ("SecureVectorModel", lambda v: SecureVectorModel(values=v)),
-            ("SearchStage", lambda v: SearchStage(
-                stage_name="consistency-test", query_vector=SecureVectorModel(values=v)
-            )),
-            ("BasicSearchRequest", lambda v: BasicSearchRequest(
-                query_vector=SecureVectorModel(values=v)
-            )),
-            ("AdvancedHybridSearchRequest", lambda v: AdvancedHybridSearchRequest(
-                query_vector=SecureVectorModel(values=v)
-            )),
+            (
+                "SearchStage",
+                lambda v: SearchStage(
+                    stage_name="consistency-test",
+                    query_vector=SecureVectorModel(values=v),
+                ),
+            ),
+            (
+                "BasicSearchRequest",
+                lambda v: BasicSearchRequest(query_vector=SecureVectorModel(values=v)),
+            ),
+            (
+                "AdvancedHybridSearchRequest",
+                lambda v: AdvancedHybridSearchRequest(
+                    query_vector=SecureVectorModel(values=v)
+                ),
+            ),
         ]
 
         for test_vector, expected_exception, expected_keyword in test_vectors:

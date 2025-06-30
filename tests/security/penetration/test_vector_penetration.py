@@ -71,7 +71,9 @@ class TestVectorPenetrationAttacks:
         gc.collect()
         memory_before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
-        with pytest.raises((ValueError, DimensionError), match=r"security: DoS prevention"):
+        with pytest.raises(
+            (ValueError, DimensionError), match=r"security: DoS prevention"
+        ):
             SearchStage(
                 stage_name="memory-bomb-test",
                 query_vector=SecureVectorModel(values=memory_bomb),
@@ -106,7 +108,9 @@ class TestVectorPenetrationAttacks:
                 assert len(stage.query_vector.values) == vector_size
             else:
                 # Should fail consistently
-                with pytest.raises((ValueError, DimensionError), match=r"security: DoS prevention"):
+                with pytest.raises(
+                    (ValueError, DimensionError), match=r"security: DoS prevention"
+                ):
                     SearchStage(
                         stage_name=f"test-{attempt}",
                         query_vector=SecureVectorModel(values=test_vector),
@@ -306,7 +310,9 @@ class TestVectorFuzzingAttacks:
     @settings(max_examples=100)
     def test_oversized_vector_fuzzing(self, oversized_vector: list[float]) -> None:
         """Fuzz test specifically for oversized vectors."""
-        with pytest.raises((ValueError, DimensionError), match=r"security: DoS prevention"):
+        with pytest.raises(
+            (ValueError, DimensionError), match=r"security: DoS prevention"
+        ):
             SearchStage(
                 stage_name="oversized-fuzz",
                 query_vector=SecureVectorModel(values=oversized_vector),
@@ -351,7 +357,9 @@ class TestVectorInjectionAttacks:
             with pytest.raises(ValueError, match=r"could not convert string to float"):
                 SearchStage(
                     stage_name="sql-injection-test",
-                    query_vector=SecureVectorModel(values=[1.0, injection_pattern, 3.0]),
+                    query_vector=SecureVectorModel(
+                        values=[1.0, injection_pattern, 3.0]
+                    ),
                 )
 
     def test_xss_injection_resistance(self) -> None:
@@ -384,7 +392,9 @@ class TestVectorInjectionAttacks:
             with pytest.raises(ValueError, match=r"could not convert string to float"):
                 SearchStage(
                     stage_name="path-traversal-test",
-                    query_vector=SecureVectorModel(values=[1.0, traversal_pattern, 3.0]),
+                    query_vector=SecureVectorModel(
+                        values=[1.0, traversal_pattern, 3.0]
+                    ),
                 )
 
     def test_command_injection_resistance(self) -> None:
@@ -415,7 +425,10 @@ class TestVectorInjectionAttacks:
         ]
 
         for unicode_pattern in unicode_patterns:
-            with pytest.raises(ValueError, match=r"Invalid vector value.*could not convert string to float"):
+            with pytest.raises(
+                ValueError,
+                match=r"Invalid vector value.*could not convert string to float",
+            ):
                 SearchStage(
                     stage_name="unicode-injection-test",
                     query_vector=SecureVectorModel(values=[1.0, unicode_pattern, 3.0]),
