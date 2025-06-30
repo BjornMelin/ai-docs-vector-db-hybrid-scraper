@@ -8,7 +8,7 @@ import asyncio
 import threading
 import time
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4

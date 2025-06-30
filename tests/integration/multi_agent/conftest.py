@@ -4,7 +4,7 @@ Provides fixtures for testing multi-agent coordination, result fusion,
 and performance optimization scenarios without making real API calls.
 """
 
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 

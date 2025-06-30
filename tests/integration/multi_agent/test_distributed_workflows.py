@@ -7,7 +7,7 @@ and autonomous capabilities enabling 3-10x performance improvements.
 import asyncio
 import time
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock

@@ -8,7 +8,7 @@ import asyncio
 import statistics
 import time
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
