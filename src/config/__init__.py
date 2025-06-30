@@ -15,6 +15,19 @@ from typing import Any
 
 from pydantic import BaseModel
 
+# Import drift detection system
+from .drift import (
+    ConfigDriftDetector,
+    ConfigSnapshot,
+    DriftEvent,
+    DriftSeverity,
+    DriftType,
+    get_drift_detector,
+    get_drift_summary,
+    initialize_drift_detector,
+    run_drift_detection,
+)
+
 # Import everything from the unified settings system
 from .settings import (
     # Enums
@@ -493,6 +506,8 @@ __all__ = [
     "default_tier_manager",
     "get_cache_config",
     "get_config",
+    "get_drift_detector",
+    "get_drift_summary",
     "get_config_manager",
     "get_config_reloader",
     "get_config_with_auto_detection",
@@ -513,6 +528,7 @@ __all__ = [
     # Configuration management
     "get_settings",
     "handle_validation_error",
+    "initialize_drift_detector",
     "is_feature_enabled",
     "is_using_modern_config",
     "migrate_legacy_config",
@@ -522,6 +538,7 @@ __all__ = [
     "reset_modern_config",
     "reset_settings",
     "retry_config_operation",
+    "run_drift_detection",
     "set_config",
     "set_config_manager",
     "set_legacy_config",

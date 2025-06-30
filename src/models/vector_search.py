@@ -718,9 +718,158 @@ class PrefetchConfig(SecureBaseModel):
 # =============================================================================
 # EXPORT DEFINITIONS
 # =============================================================================
+# MISSING CLASSES FOR BACKWARD COMPATIBILITY
+# =============================================================================
+
+
+class QueryClassification(SecureBaseModel):
+    """Query classification result."""
+
+    query_type: str = Field(..., description="Type of query")
+    complexity_level: str = Field(..., description="Complexity level")
+    domain: str = Field(..., description="Query domain")
+    programming_language: str | None = Field(None, description="Programming language")
+    is_multimodal: bool = Field(False, description="Whether query is multimodal")
+    confidence: float = Field(
+        ..., ge=0.0, le=1.0, description="Classification confidence"
+    )
+    features: dict[str, Any] = Field(default_factory=dict, description="Query features")
+
+
+
+class SearchResult(SecureBaseModel):
+    """Individual search result - alias for backward compatibility."""
+
+    id: str = Field(..., description="Result identifier")
+    score: float = Field(..., ge=0.0, le=1.0, description="Similarity score")
+    content: str = Field(..., description="Result content")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Result metadata"
+    )
+    payload: dict[str, Any] = Field(default_factory=dict, description="Result payload")
+
+
+class FusionConfig(SecureBaseModel):
+    """Configuration for fusion algorithms."""
+
+    algorithm: str = Field(default="rrf", description="Fusion algorithm name")
+    weights: dict[str, float] = Field(
+        default_factory=dict, description="Algorithm weights"
+    )
+    parameters: dict[str, Any] = Field(
+        default_factory=dict, description="Algorithm parameters"
+    )
+
+
+class ModelSelectionStrategy(SecureBaseModel):
+    """Model selection strategy configuration."""
+
+    primary_model: str = Field(..., description="Primary model identifier")
+    model_type: str = Field(..., description="Type of model")
+    fallback_models: list[str] = Field(
+        default_factory=list, description="Fallback models"
+    )
+    selection_criteria: dict[str, Any] = Field(
+        default_factory=dict, description="Selection criteria"
+    )
+
+
+class ABTestConfig(SecureBaseModel):
+    """A/B testing configuration."""
+
+    experiment_name: str = Field(..., description="Experiment name")
+    variants: list[str] = Field(..., description="Test variants")
+    allocation: dict[str, float] = Field(
+        default_factory=dict, description="Variant allocation"
+    )
+    success_metrics: list[str] = Field(
+        default_factory=list, description="Success metrics"
+    )
+
+
+class HybridSearchRequest(AdvancedHybridSearchRequest):
+    """Hybrid search request - alias for backward compatibility."""
+
+    query: str = Field(..., description="Search query text")
+    collection_name: str = Field(..., description="Collection to search")
+    enable_query_classification: bool = Field(
+        True, description="Enable query classification"
+    )
+    enable_model_selection: bool = Field(True, description="Enable model selection")
+    enable_adaptive_fusion: bool = Field(True, description="Enable adaptive fusion")
+    enable_splade: bool = Field(False, description="Enable SPLADE")
+    fusion_config: FusionConfig | None = Field(None, description="Fusion configuration")
+    user_id: str | None = Field(None, description="User identifier")
+    session_id: str | None = Field(None, description="Session identifier")
+
+
+class RetrievalMetrics(SecureBaseModel):
+    """Retrieval performance metrics."""
+
+    query_vector_time_ms: float = Field(
+        ..., ge=0.0, description="Time to generate query vector in milliseconds"
+    )
+    search_time_ms: float = Field(
+        ..., ge=0.0, description="Time to execute search in milliseconds"
+    )
+    total_time_ms: float = Field(
+        ..., ge=0.0, description="Total processing time in milliseconds"
+    )
+    results_count: int = Field(..., ge=0, description="Number of results found")
+    filtered_count: int = Field(
+        ..., ge=0, description="Number of results after filtering"
+    )
+    cache_hit: bool = Field(..., description="Whether cache was hit")
+    hnsw_ef_used: int = Field(
+        ..., ge=1, description="HNSW ef parameter used for search"
+    )
+
+    @model_validator(mode="after")
+    def validate_timing_consistency(self) -> Self:
+        """Validate that timing values are consistent."""
+        if self.total_time_ms < self.search_time_ms:
+            msg = "Total time cannot be less than search time"
+            raise ValueError(msg)
+        if self.total_time_ms < self.query_vector_time_ms:
+            msg = "Total time cannot be less than query vector time"
+            raise ValueError(msg)
+        return self
+
+
+class HybridSearchResponse(SecureBaseModel):
+    """Hybrid search response."""
+
+    results: list[SearchResult] = Field(
+        default_factory=list, description="Search results"
+    )
+    query_classification: QueryClassification | None = Field(
+        None, description="Query classification"
+    )
+    model_selection: ModelSelectionStrategy | None = Field(
+        None, description="Model selection info"
+    )
+    fusion_weights: dict[str, float] | None = Field(None, description="Fusion weights")
+    optimization_applied: bool = Field(
+        False, description="Whether optimization was applied"
+    )
+    retrieval_metrics: RetrievalMetrics | None = Field(
+        None, description="Retrieval metrics"
+    )
+    total_results: int = Field(0, description="Total number of results")
+    execution_time_ms: float = Field(0.0, description="Execution time in milliseconds")
+    effectiveness_score: float | None = Field(
+        None, description="Search effectiveness score"
+    )
+    fallback_reason: str | None = Field(
+        None, description="Reason for fallback if applicable"
+    )
+
+
+# =============================================================================
 
 # Core models
 __all__ = [
+    "ABTestConfig",
     "AdvancedFilteredSearchRequest",
     "AdvancedHybridSearchRequest",
     # Async models
@@ -732,13 +881,20 @@ __all__ = [
     "DimensionError",
     "FilterValidationError",
     "FusionAlgorithm",
+    "FusionConfig",
+    "HybridSearchRequest",
+    "HybridSearchResponse",
     "HyDESearchRequest",
+    "ModelSelectionStrategy",
     "MultiStageSearchRequest",
     # Prefetch models
     "PrefetchConfig",
+    "QueryClassification",
+    "RetrievalMetrics",
     "SearchAccuracy",
     "SearchConfigurationError",
     "SearchResponse",
+    "SearchResult",
     # Search stage models
     "SearchStage",
     # Base classes and enums

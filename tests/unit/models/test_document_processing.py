@@ -4,9 +4,7 @@ from datetime import datetime, timezone
 
 import pytest
 from pydantic import ValidationError
-from src.config.enums import ChunkingStrategy
-from src.config.enums import DocumentStatus
-from src.config import ChunkingConfig
+from src.config import ChunkingStrategy, DocumentStatus, ChunkingConfig
 from src.models.document_processing import Chunk
 from src.models.document_processing import ChunkType
 from src.models.document_processing import CodeBlock
