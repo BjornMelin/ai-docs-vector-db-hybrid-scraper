@@ -17,7 +17,7 @@ from pydantic import BaseModel
 
 from src.config import Config, get_config, get_config_with_auto_detection
 from src.config.auto_detect import AutoDetectedServices, DetectedEnvironment
-from src.config.enums import CacheType, Environment
+from src.config import CacheType, Environment
 from src.infrastructure.client_manager import ClientManager
 from src.services.auto_detection import (
     ConnectionPoolManager,

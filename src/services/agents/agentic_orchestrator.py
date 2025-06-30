@@ -103,8 +103,13 @@ maintaining high performance and reliability. Always explain your reasoning."""
 
     async def initialize_tools(self, deps: BaseAgentDependencies) -> None:
         """Initialize with dynamic tool discovery."""
-        if not PYDANTIC_AI_AVAILABLE:
-            logger.warning("Pydantic-AI not available, using fallback mode")
+        # Check fallback status
+        fallback_reason = getattr(self, "_fallback_reason", None)
+
+        if not PYDANTIC_AI_AVAILABLE or self.agent is None:
+            logger.warning(
+                f"AgenticOrchestrator using fallback mode (reason: {fallback_reason or 'pydantic_ai_unavailable'})"
+            )
             return
 
         # Set up native Pydantic-AI tool discovery and orchestration
@@ -380,16 +385,88 @@ maintaining high performance and reliability. Always explain your reasoning."""
         self, request: ToolRequest, deps: BaseAgentDependencies
     ) -> ToolResponse:
         """Fallback orchestration when Pydantic-AI unavailable."""
-        logger.warning("Using fallback orchestration mode")
+        fallback_reason = getattr(self, "_fallback_reason", "unknown")
+        logger.warning(f"Using fallback orchestration mode (reason: {fallback_reason})")
 
-        return ToolResponse(
+        import time
+
+        start_time = time.time()
+
+        # Enhanced fallback logic with context-aware responses
+        task_lower = request.task.lower()
+
+        # Determine appropriate fallback response based on task type
+        if any(keyword in task_lower for keyword in ["search", "find", "retrieve"]):
+            fallback_tools = ["mock_search_tool"]
+            result_data = {
+                "search_results": f"Mock search results for: {request.task}",
+                "result_count": 5,
+                "search_type": "fallback_search",
+            }
+            reasoning = f"Fallback search orchestration for task: {request.task}"
+            confidence = 0.7
+        elif any(
+            keyword in task_lower for keyword in ["analyze", "examine", "evaluate"]
+        ):
+            fallback_tools = ["mock_analysis_tool"]
+            result_data = {
+                "analysis_results": f"Mock analysis of: {request.task}",
+                "confidence_score": 0.65,
+                "analysis_type": "fallback_analysis",
+            }
+            reasoning = f"Fallback analysis orchestration for task: {request.task}"
+            confidence = 0.65
+        elif any(
+            keyword in task_lower for keyword in ["generate", "create", "compose"]
+        ):
+            fallback_tools = ["mock_generation_tool"]
+            result_data = {
+                "generated_content": f"Mock generated content for: {request.task}",
+                "word_count": 150,
+                "generation_type": "fallback_generation",
+            }
+            reasoning = f"Fallback generation orchestration for task: {request.task}"
+            confidence = 0.6
+        else:
+            fallback_tools = ["mock_general_tool"]
+            result_data = {
+                "general_response": f"Mock response for task: {request.task}",
+                "task_type": "general",
+                "processing_mode": "fallback",
+            }
+            reasoning = f"Fallback general orchestration for task: {request.task}"
+            confidence = 0.5
+
+        latency_ms = (time.time() - start_time) * 1000
+
+        response = ToolResponse(
             success=True,
-            results={"fallback_response": f"Processed task: {request.task}"},
-            tools_used=["fallback_handler"],
-            reasoning="Fallback mode - Pydantic-AI not available",
-            latency_ms=50.0,
-            confidence=0.5,
+            results={
+                "fallback_mode": True,
+                "fallback_reason": fallback_reason,
+                **result_data,
+            },
+            tools_used=fallback_tools,
+            reasoning=f"{reasoning} (fallback mode - reason: {fallback_reason})",
+            latency_ms=latency_ms,
+            confidence=confidence,
         )
+
+        # Update session state even in fallback mode
+        deps.session_state.increment_tool_usage("agentic_orchestrator")
+        deps.session_state.add_interaction(
+            role="orchestrator",
+            content=response.reasoning,
+            metadata={
+                "tools_used": response.tools_used,
+                "latency_ms": response.latency_ms,
+                "confidence": response.confidence,
+                "fallback_mode": True,
+                "fallback_reason": fallback_reason,
+            },
+        )
+
+        return response
 
 
 # Global orchestrator instance for singleton pattern

@@ -12,7 +12,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from .core import BaseAgent, BaseAgentDependencies
+from .core import BaseAgent, BaseAgentDependencies, _check_api_key_availability
 
 
 logger = logging.getLogger(__name__)
@@ -122,6 +122,21 @@ class DynamicToolDiscovery(BaseAgent):
 
 Your goal is to provide intelligent tool discovery and capability assessment
 for autonomous agent systems, enabling optimal tool selection and orchestration."""
+
+    async def initialize_tools(self, deps: BaseAgentDependencies) -> None:
+        """Initialize tool discovery capabilities.
+
+        Args:
+            deps: Agent dependencies for tool initialization
+        """
+        # Check if we're in fallback mode
+        fallback_reason = getattr(self, "_fallback_reason", None)
+        if fallback_reason:
+            logger.info(
+                f"DynamicToolDiscovery tools initialized in fallback mode (reason: {fallback_reason})"
+            )
+        else:
+            logger.info("DynamicToolDiscovery tools initialized (discovery-based)")
 
     async def initialize_discovery(self, deps: BaseAgentDependencies) -> None:
         """Initialize tool discovery with system scanning.
@@ -257,6 +272,11 @@ for autonomous agent systems, enabling optimal tool selection and orchestration.
         Returns:
             List of suitable tools ranked by suitability score
         """
+        # Check if we're in fallback mode
+        fallback_reason = getattr(self, "_fallback_reason", None)
+        if fallback_reason:
+            return await self._fallback_discover_tools(task_description, requirements)
+
         suitable_tools = []
 
         for tool in self.discovered_tools.values():
@@ -398,6 +418,11 @@ for autonomous agent systems, enabling optimal tool selection and orchestration.
         Returns:
             Tool recommendations with reasoning
         """
+        # Check if we're in fallback mode
+        fallback_reason = getattr(self, "_fallback_reason", None)
+        if fallback_reason:
+            return await self._fallback_get_recommendations(task_type, constraints)
+
         recommendations = {
             "primary_tools": [],
             "secondary_tools": [],
@@ -514,6 +539,161 @@ for autonomous agent systems, enabling optimal tool selection and orchestration.
             )
 
         return chains
+
+    async def _fallback_discover_tools(
+        self, task_description: str, requirements: dict[str, Any]
+    ) -> list[ToolCapability]:
+        """Fallback tool discovery when agent is in fallback mode.
+
+        Args:
+            task_description: Description of the task to perform
+            requirements: Performance and quality requirements
+
+        Returns:
+            List of mock suitable tools
+        """
+        fallback_reason = getattr(self, "_fallback_reason", "unknown")
+        logger.info(f"Using fallback tool discovery (reason: {fallback_reason})")
+
+        # Create mock tools based on task analysis
+        mock_tools = []
+        task_lower = task_description.lower()
+
+        # Mock hybrid search tool
+        if any(keyword in task_lower for keyword in ["search", "find", "retrieve"]):
+            mock_tool = ToolCapability(
+                name="mock_hybrid_search",
+                capability_type=ToolCapabilityType.SEARCH,
+                description="Mock hybrid search tool (fallback mode)",
+                input_types=["text", "query"],
+                output_types=["search_results"],
+                metrics=ToolMetrics(
+                    average_latency_ms=200.0,
+                    success_rate=0.85,
+                    accuracy_score=0.80,
+                    cost_per_execution=0.01,
+                    reliability_score=0.85,
+                ),
+                confidence_score=0.85,
+                last_updated="fallback_mode",
+            )
+            mock_tools.append(mock_tool)
+
+        # Mock analysis tool
+        if any(keyword in task_lower for keyword in ["analyze", "examine", "evaluate"]):
+            mock_tool = ToolCapability(
+                name="mock_content_analysis",
+                capability_type=ToolCapabilityType.ANALYSIS,
+                description="Mock content analysis tool (fallback mode)",
+                input_types=["text", "documents"],
+                output_types=["analysis_results"],
+                metrics=ToolMetrics(
+                    average_latency_ms=300.0,
+                    success_rate=0.80,
+                    accuracy_score=0.75,
+                    cost_per_execution=0.02,
+                    reliability_score=0.80,
+                ),
+                confidence_score=0.80,
+                last_updated="fallback_mode",
+            )
+            mock_tools.append(mock_tool)
+
+        # Mock generation tool
+        if any(keyword in task_lower for keyword in ["generate", "create", "compose"]):
+            mock_tool = ToolCapability(
+                name="mock_content_generation",
+                capability_type=ToolCapabilityType.GENERATION,
+                description="Mock content generation tool (fallback mode)",
+                input_types=["text", "context"],
+                output_types=["generated_content"],
+                metrics=ToolMetrics(
+                    average_latency_ms=500.0,
+                    success_rate=0.75,
+                    accuracy_score=0.70,
+                    cost_per_execution=0.05,
+                    reliability_score=0.75,
+                ),
+                confidence_score=0.75,
+                last_updated="fallback_mode",
+            )
+            mock_tools.append(mock_tool)
+
+        # Default fallback tool if no specific tools matched
+        if not mock_tools:
+            mock_tool = ToolCapability(
+                name="mock_general_tool",
+                capability_type=ToolCapabilityType.SEARCH,
+                description="Mock general purpose tool (fallback mode)",
+                input_types=["text"],
+                output_types=["results"],
+                metrics=ToolMetrics(
+                    average_latency_ms=250.0,
+                    success_rate=0.70,
+                    accuracy_score=0.65,
+                    cost_per_execution=0.02,
+                    reliability_score=0.70,
+                ),
+                confidence_score=0.70,
+                last_updated="fallback_mode",
+            )
+            mock_tools.append(mock_tool)
+
+        return mock_tools
+
+    async def _fallback_get_recommendations(
+        self, task_type: str, constraints: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Fallback tool recommendations when agent is in fallback mode.
+
+        Args:
+            task_type: Type of task to perform
+            constraints: Performance and resource constraints
+
+        Returns:
+            Mock tool recommendations
+        """
+        fallback_reason = getattr(self, "_fallback_reason", "unknown")
+        logger.info(f"Using fallback tool recommendations (reason: {fallback_reason})")
+
+        # Get fallback tools
+        fallback_tools = await self._fallback_discover_tools(task_type, constraints)
+
+        recommendations = {
+            "primary_tools": [
+                {
+                    "name": tool.name,
+                    "suitability_score": tool.confidence_score,
+                    "capability_type": tool.capability_type.value,
+                    "estimated_latency_ms": tool.metrics.average_latency_ms
+                    if tool.metrics
+                    else 0,
+                    "fallback_mode": True,
+                }
+                for tool in fallback_tools[:2]  # Top 2 fallback tools
+            ],
+            "secondary_tools": [],
+            "tool_chains": [
+                {
+                    "chain": [tool.name for tool in fallback_tools],
+                    "type": "fallback_chain",
+                    "estimated_total_latency_ms": sum(
+                        tool.metrics.average_latency_ms if tool.metrics else 0
+                        for tool in fallback_tools
+                    ),
+                }
+            ]
+            if len(fallback_tools) > 1
+            else [],
+            "reasoning": (
+                f"Using fallback mode recommendations (reason: {fallback_reason}). "
+                f"Identified {len(fallback_tools)} mock tools suitable for '{task_type}' tasks. "
+                "These are simulated capabilities that will provide basic functionality."
+            ),
+            "fallback_mode": True,
+        }
+
+        return recommendations
 
 
 # Global discovery engine instance

@@ -80,8 +80,13 @@ Always provide structured decisions with confidence scores and reasoning."""
         Args:
             deps: Agent dependencies containing client manager and config
         """
+        # Check fallback status
+        fallback_reason = getattr(self, "_fallback_reason", None)
+
         if not PYDANTIC_AI_AVAILABLE or self.agent is None:
-            logger.warning("Pydantic-AI not available, tools will use fallback mode")
+            logger.warning(
+                f"QueryOrchestrator using fallback mode (reason: {fallback_reason or 'pydantic_ai_unavailable'})"
+            )
             return
 
         @self.agent.tool
@@ -467,20 +472,81 @@ Always provide structured decisions with confidence scores and reasoning."""
             Fallback orchestration result
         """
         query = context["query"]
+        fallback_reason = getattr(self, "_fallback_reason", "unknown")
 
-        # Simple fallback logic
+        logger.info(f"Using fallback query orchestration (reason: {fallback_reason})")
+
+        # Enhanced fallback logic with better analysis
+        query_lower = query.lower()
+
+        # Determine complexity based on query patterns
+        if any(keyword in query_lower for keyword in ["what is", "who is", "define"]):
+            complexity = "simple"
+            strategy = "fast"
+            recommended_tools = ["basic_search"]
+        elif any(
+            keyword in query_lower
+            for keyword in ["analyze", "compare", "evaluate", "complex"]
+        ):
+            complexity = "complex"
+            strategy = "comprehensive"
+            recommended_tools = ["advanced_search", "content_analysis", "synthesis"]
+        else:
+            complexity = "moderate"
+            strategy = "balanced"
+            recommended_tools = ["hybrid_search", "content_analysis"]
+
+        # Determine domain
+        if any(keyword in query_lower for keyword in ["code", "programming", "api"]):
+            domain = "technical"
+            recommended_tools.append("technical_analyzer")
+        elif any(
+            keyword in query_lower for keyword in ["business", "market", "revenue"]
+        ):
+            domain = "business"
+            recommended_tools.append("business_analyzer")
+        else:
+            domain = "general"
+
         analysis = {
-            "complexity": "moderate",
-            "strategy": "balanced",
-            "recommended_tools": ["hybrid_search"],
+            "complexity": complexity,
+            "domain": domain,
+            "strategy": strategy,
+            "recommended_tools": recommended_tools,
+            "confidence": 0.7,
+            "reasoning": f"Fallback analysis based on keyword patterns (reason: {fallback_reason})",
+            "fallback_mode": True,
+        }
+
+        orchestration_plan = {
+            "steps": [
+                f"1. Analyze query: '{query}' (complexity: {complexity})",
+                f"2. Apply {strategy} strategy",
+                f"3. Use tools: {', '.join(recommended_tools)}",
+                "4. Generate response with fallback capabilities",
+            ],
+            "estimated_time_seconds": 2.0
+            if complexity == "simple"
+            else 5.0
+            if complexity == "moderate"
+            else 8.0,
+            "quality_expectation": "basic" if fallback_reason else "standard",
         }
 
         return {
             "success": True,
             "result": {
                 "analysis": analysis,
-                "orchestration_plan": f"Process query '{query}' using balanced strategy",
+                "orchestration_plan": orchestration_plan,
                 "fallback_used": True,
+                "fallback_reason": fallback_reason,
+                "mock_results": {
+                    "query_processed": query,
+                    "tools_executed": recommended_tools,
+                    "processing_time_ms": 100.0,
+                    "confidence": 0.7,
+                    "fallback_response": f"Mock orchestrated response for: {query}",
+                },
             },
             "orchestration_id": context["orchestration_id"],
         }

@@ -12,13 +12,13 @@ from pydantic import Field
 from pydantic import field_validator
 from pydantic import model_validator
 
-from ..config.enums import ABTestVariant
-from ..config.enums import FusionAlgorithm
-from ..config.enums import ModelType
-from ..config.enums import QueryComplexity
-from ..config.enums import QueryType
-from ..config.enums import SearchAccuracy
-from ..config.enums import VectorType
+from ..config import ABTestVariant
+from ..config import FusionAlgorithm
+from ..config import ModelType
+from ..config import QueryComplexity
+from ..config import QueryType
+from ..config import SearchAccuracy
+from ..config import VectorType
 
 
 class SearchStage(BaseModel):

@@ -9,7 +9,7 @@ from typing import Annotated, Any
 
 from fastapi import Depends
 
-from src.config.enums import CacheType
+from src.config import CacheType
 
 from .circuit_breaker import CircuitBreakerConfig, circuit_breaker
 from .dependencies import get_cache_client

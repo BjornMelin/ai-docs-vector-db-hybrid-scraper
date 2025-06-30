@@ -15,7 +15,7 @@ from aiocache.serializers import PickleSerializer, JsonSerializer
 from aiocache.backends.redis import RedisBackend
 
 from src.config import Config
-from src.config.enums import CacheType
+from src.config import CacheType
 
 
 logger = logging.getLogger(__name__)
