@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from src.config.core import get_config
+from src.config import get_config
 from src.services.config_drift_service import (
     get_drift_service,
     get_drift_service_status,

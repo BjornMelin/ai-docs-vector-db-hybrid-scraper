@@ -58,7 +58,7 @@ def complete_collection_name(
             CompletionItem(name, help=f"Collection: {name}")
             for name in matching_collections
         ]
-    except Exception:
+    except (ValueError, RuntimeError, TimeoutError):
         # If anything fails, return empty list
         return []
 
@@ -135,7 +135,7 @@ class OperationQueue:
                 try:
                     op.function(*op.args, **op.kwargs)
                     progress.console.print(f"✅ {op.name}")
-                except Exception as e:
+                except (ValueError, RuntimeError, OSError) as e:
                     progress.console.print(f"❌ {op.name}: {e}")
                     return False
 
@@ -253,7 +253,7 @@ def index_documents(
 
     except Exception as e:
         rich_cli.show_error("Batch indexing failed", str(e))
-        raise click.Abort() from e
+        raise click.Abort from e
 
 
 def _show_indexing_preview(
@@ -433,13 +433,14 @@ def delete_collections(ctx: click.Context, collections: tuple, yes: bool):
 )
 @click.option(
     "--format",
+    "backup_format",
     type=click.Choice(["json", "parquet"]),
     default="json",
     help="Backup format",
 )
 @click.pass_context
 def backup_collections(
-    ctx: click.Context, collections: tuple, output_dir: Path, format: str
+    ctx: click.Context, collections: tuple, output_dir: Path, backup_format: str
 ):
     """Backup collections to files."""
     config = ctx.obj["config"]
@@ -462,7 +463,7 @@ def backup_collections(
     backup_text.append("📦 Backup Plan\n\n", style="bold cyan")
     backup_text.append(f"Collections: {len(collection_names)}\n", style="")
     backup_text.append(f"Output directory: {output_dir}\n", style="")
-    backup_text.append(f"Format: {format.upper()}", style="")
+    backup_text.append(f"Format: {backup_format.upper()}", style="")
 
     panel = Panel(
         backup_text,

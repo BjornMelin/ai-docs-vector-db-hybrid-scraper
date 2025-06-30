@@ -7,6 +7,7 @@ optimization, drift detection, and adaptive configuration learning.
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -36,7 +37,7 @@ def register_tools(mcp, client_manager: ClientManager):
         learning_enabled: bool = True,
         safe_mode: bool = True,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform intelligent configuration optimization with autonomous learning.
 
         Implements ML-powered configuration optimization with autonomous parameter
@@ -154,7 +155,7 @@ def register_tools(mcp, client_manager: ClientManager):
         auto_remediation: bool = False,
         monitoring_duration: int = 3600,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Monitor configuration drift with adaptive detection and autonomous remediation.
 
         Implements intelligent configuration monitoring with drift detection,
@@ -252,11 +253,11 @@ def register_tools(mcp, client_manager: ClientManager):
     @mcp.tool()
     async def configuration_profile_management(
         action: str,
-        profile_name: Optional[str] = None,
-        profile_data: Optional[Dict[str, Any]] = None,
+        profile_name: str | None = None,
+        profile_data: dict[str, Any] | None = None,
         auto_optimize: bool = True,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Manage configuration profiles with autonomous optimization and learning.
 
         Provides intelligent configuration profile management with automatic
@@ -337,7 +338,7 @@ def register_tools(mcp, client_manager: ClientManager):
             }
 
     @mcp.tool()
-    async def get_configuration_capabilities() -> Dict[str, Any]:
+    async def get_configuration_capabilities() -> dict[str, Any]:
         """Get configuration management capabilities and options.
 
         Returns:
@@ -404,7 +405,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
 async def _get_current_configuration(
     config_scope: str, client_manager: ClientManager, ctx
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Get current configuration for the specified scope."""
     try:
         # Mock configuration retrieval (replace with actual config manager calls)
@@ -450,8 +451,8 @@ async def _get_current_configuration(
 
 
 async def _analyze_performance_baseline(
-    config_scope: str, configuration: Dict, ctx
-) -> Dict[str, Any]:
+    config_scope: str, configuration: dict, ctx
+) -> dict[str, Any]:
     """Analyze current performance baseline for configuration."""
     # Mock performance analysis (replace with actual metrics collection)
     return {
@@ -469,12 +470,12 @@ async def _analyze_performance_baseline(
 
 
 async def _generate_optimization_recommendations(
-    current_config: Dict,
+    current_config: dict,
     optimization_target: str,
-    baseline: Dict,
+    baseline: dict,
     learning_enabled: bool,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate intelligent optimization recommendations."""
     recommendations = []
 
@@ -566,8 +567,8 @@ async def _generate_optimization_recommendations(
 
 
 async def _apply_safe_optimization(
-    config_scope: str, optimization_recommendations: Dict, ctx
-) -> Dict[str, Any]:
+    config_scope: str, optimization_recommendations: dict, ctx
+) -> dict[str, Any]:
     """Apply optimization recommendations with safety mechanisms."""
     applied_changes = []
     failed_changes = []
@@ -617,8 +618,8 @@ async def _apply_safe_optimization(
 
 
 async def _apply_configuration_change(
-    config_scope: str, recommendation: Dict, ctx
-) -> Dict[str, Any]:
+    config_scope: str, recommendation: dict, ctx
+) -> dict[str, Any]:
     """Apply a single configuration change with validation."""
     try:
         # Mock configuration change application
@@ -655,8 +656,8 @@ async def _apply_configuration_change(
 
 
 async def _calculate_optimization_impact(
-    baseline: Dict, optimization_results: Dict, ctx
-) -> Dict[str, Any]:
+    baseline: dict, optimization_results: dict, ctx
+) -> dict[str, Any]:
     """Calculate the impact of optimization changes."""
     if not optimization_results.get("applied", False):
         return {
@@ -687,11 +688,11 @@ async def _calculate_optimization_impact(
 
 
 async def _generate_autonomous_insights(
-    current_config: Dict,
-    optimization_recommendations: Dict,
-    optimization_impact: Dict,
+    current_config: dict,
+    optimization_recommendations: dict,
+    optimization_impact: dict,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate autonomous insights from optimization process."""
     insights = {
         "configuration_health": {
@@ -736,7 +737,7 @@ def _get_timestamp() -> str:
 
 async def _establish_monitoring_baseline(
     monitoring_scope: str, client_manager: ClientManager, ctx
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Establish baseline for configuration monitoring."""
     # Mock monitoring baseline establishment
     return {
@@ -761,8 +762,8 @@ async def _establish_monitoring_baseline(
 
 
 async def _perform_drift_analysis(
-    monitoring_baseline: Dict, drift_threshold: float, ctx
-) -> Dict[str, Any]:
+    monitoring_baseline: dict, drift_threshold: float, ctx
+) -> dict[str, Any]:
     """Perform configuration drift analysis."""
     # Mock drift analysis
     detected_drifts = [
@@ -801,8 +802,8 @@ async def _perform_drift_analysis(
 
 
 async def _detect_configuration_anomalies(
-    monitoring_baseline: Dict, ctx
-) -> Dict[str, Any]:
+    monitoring_baseline: dict, ctx
+) -> dict[str, Any]:
     """Detect configuration anomalies using ML-based analysis."""
     # Mock anomaly detection
     detected_anomalies = [
@@ -838,8 +839,8 @@ async def _detect_configuration_anomalies(
 
 
 async def _apply_autonomous_remediation(
-    drift_analysis: Dict, anomaly_detection: Dict, ctx
-) -> Dict[str, Any]:
+    drift_analysis: dict, anomaly_detection: dict, ctx
+) -> dict[str, Any]:
     """Apply autonomous remediation for detected issues."""
     remediation_actions = []
 
@@ -876,8 +877,8 @@ async def _apply_autonomous_remediation(
 
 
 def _calculate_monitoring_metrics(
-    drift_analysis: Dict, anomaly_detection: Dict, remediation_results: Dict
-) -> Dict[str, Any]:
+    drift_analysis: dict, anomaly_detection: dict, remediation_results: dict
+) -> dict[str, Any]:
     """Calculate comprehensive monitoring metrics."""
     return {
         "monitoring_effectiveness": 0.87,
@@ -892,8 +893,8 @@ def _calculate_monitoring_metrics(
 
 
 async def _generate_adaptive_monitoring_insights(
-    drift_analysis: Dict, anomaly_detection: Dict, monitoring_metrics: Dict, ctx
-) -> Dict[str, Any]:
+    drift_analysis: dict, anomaly_detection: dict, monitoring_metrics: dict, ctx
+) -> dict[str, Any]:
     """Generate adaptive insights from monitoring results."""
     insights = {
         "system_health_assessment": {
@@ -933,8 +934,8 @@ async def _generate_adaptive_monitoring_insights(
 
 
 async def _create_configuration_profile(
-    profile_name: str, profile_data: Optional[Dict], auto_optimize: bool, ctx
-) -> Dict[str, Any]:
+    profile_name: str, profile_data: dict | None, auto_optimize: bool, ctx
+) -> dict[str, Any]:
     """Create a new configuration profile."""
     try:
         # Validate profile data
@@ -980,7 +981,7 @@ async def _create_configuration_profile(
         }
 
 
-async def _auto_optimize_profile_data(profile_data: Dict, ctx) -> Dict[str, Any]:
+async def _auto_optimize_profile_data(profile_data: dict, ctx) -> dict[str, Any]:
     """Auto-optimize profile configuration data."""
     optimized_config = profile_data.copy()
 
@@ -1005,7 +1006,7 @@ async def _auto_optimize_profile_data(profile_data: Dict, ctx) -> Dict[str, Any]
 
 async def _load_configuration_profile(
     profile_name: str, auto_optimize: bool, ctx
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Load an existing configuration profile."""
     try:
         # Mock profile loading
@@ -1047,7 +1048,7 @@ async def _load_configuration_profile(
         }
 
 
-async def _save_current_configuration_profile(profile_name: str, ctx) -> Dict[str, Any]:
+async def _save_current_configuration_profile(profile_name: str, ctx) -> dict[str, Any]:
     """Save current configuration as a named profile."""
     try:
         # Mock saving current configuration
@@ -1083,7 +1084,7 @@ async def _save_current_configuration_profile(profile_name: str, ctx) -> Dict[st
         }
 
 
-async def _list_configuration_profiles(ctx) -> Dict[str, Any]:
+async def _list_configuration_profiles(ctx) -> dict[str, Any]:
     """List all available configuration profiles."""
     try:
         # Mock profile listing
@@ -1127,7 +1128,7 @@ async def _list_configuration_profiles(ctx) -> Dict[str, Any]:
         }
 
 
-async def _optimize_configuration_profile(profile_name: str, ctx) -> Dict[str, Any]:
+async def _optimize_configuration_profile(profile_name: str, ctx) -> dict[str, Any]:
     """Optimize an existing configuration profile."""
     try:
         # Mock profile optimization
@@ -1165,7 +1166,7 @@ async def _optimize_configuration_profile(profile_name: str, ctx) -> Dict[str, A
         }
 
 
-async def _compare_configuration_profiles(profile_name: str, ctx) -> Dict[str, Any]:
+async def _compare_configuration_profiles(profile_name: str, ctx) -> dict[str, Any]:
     """Compare configuration profiles for analysis."""
     try:
         # Mock profile comparison

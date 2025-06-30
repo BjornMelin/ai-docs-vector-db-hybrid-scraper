@@ -7,6 +7,7 @@ autonomous ranking optimization, and multi-criteria result evaluation.
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -37,10 +38,10 @@ def register_tools(mcp, client_manager: ClientManager):
         initial_limit: int = 50,
         final_limit: int = 10,
         reranking_strategy: str = "semantic_similarity",
-        quality_factors: Optional[Dict[str, float]] = None,
-        filters: Optional[Dict[str, Any]] = None,
+        quality_factors: dict[str, float] | None = None,
+        filters: dict[str, Any] | None = None,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform search with semantic reranking for improved result quality.
 
         Implements advanced semantic reranking with multiple quality factors
@@ -155,11 +156,11 @@ def register_tools(mcp, client_manager: ClientManager):
         collection_name: str,
         initial_limit: int = 50,
         final_limit: int = 10,
-        criteria_weights: Optional[Dict[str, float]] = None,
+        criteria_weights: dict[str, float] | None = None,
         adaptive_weighting: bool = True,
-        filters: Optional[Dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform multi-criteria reranking with adaptive weight optimization.
 
         Implements comprehensive multi-criteria ranking with autonomous
@@ -276,13 +277,13 @@ def register_tools(mcp, client_manager: ClientManager):
     async def contextual_reranking_search(
         query: str,
         collection_name: str,
-        context_query: Optional[str] = None,
+        context_query: str | None = None,
         context_weight: float = 0.3,
         initial_limit: int = 50,
         final_limit: int = 10,
-        filters: Optional[Dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform contextual reranking considering additional context.
 
         Implements context-aware reranking that considers additional context
@@ -406,7 +407,7 @@ def register_tools(mcp, client_manager: ClientManager):
             }
 
     @mcp.tool()
-    async def get_reranking_capabilities() -> Dict[str, Any]:
+    async def get_reranking_capabilities() -> dict[str, Any]:
         """Get reranking capabilities and configuration options.
 
         Returns:
@@ -478,9 +479,9 @@ async def _perform_initial_search(
     query: str,
     collection_name: str,
     limit: int,
-    filters: Optional[Dict],
+    filters: dict | None,
     ctx,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Perform initial search to get results for reranking."""
     try:
         # Generate embedding for query
@@ -516,7 +517,7 @@ async def _perform_initial_search(
         }
 
 
-async def _apply_quality_assessment(results: List[Dict], query: str, ctx) -> List[Dict]:
+async def _apply_quality_assessment(results: list[dict], query: str, ctx) -> list[dict]:
     """Apply comprehensive quality assessment to search results."""
     assessed_results = []
 
@@ -604,13 +605,13 @@ def _calculate_content_quality(content: str) -> float:
     return min(quality, 1.0)
 
 
-def _calculate_freshness(payload: Dict) -> float:
+def _calculate_freshness(payload: dict) -> float:
     """Calculate freshness score based on timestamp or recency indicators."""
     # Mock freshness calculation (replace with actual timestamp analysis)
     return 0.7  # Default medium freshness
 
 
-def _calculate_authority(payload: Dict) -> float:
+def _calculate_authority(payload: dict) -> float:
     """Calculate authority score based on source credibility."""
     # Mock authority calculation (replace with actual domain/source analysis)
     url = payload.get("url", "")
@@ -621,10 +622,9 @@ def _calculate_authority(payload: Dict) -> float:
 
     if domain in high_authority_domains:
         return 0.9
-    elif "github" in url or "stackoverflow" in url:
+    if "github" in url or "stackoverflow" in url:
         return 0.8
-    else:
-        return 0.6
+    return 0.6
 
 
 def _calculate_completeness(content: str) -> float:
@@ -665,24 +665,24 @@ def _calculate_readability(content: str) -> float:
 
 
 async def _apply_reranking_strategy(
-    results: List[Dict],
+    results: list[dict],
     query: str,
     strategy: str,
-    quality_factors: Optional[Dict[str, float]],
+    quality_factors: dict[str, float] | None,
     ctx,
-) -> List[Dict]:
+) -> list[dict]:
     """Apply the specified reranking strategy."""
     if strategy == "semantic_similarity":
         return await _semantic_similarity_reranking(results, query, ctx)
-    elif strategy == "quality_score":
+    if strategy == "quality_score":
         return await _quality_score_reranking(results, quality_factors, ctx)
-    else:  # hybrid
-        return await _hybrid_reranking(results, query, quality_factors, ctx)
+    # hybrid
+    return await _hybrid_reranking(results, query, quality_factors, ctx)
 
 
 async def _semantic_similarity_reranking(
-    results: List[Dict], query: str, ctx
-) -> List[Dict]:
+    results: list[dict], query: str, ctx
+) -> list[dict]:
     """Rerank based on semantic similarity."""
     # Sort by semantic relevance from quality assessment
     reranked = sorted(
@@ -708,8 +708,8 @@ async def _semantic_similarity_reranking(
 
 
 async def _quality_score_reranking(
-    results: List[Dict], quality_factors: Optional[Dict[str, float]], ctx
-) -> List[Dict]:
+    results: list[dict], quality_factors: dict[str, float] | None, ctx
+) -> list[dict]:
     """Rerank based on overall quality score."""
     weights = quality_factors or _get_default_quality_weights()
 
@@ -744,8 +744,8 @@ async def _quality_score_reranking(
 
 
 async def _hybrid_reranking(
-    results: List[Dict], query: str, quality_factors: Optional[Dict[str, float]], ctx
-) -> List[Dict]:
+    results: list[dict], query: str, quality_factors: dict[str, float] | None, ctx
+) -> list[dict]:
     """Apply hybrid reranking combining multiple factors."""
     # Combine original score, semantic relevance, and quality
     for result in results:
@@ -787,7 +787,7 @@ async def _hybrid_reranking(
     return reranked
 
 
-def _get_default_quality_weights() -> Dict[str, float]:
+def _get_default_quality_weights() -> dict[str, float]:
     """Get default weights for quality factors."""
     return {
         "semantic_relevance": 0.3,
@@ -800,8 +800,8 @@ def _get_default_quality_weights() -> Dict[str, float]:
 
 
 def _calculate_reranking_metrics(
-    original_results: List[Dict], reranked_results: List[Dict], final_limit: int
-) -> Dict[str, Any]:
+    original_results: list[dict], reranked_results: list[dict], final_limit: int
+) -> dict[str, Any]:
     """Calculate metrics for reranking effectiveness."""
     # Calculate ranking changes
     rank_changes = []
@@ -840,8 +840,8 @@ def _calculate_reranking_metrics(
 
 
 async def _generate_reranking_insights(
-    query: str, original_results: List[Dict], reranked_results: List[Dict], ctx
-) -> Dict[str, Any]:
+    query: str, original_results: list[dict], reranked_results: list[dict], ctx
+) -> dict[str, Any]:
     """Generate insights for reranking optimization."""
     insights = {
         "reranking_effectiveness": {
@@ -882,7 +882,7 @@ async def _generate_reranking_insights(
     return insights
 
 
-def _calculate_quality_correlation(results: List[Dict]) -> float:
+def _calculate_quality_correlation(results: list[dict]) -> float:
     """Calculate correlation between ranking position and quality scores."""
     if len(results) < 3:
         return 0.0
@@ -903,8 +903,8 @@ def _calculate_quality_correlation(results: List[Dict]) -> float:
 
 
 async def _analyze_optimal_criteria_weights(
-    query: str, results: List[Dict], ctx
-) -> Dict[str, float]:
+    query: str, results: list[dict], ctx
+) -> dict[str, float]:
     """Analyze optimal criteria weights based on query and results."""
     # Simple heuristic for weight optimization
     query_words = query.lower().split()
@@ -935,12 +935,12 @@ async def _analyze_optimal_criteria_weights(
         weights["completeness"] = 0.05
 
     if ctx:
-        await ctx.debug(f"Optimized criteria weights based on query characteristics")
+        await ctx.debug("Optimized criteria weights based on query characteristics")
 
     return weights
 
 
-def _get_default_criteria_weights() -> Dict[str, float]:
+def _get_default_criteria_weights() -> dict[str, float]:
     """Get default weights for multi-criteria ranking."""
     return {
         "semantic_relevance": 0.3,
@@ -952,8 +952,8 @@ def _get_default_criteria_weights() -> Dict[str, float]:
 
 
 async def _apply_comprehensive_assessment(
-    results: List[Dict], query: str, weights: Dict[str, float], ctx
-) -> List[Dict]:
+    results: list[dict], query: str, weights: dict[str, float], ctx
+) -> list[dict]:
     """Apply comprehensive multi-criteria assessment."""
     assessed_results = await _apply_quality_assessment(results, query, ctx)
 
@@ -976,8 +976,8 @@ async def _apply_comprehensive_assessment(
 
 
 async def _apply_multi_criteria_ranking(
-    results: List[Dict], weights: Dict[str, float], ctx
-) -> List[Dict]:
+    results: list[dict], weights: dict[str, float], ctx
+) -> list[dict]:
     """Apply multi-criteria ranking to results."""
     # Sort by multi-criteria score
     ranked_results = sorted(
@@ -999,10 +999,10 @@ async def _apply_multi_criteria_ranking(
 
 
 def _calculate_adaptation_metrics(
-    original_weights: Optional[Dict[str, float]],
-    optimal_weights: Dict[str, float],
-    results: List[Dict],
-) -> Dict[str, Any]:
+    original_weights: dict[str, float] | None,
+    optimal_weights: dict[str, float],
+    results: list[dict],
+) -> dict[str, Any]:
     """Calculate metrics for weight adaptation."""
     # Calculate weight changes if original weights provided
     weight_changes = {}
@@ -1036,8 +1036,8 @@ def _calculate_adaptation_metrics(
 
 
 async def _generate_multi_criteria_insights(
-    query: str, optimal_weights: Dict[str, float], results: List[Dict], ctx
-) -> Dict[str, Any]:
+    query: str, optimal_weights: dict[str, float], results: list[dict], ctx
+) -> dict[str, Any]:
     """Generate insights for multi-criteria optimization."""
     insights = {
         "weight_analysis": {
@@ -1070,7 +1070,7 @@ async def _generate_multi_criteria_insights(
     return insights
 
 
-def _analyze_top_criteria_consistency(results: List[Dict]) -> float:
+def _analyze_top_criteria_consistency(results: list[dict]) -> float:
     """Analyze consistency of top-performing criteria across results."""
     if len(results) < 5:
         return 1.0
@@ -1096,13 +1096,13 @@ def _analyze_top_criteria_consistency(results: List[Dict]) -> float:
 
 
 async def _apply_contextual_assessment(
-    results: List[Dict],
+    results: list[dict],
     query: str,
-    context_query: Optional[str],
-    context_embeddings: Optional[List[float]],
+    context_query: str | None,
+    context_embeddings: list[float] | None,
     embedding_manager,
     ctx,
-) -> List[Dict]:
+) -> list[dict]:
     """Apply contextual assessment to results."""
     assessed_results = []
 
@@ -1144,12 +1144,12 @@ async def _apply_contextual_assessment(
     return assessed_results
 
 
-def _calculate_cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
+def _calculate_cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
     """Calculate cosine similarity between two vectors."""
     if len(vec1) != len(vec2):
         return 0.0
 
-    dot_product = sum(a * b for a, b in zip(vec1, vec2))
+    dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=False))
     magnitude1 = sum(a * a for a in vec1) ** 0.5
     magnitude2 = sum(b * b for b in vec2) ** 0.5
 
@@ -1160,8 +1160,8 @@ def _calculate_cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
 
 
 async def _apply_contextual_reranking(
-    results: List[Dict], context_weight: float, ctx
-) -> List[Dict]:
+    results: list[dict], context_weight: float, ctx
+) -> list[dict]:
     """Apply contextual reranking to results."""
     # Calculate contextual scores
     for result in results:
@@ -1197,8 +1197,8 @@ async def _apply_contextual_reranking(
 
 
 def _calculate_contextual_metrics(
-    original_results: List[Dict], reranked_results: List[Dict], context_weight: float
-) -> Dict[str, Any]:
+    original_results: list[dict], reranked_results: list[dict], context_weight: float
+) -> dict[str, Any]:
     """Calculate metrics for contextual reranking."""
     # Calculate ranking changes
     rank_changes = []

@@ -690,7 +690,7 @@ incremental = true
 follow_imports = "normal"           # Changed from skip for better analysis
 follow_imports_for_stubs = true
 skip_version_check = true
-fast_parser = true
+
 
 # Additional checks
 warn_incomplete_stub = true

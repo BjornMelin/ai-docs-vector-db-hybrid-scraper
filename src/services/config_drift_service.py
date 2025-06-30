@@ -10,7 +10,7 @@ import logging
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
-from src.config.core import get_config
+from src.config import get_config
 from src.config.drift_detection import (
     ConfigDriftDetector,
     DriftDetectionConfig as CoreDriftDetectionConfig,
@@ -104,7 +104,7 @@ class ConfigDriftService:
 
         try:
             # Import here to avoid circular dependency
-            from src.services.task_queue.tasks import create_task  # noqa: PLC0415
+            from src.services.task_queue.tasks import create_task
 
             # Create task for taking configuration snapshots
             await create_task(
@@ -126,7 +126,7 @@ class ConfigDriftService:
 
         try:
             # Import here to avoid circular dependency
-            from src.services.task_queue.tasks import create_task  # noqa: PLC0415
+            from src.services.task_queue.tasks import create_task
 
             # Create task for comparing configurations
             await create_task(
@@ -348,7 +348,7 @@ class ConfigDriftService:
                 )  # TODO: Convert f-string to logging format
 
             # Import here to avoid circular dependency
-            from src.services.task_queue.tasks import create_task  # noqa: PLC0415
+            from src.services.task_queue.tasks import create_task
 
             # Create a task to track the remediation
             await create_task(

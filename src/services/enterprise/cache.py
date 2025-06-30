@@ -6,7 +6,7 @@ for enterprise deployments.
 
 import logging
 import time
-from typing import Any, Optional, 
+from typing import Any, Optional
 
 from src.architecture.service_factory import BaseService
 

@@ -45,7 +45,7 @@ def _abort_profile_not_found(profile: str, available_profiles: list[str]) -> Non
     console.print(
         f"[red]Profile '{profile}' not found. Available: {', '.join(available_profiles)}[/red]"
     )
-    raise click.Abort()
+    raise click.Abort
 
 
 class ConfigurationWizard:
@@ -348,7 +348,7 @@ class ConfigurationWizard:
 
         if not ready:
             self.console.print("Setup cancelled.")
-            raise click.Abort()
+            raise click.Abort
 
         try:
             # Step 1: Profile Selection (unless pre-selected)
@@ -394,14 +394,14 @@ class ConfigurationWizard:
             # Step 5: Success Message
             self._show_success_message(config_path)
 
-            return config_path
-
         except KeyboardInterrupt:
             self.console.print("\n[yellow]Setup cancelled by user.[/yellow]")
-            raise click.Abort() from None
+            raise click.Abort from None
         except Exception as e:
             self.console.print(f"\n[red]Setup failed: {e}[/red]")
             raise
+        else:
+            return config_path
 
     def _show_success_message(self, config_path: Path) -> None:
         """Show final success message with next steps."""
@@ -528,7 +528,7 @@ def setup(
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Setup cancelled by user.[/yellow]")
-        raise click.Abort() from None
+        raise click.Abort from None
     except Exception as e:
         console.print(f"\n[red]Setup failed: {e}[/red]")
-        raise click.Abort() from e
+        raise click.Abort from e

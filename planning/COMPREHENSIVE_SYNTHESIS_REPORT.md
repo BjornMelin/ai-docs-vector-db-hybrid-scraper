@@ -152,7 +152,7 @@ This comprehensive synthesis report consolidates findings from multiple research
 
 ## Infrastructure Modernization Research Results (H1-H5)
 
-**RESEARCH LOCATION:** `subagents/infrastructure-research/`
+**RESEARCH LOCATION:** `planning/infrastructure-research/`
 
 ### 🚀 COMPREHENSIVE INFRASTRUCTURE MODERNIZATION STRATEGY
 **Unanimous Consensus:** 95%+ confidence across H1-H5 research agents

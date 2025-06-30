@@ -12,7 +12,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
-from src.config.core import Config
+from src.config.settings import Settings
 
 
 console = Console()
@@ -59,7 +59,7 @@ class TemplateManager:
                     template_data, template_name
                 )
 
-            except Exception as e:
+            except (OSError, json.JSONDecodeError, ValueError) as e:
                 console.print(f"[red]Error loading template {template_file}: {e}[/red]")
 
     def _extract_metadata(
@@ -103,7 +103,7 @@ class TemplateManager:
         return metadata_map.get(
             name,
             {
-                "description": f"Configuration template for {name}",
+                "description": f"Settingsuration template for {name}",
                 "use_case": f"{name.title()} deployment",
                 "features": "Custom configuration template",
             },
@@ -124,15 +124,15 @@ class TemplateManager:
     def validate_template(
         self, template_data: dict[str, Any]
     ) -> tuple[bool, str | None]:
-        """Validate template data against Config model.
+        """Validate template data against Settings model.
 
         Returns:
             Tuple of (is_valid, error_message)
 
         """
         try:
-            Config(**template_data)
-        except Exception as e:
+            Settings(**template_data)
+        except (ValueError, TypeError) as e:
             return False, str(e)
         else:
             return True, None
@@ -144,7 +144,7 @@ class TemplateManager:
             return
 
         table = Table(
-            title="📋 Available Configuration Templates",
+            title="📋 Available Settingsuration Templates",
             show_header=True,
             header_style="bold cyan",
             border_style="cyan",
@@ -254,15 +254,15 @@ class TemplateManager:
 
     def create_config_from_template(
         self, template_name: str, overrides: dict[str, Any] | None = None
-    ) -> Config:
-        """Create a Config object from template with optional overrides.
+    ) -> Settings:
+        """Create a Settings object from template with optional overrides.
 
         Args:
             template_name: Name of the template to use
             overrides: Optional dictionary of values to override in template
 
         Returns:
-            Config object created from template
+            Settings object created from template
 
         Raises:
             ValueError: If template not found or validation fails
@@ -279,17 +279,17 @@ class TemplateManager:
 
         # Validate and create config
         try:
-            return Config(**template_data)
+            return Settings(**template_data)
         except Exception as e:
             msg = f"Failed to create config from template: {e}"
             raise ValueError(msg) from e
 
-    def save_template(self, name: str, config: Config, description: str = "") -> Path:
-        """Save a Config object as a new template.
+    def save_template(self, name: str, config: Settings, description: str = "") -> Path:
+        """Save a Settings object as a new template.
 
         Args:
             name: Name for the new template
-            config: Config object to save
+            config: Settings object to save
             description: Optional description for the template
 
         Returns:

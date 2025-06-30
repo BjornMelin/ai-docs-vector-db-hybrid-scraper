@@ -7,6 +7,7 @@ and autonomous document processing enhancement.
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -33,10 +34,10 @@ def register_tools(mcp, client_manager: ClientManager):
     @mcp.tool()
     async def intelligent_tier_selection(
         url: str,
-        content_type_hint: Optional[str] = None,
-        performance_requirements: Optional[Dict[str, Any]] = None,
+        content_type_hint: str | None = None,
+        performance_requirements: dict[str, Any] | None = None,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Select optimal crawling tier based on ML-powered analysis.
 
         Implements I3 research findings for intelligent tier selection with
@@ -117,10 +118,10 @@ def register_tools(mcp, client_manager: ClientManager):
     @mcp.tool()
     async def enhanced_5_tier_crawl(
         url: str,
-        tier: Optional[str] = None,
+        tier: str | None = None,
         autonomous_optimization: bool = True,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform enhanced 5-tier crawling with autonomous optimization.
 
         Implements I3 research findings with intelligent tier selection,
@@ -217,7 +218,7 @@ def register_tools(mcp, client_manager: ClientManager):
             }
 
     @mcp.tool()
-    async def get_crawling_capabilities() -> Dict[str, Any]:
+    async def get_crawling_capabilities() -> dict[str, Any]:
         """Get 5-tier crawling capabilities and status.
 
         Returns:
@@ -297,10 +298,9 @@ def _analyze_domain_complexity(url: str) -> str:
     complex_indicators = ["auth", "login", "admin", "api", "spa", "app"]
     if any(indicator in domain for indicator in complex_indicators):
         return "high"
-    elif len(domain.split(".")) > 3:
+    if len(domain.split(".")) > 3:
         return "medium"
-    else:
-        return "low"
+    return "low"
 
 
 def _predict_js_requirements(url: str) -> bool:
@@ -317,18 +317,17 @@ def _assess_anti_detection_needs(url: str) -> bool:
 
 
 def _select_optimal_tier(
-    analysis: Dict[str, Any], requirements: Optional[Dict[str, Any]]
+    analysis: dict[str, Any], requirements: dict[str, Any] | None
 ) -> str:
     """Select optimal tier based on analysis and requirements."""
     # Simple tier selection logic (can be enhanced with ML model)
     if analysis["anti_detection_needed"]:
         return "firecrawl"
-    elif analysis["js_requirements"] and analysis["domain_complexity"] == "high":
+    if analysis["js_requirements"] and analysis["domain_complexity"] == "high":
         return "playwright"
-    elif analysis["js_requirements"]:
+    if analysis["js_requirements"]:
         return "crawl4ai"
-    else:
-        return "lightweight"
+    return "lightweight"
 
 
 def _predict_latency(tier: str) -> float:
@@ -343,7 +342,7 @@ def _predict_latency(tier: str) -> float:
     return latency_map.get(tier, 1000.0)
 
 
-def _assess_content_quality(crawl_result: Dict[str, Any]) -> Dict[str, Any]:
+def _assess_content_quality(crawl_result: dict[str, Any]) -> dict[str, Any]:
     """Assess content quality from crawl results."""
     content = crawl_result.get("content", "")
 
@@ -359,10 +358,10 @@ def _assess_content_quality(crawl_result: Dict[str, Any]) -> Dict[str, Any]:
 
 
 async def _apply_autonomous_enhancements(
-    crawl_result: Dict[str, Any],
-    quality_metrics: Dict[str, Any],
-    ctx: Optional[Any] = None,
-) -> Dict[str, Any]:
+    crawl_result: dict[str, Any],
+    quality_metrics: dict[str, Any],
+    ctx: Any | None = None,
+) -> dict[str, Any]:
     """Apply autonomous enhancements to crawl results."""
     enhanced_result = crawl_result.copy()
     enhancements = []

@@ -30,8 +30,7 @@ class BenchmarkReporter:
             HTML report string
 
         """
-        html_content = self._build_html_template(results)
-        return html_content
+        return self._build_html_template(results)
 
     def _build_html_template(self, results: Any) -> str:
         """Build HTML template with benchmark results."""
@@ -53,7 +52,7 @@ class BenchmarkReporter:
         )
 
         # Build complete HTML
-        html = f"""
+        html: str = f"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -839,7 +838,5 @@ class BenchmarkReporter:
                 f.write(csv_report)
             saved_files["csv"] = str(csv_file)
 
-        logger.info(
-            f"Saved benchmark reports: {list(saved_files.keys())}"
-        )  # TODO: Convert f-string to logging format
+        logger.info("Saved benchmark reports: %s", list(saved_files.keys()))
         return saved_files

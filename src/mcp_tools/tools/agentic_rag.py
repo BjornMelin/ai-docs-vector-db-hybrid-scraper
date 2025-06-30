@@ -9,9 +9,9 @@ import logging
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
+from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
-from fastmcp import FastMCP
 from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
 from src.services.agents import (

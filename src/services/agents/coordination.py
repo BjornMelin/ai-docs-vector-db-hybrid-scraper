@@ -109,12 +109,20 @@ class AgentCoordinationResult(BaseModel):
 
     coordination_id: str = Field(..., description="Unique coordination identifier")
     success: bool = Field(..., description="Whether coordination succeeded")
-    strategy_used: CoordinationStrategy = Field(..., description="Coordination strategy used")
+    strategy_used: CoordinationStrategy = Field(
+        ..., description="Coordination strategy used"
+    )
     execution_time_seconds: float = Field(..., description="Total execution time")
-    task_results: dict[str, Any] = Field(default_factory=dict, description="Individual task results")
-    metrics: CoordinationMetrics = Field(default_factory=CoordinationMetrics, description="Performance metrics")
-    error_message: Optional[str] = Field(None, description="Error message if failed")
-    agent_assignments: list[AgentAssignment] = Field(default_factory=list, description="Agent task assignments")
+    task_results: dict[str, Any] = Field(
+        default_factory=dict, description="Individual task results"
+    )
+    metrics: CoordinationMetrics = Field(
+        default_factory=CoordinationMetrics, description="Performance metrics"
+    )
+    error_message: str | None = Field(None, description="Error message if failed")
+    agent_assignments: list[AgentAssignment] = Field(
+        default_factory=list, description="Agent task assignments"
+    )
 
 
 class ParallelAgentCoordinator:

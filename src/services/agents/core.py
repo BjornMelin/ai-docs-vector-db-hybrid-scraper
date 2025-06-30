@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 try:
@@ -107,8 +107,7 @@ class BaseAgentDependencies(BaseModel):
     config: Any = Field(..., description="Unified configuration")
     session_state: AgentState = Field(..., description="Session state")
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class BaseAgent(ABC):

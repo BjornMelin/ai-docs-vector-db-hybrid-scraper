@@ -1,30 +1,71 @@
-import typing
 """Vector search models for Qdrant Query API and search operations.
 
 This module consolidates all models related to vector search, HNSW configuration,
 search stages, prefetch configurations, and search parameters.
 """
 
+import math
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
-from pydantic import field_validator
-from pydantic import model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from ..config import ABTestVariant
-from ..config import FusionAlgorithm
-from ..config import ModelType
-from ..config import QueryComplexity
-from ..config import QueryType
-from ..config import SearchAccuracy
-from ..config import VectorType
+from src.config import (
+    ABTestVariant,
+    FusionAlgorithm,
+    ModelType,
+    QueryComplexity,
+    QueryType,
+    SearchAccuracy,
+    VectorType,
+)
 
 
 class SearchStage(BaseModel):
     """Configuration for a single stage in multi-stage retrieval."""
 
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
+
     query_vector: list[float] = Field(..., description="Vector for this stage")
+
+    @field_validator("query_vector", mode="before")
+    @classmethod
+    def validate_vector_security(cls, v: list[float]) -> list[float]:
+        """Validate vector for DoS protection and data integrity."""
+        if not isinstance(v, list):
+            raise ValueError("Vector must be a list of floats")
+
+        if not v:  # Empty vector check
+            raise ValueError("Vector cannot be empty (security: DoS prevention)")
+
+        if len(v) > 4096:  # Industry standard maximum
+            raise ValueError(
+                f"Vector dimensions exceed maximum allowed (4096), got {len(v)} (security: DoS prevention)"
+            )
+
+        if len(v) < 1:
+            raise ValueError(
+                "Vector must have at least 1 dimension (security: DoS prevention)"
+            )
+
+        # Validate all values are finite floats
+        for i, val in enumerate(v):
+            if not isinstance(val, (int, float)):
+                raise ValueError(
+                    f"Vector element at index {i} must be numeric, got {type(val).__name__} (security: type validation)"
+                )
+
+            float_val = float(val)
+            if math.isnan(float_val) or math.isinf(float_val):
+                raise ValueError(
+                    f"Vector element at index {i} contains invalid value (NaN/Inf) (security: data integrity)"
+                )
+
+        return [float(x) for x in v]
+
     vector_name: str = Field(..., description="Vector field name (dense, sparse, etc.)")
     vector_type: VectorType = Field(..., description="Type of vector for optimization")
     limit: int = Field(..., description="Number of results to retrieve in this stage")
@@ -38,6 +79,12 @@ class SearchStage(BaseModel):
 
 class PrefetchConfig(BaseModel):
     """Optimized prefetch configuration based on research findings."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     # Optimal prefetch limits based on vector type
     sparse_multiplier: float = Field(
@@ -62,16 +109,19 @@ class PrefetchConfig(BaseModel):
         if vector_type == VectorType.SPARSE:
             calculated = int(final_limit * self.sparse_multiplier)
             return min(calculated, self.max_sparse_limit)
-        elif vector_type == VectorType.HYDE:
-            calculated = int(final_limit * self.hyde_multiplier)
-            return min(calculated, self.max_hyde_limit)
-        else:  # DENSE
-            calculated = int(final_limit * self.dense_multiplier)
-            return min(calculated, self.max_dense_limit)
+        # For DENSE vectors (including HyDE which uses dense embeddings)
+        calculated = int(final_limit * self.dense_multiplier)
+        return min(calculated, self.max_dense_limit)
 
 
 class SearchParams(BaseModel):
     """HNSW search parameters optimized for different accuracy levels."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     accuracy_level: SearchAccuracy = Field(
         SearchAccuracy.BALANCED, description="Desired accuracy level"
@@ -82,19 +132,22 @@ class SearchParams(BaseModel):
     @classmethod
     def from_accuracy_level(cls, accuracy_level: SearchAccuracy) -> "SearchParams":
         """Create SearchParams from accuracy level."""
-        params_map = {
-            SearchAccuracy.FAST: {"hnsw_ef": 50, "exact": False},
-            SearchAccuracy.BALANCED: {"hnsw_ef": 100, "exact": False},
-            SearchAccuracy.ACCURATE: {"hnsw_ef": 200, "exact": False},
-            SearchAccuracy.EXACT: {"exact": True},
-        }
-
-        config = params_map.get(accuracy_level, params_map[SearchAccuracy.BALANCED])
-        return cls(accuracy_level=accuracy_level, **config)
+        if accuracy_level == SearchAccuracy.FAST:
+            return cls(accuracy_level=accuracy_level, hnsw_ef=50, exact=False)
+        if accuracy_level == SearchAccuracy.PRECISE:
+            return cls(accuracy_level=accuracy_level, hnsw_ef=200, exact=False)
+        # BALANCED
+        return cls(accuracy_level=accuracy_level, hnsw_ef=100, exact=False)
 
 
 class FusionConfig(BaseModel):
     """Configuration for fusion algorithm selection."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     algorithm: FusionAlgorithm = Field(
         FusionAlgorithm.RRF, description="Fusion algorithm to use"
@@ -109,7 +162,7 @@ class FusionConfig(BaseModel):
         fusion_map = {
             "hybrid": FusionAlgorithm.RRF,  # Best for combining dense+sparse
             "multi_stage": FusionAlgorithm.RRF,  # Good for multiple strategies
-            "reranking": FusionAlgorithm.DBSF,  # Better for similar vectors
+            "reranking": FusionAlgorithm.WEIGHTED,  # Better for similar vectors
             "hyde": FusionAlgorithm.RRF,  # Good for hypothetical docs
         }
 
@@ -119,13 +172,19 @@ class FusionConfig(BaseModel):
 class MultiStageSearchRequest(BaseModel):
     """Request configuration for multi-stage retrieval."""
 
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
+
     collection_name: str = Field(..., description="Target collection")
     stages: list[SearchStage] = Field(..., description="Search stages to execute")
     fusion_config: FusionConfig = Field(
-        default_factory=FusionConfig, description="Fusion configuration"
+        default_factory=lambda: FusionConfig(), description="Fusion configuration"
     )
     search_params: SearchParams = Field(
-        default_factory=SearchParams, description="Search parameters"
+        default_factory=lambda: SearchParams(), description="Search parameters"
     )
     limit: int = Field(10, description="Final number of results to return")
     score_threshold: float = Field(0.0, description="Minimum score threshold")
@@ -134,6 +193,12 @@ class MultiStageSearchRequest(BaseModel):
 class HyDESearchRequest(BaseModel):
     """Request configuration for HyDE (Hypothetical Document Embeddings) search."""
 
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
+
     collection_name: str = Field(..., description="Target collection")
     query: str = Field(..., description="Original query text")
     num_hypothetical_docs: int = Field(
@@ -141,31 +206,115 @@ class HyDESearchRequest(BaseModel):
     )
     limit: int = Field(10, description="Final number of results to return")
     fusion_config: FusionConfig = Field(
-        default_factory=FusionConfig, description="Fusion configuration"
+        default_factory=lambda: FusionConfig(), description="Fusion configuration"
     )
     search_params: SearchParams = Field(
-        default_factory=SearchParams, description="Search parameters"
+        default_factory=lambda: SearchParams(), description="Search parameters"
     )
 
 
-class FilteredSearchRequest(BaseModel):
-    """Request configuration for filtered search with indexed payload fields."""
+class BasicFilteredSearchRequest(BaseModel):
+    """Basic request configuration for filtered search with indexed payload fields."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     collection_name: str = Field(..., description="Target collection")
     query_vector: list[float] = Field(..., description="Query vector")
+
+    @field_validator("query_vector", mode="before")
+    @classmethod
+    def validate_vector_security(cls, v: list[float]) -> list[float]:
+        """Validate vector for DoS protection and data integrity."""
+        if not isinstance(v, list):
+            raise ValueError("Vector must be a list of floats")
+
+        if not v:  # Empty vector check
+            raise ValueError("Vector cannot be empty (security: DoS prevention)")
+
+        if len(v) > 4096:  # Industry standard maximum
+            raise ValueError(
+                f"Vector dimensions exceed maximum allowed (4096), got {len(v)} (security: DoS prevention)"
+            )
+
+        if len(v) < 1:
+            raise ValueError(
+                "Vector must have at least 1 dimension (security: DoS prevention)"
+            )
+
+        # Validate all values are finite floats
+        for i, val in enumerate(v):
+            if not isinstance(val, (int, float)):
+                raise ValueError(
+                    f"Vector element at index {i} must be numeric, got {type(val).__name__} (security: type validation)"
+                )
+
+            float_val = float(val)
+            if math.isnan(float_val) or math.isinf(float_val):
+                raise ValueError(
+                    f"Vector element at index {i} contains invalid value (NaN/Inf) (security: data integrity)"
+                )
+
+        return [float(x) for x in v]
+
     filters: dict[str, Any] = Field(..., description="Filters to apply")
     limit: int = Field(10, description="Number of results to return")
     search_params: SearchParams = Field(
-        default_factory=SearchParams, description="Search parameters"
+        default_factory=lambda: SearchParams(), description="Search parameters"
     )
     score_threshold: float = Field(0.0, description="Minimum score threshold")
 
 
-class HybridSearchRequest(BaseModel):
-    """Request configuration for hybrid dense+sparse vector search."""
+class BasicHybridSearchRequest(BaseModel):
+    """Basic request configuration for hybrid dense+sparse vector search."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     collection_name: str = Field(..., description="Target collection")
     dense_vector: list[float] = Field(..., description="Dense query vector")
+
+    @field_validator("dense_vector", mode="before")
+    @classmethod
+    def validate_vector_security(cls, v: list[float]) -> list[float]:
+        """Validate vector for DoS protection and data integrity."""
+        if not isinstance(v, list):
+            raise ValueError("Vector must be a list of floats")
+
+        if not v:  # Empty vector check
+            raise ValueError("Vector cannot be empty (security: DoS prevention)")
+
+        if len(v) > 4096:  # Industry standard maximum
+            raise ValueError(
+                f"Vector dimensions exceed maximum allowed (4096), got {len(v)} (security: DoS prevention)"
+            )
+
+        if len(v) < 1:
+            raise ValueError(
+                "Vector must have at least 1 dimension (security: DoS prevention)"
+            )
+
+        # Validate all values are finite floats
+        for i, val in enumerate(v):
+            if not isinstance(val, (int, float)):
+                raise ValueError(
+                    f"Vector element at index {i} must be numeric, got {type(val).__name__} (security: type validation)"
+                )
+
+            float_val = float(val)
+            if math.isnan(float_val) or math.isinf(float_val):
+                raise ValueError(
+                    f"Vector element at index {i} contains invalid value (NaN/Inf) (security: data integrity)"
+                )
+
+        return [float(x) for x in v]
+
     sparse_vector: dict[str, Any] | None = Field(
         None, description="Sparse query vector (indices and values)"
     )
@@ -177,13 +326,28 @@ class HybridSearchRequest(BaseModel):
     )
     limit: int = Field(10, description="Final number of results to return")
     search_params: SearchParams = Field(
-        default_factory=SearchParams, description="Search parameters"
+        default_factory=lambda: SearchParams(), description="Search parameters"
     )
     score_threshold: float = Field(0.0, description="Minimum score threshold")
+
+    @model_validator(mode="after")
+    def validate_weights_sum_to_one(self) -> "BasicHybridSearchRequest":
+        """Ensure dense and sparse weights sum to approximately 1.0."""
+        total = self.dense_weight + self.sparse_weight
+        if not (0.95 <= total <= 1.05):  # Allow small tolerance for floating point
+            msg = f"Dense and sparse weights must sum to ~1.0, got {total:.3f}"
+            raise ValueError(msg)
+        return self
 
 
 class SearchResult(BaseModel):
     """Standardized search result format."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     id: str = Field(..., description="Document ID")
     score: float = Field(..., description="Relevance score")
@@ -192,9 +356,53 @@ class SearchResult(BaseModel):
     )
     vector: list[float] | None = Field(None, description="Document vector if requested")
 
+    @field_validator("vector", mode="before")
+    @classmethod
+    def validate_vector_security(cls, v: list[float] | None) -> list[float] | None:
+        """Validate vector for DoS protection and data integrity."""
+        if v is None:
+            return v
+
+        if not isinstance(v, list):
+            raise ValueError("Vector must be a list of floats")
+
+        if not v:  # Empty vector check
+            raise ValueError("Vector cannot be empty (security: DoS prevention)")
+
+        if len(v) > 4096:  # Industry standard maximum
+            raise ValueError(
+                f"Vector dimensions exceed maximum allowed (4096), got {len(v)} (security: DoS prevention)"
+            )
+
+        if len(v) < 1:
+            raise ValueError(
+                "Vector must have at least 1 dimension (security: DoS prevention)"
+            )
+
+        # Validate all values are finite floats
+        for i, val in enumerate(v):
+            if not isinstance(val, (int, float)):
+                raise ValueError(
+                    f"Vector element at index {i} must be numeric, got {type(val).__name__} (security: type validation)"
+                )
+
+            float_val = float(val)
+            if math.isnan(float_val) or math.isinf(float_val):
+                raise ValueError(
+                    f"Vector element at index {i} contains invalid value (NaN/Inf) (security: data integrity)"
+                )
+
+        return [float(x) for x in v]
+
 
 class SearchResponse(BaseModel):
     """Standardized search response format."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     results: list[SearchResult] = Field(
         default_factory=list, description="Search results"
@@ -211,6 +419,12 @@ class SearchResponse(BaseModel):
 class RetrievalMetrics(BaseModel):
     """Metrics for search and retrieval operations."""
 
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
+
     query_vector_time_ms: float = Field(
         0.0, description="Time to generate query vector"
     )
@@ -224,6 +438,12 @@ class RetrievalMetrics(BaseModel):
 
 class AdaptiveSearchParams(BaseModel):
     """Parameters for adaptive search optimization."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     time_budget_ms: int = Field(
         default=100, gt=0, description="Maximum time budget for search"
@@ -239,6 +459,12 @@ class AdaptiveSearchParams(BaseModel):
 class IndexingRequest(BaseModel):
     """Request for creating payload indexes."""
 
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
+
     collection_name: str = Field(..., description="Target collection")
     field_name: str = Field(..., description="Field to index")
     field_type: str = Field(
@@ -252,6 +478,12 @@ class IndexingRequest(BaseModel):
 
 class CollectionStats(BaseModel):
     """Statistics for a collection."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     name: str = Field(..., description="Collection name")
     points_count: int = Field(0, description="Number of points in collection")
@@ -268,6 +500,12 @@ class CollectionStats(BaseModel):
 class OptimizationRequest(BaseModel):
     """Request for collection optimization."""
 
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
+
     collection_name: str = Field(..., description="Target collection")
     optimization_type: str = Field(
         default="auto", description="Type of optimization (auto, indexing, hnsw)"
@@ -280,14 +518,22 @@ class OptimizationRequest(BaseModel):
 class VectorSearchConfig(BaseModel):
     """Overall configuration for vector search operations."""
 
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
+
     default_prefetch: PrefetchConfig = Field(
-        default_factory=PrefetchConfig, description="Default prefetch configuration"
+        default_factory=lambda: PrefetchConfig(),
+        description="Default prefetch configuration",
     )
     default_search_params: SearchParams = Field(
-        default_factory=SearchParams, description="Default search parameters"
+        default_factory=lambda: SearchParams(), description="Default search parameters"
     )
     default_fusion: FusionConfig = Field(
-        default_factory=FusionConfig, description="Default fusion configuration"
+        default_factory=lambda: FusionConfig(),
+        description="Default fusion configuration",
     )
     enable_metrics: bool = Field(
         default=True, description="Enable search metrics collection"
@@ -303,6 +549,12 @@ class VectorSearchConfig(BaseModel):
 
 class QueryClassification(BaseModel):
     """Query classification results for adaptive search optimization."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     query_type: QueryType = Field(..., description="Primary query type")
     complexity_level: QueryComplexity = Field(..., description="Query complexity level")
@@ -326,6 +578,12 @@ class QueryClassification(BaseModel):
 class EffectivenessScore(BaseModel):
     """Effectiveness scoring for fusion weight optimization."""
 
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
+
     dense_effectiveness: float = Field(
         ..., ge=0.0, le=1.0, description="Dense retrieval effectiveness score"
     )
@@ -344,6 +602,12 @@ class EffectivenessScore(BaseModel):
 
 class AdaptiveFusionWeights(BaseModel):
     """Dynamic fusion weights based on query characteristics."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     dense_weight: float = Field(
         ..., ge=0.0, le=1.0, description="Weight for dense vector results"
@@ -367,19 +631,24 @@ class AdaptiveFusionWeights(BaseModel):
         None, description="Effectiveness score used for weight calculation"
     )
 
-    @field_validator("dense_weight", "sparse_weight")
-    @classmethod
-    def validate_weights_sum_to_one(cls, v, info):
+    @model_validator(mode="after")
+    def validate_weights_sum_to_one(self) -> "AdaptiveFusionWeights":
         """Ensure dense and sparse weights sum to approximately 1.0."""
-        if info.data and "dense_weight" in info.data:
-            total = info.data["dense_weight"] + v
-            if not (0.95 <= total <= 1.05):  # Allow small tolerance
-                raise ValueError("Dense and sparse weights should sum to ~1.0")
-        return v
+        total = self.dense_weight + self.sparse_weight
+        if not (0.95 <= total <= 1.05):  # Allow small tolerance
+            msg = f"Dense and sparse weights should sum to ~1.0, got {total:.3f}"
+            raise ValueError(msg)
+        return self
 
 
 class ModelSelectionStrategy(BaseModel):
     """Strategy for selecting optimal embedding models based on query."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     primary_model: str = Field(..., description="Primary embedding model to use")
     model_type: ModelType = Field(..., description="Type of the selected model")
@@ -404,6 +673,12 @@ class ModelSelectionStrategy(BaseModel):
 class SPLADEConfig(BaseModel):
     """Configuration for SPLADE sparse vector generation."""
 
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
+
     model_name: str = Field(
         default="naver/splade-cocondenser-ensembledistil",
         description="SPLADE model identifier",
@@ -423,6 +698,12 @@ class SPLADEConfig(BaseModel):
 
 class ABTestConfig(BaseModel):
     """Configuration for A/B testing different fusion strategies."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     experiment_name: str = Field(..., description="Name of the A/B test experiment")
     variants: list[ABTestVariant] = Field(..., description="List of test variants")
@@ -450,6 +731,12 @@ class ABTestConfig(BaseModel):
 class HybridSearchRequest(BaseModel):
     """Request for hybrid search with adaptive optimization."""
 
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
+
     collection_name: str = Field(..., description="Target collection")
     query: str = Field(..., description="Search query text")
     limit: int = Field(10, description="Number of results to return")
@@ -466,13 +753,13 @@ class HybridSearchRequest(BaseModel):
         default=True, description="Enable SPLADE sparse vector generation"
     )
     fusion_config: FusionConfig = Field(
-        default_factory=FusionConfig, description="Fusion configuration"
+        default_factory=lambda: FusionConfig(), description="Fusion configuration"
     )
     search_params: SearchParams = Field(
-        default_factory=SearchParams, description="Search parameters"
+        default_factory=lambda: SearchParams(), description="Search parameters"
     )
     splade_config: SPLADEConfig = Field(
-        default_factory=SPLADEConfig, description="SPLADE configuration"
+        default_factory=lambda: SPLADEConfig(), description="SPLADE configuration"
     )
     ab_test_config: ABTestConfig | None = Field(
         None, description="A/B testing configuration"
@@ -486,6 +773,12 @@ class HybridSearchRequest(BaseModel):
 
 class HybridSearchResponse(BaseModel):
     """Response from hybrid search with optimization metadata."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     results: list[SearchResult] = Field(
         default_factory=list, description="Search results"
@@ -506,7 +799,7 @@ class HybridSearchResponse(BaseModel):
         None, description="A/B test variant used"
     )
     retrieval_metrics: RetrievalMetrics = Field(
-        default_factory=RetrievalMetrics, description="Performance metrics"
+        default_factory=lambda: RetrievalMetrics(), description="Performance metrics"
     )
     optimization_applied: bool = Field(
         default=False, description="Whether optimization was applied"
@@ -518,6 +811,12 @@ class HybridSearchResponse(BaseModel):
 
 class QueryFeatures(BaseModel):
     """Extracted features from query for classification and optimization."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     query_length: int = Field(..., description="Number of words/tokens in query")
     has_code_keywords: bool = Field(
@@ -567,12 +866,19 @@ class TemporalSearchCriteria(BaseModel):
     def validate_temporal_criteria(self) -> "TemporalSearchCriteria":
         """Validate temporal criteria consistency."""
         if self.time_window and (self.start_date or self.end_date):
-            raise ValueError("Cannot specify both time_window and explicit dates")
+            msg = "Cannot specify both time_window and explicit dates"
+            raise ValueError(msg)
         return self
 
 
 class ContentTypeSearchCriteria(BaseModel):
     """Content type criteria for filtering by document type."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     allowed_types: list[str] = Field(
         default_factory=list, description="Allowed content types"
@@ -594,6 +900,12 @@ class ContentTypeSearchCriteria(BaseModel):
 class MetadataSearchCriteria(BaseModel):
     """Metadata search criteria with boolean logic support."""
 
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
+
     filters: dict[str, Any] = Field(
         default_factory=dict, description="Key-value filters"
     )
@@ -612,6 +924,12 @@ class MetadataSearchCriteria(BaseModel):
 
 class SimilarityThresholdCriteria(BaseModel):
     """Adaptive similarity threshold criteria."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     base_threshold: float = Field(
         0.6, ge=0.0, le=1.0, description="Base similarity threshold"
@@ -634,9 +952,50 @@ class SimilarityThresholdCriteria(BaseModel):
 class FilteredSearchRequest(BaseModel):
     """Filtered search request with advanced filtering capabilities."""
 
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
+
     collection_name: str = Field(..., description="Target collection")
     query_vector: list[float] = Field(..., description="Query vector")
     limit: int = Field(10, ge=1, le=1000, description="Number of results to return")
+
+    @field_validator("query_vector", mode="before")
+    @classmethod
+    def validate_vector_security(cls, v: list[float]) -> list[float]:
+        """Validate vector for DoS protection and data integrity."""
+        if not isinstance(v, list):
+            raise ValueError("Vector must be a list of floats")
+
+        if not v:  # Empty vector check
+            raise ValueError("Vector cannot be empty (security: DoS prevention)")
+
+        if len(v) > 4096:  # Industry standard maximum
+            raise ValueError(
+                f"Vector dimensions exceed maximum allowed (4096), got {len(v)} (security: DoS prevention)"
+            )
+
+        if len(v) < 1:
+            raise ValueError(
+                "Vector must have at least 1 dimension (security: DoS prevention)"
+            )
+
+        # Validate all values are finite floats
+        for i, val in enumerate(v):
+            if not isinstance(val, (int, float)):
+                raise ValueError(
+                    f"Vector element at index {i} must be numeric, got {type(val).__name__} (security: type validation)"
+                )
+
+            float_val = float(val)
+            if math.isnan(float_val) or math.isinf(float_val):
+                raise ValueError(
+                    f"Vector element at index {i} contains invalid value (NaN/Inf) (security: data integrity)"
+                )
+
+        return [float(x) for x in v]
 
     # Advanced filtering criteria
     temporal_criteria: TemporalSearchCriteria | None = Field(
@@ -659,7 +1018,7 @@ class FilteredSearchRequest(BaseModel):
 
     # Search parameters
     search_params: SearchParams = Field(
-        default_factory=SearchParams, description="Search parameters"
+        default_factory=lambda: SearchParams(), description="Search parameters"
     )
     enable_query_expansion: bool = Field(False, description="Enable query expansion")
     enable_result_clustering: bool = Field(
@@ -679,6 +1038,12 @@ class FilteredSearchRequest(BaseModel):
 
 class FilteredSearchResult(BaseModel):
     """Filtered search result with filtering and processing metadata."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     id: str = Field(..., description="Document ID")
     score: float = Field(..., description="Relevance score")
@@ -714,6 +1079,12 @@ class FilteredSearchResult(BaseModel):
 
 class FilteredSearchResponse(BaseModel):
     """Filtered search response with comprehensive metadata."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     results: list[FilteredSearchResult] = Field(
         default_factory=list, description="Filtered search results"
@@ -755,7 +1126,7 @@ class FilteredSearchResponse(BaseModel):
 
     # Performance metadata
     retrieval_metrics: RetrievalMetrics = Field(
-        default_factory=RetrievalMetrics, description="Performance metrics"
+        default_factory=lambda: RetrievalMetrics(), description="Performance metrics"
     )
     quality_metrics: dict[str, float] = Field(
         default_factory=dict, description="Quality metrics"
@@ -813,12 +1184,19 @@ class VectorSearchIntegrationConfig(BaseModel):
     def validate_config(self) -> "VectorSearchIntegrationConfig":
         """Validate integration configuration."""
         if self.enable_federated_search and not self.enable_query_processing:
-            raise ValueError("Federated search requires query processing to be enabled")
+            msg = "Federated search requires query processing to be enabled"
+            raise ValueError(msg)
         return self
 
 
 class IntegratedSearchRequest(BaseModel):
     """Unified search request integrating all advanced capabilities."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+    )
 
     # Core search parameters
     query: str = Field(..., description="Search query")
@@ -828,7 +1206,8 @@ class IntegratedSearchRequest(BaseModel):
 
     # Vector search configuration
     vector_search_config: VectorSearchConfig = Field(
-        default_factory=VectorSearchConfig, description="Vector search configuration"
+        default_factory=lambda: VectorSearchConfig(),
+        description="Vector search configuration",
     )
 
     # Advanced filtering
@@ -845,7 +1224,7 @@ class IntegratedSearchRequest(BaseModel):
 
     # Integration configuration
     integration_config: VectorSearchIntegrationConfig = Field(
-        default_factory=VectorSearchIntegrationConfig,
+        default_factory=lambda: VectorSearchIntegrationConfig(),
         description="Integration configuration",
     )
 
@@ -866,17 +1245,16 @@ __all__ = [
     "ABTestConfig",
     "AdaptiveFusionWeights",
     "AdaptiveSearchParams",
-    "HybridSearchRequest",
-    "HybridSearchResponse",
     "CollectionStats",
     "ContentTypeSearchCriteria",
     "EffectivenessScore",
     "FilteredSearchRequest",
-    "FilteredSearchResponse", 
+    "FilteredSearchResponse",
     "FilteredSearchResult",
     "FusionConfig",
     "HyDESearchRequest",
     "HybridSearchRequest",
+    "HybridSearchResponse",
     "IndexingRequest",
     "IntegratedSearchRequest",
     "MetadataSearchCriteria",

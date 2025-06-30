@@ -7,6 +7,7 @@ resource allocation with ML-powered cost prediction and optimization.
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+
 if TYPE_CHECKING:
     from fastmcp import Context
 else:
@@ -36,7 +37,7 @@ def register_tools(mcp, client_manager: ClientManager):
         optimization_target: float = 0.2,
         include_predictions: bool = True,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform intelligent cost analysis with ML-powered optimization.
 
         Implements autonomous cost analysis with usage pattern recognition,
@@ -135,7 +136,7 @@ def register_tools(mcp, client_manager: ClientManager):
         auto_apply: bool = False,
         safety_margin: float = 0.1,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform autonomous budget optimization with intelligent resource allocation.
 
         Implements ML-powered budget optimization with autonomous resource
@@ -233,9 +234,9 @@ def register_tools(mcp, client_manager: ClientManager):
         prediction_horizon: str = "quarterly",
         scenario_analysis: bool = True,
         confidence_intervals: bool = True,
-        growth_assumptions: Optional[Dict[str, float]] = None,
+        growth_assumptions: dict[str, float] | None = None,
         ctx: Context = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate predictive cost models with scenario analysis and confidence intervals.
 
         Implements advanced predictive modeling with ML-powered forecasting,
@@ -330,7 +331,7 @@ def register_tools(mcp, client_manager: ClientManager):
             }
 
     @mcp.tool()
-    async def get_cost_estimation_capabilities() -> Dict[str, Any]:
+    async def get_cost_estimation_capabilities() -> dict[str, Any]:
         """Get cost estimation and optimization capabilities.
 
         Returns:
@@ -396,7 +397,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
 async def _collect_current_cost_data(
     analysis_scope: str, time_period: str, ctx
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Collect current cost data for the specified scope and period."""
     # Mock cost data collection
     cost_data = {
@@ -429,8 +430,8 @@ async def _collect_current_cost_data(
 
 
 async def _analyze_cost_patterns(
-    cost_data: Dict, time_period: str, ctx
-) -> Dict[str, Any]:
+    cost_data: dict, time_period: str, ctx
+) -> dict[str, Any]:
     """Analyze cost patterns and trends from historical data."""
     return {
         "cost_trends": {
@@ -461,8 +462,8 @@ async def _analyze_cost_patterns(
 
 
 async def _identify_optimization_opportunities(
-    cost_data: Dict, optimization_target: float, ctx
-) -> List[Dict[str, Any]]:
+    cost_data: dict, optimization_target: float, ctx
+) -> list[dict[str, Any]]:
     """Identify cost optimization opportunities."""
     opportunities = [
         {
@@ -519,8 +520,8 @@ async def _identify_optimization_opportunities(
 
 
 async def _calculate_potential_savings(
-    cost_data: Dict, opportunities: List[Dict], ctx
-) -> Dict[str, Any]:
+    cost_data: dict, opportunities: list[dict], ctx
+) -> dict[str, Any]:
     """Calculate potential savings from optimization opportunities."""
     total_savings = sum(opp["potential_savings"] for opp in opportunities)
     total_percentage = total_savings / cost_data["total_cost"]
@@ -540,8 +541,8 @@ async def _calculate_potential_savings(
 
 
 async def _generate_cost_insights(
-    cost_data: Dict, patterns: Dict, opportunities: List[Dict], ctx
-) -> Dict[str, Any]:
+    cost_data: dict, patterns: dict, opportunities: list[dict], ctx
+) -> dict[str, Any]:
     """Generate autonomous cost insights and recommendations."""
     return {
         "cost_health_score": 0.73,
@@ -577,7 +578,7 @@ def _get_timestamp() -> str:
     return datetime.datetime.now().isoformat()
 
 
-async def _analyze_current_allocation(ctx) -> Dict[str, Any]:
+async def _analyze_current_allocation(ctx) -> dict[str, Any]:
     """Analyze current resource allocation."""
     return {
         "resource_allocation": {
@@ -595,8 +596,8 @@ async def _analyze_current_allocation(ctx) -> Dict[str, Any]:
 
 
 async def _calculate_budget_requirements(
-    allocation: Dict, budget_limit: float, safety_margin: float, ctx
-) -> Dict[str, Any]:
+    allocation: dict, budget_limit: float, safety_margin: float, ctx
+) -> dict[str, Any]:
     """Calculate budget requirements and constraints."""
     current_total = sum(
         resource["current_spend"]
@@ -619,8 +620,8 @@ async def _calculate_budget_requirements(
 
 
 async def _generate_optimization_strategy(
-    requirements: Dict, strategy: str, budget_limit: float, ctx
-) -> Dict[str, Any]:
+    requirements: dict, strategy: str, budget_limit: float, ctx
+) -> dict[str, Any]:
     """Generate optimization strategy based on requirements and approach."""
     optimization_factors = {
         "aggressive": {
@@ -684,8 +685,8 @@ async def _generate_optimization_strategy(
 
 
 async def _apply_autonomous_optimization(
-    optimization_plan: Dict, safety_margin: float, ctx
-) -> Dict[str, Any]:
+    optimization_plan: dict, safety_margin: float, ctx
+) -> dict[str, Any]:
     """Apply autonomous optimization with safety mechanisms."""
     applied_actions = []
     failed_actions = []
@@ -733,8 +734,8 @@ async def _apply_autonomous_optimization(
 
 
 async def _analyze_cost_performance_tradeoffs(
-    optimization_plan: Dict, current_allocation: Dict, ctx
-) -> Dict[str, Any]:
+    optimization_plan: dict, current_allocation: dict, ctx
+) -> dict[str, Any]:
     """Analyze cost-performance trade-offs for optimization plan."""
     return {
         "tradeoff_analysis": {
@@ -763,8 +764,8 @@ async def _analyze_cost_performance_tradeoffs(
 
 
 async def _generate_budget_recommendations(
-    budget_limit: float, optimization_plan: Dict, tradeoff_analysis: Dict, ctx
-) -> List[str]:
+    budget_limit: float, optimization_plan: dict, tradeoff_analysis: dict, ctx
+) -> list[str]:
     """Generate autonomous budget recommendations."""
     recommendations = [
         f"Apply {optimization_plan['strategy']} optimization strategy for {optimization_plan['estimated_savings']:.1f}% savings",
@@ -787,7 +788,7 @@ async def _generate_budget_recommendations(
     return recommendations
 
 
-async def _collect_historical_cost_data(prediction_horizon: str, ctx) -> Dict[str, Any]:
+async def _collect_historical_cost_data(prediction_horizon: str, ctx) -> dict[str, Any]:
     """Collect historical cost data for predictive modeling."""
     # Mock historical data
     return {
@@ -808,8 +809,8 @@ async def _collect_historical_cost_data(prediction_horizon: str, ctx) -> Dict[st
 
 
 async def _generate_base_cost_predictions(
-    historical_data: Dict, horizon: str, growth_assumptions: Optional[Dict], ctx
-) -> Dict[str, Any]:
+    historical_data: dict, horizon: str, growth_assumptions: dict | None, ctx
+) -> dict[str, Any]:
     """Generate base cost predictions using ML models."""
     # Mock prediction generation
     base_cost = 2547.83
@@ -847,8 +848,8 @@ async def _generate_base_cost_predictions(
 
 
 async def _generate_scenario_analysis(
-    base_predictions: Dict, historical_data: Dict, ctx
-) -> Dict[str, Any]:
+    base_predictions: dict, historical_data: dict, ctx
+) -> dict[str, Any]:
     """Generate scenario-based cost predictions."""
     base_total = base_predictions["total_predicted_cost"]
 
@@ -891,8 +892,8 @@ async def _generate_scenario_analysis(
 
 
 async def _calculate_confidence_intervals(
-    predictions: Dict, historical_data: Dict, ctx
-) -> Dict[str, Any]:
+    predictions: dict, historical_data: dict, ctx
+) -> dict[str, Any]:
     """Calculate confidence intervals for predictions."""
     base_cost = predictions["total_predicted_cost"]
 
@@ -930,8 +931,8 @@ async def _calculate_confidence_intervals(
 
 
 async def _generate_optimization_timeline(
-    predictions: Dict, horizon: str, ctx
-) -> Dict[str, Any]:
+    predictions: dict, horizon: str, ctx
+) -> dict[str, Any]:
     """Generate optimization timeline based on predictions."""
     return {
         "optimization_phases": [
@@ -968,8 +969,8 @@ async def _generate_optimization_timeline(
 
 
 async def _generate_predictive_insights(
-    base_predictions: Dict, scenario_predictions: Dict, confidence_analysis: Dict, ctx
-) -> Dict[str, Any]:
+    base_predictions: dict, scenario_predictions: dict, confidence_analysis: dict, ctx
+) -> dict[str, Any]:
     """Generate insights from predictive analysis."""
     return {
         "key_insights": [

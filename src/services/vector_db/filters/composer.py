@@ -12,7 +12,7 @@ from enum import Enum
 from typing import Any
 
 from cachetools import LRUCache
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from qdrant_client import models
 
 from .base import BaseFilter, FilterError, FilterResult
@@ -39,8 +39,7 @@ class FilterReference(BaseModel):
     )
     required: bool = Field(True, description="Whether this filter must succeed")
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class CompositionRule(BaseModel):

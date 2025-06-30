@@ -105,14 +105,10 @@ def _configure_cors(app: FastAPI, mode: ApplicationMode) -> None:
 
 def _apply_middleware_stack(app: FastAPI, middleware_stack: list[str]) -> None:
     """Apply mode-specific middleware stack."""
-    from src.services.fastapi.middleware import manager as middleware_manager
+    from src.services.fastapi.middleware.manager import get_middleware_manager
 
-    for middleware_name in middleware_stack:
-        try:
-            middleware_manager.apply_middleware(app, middleware_name)
-            logger.debug("Applied middleware: %s", middleware_name)
-        except ValueError as e:
-            logger.warning("Failed to apply middleware %s: %s", middleware_name, e)
+    middleware_manager = get_middleware_manager()
+    middleware_manager.apply_middleware(app, middleware_stack)
 
 
 def _configure_routes(app: FastAPI, mode: ApplicationMode) -> None:
@@ -319,10 +315,10 @@ def _register_mode_services(factory: ModeAwareServiceFactory) -> None:
     # Register universal services (work in both modes)
     try:
         from src.services.embeddings.manager import EmbeddingManager
-        from src.services.vector_db.service import VectorDBService
+        from src.services.vector_db.service import QdrantService
 
         factory.register_universal_service("embedding_service", EmbeddingManager)
-        factory.register_universal_service("vector_db_service", VectorDBService)
+        factory.register_universal_service("vector_db_service", QdrantService)
 
     except ImportError as e:
         logger.warning("Universal services not available: %s", e)
@@ -350,9 +346,9 @@ async def _initialize_critical_services(factory: ModeAwareServiceFactory) -> Non
 
 def get_app_mode(app: FastAPI) -> ApplicationMode:
     """Get the mode of a FastAPI application."""
-    return app.state.mode
+    return app.state.mode  # type: ignore
 
 
 def get_app_service_factory(app: FastAPI) -> ModeAwareServiceFactory:
     """Get the service factory from a FastAPI application."""
-    return app.state.service_factory
+    return app.state.service_factory  # type: ignore

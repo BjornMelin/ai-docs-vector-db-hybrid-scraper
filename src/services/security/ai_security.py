@@ -16,7 +16,7 @@ import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional, 
+from typing import Any, Optional
 
 from fastapi import HTTPException
 
@@ -537,21 +537,20 @@ class AISecurityValidator:
             # Limit string length and remove dangerous patterns
             clean_value = re.sub(r'[<>"\']', "", str(value))[:500]
             return clean_value
-        elif isinstance(value, int | float | bool):
+        if isinstance(value, int | float | bool):
             return value
-        elif isinstance(value, list | tuple):
+        if isinstance(value, list | tuple):
             # Recursively sanitize list items (limit to 10 items)
             return [self._sanitize_metadata_value(item) for item in value[:10]]
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             # Recursively sanitize nested dictionaries (limit depth)
             return {
                 k: self._sanitize_metadata_value(v)
                 for k, v in value.items()
                 if isinstance(k, str) and len(k) < 50
             }
-        else:
-            # Convert other types to string and sanitize
-            return re.sub(r'[<>"\']', "", str(value))[:500]
+        # Convert other types to string and sanitize
+        return re.sub(r'[<>"\']', "", str(value))[:500]
 
     def validate_embedding_query(self, query: str, context: str | None = None) -> str:
         """Validate query for embedding generation.

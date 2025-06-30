@@ -6,7 +6,9 @@ caching, and rate limiting implementations in your application code.
 
 import asyncio
 import logging
-from typing import Any, from src.config import Config
+from typing import Any
+
+from src.config import Config
 from src.services.cache.modern import ModernCacheManager
 from src.services.circuit_breaker.modern import ModernCircuitBreakerManager
 from src.services.middleware.rate_limiting import setup_rate_limiting

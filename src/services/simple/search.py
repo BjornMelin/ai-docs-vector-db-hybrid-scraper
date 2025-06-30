@@ -5,7 +5,9 @@ Focuses on core vector search functionality without advanced features.
 """
 
 import logging
-from typing import Any, from src.architecture.features import conditional_feature
+from typing import Any
+
+from src.architecture.features import conditional_feature
 from src.architecture.service_factory import BaseService
 from src.models.vector_search import SearchRequest, SearchResponse
 

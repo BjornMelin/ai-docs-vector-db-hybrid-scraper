@@ -47,7 +47,7 @@ class WorkerSettings:
             tq_config = config.task_queue
         else:
             # Fallback to default TaskQueueConfig if not available
-            from src.config.core import TaskQueueConfig
+            from src.config.task_queue import TaskQueueConfig
 
             tq_config = TaskQueueConfig()
 

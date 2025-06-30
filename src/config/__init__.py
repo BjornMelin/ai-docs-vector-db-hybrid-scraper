@@ -11,8 +11,76 @@ All 27 previous configuration files have been consolidated into settings.py
 while maintaining full backward compatibility for existing code.
 """
 
+from typing import Any
+
 # Import everything from the unified settings system
-from .settings import *
+from .settings import (
+    # Enums
+    ABTestVariant,
+    ApplicationMode,
+    # Configuration classes
+    AutoDetectionConfig,
+    BrowserUseConfig,
+    CacheConfig,
+    CacheType,
+    ChunkingConfig,
+    ChunkingStrategy,
+    CircuitBreakerConfig,
+    # Main configuration management
+    Config,
+    Crawl4AIConfig,
+    CrawlProvider,
+    DatabaseConfig,
+    DeploymentConfig,
+    DeploymentTier,
+    DocumentationSite,
+    DocumentStatus,
+    DriftDetectionConfig,
+    EmbeddingConfig,
+    EmbeddingModel,
+    EmbeddingProvider,
+    Environment,
+    FastEmbedConfig,
+    FirecrawlConfig,
+    FusionAlgorithm,
+    HyDEConfig,
+    LogLevel,
+    ModelType,
+    MonitoringConfig,
+    ObservabilityConfig,
+    OpenAIConfig,
+    OptimizationStrategy,
+    PerformanceConfig,
+    PlaywrightConfig,
+    QdrantConfig,
+    QueryComplexity,
+    QueryType,
+    RAGConfig,
+    ReRankingConfig,
+    SearchAccuracy,
+    SearchStrategy,
+    SecurityConfig,
+    Settings,
+    TaskQueueConfig,
+    VectorType,
+    create_enterprise_config,
+    create_settings_from_env,
+    create_simple_config,
+    get_cache_config,
+    get_config,
+    get_embedding_config,
+    get_openai_config,
+    get_performance_config,
+    get_qdrant_config,
+    get_security_config,
+    get_settings,
+    reset_config,
+    reset_settings,
+    set_config,
+    set_settings,
+    settings,
+)
+
 
 # Legacy aliases for backward compatibility during transition
 UnifiedConfig = Config
@@ -47,47 +115,47 @@ ModernHyDEConfig = HyDEConfig
 
 
 # Legacy compatibility functions
-def get_legacy_config():
+def get_legacy_config() -> Config:
     """Legacy compatibility function."""
     return get_config()
 
 
-def get_modern_config():
+def get_modern_config() -> Config:
     """Modern compatibility function."""
     return get_config()
 
 
-def get_config_with_auto_detection():
+def get_config_with_auto_detection() -> Config:
     """Get configuration with auto-detection compatibility."""
     return get_config()
 
 
-def get_modern_config_with_auto_detection():
+def get_modern_config_with_auto_detection() -> Config:
     """Modern auto-detection compatibility function."""
     return get_config()
 
 
-def get_legacy_config_with_auto_detection():
+def get_legacy_config_with_auto_detection() -> Config:
     """Legacy auto-detection compatibility function."""
     return get_config()
 
 
-def set_legacy_config(config):
+def set_legacy_config(config: Config) -> None:
     """Legacy set config function."""
     set_config(config)
 
 
-def set_modern_config(config):
+def set_modern_config(config: Config) -> None:
     """Modern set config function."""
     set_config(config)
 
 
-def reset_legacy_config():
+def reset_legacy_config() -> None:
     """Legacy reset config function."""
     reset_config()
 
 
-def reset_modern_config():
+def reset_modern_config() -> None:
     """Modern reset config function."""
     reset_config()
 
@@ -101,12 +169,12 @@ def is_using_modern_config() -> bool:
     return True
 
 
-def migrate_to_modern_config():
+def migrate_to_modern_config() -> Config:
     """Migrate to modern config (no-op since we're already unified)."""
     return get_config()
 
 
-def get_migration_status() -> dict:
+def get_migration_status() -> dict[str, Any]:
     """Get configuration migration status.
 
     Returns:
@@ -124,288 +192,248 @@ def get_migration_status() -> dict:
 
 
 # Mock deployment tiers and error handling for backward compatibility
-class DeploymentTier:
-    """Mock deployment tier for backward compatibility."""
-
-    PERSONAL = "personal"
-    PROFESSIONAL = "professional"
-    ENTERPRISE = "enterprise"
+# Note: DeploymentTier is imported from settings.py, no need to redefine
 
 
 class TierCapability:
     """Mock tier capability for backward compatibility."""
 
-    pass
-
 
 class TierConfiguration:
     """Mock tier configuration for backward compatibility."""
-
-    pass
 
 
 class TierManager:
     """Mock tier manager for backward compatibility."""
 
-    pass
-
 
 class ConfigError(Exception):
     """Configuration error."""
-
-    pass
 
 
 class ConfigFileWatchError(ConfigError):
     """Configuration file watch error."""
 
-    pass
-
 
 class ConfigLoadError(ConfigError):
     """Configuration load error."""
-
-    pass
 
 
 class ConfigReloadError(ConfigError):
     """Configuration reload error."""
 
-    pass
-
 
 class ConfigValidationError(ConfigError):
     """Configuration validation error."""
-
-    pass
 
 
 class ErrorContext:
     """Mock error context for backward compatibility."""
 
-    pass
-
 
 class GracefulDegradationHandler:
     """Mock graceful degradation handler for backward compatibility."""
-
-    pass
 
 
 class RetryableConfigOperation:
     """Mock retryable config operation for backward compatibility."""
 
-    pass
-
 
 class SafeConfigLoader:
     """Mock safe config loader for backward compatibility."""
-
-    pass
 
 
 class ConfigManager:
     """Mock config manager for backward compatibility."""
 
-    pass
-
 
 class ConfigMigrator:
     """Mock config migrator for backward compatibility."""
 
-    pass
-
 
 # Mock functions for backward compatibility
-def default_tier_manager():
+def default_tier_manager() -> TierManager:
     """Mock default tier manager."""
     return TierManager()
 
 
-def get_current_tier_config():
+def get_current_tier_config() -> TierConfiguration:
     """Mock get current tier config."""
     return TierConfiguration()
 
 
-def is_feature_enabled(feature: str) -> bool:
+def is_feature_enabled(_feature: str) -> bool:
     """Mock feature flag check."""
     return True
 
 
-def async_error_context(*args, **kwargs):
+def async_error_context(*args: Any, **kwargs: Any) -> None:
     """Mock async error context."""
-    pass
 
 
-def create_and_load_config_async():
+def create_and_load_config_async() -> Config:
     """Mock async config loader."""
     return get_config()
 
 
-def create_migration_compatibility_wrapper(*args, **kwargs):
+def create_migration_compatibility_wrapper(*_args: Any, **_kwargs: Any) -> Config:
     """Mock migration wrapper."""
     return get_config()
 
 
-def migrate_legacy_config(config):
+def migrate_legacy_config(_config: Any) -> Config:
     """Mock legacy config migration."""
     return get_config()
 
 
-def get_config_manager():
+def get_config_manager() -> ConfigManager:
     """Mock config manager getter."""
     return ConfigManager()
 
 
-def set_config_manager(manager):
+def set_config_manager(manager: Any) -> None:
     """Mock config manager setter."""
-    pass
 
 
-def get_degradation_handler():
+def get_degradation_handler() -> GracefulDegradationHandler:
     """Mock degradation handler getter."""
     return GracefulDegradationHandler()
 
 
-def handle_validation_error(*args, **kwargs):
+def handle_validation_error(*args: Any, **kwargs: Any) -> None:
     """Mock validation error handler."""
-    pass
 
 
-def retry_config_operation(*args, **kwargs):
+def retry_config_operation(*args: Any, **kwargs: Any) -> None:
     """Mock retry operation."""
-    pass
 
 
 # Update __all__ to include everything for full backward compatibility
 __all__ = [
-    # Main configuration class
-    "Settings",
-    "Config",
-    # Enums
-    "ApplicationMode",
-    "Environment",
-    "LogLevel",
-    "EmbeddingProvider",
-    "EmbeddingModel",
-    "CrawlProvider",
-    "ChunkingStrategy",
-    "SearchStrategy",
-    "CacheType",
-    "DocumentStatus",
-    "QueryComplexity",
-    "ModelType",
-    "VectorType",
-    "QueryType",
-    "SearchAccuracy",
-    "FusionAlgorithm",
+    # Enums (imported from settings)
     "ABTestVariant",
-    "OptimizationStrategy",
-    "DeploymentTier",
-    # Configuration sections
-    "CacheConfig",
-    "QdrantConfig",
-    "OpenAIConfig",
-    "FastEmbedConfig",
-    "FirecrawlConfig",
-    "Crawl4AIConfig",
-    "PlaywrightConfig",
-    "BrowserUseConfig",
-    "ChunkingConfig",
-    "EmbeddingConfig",
-    "HyDEConfig",
-    "ReRankingConfig",
-    "SecurityConfig",
-    "PerformanceConfig",
-    "CircuitBreakerConfig",
-    "DatabaseConfig",
-    "SQLAlchemyConfig",  # Alias
-    "MonitoringConfig",
-    "ObservabilityConfig",
-    "TaskQueueConfig",
-    "RAGConfig",
-    "DeploymentConfig",
+    "ApplicationMode",
+    # Configuration classes (imported from settings)
     "AutoDetectionConfig",
-    "DriftDetectionConfig",
-    "DocumentationSite",
-    # Configuration management
-    "get_settings",
-    "set_settings",
-    "reset_settings",
-    "create_settings_from_env",
-    "get_config",
-    "set_config",
-    "reset_config",
-    "settings",
-    # Convenience functions
-    "get_qdrant_config",
-    "get_embedding_config",
-    "get_cache_config",
-    "get_performance_config",
-    "get_openai_config",
-    "get_security_config",
-    # Mode-specific factories
-    "create_simple_config",
-    "create_enterprise_config",
-    # Legacy compatibility
-    "UnifiedConfig",
-    "LegacyConfig",
-    "LegacyCacheConfig",
-    "LegacyPerformanceConfig",
-    "LegacyOpenAIConfig",
-    "LegacyQdrantConfig",
-    "LegacyFirecrawlConfig",
-    "LegacySecurityConfig",
-    "LegacyChunkingConfig",
-    "LegacyHyDEConfig",
-    "ModernConfig",
-    "ModernCacheConfig",
-    "ModernPerformanceConfig",
-    "ModernOpenAIConfig",
-    "ModernQdrantConfig",
-    "ModernFirecrawlConfig",
-    "ModernSecurityConfig",
-    "ModernChunkingConfig",
-    "ModernHyDEConfig",
-    # Legacy functions
-    "get_legacy_config",
-    "get_modern_config",
-    "get_config_with_auto_detection",
-    "get_modern_config_with_auto_detection",
-    "get_legacy_config_with_auto_detection",
-    "set_legacy_config",
-    "set_modern_config",
-    "reset_legacy_config",
-    "reset_modern_config",
-    "is_using_modern_config",
-    "migrate_to_modern_config",
-    "get_migration_status",
-    # Mock classes for compatibility
-    "TierCapability",
-    "TierConfiguration",
-    "TierManager",
+    "BrowserUseConfig",
+    "CacheConfig",
+    "CacheType",
+    "ChunkingConfig",
+    "ChunkingStrategy",
+    "CircuitBreakerConfig",
+    "Config",  # Alias for Settings
+    # Mock classes for backward compatibility (defined in this module)
     "ConfigError",
     "ConfigFileWatchError",
     "ConfigLoadError",
-    "ConfigReloadError",
-    "ConfigValidationError",
-    "ErrorContext",
-    "GracefulDegradationHandler",
-    "RetryableConfigOperation",
-    "SafeConfigLoader",
     "ConfigManager",
     "ConfigMigrator",
-    # Mock functions for compatibility
-    "default_tier_manager",
-    "get_current_tier_config",
-    "is_feature_enabled",
+    "ConfigReloadError",
+    "ConfigValidationError",
+    "Crawl4AIConfig",
+    "CrawlProvider",
+    "DatabaseConfig",
+    "DeploymentConfig",
+    "DeploymentTier",
+    "DocumentStatus",
+    "DocumentationSite",
+    "DriftDetectionConfig",
+    "EmbeddingConfig",
+    "EmbeddingModel",
+    "EmbeddingProvider",
+    "Environment",
+    "ErrorContext",
+    "FastEmbedConfig",
+    "FirecrawlConfig",
+    "FusionAlgorithm",
+    "GracefulDegradationHandler",
+    "HyDEConfig",
+    "LegacyCacheConfig",
+    "LegacyChunkingConfig",
+    "LegacyConfig",
+    "LegacyFirecrawlConfig",
+    "LegacyHyDEConfig",
+    "LegacyOpenAIConfig",
+    "LegacyPerformanceConfig",
+    "LegacyQdrantConfig",
+    "LegacySecurityConfig",
+    "LogLevel",
+    "ModelType",
+    "ModernCacheConfig",
+    "ModernChunkingConfig",
+    "ModernConfig",
+    "ModernFirecrawlConfig",
+    "ModernHyDEConfig",
+    "ModernOpenAIConfig",
+    "ModernPerformanceConfig",
+    "ModernQdrantConfig",
+    "ModernSecurityConfig",
+    "MonitoringConfig",
+    "ObservabilityConfig",
+    "OpenAIConfig",
+    "OptimizationStrategy",
+    "PerformanceConfig",
+    "PlaywrightConfig",
+    "QdrantConfig",
+    "QueryComplexity",
+    "QueryType",
+    "RAGConfig",
+    "ReRankingConfig",
+    "RetryableConfigOperation",
+    "SQLAlchemyConfig",
+    "SafeConfigLoader",
+    "SearchAccuracy",
+    "SearchStrategy",
+    "SecurityConfig",
+    "Settings",
+    "TaskQueueConfig",
+    "TierCapability",
+    "TierConfiguration",
+    "TierManager",
+    # Legacy compatibility aliases (defined in this module)
+    "UnifiedConfig",
+    "VectorType",
+    # Mock functions for backward compatibility (defined in this module)
     "async_error_context",
     "create_and_load_config_async",
+    # Configuration management functions (imported from settings)
+    "create_enterprise_config",
     "create_migration_compatibility_wrapper",
-    "migrate_legacy_config",
+    "create_settings_from_env",
+    "create_simple_config",
+    "default_tier_manager",
+    "get_cache_config",
+    "get_config",  # Alias for get_settings
     "get_config_manager",
-    "set_config_manager",
+    "get_config_with_auto_detection",
+    "get_current_tier_config",
     "get_degradation_handler",
+    "get_embedding_config",
+    # Legacy compatibility functions (defined in this module)
+    "get_legacy_config",
+    "get_legacy_config_with_auto_detection",
+    "get_migration_status",
+    "get_modern_config",
+    "get_modern_config_with_auto_detection",
+    "get_openai_config",
+    "get_performance_config",
+    "get_qdrant_config",
+    "get_security_config",
+    "get_settings",
     "handle_validation_error",
+    "is_feature_enabled",
+    "is_using_modern_config",
+    "migrate_legacy_config",
+    "migrate_to_modern_config",
+    "reset_config",  # Alias for reset_settings
+    "reset_legacy_config",
+    "reset_modern_config",
+    "reset_settings",
     "retry_config_operation",
+    "set_config",  # Alias for set_settings
+    "set_config_manager",
+    "set_legacy_config",
+    "set_modern_config",
+    "set_settings",
+    "settings",  # Global instance
 ]
