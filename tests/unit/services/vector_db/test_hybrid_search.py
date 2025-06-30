@@ -24,7 +24,7 @@ from src.models.vector_search import (
     ModelSelectionStrategy,
     QueryClassification,
     SearchAccuracy,
-    SearchParams,
+    SecureSearchParamsModel,
 )
 from src.services.errors import QdrantServiceError
 from src.services.query_processing.models import (
@@ -80,7 +80,7 @@ class TestAdvancedHybridSearchService:
             query="How to implement async functions in Python?",
             collection_name="test_collection",
             limit=5,
-            search_params=SearchParams(
+            search_params=SecureSearchParamsModel(
                 accuracy_level=SearchAccuracy.BALANCED, hnsw_ef=64
             ),
             fusion_config=FusionConfig(algorithm="rrf"),
