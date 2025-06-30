@@ -16,7 +16,7 @@ import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import HTTPException
 
@@ -220,10 +220,8 @@ class AISecurityValidator:
 
         # Length validation
         if len(query) > self.max_query_length:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Search query too long (max {self.max_query_length} characters)",
-            )
+            detail_msg = f"Query too long (max {self.max_query_length} chars)"
+            raise HTTPException(status_code=400, detail=detail_msg)
 
         # Detect threats
         threats = self._detect_threats(query)
@@ -233,8 +231,9 @@ class AISecurityValidator:
         high_threats = [t for t in threats if t.level == ThreatLevel.HIGH]
 
         if critical_threats:
+            threat_types = [t.threat_type for t in critical_threats]
             logger.critical(
-                f"Critical security threat in search query: {[t.threat_type for t in critical_threats]}",
+                f"Critical security threat in search query: {threat_types}",
                 extra={
                     "query": query[:100],
                     "threats": [t.__dict__ for t in critical_threats],
@@ -245,8 +244,9 @@ class AISecurityValidator:
             )
 
         if high_threats:
+            threat_types = [t.threat_type for t in high_threats]
             logger.warning(
-                f"High-risk patterns detected in search query: {[t.threat_type for t in high_threats]}",
+                f"High-risk patterns detected in search query: {threat_types}",
                 extra={
                     "query": query[:100],
                     "threats": [t.__dict__ for t in high_threats],
@@ -258,7 +258,7 @@ class AISecurityValidator:
         # Basic sanitization
         sanitized_query = self._sanitize_query(query)
 
-        logger.debug(f"Search query validated and sanitized: {sanitized_query[:100]}")
+        logger.debug("Search query validated and sanitized: %s", sanitized_query[:100])
         return sanitized_query
 
     def _detect_threats(self, text: str) -> list[SecurityThreat]:
@@ -305,7 +305,7 @@ class AISecurityValidator:
                 SecurityThreat(
                     threat_type="token_flooding",
                     level=ThreatLevel.MEDIUM,
-                    description="Excessive repetition detected - potential token flooding",
+                    description="Excessive repetition detected - token flooding risk",
                     pattern_matched="repetitive_content",
                     suggested_action="Truncate or reject content",
                 )
@@ -391,7 +391,7 @@ class AISecurityValidator:
                 SecurityThreat(
                     threat_type="oversized_content",
                     level=ThreatLevel.MEDIUM,
-                    description=f"Document exceeds maximum size limit ({self.max_document_size} bytes)",
+                    description=f"Document too large ({self.max_document_size} bytes)",
                     pattern_matched="size_limit",
                     suggested_action="Reject or truncate document",
                 )
@@ -412,7 +412,7 @@ class AISecurityValidator:
 
         if not is_valid:
             logger.warning(
-                f"Document content validation failed: {len(critical_threats)} critical threats",
+                f"Document validation failed: {len(critical_threats)} critical threats",
                 extra={
                     "filename": filename,
                     "threats": [t.__dict__ for t in critical_threats],
@@ -516,7 +516,7 @@ class AISecurityValidator:
         # Check for suspicious patterns
         for pattern in self.SUSPICIOUS_METADATA_PATTERNS:
             if re.search(pattern, key, re.IGNORECASE):
-                logger.warning(f"Rejecting suspicious metadata key: {key}")
+                logger.warning("Rejecting suspicious metadata key: %s", key)
                 return None
 
         # Remove dangerous characters and limit length
@@ -578,8 +578,9 @@ class AISecurityValidator:
             ]
 
             if critical_context_threats:
+                threat_types = [t.threat_type for t in critical_context_threats]
                 logger.critical(
-                    f"Critical security threat in embedding context: {[t.threat_type for t in critical_context_threats]}"
+                    f"Critical security threat in embedding context: {threat_types}"
                 )
                 raise HTTPException(
                     status_code=400, detail="Context contains prohibited content"

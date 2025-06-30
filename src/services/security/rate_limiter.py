@@ -16,7 +16,6 @@ Features:
 import asyncio
 import logging
 import time
-from typing import Dict
 
 
 try:
@@ -78,7 +77,7 @@ class DistributedRateLimiter:
                 logger.info(
                     f"Redis rate limiter initialized: {redis_url}"
                 )  # TODO: Convert f-string to logging format
-            except Exception as e:
+            except (ConnectionError, ValueError, AttributeError) as e:
                 logger.warning(
                     f"Failed to initialize Redis: {e}. Using local fallback only."
                 )
@@ -86,7 +85,7 @@ class DistributedRateLimiter:
         else:
             if not REDIS_AVAILABLE:
                 logger.warning(
-                    "Redis not available. Install redis package for distributed rate limiting."
+                    "Redis unavailable. Install redis for distributed limiting."
                 )
             logger.info("Rate limiter initialized with local cache fallback only")
 
@@ -115,7 +114,7 @@ class DistributedRateLimiter:
                 return await self._check_rate_limit_redis(
                     identifier, limit, window, burst_limit, current_time
                 )
-            except Exception as e:
+            except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
                 logger.warning(
                     f"Redis rate limit check failed: {e}. Using local fallback."
                 )
@@ -283,6 +282,11 @@ class DistributedRateLimiter:
 
                 current_requests = results[1]
 
+            except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
+                logger.warning(
+                    f"Failed to get Redis rate limit status: {e}"
+                )  # TODO: Convert f-string to logging format
+            else:
                 return {
                     "identifier": identifier,
                     "current_requests": current_requests,
@@ -290,10 +294,6 @@ class DistributedRateLimiter:
                     "backend": "redis",
                     "timestamp": current_time,
                 }
-            except Exception as e:
-                logger.warning(
-                    f"Failed to get Redis rate limit status: {e}"
-                )  # TODO: Convert f-string to logging format
 
         # Local fallback
         async with self._cache_lock:
@@ -342,10 +342,11 @@ class DistributedRateLimiter:
                         f"Reset local rate limit for {identifier}"
                     )  # TODO: Convert f-string to logging format
 
-            return True
-        except Exception as e:
+        except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
             logger.exception("Failed to reset rate limit for {identifier}")
             return False
+        else:
+            return True
 
     async def cleanup_expired_entries(self, max_age_hours: int = 24) -> int:
         """Clean up expired entries from local cache.
@@ -412,7 +413,7 @@ class DistributedRateLimiter:
             try:
                 await self.redis_client.ping()
                 status["redis_healthy"] = True
-            except Exception as e:
+            except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
                 logger.warning(
                     f"Redis health check failed: {e}"
                 )  # TODO: Convert f-string to logging format
@@ -426,7 +427,7 @@ class DistributedRateLimiter:
             try:
                 await self.redis_client.close()
                 logger.info("Redis connection closed")
-            except Exception as e:
+            except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
                 logger.warning(
                     f"Error closing Redis connection: {e}"
                 )  # TODO: Convert f-string to logging format

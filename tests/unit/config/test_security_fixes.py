@@ -2,25 +2,43 @@
 
 Tests the security configuration system including validation,
 rate limiting, and security controls.
+
+Consolidated security configuration tests.
 """
 
-from src.config.settings import (
-    SecurityConfig,
-    Settings,
-)
-
-
-"""Consolidated security configuration tests."""
+import json
+import os
+import tempfile
+from pathlib import Path
+from typing import Any
+from unittest.mock import patch
 
 import pytest
-from pydantic import ValidationError
+from hypothesis import given, strategies as st
+from pydantic import BaseModel, ValidationError
+
+from src.config.settings import (
+    ApplicationMode,
+    CacheConfig,
+    CacheType,
+    EmbeddingProvider,
+    Environment,
+    FastEmbedConfig,
+    OpenAIConfig,
+    PerformanceConfig,
+    QdrantConfig,
+    SecurityConfig,
+    Settings,
+    get_security_config,
+    reset_settings,
+)
 
 
 class TestSecurityConfig:
     """Consolidated security configuration tests with parametrized patterns."""
 
     @pytest.mark.parametrize(
-        "config_params,expected_values",
+        ("config_params", "expected_values"),
         [
             pytest.param(
                 {},  # Default config
@@ -140,7 +158,7 @@ class TestSecurityConfig:
         assert config.api_key_header == api_key_config["api_key_header"]
 
     @pytest.mark.parametrize(
-        "rate_limit_config,should_pass",
+        ("rate_limit_config", "should_pass"),
         [
             pytest.param(
                 {"rate_limit_requests": 100, "rate_limit_requests_per_minute": 60},
@@ -197,7 +215,7 @@ class TestSecurityConfig:
         assert config.max_url_length == validation_limits["max_url_length"]
 
     @pytest.mark.parametrize(
-        "invalid_config,expected_error",
+        ("invalid_config", "expected_error"),
         [
             pytest.param(
                 {"rate_limit_requests": 0},
@@ -312,8 +330,6 @@ class TestSecurityIntegration:
 
     def test_security_defaults_in_different_environments(self):
         """Test security defaults in different environments."""
-        from src.config.settings import Environment
-
         dev_settings = Settings(environment=Environment.DEVELOPMENT)
         prod_settings = Settings(environment=Environment.PRODUCTION)
 
@@ -333,8 +349,6 @@ class TestSecurityHelpers:
 
     def test_get_security_config(self):
         """Test getting security configuration."""
-        from src.config.settings import get_security_config, reset_settings
-
         # Reset to ensure clean state
         reset_settings()
 
@@ -406,33 +420,12 @@ Consolidated core configuration tests with parametrized patterns.
 This content should be moved to test_config_core.py for core config functionality.
 """
 
-import os
-import tempfile
-from pathlib import Path
-from typing import Any, Dict
-from unittest.mock import patch
-
-import pytest
-from hypothesis import given, strategies as st
-
-from src.config.settings import (
-    ApplicationMode,
-    CacheConfig,
-    CacheType,
-    EmbeddingProvider,
-    Environment,
-    FastEmbedConfig,
-    OpenAIConfig,
-    PerformanceConfig,
-    QdrantConfig,
-)
-
 
 class TestCoreConfigurationPatterns:
     """Consolidated tests for core configuration patterns."""
 
     @pytest.mark.parametrize(
-        "app_mode,expected_defaults",
+        ("app_mode", "expected_defaults"),
         [
             pytest.param(
                 ApplicationMode.SIMPLE,
@@ -472,7 +465,7 @@ class TestCoreConfigurationPatterns:
                 assert settings.performance.max_concurrent_requests >= 20
 
     @pytest.mark.parametrize(
-        "environment,debug_expected",
+        ("environment", "debug_expected"),
         [
             (Environment.DEVELOPMENT, True),
             (Environment.TESTING, True),
@@ -558,7 +551,7 @@ class TestCoreConfigurationPatterns:
             assert settings.cache.dragonfly_url == cache_config.get("dragonfly_url")
 
     @pytest.mark.parametrize(
-        "env_vars,expected_values",
+        ("env_vars", "expected_values"),
         [
             pytest.param(
                 {
@@ -647,7 +640,7 @@ class TestCoreConfigurationPatterns:
         assert settings.security.rate_limit_requests == 100
 
     @pytest.mark.parametrize(
-        "invalid_config,expected_error",
+        ("invalid_config", "expected_error"),
         [
             pytest.param(
                 {"performance": {"max_concurrent_requests": -1}},
@@ -664,19 +657,19 @@ class TestCoreConfigurationPatterns:
     )
     def test_settings_validation_errors(self, invalid_config, expected_error):
         """Test that invalid settings configurations raise validation errors."""
+        # Construct config objects for nested validation
+        config_kwargs = {}
+
+        if "performance" in invalid_config:
+            config_kwargs["performance"] = PerformanceConfig(
+                **invalid_config["performance"]
+            )
+        if "cache" in invalid_config:
+            config_kwargs["cache"] = CacheConfig(**invalid_config["cache"])
+        if "qdrant" in invalid_config:
+            config_kwargs["qdrant"] = QdrantConfig(**invalid_config["qdrant"])
+
         with pytest.raises(ValidationError) as exc_info:
-            # Construct config objects for nested validation
-            config_kwargs = {}
-
-            if "performance" in invalid_config:
-                config_kwargs["performance"] = PerformanceConfig(
-                    **invalid_config["performance"]
-                )
-            if "cache" in invalid_config:
-                config_kwargs["cache"] = CacheConfig(**invalid_config["cache"])
-            if "qdrant" in invalid_config:
-                config_kwargs["qdrant"] = QdrantConfig(**invalid_config["qdrant"])
-
             Settings(**config_kwargs)
 
         # Verify error message contains expected text
@@ -714,19 +707,15 @@ Shared utilities for configuration testing.
 This content should be moved to test_config_utils.py for reusable test utilities.
 """
 
-import json
-from typing import Type, Union
-
-import pytest
-from pydantic import BaseModel
-
 
 class ConfigTestUtils:
     """Utility class for configuration testing."""
 
     @staticmethod
     def create_temp_config_file(
-        config_data: dict[str, Any], file_format: str = "json", temp_dir: Path = None
+        config_data: dict[str, Any],
+        file_format: str = "json",
+        temp_dir: Path | None = None,
     ) -> Path:
         """Create a temporary configuration file for testing."""
         if temp_dir is None:
@@ -734,21 +723,23 @@ class ConfigTestUtils:
 
         if file_format == "json":
             config_file = temp_dir / "test_config.json"
-            with open(config_file, "w") as f:
+            with config_file.open("w") as f:
                 json.dump(config_data, f, indent=2)
         elif file_format == "env":
             config_file = temp_dir / ".env"
-            with open(config_file, "w") as f:
-                for key, value in config_data.items():
-                    f.write(f"{key}={value}\n")
+            with config_file.open("w") as f:
+                f.writelines(f"{key}={value}\n" for key, value in config_data.items())
         else:
-            raise ValueError(f"Unsupported file format: {file_format}")
+            msg = f"Unsupported file format: {file_format}"
+            raise ValueError(msg)
 
         return config_file
 
     @staticmethod
     def assert_config_subset(
-        config: BaseModel, expected_subset: dict[str, Any], exclude_fields: set = None
+        config: BaseModel,
+        expected_subset: dict[str, Any],
+        exclude_fields: set | None = None,
     ) -> None:
         """Assert that a config contains expected values for a subset of fields."""
         exclude_fields = exclude_fields or set()
@@ -769,7 +760,7 @@ class ConfigTestUtils:
     def validate_config_errors(
         config_class: type[BaseModel],
         invalid_params: dict[str, Any],
-        expected_error_fields: set = None,
+        expected_error_fields: set | None = None,
     ) -> list[str]:
         """Validate that invalid config parameters raise expected errors."""
         expected_error_fields = expected_error_fields or set(invalid_params.keys())
@@ -833,7 +824,7 @@ class ConfigTestUtils:
 
     @staticmethod
     def compare_config_versions(
-        config1: BaseModel, config2: BaseModel, ignore_fields: set = None
+        config1: BaseModel, config2: BaseModel, ignore_fields: set | None = None
     ) -> dict[str, Any]:
         """Compare two configuration versions and return differences."""
         ignore_fields = ignore_fields or set()

@@ -10,14 +10,14 @@ This script validates all security enhancements implemented by Subagent 3I:
 Run with: python tests/security/validate_security_framework.py
 """
 
-import asyncio
+# asyncio import removed (unused)
 import json
 import logging
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 
 # Add project root to path
@@ -65,10 +65,16 @@ class SecurityFrameworkValidator:
             # 5. Generate final assessment
             self._generate_final_assessment()
 
-        except Exception as e:
-            logger.error(f"Security validation failed: {e}")
+        except (RuntimeError, subprocess.SubprocessError, ValueError) as e:
+            logger.error("Security validation failed: %s", e)
             self.results["validation_status"] = "FAILED"
             self.results["error"] = str(e)
+        except Exception as e:
+            logger.error(
+                "Unexpected error during security validation: %s", e, exc_info=True
+            )
+            self.results["validation_status"] = "FAILED"
+            self.results["error"] = f"Unexpected error: {e}"
 
         return self.results
 

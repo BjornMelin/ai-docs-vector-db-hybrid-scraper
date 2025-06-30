@@ -17,7 +17,7 @@ import json
 import logging
 import time
 from collections.abc import Callable
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import HTTPException, Request, Response
 from fastapi.security import HTTPBearer
@@ -122,12 +122,6 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             # 5. Post-processing security
             self._add_security_headers(response)
 
-            # 6. Log successful request
-            processing_time = time.time() - start_time
-            self.security_monitor.log_request_success(request, processing_time)
-
-            return response
-
         except HTTPException as e:
             # Handle security-related HTTP exceptions
             response = self._create_security_error_response(e, request)
@@ -161,6 +155,11 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 "middleware_error", request, {"error": str(e)}
             )
 
+            return response
+        else:
+            # 6. Log successful request
+            processing_time = time.time() - start_time
+            self.security_monitor.log_request_success(request, processing_time)
             return response
 
     async def _validate_request_security(self, request: Request) -> None:
@@ -619,7 +618,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             reason: Reason for blocking
         """
         self.blocked_ips.add(ip_address)
-        logger.warning(f"Blocked IP address {ip_address}: {reason}")
+        logger.warning("Blocked IP address %s: %s", ip_address, reason)
 
         # Log blocking event
         self.security_monitor.log_security_event(
@@ -637,7 +636,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         """
         if ip_address in self.blocked_ips:
             self.blocked_ips.remove(ip_address)
-            logger.info(f"Unblocked IP address {ip_address}")
+            logger.info("Unblocked IP address %s", ip_address)
             return True
         return False
 

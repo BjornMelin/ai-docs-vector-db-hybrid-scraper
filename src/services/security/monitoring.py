@@ -19,7 +19,7 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import Request
 
@@ -332,10 +332,10 @@ class SecurityMonitor:
 
         # Log to appropriate logger based on severity
         if event.severity in (SecuritySeverity.CRITICAL, SecuritySeverity.HIGH):
-            self.threat_logger.error(f"HIGH_PRIORITY_EVENT: {event_json}")
+            self.threat_logger.error("HIGH_PRIORITY_EVENT: %s", event_json)
 
         # Always log to security events
-        self.security_logger.info(f"SECURITY_EVENT: {event_json}")
+        self.security_logger.info("SECURITY_EVENT: %s", event_json)
 
         # Log to audit trail for compliance
         if event.event_type in (
@@ -344,7 +344,7 @@ class SecurityMonitor:
             SecurityEventType.IP_BLOCKED,
             SecurityEventType.SECURITY_CONFIGURATION_CHANGE,
         ):
-            self.audit_logger.info(f"AUDIT_EVENT: {event_json}")
+            self.audit_logger.info("AUDIT_EVENT: %s", event_json)
 
     def _update_metrics(self, event: SecurityEvent) -> None:
         """Update security metrics with new event.
@@ -458,7 +458,7 @@ class SecurityMonitor:
                 SecurityEventType.SUSPICIOUS_ACTIVITY,
             ):
                 logger.critical(
-                    f"Critical security event detected - consider IP blocking: {event.client_ip}",
+                    f"Critical event - consider blocking IP: {event.client_ip}",
                     extra={
                         "event_type": event.event_type.value,
                         "client_ip": event.client_ip,
@@ -477,7 +477,7 @@ class SecurityMonitor:
 
         if len(recent_ip_events) >= 3:
             logger.critical(
-                f"Repeated security violations from IP {event.client_ip} - automatic blocking recommended",
+                f"Repeated violations from {event.client_ip} - auto-block advised",
                 extra={
                     "violation_count": len(recent_ip_events),
                     "client_ip": event.client_ip,
@@ -641,12 +641,12 @@ class SecurityMonitor:
             "generated_at": datetime.now(UTC).isoformat(),
         }
 
-    def export_security_logs(self, hours: int = 24, format: str = "json") -> str:
+    def export_security_logs(self, hours: int = 24, file_format: str = "json") -> str:
         """Export security logs for external analysis.
 
         Args:
             hours: Number of hours to export
-            format: Export format (json, csv)
+            file_format: Export format (json, csv)
 
         Returns:
             Exported log data as string
@@ -659,11 +659,11 @@ class SecurityMonitor:
             e for e in self.recent_events if e.timestamp.timestamp() > cutoff_time
         ]
 
-        if format.lower() == "json":
+        if file_format.lower() == "json":
             return json.dumps(
                 [e.to_dict() for e in relevant_events], indent=2, default=str
             )
-        if format.lower() == "csv":
+        if file_format.lower() == "csv":
             # Simple CSV export
             lines = ["timestamp,event_type,severity,client_ip,endpoint,method"]
             for event in relevant_events:
@@ -672,7 +672,7 @@ class SecurityMonitor:
                     f"{event.severity.value},{event.client_ip},{event.endpoint},{event.method}"
                 )
             return "\n".join(lines)
-        msg = f"Unsupported export format: {format}"
+        msg = f"Unsupported export format: {file_format}"
         raise ValueError(msg)
 
     def cleanup_old_data(self, days: int = 30) -> int:
@@ -703,6 +703,6 @@ class SecurityMonitor:
 
         cleaned_count = old_count - new_count
         if cleaned_count > 0:
-            logger.info(f"Cleaned up {cleaned_count} old security events")
+            logger.info("Cleaned up %s old security events", cleaned_count)
 
         return cleaned_count

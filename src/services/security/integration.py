@@ -15,7 +15,7 @@ system, bringing together all security components into a cohesive framework:
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -116,7 +116,7 @@ class SecurityManager:
             Configured security middleware
         """
         if not all([self.rate_limiter, self.ai_validator, self.security_monitor]):
-            msg = "Security components not initialized. Call initialize_components() first."
+            msg = "Security components not initialized. Call initialize_components()."
             raise RuntimeError(msg)
 
         # Create security middleware
@@ -189,7 +189,7 @@ class SecurityManager:
             try:
                 rate_limiter_health = await self.rate_limiter.get_health_status()
                 status["rate_limiter"] = rate_limiter_health
-            except Exception as e:
+            except (AttributeError, RuntimeError, ValueError) as e:
                 status["rate_limiter"] = {"error": str(e), "healthy": False}
 
         # Security monitor metrics
@@ -198,7 +198,7 @@ class SecurityManager:
                 status["security_metrics"] = (
                     self.security_monitor.get_security_metrics()
                 )
-            except Exception as e:
+            except (AttributeError, RuntimeError, ValueError) as e:
                 status["security_metrics"] = {"error": str(e)}
 
         # Middleware status
