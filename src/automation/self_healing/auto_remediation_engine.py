@@ -504,7 +504,8 @@ class CPUOverloadRemediationStrategy(RemediationStrategy):
             success=True,
             execution_time_seconds=time.time() - start_time,
             actions_taken=[
-                f"Enabled request throttling at {max_requests} req/min for {duration} minutes"
+                f"Enabled request throttling at {max_requests} req/min "
+                f"for {duration} minutes"
             ],
             rollback_point=checkpoint.checkpoint_id,
         )
@@ -730,7 +731,8 @@ class ServiceDegradationRemediationStrategy(RemediationStrategy):
             success=True,
             execution_time_seconds=time.time() - start_time,
             actions_taken=[
-                f"Enabled circuit breakers with threshold {failure_threshold} and timeout {timeout_seconds}s"
+                f"Enabled circuit breakers with threshold {failure_threshold} "
+                f"and timeout {timeout_seconds}s"
             ],
             rollback_point=checkpoint.checkpoint_id,
         )
@@ -755,7 +757,8 @@ class ServiceDegradationRemediationStrategy(RemediationStrategy):
             success=True,
             execution_time_seconds=time.time() - start_time,
             actions_taken=[
-                f"Enabled aggressive caching for {cache_duration} minutes at {cache_percentage}% coverage"
+                f"Enabled aggressive caching for {cache_duration} minutes "
+                f"at {cache_percentage}% coverage"
             ],
             rollback_point=checkpoint.checkpoint_id,
         )
@@ -802,7 +805,8 @@ class ServiceDegradationRemediationStrategy(RemediationStrategy):
         # Allow time for changes to take effect
         await asyncio.sleep(10)
 
-        # Simulate health check (in real implementation, would check actual service health)
+        # Simulate health check
+        # (in real implementation, would check actual service health)
         if action.action_type == "enable_circuit_breaker":
             return True  # Circuit breakers should help with error rates
         if action.action_type == "enable_aggressive_caching":
@@ -963,7 +967,8 @@ class RollbackManager:
 
 
 class AutoRemediationEngine:
-    """Intelligent automated remediation engine with safety constraints and rollback capabilities."""
+    """Intelligent automated remediation engine with safety constraints and rollback
+    capabilities."""
 
     def __init__(
         self,
@@ -1013,20 +1018,25 @@ class AutoRemediationEngine:
         safety_result = await strategy.assess_safety(issue)
         if not safety_result.safe:
             logger.warning(
-                f"Issue {issue.issue_id} failed safety assessment: {', '.join(safety_result.blocking_factors)}"
+                f"Issue {issue.issue_id} failed safety assessment: "
+                f"{', '.join(safety_result.blocking_factors)}"
             )
             return RemediationResult(
                 action_id=f"safety_blocked_{issue.issue_id}",
                 status=RemediationStatus.REQUIRES_MANUAL,
                 success=False,
                 execution_time_seconds=0,
-                error_message=f"Safety validation failed: {', '.join(safety_result.blocking_factors)}",
+                error_message=(
+                    f"Safety validation failed: "
+                    f"{', '.join(safety_result.blocking_factors)}"
+                ),
             )
 
         # 3. Check concurrency limits
         if len(self.active_remediations) >= self.max_concurrent_remediations:
             logger.warning(
-                f"Maximum concurrent remediations ({self.max_concurrent_remediations}) reached"
+                f"Maximum concurrent remediations "
+                f"({self.max_concurrent_remediations}) reached"
             )
             return RemediationResult(
                 action_id=f"concurrency_limit_{issue.issue_id}",
@@ -1085,7 +1095,8 @@ class AutoRemediationEngine:
             # Execute actions sequentially
             for action in actions:
                 logger.info(
-                    f"Executing remediation action: {action.action_type} for {action.target_component}"
+                    f"Executing remediation action: {action.action_type} "
+                    f"for {action.target_component}"
                 )
 
                 # Execute action
@@ -1099,7 +1110,8 @@ class AutoRemediationEngine:
 
                     if validation_success:
                         logger.info(
-                            f"Remediation action {action.action_type} completed successfully"
+                            f"Remediation action {action.action_type} "
+                            f"completed successfully"
                         )
                         overall_result.actions_taken.extend(action_result.actions_taken)
                     else:
@@ -1109,7 +1121,8 @@ class AutoRemediationEngine:
                         # Don't rollback immediately, try next action
                 else:
                     logger.error(
-                        f"Remediation action {action.action_type} failed: {action_result.error_message}"
+                        f"Remediation action {action.action_type} failed: "
+                        f"{action_result.error_message}"
                     )
                     # Continue with next action
 
@@ -1134,7 +1147,8 @@ class AutoRemediationEngine:
                 if rollback_success:
                     overall_result.status = RemediationStatus.ROLLED_BACK
                     logger.info(
-                        f"Successfully rolled back remediation for issue {issue.issue_id}"
+                        f"Successfully rolled back remediation for issue "
+                        f"{issue.issue_id}"
                     )
             except Exception as rollback_error:
                 logger.exception(f"Rollback failed: {rollback_error}")

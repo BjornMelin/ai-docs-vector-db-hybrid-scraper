@@ -186,7 +186,10 @@ class SystemWeaknessAnalyzer:
                 component="cpu",
                 severity=min(1.0, metrics.cpu_percent / 100),
                 confidence=0.8,
-                description=f"High CPU utilization ({metrics.cpu_percent:.1f}%) indicating resource contention",
+                description=(
+                    f"High CPU utilization ({metrics.cpu_percent:.1f}%) "
+                    f"indicating resource contention"
+                ),
                 evidence=[f"CPU usage: {metrics.cpu_percent:.1f}%"],
                 detection_time=timestamp,
                 suggested_experiments=["cpu_stress_test", "process_termination"],
@@ -204,13 +207,19 @@ class SystemWeaknessAnalyzer:
                 component="memory",
                 severity=min(1.0, metrics.memory_percent / 100),
                 confidence=0.9,
-                description=f"High memory utilization ({metrics.memory_percent:.1f}%) indicating potential memory pressure",
+                description=(
+                    f"High memory utilization ({metrics.memory_percent:.1f}%) "
+                    f"indicating potential memory pressure"
+                ),
                 evidence=[f"Memory usage: {metrics.memory_percent:.1f}%"],
                 detection_time=timestamp,
                 suggested_experiments=["memory_exhaustion", "oom_killer_test"],
                 business_impact=0.8,
                 learning_objective="Test memory management and recovery mechanisms",
-                hypothesis="System has adequate memory management and can recover from memory pressure",
+                hypothesis=(
+                    "System has adequate memory management and can recover from "
+                    "memory pressure"
+                ),
             )
             weaknesses.append(memory_weakness)
 
@@ -222,7 +231,10 @@ class SystemWeaknessAnalyzer:
                 component="database",
                 severity=min(1.0, metrics.database_connections / 100),
                 confidence=0.8,
-                description=f"High database connection usage ({metrics.database_connections}) may indicate connection pool issues",
+                description=(
+                    f"High database connection usage ({metrics.database_connections}) "
+                    f"may indicate connection pool issues"
+                ),
                 evidence=[f"DB connections: {metrics.database_connections}"],
                 detection_time=timestamp,
                 suggested_experiments=[
@@ -231,7 +243,9 @@ class SystemWeaknessAnalyzer:
                 ],
                 business_impact=0.6,
                 learning_objective="Validate database connection handling and pooling",
-                hypothesis="Database connection pooling is properly configured and resilient",
+                hypothesis=(
+                    "Database connection pooling is properly configured and resilient"
+                ),
             )
             weaknesses.append(db_weakness)
 
@@ -253,7 +267,10 @@ class SystemWeaknessAnalyzer:
                     1.0, metrics.response_time_p95 / 10000
                 ),  # Normalize to 10s max
                 confidence=0.9,
-                description=f"High response times ({metrics.response_time_p95:.0f}ms) indicate performance issues",
+                description=(
+                    f"High response times ({metrics.response_time_p95:.0f}ms) "
+                    f"indicate performance issues"
+                ),
                 evidence=[f"P95 response time: {metrics.response_time_p95:.0f}ms"],
                 detection_time=timestamp,
                 suggested_experiments=["latency_injection", "traffic_spike"],
@@ -271,7 +288,10 @@ class SystemWeaknessAnalyzer:
                 component="cache",
                 severity=1.0 - metrics.cache_hit_ratio,
                 confidence=0.8,
-                description=f"Low cache hit ratio ({metrics.cache_hit_ratio:.2f}) affecting performance",
+                description=(
+                    f"Low cache hit ratio ({metrics.cache_hit_ratio:.2f}) "
+                    f"affecting performance"
+                ),
                 evidence=[f"Cache hit ratio: {metrics.cache_hit_ratio:.2f}"],
                 detection_time=timestamp,
                 suggested_experiments=["cache_invalidation", "cache_overload"],
@@ -297,13 +317,18 @@ class SystemWeaknessAnalyzer:
                 component="api_gateway",
                 severity=min(1.0, metrics.error_rate * 20),  # Normalize to 5% = 1.0
                 confidence=0.9,
-                description=f"High error rate ({metrics.error_rate:.3f}) indicates error handling issues",
+                description=(
+                    f"High error rate ({metrics.error_rate:.3f}) "
+                    f"indicates error handling issues"
+                ),
                 evidence=[f"Error rate: {metrics.error_rate:.3f}"],
                 detection_time=timestamp,
                 suggested_experiments=["error_injection", "dependency_failure"],
                 business_impact=0.9,
                 learning_objective="Test error handling and propagation patterns",
-                hypothesis="System has robust error handling and doesn't cascade failures",
+                hypothesis=(
+                    "System has robust error handling and doesn't cascade failures"
+                ),
             )
             weaknesses.append(error_weakness)
 
@@ -322,7 +347,10 @@ class SystemWeaknessAnalyzer:
                     1.0, len(open_breakers) / 5
                 ),  # Normalize to 5 breakers = 1.0
                 confidence=0.8,
-                description=f"Open circuit breakers ({', '.join(open_breakers)}) indicate dependency issues",
+                description=(
+                    f"Open circuit breakers ({', '.join(open_breakers)}) "
+                    f"indicate dependency issues"
+                ),
                 evidence=[f"Open breakers: {', '.join(open_breakers)}"],
                 detection_time=timestamp,
                 suggested_experiments=["service_unavailable", "network_partition"],

@@ -100,7 +100,7 @@ class AdaptiveCircuitBreaker:
             self._record_success(time.time() - start_time)
             return result
 
-        except Exception as e:
+        except Exception:
             # Record failure
             self._record_failure(time.time() - start_time)
             raise
@@ -224,7 +224,7 @@ class SelfHealingDatabaseManager:
             self.engine = await self._create_engine_with_retry()
             logger.info("Database connection initialized successfully")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize database")
             # Start background recovery
             asyncio.create_task(self._background_recovery())
@@ -252,7 +252,8 @@ class SelfHealingDatabaseManager:
 
                 delay = min(self.base_delay * (2**attempt), self.max_delay)
                 logger.warning(
-                    f"Database connection attempt {attempt + 1} failed, retrying in {delay}s: {e}"
+                    f"Database connection attempt {attempt + 1} failed, "
+                    f"retrying in {delay}s: {e}"
                 )
                 await asyncio.sleep(delay)
 
@@ -273,7 +274,7 @@ class SelfHealingDatabaseManager:
 
             yield session
 
-        except Exception as e:
+        except Exception:
             self.error_count += 1
             logger.exception("Database session error")
 
@@ -315,7 +316,7 @@ class SelfHealingDatabaseManager:
             self.engine = await self._create_engine_with_retry()
             logger.info("Database recovery successful")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Database recovery failed")
             # Schedule retry
             asyncio.create_task(self._delayed_recovery())
@@ -386,7 +387,7 @@ class AutoScalingManager:
 
                 await asyncio.sleep(check_interval)
 
-            except Exception as e:
+            except Exception:
                 logger.exception("Auto-scaling monitoring error")
                 await asyncio.sleep(30)  # Shorter interval on error
 
@@ -458,7 +459,8 @@ class AutoScalingManager:
     async def _scale_up(self, metrics: SystemMetrics):
         """Scale up system resources."""
         logger.info(
-            f"Scaling up - CPU: {metrics.cpu_percent}%, Memory: {metrics.memory_percent}%"
+            f"Scaling up - CPU: {metrics.cpu_percent}%, "
+            f"Memory: {metrics.memory_percent}%"
         )
 
         # In a real implementation, this would:
@@ -472,7 +474,8 @@ class AutoScalingManager:
     async def _scale_down(self, metrics: SystemMetrics):
         """Scale down system resources."""
         logger.info(
-            f"Scaling down - CPU: {metrics.cpu_percent}%, Memory: {metrics.memory_percent}%"
+            f"Scaling down - CPU: {metrics.cpu_percent}%, "
+            f"Memory: {metrics.memory_percent}%"
         )
 
         # In a real implementation, this would:

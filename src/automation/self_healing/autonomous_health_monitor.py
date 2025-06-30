@@ -86,7 +86,8 @@ class HealthTrend:
 
 
 class FailurePredictionEngine:
-    """ML-based failure prediction using time-series analysis and pattern recognition."""
+    """ML-based failure prediction using time-series analysis and pattern
+    recognition."""
 
     def __init__(self):
         self.metric_history: dict[str, list[float]] = {}
@@ -582,7 +583,8 @@ class FailurePredictionEngine:
 
 
 class AutonomousHealthMonitor:
-    """AI-driven health monitoring with predictive failure detection and autonomous remediation."""
+    """AI-driven health monitoring with predictive failure detection and autonomous
+    remediation."""
 
     def __init__(
         self,
@@ -622,7 +624,7 @@ class AutonomousHealthMonitor:
 
         try:
             await self.continuous_monitoring_loop()
-        except Exception as e:
+        except Exception:
             logger.exception("Health monitoring loop failed")
             self.monitoring_active = False
             raise
@@ -797,7 +799,8 @@ class AutonomousHealthMonitor:
             return
 
         logger.warning(
-            f"High-risk failure predictions detected: {len(high_risk_predictions)} predictions"
+            f"High-risk failure predictions detected: "
+            f"{len(high_risk_predictions)} predictions"
         )
 
         for prediction in high_risk_predictions:
@@ -806,14 +809,16 @@ class AutonomousHealthMonitor:
     async def handle_prediction(self, prediction: FailurePrediction):
         """Handle individual failure prediction."""
         logger.warning(
-            f"Prediction: {prediction.failure_type} - Risk: {prediction.risk_level.value} - "
+            f"Prediction: {prediction.failure_type} - "
+            f"Risk: {prediction.risk_level.value} - "
             f"Confidence: {prediction.confidence.value} - "
             f"Time to failure: {prediction.time_to_failure_minutes} minutes"
         )
 
         # Log recommended actions
         logger.info(
-            f"Recommended actions for {prediction.failure_type}: {', '.join(prediction.recommended_actions)}"
+            f"Recommended actions for {prediction.failure_type}: "
+            f"{', '.join(prediction.recommended_actions)}"
         )
 
         # For now, we log the prediction and recommendations
@@ -853,7 +858,8 @@ class AutonomousHealthMonitor:
         # Log circuit breaker optimization recommendations
         if stressed_services:
             logger.info(
-                f"Recommend reviewing circuit breaker configurations for: {', '.join(set(stressed_services))}"
+                f"Recommend reviewing circuit breaker configurations for: "
+                f"{', '.join(set(stressed_services))}"
             )
 
     async def generate_health_insights(
@@ -878,10 +884,20 @@ class AutonomousHealthMonitor:
         summary_lines = [
             "=== Health Status Summary ===",
             f"Overall Health Score: {insights['overall_health_score']:.2f}/1.0",
-            f"CPU: {metrics.cpu_percent:.1f}% | Memory: {metrics.memory_percent:.1f}% | Disk: {metrics.disk_percent:.1f}%",
-            f"Response Time P95: {metrics.response_time_p95:.0f}ms | Error Rate: {metrics.error_rate:.3f}",
-            f"Cache Hit Ratio: {metrics.cache_hit_ratio:.2f} | DB Connections: {metrics.database_connections}",
-            f"Active Predictions: {len(predictions)} | High Risk: {len([p for p in predictions if p.risk_level == FailureRiskLevel.HIGH])}",
+            (
+                f"CPU: {metrics.cpu_percent:.1f}% | "
+                f"Memory: {metrics.memory_percent:.1f}% | "
+                f"Disk: {metrics.disk_percent:.1f}%"
+            ),
+            f"Response Time P95: {metrics.response_time_p95:.0f}ms | "
+            f"Error Rate: {metrics.error_rate:.3f}",
+            f"Cache Hit Ratio: {metrics.cache_hit_ratio:.2f} | "
+            f"DB Connections: {metrics.database_connections}",
+            (
+                f"Active Predictions: {len(predictions)} | "
+                f"High Risk: {len([p for p in predictions "
+                f"if p.risk_level == FailureRiskLevel.HIGH])}"
+            ),
             f"System Stability: {insights['system_stability']}",
             "=== End Summary ===",
         ]

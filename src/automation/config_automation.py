@@ -198,7 +198,7 @@ class AutoConfigManager:
                 f"scale_threshold={self.config.scale_up_threshold:.2f}"
             )
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize configuration")
             # Fallback to minimal configuration
             return await self._create_fallback_config()
@@ -251,7 +251,7 @@ class AutoConfigManager:
             logger.info("Configuration refreshed successfully")
             return True
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to refresh configuration")
             return False
 
@@ -295,7 +295,7 @@ class ConfigDriftHealer:
                 await self._check_and_heal_drift()
                 await asyncio.sleep(check_interval)
 
-            except Exception as e:
+            except Exception:
                 logger.exception("Configuration drift monitoring error")
                 await asyncio.sleep(60)  # Shorter interval on error
 
@@ -321,7 +321,7 @@ class ConfigDriftHealer:
             # If refresh fails, try to restore from backup
             return await self._restore_from_backup()
 
-        except Exception as e:
+        except Exception:
             logger.exception("Configuration healing failed")
             return False
 
@@ -335,7 +335,8 @@ class ConfigDriftHealer:
     async def _notify_manual_intervention_needed(self):
         """Notify that manual intervention is needed for configuration issues."""
         logger.critical(
-            "Configuration drift could not be automatically healed - manual intervention required"
+            "Configuration drift could not be automatically healed - "
+            "manual intervention required"
         )
 
         # In a real implementation, this would send alerts through configured channels
