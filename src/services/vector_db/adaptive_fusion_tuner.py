@@ -114,7 +114,8 @@ class AdaptiveFusionTuner:
             return {"dense": 0.7, "sparse": 0.3}
 
     def _compute_complexity_adjustment(
-        self, query_classification: Any  # TODO: Replace with proper QueryClassification type
+        self,
+        query_classification: Any,  # TODO: Replace with proper QueryClassification type
     ) -> float:
         """Compute weight adjustment based on query complexity."""
         complexity = query_classification.complexity_level.lower()
@@ -130,7 +131,7 @@ class AdaptiveFusionTuner:
     def _compute_performance_adjustment(
         self,
         historical_performance: dict[str, float],
-        _query_classification: Any  # TODO: Replace with proper QueryClassification type,
+        _query_classification: Any,  # TODO: Replace with proper QueryClassification type,
     ) -> float:
         """Compute adjustment based on historical performance."""
         try:

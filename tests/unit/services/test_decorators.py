@@ -478,7 +478,7 @@ class TestRateLimiter:
         # Next call should provide retry_after
         with pytest.raises(RateLimitError) as exc_info:
             await limiter.acquire()
-        
+
         e = exc_info.value
         assert hasattr(e, "retry_after")
         assert e.retry_after > 0

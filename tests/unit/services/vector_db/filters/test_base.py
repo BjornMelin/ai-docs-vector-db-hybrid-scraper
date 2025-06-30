@@ -252,6 +252,7 @@ class TestBaseFilter:
 
     def test_abstract_methods(self):
         """Test that abstract methods must be implemented."""
+
         # Cannot instantiate abstract class without implementing apply
         class IncompleteFilter(BaseFilter):
             pass

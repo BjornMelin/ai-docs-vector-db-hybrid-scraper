@@ -283,8 +283,7 @@ class TestContextManagers:
     def test_trace_operation_with_exception(self):
         """Test trace_operation context manager with exceptions."""
         with pytest.raises(ValueError), trace_operation("failing_operation"):
-            msg = "Test error"
-            raise ValueError(msg)
+            raise ValueError("Test error")
 
     def test_trace_async_operation(self):
         """Test async trace_operation context manager."""

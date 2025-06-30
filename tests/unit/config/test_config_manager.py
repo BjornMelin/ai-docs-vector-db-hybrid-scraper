@@ -33,7 +33,7 @@ class ConfigFileSettingsSource:
         return {
             "app_name": "Test App",
             "debug": True,
-            "performance": {"max_concurrent_requests": 20}
+            "performance": {"max_concurrent_requests": 20},
         }
 
 

@@ -530,16 +530,16 @@ class TestCoreConfigurationPatterns:
         "cache_config",
         [
             pytest.param(
-                {"cache_type": CacheType.MEMORY, "local_max_size": 1000},
-                id="memory_cache",
+                {"cache_type": CacheType.LOCAL, "local_max_size": 1000},
+                id="local_cache",
             ),
             pytest.param(
                 {
-                    "cache_type": CacheType.DRAGONFLY,
-                    "dragonfly_url": "redis://localhost:6379",
-                    "ttl_seconds": 3600,
+                    "cache_type": CacheType.REDIS,
+                    "redis_url": "redis://localhost:6379",
+                    "ttl_embeddings": 3600,
                 },
-                id="dragonfly_cache",
+                id="redis_cache",
             ),
         ],
     )

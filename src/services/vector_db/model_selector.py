@@ -183,7 +183,8 @@ class ModelSelector:
             return self._get_fallback_strategy(query_classification)
 
     def _get_candidate_models(
-        self, query_classification: Any  # TODO: Replace with proper QueryClassification type
+        self,
+        query_classification: Any,  # TODO: Replace with proper QueryClassification type
     ) -> list[str]:
         """Get candidate models based on query characteristics."""
         candidates = []
@@ -317,7 +318,9 @@ class ModelSelector:
         return scored_candidates
 
     def _calculate_specialization_score(
-        self, model_info: dict[str, Any], query_classification: Any  # TODO: Replace with proper QueryClassification type
+        self,
+        model_info: dict[str, Any],
+        query_classification: Any,  # TODO: Replace with proper QueryClassification type
     ) -> float:
         """Calculate specialization score based on model-query alignment."""
         specializations = model_info["specializations"]
@@ -360,7 +363,9 @@ class ModelSelector:
         return min(score, 1.0)
 
     def _get_historical_performance(
-        self, model_id: str, query_classification: Any  # TODO: Replace with proper QueryClassification type
+        self,
+        model_id: str,
+        query_classification: Any,  # TODO: Replace with proper QueryClassification type
     ) -> float:
         """Get historical performance score for model on similar queries."""
         query_type_key = (
@@ -475,7 +480,8 @@ class ModelSelector:
         return ". ".join(rationale_parts)
 
     def _get_fallback_strategy(
-        self, query_classification: Any  # TODO: Replace with proper QueryClassification type
+        self,
+        query_classification: Any,  # TODO: Replace with proper QueryClassification type
     ) -> Any:  # TODO: Replace with proper ModelSelectionStrategy type
         """Get fallback strategy when selection fails."""
         # Default to balanced general-purpose model

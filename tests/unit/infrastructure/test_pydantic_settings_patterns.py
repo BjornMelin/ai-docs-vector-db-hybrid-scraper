@@ -326,7 +326,7 @@ class TestPydanticSettingsPatterns:
         assert settings.instance_id.startswith("instance-")
         assert str(os.getpid()) in settings.instance_id
 
-    def test_configuration_custom_validation(self):
+    def test_configuration_custom_validation(self, test_password):
         """Test custom validation logic in configuration.
 
         Verifies that custom validators work properly with
@@ -359,7 +359,7 @@ class TestPydanticSettingsPatterns:
         # Test valid configuration
         settings = CustomValidatedSettings(
             email="USER@EXAMPLE.COM",
-            password="SecurePass123",  # Test data
+            password=test_password,
         )
         assert settings.email == "user@example.com"  # Lowercased
         assert settings.password == test_password

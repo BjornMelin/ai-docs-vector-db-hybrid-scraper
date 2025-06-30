@@ -220,14 +220,14 @@ class TestObservabilitySystemIntegration:
             user_id="user789", session_id="session012"
         )
 
+        # Simulate operation that fails
+        @instrument_function("failing_ai_operation")
+        def failing_embedding_call():
+            msg = "OpenAI API unavailable"
+            raise ConnectionError(msg)
+
         with correlation_manager.correlated_operation("error_prone_operation"):
             try:
-                # Simulate operation that fails
-                @instrument_function("failing_ai_operation")
-                def failing_embedding_call():
-                    msg = "OpenAI API unavailable"
-                    raise ConnectionError(msg)
-
                 failing_embedding_call()
 
             except ConnectionError as e:
