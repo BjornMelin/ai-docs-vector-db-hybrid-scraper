@@ -11,14 +11,17 @@ import pytest
 
 from src.config import ABTestVariant, Config, ModelType, OptimizationStrategy, QueryType
 from src.models.vector_search import (
-    ABTestConfig,
-    FusionConfig,
-    HybridSearchRequest,
-    HybridSearchResponse,
-    ModelSelectionStrategy,
-    QueryClassification,
+    # TODO: Fix imports - these classes need to be implemented or renamed
+    # ABTestConfig,
+    # FusionConfig,
+    # HybridSearchRequest,
+    # HybridSearchResponse,
+    # ModelSelectionStrategy,
+    # QueryClassification,
     SearchAccuracy,
     SecureSearchParamsModel,
+    AdvancedHybridSearchRequest,  # Use existing class
+    # Add other available classes as needed
 )
 from src.services.errors import QdrantServiceError
 from src.services.query_processing.models import (

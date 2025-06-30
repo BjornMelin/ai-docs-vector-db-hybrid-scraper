@@ -595,11 +595,13 @@ async def _generate_cost_predictions(
     predictions = []
     for period in range(1, periods + 1):
         predicted_cost = base_cost * (1 + growth_rate) ** period
-        predictions.append({
-            "period": period,
-            "predicted_cost": predicted_cost,
-            "confidence": 0.89 - (period * 0.02),  # Decreasing confidence over time
-        })
+        predictions.append(
+            {
+                "period": period,
+                "predicted_cost": predicted_cost,
+                "confidence": 0.89 - (period * 0.02),  # Decreasing confidence over time
+            }
+        )
 
     return {
         "total_predicted_cost": sum(p["predicted_cost"] for p in predictions),

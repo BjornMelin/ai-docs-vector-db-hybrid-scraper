@@ -517,7 +517,9 @@ class AdvancedToolOrchestrator:
                 try:
                     # Create a lambda that captures the exception to test circuit breaker
                     exception_to_throw = e
-                    await circuit_breaker.call(lambda: (_ for _ in ()).throw(exception_to_throw))
+                    await circuit_breaker.call(
+                        lambda: (_ for _ in ()).throw(exception_to_throw)
+                    )
                 except Exception:  # nosec # Expected to fail for circuit breaker testing
                     pass
 

@@ -61,4 +61,4 @@ def async_command(func: Callable[..., Any]) -> Callable[..., Any]:
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         return asyncio.run(func(*args, **kwargs))
 
-    return wrapper  # type: ignore
+    return wrapper  # type: ignore[return-value]

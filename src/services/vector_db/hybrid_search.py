@@ -14,10 +14,11 @@ from qdrant_client import AsyncQdrantClient
 
 from src.config import ABTestVariant, Config, OptimizationStrategy
 from src.models.vector_search import (
-    HybridSearchRequest,
-    HybridSearchResponse,
-    RetrievalMetrics,
-    SearchResult,
+    # TODO: Fix imports - use existing classes or create missing ones
+    AdvancedHybridSearchRequest,  # Use existing class instead of HybridSearchRequest
+    SearchResponse,  # Use existing class instead of HybridSearchResponse
+    SecureSearchResult,  # Use existing class instead of SearchResult
+    # RetrievalMetrics,  # TODO: Create this class or use alternative
 )
 from src.services.errors import QdrantServiceError
 from src.services.query_processing import (
