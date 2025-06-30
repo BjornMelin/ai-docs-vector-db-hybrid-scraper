@@ -459,10 +459,13 @@ class TestLogContext:
         """Test LogContext handles exceptions properly."""
         original_factory = logging.getLogRecordFactory()
 
+        def raise_test_exception():
+            msg = "Test exception"
+            raise ValueError(msg)
+
         try:
             with LogContext(service="TestService"):
-                msg = "Test exception"
-                raise ValueError(msg)
+                raise_test_exception()
         except ValueError:
             pass
 
@@ -726,9 +729,13 @@ class TestLoggingIntegration:
             with_service_context("ErrorService"),
             LogContext(operation="risky_operation"),
         ):
-            try:
+
+            def raise_error():
                 msg = "Something went wrong"
                 raise ValueError(msg)
+
+            try:
+                raise_error()
             except ValueError:
                 logger.exception("Operation failed")
 

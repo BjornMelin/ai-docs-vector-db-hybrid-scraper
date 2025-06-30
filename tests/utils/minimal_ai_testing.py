@@ -209,8 +209,8 @@ class MinimalVectorDatabaseTestUtils:
 
         # Mock search results
         class MockSearchResult:
-            def __init__(self, id: str, score: float, payload: dict):
-                self.id = id
+            def __init__(self, search_id: str, score: float, payload: dict):
+                self.id = search_id
                 self.score = score
                 self.payload = payload
 

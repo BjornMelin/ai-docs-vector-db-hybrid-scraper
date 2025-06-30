@@ -36,7 +36,10 @@ class TestAutomatedAccessibilityTools:
                     "id": "color-contrast",
                     "impact": "serious",
                     "tags": ["cat.color", "wcag2aa", "wcag143"],
-                    "description": "Ensures the contrast between foreground and background colors meets WCAG 2 AA contrast ratio thresholds",
+                    "description": (
+                        "Ensures the contrast between foreground and background colors "
+                        "meets WCAG 2 AA contrast ratio thresholds"
+                    ),
                     "help": "Elements must have sufficient color contrast",
                     "helpUrl": "https://dequeuniversity.com/rules/axe/4.8/color-contrast",
                     "nodes": [
@@ -184,7 +187,10 @@ class TestAutomatedAccessibilityTools:
                     "id": "color-contrast",
                     "impact": "serious",
                     "tags": ["cat.color", "wcag2aa", "wcag143"],
-                    "description": "Ensures the contrast between foreground and background colors meets WCAG 2 AA contrast ratio thresholds",
+                    "description": (
+                        "Ensures the contrast between foreground and background colors "
+                        "meets WCAG 2 AA contrast ratio thresholds"
+                    ),
                     "help": "Elements must have sufficient color contrast",
                     "helpUrl": "https://dequeuniversity.com/rules/axe/4.8/color-contrast",
                     "nodes": [
