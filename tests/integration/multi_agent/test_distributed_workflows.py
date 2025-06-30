@@ -86,7 +86,7 @@ class WorkflowOrchestrator:
             "role": role,
             "load": 0,
             "capabilities": [],
-            "last_activity": datetime.now(),
+            "last_activity": datetime.now(tz=timezone.utc),
         }
 
     async def execute_workflow(
@@ -96,7 +96,7 @@ class WorkflowOrchestrator:
     ) -> DistributedWorkflow:
         """Execute a distributed workflow."""
         workflow.state = WorkflowState.RUNNING
-        workflow.start_time = datetime.now()
+        workflow.start_time = datetime.now(tz=timezone.utc)
 
         try:
             # Build dependency graph
@@ -131,11 +131,11 @@ class WorkflowOrchestrator:
             workflow.performance_metrics = self._calculate_workflow_metrics(workflow)
             workflow.state = WorkflowState.COMPLETED
 
-        except Exception as e:
+        except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
             workflow.state = WorkflowState.FAILED
             workflow.error = str(e)
         finally:
-            workflow.end_time = datetime.now()
+            workflow.end_time = datetime.now(tz=timezone.utc)
 
         return workflow
 
@@ -219,7 +219,7 @@ class WorkflowOrchestrator:
 
             node.state = WorkflowState.COMPLETED
 
-        except Exception as e:
+        except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
             node.state = WorkflowState.FAILED
             node.error = str(e)
             node.result = {"success": False, "error": str(e)}
@@ -1145,7 +1145,7 @@ class TestAutonomousCapabilities:
             failure_history.append(
                 {
                     "agent_id": agent_id,
-                    "timestamp": datetime.now(),
+                    "timestamp": datetime.now(tz=timezone.utc),
                     "error": str(error),
                 }
             )
@@ -1215,7 +1215,7 @@ class TestAutonomousCapabilities:
 
                 return await original_execute_node(node, workflow, deps)
 
-            except Exception as e:
+            except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
                 # Autonomous failure detection
                 agent_id = autonomous_orchestrator._select_agent_for_node(node)
                 replacement_agent = detect_agent_failure(agent_id, e)

@@ -311,40 +311,42 @@ class TestFastAPIObservabilityIntegration:
         )
 
         # Mock the tracking module before importing middleware
-        with patch.dict(
-            "sys.modules",
-            {
-                "opentelemetry": MagicMock(),
-                "opentelemetry.trace": MagicMock(),
-                "opentelemetry.metrics": MagicMock(),
-            },
-        ):
+        with (
+            patch.dict(
+                "sys.modules",
+                {
+                    "opentelemetry": MagicMock(),
+                    "opentelemetry.trace": MagicMock(),
+                    "opentelemetry.metrics": MagicMock(),
+                },
+            ),
             # Patch tracking functions
-            with patch(
+            patch(
                 "src.services.observability.tracking.get_tracer",
                 return_value=mock_tracer,
-            ):
-                # Force reload of middleware module to pick up mocked functions
+            ),
+        ):
+            # Force reload of middleware module to pick up mocked functions
 
-                importlib.reload(src.services.observability.middleware)
+            importlib.reload(src.services.observability.middleware)
 
-                # Add middleware
-                self.app.add_middleware(
-                    FastAPIObservabilityMiddleware,
-                    service_name="test-service",
-                    record_request_metrics=False,
-                )
+            # Add middleware
+            self.app.add_middleware(
+                FastAPIObservabilityMiddleware,
+                service_name="test-service",
+                record_request_metrics=False,
+            )
 
-                client = TestClient(self.app)
+            client = TestClient(self.app)
 
-                # Make request to error endpoint
-                response = client.get("/error")
+            # Make request to error endpoint
+            response = client.get("/error")
 
-                assert response.status_code == 500
+            assert response.status_code == 500
 
-                # Verify error was recorded in span
-                mock_span.record_exception.assert_called()
-                mock_span.set_status.assert_called()
+            # Verify error was recorded in span
+            mock_span.record_exception.assert_called()
+            mock_span.set_status.assert_called()
 
     def test_middleware_ai_context_detection(self):
         """Test middleware AI context detection."""
@@ -358,47 +360,49 @@ class TestFastAPIObservabilityIntegration:
         )
 
         # Mock the tracking module before importing middleware
-        with patch.dict(
-            "sys.modules",
-            {
-                "opentelemetry": MagicMock(),
-                "opentelemetry.trace": MagicMock(),
-                "opentelemetry.metrics": MagicMock(),
-            },
-        ):
+        with (
+            patch.dict(
+                "sys.modules",
+                {
+                    "opentelemetry": MagicMock(),
+                    "opentelemetry.trace": MagicMock(),
+                    "opentelemetry.metrics": MagicMock(),
+                },
+            ),
             # Patch tracking functions
-            with patch(
+            patch(
                 "src.services.observability.tracking.get_tracer",
                 return_value=mock_tracer,
-            ):
-                # Force reload of middleware module to pick up mocked functions
+            ),
+        ):
+            # Force reload of middleware module to pick up mocked functions
 
-                importlib.reload(src.services.observability.middleware)
+            importlib.reload(src.services.observability.middleware)
 
-                # Add AI endpoint
-                @self.app.post("/api/search")
-                async def search_endpoint():
-                    return {"results": []}
+            # Add AI endpoint
+            @self.app.post("/api/search")
+            async def search_endpoint():
+                return {"results": []}
 
-                # Add middleware with AI context
-                self.app.add_middleware(
-                    FastAPIObservabilityMiddleware,
-                    service_name="test-service",
-                    record_ai_context=True,
-                    record_request_metrics=False,
-                )
+            # Add middleware with AI context
+            self.app.add_middleware(
+                FastAPIObservabilityMiddleware,
+                service_name="test-service",
+                record_ai_context=True,
+                record_request_metrics=False,
+            )
 
-                client = TestClient(self.app)
+            client = TestClient(self.app)
 
-                # Make request to AI endpoint
-                response = client.post("/api/search?model=embedding&provider=openai")
+            # Make request to AI endpoint
+            response = client.post("/api/search?model=embedding&provider=openai")
 
-                assert response.status_code == 200
+            assert response.status_code == 200
 
-                # Verify AI context attributes were set
-                mock_span.set_attribute.assert_any_call("ai.operation.type", "search")
-                mock_span.set_attribute.assert_any_call("ai.model", "embedding")
-                mock_span.set_attribute.assert_any_call("ai.provider", "openai")
+            # Verify AI context attributes were set
+            mock_span.set_attribute.assert_any_call("ai.operation.type", "search")
+            mock_span.set_attribute.assert_any_call("ai.model", "embedding")
+            mock_span.set_attribute.assert_any_call("ai.provider", "openai")
 
 
 class TestObservabilityConfigurationIntegration:
@@ -460,7 +464,7 @@ class TestObservabilityConfigurationIntegration:
         assert config.trace_sample_rate == 0.5
 
         # Test invalid configuration should raise validation error
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="trace_sample_rate"):
             ObservabilityConfig(trace_sample_rate=1.5)
 
 

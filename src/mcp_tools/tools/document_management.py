@@ -4,6 +4,7 @@ Provides comprehensive document lifecycle management with autonomous
 processing and intelligent organization capabilities.
 """
 
+import datetime
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from uuid import uuid4
@@ -418,8 +419,6 @@ def register_tools(mcp, client_manager: ClientManager):
 
 def _get_timestamp() -> str:
     """Get current timestamp."""
-    import datetime
-
     return datetime.datetime.now(tz=datetime.UTC).isoformat()
 
 

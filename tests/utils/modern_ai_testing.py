@@ -6,6 +6,7 @@ following 2025 best practices.
 """
 
 import asyncio
+import contextlib
 import json
 import time
 from typing import Any
@@ -144,7 +145,7 @@ class ModernAITestingUtils:
                     input_texts = data.get("input", [])
                     if isinstance(input_texts, str):
                         input_texts = [input_texts]
-                except:
+                except (KeyError, TypeError, AttributeError):
                     input_texts = ["default"]
             else:
                 input_texts = ["default"]
@@ -314,11 +315,9 @@ class PerformanceTestingFramework:
             Latency in seconds
         """
         start_time = time.perf_counter()
-        try:
-            await search_func(query)
-        except Exception:
+        with contextlib.suppress(Exception):
             # Still measure time even if operation fails
-            pass
+            await search_func(query)
         return time.perf_counter() - start_time
 
     async def run_latency_test(

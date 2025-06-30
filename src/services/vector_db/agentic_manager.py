@@ -8,7 +8,7 @@ based on the I4 Vector Database Modernization research.
 import asyncio
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from uuid import uuid4
@@ -347,7 +347,7 @@ class AgenticVectorManager:
             optimization_time = time.time() - optimization_start
 
             # Update metrics and history
-            metrics.last_optimized = datetime.now()
+            metrics.last_optimized = datetime.now(tz=UTC)
 
             optimization_result = {
                 "optimization_id": optimization_id,
@@ -359,7 +359,7 @@ class AgenticVectorManager:
                 "performance_after": await self._analyze_collection_performance(
                     collection_name
                 ),
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
             }
 
             self.optimization_history.append(optimization_result)
@@ -375,7 +375,7 @@ class AgenticVectorManager:
             return {
                 "optimization_id": optimization_id,
                 "error": str(e),
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(tz=UTC).isoformat(),
             }
 
     async def autonomous_search(
@@ -581,7 +581,7 @@ class AgenticVectorManager:
                     opt
                     for opt in self.optimization_history
                     if datetime.fromisoformat(opt["timestamp"])
-                    > datetime.now() - timedelta(hours=24)
+                    > datetime.now(tz=UTC) - timedelta(hours=24)
                 ]
             ),
             "collection_breakdown": {
@@ -682,7 +682,7 @@ class AgenticVectorManager:
 
     async def _run_periodic_optimization(self) -> None:
         """Run periodic optimization on collections that need it."""
-        current_time = datetime.now()
+        current_time = datetime.now(tz=UTC)
 
         for collection_name, config in self.agent_collections.items():
             if not config.enable_auto_optimization:

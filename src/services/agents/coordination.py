@@ -558,7 +558,7 @@ class ParallelAgentCoordinator:
             self.failed_tasks.append(assignment)
             self.metrics.failed_tasks += 1
 
-            logger.exception(f"Task {task.task_id} failed for agent {agent_name}: {e}")
+            logger.exception("Task {task.task_id} failed for agent {agent_name}")
 
             # Track failure in circuit breaker
             if self.enable_circuit_breaker:

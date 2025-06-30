@@ -170,7 +170,7 @@ class TestServiceFaultInjection:
         async def get_data_with_fallback(key: str):
             try:
                 return await cache_get(key)
-            except Exception:
+            except (ConnectionError, RuntimeError, ValueError):
                 return await fallback_db_get(key)
 
         # Run multiple operations
@@ -258,7 +258,7 @@ class TestServiceFaultInjection:
         async def service_a():
             try:
                 result_b = await service_b()
-            except Exception:
+            except (ConnectionError, RuntimeError, ValueError):
                 # Fallback mechanism
                 return {"service": "A", "dependency": None, "fallback": True}
             else:
@@ -508,7 +508,7 @@ class TestAdvancedServiceFaults:
             try:
                 result = await resource_intensive_operation(cpu, memory)
                 results.append(result)
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError) as e:
                 results.append({"error": str(e)})
 
         # Some operations should fail due to resource exhaustion

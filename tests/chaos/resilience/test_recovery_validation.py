@@ -817,7 +817,7 @@ class TestRecoveryValidation:
                     try:
                         result = await check_func()
                         results[check_name] = {"status": "pass", "result": result}
-                    except Exception as e:
+                    except (ConnectionError, RuntimeError, ValueError) as e:
                         results[check_name] = {"status": "fail", "error": str(e)}
 
                 # Calculate overall health score

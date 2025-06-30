@@ -1,10 +1,3 @@
-import time
-
-
-class TestError(Exception):
-    """Custom exception for this module."""
-
-
 """Mutation testing for service logic validation.
 
 Tests service logic robustness by introducing mutations and verifying
@@ -14,6 +7,7 @@ error handling patterns.
 """
 
 import asyncio
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -28,6 +22,10 @@ from src.services.functional.dependencies import (
     get_client_manager,
     get_config,
 )
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
 
 
 class TestCircuitBreakerMutationTesting:
@@ -49,7 +47,7 @@ class TestCircuitBreakerMutationTesting:
         for _i in range(3):
             try:
                 await circuit_breaker.call(failing_service)
-            except Exception:
+            except (ConnectionError, RuntimeError, ValueError):
                 failure_count += 1
 
         assert circuit_breaker.state == CircuitBreakerState.OPEN
@@ -217,9 +215,9 @@ class TestDependencyInjectionMutationTesting:
         # Test normal lifecycle
         with patch(
             "src.services.functional.dependencies.CacheManager"
-        ) as MockCacheManager:
+        ) as mock_cache_manager:
             mock_instance = AsyncMock()
-            MockCacheManager.return_value = mock_instance
+            mock_cache_manager.return_value = mock_instance
 
             # Normal flow should call initialize and cleanup
             try:
@@ -267,14 +265,14 @@ class TestDependencyInjectionMutationTesting:
 
         with patch(
             "src.services.functional.dependencies.ClientManager"
-        ) as MockClientManager:
+        ) as mock_client_manager:
             # Test mutation: What if initialization error is swallowed?
             # Original: await client_manager.initialize()
             # Mutation: try: await client_manager.initialize() except: pass
 
             mock_instance = AsyncMock()
             mock_instance.initialize.side_effect = Exception("Init failed")
-            MockClientManager.return_value = mock_instance
+            mock_client_manager.return_value = mock_instance
 
             # Normal behavior should propagate the error
             with pytest.raises(Exception, match="Init failed"):
@@ -372,7 +370,7 @@ class TestServiceLogicMutationTesting:
         async def service_with_fallback():
             try:
                 return await primary_service()
-            except Exception:
+            except (ConnectionError, RuntimeError, ValueError):
                 return await fallback_service()
 
         result = await service_with_fallback()

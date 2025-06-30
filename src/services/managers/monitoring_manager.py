@@ -483,5 +483,5 @@ class MonitoringManager:
                 logger.info("Health check loop cancelled")
                 break
             except Exception as e:
-                logger.exception(f"Error in health check loop: {e}")
+                logger.exception("Error in health check loop")
                 await asyncio.sleep(10)  # Brief pause before retry

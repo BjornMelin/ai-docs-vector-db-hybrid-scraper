@@ -670,8 +670,11 @@ class TestBreakingPoints:
                 logger.info("System recovery completed")
 
             logger.info(
-                f"Phase {phase_config['name']}: {error_rate:.2f}% errors, "
-                f"{avg_response_time:.2f}ms response time, {result.metrics.throughput_rps:.2f} RPS"
+                "Phase %s: %.2f%% errors, %.2f ms response time, %.2f RPS",
+                phase_config["name"],
+                error_rate,
+                avg_response_time,
+                result.metrics.throughput_rps,
             )
 
         # Calculate recovery metrics

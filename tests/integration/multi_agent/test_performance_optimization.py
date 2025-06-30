@@ -62,7 +62,7 @@ class PerformanceOptimizer:
         dependencies: BaseAgentDependencies,
     ) -> PerformanceMetrics:
         """Run baseline benchmark to establish performance baseline."""
-        start_time = datetime.now()
+        start_time = datetime.now(tz=timezone.utc)
 
         # Simple sequential processing (baseline)
         task_results = []
@@ -88,11 +88,11 @@ class PerformanceOptimizer:
                     task_results.append(len(tools) > 0)
                     task_latencies.append((time.time() - task_start) * 1000)
 
-            except Exception:
+            except (TimeoutError, ConnectionError, RuntimeError, ValueError):
                 task_results.append(False)
                 task_latencies.append((time.time() - task_start) * 1000)
 
-        end_time = datetime.now()
+        end_time = datetime.now(tz=timezone.utc)
         duration = (end_time - start_time).total_seconds()
 
         baseline_metrics = PerformanceMetrics(
@@ -122,7 +122,7 @@ class PerformanceOptimizer:
         optimization_strategy: str = "parallel_with_coordination",
     ) -> PerformanceMetrics:
         """Run optimized benchmark using multi-agent coordination."""
-        start_time = datetime.now()
+        start_time = datetime.now(tz=timezone.utc)
 
         if optimization_strategy == "parallel_with_coordination":
             return await self._parallel_coordinated_execution(
@@ -179,7 +179,7 @@ class PerformanceOptimizer:
                     "latency_ms": (time.time() - task_start) * 1000,
                     "agent_type": "discovery",
                 }
-            except Exception:
+            except (TimeoutError, ConnectionError, RuntimeError, ValueError):
                 return {
                     "success": False,
                     "latency_ms": (time.time() - task_start) * 1000,
@@ -190,7 +190,7 @@ class PerformanceOptimizer:
         tasks = [coordinated_task(agent, i) for i, agent in enumerate(agents)]
         results = await asyncio.gather(*tasks)
 
-        end_time = datetime.now()
+        end_time = datetime.now(tz=timezone.utc)
         duration = (end_time - start_time).total_seconds()
 
         success_results = [r["success"] for r in results]
@@ -254,7 +254,7 @@ class PerformanceOptimizer:
 
         coordination_results = await asyncio.gather(*coordination_tasks)
 
-        end_time = datetime.now()
+        end_time = datetime.now(tz=timezone.utc)
         duration = (end_time - start_time).total_seconds()
 
         # Combine results
@@ -330,7 +330,7 @@ class PerformanceOptimizer:
 
         results = await adaptive_task_execution()
 
-        end_time = datetime.now()
+        end_time = datetime.now(tz=timezone.utc)
         duration = (end_time - start_time).total_seconds()
 
         # Process results

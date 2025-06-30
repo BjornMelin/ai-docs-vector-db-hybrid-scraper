@@ -7,22 +7,20 @@ focusing on complex workflow scenarios and performance optimization.
 import asyncio
 import statistics
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from collections import Counter
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.infrastructure.client_manager import ClientManager
 from src.services.agents.agentic_orchestrator import (
     AgenticOrchestrator,
-    ToolRequest,
     ToolResponse,
 )
 from src.services.agents.core import BaseAgentDependencies, create_agent_dependencies
 from src.services.agents.dynamic_tool_discovery import (
     DynamicToolDiscovery,
-    ToolCapability,
-    ToolCapabilityType,
-    ToolMetrics,
 )
 
 
@@ -125,8 +123,6 @@ class ResultFusionEngine:
                 majority_results[key] = statistics.median(values)
             else:
                 # Most common value
-                from collections import Counter
-
                 counter = Counter(str(v) for v in values)
                 most_common = counter.most_common(1)[0]
                 majority_results[key] = most_common[0]

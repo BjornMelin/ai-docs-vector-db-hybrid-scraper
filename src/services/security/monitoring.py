@@ -240,7 +240,7 @@ class SecurityMonitor:
             self._check_automated_responses(security_event)
 
         except Exception as e:
-            logger.exception(f"Failed to log security event: {e}")
+            logger.exception("Failed to log security event")
 
     def _determine_severity(self, event_type: SecurityEventType) -> SecuritySeverity:
         """Determine severity based on event type.

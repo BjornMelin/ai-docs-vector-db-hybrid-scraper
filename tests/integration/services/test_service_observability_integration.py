@@ -773,7 +773,7 @@ class TestMetricsCollection:
                             }
                             triggered_alerts.append(alert)
                             self.alerts.append(alert)
-                    except Exception:
+                    except (TimeoutError, ConnectionError, RuntimeError, ValueError):
                         # Handle errors in alert evaluation
                         logger.debug("Exception suppressed during cleanup/testing")
 
@@ -1342,7 +1342,12 @@ class TestHealthMonitoring:
 
                             health_results[service] = health_result
 
-                        except Exception as e:
+                        except (
+                            TimeoutError,
+                            ConnectionError,
+                            RuntimeError,
+                            ValueError,
+                        ) as e:
                             check_config["status"] = "error"
                             health_results[service] = {
                                 "status": "error",

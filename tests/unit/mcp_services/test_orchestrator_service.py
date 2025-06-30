@@ -781,7 +781,6 @@ class TestOrchestratorServicePerformanceAndIntegration:
 
     async def test_service_initialization_is_efficient(self, mock_client_manager):
         """Test that service initialization is efficient and doesn't block."""
-        import time
 
         service = OrchestratorService()
 
@@ -807,7 +806,6 @@ class TestOrchestratorServicePerformanceAndIntegration:
 
     async def test_service_supports_concurrent_access(self, mock_client_manager):
         """Test that service supports concurrent access patterns."""
-        import asyncio
 
         service = OrchestratorService()
 

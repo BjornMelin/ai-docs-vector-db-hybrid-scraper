@@ -13,6 +13,10 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 from pydantic import BaseModel, Field
+
+
+# Initialize numpy random generator
+rng = np.random.default_rng()
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
@@ -155,9 +159,7 @@ class VectorVisualizationEngine(BaseService):
 
             # Limit number of points for performance
             if len(embeddings) > self.max_points:
-                indices = np.random.choice(
-                    len(embeddings), self.max_points, replace=False
-                )
+                indices = rng.choice(len(embeddings), self.max_points, replace=False)
                 embeddings_array = embeddings_array[indices]
                 texts = [texts[i] for i in indices]
                 if metadata:
@@ -298,7 +300,7 @@ class VectorVisualizationEngine(BaseService):
 
             # Sample if too many embeddings
             if len(embeddings) > sample_size:
-                indices = np.random.choice(len(embeddings), sample_size, replace=False)
+                indices = rng.choice(len(embeddings), sample_size, replace=False)
                 embeddings = [embeddings[i] for i in indices]
                 texts = [texts[i] for i in indices]
 
@@ -591,7 +593,7 @@ class VectorVisualizationEngine(BaseService):
             if len(embeddings_array) > 100:
                 # Sample pairs to avoid O(n²) complexity
                 num_samples = 200
-                indices = np.random.choice(
+                indices = rng.choice(
                     len(embeddings_array),
                     min(num_samples, len(embeddings_array)),
                     replace=False,
@@ -680,9 +682,7 @@ class VectorVisualizationEngine(BaseService):
             else:
                 # Sample for large datasets
                 sample_size = 50
-                indices = np.random.choice(
-                    len(embeddings_array), sample_size, replace=False
-                )
+                indices = rng.choice(len(embeddings_array), sample_size, replace=False)
                 sample_embeddings = embeddings_array[indices]
 
                 pairwise_distances = []
@@ -858,7 +858,7 @@ class VectorVisualizationEngine(BaseService):
         try:
             # Sample for large datasets
             if len(embeddings_array) > 200:
-                indices = np.random.choice(len(embeddings_array), 200, replace=False)
+                indices = rng.choice(len(embeddings_array), 200, replace=False)
                 sample_embeddings = embeddings_array[indices]
             else:
                 sample_embeddings = embeddings_array
@@ -921,7 +921,7 @@ class VectorVisualizationEngine(BaseService):
         try:
             # Sample for performance
             if len(embeddings_array) > 100:
-                indices = np.random.choice(len(embeddings_array), 100, replace=False)
+                indices = rng.choice(len(embeddings_array), 100, replace=False)
                 sample_embeddings = embeddings_array[indices]
                 sample_texts = [texts[i] for i in indices]
             else:

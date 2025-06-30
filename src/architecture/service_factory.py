@@ -129,12 +129,13 @@ class ModeAwareServiceFactory:
             self._initialization_status[name] = True
 
             logger.info(f"Initialized service '{name}' in {self.mode.value} mode")
-            return service
 
         except Exception as e:
             self._initialization_status[name] = False
             msg = f"Failed to initialize service '{name}': {e}"
             raise ServiceInitializationError(msg) from e
+        else:
+            return service
 
     def _get_service_class(self, name: str) -> type[ServiceProtocol]:
         """Get the service class for the current mode."""
@@ -195,10 +196,11 @@ class ModeAwareServiceFactory:
 
             # Check if implementation exists
             self._get_service_class(name)
-            return True
 
         except (ServiceNotFoundError, ServiceNotEnabledError):
             return False
+        else:
+            return True
 
     def get_available_services(self) -> list[str]:
         """Get list of services available in the current mode.
@@ -267,7 +269,7 @@ class ModeAwareServiceFactory:
                 await service.cleanup()
                 logger.debug(f"Cleaned up service '{name}'")
             except Exception as e:
-                logger.exception(f"Error cleaning up service '{name}': {e}")
+                logger.exception("Error cleaning up service '{name}'")
 
         self._service_instances.clear()
         self._initialization_status.clear()

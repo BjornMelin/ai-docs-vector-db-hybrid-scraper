@@ -4,8 +4,6 @@ Tests the security configuration system including validation,
 rate limiting, and security controls.
 """
 
-import pytest
-
 from src.config.settings import (
     SecurityConfig,
     Settings,

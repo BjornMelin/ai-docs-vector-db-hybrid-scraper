@@ -477,5 +477,5 @@ async def create_task(
             await client_manager.cleanup()
 
     except Exception as e:
-        logger.exception(f"Failed to create task {task_name}: {e}")
+        logger.exception("Failed to create task {task_name}")
         return None

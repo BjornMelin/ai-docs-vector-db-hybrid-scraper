@@ -97,7 +97,7 @@ class TestDataProtection:
                 )
                 try:
                     kdf.verify(password.encode(), stored_hash)
-                except Exception:
+                except (ValueError, RuntimeError, ImportError):
                     return False
                 else:
                     return True

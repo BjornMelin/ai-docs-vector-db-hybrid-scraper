@@ -7,10 +7,10 @@ and coordination efficiency under high load scenarios.
 import asyncio
 import threading
 import time
-from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -18,19 +18,13 @@ import pytest
 from src.infrastructure.client_manager import ClientManager
 from src.services.agents.agentic_orchestrator import (
     AgenticOrchestrator,
-    ToolRequest,
-    ToolResponse,
 )
 from src.services.agents.core import (
-    AgentState,
-    BaseAgent,
     BaseAgentDependencies,
     create_agent_dependencies,
 )
 from src.services.agents.dynamic_tool_discovery import (
     DynamicToolDiscovery,
-    ToolCapability,
-    ToolMetrics,
 )
 
 
@@ -81,7 +75,7 @@ class DistributedStateManager:
         shared_state = SharedState(
             state_id=state_id,
             data=initial_data.copy(),
-            last_updated=datetime.now(),
+            last_updated=datetime.now(tz=timezone.utc),
         )
 
         self.shared_states[state_id] = shared_state
@@ -96,7 +90,7 @@ class DistributedStateManager:
         update = StateUpdate(
             update_id=str(uuid4()),
             agent_id=agent_id,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
             operation="read",
             key_path=key_path or "",
         )
@@ -141,7 +135,7 @@ class DistributedStateManager:
         update = StateUpdate(
             update_id=str(uuid4()),
             agent_id=agent_id,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
             operation="write",
             key_path=key_path,
             new_value=value,
@@ -176,7 +170,7 @@ class DistributedStateManager:
             # Detect conflicts
             if update.old_value != update.new_value and state.updated_by != agent_id:
                 # Check if another agent updated this recently
-                time_since_update = datetime.now() - state.last_updated
+                time_since_update = datetime.now(tz=timezone.utc) - state.last_updated
                 if time_since_update < timedelta(seconds=1):  # Recent update
                     update.conflict_detected = True
                     if not await self._resolve_conflict(state_id, update):
@@ -188,7 +182,7 @@ class DistributedStateManager:
 
             # Update metadata
             state.version += 1
-            state.last_updated = datetime.now()
+            state.last_updated = datetime.now(tz=timezone.utc)
             state.updated_by = agent_id
 
             update.success = True
@@ -211,7 +205,7 @@ class DistributedStateManager:
         update = StateUpdate(
             update_id=str(uuid4()),
             agent_id=agent_id,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
             operation="merge",
             key_path="multiple",
             new_value=updates,
@@ -236,7 +230,7 @@ class DistributedStateManager:
 
             # Update metadata
             state.version += 1
-            state.last_updated = datetime.now()
+            state.last_updated = datetime.now(tz=timezone.utc)
             state.updated_by = agent_id
 
             update.success = True
@@ -262,7 +256,7 @@ class DistributedStateManager:
                 self.state_locks[state_id] = agent_id
                 state = self.shared_states[state_id]
                 state.lock_owner = agent_id
-                state.lock_timestamp = datetime.now()
+                state.lock_timestamp = datetime.now(tz=timezone.utc)
                 return True
 
             # Wait briefly before retrying
@@ -348,7 +342,7 @@ class DistributedStateManager:
         recent_updates = [
             u
             for u in self.update_history
-            if datetime.now() - u.timestamp < timedelta(minutes=1)
+            if datetime.now(tz=timezone.utc) - u.timestamp < timedelta(minutes=1)
         ]
 
         return {
@@ -678,7 +672,7 @@ class TestConcurrentStateAccess:
                     ]
                     conflicts_detected = len(recent_updates)
 
-                except Exception:
+                except (TimeoutError, ConnectionError, RuntimeError, ValueError):
                     pass  # Continue on errors
 
             return {
@@ -781,7 +775,7 @@ class TestConcurrentStateAccess:
                         {
                             "agent_id": agent_id,
                             "resources": allocated,
-                            "timestamp": datetime.now().isoformat(),
+                            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
                         }
                     )
                     await state_manager.write_state(
@@ -926,7 +920,7 @@ class TestHighLoadScenarios:
                     )
 
                     # Update metrics
-                    timestamp = datetime.now().isoformat()
+                    timestamp = datetime.now(tz=timezone.utc).isoformat()
                     await state_manager.write_state(
                         "high_frequency_test",
                         agent_id,
@@ -953,7 +947,7 @@ class TestHighLoadScenarios:
                     successful_updates += 1
                     await asyncio.sleep(update_interval)
 
-                except Exception:
+                except (TimeoutError, ConnectionError, RuntimeError, ValueError):
                     pass  # Continue on errors
 
             return {
@@ -1073,7 +1067,7 @@ class TestHighLoadScenarios:
                         {
                             "task": task,
                             "agent": agent_id,
-                            "timestamp": datetime.now().isoformat(),
+                            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
                         }
                     )
                     await state_manager.write_state(
@@ -1087,7 +1081,7 @@ class TestHighLoadScenarios:
                     processing_time = time.time() - start_time
                     processing_times.append(processing_time)
 
-                except Exception:
+                except (TimeoutError, ConnectionError, RuntimeError, ValueError):
                     pass
                 finally:
                     await state_manager.release_lock("efficiency_test", agent_id)
@@ -1178,7 +1172,7 @@ class TestHighLoadScenarios:
                 "agent_metrics": {},
                 "synchronization_events": [],
                 "performance_data": {
-                    "start_time": datetime.now().isoformat(),
+                    "start_time": datetime.now(tz=timezone.utc).isoformat(),
                     "operations_completed": 0,
                 },
             },

@@ -146,7 +146,7 @@ class HealthMonitor:
                     "details": {"reason": "health_check_exception", "error": str(e)},
                 }
             )
-            logger.exception(f"Health check failed for {self.service_name}: {e}")
+            logger.exception("Health check failed for {self.service_name}")
 
         # Update descriptor status
         self.descriptor.status = ServiceStatus(health_result["status"])
@@ -394,7 +394,7 @@ class EnterpriseServiceRegistry:
             logger.info("Enterprise service orchestration completed successfully")
 
         except Exception as e:
-            logger.exception(f"Service orchestration failed: {e}")
+            logger.exception("Service orchestration failed")
             await self.coordinate_shutdown()
             raise
         finally:
@@ -497,7 +497,7 @@ class EnterpriseServiceRegistry:
         except Exception as e:
             descriptor.status = ServiceStatus.FAILED
             descriptor.error_count += 1
-            logger.exception(f"Failed to start service {service_name}: {e}")
+            logger.exception("Failed to start service {service_name}")
             raise
 
     async def _stop_service(self, service_name: str) -> None:
@@ -518,7 +518,7 @@ class EnterpriseServiceRegistry:
         except Exception as e:
             descriptor.status = ServiceStatus.FAILED
             descriptor.error_count += 1
-            logger.exception(f"Failed to stop service {service_name}: {e}")
+            logger.exception("Failed to stop service {service_name}")
 
     async def _health_check_loop(self) -> None:
         """Background health monitoring for all services."""
@@ -529,14 +529,14 @@ class EnterpriseServiceRegistry:
                     try:
                         await self.health_monitors[service_name].check_health()
                     except Exception as e:
-                        logger.exception(f"Health check failed for {service_name}: {e}")
+                        logger.exception("Health check failed for {service_name}")
 
                 await asyncio.sleep(self.health_check_interval)
 
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.exception(f"Error in health check loop: {e}")
+                logger.exception("Error in health check loop")
                 await asyncio.sleep(self.health_check_interval)
 
 
@@ -593,7 +593,7 @@ class EnterpriseIntegrationManager:
 
         except Exception as e:
             self.integration_phase = IntegrationPhase.FAILED
-            logger.exception(f"Enterprise integration failed: {e}")
+            logger.exception("Enterprise integration failed")
             await self.cleanup_enterprise_features()
             raise
 
@@ -614,7 +614,7 @@ class EnterpriseIntegrationManager:
             logger.info("Enterprise feature cleanup completed")
 
         except Exception as e:
-            logger.exception(f"Error during enterprise cleanup: {e}")
+            logger.exception("Error during enterprise cleanup")
 
     async def get_integration_status(self) -> dict[str, Any]:
         """Get comprehensive integration status."""

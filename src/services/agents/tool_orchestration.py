@@ -11,7 +11,7 @@ import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from uuid import uuid4
@@ -519,7 +519,7 @@ class AdvancedToolOrchestrator:
                 except Exception:  # nosec # Expected to fail for circuit breaker testing
                     pass
 
-            logger.exception(f"Tool {tool_id} execution failed: {e}")
+            logger.exception("Tool {tool_id} execution failed")
 
             # Try fallback if available
             if fallback_enabled and tool_def.fallback_tools:
@@ -559,7 +559,7 @@ class AdvancedToolOrchestrator:
         recent_executions = [
             result
             for result in self.execution_history
-            if result.start_time > datetime.now() - timedelta(hours=1)
+            if result.start_time > datetime.now(tz=UTC) - timedelta(hours=1)
         ]
 
         avg_success_rate = (
@@ -880,7 +880,7 @@ class AdvancedToolOrchestrator:
         self, node: ToolChainNode, execution_state: dict[str, Any]
     ) -> dict[str, Any]:
         """Execute a single node in the tool chain."""
-        node.start_time = datetime.now()
+        node.start_time = datetime.now(tz=UTC)
         node.status = "running"
 
         try:
@@ -900,7 +900,7 @@ class AdvancedToolOrchestrator:
                 node.tool_id, input_data, fallback_enabled=True
             )
 
-            node.end_time = datetime.now()
+            node.end_time = datetime.now(tz=UTC)
             node.result = result.result
 
             if result.success:
@@ -922,12 +922,12 @@ class AdvancedToolOrchestrator:
             return result.result or {"error": result.error}
 
         except Exception as e:
-            node.end_time = datetime.now()
+            node.end_time = datetime.now(tz=UTC)
             node.status = "failed"
             node.error = str(e)
             execution_state["failed_nodes"].add(node.node_id)
 
-            logger.exception(f"Node {node.node_id} execution failed: {e}")
+            logger.exception("Node {node.node_id} execution failed")
 
             return {"error": str(e)}
 

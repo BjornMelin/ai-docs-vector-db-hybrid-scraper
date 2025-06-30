@@ -9,7 +9,6 @@ This module provides comprehensive security testing for AI/ML systems including:
 - SQL injection and XSS protection
 """
 
-import asyncio
 
 import pytest
 from fastapi.testclient import TestClient

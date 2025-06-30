@@ -1091,7 +1091,7 @@ class IntelligentChaosOrchestrator:
         try:
             await self.continuous_chaos_loop()
         except Exception as e:
-            logger.exception(f"Chaos orchestration failed: {e}")
+            logger.exception("Chaos orchestration failed")
             self.orchestration_active = False
             raise
 
@@ -1131,7 +1131,7 @@ class IntelligentChaosOrchestrator:
                 await self.generate_resilience_insights()
 
             except Exception as e:
-                logger.exception(f"Error in chaos orchestration loop: {e}")
+                logger.exception("Error in chaos orchestration loop")
 
             # Wait for next testing cycle
             await asyncio.sleep(self.testing_interval)
@@ -1262,7 +1262,7 @@ class IntelligentChaosOrchestrator:
                 await asyncio.sleep(30)
 
             except Exception as e:
-                logger.exception(f"Failed to execute experiment {experiment.name}: {e}")
+                logger.exception("Failed to execute experiment {experiment.name}")
 
         return session_results
 
@@ -1349,7 +1349,7 @@ class IntelligentChaosOrchestrator:
             return chaos_result
 
         except Exception as e:
-            logger.exception(f"Chaos experiment execution failed: {e}")
+            logger.exception("Chaos experiment execution failed")
             # Create failure result
             failed_result = ExperimentResult(
                 experiment_name=experiment.name,

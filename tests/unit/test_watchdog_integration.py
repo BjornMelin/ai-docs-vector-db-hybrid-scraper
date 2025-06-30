@@ -162,7 +162,7 @@ class TestWatchdogIntegration:
                 # Simulate config reload that fails
                 msg = "Invalid configuration format"
                 raise ValueError(msg)
-            except Exception:
+            except (TimeoutError, ConnectionError, RuntimeError, ValueError):
                 error_count += 1
                 # In real implementation, this would be logged
                 # logger.error(f"Config reload failed: {e}")

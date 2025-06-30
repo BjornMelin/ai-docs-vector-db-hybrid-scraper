@@ -92,7 +92,7 @@ class MockLightweightScraper:
 
             return "LIGHTWEIGHT_OK"
 
-        except Exception:
+        except (httpx.HTTPError, ValueError, KeyError):
             return "BROWSER_REQUIRED"
 
 

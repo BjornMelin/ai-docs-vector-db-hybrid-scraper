@@ -817,7 +817,7 @@ class TestDisasterRecovery:
                     "test_duration": test_duration,
                     "timestamp": test_start,
                 }
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError, OSError) as e:
                 return {
                     "test_successful": False,
                     "error": str(e),

@@ -346,7 +346,7 @@ class TestResourceExhaustion:
             """Connection request with fallback strategy."""
             try:
                 return await request_database_connection()
-            except Exception:
+            except (ConnectionError, RuntimeError, MemoryError, OSError):
                 # Fallback to read-only replica or cached data
                 return {
                     "connection_id": "fallback_readonly",

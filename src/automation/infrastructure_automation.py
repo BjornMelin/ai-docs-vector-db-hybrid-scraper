@@ -225,7 +225,7 @@ class SelfHealingDatabaseManager:
             logger.info("Database connection initialized successfully")
 
         except Exception as e:
-            logger.exception(f"Failed to initialize database: {e}")
+            logger.exception("Failed to initialize database")
             # Start background recovery
             asyncio.create_task(self._background_recovery())
 
@@ -275,7 +275,7 @@ class SelfHealingDatabaseManager:
 
         except Exception as e:
             self.error_count += 1
-            logger.exception(f"Database session error: {e}")
+            logger.exception("Database session error")
 
             # Attempt automatic recovery
             if self._should_attempt_recovery():
@@ -316,7 +316,7 @@ class SelfHealingDatabaseManager:
             logger.info("Database recovery successful")
 
         except Exception as e:
-            logger.exception(f"Database recovery failed: {e}")
+            logger.exception("Database recovery failed")
             # Schedule retry
             asyncio.create_task(self._delayed_recovery())
 
@@ -387,7 +387,7 @@ class AutoScalingManager:
                 await asyncio.sleep(check_interval)
 
             except Exception as e:
-                logger.exception(f"Auto-scaling monitoring error: {e}")
+                logger.exception("Auto-scaling monitoring error")
                 await asyncio.sleep(30)  # Shorter interval on error
 
     async def _collect_metrics(self) -> SystemMetrics:

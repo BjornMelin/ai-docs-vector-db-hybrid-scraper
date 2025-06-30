@@ -11,8 +11,13 @@ This module provides the enhanced testing infrastructure with:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
+import math
 import os
+import random
+import shutil
+import statistics
 import tempfile
 import time
 from typing import Any
@@ -118,8 +123,6 @@ def mock_embedding_service():
         """Generate deterministic mock embedding based on text."""
         # Use text hash for deterministic results
         seed = hash(text) % 1000000
-        import random
-
         random.seed(seed)
         embedding = [random.uniform(-1, 1) for _ in range(1536)]
         # Normalize to unit vector
@@ -228,7 +231,7 @@ def performance_monitor():
                 result = await operation(*args, **kwargs)
                 success = True
                 error = None
-            except Exception as e:
+            except (ImportError, AttributeError, RuntimeError) as e:
                 result = None
                 success = False
                 error = str(e)
@@ -252,8 +255,6 @@ def performance_monitor():
             durations = [m["duration_ms"] for m in self.measurements if m["success"]]
             if not durations:
                 return {"success_rate": 0.0}
-
-            import statistics
 
             return {
                 "count": len(self.measurements),
@@ -315,9 +316,6 @@ async def isolated_test_environment():
 
         async def cleanup(self):
             """Clean up test environment."""
-            import contextlib
-            import shutil
-
             with contextlib.suppress(Exception):
                 shutil.rmtree(self.temp_dir, ignore_errors=True)
 
@@ -326,7 +324,7 @@ async def isolated_test_environment():
                     if not task.done():
                         task.cancel()
                         await asyncio.sleep(0.1)
-                except Exception:
+                except (ImportError, AttributeError, RuntimeError):
                     pass
 
     env = IsolatedEnvironment()
@@ -354,8 +352,6 @@ def ai_test_utilities():
             assert all(isinstance(x, int | float) for x in embedding), (
                 "All values must be numeric"
             )
-
-            import math
 
             assert not any(math.isnan(x) or math.isinf(x) for x in embedding), (
                 "No NaN/Inf values"
@@ -391,8 +387,6 @@ def ai_test_utilities():
             count: int = 10, dim: int = 1536
         ) -> list[list[float]]:
             """Generate deterministic test embeddings."""
-            import random
-
             embeddings = []
 
             for i in range(count):

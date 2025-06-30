@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import click
+import uvicorn
 
 
 @click.group()
@@ -21,7 +22,6 @@ def cli():
 @click.option("--port", default=8000)
 def dev(mode: str, reload: bool, host: str, port: int):
     """Start development server"""
-    import uvicorn
 
     os.environ["AI_DOCS__MODE"] = mode
     click.echo(f"🚀 Starting development server in {mode} mode")

@@ -427,7 +427,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
             }
 
         except Exception as e:
-            logger.exception(f"Failed to get agent performance metrics: {e}")
+            logger.exception("Failed to get agent performance metrics")
             return {
                 "error": str(e),
                 "message": "Failed to retrieve performance metrics",
@@ -454,7 +454,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
             }
 
         except Exception as e:
-            logger.exception(f"Failed to reset agent learning: {e}")
+            logger.exception("Failed to reset agent learning")
             return {
                 "status": "error",
                 "message": f"Failed to reset agent learning: {e!s}",
@@ -515,7 +515,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
             }
 
         except Exception as e:
-            logger.exception(f"Agent configuration optimization failed: {e}")
+            logger.exception("Agent configuration optimization failed")
             return {"status": "error", "message": f"Optimization failed: {e!s}"}
 
     @mcp.tool()
@@ -571,7 +571,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
             }
 
         except Exception as e:
-            logger.exception(f"Failed to get orchestration metrics: {e}")
+            logger.exception("Failed to get orchestration metrics")
             return {
                 "error": str(e),
                 "message": "Failed to retrieve orchestration metrics",

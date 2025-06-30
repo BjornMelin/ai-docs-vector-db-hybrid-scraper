@@ -72,14 +72,16 @@ class TestDocumentService:
         """Test that initialization logs success message with 5-tier capabilities."""
         service = DocumentService()
 
-        with patch.object(service, "_register_document_tools", new_callable=AsyncMock):
-            with caplog.at_level(logging.INFO):
-                await service.initialize(mock_client_manager)
+        with (
+            patch.object(service, "_register_document_tools", new_callable=AsyncMock),
+            caplog.at_level(logging.INFO),
+        ):
+            await service.initialize(mock_client_manager)
 
-                assert (
-                    "DocumentService initialized with 5-tier crawling capabilities"
-                    in caplog.text
-                )
+            assert (
+                "DocumentService initialized with 5-tier crawling capabilities"
+                in caplog.text
+            )
 
     async def test_register_document_tools_raises_error_when_not_initialized(self):
         """Test that tool registration raises error when service not initialized."""
@@ -218,19 +220,21 @@ class TestDocumentServiceCrawlingCapabilities:
         mock_crawling = Mock()
         mock_crawling.register_tools = Mock()
 
-        with patch("src.mcp_services.document_service.crawling", mock_crawling):
-            with patch.multiple(
+        with (
+            patch("src.mcp_services.document_service.crawling", mock_crawling),
+            patch.multiple(
                 "src.mcp_services.document_service",
                 document_management=Mock(register_tools=Mock()),
                 collections=Mock(register_tools=Mock()),
                 projects=Mock(register_tools=Mock()),
                 content_intelligence=Mock(register_tools=Mock()),
-            ):
-                await service._register_document_tools()
+            ),
+        ):
+            await service._register_document_tools()
 
-                # Verify crawling tools were registered (I3 research implementation)
-                mock_crawling.register_tools.assert_called_once_with(
-                    service.mcp, mock_client_manager
+            # Verify crawling tools were registered (I3 research implementation)
+            mock_crawling.register_tools.assert_called_once_with(
+                service.mcp, mock_client_manager
                 )
 
     async def test_content_intelligence_tool_registration(self, mock_client_manager):
@@ -542,7 +546,6 @@ class TestDocumentServiceIntegrationScenarios:
 
     async def test_service_supports_concurrent_access(self, mock_client_manager):
         """Test that service supports concurrent access patterns."""
-        import asyncio
 
         service = DocumentService()
 

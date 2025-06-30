@@ -1,7 +1,7 @@
 """Tests for agentic RAG implementation."""
 
 import asyncio
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -739,7 +739,7 @@ class TestQueryOrchestrator:
                 # Should handle gracefully
                 assert "success" in result
                 assert "orchestration_id" in result
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError) as e:
                 # If exceptions occur, they should be handled gracefully
                 assert isinstance(e, ValueError | RuntimeError)
 

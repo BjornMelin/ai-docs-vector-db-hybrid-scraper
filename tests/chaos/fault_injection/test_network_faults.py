@@ -92,7 +92,7 @@ class TestNetworkFaultInjection:
             try:
                 await fault_injector.get_active_faults()[fault_id]["fault_func"]()
                 successes += 1
-            except Exception:
+            except (TimeoutError, ConnectionError, RuntimeError):
                 failures += 1
 
         # Verify partial failure behavior (should have some failures)
@@ -268,7 +268,7 @@ class TestNetworkFaultInjection:
         for _ in range(_total_requests):
             try:
                 await fault_injector.get_active_faults()[fault_id]["fault_func"]()
-            except Exception:
+            except (TimeoutError, ConnectionError, RuntimeError):
                 failures += 1
 
         actual_failure_rate = failures / _total_requests

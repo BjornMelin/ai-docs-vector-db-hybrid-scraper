@@ -5,14 +5,11 @@ including P95 latency validation, throughput testing, and load characteristics
 following 2025 performance testing best practices.
 """
 
-import asyncio
-import time
 from unittest.mock import MagicMock
 
 import pytest
 
 from tests.utils.modern_ai_testing import (
-    ModernAITestingUtils,
     PerformanceTestingFramework,
     performance_critical_test,
 )
@@ -82,7 +79,6 @@ class TestSearchPerformance:
         # Configure mock service for realistic latency
         async def search_func(query: str):
             # Simulate variable latency (most requests fast, some slower)
-            import random
 
             if random.random() < 0.95:  # 95% of requests
                 latency = random.uniform(20, 80)  # Fast requests
@@ -250,7 +246,6 @@ class TestSearchPerformance:
             # Simulate search in dataset of given size
             async def search_func(query: str, size=dataset_size):
                 # Latency increases logarithmically with dataset size (realistic)
-                import math
 
                 base_latency = 30.0
                 scale_factor = math.log10(size / 100.0 + 1) * 20.0

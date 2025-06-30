@@ -1,16 +1,12 @@
 """Tests for search analytics dashboard functionality."""
 
 import asyncio
-from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from src.services.analytics.search_dashboard import (
-    PerformanceMetric,
-    QueryPattern,
     SearchAnalyticsDashboard,
-    UserBehaviorInsight,
 )
 
 

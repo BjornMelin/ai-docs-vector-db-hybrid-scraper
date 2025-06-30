@@ -148,7 +148,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         except Exception as e:
             # Handle unexpected errors securely
-            logger.exception(f"Unexpected error in security middleware: {e}")
+            logger.exception("Unexpected error in security middleware")
 
             response = JSONResponse(
                 status_code=500, content={"error": "Internal server error"}

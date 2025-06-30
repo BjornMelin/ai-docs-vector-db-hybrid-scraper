@@ -5,7 +5,6 @@ Tests comprehensive security features including encryption, audit logging,
 integrity validation, and integration with existing security infrastructure.
 """
 
-import json
 import tempfile
 from pathlib import Path
 from unittest.mock import patch

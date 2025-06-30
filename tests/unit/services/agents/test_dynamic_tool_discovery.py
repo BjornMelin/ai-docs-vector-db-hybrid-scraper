@@ -4,9 +4,7 @@ This module provides thorough testing of the J3 research implementation
 for autonomous tool orchestration with intelligent capability assessment.
 """
 
-import asyncio
 import sys
-import time
 from unittest.mock import Mock
 from uuid import uuid4
 

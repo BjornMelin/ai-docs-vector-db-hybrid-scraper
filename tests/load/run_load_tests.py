@@ -7,12 +7,9 @@ with different configurations, profiles, and reporting options.
 
 import argparse
 import contextlib
-import json
 import logging
-import os
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 
@@ -20,12 +17,12 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from locust import main as locust_main
-from locust.env import Environment
-from locust.log import setup_logging
+from locust import main as locust_main  # noqa: E402
+from locust.env import Environment  # noqa: E402
+from locust.log import setup_logging  # noqa: E402
 
-from tests.load.load_profiles import LOAD_PROFILES, get_load_profile
-from tests.load.locust_load_runner import (
+from tests.load.load_profiles import LOAD_PROFILES, get_load_profile  # noqa: E402
+from tests.load.locust_load_runner import (  # noqa: E402
     AdminUser,
     VectorDBUser,
     create_load_test_environment,

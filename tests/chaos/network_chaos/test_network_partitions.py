@@ -764,7 +764,7 @@ class TestNetworkPartitions:
                             except ConnectionError:
                                 pass
 
-                except Exception as e:
+                except (TimeoutError, ConnectionError, OSError) as e:
                     write_op["error"] = str(e)
 
                 self.operations_log.append(write_op)
@@ -786,7 +786,7 @@ class TestNetworkPartitions:
                         read_op["value"] = self.network.nodes[node_id].data[key]
                         read_op["success"] = True
 
-                except Exception as e:
+                except (TimeoutError, ConnectionError, OSError) as e:
                     read_op["error"] = str(e)
 
                 self.reads_log.append(read_op)

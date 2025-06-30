@@ -56,7 +56,7 @@ class EnterpriseSearchService(BaseService):
             logger.info("Enterprise search service initialized successfully")
 
         except Exception as e:
-            logger.exception(f"Failed to initialize enterprise search service: {e}")
+            logger.exception("Failed to initialize enterprise search service")
             raise
 
     async def cleanup(self) -> None:
@@ -142,7 +142,7 @@ class EnterpriseSearchService(BaseService):
             return response
 
         except Exception as e:
-            logger.exception(f"Enterprise search failed: {e}")
+            logger.exception("Enterprise search failed")
             return SearchResponse(
                 query=request.query,
                 results=[],
@@ -193,7 +193,7 @@ class EnterpriseSearchService(BaseService):
             return query  # Would implement actual expansion logic
 
         except Exception as e:
-            logger.exception(f"Query expansion failed: {e}")
+            logger.exception("Query expansion failed")
             return query
 
     async def rerank_results(
@@ -212,7 +212,7 @@ class EnterpriseSearchService(BaseService):
             return sorted(results, key=lambda x: x.get("score", 0), reverse=True)
 
         except Exception as e:
-            logger.exception(f"Reranking failed: {e}")
+            logger.exception("Reranking failed")
             return results
 
     async def _initialize_vector_search(self) -> None:

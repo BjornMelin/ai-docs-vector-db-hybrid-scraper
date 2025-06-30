@@ -357,7 +357,7 @@ async def main():
 
     except Exception as e:
         logger.exception(
-            f"❌ Demonstration failed: {e}"
+            "❌ Demonstration failed"
         )  # TODO: Convert f-string to logging format
         raise
 

@@ -68,8 +68,8 @@ async def search_documents(request: SimpleSearchRequest) -> SimpleSearchResponse
         )
 
     except Exception as e:
-        logger.exception(f"Search failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Search failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/search")
@@ -93,16 +93,15 @@ async def search_health() -> dict[str, Any]:
     try:
         search_service = await get_service("search_service")
         stats = search_service.get_search_stats()
-
+    except Exception as e:
+        logger.exception("Search health check failed")
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+        }
+    else:
         return {
             "status": "healthy",
             "service_type": "simple",
             "stats": stats,
-        }
-
-    except Exception as e:
-        logger.exception(f"Search health check failed: {e}")
-        return {
-            "status": "unhealthy",
-            "error": str(e),
         }

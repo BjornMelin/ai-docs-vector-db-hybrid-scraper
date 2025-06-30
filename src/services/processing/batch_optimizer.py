@@ -29,7 +29,7 @@ class BatchConfig:
     performance_target_ms: float = 100.0  # Target processing time per batch
 
 
-class BatchProcessor[T, R]:
+class BatchProcessor(Generic[T, R]):
     """Intelligent batch processing for optimal throughput."""
 
     def __init__(
@@ -146,7 +146,7 @@ class BatchProcessor[T, R]:
             )
 
         except Exception as e:
-            logger.exception(f"Batch processing failed: {e}")
+            logger.exception("Batch processing failed")
             # Propagate error to all waiting coroutines
             for future in futures:
                 if not future.done():

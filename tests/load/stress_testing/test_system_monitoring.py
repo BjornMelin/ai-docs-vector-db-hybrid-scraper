@@ -159,7 +159,7 @@ class SystemMonitor:
                     m for m in self.application_metrics if m.timestamp > cutoff_time
                 ]
 
-            except Exception as e:
+            except (ConnectionError, RuntimeError, OSError) as e:
                 logger.warning(
                     "Error during monitoring: %s", e
                 )  # TODO: Convert f-string to logging format

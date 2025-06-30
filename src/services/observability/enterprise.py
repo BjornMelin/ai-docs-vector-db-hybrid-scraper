@@ -534,7 +534,7 @@ class AlertManager:
                     self._record_alert_event(alert, "resolved", latest_value)
 
             except Exception as e:
-                logger.exception(f"Error checking alert {alert.name}: {e}")
+                logger.exception("Error checking alert {alert.name}")
 
         return triggered_alerts
 
@@ -587,7 +587,7 @@ class AlertManager:
             try:
                 handler(alert)
             except Exception as e:
-                logger.exception(f"Error in alert notification handler: {e}")
+                logger.exception("Error in alert notification handler")
 
 
 class EnterpriseObservabilityPlatform:
@@ -641,7 +641,7 @@ class EnterpriseObservabilityPlatform:
             logger.info("Enterprise observability platform started successfully")
 
         except Exception as e:
-            logger.exception(f"Failed to initialize observability platform: {e}")
+            logger.exception("Failed to initialize observability platform")
             raise
 
     async def cleanup(self) -> None:
@@ -826,7 +826,7 @@ class EnterpriseObservabilityPlatform:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.exception(f"Error in cleanup loop: {e}")
+                logger.exception("Error in cleanup loop")
 
     async def _monitoring_loop(self) -> None:
         """Background monitoring and alerting."""
@@ -846,7 +846,7 @@ class EnterpriseObservabilityPlatform:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.exception(f"Error in monitoring loop: {e}")
+                logger.exception("Error in monitoring loop")
 
     async def _update_anomaly_baselines(self) -> None:
         """Update anomaly detection baselines."""
@@ -862,7 +862,7 @@ class EnterpriseObservabilityPlatform:
                     self.anomaly_detector.update_baseline(metadata["name"], values)
 
             except Exception as e:
-                logger.exception(f"Error updating baseline for {metric_key}: {e}")
+                logger.exception("Error updating baseline for {metric_key}")
 
     def _handle_alert_notification(self, alert: Alert) -> None:
         """Handle alert notifications."""

@@ -8,10 +8,8 @@ Tests the integration between different service layers including:
 - Circuit breaker coordination across services
 """
 
-import asyncio
 import contextlib
 import logging
-import time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -794,20 +792,20 @@ class TestCircuitBreakerCoordination:
         try:
             embedding_result = await embedding_circuit.call(embedding_operation)
             service_results["embedding"] = embedding_result
-        except Exception as e:
+        except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
             service_results["embedding"] = {"error": str(e), "circuit_open": False}
 
         # Continue with other services even if embedding fails
         try:
             vector_result = await vector_db_circuit.call(vector_db_operation)
             service_results["vector_db"] = vector_result
-        except Exception as e:
+        except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
             service_results["vector_db"] = {"error": str(e)}
 
         try:
             cache_result = await cache_circuit.call(cache_operation)
             service_results["cache"] = cache_result
-        except Exception as e:
+        except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
             service_results["cache"] = {"error": str(e)}
 
         # Test that embedding failures trigger circuit opening
@@ -853,11 +851,11 @@ class TestCircuitBreakerCoordination:
             try:
                 # Try primary service
                 return await primary_service_circuit.call(primary_service)
-            except Exception:
+            except (TimeoutError, ConnectionError, RuntimeError, ValueError):
                 # Primary failed, try fallback
                 try:
                     return await fallback_service_circuit.call(fallback_service)
-                except Exception:
+                except (TimeoutError, ConnectionError, RuntimeError, ValueError):
                     return {"status": "all_services_failed"}
 
         # Execute multiple calls to trigger circuit opening
@@ -866,7 +864,7 @@ class TestCircuitBreakerCoordination:
             try:
                 result = await protected_service_call()
                 results.append(result)
-            except Exception as e:
+            except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
                 results.append({"error": str(e)})
 
         # Verify fallback success and circuit behavior
@@ -937,11 +935,9 @@ class TestCircuitBreakerCoordination:
             await monitor.call_service_with_protection(
                 "vector_db_service", degraded_operation
             )
-        except Exception as e:
+        except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
             # Expected failure - testing degraded service behavior
-            logger.debug(
-                f"Expected degraded service failure: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Expected degraded service failure: %s", e)
 
         # Verify different circuit breaker configurations
         embedding_cb = monitor.circuit_breakers["embedding_service"]

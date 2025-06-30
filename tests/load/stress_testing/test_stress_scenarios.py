@@ -1,7 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-
 """Stress testing scenarios for system breaking point analysis.
 
 This module implements various stress testing scenarios to identify system
@@ -9,12 +5,14 @@ breaking points, resource exhaustion conditions, and failure modes under
 extreme load conditions.
 """
 
-import asyncio
-import time
 
 import pytest
 
 from tests.load.conftest import LoadTestConfig, LoadTestType
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
 
 
 @pytest.mark.stress
@@ -358,7 +356,6 @@ class TestStressScenarios:
                     self.consecutive_failures = 0
 
                 # Simulate failure probability that increases with load
-                import random
 
                 current_load = self.service.request_count / 100.0  # Normalize load
                 failure_probability = min(

@@ -351,10 +351,12 @@ class TestCircuitBreakers:
             )
 
             logger.info(
-                f"Scenario {i + 1}: Failure rate {scenario['rate']:.1%}, "
-                f"Circuit opened: {circuit_opened}, "
-                f"Error rate: {error_rate:.2f}%, "
-                f"Rejections: {circuit_breaker.metrics.rejection_count}"
+                "Scenario %d: Failure rate %.1f%%, Circuit opened: %s, Error rate: %.2f%%, Rejections: %d",
+                i + 1,
+                scenario["rate"] * 100,
+                circuit_opened,
+                error_rate,
+                circuit_breaker.metrics.rejection_count,
             )
 
         # Assertions
@@ -514,9 +516,12 @@ class TestCircuitBreakers:
             )
 
             logger.info(
-                f"Phase {phase['name']}: {initial_state.value} -> {final_state.value}, "
-                f"Error rate: {error_rate:.2f}%, "
-                f"Rejections: {phase_metrics['rejections']}"
+                "Phase %s: %s -> %s, Error rate: %.2f%%, Rejections: %d",
+                phase["name"],
+                initial_state.value,
+                final_state.value,
+                error_rate,
+                phase_metrics["rejections"],
             )
 
         # Analyze recovery behavior
@@ -661,9 +666,11 @@ class TestRateLimiters:
             )
 
             logger.info(
-                f"Pattern {pattern['name']}: {rejection_rate:.2f}% rejected, "
-                f"Actual rate: {actual_rate:.1f} req/min, "
-                f"Peak rate: {rate_limiter.metrics.peak_rate:.1f} req/min"
+                "Pattern %s: %.2f%% rejected, Actual rate: %.1f req/min, Peak rate: %.1f req/min",
+                pattern["name"],
+                rejection_rate,
+                actual_rate,
+                rate_limiter.metrics.peak_rate,
             )
 
         # Assertions for rate limiting effectiveness

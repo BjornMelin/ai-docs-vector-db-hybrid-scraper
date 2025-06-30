@@ -7,6 +7,7 @@ API response times, and throughput measurement.
 
 import asyncio
 import gc
+import random
 import resource
 import time
 from contextlib import asynccontextmanager
@@ -16,6 +17,17 @@ from unittest.mock import AsyncMock, MagicMock
 
 import psutil
 import pytest
+
+
+try:
+    import numpy as np
+except ImportError:
+    np = None
+
+try:
+    import redis
+except ImportError:
+    redis = None
 
 
 @dataclass
@@ -645,8 +657,6 @@ def mock_search_manager():
 
     async def mock_search(query: str):
         """Mock search implementation with realistic timing."""
-        import random
-
         # Simulate realistic search latency (20-80ms)
         await asyncio.sleep(random.uniform(0.02, 0.08))
 
@@ -670,8 +680,6 @@ def mock_search_manager():
 @pytest.fixture
 def mock_qdrant_client():
     """Mock Qdrant client for performance testing."""
-    from unittest.mock import MagicMock
-
     client = AsyncMock()
 
     # Mock collection creation
@@ -681,8 +689,6 @@ def mock_qdrant_client():
 
     # Mock search operations
     async def mock_search(*args, **kwargs):
-        import random
-
         await asyncio.sleep(random.uniform(0.01, 0.05))  # Simulate search time
         return [
             {
@@ -747,29 +753,31 @@ def mock_performance_service():
 @pytest.fixture
 def redis_url():
     """Redis URL for testing (uses fakeredis if Redis not available)."""
-    import os
-
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
     # Check if Redis is available, otherwise use fakeredis
-    try:
-        import redis
-
-        client = redis.from_url(redis_url)
-        client.ping()
-        return redis_url
-    except Exception:
-        # Fall back to fakeredis for testing
-        return "redis://fake:6379/0"
+    if redis is not None:
+        try:
+            client = redis.from_url(redis_url)
+            client.ping()
+            return redis_url
+        except (ImportError, AttributeError, RuntimeError):
+            # Fall back to fakeredis for testing
+            pass
+    
+    # Fall back to fakeredis for testing
+    return "redis://fake:6379/0"
 
 
 @pytest.fixture
 def performance_test_vectors():
     """Generate test vectors for performance testing."""
-    import numpy as np
-
-    # Generate 100 test vectors of dimension 384
-    return [np.random.random(384).tolist() for _ in range(100)]
+    if np is not None:
+        # Generate 100 test vectors of dimension 384
+        return [np.random.random(384).tolist() for _ in range(100)]
+    else:
+        # Fallback to Python random if numpy not available
+        return [[random.random() for _ in range(384)] for _ in range(100)]
 
 
 @pytest.fixture

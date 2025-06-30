@@ -167,7 +167,6 @@ class TestUtilsPackageImportLogic:
                 del sys.modules[module_name]
 
             # Import to trigger the logic
-            import src.utils
 
             # Verify the importlib functions were called
             mock_spec_func.assert_called()

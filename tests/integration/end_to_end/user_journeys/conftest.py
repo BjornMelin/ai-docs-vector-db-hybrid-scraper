@@ -164,7 +164,7 @@ def journey_executor():
                         if isinstance(step_result, dict):
                             context.update(step_result.get("context_updates", {}))
 
-                    except Exception as e:
+                    except (ImportError, AttributeError, RuntimeError) as e:
                         error_msg = f"Step '{step.name}' failed: {e!s}"
                         errors.append(error_msg)
                         step_results.append(

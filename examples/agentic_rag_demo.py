@@ -101,7 +101,7 @@ async def demo_query_orchestration():
         await client_manager.cleanup()
 
     except Exception as e:
-        logger.exception(f"Query orchestration demo failed: {e}")
+        logger.exception("Query orchestration demo failed")
         print(f"Demo failed: {e}")
 
 
@@ -206,7 +206,7 @@ async def demo_tool_composition():
         await client_manager.cleanup()
 
     except Exception as e:
-        logger.exception(f"Tool composition demo failed: {e}")
+        logger.exception("Tool composition demo failed")
         print(f"Demo failed: {e}")
 
 
@@ -296,7 +296,7 @@ async def demo_agent_learning():
         await client_manager.cleanup()
 
     except Exception as e:
-        logger.exception(f"Agent learning demo failed: {e}")
+        logger.exception("Agent learning demo failed")
         print(f"Demo failed: {e}")
 
 
@@ -414,7 +414,7 @@ async def demo_performance_optimization():
         await client_manager.cleanup()
 
     except Exception as e:
-        logger.exception(f"Performance optimization demo failed: {e}")
+        logger.exception("Performance optimization demo failed")
         print(f"Demo failed: {e}")
 
 
@@ -452,7 +452,7 @@ async def main():
     except KeyboardInterrupt:
         print("\nDemo interrupted by user")
     except Exception as e:
-        logger.exception(f"Demo failed: {e}")
+        logger.exception("Demo failed")
         print(f"\nDemo failed with error: {e}")
 
 

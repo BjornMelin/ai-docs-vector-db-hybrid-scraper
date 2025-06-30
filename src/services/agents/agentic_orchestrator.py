@@ -11,6 +11,7 @@ Based on research findings:
 
 import asyncio
 import logging
+import time
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -192,7 +193,7 @@ maintaining high performance and reliability. Always explain your reasoning."""
             return response
 
         except Exception as e:
-            logger.exception(f"Autonomous orchestration failed: {e}")
+            logger.exception("Autonomous orchestration failed")
             return ToolResponse(
                 success=False,
                 results={"error": str(e)},
@@ -206,8 +207,6 @@ maintaining high performance and reliability. Always explain your reasoning."""
         self, request: ToolRequest, deps: BaseAgentDependencies
     ) -> ToolResponse:
         """Core autonomous orchestration logic."""
-        import time
-
         start_time = time.time()
 
         try:
@@ -387,9 +386,6 @@ maintaining high performance and reliability. Always explain your reasoning."""
         """Fallback orchestration when Pydantic-AI unavailable."""
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
         logger.warning(f"Using fallback orchestration mode (reason: {fallback_reason})")
-
-        import time
-
         start_time = time.time()
 
         # Enhanced fallback logic with context-aware responses

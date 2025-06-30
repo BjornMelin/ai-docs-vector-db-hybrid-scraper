@@ -625,7 +625,7 @@ class AutonomousHealthMonitor:
         try:
             await self.continuous_monitoring_loop()
         except Exception as e:
-            logger.exception(f"Health monitoring loop failed: {e}")
+            logger.exception("Health monitoring loop failed")
             self.monitoring_active = False
             raise
 
@@ -669,7 +669,7 @@ class AutonomousHealthMonitor:
                 )
 
             except Exception as e:
-                logger.exception(f"Error in monitoring loop: {e}")
+                logger.exception("Error in monitoring loop")
 
             # Wait for next monitoring cycle
             await asyncio.sleep(self.monitoring_interval)
@@ -724,7 +724,7 @@ class AutonomousHealthMonitor:
             )
 
         except Exception as e:
-            logger.exception(f"Failed to collect health metrics: {e}")
+            logger.exception("Failed to collect health metrics")
             # Return minimal metrics on failure
             return SystemMetrics(
                 timestamp=datetime.utcnow(),

@@ -62,8 +62,8 @@ async def add_document(request: SimpleDocumentRequest) -> SimpleDocumentResponse
         )
 
     except Exception as e:
-        logger.exception(f"Document addition failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Document addition failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/documents/{document_id}")
@@ -79,17 +79,14 @@ async def get_document(
             document_id=document_id,
             collection_name=collection_name,
         )
-
+    except Exception as e:
+        logger.exception("Document retrieval failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    else:
         if not document:
             raise HTTPException(status_code=404, detail="Document not found")
 
         return document
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.exception(f"Document retrieval failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.delete("/documents/{document_id}")
@@ -105,17 +102,14 @@ async def delete_document(
             document_id=document_id,
             collection_name=collection_name,
         )
-
+    except Exception as e:
+        logger.exception("Document deletion failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    else:
         if not success:
             raise HTTPException(status_code=404, detail="Document not found")
 
         return {"status": "success", "message": "Document deleted successfully"}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.exception(f"Document deletion failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/documents")
@@ -142,8 +136,8 @@ async def list_documents(
         }
 
     except Exception as e:
-        logger.exception(f"Document listing failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Document listing failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/collections")
@@ -160,8 +154,8 @@ async def list_collections() -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.exception(f"Collection listing failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Collection listing failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/documents/health")
@@ -180,7 +174,7 @@ async def documents_health() -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.exception(f"Documents health check failed: {e}")
+        logger.exception("Documents health check failed")
         return {
             "status": "unhealthy",
             "error": str(e),

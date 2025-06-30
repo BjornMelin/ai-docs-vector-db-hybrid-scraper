@@ -91,11 +91,11 @@ async def demonstrate_container_integration():
                 status = await parallel_system.get_system_status()
                 print(f"✅ System status: {status['system_health']['status']}")
 
-                return True
-
             except Exception as e:
                 print(f"❌ Failed to get parallel processing system: {e}")
                 return False
+            else:
+                return True
 
     except Exception as e:
         print(f"❌ Container integration failed: {e}")
@@ -196,12 +196,12 @@ async def demonstrate_client_manager_integration():
             await shutdown_container()
             print("✅ Container shutdown completed")
 
-            return True
-
         except Exception as e:
             print(f"❌ ClientManager integration failed: {e}")
             traceback.print_exc()
             return False
+        else:
+            return True
 
 
 async def demonstrate_document_processing():

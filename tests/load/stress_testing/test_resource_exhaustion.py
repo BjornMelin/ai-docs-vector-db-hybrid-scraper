@@ -131,7 +131,7 @@ class ResourceMonitor:
                 # Timestamp
                 self.metrics.timestamps.append(time.time())
 
-            except Exception:
+            except (TimeoutError, ConnectionError, RuntimeError, MemoryError):
                 logger.warning("Error collecting resource metrics")
 
             time.sleep(self.interval)

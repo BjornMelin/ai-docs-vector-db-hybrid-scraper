@@ -6,6 +6,7 @@ across development, staging, and production environments.
 
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -555,8 +556,6 @@ class EnvironmentVariableValidator:
 
                 # Check pattern
                 if "pattern" in requirements:
-                    import re
-
                     if not re.match(requirements["pattern"], value):
                         errors.append(
                             f"Value does not match required pattern: {requirements['pattern']}"

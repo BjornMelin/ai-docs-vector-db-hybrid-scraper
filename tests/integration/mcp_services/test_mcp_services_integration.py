@@ -10,6 +10,7 @@ Tests cover:
 """
 
 import asyncio
+import gc
 import time
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -758,8 +759,6 @@ class TestMCPServicesPerformanceAndScalability:
 
     async def test_services_initialization_performance(self, mock_client_manager):
         """Test that services initialize within acceptable time limits."""
-        import time
-
         # Test each service initialization performance
         service_classes = [
             SearchService,
@@ -830,8 +829,6 @@ class TestMCPServicesPerformanceAndScalability:
         self, complete_mcp_services_setup
     ):
         """Test memory efficiency during service operations."""
-        import gc
-
         services = complete_mcp_services_setup
 
         # Get initial memory usage

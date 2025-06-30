@@ -1,9 +1,6 @@
 """Integration tests for configuration error handling scenarios."""
 
-import asyncio
-import json
 import signal
-import time
 from unittest.mock import patch
 
 import pytest

@@ -3,8 +3,6 @@
 Tests the observability configuration and monitoring capabilities.
 """
 
-import pytest
-
 from src.config.settings import (
     Environment,
     ObservabilityConfig,

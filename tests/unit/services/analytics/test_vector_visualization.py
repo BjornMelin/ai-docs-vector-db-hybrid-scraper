@@ -1,6 +1,6 @@
 """Tests for vector embeddings visualization functionality."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -46,17 +46,17 @@ async def initialized_engine(visualization_engine):
 def sample_embeddings():
     """Create sample embeddings for testing."""
     # Create diverse embeddings to test clustering
-    np.random.seed(42)  # For reproducible tests
+    rng = np.random.default_rng(42)  # For reproducible tests
 
     # Cluster 1: Similar embeddings around [0.5, 0.5, ...]
-    cluster1 = np.random.normal(0.5, 0.1, (10, 768))
+    cluster1 = rng.normal(0.5, 0.1, (10, 768))
 
     # Cluster 2: Similar embeddings around [-0.5, -0.5, ...]
-    cluster2 = np.random.normal(-0.5, 0.1, (10, 768))
+    cluster2 = rng.normal(-0.5, 0.1, (10, 768))
 
     # Cluster 3: Similar embeddings around [0.0, 1.0, ...]
-    cluster3 = np.random.normal(0.0, 0.1, (10, 768))
-    cluster3[:, 1] = np.random.normal(1.0, 0.1, 10)
+    cluster3 = rng.normal(0.0, 0.1, (10, 768))
+    cluster3[:, 1] = rng.normal(1.0, 0.1, 10)
 
     # Combine all clusters
     return np.vstack([cluster1, cluster2, cluster3])
@@ -313,7 +313,8 @@ class TestVectorVisualizationEngine:
     ):
         """Test similarity calculation via compare_query_embeddings."""
         # Test with query vector (similar to first cluster)
-        query_vector = np.random.normal(0.5, 0.05, 768)
+        rng = np.random.default_rng(42)
+        query_vector = rng.normal(0.5, 0.05, 768)
 
         # Convert to required format
         query_embeddings = [query_vector.tolist()]
@@ -431,7 +432,8 @@ class TestVectorVisualizationEngine:
         self, initialized_engine, sample_embeddings, sample_documents
     ):
         """Test visualization with query vector."""
-        query_vector = np.random.normal(0.5, 0.05, 768)  # Similar to cluster 1
+        rng = np.random.default_rng(42)
+        query_vector = rng.normal(0.5, 0.05, 768)  # Similar to cluster 1
 
         # Convert to required format
         embeddings_list = sample_embeddings.tolist()
@@ -552,7 +554,6 @@ class TestVectorVisualizationEngine:
         assert "quality_metrics" in visualization
 
         # Test that the data can be serialized (equivalent to export)
-        import json
 
         try:
             # Data should already be in serializable format (dictionaries)
@@ -571,6 +572,7 @@ class TestVectorVisualizationEngine:
 
     async def test_error_handling(self, initialized_engine):
         """Test error handling."""
+        rng = np.random.default_rng(42)
         # Test with empty embeddings
         result = await initialized_engine.create_embedding_visualization(
             embeddings=[], texts=[], method="pca", dimensions=2
@@ -579,7 +581,7 @@ class TestVectorVisualizationEngine:
         assert "required" in result["error"].lower()
 
         # Test with mismatched embeddings and documents
-        embeddings = np.random.random((5, 768)).tolist()
+        embeddings = rng.random((5, 768)).tolist()
         texts = ["test"]  # Only 1 text for 5 embeddings
 
         result = await initialized_engine.create_embedding_visualization(
@@ -628,8 +630,9 @@ class TestVectorVisualizationEngine:
 
     async def test_large_dataset_handling(self, initialized_engine):
         """Test handling of large datasets."""
+        rng = np.random.default_rng(42)
         # Create dataset larger than max_points
-        large_embeddings = np.random.random((1200, 768)).tolist()
+        large_embeddings = rng.random((1200, 768)).tolist()
         large_texts = [f"Document {i}" for i in range(1200)]
         large_metadata = [{"id": f"doc_{i}"} for i in range(1200)]
 

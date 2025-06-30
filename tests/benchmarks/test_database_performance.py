@@ -278,7 +278,7 @@ class TestDatabasePerformance:
                                 result = await session.execute(text("SELECT 1"))
                                 result.fetchone()
                                 query_count += 1
-                        except Exception:
+                        except (TimeoutError, ConnectionError, RuntimeError):
                             # Count failures but continue - expected during stress testing
                             logger.debug("Query failed during stress test")
 
@@ -333,7 +333,7 @@ class TestEnterpriseFeatures:
                     try:
                         async with database_manager.session() as session:
                             await session.execute(text("SELECT 1"))  # Simplified query
-                    except Exception:
+                    except (TimeoutError, ConnectionError, RuntimeError):
                         logger.debug("Query pattern failed")
 
                 # Get query performance summary

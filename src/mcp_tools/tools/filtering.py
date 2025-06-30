@@ -4,6 +4,7 @@ Provides autonomous filtering capabilities with ML-powered filter optimization,
 adaptive filter selection, and intelligent query enhancement.
 """
 
+import datetime
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
@@ -937,8 +938,6 @@ async def _generate_filter_optimization_insights(
 
 def _get_timestamp() -> str:
     """Get current timestamp."""
-    import datetime
-
     return datetime.datetime.now(tz=datetime.UTC).isoformat()
 
 
@@ -1561,8 +1560,6 @@ async def _apply_learning_updates(
 
 def _get_next_update_time(frequency: str) -> str:
     """Get next update time based on frequency."""
-    import datetime
-
     now = datetime.datetime.now(tz=datetime.UTC)
 
     if frequency == "real_time":

@@ -750,14 +750,14 @@ class TestServiceDiscoveryAndRegistration:
                 result = await primary_service_discovery.discover_services(service_name)
                 if result:
                     return {"source": "primary", "services": result}
-            except Exception:
+            except (TimeoutError, ConnectionError, RuntimeError, ValueError):
                 logger.debug("Exception suppressed during cleanup/testing")
 
             # Fallback to backup service discovery
             try:
                 backup_result = backup_registry.get(service_name, [])
                 return {"source": "backup", "services": backup_result}
-            except Exception:
+            except (TimeoutError, ConnectionError, RuntimeError, ValueError):
                 return {"source": "none", "services": []}
 
         # Test normal operation (primary available)

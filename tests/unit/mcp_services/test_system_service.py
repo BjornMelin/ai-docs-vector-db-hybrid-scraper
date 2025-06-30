@@ -592,7 +592,6 @@ class TestSystemServicePerformanceAndIntegration:
 
     async def test_service_initialization_is_efficient(self, mock_client_manager):
         """Test that service initialization is efficient and doesn't block."""
-        import time
 
         service = SystemService()
 
@@ -608,7 +607,6 @@ class TestSystemServicePerformanceAndIntegration:
 
     async def test_get_service_info_performance(self):
         """Test that get_service_info is performant for capability discovery."""
-        import time
 
         service = SystemService()
 
@@ -625,7 +623,6 @@ class TestSystemServicePerformanceAndIntegration:
 
     async def test_service_supports_concurrent_access(self, mock_client_manager):
         """Test that service supports concurrent access patterns."""
-        import asyncio
 
         service = SystemService()
 

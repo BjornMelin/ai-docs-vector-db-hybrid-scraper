@@ -4,6 +4,7 @@ Provides autonomous cost estimation, budget optimization, and intelligent
 resource allocation with ML-powered cost prediction and optimization.
 """
 
+import datetime
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
@@ -571,7 +572,6 @@ async def _generate_cost_insights(
 
 def _get_timestamp() -> str:
     """Get current timestamp."""
-    import datetime
 
     return datetime.datetime.now(tz=datetime.UTC).isoformat()
 

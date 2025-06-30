@@ -4,8 +4,7 @@ This test module provides thorough coverage of the AgenticOrchestrator functiona
 focusing on autonomous decision-making, tool composition, and error handling.
 """
 
-from typing import Any, Dict, List
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -328,7 +327,7 @@ class TestOrchestrateTools:
                 result = await orchestrate_tools(query, mock_client_manager)
                 # If it returns a result, it should be an error response
                 assert isinstance(result, dict)
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError) as e:
                 # If it raises, that's also acceptable error handling
                 assert "error" in str(e).lower() or "orchestration" in str(e).lower()
 
@@ -421,7 +420,6 @@ class TestOrchestratorIntegration:
     @pytest.mark.asyncio
     async def test_orchestrator_concurrent_queries(self):
         """Test orchestrator handling concurrent queries."""
-        import asyncio
 
         deps = BaseAgentDependencies(client_manager=MagicMock(), config=MagicMock())
 

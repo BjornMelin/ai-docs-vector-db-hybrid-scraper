@@ -529,7 +529,7 @@ class TestQueryOrchestratorComprehensive:
             assert complexity in ["simple", "moderate", "complex"]
             assert domain in ["general", "technical", "business", "academic"]
 
-        except Exception as e:
+        except (ConnectionError, RuntimeError, ValueError) as e:
             pytest.fail(f"Query analysis failed for input '{query_text}': {e}")
 
     @given(
@@ -845,7 +845,7 @@ class TestQueryOrchestratorComprehensive:
                 # Should handle gracefully
                 assert "success" in result
                 assert "orchestration_id" in result
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError) as e:
                 # If exceptions occur, they should be handled gracefully
                 assert isinstance(e, ValueError | RuntimeError)
 

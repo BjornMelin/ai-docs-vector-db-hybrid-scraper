@@ -4,6 +4,7 @@ Provides intelligent configuration management with autonomous parameter
 optimization, drift detection, and adaptive configuration learning.
 """
 
+import datetime
 import logging
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
@@ -732,8 +733,6 @@ async def _generate_autonomous_insights(
 
 def _get_timestamp() -> str:
     """Get current timestamp."""
-    import datetime
-
     return datetime.datetime.now(tz=datetime.UTC).isoformat()
 
 

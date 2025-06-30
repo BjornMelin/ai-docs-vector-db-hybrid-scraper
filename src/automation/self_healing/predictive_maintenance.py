@@ -666,7 +666,7 @@ class PredictiveMaintenanceScheduler:
         try:
             await self.continuous_prediction_loop()
         except Exception as e:
-            logger.exception(f"Predictive maintenance monitoring failed: {e}")
+            logger.exception("Predictive maintenance monitoring failed")
             self.monitoring_enabled = False
             raise
 
@@ -717,7 +717,7 @@ class PredictiveMaintenanceScheduler:
                     )
 
             except Exception as e:
-                logger.exception(f"Error in predictive maintenance loop: {e}")
+                logger.exception("Error in predictive maintenance loop")
 
             # Wait for next cycle
             await asyncio.sleep(self.prediction_interval)
@@ -999,7 +999,7 @@ class PredictiveMaintenanceScheduler:
             return execution
 
         except Exception as e:
-            logger.exception(f"Maintenance execution failed: {e}")
+            logger.exception("Maintenance execution failed")
             execution.status = "failed"
             execution.success = False
             execution.end_time = datetime.utcnow()

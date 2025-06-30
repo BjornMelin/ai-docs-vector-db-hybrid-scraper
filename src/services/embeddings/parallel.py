@@ -50,7 +50,7 @@ class ProcessingMetrics:
     speedup_factor: float = 1.0
 
 
-class ParallelProcessor[T, R]:
+class ParallelProcessor(Generic[T, R]):
     """High-performance parallel processor for ML operations."""
 
     def __init__(

@@ -9,7 +9,7 @@ import gc
 import logging
 import time
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 import psutil
@@ -67,7 +67,9 @@ class RealTimePerformanceMonitor:
                 self.snapshots.append(snapshot)
 
                 # Keep only recent snapshots
-                cutoff_time = datetime.now() - timedelta(seconds=self.window_size * 10)
+                cutoff_time = datetime.now(tz=UTC) - timedelta(
+                    seconds=self.window_size * 10
+                )
                 self.snapshots = [
                     s for s in self.snapshots if s.timestamp > cutoff_time
                 ]
@@ -80,7 +82,7 @@ class RealTimePerformanceMonitor:
         except asyncio.CancelledError:
             logger.info("Performance monitoring cancelled")
         except Exception as e:
-            logger.exception(f"Performance monitoring error: {e}")
+            logger.exception("Performance monitoring error")
         finally:
             self.monitoring_active = False
 
@@ -123,7 +125,7 @@ class RealTimePerformanceMonitor:
         gc_time_ms = self._estimate_gc_time()
 
         return PerformanceSnapshot(
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=UTC),
             cpu_percent=cpu_percent,
             memory_percent=memory.percent,
             memory_mb=memory.used / 1024 / 1024,
@@ -213,7 +215,7 @@ class RealTimePerformanceMonitor:
             return {"status": "no_data"}
 
         # Filter snapshots to specified time window
-        cutoff_time = datetime.now() - timedelta(minutes=minutes)
+        cutoff_time = datetime.now(tz=UTC) - timedelta(minutes=minutes)
         recent_snapshots = [s for s in self.snapshots if s.timestamp > cutoff_time]
 
         if len(recent_snapshots) < 2:

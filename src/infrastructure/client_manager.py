@@ -19,6 +19,17 @@ from src.infrastructure.container import ApplicationContainer, get_container
 from src.services.errors import APIError
 
 
+# Import dependencies for health checks
+try:
+    from src.services.dependencies import (
+        get_health_status as deps_get_health_status,
+        get_overall_health as deps_get_overall_health,
+    )
+except ImportError:
+    deps_get_health_status = None
+    deps_get_overall_health = None
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -201,27 +212,21 @@ class ClientManager:
 
     async def get_health_status(self) -> dict[str, dict[str, Any]]:
         """Get health status using function-based dependencies."""
-        try:
-            from src.services.dependencies import get_health_status
-
-            return await get_health_status()
-        except ImportError:
-            logger.warning(
-                "Health status monitoring not available - function-based dependency not found"
-            )
-            return {}
+        if deps_get_health_status:
+            return await deps_get_health_status()
+        logger.warning(
+            "Health status monitoring not available - function-based dependency not found"
+        )
+        return {}
 
     async def get_overall_health(self) -> dict[str, Any]:
         """Get overall health using function-based dependencies."""
-        try:
-            from src.services.dependencies import get_overall_health
-
-            return await get_overall_health()
-        except ImportError:
-            return {
-                "overall_healthy": False,
-                "error": "Health monitoring not available",
-            }
+        if deps_get_overall_health:
+            return await deps_get_overall_health()
+        return {
+            "overall_healthy": False,
+            "error": "Health monitoring not available",
+        }
 
     async def get_service_status(self) -> dict[str, Any]:
         """Get service status using function-based dependencies."""

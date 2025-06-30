@@ -5,7 +5,9 @@ configuration, and utilities that follow 2025 testing best practices.
 """
 
 import asyncio
+import math
 import os
+import random
 import subprocess
 import sys
 import tempfile
@@ -867,8 +869,6 @@ def ai_test_utilities():
                 "All values must be numeric"
             )
 
-            import math
-
             assert not any(math.isnan(x) or math.isinf(x) for x in embedding), (
                 "No NaN/Inf values"
             )
@@ -903,8 +903,6 @@ def ai_test_utilities():
             count: int = 10, dim: int = 1536
         ) -> list[list[float]]:
             """Generate deterministic test embeddings."""
-            import random
-
             embeddings = []
 
             for i in range(count):
@@ -1001,8 +999,6 @@ except ImportError:
     # Fallback if Hypothesis not available
     def embedding_strategy(*args, **kwargs):
         """Fallback embedding strategy when Hypothesis not available."""
-        import random
-
         dim = kwargs.get("max_dim", 384)
         normalized = kwargs.get("normalized", True)
 
@@ -1017,7 +1013,6 @@ except ImportError:
         """Fallback document strategy when Hypothesis not available."""
         min_length = kwargs.get("min_length", 10)
         max_length = kwargs.get("max_length", 500)
-        import random
 
         words = [
             "test",

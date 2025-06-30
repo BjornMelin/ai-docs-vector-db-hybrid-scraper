@@ -6,6 +6,7 @@ rollback capabilities, and comprehensive validation for autonomous system healin
 
 import asyncio
 import contextlib
+import gc
 import logging
 import time
 from abc import ABC, abstractmethod
@@ -306,7 +307,6 @@ class MemoryLeakRemediationStrategy(RemediationStrategy):
         self, action: RemediationAction, checkpoint: SystemCheckpoint, start_time: float
     ) -> RemediationResult:
         """Execute garbage collection remediation."""
-        import gc
 
         aggressive = action.parameters.get("aggressive", False)
 
@@ -1123,7 +1123,7 @@ class AutoRemediationEngine:
             )
 
         except Exception as e:
-            logger.exception(f"Remediation execution failed: {e}")
+            logger.exception("Remediation execution failed")
             overall_result.error_message = str(e)
             overall_result.status = RemediationStatus.FAILED
 

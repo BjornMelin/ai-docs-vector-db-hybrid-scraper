@@ -207,7 +207,7 @@ class TestStressLoad:
             try:
                 # Call multiple services
                 await services.call_service("cache")
-            except Exception as e:
+            except (TimeoutError, ConnectionError, RuntimeError, MemoryError) as e:
                 # Check if failure is cascading
                 logger.warning(
                     "Service failure: %s", e

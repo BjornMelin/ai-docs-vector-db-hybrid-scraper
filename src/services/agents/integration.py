@@ -504,7 +504,7 @@ class UnifiedAgenticSystem:
             return vector_results
 
         except Exception as e:
-            logger.exception(f"Vector environment preparation failed: {e}")
+            logger.exception("Vector environment preparation failed")
             return {"error": str(e)}
 
     async def _compose_tool_chain(
@@ -531,7 +531,7 @@ class UnifiedAgenticSystem:
             )
 
         except Exception as e:
-            logger.exception(f"Tool chain composition failed: {e}")
+            logger.exception("Tool chain composition failed")
             raise
 
     async def _create_coordination_tasks(
@@ -572,7 +572,7 @@ class UnifiedAgenticSystem:
             return tasks
 
         except Exception as e:
-            logger.exception(f"Coordination task creation failed: {e}")
+            logger.exception("Coordination task creation failed")
             raise
 
     async def _execute_unified_workflow(
@@ -614,7 +614,7 @@ class UnifiedAgenticSystem:
             }
 
         except Exception as e:
-            logger.exception(f"Unified workflow execution failed: {e}")
+            logger.exception("Unified workflow execution failed")
             return {"error": str(e), "integration_success": False}
 
     async def _integrate_results(
@@ -658,7 +658,7 @@ class UnifiedAgenticSystem:
             return integrated
 
         except Exception as e:
-            logger.exception(f"Results integration failed: {e}")
+            logger.exception("Results integration failed")
             return {"error": str(e)}
 
     async def _calculate_quality_metrics(
@@ -721,7 +721,7 @@ class UnifiedAgenticSystem:
             }
 
         except Exception as e:
-            logger.exception(f"Quality metrics calculation failed: {e}")
+            logger.exception("Quality metrics calculation failed")
             return {
                 "quality_score": 0.5,
                 "confidence": 0.5,
@@ -780,7 +780,7 @@ class UnifiedAgenticSystem:
             return recommendations
 
         except Exception as e:
-            logger.exception(f"Recommendation generation failed: {e}")
+            logger.exception("Recommendation generation failed")
             return ["Unable to generate recommendations"]
 
     async def _register_default_tools(self) -> None:
@@ -833,7 +833,7 @@ class UnifiedAgenticSystem:
             logger.info("Default tools registered with orchestrator")
 
         except Exception as e:
-            logger.exception(f"Failed to register default tools: {e}")
+            logger.exception("Failed to register default tools")
 
     async def _update_system_metrics(self, response: UnifiedAgentResponse) -> None:
         """Update system performance metrics."""
@@ -871,7 +871,7 @@ class UnifiedAgenticSystem:
                 self.request_history = self.request_history[-1000:]
 
         except Exception as e:
-            logger.exception(f"Failed to update system metrics: {e}")
+            logger.exception("Failed to update system metrics")
 
     async def _identify_system_optimizations(self) -> list[str]:
         """Identify system-wide optimization opportunities."""
@@ -911,5 +911,5 @@ class UnifiedAgenticSystem:
             return optimizations
 
         except Exception as e:
-            logger.exception(f"Failed to identify optimizations: {e}")
+            logger.exception("Failed to identify optimizations")
             return ["Unable to analyze optimizations"]

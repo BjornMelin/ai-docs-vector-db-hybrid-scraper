@@ -124,9 +124,11 @@ class TestEnvironmentVariableLoading:
         ]
 
         for env_key, env_value in invalid_env_vars:
-            with patch.dict(os.environ, {env_key: env_value}, clear=False):
-                with pytest.raises(ValueError):
-                    Config()
+            with (
+                patch.dict(os.environ, {env_key: env_value}, clear=False),
+                pytest.raises(ValueError),
+            ):
+                Config()
 
     @given(
         debug=st.booleans(),

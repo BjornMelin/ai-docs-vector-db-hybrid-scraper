@@ -510,14 +510,14 @@ class TestResultClusteringService:
     @pytest.fixture
     def sample_results_with_embeddings(self):
         """Create sample results with embeddings."""
-        np.random.seed(42)  # For reproducible tests
+        rng = np.random.default_rng(42)  # For reproducible tests
         return [
             SearchResult(
                 id=f"result_{i}",
                 title=f"Document {i}",
                 content=f"Content about topic {i % 3}",
                 score=0.5 + (i * 0.05),
-                embedding=np.random.rand(10).tolist(),
+                embedding=rng.random(10).tolist(),
             )
             for i in range(10)
         ]
@@ -620,7 +620,8 @@ class TestResultClusteringService:
     def test_select_clustering_method_auto(self, clustering_service):
         """Test automatic clustering method selection."""
         # Small dataset -> should select DBSCAN (since HDBSCAN disabled)
-        small_embeddings = np.random.rand(10, 5)
+        rng = np.random.default_rng(42)
+        small_embeddings = rng.random((10, 5))
         request = ResultClusteringRequest(
             results=[
                 SearchResult(id=str(i), title="T", content="C", score=0.5)
@@ -634,21 +635,23 @@ class TestResultClusteringService:
         assert method == ClusteringMethod.DBSCAN
 
         # Medium dataset -> should select DBSCAN
-        medium_embeddings = np.random.rand(80, 5)
+        rng = np.random.default_rng(42)
+        medium_embeddings = rng.random((80, 5))
         method = clustering_service._select_clustering_method(
             request, medium_embeddings
         )
         assert method == ClusteringMethod.DBSCAN
 
         # Large dataset with max_clusters -> should select K-means
-        large_embeddings = np.random.rand(150, 5)
+        large_embeddings = rng.random((150, 5))
         request.max_clusters = 5
         method = clustering_service._select_clustering_method(request, large_embeddings)
         assert method == ClusteringMethod.KMEANS
 
     def test_select_clustering_method_explicit(self, clustering_service):
         """Test explicit clustering method selection."""
-        embeddings = np.random.rand(10, 5)
+        rng = np.random.default_rng(42)
+        embeddings = rng.random((10, 5))
         request = ResultClusteringRequest(
             results=[
                 SearchResult(id=str(i), title="T", content="C", score=0.5)
@@ -670,7 +673,8 @@ class TestResultClusteringService:
         mock_clusterer.n_iter_ = 5
         mock_kmeans_class.return_value = mock_clusterer
 
-        embeddings = np.random.rand(5, 3)
+        rng = np.random.default_rng(42)
+        embeddings = rng.random((5, 3))
         request = ResultClusteringRequest(
             results=[
                 SearchResult(id=str(i), title="T", content="C", score=0.5)
@@ -699,7 +703,8 @@ class TestResultClusteringService:
         mock_clusterer.fit_predict.return_value = np.array([0, 0, 1, 1, -1])
         mock_dbscan_class.return_value = mock_clusterer
 
-        embeddings = np.random.rand(5, 3)
+        rng = np.random.default_rng(42)
+        embeddings = rng.random((5, 3))
         request = ResultClusteringRequest(
             results=[
                 SearchResult(id=str(i), title="T", content="C", score=0.5)
@@ -729,7 +734,8 @@ class TestResultClusteringService:
         mock_clusterer.fit_predict.return_value = np.array([0, 0, 1, 1, 2])
         mock_agglomerative_class.return_value = mock_clusterer
 
-        embeddings = np.random.rand(5, 3)
+        rng = np.random.default_rng(42)
+        embeddings = rng.random((5, 3))
         request = ResultClusteringRequest(
             results=[
                 SearchResult(id=str(i), title="T", content="C", score=0.5)

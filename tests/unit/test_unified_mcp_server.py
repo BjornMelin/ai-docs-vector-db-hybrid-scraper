@@ -25,7 +25,7 @@ sys.modules["src.services"] = MagicMock()
 sys.modules["src.services.vector_db"] = MagicMock()
 sys.modules["src.services.vector_db.search"] = MagicMock()
 
-from src import unified_mcp_server
+from src import unified_mcp_server  # noqa: E402
 
 
 logger = logging.getLogger(__name__)
@@ -518,11 +518,9 @@ class TestLifespanContextManager:
         try:
             async with unified_mcp_server.lifespan():
                 pass
-        except Exception as e:
+        except (ConnectionError, RuntimeError, ValueError) as e:
             # Exception expected during lifespan test
-            logger.debug(
-                f"Expected lifespan test exception: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Expected lifespan test exception: %s", e)
 
         # Should not attempt to cleanup non-existent client manager
         # (No assertion needed as exception would be raised if cleanup was called incorrectly)

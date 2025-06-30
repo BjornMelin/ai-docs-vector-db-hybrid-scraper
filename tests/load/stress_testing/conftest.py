@@ -319,7 +319,7 @@ class FailureInjector:
                     # Brief pause
                     time.sleep(0.1)
 
-                except Exception:
+                except (ImportError, AttributeError, RuntimeError):
                     logger.warning("Disk I/O stress error")
                     break
 
@@ -678,7 +678,7 @@ def stress_test_environment():
                 logger.info("Memory limit: %.2f GB", mem_limit[0] / (1024**3))
             else:
                 logger.info("Memory limit: unlimited")
-        except Exception:
+        except (ImportError, AttributeError, RuntimeError):
             logger.warning("Could not check resource limits")
 
     yield

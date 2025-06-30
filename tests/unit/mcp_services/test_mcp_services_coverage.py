@@ -4,8 +4,7 @@ This test module provides thorough coverage of the MCP services functionality,
 focusing on service initialization, tool registration, and error handling.
 """
 
-from typing import Any, Dict, List
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -418,7 +417,7 @@ class TestMCPServicesIntegration:
                     try:
                         service = service_class(mock_client_manager)
                         services.append(service)
-                    except Exception:
+                    except (ConnectionError, RuntimeError, ValueError):
                         services.append(None)  # Mark as failed
                 else:
                     mock_app = MagicMock()

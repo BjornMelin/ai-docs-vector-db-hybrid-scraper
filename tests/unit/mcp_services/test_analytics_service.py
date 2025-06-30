@@ -102,19 +102,19 @@ class TestAnalyticsService:
         """Test that initialization logs success message with agentic observability."""
         service = AnalyticsService()
 
-        with patch.object(
-            service, "_initialize_observability_integration", new_callable=AsyncMock
+        with (
+            patch.object(
+                service, "_initialize_observability_integration", new_callable=AsyncMock
+            ),
+            patch.object(service, "_register_analytics_tools", new_callable=AsyncMock),
+            caplog.at_level(logging.INFO),
         ):
-            with patch.object(
-                service, "_register_analytics_tools", new_callable=AsyncMock
-            ):
-                with caplog.at_level(logging.INFO):
-                    await service.initialize(mock_client_manager)
+            await service.initialize(mock_client_manager)
 
-                    assert (
-                        "AnalyticsService initialized with agentic observability integration"
-                        in caplog.text
-                    )
+            assert (
+                "AnalyticsService initialized with agentic observability integration"
+                in caplog.text
+            )
 
     async def test_initialize_observability_integration(self, caplog):
         """Test observability integration initialization."""
@@ -206,24 +206,26 @@ class TestAnalyticsService:
         service.client_manager = mock_client_manager
 
         # Mock tool modules
-        with patch.multiple(
-            "src.mcp_services.analytics_service",
-            analytics=Mock(register_tools=Mock()),
-            query_processing=Mock(register_tools=Mock()),
-            agentic_rag=Mock(register_tools=Mock()),
-        ):
-            with patch.object(
+        with (
+            patch.multiple(
+                "src.mcp_services.analytics_service",
+                analytics=Mock(register_tools=Mock()),
+                query_processing=Mock(register_tools=Mock()),
+                agentic_rag=Mock(register_tools=Mock()),
+            ),
+            patch.object(
                 service,
                 "_register_enhanced_observability_tools",
                 new_callable=AsyncMock,
-            ):
-                with caplog.at_level(logging.INFO):
-                    await service._register_analytics_tools()
+            ),
+            caplog.at_level(logging.INFO),
+        ):
+            await service._register_analytics_tools()
 
-                    assert (
-                        "Registered analytics tools with agentic observability capabilities and enterprise integration"
-                        in caplog.text
-                    )
+            assert (
+                "Registered analytics tools with agentic observability capabilities and enterprise integration"
+                in caplog.text
+            )
 
     def test_get_mcp_server_returns_configured_instance(self):
         """Test that get_mcp_server returns the configured FastMCP instance."""
@@ -509,23 +511,25 @@ class TestAnalyticsServiceJ1ResearchIntegration:
         mock_agentic_rag = Mock()
         mock_agentic_rag.register_tools = Mock()
 
-        with patch("src.mcp_services.analytics_service.agentic_rag", mock_agentic_rag):
-            with patch.multiple(
+        with (
+            patch("src.mcp_services.analytics_service.agentic_rag", mock_agentic_rag),
+            patch.multiple(
                 "src.mcp_services.analytics_service",
                 analytics=Mock(register_tools=Mock()),
                 query_processing=Mock(register_tools=Mock()),
-            ):
-                with patch.object(
-                    service,
-                    "_register_enhanced_observability_tools",
-                    new_callable=AsyncMock,
-                ):
-                    await service._register_analytics_tools()
+            ),
+            patch.object(
+                service,
+                "_register_enhanced_observability_tools",
+                new_callable=AsyncMock,
+            ),
+        ):
+            await service._register_analytics_tools()
 
-                    # Verify J1 research tools were registered
-                    mock_agentic_rag.register_tools.assert_called_once_with(
-                        service.mcp, mock_client_manager
-                    )
+            # Verify J1 research tools were registered
+            mock_agentic_rag.register_tools.assert_called_once_with(
+                service.mcp, mock_client_manager
+            )
 
     def test_service_instructions_contain_j1_research_features(self):
         """Test that service instructions reference J1 research features."""
@@ -657,20 +661,22 @@ class TestAnalyticsServiceErrorHandling:
             "Tool registration failed"
         )
 
-        with patch("src.mcp_services.analytics_service.analytics", mock_failing_tool):
-            with patch.multiple(
+        with (
+            patch("src.mcp_services.analytics_service.analytics", mock_failing_tool),
+            patch.multiple(
                 "src.mcp_services.analytics_service",
                 query_processing=Mock(register_tools=Mock()),
                 agentic_rag=Mock(register_tools=Mock()),
-            ):
-                with patch.object(
-                    service,
-                    "_register_enhanced_observability_tools",
-                    new_callable=AsyncMock,
-                ):
-                    # Tool registration should raise the exception
-                    with pytest.raises(Exception, match="Tool registration failed"):
-                        await service._register_analytics_tools()
+            ),
+            patch.object(
+                service,
+                "_register_enhanced_observability_tools",
+                new_callable=AsyncMock,
+            ),
+            pytest.raises(Exception, match="Tool registration failed"),
+        ):
+            # Tool registration should raise the exception
+            await service._register_analytics_tools()
 
     async def test_multiple_initialization_calls_are_safe(self, mock_client_manager):
         """Test that multiple initialization calls are handled safely."""
@@ -704,7 +710,6 @@ class TestAnalyticsServicePerformanceAndIntegration:
 
     async def test_service_initialization_is_efficient(self, mock_client_manager):
         """Test that service initialization is efficient and doesn't block."""
-        import time
 
         service = AnalyticsService()
 
@@ -725,7 +730,6 @@ class TestAnalyticsServicePerformanceAndIntegration:
 
     async def test_observability_integration_performance(self):
         """Test that observability integration is performant."""
-        import time
 
         service = AnalyticsService()
 
@@ -746,7 +750,6 @@ class TestAnalyticsServicePerformanceAndIntegration:
 
     async def test_service_supports_concurrent_access(self, mock_client_manager):
         """Test that service supports concurrent access patterns."""
-        import asyncio
 
         service = AnalyticsService()
 

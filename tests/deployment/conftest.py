@@ -253,7 +253,7 @@ class DeploymentHealthChecker:
                 "response_time_ms": 50.0,
                 "timestamp": datetime.now(tz=UTC).isoformat(),
             }
-        except Exception as e:
+        except (ImportError, AttributeError, RuntimeError) as e:
             return {
                 "endpoint": endpoint,
                 "status": "unhealthy",
@@ -341,7 +341,7 @@ class DeploymentRollbackManager:
             self.current_deployment = rollback_target.copy()
             self.current_deployment["rollback_info"] = rollback_info
 
-        except Exception as e:
+        except (ImportError, AttributeError, RuntimeError) as e:
             return {
                 "success": False,
                 "error": str(e),
@@ -388,7 +388,7 @@ class BlueGreenDeploymentManager:
                 "deployment_id": deployment_info["deployment_id"],
             }
 
-        except Exception as e:
+        except (ImportError, AttributeError, RuntimeError) as e:
             return {
                 "success": False,
                 "error": str(e),
@@ -430,7 +430,7 @@ class BlueGreenDeploymentManager:
                 "switch_time": datetime.now(tz=UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (ImportError, AttributeError, RuntimeError) as e:
             return {
                 "success": False,
                 "error": str(e),

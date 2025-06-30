@@ -404,7 +404,7 @@ class TestDocumentIngestionDataFlow:
                             "points_upserted"
                         ]
 
-        except Exception as e:
+        except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
             pipeline_result["errors"].append(str(e))
 
         # Verify error handling and partial success
