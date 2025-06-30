@@ -15,22 +15,20 @@ import pytest
 from src.config import (
     CacheConfig,
     ChunkingConfig,
+    ChunkingStrategy,
     Config,
     EmbeddingConfig,
-    OpenAIConfig,
-    QdrantConfig,
-    SecurityConfig,
-    get_config,
-    reset_config,
-    set_config,
-)
-from src.config import (
-    ChunkingStrategy,
     EmbeddingModel,
     EmbeddingProvider,
     Environment,
     LogLevel,
+    OpenAIConfig,
+    QdrantConfig,
     SearchStrategy,
+    SecurityConfig,
+    get_config,
+    reset_config,
+    set_config,
 )
 
 

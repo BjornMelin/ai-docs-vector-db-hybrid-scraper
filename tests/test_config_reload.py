@@ -14,8 +14,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.api.main import app
-from src.config import Config
-from src.config.reload import (
+from src.config import (
+    Config,
     ConfigReloader,
     ReloadOperation,
     ReloadStatus,

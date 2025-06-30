@@ -12,7 +12,7 @@ import hypothesis.strategies as st
 from hypothesis import assume
 from pydantic import HttpUrl
 
-from src.config.enums import (
+from src.config import (
     ChunkingStrategy,
     CrawlProvider,
     EmbeddingModel,

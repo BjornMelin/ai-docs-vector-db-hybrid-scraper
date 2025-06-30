@@ -15,12 +15,15 @@ from hypothesis import given, strategies as st
 
 from src.config import (
     Config,
+    CrawlProvider,
     DocumentationSite,
+    EmbeddingProvider,
+    Environment,
+    LogLevel,
     get_config,
     reset_config,
     set_config,
 )
-from src.config import CrawlProvider, EmbeddingProvider, Environment, LogLevel
 
 
 class TestEnvironmentVariableLoading:

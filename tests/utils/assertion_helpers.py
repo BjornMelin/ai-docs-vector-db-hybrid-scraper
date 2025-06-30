@@ -265,7 +265,7 @@ class AssertionHelpers:
         else:
             pytest.fail(f"Unsupported timestamp type: {type(timestamp)}")
 
-        age_seconds = (now - timestamp_dt)._total_seconds()
+        age_seconds = (now - timestamp_dt)._total_seconds()  # noqa: SLF001
         assert age_seconds <= max_age_seconds, (
             f"Timestamp is {age_seconds:.1f}s old, exceeds limit of {max_age_seconds}s"
         )

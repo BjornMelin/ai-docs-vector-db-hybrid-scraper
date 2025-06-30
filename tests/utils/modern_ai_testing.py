@@ -617,7 +617,7 @@ def performance_critical_test(p95_threshold_ms: float = 100.0):
     """Decorator for performance-critical tests with threshold."""
 
     def decorator(test_func):
-        test_func._p95_threshold = p95_threshold_ms
+        test_func._p95_threshold = p95_threshold_ms  # noqa: SLF001
         return pytest.mark.performance(test_func)
 
     return decorator

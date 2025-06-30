@@ -11,7 +11,7 @@ Comprehensive test suite for the configuration automation system including:
 
 import asyncio
 import tempfile
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 

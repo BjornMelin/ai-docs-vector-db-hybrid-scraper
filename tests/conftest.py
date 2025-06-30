@@ -545,6 +545,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "throughput: mark test as throughput test")
     config.addinivalue_line("markers", "latency: mark test as latency test")
     config.addinivalue_line("markers", "scalability: mark test as scalability test")
+    config.addinivalue_line("markers", "performance_critical: mark test as performance critical")
 
 
 def pytest_collection_modifyitems(config, items):

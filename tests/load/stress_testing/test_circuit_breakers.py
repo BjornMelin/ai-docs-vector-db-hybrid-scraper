@@ -798,8 +798,8 @@ class TestRateLimiters:
 
         logger.info("Thundering herd protection successful:")
         logger.info(
-            "  - %s% requests rejected", rejection_rate:.2f
-        )  # TODO: Convert f-string to logging format
+            "  - %.2f%% requests rejected", rejection_rate
+        )
         logger.info(
             "  - Max concurrent executions: %s", expensive_service.max_concurrent
         )

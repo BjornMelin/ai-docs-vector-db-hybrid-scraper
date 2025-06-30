@@ -653,7 +653,7 @@ def stress_test_environment():
     # Log system information
     logger.info("Setting up stress testing environment")
     logger.info(
-        "System: %s CPUs, %s GB RAM", psutil.cpu_count(), psutil.virtual_memory()._total / (1024**3):.2f
+        "System: %s CPUs, %.2f GB RAM", psutil.cpu_count(), psutil.virtual_memory().total / (1024**3)
     )
 
     # Check resource limits
@@ -667,8 +667,8 @@ def stress_test_environment():
             mem_limit = resource.getrlimit(resource.RLIMIT_AS)
             if mem_limit[0] != resource.RLIM_INFINITY:
                 logger.info(
-                    "Memory limit: %s GB", mem_limit[0] / (1024**3):.2f
-                )  # TODO: Convert f-string to logging format
+                    "Memory limit: %.2f GB", mem_limit[0] / (1024**3)
+                )
             else:
                 logger.info("Memory limit: unlimited")
         except Exception:

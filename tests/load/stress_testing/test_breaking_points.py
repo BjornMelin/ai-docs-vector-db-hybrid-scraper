@@ -724,8 +724,8 @@ class TestBreakingPoints:
         )
         logger.info("Recovery efficiency")
         logger.info(
-            "Baseline vs Recovery - Errors: %s% -> %s%", baseline_performance['error_rate']:.2f, recovery_performance['error_rate']:.2f
+            "Baseline vs Recovery - Errors: %.2f%% -> %.2f%%", baseline_performance['error_rate'], recovery_performance['error_rate']
         )
         logger.info(
-            "Baseline vs Recovery - Response time: %sms -> %sms", baseline_performance['response_time']:.2f, recovery_performance['response_time']:.2f
+            "Baseline vs Recovery - Response time: %.2fms -> %.2fms", baseline_performance['response_time'], recovery_performance['response_time']
         )

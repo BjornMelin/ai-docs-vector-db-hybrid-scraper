@@ -7,7 +7,7 @@ demonstrating modern testing patterns without external dependencies.
 import math
 import random
 import time
-from typing import Any, , , Optional, 
+from typing import Any, Optional
 from unittest.mock import MagicMock
 
 
@@ -410,31 +410,31 @@ class MinimalPerformanceTestUtils:
 # Test decorators (simplified versions without pytest)
 def ai_test(func):
     """Decorator to mark AI tests."""
-    func._ai_test = True
+    func._ai_test = True  # noqa: SLF001
     return func
 
 
 def embedding_test(func):
     """Decorator to mark embedding tests."""
-    func._embedding_test = True
+    func._embedding_test = True  # noqa: SLF001
     return func
 
 
 def vector_db_test(func):
     """Decorator to mark vector database tests."""
-    func._vector_db_test = True
+    func._vector_db_test = True  # noqa: SLF001
     return func
 
 
 def rag_test(func):
     """Decorator to mark RAG tests."""
-    func._rag_test = True
+    func._rag_test = True  # noqa: SLF001
     return func
 
 
 def performance_critical(func):
     """Decorator to mark performance-critical tests."""
-    func._performance_critical = True
+    func._performance_critical = True  # noqa: SLF001
     return func
 
 

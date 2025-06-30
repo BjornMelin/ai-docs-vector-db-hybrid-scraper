@@ -7,10 +7,11 @@ following 2025 performance testing best practices.
 
 import asyncio
 import time
+from unittest.mock import MagicMock
+
+import pytest
 
 from tests.utils.modern_ai_testing import (
-import pytest
-from unittest.mock import MagicMock
     ModernAITestingUtils,
     PerformanceTestingFramework,
     performance_critical_test,
@@ -94,6 +95,10 @@ class TestSearchPerformance:
         metrics = await performance_framework.run_latency_test(
             search_func=search_func, queries=test_queries, concurrent_requests=100
         )
+
+        # Performance test: Verify internal framework state
+        assert len(performance_framework._latency_measurements) > 0  # noqa: SLF001
+        assert performance_framework._test_session.start_time is not None  # noqa: SLF001
 
         # Validate performance requirements
         performance_framework.assert_performance_requirements(
@@ -209,6 +214,10 @@ class TestSearchPerformance:
                 # Small delay between rounds
                 await asyncio.sleep(0.1)
 
+        # Performance test: Verify internal tracker state
+        assert "sustained_search_load" in tracker._measurements  # noqa: SLF001
+        assert tracker._current_measurements > 0  # noqa: SLF001
+
         # Analyze memory usage
         stats = tracker.get_statistics("sustained_search_load")
 
@@ -310,12 +319,11 @@ class TestSearchPerformance:
                 # Cache hit - very fast response
                 await asyncio.sleep(0.001)  # 1ms for cache hit
                 return cache[query]
-            else:
-                cache_misses += 1
-                # Cache miss - normal search latency
-                result = await mock_search_service.search(query, latency_ms=60.0)
-                cache[query] = result
-                return result
+            cache_misses += 1
+            # Cache miss - normal search latency
+            result = await mock_search_service.search(query, latency_ms=60.0)
+            cache[query] = result
+            return result
 
         # Test with repeated queries (should benefit from caching)
         repeated_queries = test_queries * 3  # Each query appears 3 times

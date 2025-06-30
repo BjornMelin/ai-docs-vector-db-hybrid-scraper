@@ -82,7 +82,7 @@ except ImportError:
             start = datetime.now(tz=UTC) - timedelta(days=365)
             end = datetime.now(tz=UTC)
             return start + timedelta(
-                seconds=random.randint(0, int((end - start)._total_seconds()))
+                seconds=random.randint(0, int((end - start)._total_seconds()))  # noqa: SLF001
             )
 
         @staticmethod

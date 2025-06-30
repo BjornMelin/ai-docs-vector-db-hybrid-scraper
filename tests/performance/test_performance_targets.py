@@ -152,6 +152,10 @@ class TestPerformanceTargets:
             hit_rate = hits / total_requests
             cache_stats = await cache.get_cache_stats()
 
+            # Performance test: Verify internal cache structure integrity
+            assert cache._connection_pool.size == 1  # noqa: SLF001
+            assert len(cache._l1_cache) <= 1000  # noqa: SLF001
+
             logger.info("Cache performance test results:")
             logger.info(
                 f"  Hit rate: {hit_rate:.1%}"
@@ -189,6 +193,10 @@ class TestPerformanceTargets:
 
         # Get optimization metrics
         metrics = await optimizer.get_optimization_metrics(collection_name)
+
+        # Performance test: Verify internal optimizer state
+        assert optimizer._client == mock_qdrant_client  # noqa: SLF001
+        assert hasattr(optimizer._config, 'quantization_settings')  # noqa: SLF001
 
         logger.info("Quantization test results:")
         logger.info(
@@ -234,6 +242,10 @@ class TestPerformanceTargets:
         tasks = [batch_processor.process_item(f"item_{i}") for i in range(200)]
         results = await asyncio.gather(*tasks)
         total_time = time.perf_counter() - start_time
+
+        # Performance test: Verify internal batch processor state
+        assert batch_processor._queue.qsize() == 0  # noqa: SLF001
+        assert batch_processor._stats.batches_processed > 0  # noqa: SLF001
 
         # Get performance statistics
         stats = batch_processor.get_performance_stats()
@@ -282,6 +294,10 @@ class TestPerformanceTargets:
             for _i in range(100):
                 monitor.record_request(0.05)  # 50ms request
                 await asyncio.sleep(0.01)
+
+            # Performance test: Verify internal monitoring state
+            assert len(monitor._request_history) > 0  # noqa: SLF001
+            assert monitor._monitoring_task is not None  # noqa: SLF001
 
             # Get performance summary
             summary = monitor.get_performance_summary()

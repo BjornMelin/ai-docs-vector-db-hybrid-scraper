@@ -68,7 +68,7 @@ class TestJWTSecurity:
                     token,
                     _jwt_secret,
                     algorithms=["HS256"],
-                    options={"verify_aud": False, "verify_iss": False}
+                    options={"verify_aud": False, "verify_iss": False},
                 )
             except jwt.InvalidTokenError as e:
                 return {"valid": False, "error": str(e)}

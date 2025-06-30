@@ -5,7 +5,7 @@ with proper mocking and integration test patterns.
 """
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 

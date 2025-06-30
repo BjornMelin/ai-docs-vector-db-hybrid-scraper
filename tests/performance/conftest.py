@@ -724,6 +724,27 @@ def mock_qdrant_client():
 
 
 @pytest.fixture
+def mock_performance_service():
+    """Mock performance service for testing internal state access."""
+    service = AsyncMock()
+    
+    # Add private attributes for testing
+    service._connection_pool = MagicMock()  # noqa: SLF001
+    service._connection_pool.size = 5  # noqa: SLF001
+    service._internal_cache = {}  # noqa: SLF001
+    service._config = MagicMock()  # noqa: SLF001
+    service._stats = MagicMock()  # noqa: SLF001
+    service._stats.request_count = 0  # noqa: SLF001
+    
+    async def mock_process_request():
+        service._stats.request_count += 1  # noqa: SLF001
+        return {"processed": True}
+    
+    service.process_request = mock_process_request
+    return service
+
+
+@pytest.fixture
 def redis_url():
     """Redis URL for testing (uses fakeredis if Redis not available)."""
     import os

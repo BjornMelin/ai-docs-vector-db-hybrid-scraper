@@ -169,8 +169,7 @@ def temp_deployment_dir() -> Generator[Path]:
 def mock_docker_registry() -> Generator[str]:
     """Mock Docker registry for testing."""
     # In real scenarios, this would point to a test registry
-    registry_url = "localhost:5000"
-    return registry_url
+    return "localhost:5000"
 
 
 @pytest.fixture

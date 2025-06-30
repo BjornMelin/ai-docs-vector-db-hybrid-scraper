@@ -43,3 +43,23 @@ class TestPerformanceFixtures:
     def test_benchmark_marker_works(self):
         """Test that benchmark marker is configured."""
         assert True
+
+    def test_mock_performance_service_internal_state(self, mock_performance_service):
+        """Test performance service private member access for testing."""
+        # Performance tests often need to access private members to verify internal state
+        assert mock_performance_service._connection_pool.size == 5  # noqa: SLF001
+        assert len(mock_performance_service._internal_cache) == 0  # noqa: SLF001
+        assert mock_performance_service._stats.request_count == 0  # noqa: SLF001
+
+    async def test_mock_performance_service_processing(self, mock_performance_service):
+        """Test performance service request processing with internal state verification."""
+        # Process some requests
+        await mock_performance_service.process_request()
+        await mock_performance_service.process_request()
+        
+        # Verify internal state changes (common in performance tests)
+        assert mock_performance_service._stats.request_count == 2  # noqa: SLF001
+        
+        # Test connection pool state
+        mock_performance_service._connection_pool.acquire()  # noqa: SLF001
+        assert mock_performance_service._connection_pool.size == 5  # noqa: SLF001

@@ -407,7 +407,7 @@ def create_test_config(
         "vector_db_url": "memory://localhost",
         "embedding_api_key": "test-key",
         "cache_url": "memory://localhost",
-        "temp_dir": get_config_manager()._create_temp_dir(name),
+        "temp_dir": get_config_manager()._create_temp_dir(name),  # noqa: SLF001
         "log_level": "INFO",
         "debug_mode": True,
         "additional_config": {},

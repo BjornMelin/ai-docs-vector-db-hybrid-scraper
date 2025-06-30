@@ -377,6 +377,7 @@ unfixable = [
     "B904",    # Allow raise without from in tests
     "TRY401",  # Allow simple error logging in tests
     "PT019",   # Allow fixtures as parameters (false positives in pytest)
+    "SLF001",  # Private member access allowed in tests
 ]
 
 # Example files - demonstration code
@@ -499,9 +500,11 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "unit: marks tests as unit tests",
     "asyncio: marks tests as async tests",
+    "smoke: marks tests as smoke tests",
     
     # AI/ML specific markers
     "ai: AI/ML specific tests",
+    "ai_ml: AI/ML specific tests",
     "embedding: Embedding-related tests",
     "vector_db: Vector database tests",
     "rag: RAG system tests",
@@ -519,13 +522,23 @@ markers = [
     
     # Security testing markers
     "security: mark test as security test",
+    "vulnerability: mark test as vulnerability test",
     "vulnerability_scan: mark test as vulnerability scan test",
+    "penetration: mark test as penetration test",
     "penetration_test: mark test as penetration test",
     "owasp: mark test as OWASP compliance test",
     "input_validation: mark test as input validation test",
     "authentication: mark test as authentication test",
     "authorization: mark test as authorization test",
     "compliance: mark test as compliance test",
+    "data_protection: mark test as data protection test",
+    "encryption: mark test as encryption test",
+    "injection_prevention: mark test as injection prevention test",
+    "pii_detection: mark test as PII detection test",
+    "prompt_injection: mark test as prompt injection test",
+    "rbac: mark test as role-based access control test",
+    "zero_vulnerability: mark test as zero vulnerability test",
+    "enterprise_grade: mark test as enterprise grade test",
     
     # Accessibility testing markers
     "accessibility: mark test as accessibility test",
@@ -561,8 +574,15 @@ markers = [
     "volume: mark test as volume test",
     
     # Deployment and reporting markers
+    "deployment: mark test as deployment test",
     "post_deployment: mark test as post-deployment test",
     "reporting: mark test as reporting test",
+    "blue_green: mark test as blue-green deployment test",
+    "disaster_recovery: mark test as disaster recovery test",
+    "environment: mark test as environment test",
+    "infrastructure: mark test as infrastructure test",
+    "pipeline: mark test as pipeline test",
+    "performance_critical: mark test as performance critical test",
 ]
 
 # Logging configuration for tests

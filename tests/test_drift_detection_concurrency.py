@@ -17,7 +17,7 @@ from typing import Any
 
 import pytest
 
-from src.config.drift_detection import (
+from src.config import (
     ConfigDriftDetector,
     ConfigSnapshot,
     DriftDetectionConfig,

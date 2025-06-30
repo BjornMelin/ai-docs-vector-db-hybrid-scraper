@@ -22,9 +22,9 @@ from src.config import (
     AutoDetectionConfig,
     DetectedEnvironment,
     DetectedService,
+    Environment,
     EnvironmentDetector,
 )
-from src.config import Environment
 from src.services.auto_detection.connection_pools import (
     ConnectionPoolManager,
     PoolHealthMetrics,

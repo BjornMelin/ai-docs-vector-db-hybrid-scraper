@@ -17,15 +17,21 @@ from pydantic import ValidationError
 from src.config import (
     CacheConfig,
     ChunkingConfig,
+    ChunkingStrategy,
     CircuitBreakerConfig,
     Config,
     Crawl4AIConfig,
+    CrawlProvider,
     DeploymentConfig,
     DocumentationSite,
     EmbeddingConfig,
+    EmbeddingModel,
+    EmbeddingProvider,
+    Environment,
     FastEmbedConfig,
     FirecrawlConfig,
     HyDEConfig,
+    LogLevel,
     MonitoringConfig,
     ObservabilityConfig,
     OpenAIConfig,
@@ -33,18 +39,10 @@ from src.config import (
     PlaywrightConfig,
     QdrantConfig,
     RAGConfig,
+    SearchStrategy,
     SecurityConfig,
     SQLAlchemyConfig,
     TaskQueueConfig,
-)
-from src.config.enums import (
-    ChunkingStrategy,
-    CrawlProvider,
-    EmbeddingModel,
-    EmbeddingProvider,
-    Environment,
-    LogLevel,
-    SearchStrategy,
 )
 
 from .strategies import (

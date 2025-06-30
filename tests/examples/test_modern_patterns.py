@@ -13,9 +13,7 @@ import pytest
 import pytest_asyncio
 from hypothesis import given, settings, strategies as st
 
-from src.config import Config, TaskQueueConfig
-from src.config.core import ChunkingConfig
-from src.config.enums import EmbeddingProvider
+from src.config import ChunkingConfig, Config, EmbeddingProvider, TaskQueueConfig
 from src.services.task_queue.worker import WorkerSettings
 
 

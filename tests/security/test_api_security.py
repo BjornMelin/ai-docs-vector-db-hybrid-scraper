@@ -384,7 +384,8 @@ async def mock_security_validator():
 
         for pattern in dangerous_patterns:
             if pattern.lower() in value.lower():
-                raise SecurityException(f"Dangerous pattern detected: {pattern}")
+                msg = f"Dangerous pattern detected: {pattern}"
+                raise SecurityException(msg)
 
         return True
 

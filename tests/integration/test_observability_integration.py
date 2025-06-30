@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import src.services.observability.middleware
-from src.config.core import get_config, reset_config
+from src.config import get_config, reset_config
 from src.services.observability.config import ObservabilityConfig
 from src.services.observability.dependencies import (
     get_ai_tracer,
