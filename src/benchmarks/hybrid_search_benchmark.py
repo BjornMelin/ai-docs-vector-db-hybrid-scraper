@@ -14,7 +14,11 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from src.config import Config
-from src.models.vector_search import FusionConfig, HybridSearchRequest, SearchParams
+from src.models.vector_search import (
+    FusionConfig,
+    HybridSearchRequest,
+    SecureSearchParamsModel,
+)
 from src.services.vector_db.hybrid_search import HybridSearchService
 
 from .benchmark_reporter import BenchmarkReporter
@@ -198,7 +202,7 @@ class HybridSearchBenchmark:
                 query=query_text,
                 collection_name="benchmark_collection",
                 limit=10,
-                search_params=SearchParams(),
+                search_params=SecureSearchParamsModel(),
                 fusion_config=FusionConfig(),
                 enable_query_classification=True,
                 enable_model_selection=True,
