@@ -142,7 +142,7 @@ class CircuitBreaker:
                 if self._failure_count >= self.failure_threshold:
                     self._state = ClientState.FAILED
                     logger.exception(
-                        f"Circuit breaker opened after {self._failure_count} failures"
+                        "Circuit breaker opened after %s failures", self._failure_count
                     )
 
             raise

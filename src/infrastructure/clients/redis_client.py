@@ -41,14 +41,13 @@ class RedisClientProvider:
 
             # Simple ping to check connectivity
             await self._client.ping()
-            self._healthy = True
-            return True
-        except Exception as e:
-            logger.warning(
-                f"Redis health check failed: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (AttributeError, ValueError, ConnectionError, TimeoutError) as e:
+            logger.warning("Redis health check failed: %s", e)
             self._healthy = False
             return False
+        else:
+            self._healthy = True
+            return True
 
     async def get(self, key: str) -> Any | None:
         """Get value by key.

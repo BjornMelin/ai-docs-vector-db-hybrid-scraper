@@ -105,9 +105,9 @@ class DatabaseManager:
             await self.load_monitor.start_monitoring()
 
             logger.info(
-                f"Enterprise database manager initialized "
-                f"(pool_size: {self.config.database.pool_size}, "
-                f"ml_monitoring: enabled, circuit_breaker: enabled)"
+                "Enterprise database manager initialized "
+                "(pool_size: %s, ml_monitoring: enabled, circuit_breaker: enabled)",
+                self.config.database.pool_size,
             )
 
         except Exception:

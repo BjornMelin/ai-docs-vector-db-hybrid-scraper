@@ -43,10 +43,8 @@ def _create_openai_client(config: Any) -> AsyncOpenAI:
             getattr(getattr(config, "performance", None), "max_retries", None) or 3
         )
         return AsyncOpenAI(api_key=api_key, max_retries=max_retries)
-    except Exception as e:
-        logger.warning(
-            f"Failed to create OpenAI client with config: {e}"
-        )  # TODO: Convert f-string to logging format
+    except (AttributeError, TypeError, ValueError) as e:
+        logger.warning("Failed to create OpenAI client with config: %s", e)
         return AsyncOpenAI(api_key="", max_retries=3)
 
 
@@ -68,10 +66,8 @@ def _create_qdrant_client(config: Any) -> AsyncQdrantClient:
         return AsyncQdrantClient(
             url=url, api_key=api_key, timeout=timeout, prefer_grpc=prefer_grpc
         )
-    except Exception as e:
-        logger.warning(
-            f"Failed to create Qdrant client with config: {e}"
-        )  # TODO: Convert f-string to logging format
+    except (AttributeError, TypeError, ValueError) as e:
+        logger.warning("Failed to create Qdrant client with config: %s", e)
         return AsyncQdrantClient(url="http://localhost:6333")
 
 
@@ -89,10 +85,8 @@ def _create_redis_client(config: Any) -> redis.Redis:
         url = getattr(cache_config, "dragonfly_url", None) or "redis://localhost:6379"
         pool_size = getattr(cache_config, "redis_pool_size", None) or 20
         return redis.from_url(url, max_connections=pool_size, decode_responses=True)
-    except Exception as e:
-        logger.warning(
-            f"Failed to create Redis client with config: {e}"
-        )  # TODO: Convert f-string to logging format
+    except (AttributeError, TypeError, ValueError) as e:
+        logger.warning("Failed to create Redis client with config: %s", e)
         return redis.from_url(
             "redis://localhost:6379", max_connections=20, decode_responses=True
         )
@@ -111,10 +105,8 @@ def _create_firecrawl_client(config: Any) -> AsyncFirecrawlApp:
         firecrawl_config = getattr(config, "firecrawl", None)
         api_key = getattr(firecrawl_config, "api_key", None) or ""
         return AsyncFirecrawlApp(api_key=api_key)
-    except Exception as e:
-        logger.warning(
-            f"Failed to create Firecrawl client with config: {e}"
-        )  # TODO: Convert f-string to logging format
+    except (AttributeError, TypeError, ValueError) as e:
+        logger.warning("Failed to create Firecrawl client with config: %s", e)
         return AsyncFirecrawlApp(api_key="")
 
 
@@ -153,10 +145,8 @@ def _create_parallel_processing_system(embedding_manager: Any) -> Any:
 
         try:
             return ParallelProcessingSystem(embedding_manager, config)
-        except Exception as e:
-            logger.warning(
-                f"Failed to create parallel processing system: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (AttributeError, TypeError, ValueError) as e:
+            logger.warning("Failed to create parallel processing system: %s", e)
             # Fall through to mock system
 
     # Return a minimal mock system if creation fails or components unavailable
@@ -301,10 +291,8 @@ class ContainerManager:
                 for key in dir(config)
                 if not key.startswith("_") and not callable(getattr(config, key))
             }
-        except Exception as e:
-            logger.warning(
-                f"Failed to convert config to dict: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (AttributeError, TypeError, ValueError) as e:
+            logger.warning("Failed to convert config to dict: %s", e)
             return {}
 
     def _serialize_config_dict(self, data: Any) -> Any:

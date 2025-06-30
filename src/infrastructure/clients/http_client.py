@@ -37,14 +37,13 @@ class HTTPClientProvider:
                 self._healthy = False
                 return False
 
-            self._healthy = True
-            return True
-        except Exception as e:
-            logger.warning(
-                f"HTTP client health check failed: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (AttributeError, RuntimeError, ValueError) as e:
+            logger.warning("HTTP client health check failed: %s", e)
             self._healthy = False
             return False
+        else:
+            self._healthy = True
+            return True
 
     async def get(
         self, url: str, headers: dict[str, str] | None = None, **kwargs

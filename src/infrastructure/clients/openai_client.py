@@ -39,14 +39,13 @@ class OpenAIClientProvider:
 
             # Simple API call to check connectivity
             await self._client.models.list()
-            self._healthy = True
-            return True
-        except Exception as e:
-            logger.warning(
-                f"OpenAI health check failed: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (AttributeError, ValueError, ConnectionError, TimeoutError) as e:
+            logger.warning("OpenAI health check failed: %s", e)
             self._healthy = False
             return False
+        else:
+            self._healthy = True
+            return True
 
     async def get_embedding(
         self, text: str, model: str = "text-embedding-3-small"

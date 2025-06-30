@@ -106,19 +106,19 @@ class ClientManager:
             container = get_container()
             if container:
                 # Get the parallel processing system from the container
-                # Note: embedding manager is now accessed via function-based dependencies
+                # Note: embedding manager is now accessed via
+                # function-based dependencies
                 self._parallel_processing_system = (
                     container.parallel_processing_system()
                 )
                 logger.info("Parallel processing system initialized")
             else:
                 logger.warning(
-                    "Cannot initialize parallel processing system: container not available"
+                    "Cannot initialize parallel processing system: "
+                    "container not available"
                 )
-        except Exception as e:
-            logger.exception(
-                f"Failed to initialize parallel processing system: {e}"
-            )  # TODO: Convert f-string to logging format
+        except Exception:
+            logger.exception("Failed to initialize parallel processing system")
             # Continue without parallel processing
             self._parallel_processing_system = None
 
@@ -167,45 +167,51 @@ class ClientManager:
     # Function-based dependency access methods (backward compatibility)
 
     async def get_database_manager(self):
-        """Backward compatibility: returns None since we use function-based dependencies."""
+        """Backward compatibility: returns None since we use function-based deps."""
         logger.warning(
-            "get_database_manager() deprecated - use function-based dependencies from src.services.dependencies"
+            "get_database_manager() deprecated - use function-based dependencies "
+            "from src.services.dependencies"
         )
 
     async def get_embedding_manager(self):
-        """Backward compatibility: returns None since we use function-based dependencies."""
+        """Backward compatibility: returns None since we use function-based deps."""
         logger.warning(
-            "get_embedding_manager() deprecated - use function-based dependencies from src.services.dependencies"
+            "get_embedding_manager() deprecated - use function-based dependencies "
+            "from src.services.dependencies"
         )
 
     async def get_crawling_manager(self):
-        """Backward compatibility: returns None since we use function-based dependencies."""
+        """Backward compatibility: returns None since we use function-based deps."""
         logger.warning(
-            "get_crawling_manager() deprecated - use function-based dependencies from src.services.dependencies"
+            "get_crawling_manager() deprecated - use function-based dependencies "
+            "from src.services.dependencies"
         )
 
     async def get_monitoring_manager(self):
-        """Backward compatibility: returns None since we use function-based dependencies."""
+        """Backward compatibility: returns None since we use function-based deps."""
         logger.warning(
-            "get_monitoring_manager() deprecated - use function-based dependencies from src.services.dependencies"
+            "get_monitoring_manager() deprecated - use function-based dependencies "
+            "from src.services.dependencies"
         )
 
     async def get_cache_manager(self):
         """Backward compatibility: use function-based dependencies."""
         logger.warning(
-            "get_cache_manager() deprecated - use get_redis_client() or function-based cache dependencies"
+            "get_cache_manager() deprecated - use get_redis_client() or "
+            "function-based cache dependencies"
         )
         return await self.get_redis_client()
 
     async def get_qdrant_service(self):
         """Backward compatibility: use function-based dependencies."""
         logger.warning(
-            "get_qdrant_service() deprecated - use get_qdrant_client() or function-based qdrant dependencies"
+            "get_qdrant_service() deprecated - use get_qdrant_client() or "
+            "function-based qdrant dependencies"
         )
         return await self.get_qdrant_client()
 
     async def get_crawl_manager(self):
-        """Backward compatibility: returns None since we use function-based dependencies."""
+        """Backward compatibility: returns None since we use function-based deps."""
         logger.warning(
             "get_crawl_manager() deprecated - use function-based crawling dependencies"
         )
@@ -215,7 +221,8 @@ class ClientManager:
         if deps_get_health_status:
             return await deps_get_health_status()
         logger.warning(
-            "Health status monitoring not available - function-based dependency not found"
+            "Health status monitoring not available - function-based dependency "
+            "not found"
         )
         return {}
 
@@ -260,7 +267,7 @@ class ClientManager:
         try:
             yield await getters[client_type]()
         except Exception:
-            logger.exception(f"Error using {client_type} client")
+            logger.exception("Error using %s client", client_type)
             raise
 
     async def __aenter__(self):
