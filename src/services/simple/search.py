@@ -78,7 +78,7 @@ class SimpleSearchService(BaseService):
         # Check cache first
         cache_key = f"search:{hash(request.query)}"
         if cache_key in self._cache:
-            logger.debug(f"Cache hit for query: {request.query[:50]}...")
+            logger.debug("Cache hit for query: %s...", request.query[:50])
             return self._cache[cache_key]
 
         # Limit results for simple mode

@@ -8,7 +8,7 @@ import asyncio
 import contextlib
 import logging
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from src.config import get_config
 from src.config.drift_detection import (

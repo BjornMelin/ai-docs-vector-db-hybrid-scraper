@@ -205,7 +205,7 @@ class BatchProcessor(Generic[T, R]):
             self.config.min_batch_size, min(best_size, self.config.max_batch_size)
         )
 
-        logger.debug(f"Updated optimal batch size to {self.optimal_batch_size}")
+        logger.debug("Updated optimal batch size to %s", self.optimal_batch_size)
 
     async def _delayed_batch_processing(self) -> None:
         """Process batch after delay if minimum wait time exceeded."""

@@ -373,8 +373,9 @@ class HealthChecker:
                 # Log health status
                 if summary.overall_health_score < 0.8:
                     self.logger.warning(
-                        f"Health degraded: {summary.healthy_services}/{summary.total_services} "
-                        f"services healthy (score: {summary.overall_health_score:.2f})"
+                        f"Health degraded: {summary.healthy_services}/"
+                        f"{summary.total_services} services healthy "
+                        f"(score: {summary.overall_health_score:.2f})"
                     )
 
                 # Wait for next check interval

@@ -1,4 +1,5 @@
-"""Connection pool management for Redis 8.2, Qdrant, and PostgreSQL with health monitoring.
+"""Connection pool management for Redis 8.2, Qdrant, and PostgreSQL with health 
+monitoring.
 
 Provides optimized connection pools with:
 - Redis 8.2 RESP3 protocol and connection optimizations

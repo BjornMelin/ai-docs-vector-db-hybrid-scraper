@@ -9,8 +9,8 @@ import gc
 import logging
 import time
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import psutil
 
@@ -161,7 +161,9 @@ class RealTimePerformanceMonitor:
             )
 
         if snapshot.cache_hit_rate < 0.8:  # Cache hit rate below 80%
-            logger.warning(f"Low cache hit rate: {snapshot.cache_hit_rate:.1%}")
+            logger.warning(
+                f"Low cache hit rate: {snapshot.cache_hit_rate:.1%}"
+            )
 
     async def _optimize_memory(self) -> None:
         """Trigger memory optimization when usage is high."""

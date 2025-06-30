@@ -220,23 +220,31 @@ class RAGGenerator(BaseService):
     def _build_context(
         self, request: RAGRequest, results: list[dict[str, Any]]
     ) -> dict[str, Any]:
-        """Build context string from search results with token management."""
+        """Build context string from search results with intelligent token management."""
         context_parts = []
         token_count = 0
         max_tokens = self.config.max_context_length
         truncated = False
 
-        # Add query context
-        query_context = f"User Query: {request.query}\n\nRelevant Information:\n\n"
+        # Add query context to help LLM understand the user's intent
+        # This primes the model with the specific question being asked
+        query_context = "User Query: " + request.query + """
+
+Relevant Information:
+
+"""
         context_parts.append(query_context)
         token_count += len(query_context.split()) * 1.3  # Rough token estimate
 
+        # Process search results in relevance order (pre-sorted by score)
+        # Each result is formatted with metadata to help LLM understand context
         for i, result in enumerate(results):
-            # Build result context
+            # Format result with title, URL, relevance score, and content
             result_text = self._format_result_for_context(result, i + 1)
             result_tokens = len(result_text.split()) * 1.3
 
-            # Check if adding this result would exceed token limit
+            # Token budget management: prevent context window overflow
+            # Critical for maintaining LLM performance and avoiding truncation errors
             if token_count + result_tokens > max_tokens:
                 truncated = True
                 break

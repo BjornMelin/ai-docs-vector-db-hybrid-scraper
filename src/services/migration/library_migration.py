@@ -9,7 +9,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict
+from typing import Any
 
 from src.config import Config
 from src.services.cache.modern import ModernCacheManager

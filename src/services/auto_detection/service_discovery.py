@@ -1,4 +1,5 @@
-"""Service discovery with connection pooling optimization for Redis 8.2, Qdrant, and PostgreSQL.
+"""Service discovery with connection pooling optimization for Redis 8.2, Qdrant, and 
+PostgreSQL.
 
 Implements modern async service discovery patterns with:
 - Circuit breaker resilience patterns
@@ -275,7 +276,8 @@ class ServiceDiscovery:
 
         for host, port in pg_candidates:
             try:
-                # Use asyncpg for direct connection testing (eliminates TCP + protocol redundancy)
+                # Use asyncpg for direct connection testing
+                # (eliminates TCP + protocol redundancy)
                 pg_info = await self._test_postgresql_connection(host, port)
                 if pg_info:
                     detection_time_ms = (time.time() - start_time) * 1000
@@ -450,7 +452,8 @@ class ServiceDiscovery:
                     # Get server version
                     version = await conn.fetchval("SELECT version()")
                     server_info = await conn.fetch(
-                        "SELECT name, setting FROM pg_settings WHERE name IN ('server_version', 'max_connections')"
+                        "SELECT name, setting FROM pg_settings "
+                        "WHERE name IN ('server_version', 'max_connections')"
                     )
 
                     await conn.close()

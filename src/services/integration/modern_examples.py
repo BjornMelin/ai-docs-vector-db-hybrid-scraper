@@ -164,7 +164,7 @@ class SearchServiceWithCaching:
         """Invalidate search cache entries matching pattern."""
         try:
             count = await self.cache_manager.invalidate_pattern(pattern)
-            logger.info(f"Invalidated {count} search cache entries")
+            logger.info("Invalidated %s search cache entries", count)
             return True
         except Exception as e:
             logger.exception("Failed to invalidate search cache")

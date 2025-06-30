@@ -187,7 +187,7 @@ class ModernCircuitBreakerManager:
                     f"Reset circuit breaker for service: {service_name}"
                 )  # TODO: Convert f-string to logging format
                 return True
-            logger.warning(f"Circuit breaker for {service_name} does not support reset")
+            logger.warning("Circuit breaker for %s does not support reset", service_name)
             return False
         except Exception as e:
             logger.exception("Failed to reset circuit breaker for {service_name}")

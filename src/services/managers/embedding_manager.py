@@ -215,7 +215,8 @@ class EmbeddingManager:
             Optimal provider name
 
         Raises:
-            EmbeddingServiceError: If manager not initialized or no provider meets constraints
+            EmbeddingServiceError: If manager not initialized or no provider meets 
+                constraints
         """
         if not self._initialized or not self._core_manager:
             msg = "Embedding manager not initialized"
