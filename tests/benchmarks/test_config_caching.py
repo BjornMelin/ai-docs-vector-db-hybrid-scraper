@@ -414,7 +414,8 @@ class TestRealWorldScenarios:
     def test_microservice_config_pattern(self):
         """Benchmark microservice configuration pattern."""
         pytest.skip(
-            "FastConfig and development configs not available - optimized module deprecated"
+            "FastConfig and development configs not available - "
+            "optimized module deprecated"
         )
 
     @pytest.mark.asyncio
@@ -444,7 +445,8 @@ class TestPerformanceTargetValidation:
     async def test_async_performance_benchmark(self):
         """Run async performance benchmark."""
         pytest.skip(
-            "benchmark_async_config_performance not available - optimized module deprecated"
+            "benchmark_async_config_performance not available - "
+            "optimized module deprecated"
         )
 
 

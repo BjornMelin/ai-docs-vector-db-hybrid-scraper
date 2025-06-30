@@ -458,7 +458,8 @@ class TestConfigurationPerformance:
 
         # Log memory metrics
         print(
-            f"\n💾 Config Memory: {result['avg_memory_per_config']:.0f} bytes/config, efficiency: {result['memory_efficiency_score']:.1f}"
+            f"\n💾 Config Memory: {result['avg_memory_per_config']:.0f} "
+            f"bytes/config, efficiency: {result['memory_efficiency_score']:.1f}"
         )
 
 
@@ -638,12 +639,17 @@ class TestPerformanceTargets:
 
         result = benchmark(timed_config_creation)
 
-        # Performance target validation - based on benchmark output showing results in microseconds
-        # From the output we can see timing is in microseconds (us), mean ~1100us = 1.1ms
-        # This is well under our 100ms target, so we just need to validate the test passes
-        # The benchmark automatically validates performance by running multiple iterations
+        # Performance target validation - based on benchmark output showing
+        # results in microseconds
+        # From the output we can see timing is in microseconds (us),
+        # mean ~1100us = 1.1ms
+        # This is well under our 100ms target, so we just need to validate
+        # the test passes
+        # The benchmark automatically validates performance by running
+        # multiple iterations
 
-        # We can see from the benchmark output that mean time is ~1.1ms, which is excellent
+        # We can see from the benchmark output that mean time is ~1.1ms,
+        # which is excellent
         print("\n✅ Config load performance: Mean ~1.1ms (well under 100ms target)")
 
         # The test passes if the benchmark completes successfully
@@ -667,9 +673,11 @@ class TestPerformanceTargets:
         result = benchmark(timed_validation)
 
         # Performance validation - benchmark runs validation automatically
-        # Based on previous runs, validation caching performs in nanoseconds/microseconds
+        # Based on previous runs, validation caching performs in
+        # nanoseconds/microseconds
         print(
-            "\n✅ Config validation performance: Sub-millisecond (well under 50ms target)"
+            "\n✅ Config validation performance: Sub-millisecond "
+            "(well under 50ms target)"
         )
 
         # Test passes if benchmark completes and result is correct
@@ -700,10 +708,12 @@ class TestPerformanceTargets:
 
         result = benchmark(timed_cache_hit)
 
-        # Performance validation - benchmark measures cache hit performance automatically
+        # Performance validation - benchmark measures cache hit performance
+        # automatically
         # Cache hits should be extremely fast (sub-microsecond range)
         print(
-            "\n✅ Config cache hit performance: Sub-microsecond (well under 10ms target)"
+            "\n✅ Config cache hit performance: Sub-microsecond "
+            "(well under 10ms target)"
         )
 
         # Test passes if benchmark completes and returns cached object

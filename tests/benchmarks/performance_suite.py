@@ -163,8 +163,9 @@ class PerformanceBenchmark:
         # Short texts (10-50 words)
         for i in range(100):
             text = (
-                f"This is a short sample text {i} with approximately ten to fifty words "
-                f"for testing text analysis performance and optimization algorithms."
+                f"This is a short sample text {i} with approximately ten to "
+                f"fifty words for testing text analysis performance and "
+                f"optimization algorithms."
             )
             texts.append(text)
 
@@ -172,10 +173,11 @@ class PerformanceBenchmark:
         for i in range(50):
             text = f"This is a medium length text sample {i}. " * 20
             text += (
-                "It contains multiple sentences and paragraphs to test more complex "
-                "text analysis scenarios including keyword extraction, complexity analysis, "
-                "and readability scoring. The purpose is to benchmark performance with "
-                "realistic content that might be found in documents, articles, or web pages."
+                "It contains multiple sentences and paragraphs to test more "
+                "complex text analysis scenarios including keyword extraction, "
+                "complexity analysis, and readability scoring. The purpose is to "
+                "benchmark performance with realistic content that might be found "
+                "in documents, articles, or web pages."
             )
             texts.append(text)
 
@@ -183,9 +185,10 @@ class PerformanceBenchmark:
         for i in range(20):
             text = f"This is a long text sample {i}. " * 100
             text += (
-                "This extensive text is designed to test the performance of text analysis "
-                "algorithms on larger content pieces. It simulates full articles, research "
-                "papers, or comprehensive documentation that requires efficient processing."
+                "This extensive text is designed to test the performance of text "
+                "analysis algorithms on larger content pieces. It simulates full "
+                "articles, research papers, or comprehensive documentation that "
+                "requires efficient processing."
             )
             texts.append(text)
 
@@ -651,7 +654,7 @@ class TestPerformanceBenchmarks:
     @pytest.fixture
     async def real_embedding_manager(self):
         """Create real embedding manager with test configuration."""
-        from src.config.settings import EmbeddingProvider, get_settings
+        from src.config.settings import get_settings
         from src.services.embeddings.manager import EmbeddingManager
 
         settings = get_settings()
@@ -679,18 +682,51 @@ class TestPerformanceBenchmarks:
 
         # Technical documentation samples
         tech_docs = [
-            "Python asyncio provides infrastructure for writing single-threaded concurrent code using coroutines, multiplexing I/O access over sockets and other resources, running network clients and servers, and other related primitives.",
-            "Machine learning embeddings are dense vector representations of text that capture semantic meaning and enable similarity search across large document collections.",
-            "Vector databases like Qdrant provide specialized storage and retrieval for high-dimensional vectors with efficient approximate nearest neighbor search algorithms.",
-            "Hybrid search combines dense vector similarity with traditional keyword-based search to improve retrieval accuracy and handle diverse query types.",
-            "Circuit breaker patterns prevent cascading failures by temporarily disabling operations that are likely to fail, allowing systems to gracefully degrade.",
+            (
+                "Python asyncio provides infrastructure for writing single-threaded "
+                "concurrent code using coroutines, multiplexing I/O access over "
+                "sockets and other resources, running network clients and servers, "
+                "and other related primitives."
+            ),
+            (
+                "Machine learning embeddings are dense vector representations of "
+                "text that capture semantic meaning and enable similarity search "
+                "across large document collections."
+            ),
+            (
+                "Vector databases like Qdrant provide specialized storage and "
+                "retrieval for high-dimensional vectors with efficient approximate "
+                "nearest neighbor search algorithms."
+            ),
+            (
+                "Hybrid search combines dense vector similarity with traditional "
+                "keyword-based search to improve retrieval accuracy and handle "
+                "diverse query types."
+            ),
+            (
+                "Circuit breaker patterns prevent cascading failures by temporarily "
+                "disabling operations that are likely to fail, allowing systems to "
+                "gracefully degrade."
+            ),
         ]
 
         # API documentation samples
         api_docs = [
-            "GET /api/v1/documents/{id} - Retrieve a specific document by its unique identifier. Returns JSON with document content, metadata, and embedding vectors.",
-            "POST /api/v1/search - Perform hybrid search across document collection. Accepts query text, filters, and search parameters. Returns ranked results with similarity scores.",
-            "PUT /api/v1/collections/{name} - Create or update a document collection with specified configuration. Supports custom embedding models and search strategies.",
+            (
+                "GET /api/v1/documents/{id} - Retrieve a specific document by its "
+                "unique identifier. Returns JSON with document content, metadata, "
+                "and embedding vectors."
+            ),
+            (
+                "POST /api/v1/search - Perform hybrid search across document "
+                "collection. Accepts query text, filters, and search parameters. "
+                "Returns ranked results with similarity scores."
+            ),
+            (
+                "PUT /api/v1/collections/{name} - Create or update a document "
+                "collection with specified configuration. Supports custom "
+                "embedding models and search strategies."
+            ),
         ]
 
         # Code samples
@@ -756,7 +792,7 @@ class VectorSearch:
         # Validate embedding dimensions (typical values: 384, 768, 1536)
         first_embedding = results[0][0] if results[0] else []
         assert len(first_embedding) > 0, "Embeddings should have positive dimensions"
-        assert all(isinstance(val, (int, float)) for val in first_embedding), (
+        assert all(isinstance(val, int | float) for val in first_embedding), (
             "Embedding values should be numeric"
         )
 
