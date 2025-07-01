@@ -117,7 +117,7 @@ class ModernCircuitBreakerManager:
         async with breaker:
             return await func(*args, **kwargs)
 
-    def decorator(self, service_name: str, **breaker_kwargs: Any):
+    def decorator(self, service_name: str, **_breaker_kwargs: Any):
         """Decorator for circuit breaker protection.
 
         Args:
@@ -164,7 +164,7 @@ class ModernCircuitBreakerManager:
                 "is_open": getattr(breaker, "is_open", False),
                 "is_half_open": getattr(breaker, "is_half_open", False),
             }
-        except Exception as e:
+        except (OSError, PermissionError, ValueError) as e:
             logger.warning(
                 f"Failed to get status for circuit breaker {service_name}: {e}"
             )
@@ -187,7 +187,9 @@ class ModernCircuitBreakerManager:
                     f"Reset circuit breaker for service: {service_name}"
                 )  # TODO: Convert f-string to logging format
                 return True
-            logger.warning("Circuit breaker for %s does not support reset", service_name)
+            logger.warning(
+                "Circuit breaker for %s does not support reset", service_name
+            )
             return False
         except Exception as e:
             logger.exception("Failed to reset circuit breaker for {service_name}")

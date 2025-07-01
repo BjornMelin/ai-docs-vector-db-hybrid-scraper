@@ -5,22 +5,24 @@ semantic similarity analysis, and embedding quality assessment. Portfolio featur
 showcasing deep ML understanding and data visualization expertise.
 """
 
+import asyncio
 import logging
 from typing import Any
 
 import numpy as np
 from pydantic import BaseModel, Field
-
-
-# Initialize numpy random generator
-rng = np.random.default_rng()
+from scipy.spatial.distance import pdist
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.neighbors import NearestNeighbors
 
-# get_config import removed (unused)
 from src.services.base import BaseService
+
+
+# Initialize numpy random generator
+rng = np.random.default_rng()
 
 
 logger = logging.getLogger(__name__)
@@ -116,7 +118,7 @@ class VectorVisualizationEngine(BaseService):
             self._initialized = True
             self._logger.info("VectorVisualizationEngine initialized successfully")
 
-        except Exception:
+        except (AttributeError, ImportError, OSError) as e:
             self._logger.exception("Failed to initialize VectorVisualizationEngine")
             raise
 
@@ -274,7 +276,7 @@ class VectorVisualizationEngine(BaseService):
                 },
             }
 
-        except Exception:
+        except (AttributeError, OSError, PermissionError) as e:
             self._logger.exception("Failed to create embedding visualization")
             return {"error": "Failed to create visualization"}
 
@@ -341,7 +343,7 @@ class VectorVisualizationEngine(BaseService):
                 ),
             }
 
-        except Exception:
+        except (AttributeError, OSError, PermissionError) as e:
             self._logger.exception("Failed to analyze embedding space")
             return {"error": "Failed to analyze embedding space"}
 
@@ -464,7 +466,7 @@ class VectorVisualizationEngine(BaseService):
                 ),
             }
 
-        except Exception:
+        except (AttributeError, OSError, PermissionError) as e:
             self._logger.exception("Failed to compare query embeddings")
             return {"error": "Failed to compare embeddings"}
 
@@ -538,7 +540,7 @@ class VectorVisualizationEngine(BaseService):
                 "optimal_k": optimal_k,
             }
 
-        except Exception:
+        except (ImportError, OSError, PermissionError) as e:
             self._logger.exception("Failed to perform clustering")
             return None
 
@@ -623,14 +625,14 @@ class VectorVisualizationEngine(BaseService):
             # Return top 50 relationships
             return relationships[:50]
 
-        except Exception:
+        except (OSError, PermissionError, asyncio.TimeoutError) as e:
             self._logger.exception("Failed to find similarity relationships")
             return []
 
     async def _calculate_quality_metrics(
         self,
         embeddings_array: np.ndarray,
-        reduced_embeddings: np.ndarray,
+        _reduced_embeddings: np.ndarray,
         clusters_info: dict[str, Any] | None,
     ) -> EmbeddingQualityMetrics:
         """Calculate embedding quality metrics."""
@@ -723,7 +725,7 @@ class VectorVisualizationEngine(BaseService):
                 quality_grade=quality_grade,
             )
 
-        except Exception:
+        except (AttributeError, OSError, PermissionError) as e:
             self._logger.exception("Failed to calculate quality metrics")
             return EmbeddingQualityMetrics(
                 dimensionality=embeddings_array.shape[1],
@@ -844,7 +846,7 @@ class VectorVisualizationEngine(BaseService):
 
             return insights
 
-        except Exception:
+        except (AttributeError, OSError, PermissionError) as e:
             self._logger.exception("Failed to generate visualization insights")
             return []
 
@@ -861,8 +863,6 @@ class VectorVisualizationEngine(BaseService):
                 sample_embeddings = embeddings_array
 
             # Calculate pairwise distances
-            from scipy.spatial.distance import pdist
-
             euclidean_distances = pdist(sample_embeddings, metric="euclidean")
             cosine_distances = pdist(sample_embeddings, metric="cosine")
 
@@ -875,7 +875,7 @@ class VectorVisualizationEngine(BaseService):
                 "min_euclidean_distance": float(np.min(euclidean_distances)),
             }
 
-        except Exception:
+        except (AttributeError, OSError, PermissionError) as e:
             self._logger.exception("Failed to calculate distance metrics")
             return {}
 
@@ -907,7 +907,7 @@ class VectorVisualizationEngine(BaseService):
                 else 1.0,
             }
 
-        except Exception:
+        except (AttributeError, OSError, PermissionError) as e:
             self._logger.exception("Failed to analyze dimensionality")
             return {}
 
@@ -967,7 +967,7 @@ class VectorVisualizationEngine(BaseService):
                 "coherence_samples": len(coherence_scores),
             }
 
-        except Exception:
+        except (AttributeError, OSError, PermissionError) as e:
             self._logger.exception("Failed to analyze semantic coherence")
             return {}
 
@@ -1003,7 +1003,7 @@ class VectorVisualizationEngine(BaseService):
                 "sample_outliers": outliers_info,
             }
 
-        except Exception:
+        except (AttributeError, OSError, PermissionError) as e:
             self._logger.exception("Failed to detect outliers")
             return {}
 
@@ -1013,8 +1013,6 @@ class VectorVisualizationEngine(BaseService):
         """Analyze the density distribution of embeddings."""
         try:
             # Calculate local density using k-nearest neighbors
-            from sklearn.neighbors import NearestNeighbors
-
             k = min(10, len(embeddings_array) - 1)
             if k <= 0:
                 return {}
@@ -1037,13 +1035,13 @@ class VectorVisualizationEngine(BaseService):
                 },
             }
 
-        except Exception:
+        except (AttributeError, OSError, PermissionError) as e:
             self._logger.exception("Failed to analyze embedding density")
             return {}
 
     async def _generate_space_recommendations(
         self,
-        embeddings_array: np.ndarray,
+        _embeddings_array: np.ndarray,
         dimensionality_analysis: dict[str, Any],
         coherence_analysis: dict[str, Any],
     ) -> list[dict[str, str]]:
@@ -1092,7 +1090,7 @@ class VectorVisualizationEngine(BaseService):
 
             return recommendations
 
-        except Exception:
+        except (AttributeError, OSError, PermissionError) as e:
             self._logger.exception("Failed to generate space recommendations")
             return []
 
@@ -1153,7 +1151,7 @@ class VectorVisualizationEngine(BaseService):
 
             return recommendations
 
-        except Exception:
+        except (AttributeError, ConnectionError, OSError) as e:
             self._logger.exception("Failed to generate query recommendations")
             return []
 

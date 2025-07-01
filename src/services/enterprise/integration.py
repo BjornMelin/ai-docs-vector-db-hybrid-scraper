@@ -10,6 +10,7 @@ import asyncio
 import contextlib
 import logging
 import time
+
 # Callable import removed (unused)
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -17,7 +18,6 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 # BaseModel and Field imports removed (unused)
-
 from src.architecture.service_factory import BaseService
 from src.config.modern import Config
 from src.services.deployment.feature_flags import FeatureFlagManager
@@ -30,6 +30,24 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
+def _raise_missing_service_dependencies(missing_deps: list[str]) -> None:
+    """Raise ValueError for missing service dependencies."""
+    msg = f"Missing service dependencies: {missing_deps}"
+    raise ValueError(msg)
+
+
+def _raise_circular_dependencies_detected(cycles: list) -> None:
+    """Raise ValueError for circular dependencies detected."""
+    msg = f"Circular dependencies detected: {cycles}"
+    raise ValueError(msg)
+
+
+def _raise_service_health_check_failed(service_name: str, health_result: dict) -> None:
+    """Raise RuntimeError for service health check failure."""
+    msg = f"Service {service_name} failed health check: {health_result}"
+    raise RuntimeError(msg)
 
 
 class ServiceStatus(str, Enum):
@@ -369,14 +387,12 @@ class EnterpriseServiceRegistry:
             )
 
             if missing_deps:
-                msg = f"Missing service dependencies: {missing_deps}"
-                raise ValueError(msg)
+                _raise_missing_service_dependencies(missing_deps)
 
             # Detect circular dependencies
             cycles = self.dependency_graph.detect_circular_dependencies()
             if cycles:
-                msg = f"Circular dependencies detected: {cycles}"
-                raise ValueError(msg)
+                _raise_circular_dependencies_detected(cycles)
 
             # Resolve startup order
             self.startup_order = self.dependency_graph.resolve_startup_order()
@@ -491,8 +507,7 @@ class EnterpriseServiceRegistry:
                 logger.info("Service %s started successfully", service_name)
             else:
                 descriptor.status = ServiceStatus.UNHEALTHY
-                msg = f"Service {service_name} failed health check: {health_result}"
-                raise RuntimeError(msg)
+                _raise_service_health_check_failed(service_name, health_result)
 
         except Exception as e:
             descriptor.status = ServiceStatus.FAILED

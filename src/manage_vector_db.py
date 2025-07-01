@@ -5,6 +5,7 @@ Modern Python 3.13 implementation with async patterns for Qdrant operations.
 Provides comprehensive database management, search, and maintenance utilities
 """
 
+import asyncio
 import logging
 from typing import Any
 
@@ -121,7 +122,7 @@ class VectorDBManager:
             await self.initialize()
             qdrant_service = await self.get_qdrant_service()
             return await qdrant_service.list_collections()
-        except Exception as e:
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(f"❌ Error listing collections: {e}", style="red")
             return []
 
@@ -141,7 +142,7 @@ class VectorDBManager:
                 f"✅ Successfully created collection: {collection_name}", style="green"
             )
             return True  # noqa: TRY300
-        except Exception as e:
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(
                 f"❌ Error creating collection {collection_name}: {e}", style="red"
             )
@@ -157,7 +158,7 @@ class VectorDBManager:
                 f"✅ Successfully deleted collection: {collection_name}", style="green"
             )
             return True  # noqa: TRY300
-        except Exception as e:
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(
                 f"❌ Error deleting collection {collection_name}: {e}", style="red"
             )
@@ -178,7 +179,7 @@ class VectorDBManager:
                 vector_count=collection_info.vector_count,
                 vector_size=collection_info.vector_size,
             )
-        except Exception as e:
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(
                 f"❌ Error getting collection info for {collection_name}: {e}",
                 style="red",
@@ -216,9 +217,9 @@ class VectorDBManager:
                         metadata=payload,
                     )
                 )
-
             return results
-        except Exception as e:
+
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(f"❌ Error searching vectors: {e}", style="red")
             return []
 
@@ -250,7 +251,7 @@ class VectorDBManager:
                 total_vectors=total_vectors,
                 collections=collections,
             )
-        except Exception as e:
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(f"❌ Error getting database stats: {e}", style="red")
             return None
 
@@ -280,7 +281,7 @@ class VectorDBManager:
                 f"✅ Successfully cleared collection: {collection_name}", style="green"
             )
             return True
-        except Exception as e:
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(
                 f"❌ Error clearing collection {collection_name}: {e}", style="red"
             )
@@ -296,7 +297,7 @@ async def create_embeddings(text: str, embedding_manager) -> list[float]:
     try:
         embeddings = await embedding_manager.generate_embeddings([text])
         return embeddings[0] if embeddings else []
-    except Exception as e:
+    except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
         console.print(f"❌ Error creating embeddings: {e}", style="red")
         return []
 
@@ -307,7 +308,7 @@ def _create_manager_from_context(ctx) -> VectorDBManager:
     if ctx.obj.get("url"):
         config.qdrant.url = ctx.obj.get("url")
 
-    client_manager = ClientManager(config)
+    client_manager = ClientManager()
     return VectorDBManager(client_manager=client_manager)
 
 

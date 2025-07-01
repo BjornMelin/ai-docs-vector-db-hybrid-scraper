@@ -29,6 +29,24 @@ from src.infrastructure.client_manager import ClientManager
 logger = logging.getLogger(__name__)
 
 
+def _raise_collection_not_found(collection_name: str) -> None:
+    """Raise ValueError for collection not found."""
+    msg = f"Collection {collection_name} not found"
+    raise ValueError(msg)
+
+
+def _raise_unknown_lifecycle_action(action: str) -> None:
+    """Raise ValueError for unknown lifecycle action."""
+    msg = f"Unknown lifecycle action: {action}"
+    raise ValueError(msg)
+
+
+def _raise_unknown_organization_strategy(strategy: str) -> None:
+    """Raise ValueError for unknown organization strategy."""
+    msg = f"Unknown organization strategy: {strategy}"
+    raise ValueError(msg)
+
+
 def register_tools(mcp, client_manager: ClientManager):
     """Register advanced document management tools with the MCP server."""
 
@@ -82,7 +100,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     if ctx:
                         await ctx.debug(f"Created collection: {full_collection_name}")
 
-                except Exception as e:
+                except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
                     if ctx:
                         await ctx.warning(
                             f"Failed to create collection {full_collection_name}: {e}"
@@ -159,8 +177,7 @@ def register_tools(mcp, client_manager: ClientManager):
             # Get collection info
             collection_info = await qdrant_service.get_collection_info(collection_name)
             if not collection_info:
-                msg = f"Collection {collection_name} not found"
-                raise ValueError(msg)
+                _raise_collection_not_found(collection_name)
 
             results = {
                 "action": lifecycle_action,
@@ -198,8 +215,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 results["results"] = optimization_results
 
             else:
-                msg = f"Unknown lifecycle action: {lifecycle_action}"
-                raise ValueError(msg)
+                _raise_unknown_lifecycle_action(lifecycle_action)
 
             if ctx:
                 await ctx.info(
@@ -287,8 +303,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     documents, parameters, ctx
                 )
             else:
-                msg = f"Unknown organization strategy: {organization_strategy}"
-                raise ValueError(msg)
+                _raise_unknown_organization_strategy(organization_strategy)
 
             # Update document metadata with organization results
             update_results = await _update_document_organization(

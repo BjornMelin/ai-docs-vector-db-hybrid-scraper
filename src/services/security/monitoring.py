@@ -332,10 +332,10 @@ class SecurityMonitor:
 
         # Log to appropriate logger based on severity
         if event.severity in (SecuritySeverity.CRITICAL, SecuritySeverity.HIGH):
-            self.threat_logger.error("HIGH_PRIORITY_EVENT: %s", event_json)
+            self.threat_logger.error(f"HIGH_PRIORITY_EVENT: {event_json}")
 
         # Always log to security events
-        self.security_logger.info("SECURITY_EVENT: %s", event_json)
+        self.security_logger.info(f"SECURITY_EVENT: {event_json}")
 
         # Log to audit trail for compliance
         if event.event_type in (
@@ -344,7 +344,7 @@ class SecurityMonitor:
             SecurityEventType.IP_BLOCKED,
             SecurityEventType.SECURITY_CONFIGURATION_CHANGE,
         ):
-            self.audit_logger.info("AUDIT_EVENT: %s", event_json)
+            self.audit_logger.info(f"AUDIT_EVENT: {event_json}")
 
     def _update_metrics(self, event: SecurityEvent) -> None:
         """Update security metrics with new event.
@@ -703,6 +703,6 @@ class SecurityMonitor:
 
         cleaned_count = old_count - new_count
         if cleaned_count > 0:
-            logger.info("Cleaned up %s old security events", cleaned_count)
+            logger.info(f"Cleaned up {cleaned_count} old security events")
 
         return cleaned_count

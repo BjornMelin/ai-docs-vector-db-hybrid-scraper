@@ -374,7 +374,7 @@ class ModernCacheManager:
                 try:
                     if hasattr(cache, 'get_stats'):
                         stats["cache_types"][cache_type]["stats"] = await cache.get_stats()
-                except Exception:
+                except (ConnectionError, IOError, OSError, PermissionError) as e:
                     pass  # Stats not available for this cache type
             
             return stats

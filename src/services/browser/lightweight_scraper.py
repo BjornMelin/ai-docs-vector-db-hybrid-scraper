@@ -5,6 +5,7 @@ providing 5-10x performance improvement for static content by avoiding
 browser overhead for simple HTML pages.
 """
 
+import asyncio
 import logging
 import re
 import time
@@ -172,7 +173,7 @@ class LightweightScraper(BaseService):
                 analysis.content_type = head_analysis.get("content_type")
                 analysis.size_estimate = head_analysis.get("size_estimate")
 
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             logger.warning(
                 f"Error analyzing URL {url}: {e}"
             )  # TODO: Convert f-string to logging format
@@ -310,7 +311,7 @@ class LightweightScraper(BaseService):
 
             return analysis
 
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.debug(
                 f"HEAD request failed for {url}: {e}"
             )  # TODO: Convert f-string to logging format
@@ -372,7 +373,7 @@ class LightweightScraper(BaseService):
                 )  # TODO: Convert f-string to logging format
                 return None
             raise
-        except Exception as e:
+        except (httpx.HTTPError, httpx.TimeoutException, ConnectionError) as e:
             logger.warning(
                 f"Error scraping {url}: {e}"
             )  # TODO: Convert f-string to logging format

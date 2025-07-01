@@ -119,7 +119,7 @@ class BulkEmbedder:
                         f"Resumed from state: {len(state.completed_urls)} completed"
                     )
                     return state
-            except Exception:
+            except (ImportError, OSError, PermissionError) as e:
                 logger.warning("Failed to load state")
         return ProcessingState(collection_name=self.collection_name)
 
@@ -261,14 +261,13 @@ class BulkEmbedder:
 
             # Chunk the content using DocumentChunker
             chunker = DocumentChunker(self.config.chunking)
-            chunk_results = chunker.chunk_text(content_to_chunk)
-            chunks = chunk_results.chunks
+            chunks = chunker.chunk_content(content_to_chunk)
 
             if not chunks:
                 _raise_chunk_generation_error()
 
             # Generate embeddings for all chunks
-            texts = [chunk.content for chunk in chunks]
+            texts = [chunk["content"] for chunk in chunks]
             embedding_result = await self.embedding_manager.generate_embeddings(
                 texts=texts,
                 quality_tier=QualityTier.BALANCED,
@@ -292,13 +291,13 @@ class BulkEmbedder:
                     "url": url,
                     "title": metadata.get("title", ""),
                     "description": metadata.get("description", ""),
-                    "content": chunk.content,
+                    "content": chunk["content"],
                     "chunk_index": i,
                     "total_chunks": len(chunks),
-                    "start_char": chunk.start_pos,
-                    "end_char": chunk.end_pos,
-                    "chunk_type": chunk.chunk_type,
-                    "has_code": chunk.has_code,
+                    "start_char": chunk.get("start_pos", 0),
+                    "end_char": chunk.get("end_pos", 0),
+                    "chunk_type": chunk.get("chunk_type", "text"),
+                    "has_code": chunk.get("has_code", False),
                     "scraped_at": datetime.now(tz=UTC).isoformat(),
                     "provider": scrape_result.get("provider", "unknown"),
                 }
@@ -582,7 +581,7 @@ async def _async_main(
 ) -> None:
     """Async main function."""
     # Initialize client manager
-    client_manager = ClientManager(config)
+    client_manager = ClientManager()
 
     # Create embedder
     embedder = BulkEmbedder(
@@ -632,4 +631,4 @@ async def _async_main(
 
 
 if __name__ == "__main__":
-    main()
+    main()  # pylint: disable=no-value-for-parameter  # Click handles CLI arguments

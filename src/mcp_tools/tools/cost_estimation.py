@@ -746,7 +746,7 @@ async def _apply_autonomous_optimization(
                         "risk_level": action["risk_level"],
                     }
                 )
-        except Exception as e:
+        except (RuntimeError, ValueError, TypeError) as e:
             failed_actions.append(
                 {
                     "action": action["action"],

@@ -162,7 +162,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
 
             return compressed_response
 
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Failed to compress response: {e}"
             )  # TODO: Convert f-string to logging format
@@ -316,7 +316,7 @@ class BrotliCompressionMiddleware(BaseHTTPMiddleware):
 
             return compressed_response
 
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Failed to compress response with Brotli: {e}"
             )  # TODO: Convert f-string to logging format

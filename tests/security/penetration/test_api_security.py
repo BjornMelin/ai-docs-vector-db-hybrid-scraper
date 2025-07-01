@@ -99,7 +99,7 @@ class TestAPISecurity:
                     # Extract response data
                     try:
                         json_data = response.json()
-                    except Exception:
+                    except (json.JSONDecodeError, ValueError, TypeError):
                         json_data = {"text": response.text}
 
                     # Update session cookies if received
@@ -115,7 +115,7 @@ class TestAPISecurity:
                         "text": response.text,
                     }
 
-                except Exception as e:
+                except (json.JSONDecodeError, ValueError, TypeError) as e:
                     return {
                         "status_code": 500,
                         "json": {"error": f"Request failed: {e!s}"},
@@ -144,7 +144,7 @@ class TestAPISecurity:
                             endpoints[path] = list(methods.keys())
 
                         return endpoints
-                except Exception:
+                except (json.JSONDecodeError, ValueError, TypeError):
                     pass
 
                 # Fallback to known endpoints

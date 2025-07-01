@@ -729,20 +729,11 @@ class AdaptiveChaosTestGenerator:
                 recovery_time_seconds=max(30, int(duration * 0.2)),
                 success_criteria=template.success_criteria.copy(),
                 rollback_strategy="immediate",
-                metadata={
-                    "template_id": template.template_id,
-                    "weakness_id": weakness.weakness_id,
-                    "weakness_type": weakness.weakness_type.value,
-                    "learning_objective": weakness.learning_objective,
-                    "hypothesis": weakness.hypothesis,
-                    "severity": weakness.severity,
-                    "confidence": weakness.confidence,
-                },
             )
 
         except Exception as e:
             logger.exception(
-                f"Failed to generate experiment from template {template.template_id}: {e}"
+                "Failed to generate experiment from template %s", template.template_id
             )
             return None
 
@@ -770,12 +761,6 @@ class AdaptiveChaosTestGenerator:
                 recovery_time_seconds=60,
                 success_criteria=template.success_criteria.copy(),
                 rollback_strategy="immediate",
-                metadata={
-                    "template_id": template.template_id,
-                    "experiment_type": "exploratory",
-                    "learning_objective": "Discover unknown system behaviors",
-                    "hypothesis": "System behaves predictably under this failure mode",
-                },
             )
 
             experiments.append(experiment)
@@ -900,7 +885,7 @@ class RecoveryValidator:
         self,
         pre_snapshot: SystemMetrics,
         current: SystemMetrics,
-        experiment: ChaosExperiment,
+        _experiment: ChaosExperiment,
     ) -> dict[str, Any]:
         """Validate a single recovery phase."""
         # Health recovery validation
@@ -963,7 +948,7 @@ class RecoveryValidator:
         }
 
     async def _analyze_performance_impact(
-        self, pre_snapshot: SystemMetrics, validation_phases: list[dict[str, Any]]
+        self, _pre_snapshot: SystemMetrics, validation_phases: list[dict[str, Any]]
     ) -> dict[str, Any]:
         """Analyze performance impact during recovery."""
         if not validation_phases:
@@ -1371,7 +1356,6 @@ class IntelligentChaosOrchestrator:
             # Keep only recent history
             if len(self.experiment_history) > 500:
                 self.experiment_history = self.experiment_history[-500:]
-
             return chaos_result
 
         except Exception as e:
@@ -1813,7 +1797,7 @@ class IntelligentChaosOrchestrator:
         return list(set(unexpected))  # Remove duplicates
 
     async def _identify_system_adaptations(
-        self, experiment: ChaosExperiment, recovery_analysis: dict[str, Any]
+        self, _experiment: ChaosExperiment, recovery_analysis: dict[str, Any]
     ) -> list[str]:
         """Identify system adaptations observed during the experiment."""
         adaptations = []

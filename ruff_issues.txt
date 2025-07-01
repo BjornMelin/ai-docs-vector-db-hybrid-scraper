@@ -1,0 +1,3663 @@
+src/automation/infrastructure_automation.py:100:29: F841 Local variable `e` is assigned to but never used
+    |
+ 98 |             )
+ 99 |
+100 |         except Exception as e:
+    |                             ^ F841
+101 |             # Record failure
+102 |             self._record_failure(time.time() - start_time)
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/automation/infrastructure_automation.py:230:29: F841 Local variable `e` is assigned to but never used
+    |
+228 |             logger.info("Database connection initialized successfully")
+229 |
+230 |         except Exception as e:
+    |                             ^ F841
+231 |             logger.exception("Failed to initialize database")
+232 |             # Start background recovery
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/automation/infrastructure_automation.py:282:29: F841 Local variable `e` is assigned to but never used
+    |
+280 |             yield session
+281 |
+282 |         except Exception as e:
+    |                             ^ F841
+283 |             self.error_count += 1
+284 |             logger.exception("Database session error")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/automation/infrastructure_automation.py:324:29: F841 Local variable `e` is assigned to but never used
+    |
+322 |             logger.info("Database recovery successful")
+323 |
+324 |         except Exception as e:
+    |                             ^ F841
+325 |             logger.exception("Database recovery failed")
+326 |             # Schedule retry
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/automation/infrastructure_automation.py:397:33: F841 Local variable `e` is assigned to but never used
+    |
+395 |                 await asyncio.sleep(check_interval)
+396 |
+397 |             except Exception as e:
+    |                                 ^ F841
+398 |                 logger.exception("Auto-scaling monitoring error")
+399 |                 await asyncio.sleep(30)  # Shorter interval on error
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/automation/self_healing/auto_remediation_engine.py:869:29: F841 Local variable `e` is assigned to but never used
+    |
+868 |             logger.info("Successfully rolled back to checkpoint: %s", checkpoint_id)
+869 |         except Exception as e:
+    |                             ^ F841
+870 |             logger.exception("Failed to rollback to checkpoint %s", checkpoint_id)
+871 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/automation/self_healing/autonomous_health_monitor.py:630:29: F841 Local variable `e` is assigned to but never used
+    |
+628 |         try:
+629 |             await self.continuous_monitoring_loop()
+630 |         except Exception as e:
+    |                             ^ F841
+631 |             logger.exception("Health monitoring loop failed")
+632 |             self.monitoring_active = False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/automation/self_healing/autonomous_health_monitor.py:674:33: F841 Local variable `e` is assigned to but never used
+    |
+672 |                 )
+673 |
+674 |             except Exception as e:
+    |                                 ^ F841
+675 |                 logger.exception("Error in monitoring loop")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/automation/self_healing/autonomous_health_monitor.py:729:29: F841 Local variable `e` is assigned to but never used
+    |
+727 |             )
+728 |
+729 |         except Exception as e:
+    |                             ^ F841
+730 |             logger.exception("Failed to collect health metrics")
+731 |             # Return minimal metrics on failure
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/automation/self_healing/intelligent_chaos_orchestrator.py:737:29: F841 Local variable `e` is assigned to but never used
+    |
+735 |             )
+736 |
+737 |         except Exception as e:
+    |                             ^ F841
+738 |             logger.exception(
+739 |                 f"Failed to generate experiment from template {template.template_id}"
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/automation/self_healing/intelligent_chaos_orchestrator.py:1128:29: F841 Local variable `e` is assigned to but never used
+     |
+1126 |         try:
+1127 |             await self.continuous_chaos_loop()
+1128 |         except Exception as e:
+     |                             ^ F841
+1129 |             logger.exception("Chaos orchestration failed")
+1130 |             self.orchestration_active = False
+     |
+     = help: Remove assignment to unused variable `e`
+
+src/automation/self_healing/intelligent_chaos_orchestrator.py:1167:33: F841 Local variable `e` is assigned to but never used
+     |
+1165 |                 await self.generate_resilience_insights()
+1166 |
+1167 |             except Exception as e:
+     |                                 ^ F841
+1168 |                 logger.exception("Error in chaos orchestration loop")
+     |
+     = help: Remove assignment to unused variable `e`
+
+src/automation/self_healing/intelligent_chaos_orchestrator.py:1298:33: F841 Local variable `e` is assigned to but never used
+     |
+1296 |                 await asyncio.sleep(30)
+1297 |
+1298 |             except Exception as e:
+     |                                 ^ F841
+1299 |                 logger.exception("Failed to execute experiment %s", experiment.name)
+     |
+     = help: Remove assignment to unused variable `e`
+
+src/automation/self_healing/predictive_maintenance.py:666:29: F841 Local variable `e` is assigned to but never used
+    |
+664 |         try:
+665 |             await self.continuous_prediction_loop()
+666 |         except Exception as e:
+    |                             ^ F841
+667 |             logger.exception("Predictive maintenance monitoring failed")
+668 |             self.monitoring_enabled = False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/automation/self_healing/predictive_maintenance.py:718:33: F841 Local variable `e` is assigned to but never used
+    |
+716 |                     )
+717 |
+718 |             except Exception as e:
+    |                                 ^ F841
+719 |                 logger.exception("Error in predictive maintenance loop")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/benchmarks/load_test_runner.py:221:33: F841 Local variable `e` is assigned to but never used
+    |
+219 |                 await asyncio.sleep(think_time)
+220 |
+221 |             except Exception as e:
+    |                                 ^ F841
+222 |                 logger.exception(f"User {self.user_id} session error")
+223 |                 self.failures += 1
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/benchmarks/load_test_runner.py:492:33: F841 Local variable `e` is assigned to but never used
+    |
+490 |                     break
+491 |
+492 |             except Exception as e:
+    |                                 ^ F841
+493 |                 logger.exception(f"Stress test failed at {user_count} users")
+494 |                 break
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/chunking.py:754:29: F841 Local variable `e` is assigned to but never used
+    |
+752 |                 chunk.token_estimate = chunk.char_count // 4
+753 |
+754 |         except Exception as e:
+    |                             ^ F841
+755 |             # Fall back to semantic chunking on error
+756 |             return self._semantic_chunking(content, language)
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/cli/commands/setup.py:238:9: F811 Redefinition of unused `customize_template` from line 146
+    |
+236 |         return self._customize_performance(template_data)
+237 |
+238 |     def customize_template(self, template_data: dict[str, Any]) -> dict[str, Any]:
+    |         ^^^^^^^^^^^^^^^^^^ F811
+239 |         """Customize template settings (public method for testing)."""
+240 |         return self._customize_template(template_data)
+    |
+    = help: Remove definition: `customize_template`
+
+src/cli_worker.py:68:25: F841 Local variable `e` is assigned to but never used
+   |
+66 |         logger.info("Worker stopped by user")
+67 |         sys.exit(0)
+68 |     except Exception as e:
+   |                         ^ F841
+69 |         logger.exception("Worker failed")
+70 |         sys.exit(1)
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/config/__init__.py:351:7: F811 Redefinition of unused `ConfigDriftDetector` from line 20
+    |
+351 | class ConfigDriftDetector:
+    |       ^^^^^^^^^^^^^^^^^^^ F811
+352 |     """Mock config drift detector for backward compatibility."""
+    |
+    = help: Remove definition: `ConfigDriftDetector`
+
+src/config/__init__.py:355:7: F811 Redefinition of unused `ConfigSnapshot` from line 21
+    |
+355 | class ConfigSnapshot:
+    |       ^^^^^^^^^^^^^^ F811
+356 |     """Mock config snapshot for backward compatibility."""
+    |
+    = help: Remove definition: `ConfigSnapshot`
+
+src/config/__init__.py:359:7: F811 Redefinition of unused `DriftEvent` from line 22
+    |
+359 | class DriftEvent:
+    |       ^^^^^^^^^^ F811
+360 |     """Mock drift event for backward compatibility."""
+    |
+    = help: Remove definition: `DriftEvent`
+
+src/config/__init__.py:363:7: F811 Redefinition of unused `DriftSeverity` from line 23
+    |
+363 | class DriftSeverity:
+    |       ^^^^^^^^^^^^^ F811
+364 |     """Mock drift severity for backward compatibility."""
+    |
+    = help: Remove definition: `DriftSeverity`
+
+src/config/__init__.py:372:7: F811 Redefinition of unused `DriftType` from line 24
+    |
+372 | class DriftType:
+    |       ^^^^^^^^^ F811
+373 |     """Mock drift type for backward compatibility."""
+    |
+    = help: Remove definition: `DriftType`
+
+src/crawl4ai_bulk_embedder.py:121:33: F841 Local variable `e` is assigned to but never used
+    |
+119 |                     )
+120 |                     return state
+121 |             except Exception as e:
+    |                                 ^ F841
+122 |                 logger.warning("Failed to load state")
+123 |         return ProcessingState(collection_name=self.collection_name)
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/infrastructure/client_manager.py:119:29: F841 Local variable `e` is assigned to but never used
+    |
+117 |                     "container not available"
+118 |                 )
+119 |         except Exception as e:
+    |                             ^ F841
+120 |             logger.exception("Failed to initialize parallel processing system")
+121 |             # Continue without parallel processing
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/infrastructure/client_manager.py:266:29: F841 Local variable `e` is assigned to but never used
+    |
+264 |         try:
+265 |             yield await getters[client_type]()
+266 |         except Exception as e:
+    |                             ^ F841
+267 |             logger.exception(f"Error using {client_type} client")
+268 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/infrastructure/database/connection_manager.py:112:29: F841 Local variable `e` is assigned to but never used
+    |
+110 |             )
+111 |
+112 |         except Exception as e:
+    |                             ^ F841
+113 |             logger.exception("Failed to initialize enterprise database manager")
+114 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/infrastructure/database/connection_manager.py:133:29: F841 Local variable `e` is assigned to but never used
+    |
+131 |             logger.info("Enterprise database manager cleaned up")
+132 |
+133 |         except Exception as e:
+    |                             ^ F841
+134 |             logger.exception("Error during database cleanup")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/infrastructure/shared.py:137:29: F841 Local variable `e` is assigned to but never used
+    |
+135 |                 self._state = ClientState.HEALTHY
+136 |
+137 |         except Exception as e:
+    |                             ^ F841
+138 |             async with self._lock:
+139 |                 self._failure_count += 1
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/mcp_services/orchestrator_service.py:126:33: F841 Local variable `e` is assigned to but never used
+    |
+124 |                     self.system_service = service
+125 |                 logger.info(f"Initialized {service_name} service")
+126 |             except Exception as e:
+    |                                 ^ F841
+127 |                 logger.exception(f"Failed to initialize {service_name} service")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tool_registry.py:96:25: F841 Local variable `e` is assigned to but never used
+   |
+94 |     except ImportError as e:
+95 |         logger.warning(f"Agentic RAG tools not available (missing dependencies): {e}")
+96 |     except Exception as e:
+   |                         ^ F841
+97 |         logger.exception("Failed to register agentic RAG tools")
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/documents.py:301:37: F841 Local variable `e` is assigned to but never used
+    |
+299 |                     result = await add_document(doc_request, ctx)
+300 |                     successes.append(result)
+301 |                 except Exception as e:
+    |                                     ^ F841
+302 |                     failures.append(url)
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/helpers/pipeline_factory.py:49:33: F841 Local variable `e` is assigned to but never used
+   |
+47 |             try:
+48 |                 cache_manager = await self.client_manager.get_cache_manager()
+49 |             except Exception as e:
+   |                                 ^ F841
+50 |                 if ctx:
+51 |                     await ctx.debug(
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/helpers/pipeline_factory.py:69:29: F841 Local variable `e` is assigned to but never used
+   |
+67 |             return pipeline
+68 |
+69 |         except Exception as e:
+   |                             ^ F841
+70 |             if ctx:
+71 |                 await ctx.error("Failed to initialize query processing pipeline")
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/helpers/tool_registrars_additional.py:117:29: F841 Local variable `e` is assigned to but never used
+    |
+115 |             return {"status": "success", "message": "Pipeline warmed up successfully"}
+116 |
+117 |         except Exception as e:
+    |                             ^ F841
+118 |             await ctx.warning("Pipeline warm-up {request_id} had issues")
+119 |             logger.warning("Pipeline warm-up failed")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/helpers/validation_helper.py:64:33: F841 Local variable `e` is assigned to but never used
+   |
+62 |                         f"Invalid force_dimension '{request.force_dimension}', ignoring"
+63 |                     )
+64 |             except Exception as e:
+   |                                 ^ F841
+65 |                 await ctx.warning(
+66 |                     f"Invalid force_dimension '{request.force_dimension}', ignoring"
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/lightweight_scrape.py:58:25: F841 Local variable `e` is assigned to but never used
+   |
+56 |             )
+57 |         return can_handle
+58 |     except Exception as e:
+   |                         ^ F841
+59 |         return True  # Default to allowing the attempt
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/payload_indexing.py:84:29: F841 Local variable `e` is assigned to but never used
+   |
+82 |             )
+83 |
+84 |         except Exception as e:
+   |                             ^ F841
+85 |             await ctx.error("Failed to create payload indexes for {collection_name}")
+86 |             logger.exception("Failed to create payload indexes")
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/payload_indexing.py:117:29: F841 Local variable `e` is assigned to but never used
+    |
+115 |             return GenericDictResponse(**stats)
+116 |
+117 |         except Exception as e:
+    |                             ^ F841
+118 |             await ctx.error("Failed to list payload indexes for {collection_name}")
+119 |             logger.exception("Failed to list payload indexes")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/payload_indexing.py:172:29: F841 Local variable `e` is assigned to but never used
+    |
+170 |             )
+171 |
+172 |         except Exception as e:
+    |                             ^ F841
+173 |             await ctx.error("Failed to reindex collection {collection_name}")
+174 |             logger.exception("Failed to reindex collection")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/payload_indexing.py:251:29: F841 Local variable `e` is assigned to but never used
+    |
+249 |             )
+250 |
+251 |         except Exception as e:
+    |                             ^ F841
+252 |             if ctx:
+253 |                 await ctx.error("Failed to benchmark filtered search")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/projects.py:102:33: F841 Local variable `e` is assigned to but never used
+    |
+100 |                     enable_quantization=request.quality_tier != "premium",
+101 |                 )
+102 |             except Exception as e:
+    |                                 ^ F841
+103 |                 # Clean up the project if collection creation fails
+104 |                 with contextlib.suppress(Exception):
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/search.py:132:29: F841 Local variable `e` is assigned to but never used
+    |
+130 |             return final_results
+131 |
+132 |         except Exception as e:
+    |                             ^ F841
+133 |             if ctx:
+134 |                 await ctx.error("Similar search failed")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/search_tools.py:195:29: F841 Local variable `e` is assigned to but never used
+    |
+193 |             return search_results
+194 |
+195 |         except Exception as e:
+    |                             ^ F841
+196 |             await ctx.error("Multi-stage search {request_id} failed")
+197 |             logger.exception("Multi-stage search failed")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/search_tools.py:226:33: F841 Local variable `e` is assigned to but never used
+    |
+224 |             try:
+225 |                 hyde_engine = await client_manager.get_hyde_engine()
+226 |             except Exception as e:
+    |                                 ^ F841
+227 |                 await ctx.warning(
+228 |                     "HyDE engine not available, falling back to regular search"
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/search_tools.py:417:37: F841 Local variable `e` is assigned to but never used
+    |
+415 |                     )
+416 |                     result_dict["ab_test_results"] = ab_test_results
+417 |                 except Exception as e:
+    |                                     ^ F841
+418 |                     if ctx:
+419 |                         await ctx.warning("A/B testing failed")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/search_tools.py:512:29: F841 Local variable `e` is assigned to but never used
+    |
+510 |             return HyDEAdvancedResponse(**result_dict)
+511 |
+512 |         except Exception as e:
+    |                             ^ F841
+513 |             if ctx:
+514 |                 await ctx.error("Advanced HyDE search {request_id} failed")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/search_tools.py:578:29: F841 Local variable `e` is assigned to but never used
+    |
+576 |             return search_results
+577 |
+578 |         except Exception as e:
+    |                             ^ F841
+579 |             await ctx.error("Filtered search {request_id} failed")
+580 |             logger.exception("Filtered search failed")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/utilities.py:88:29: F841 Local variable `e` is assigned to but never used
+   |
+86 |             return GenericDictResponse(**costs)
+87 |
+88 |         except Exception as e:
+   |                             ^ F841
+89 |             if ctx:
+90 |                 await ctx.error("Failed to estimate costs")
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/mcp_tools/tools/utilities.py:161:29: F841 Local variable `e` is assigned to but never used
+    |
+159 |             )
+160 |
+161 |         except Exception as e:
+    |                             ^ F841
+162 |             if ctx:
+163 |                 await ctx.error("Failed to validate configuration")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/models/__init__.py:113:5: F811 Redefinition of unused `SearchResponse` from line 52
+    |
+111 |     SearchAccuracy,
+112 |     SearchConfigurationError,
+113 |     SearchResponse,
+    |     ^^^^^^^^^^^^^^ F811
+114 |     # Stage models
+115 |     SearchStage,
+    |
+    = help: Remove definition: `SearchResponse`
+
+src/security/ml_security.py:241:29: F841 Local variable `e` is assigned to but never used
+    |
+239 |             self.checks_performed.append(result)
+240 |             return result
+241 |         except Exception as e:
+    |                             ^ F841
+242 |             logger.exception("Dependency check error")
+243 |             result = SecurityCheckResult(
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/security/ml_security.py:343:29: F841 Local variable `e` is assigned to but never used
+    |
+341 |             return result
+342 |
+343 |         except Exception as e:
+    |                             ^ F841
+344 |             logger.info("Container scan skipped")
+345 |             result = SecurityCheckResult(
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/agents/integration.py:534:29: F841 Local variable `e` is assigned to but never used
+    |
+532 |             )
+533 |
+534 |         except Exception as e:
+    |                             ^ F841
+535 |             logger.exception("Tool chain composition failed")
+536 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/agents/integration.py:575:29: F841 Local variable `e` is assigned to but never used
+    |
+573 |             return tasks
+574 |
+575 |         except Exception as e:
+    |                             ^ F841
+576 |             logger.exception("Coordination task creation failed")
+577 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/agents/integration.py:723:29: F841 Local variable `e` is assigned to but never used
+    |
+721 |             }
+722 |
+723 |         except Exception as e:
+    |                             ^ F841
+724 |             logger.exception("Quality metrics calculation failed")
+725 |             return {
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/agents/integration.py:782:29: F841 Local variable `e` is assigned to but never used
+    |
+780 |             return recommendations
+781 |
+782 |         except Exception as e:
+    |                             ^ F841
+783 |             logger.exception("Recommendation generation failed")
+784 |             return ["Unable to generate recommendations"]
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/agents/integration.py:835:29: F841 Local variable `e` is assigned to but never used
+    |
+833 |             logger.info("Default tools registered with orchestrator")
+834 |
+835 |         except Exception as e:
+    |                             ^ F841
+836 |             logger.exception("Failed to register default tools")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/agents/integration.py:872:29: F841 Local variable `e` is assigned to but never used
+    |
+870 |                 self.request_history = self.request_history[-1000:]
+871 |
+872 |         except Exception as e:
+    |                             ^ F841
+873 |             logger.exception("Failed to update system metrics")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/agents/integration.py:912:29: F841 Local variable `e` is assigned to but never used
+    |
+910 |             return optimizations
+911 |
+912 |         except Exception as e:
+    |                             ^ F841
+913 |             logger.exception("Failed to identify optimizations")
+914 |             return ["Unable to analyze optimizations"]
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/agents/query_orchestrator.py:234:17: F841 Local variable `search_orchestrator` is assigned to but never used
+    |
+233 |             try:
+234 |                 search_orchestrator = (
+    |                 ^^^^^^^^^^^^^^^^^^^ F841
+235 |                     await ctx.deps.client_manager.get_search_orchestrator()
+236 |                 )
+    |
+    = help: Remove assignment to unused variable `search_orchestrator`
+
+src/services/agents/query_orchestrator.py:239:17: F841 Local variable `search_request` is assigned to but never used
+    |
+238 |                 # Execute coordinated search
+239 |                 search_request = {
+    |                 ^^^^^^^^^^^^^^ F841
+240 |                     "query": query,
+241 |                     "collection_name": collection,
+    |
+    = help: Remove assignment to unused variable `search_request`
+
+src/services/agents/tool_orchestration.py:882:29: F841 Local variable `e` is assigned to but never used
+    |
+880 |                 plan, execution_state, timeout_seconds / 2
+881 |             )
+882 |         except Exception as e:
+    |                             ^ F841
+883 |             return await self._execute_sequential_nodes(
+884 |                 plan, execution_state, timeout_seconds / 2
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/search_dashboard.py:105:29: F841 Local variable `e` is assigned to but never used
+    |
+103 |             self._logger.info("SearchAnalyticsDashboard initialized successfully")
+104 |
+105 |         except Exception as e:
+    |                             ^ F841
+106 |             self._logger.exception("Failed to initialize SearchAnalyticsDashboard")
+107 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/search_dashboard.py:167:29: F841 Local variable `e` is assigned to but never used
+    |
+165 |             await self._update_realtime_stats()
+166 |
+167 |         except Exception as e:
+    |                             ^ F841
+168 |             self._logger.exception("Failed to track query")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/search_dashboard.py:194:29: F841 Local variable `e` is assigned to but never used
+    |
+192 |                 self.performance_metrics = self.performance_metrics[-500:]
+193 |
+194 |         except Exception as e:
+    |                             ^ F841
+195 |             self._logger.exception("Failed to track performance metric")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/search_dashboard.py:227:29: F841 Local variable `e` is assigned to but never used
+    |
+225 |             }
+226 |
+227 |         except Exception as e:
+    |                             ^ F841
+228 |             self._logger.exception("Failed to generate realtime dashboard")
+229 |             return {"error": "Failed to generate dashboard data"}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/search_dashboard.py:308:29: F841 Local variable `e` is assigned to but never used
+    |
+306 |             }
+307 |
+308 |         except Exception as e:
+    |                             ^ F841
+309 |             self._logger.exception("Failed to generate query analytics")
+310 |             return {"error": "Failed to generate analytics"}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/search_dashboard.py:393:29: F841 Local variable `e` is assigned to but never used
+    |
+391 |             return recommendations
+392 |
+393 |         except Exception as e:
+    |                             ^ F841
+394 |             self._logger.exception("Failed to generate optimization recommendations")
+395 |             return []
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/search_dashboard.py:438:29: F841 Local variable `e` is assigned to but never used
+    |
+436 |                 ]
+437 |
+438 |         except Exception as e:
+    |                             ^ F841
+439 |             self._logger.exception("Failed to update realtime stats")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/search_dashboard.py:492:29: F841 Local variable `e` is assigned to but never used
+    |
+490 |             self.last_pattern_analysis = current_time
+491 |
+492 |         except Exception as e:
+    |                             ^ F841
+493 |             self._logger.exception("Failed to detect query patterns")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/search_dashboard.py:582:29: F841 Local variable `e` is assigned to but never used
+    |
+580 |             return insights
+581 |
+582 |         except Exception as e:
+    |                             ^ F841
+583 |             self._logger.exception("Failed to generate behavior insights")
+584 |             return []
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/search_dashboard.py:649:29: F841 Local variable `e` is assigned to but never used
+    |
+647 |             return trends
+648 |
+649 |         except Exception as e:
+    |                             ^ F841
+650 |             self._logger.exception("Failed to calculate performance trends")
+651 |             return {}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/search_dashboard.py:673:29: F841 Local variable `e` is assigned to but never used
+    |
+671 |             return utilization
+672 |
+673 |         except Exception as e:
+    |                             ^ F841
+674 |             self._logger.exception("Failed to calculate feature utilization")
+675 |             return {}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/search_dashboard.py:719:29: F841 Local variable `e` is assigned to but never used
+    |
+717 |             return timeline
+718 |
+719 |         except Exception as e:
+    |                             ^ F841
+720 |             self._logger.exception("Failed to get query volume timeline")
+721 |             return []
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/search_dashboard.py:771:29: F841 Local variable `e` is assigned to but never used
+    |
+769 |             return top_queries[:10]
+770 |
+771 |         except Exception as e:
+    |                             ^ F841
+772 |             self._logger.exception("Failed to get top performing queries")
+773 |             return []
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/search_dashboard.py:835:29: F841 Local variable `e` is assigned to but never used
+    |
+833 |             return opportunities
+834 |
+835 |         except Exception as e:
+    |                             ^ F841
+836 |             self._logger.exception("Failed to identify optimization opportunities")
+837 |             return []
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/search_dashboard.py:847:33: F841 Local variable `e` is assigned to but never used
+    |
+845 |             except asyncio.CancelledError:
+846 |                 break
+847 |             except Exception as e:
+    |                                 ^ F841
+848 |                 self._logger.exception("Error in pattern detection loop")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/search_dashboard.py:902:29: F841 Local variable `e` is assigned to but never used
+    |
+900 |             }
+901 |
+902 |         except Exception as e:
+    |                             ^ F841
+903 |             self._logger.exception("Failed to analyze temporal patterns")
+904 |             return {}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/vector_visualization.py:118:29: F841 Local variable `e` is assigned to but never used
+    |
+116 |             self._logger.info("VectorVisualizationEngine initialized successfully")
+117 |
+118 |         except Exception as e:
+    |                             ^ F841
+119 |             self._logger.exception("Failed to initialize VectorVisualizationEngine")
+120 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/vector_visualization.py:275:29: F841 Local variable `e` is assigned to but never used
+    |
+273 |             }
+274 |
+275 |         except Exception as e:
+    |                             ^ F841
+276 |             self._logger.exception("Failed to create embedding visualization")
+277 |             return {"error": "Failed to create visualization"}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/vector_visualization.py:342:29: F841 Local variable `e` is assigned to but never used
+    |
+340 |             }
+341 |
+342 |         except Exception as e:
+    |                             ^ F841
+343 |             self._logger.exception("Failed to analyze embedding space")
+344 |             return {"error": "Failed to analyze embedding space"}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/vector_visualization.py:465:29: F841 Local variable `e` is assigned to but never used
+    |
+463 |             }
+464 |
+465 |         except Exception as e:
+    |                             ^ F841
+466 |             self._logger.exception("Failed to compare query embeddings")
+467 |             return {"error": "Failed to compare embeddings"}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/vector_visualization.py:537:29: F841 Local variable `e` is assigned to but never used
+    |
+535 |             }
+536 |
+537 |         except Exception as e:
+    |                             ^ F841
+538 |             self._logger.exception("Failed to perform clustering")
+539 |             return None
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/vector_visualization.py:620:29: F841 Local variable `e` is assigned to but never used
+    |
+618 |             return relationships[:50]
+619 |
+620 |         except Exception as e:
+    |                             ^ F841
+621 |             self._logger.exception("Failed to find similarity relationships")
+622 |             return []
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/vector_visualization.py:717:29: F841 Local variable `e` is assigned to but never used
+    |
+715 |             )
+716 |
+717 |         except Exception as e:
+    |                             ^ F841
+718 |             self._logger.exception("Failed to calculate quality metrics")
+719 |             return EmbeddingQualityMetrics(
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/vector_visualization.py:838:29: F841 Local variable `e` is assigned to but never used
+    |
+836 |             return insights
+837 |
+838 |         except Exception as e:
+    |                             ^ F841
+839 |             self._logger.exception("Failed to generate visualization insights")
+840 |             return []
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/vector_visualization.py:869:29: F841 Local variable `e` is assigned to but never used
+    |
+867 |             }
+868 |
+869 |         except Exception as e:
+    |                             ^ F841
+870 |             self._logger.exception("Failed to calculate distance metrics")
+871 |             return {}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/vector_visualization.py:900:29: F841 Local variable `e` is assigned to but never used
+    |
+898 |             }
+899 |
+900 |         except Exception as e:
+    |                             ^ F841
+901 |             self._logger.exception("Failed to analyze dimensionality")
+902 |             return {}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/vector_visualization.py:959:29: F841 Local variable `e` is assigned to but never used
+    |
+957 |             }
+958 |
+959 |         except Exception as e:
+    |                             ^ F841
+960 |             self._logger.exception("Failed to analyze semantic coherence")
+961 |             return {}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/vector_visualization.py:993:29: F841 Local variable `e` is assigned to but never used
+    |
+991 |             }
+992 |
+993 |         except Exception as e:
+    |                             ^ F841
+994 |             self._logger.exception("Failed to detect outliers")
+995 |             return {}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/analytics/vector_visualization.py:1026:29: F841 Local variable `e` is assigned to but never used
+     |
+1024 |             }
+1025 |
+1026 |         except Exception as e:
+     |                             ^ F841
+1027 |             self._logger.exception("Failed to analyze embedding density")
+1028 |             return {}
+     |
+     = help: Remove assignment to unused variable `e`
+
+src/services/analytics/vector_visualization.py:1081:29: F841 Local variable `e` is assigned to but never used
+     |
+1079 |             return recommendations
+1080 |
+1081 |         except Exception as e:
+     |                             ^ F841
+1082 |             self._logger.exception("Failed to generate space recommendations")
+1083 |             return []
+     |
+     = help: Remove assignment to unused variable `e`
+
+src/services/analytics/vector_visualization.py:1142:29: F841 Local variable `e` is assigned to but never used
+     |
+1140 |             return recommendations
+1141 |
+1142 |         except Exception as e:
+     |                             ^ F841
+1143 |             self._logger.exception("Failed to generate query recommendations")
+1144 |             return []
+     |
+     = help: Remove assignment to unused variable `e`
+
+src/services/auto_detection/connection_pools.py:68:33: F841 Local variable `e` is assigned to but never used
+   |
+66 |                     await self._initialize_postgresql_pool(service)
+67 |
+68 |             except Exception as e:
+   |                                 ^ F841
+69 |                 self.logger.exception(
+70 |                     f"Failed to initialize {service.service_type} pool"
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/auto_detection/connection_pools.py:83:33: F841 Local variable `e` is assigned to but never used
+   |
+81 |             try:
+82 |                 await self._cleanup_pool(pool_name, pool)
+83 |             except Exception as e:
+   |                                 ^ F841
+84 |                 self.logger.exception(f"Error cleaning up {pool_name} pool")
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/auto_detection/connection_pools.py:134:29: F841 Local variable `e` is assigned to but never used
+    |
+132 |         except ImportError:
+133 |             self.logger.warning("redis package not available, skipping Redis pool")
+134 |         except Exception as e:
+    |                             ^ F841
+135 |             self.logger.exception("Failed to initialize Redis pool")
+136 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/auto_detection/connection_pools.py:188:29: F841 Local variable `e` is assigned to but never used
+    |
+186 |                 "qdrant-client package not available, skipping Qdrant pool"
+187 |             )
+188 |         except Exception as e:
+    |                             ^ F841
+189 |             self.logger.exception("Failed to initialize Qdrant pool")
+190 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/auto_detection/connection_pools.py:237:29: F841 Local variable `e` is assigned to but never used
+    |
+235 |                 "asyncpg package not available, skipping PostgreSQL pool"
+236 |             )
+237 |         except Exception as e:
+    |                             ^ F841
+238 |             self.logger.exception("Failed to initialize PostgreSQL pool")
+239 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/auto_detection/connection_pools.py:256:29: F841 Local variable `e` is assigned to but never used
+    |
+254 |             yield client
+255 |
+256 |         except Exception as e:
+    |                             ^ F841
+257 |             self.logger.exception("Redis connection error")
+258 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/auto_detection/connection_pools.py:275:29: F841 Local variable `e` is assigned to but never used
+    |
+273 |             yield client
+274 |
+275 |         except Exception as e:
+    |                             ^ F841
+276 |             self.logger.exception("Qdrant connection error")
+277 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/auto_detection/connection_pools.py:294:29: F841 Local variable `e` is assigned to but never used
+    |
+292 |             yield connection
+293 |
+294 |         except Exception as e:
+    |                             ^ F841
+295 |             self.logger.exception("PostgreSQL connection error")
+296 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/auto_detection/connection_pools.py:313:29: F841 Local variable `e` is assigned to but never used
+    |
+311 |             # Update health status and library stats using library features
+312 |             await self._update_pool_health(pool_name, metrics)
+313 |         except Exception as e:
+    |                             ^ F841
+314 |             self.logger.exception(f"Failed to get health for {pool_name}")
+315 |             if pool_name in self._health_metrics:
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/auto_detection/connection_pools.py:347:29: F841 Local variable `e` is assigned to but never used
+    |
+345 |                 await self._update_postgresql_health(metrics)
+346 |
+347 |         except Exception as e:
+    |                             ^ F841
+348 |             self.logger.exception(f"Health update failed for {pool_name}")
+349 |             metrics.is_healthy = False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/auto_detection/health_checks.py:267:41: F841 Local variable `e` is assigned to but never used
+    |
+265 |                         health_data = response.json()
+266 |                         metadata.update(health_data)
+267 |                     except Exception as e:
+    |                                         ^ F841
+268 |                         logger.debug(
+269 |                             "Failed to parse health data from {service.service_name}"
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/auto_detection/health_checks.py:386:33: F841 Local variable `e` is assigned to but never used
+    |
+384 |             except asyncio.CancelledError:
+385 |                 break
+386 |             except Exception as e:
+    |                                 ^ F841
+387 |                 self.logger.exception("Health monitoring error")
+388 |                 await asyncio.sleep(60)  # Wait longer on error
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/auto_detection/service_discovery.py:327:29: F841 Local variable `e` is assigned to but never used
+    |
+325 |             await writer.wait_closed()
+326 |             return True
+327 |         except Exception as e:
+    |                             ^ F841
+328 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/auto_detection/service_discovery.py:420:29: F841 Local variable `e` is assigned to but never used
+    |
+418 |             await writer.wait_closed()
+419 |             return True
+420 |         except Exception as e:
+    |                             ^ F841
+421 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/anti_detection.py:224:33: F841 Local variable `e` is assigned to but never used
+    |
+222 |                 # Clean up expired session
+223 |                 session_file.unlink(missing_ok=True)
+224 |             except Exception as e:
+    |                                 ^ F841
+225 |                 # Clean up corrupted session file
+226 |                 session_file.unlink(missing_ok=True)
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/anti_detection.py:280:33: F841 Local variable `e` is assigned to but never used
+    |
+278 |                 if session.is_expired():
+279 |                     session_file.unlink()
+280 |             except Exception as e:
+    |                                 ^ F841
+281 |                 session_file.unlink(missing_ok=True)
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/automation_router.py:107:29: F841 Local variable `e` is assigned to but never used
+    |
+105 |                 logger.warning("Routing rules file not found")
+106 |
+107 |         except Exception as e:
+    |                             ^ F841
+108 |             logger.exception("Failed to load routing rules")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/automation_router.py:154:29: F841 Local variable `e` is assigned to but never used
+    |
+152 |             self.logger.info("Initialized Lightweight HTTP adapter")
+153 |
+154 |         except Exception as e:
+    |                             ^ F841
+155 |             self.logger.warning("Failed to initialize Lightweight adapter")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/automation_router.py:164:29: F841 Local variable `e` is assigned to but never used
+    |
+162 |             self.logger.info("Initialized Crawl4AI adapter")
+163 |
+164 |         except Exception as e:
+    |                             ^ F841
+165 |             self.logger.warning("Failed to initialize Crawl4AI adapter")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/automation_router.py:173:29: F841 Local variable `e` is assigned to but never used
+    |
+171 |             self.logger.info("Initialized BrowserUse adapter")
+172 |
+173 |         except Exception as e:
+    |                             ^ F841
+174 |             self.logger.warning("Failed to initialize BrowserUse adapter")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/automation_router.py:183:29: F841 Local variable `e` is assigned to but never used
+    |
+181 |             self.logger.info("Initialized Playwright adapter")
+182 |
+183 |         except Exception as e:
+    |                             ^ F841
+184 |             self.logger.warning("Failed to initialize Playwright adapter")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/automation_router.py:207:33: F841 Local variable `e` is assigned to but never used
+    |
+205 |                     f"Cleaned up {name} adapter"
+206 |                 )  # TODO: Convert f-string to logging format
+207 |             except Exception as e:
+    |                                 ^ F841
+208 |                 self.logger.exception(f"Error cleaning up {name} adapter")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/automation_router.py:291:29: F841 Local variable `e` is assigned to but never used
+    |
+289 |             return result
+290 |
+291 |         except Exception as e:
+    |                             ^ F841
+292 |             self.logger.exception(f"{tool} failed for {url}")
+293 |             elapsed = time.time() - start_time
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/automation_router.py:331:33: F841 Local variable `e` is assigned to but never used
+    |
+329 |                 if can_handle:
+330 |                     return "lightweight"
+331 |             except Exception as e:
+    |                                 ^ F841
+332 |                 self.logger.debug("Lightweight adapter can_handle check failed")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/automation_router.py:544:33: F841 Local variable `e` is assigned to but never used
+    |
+542 |                 return result
+543 |
+544 |             except Exception as e:
+    |                                 ^ F841
+545 |                 self.logger.exception(f"Fallback {fallback_tool} also failed")
+546 |                 elapsed = time.time() - start_time
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/browser_use_adapter.py:137:33: F841 Local variable `e` is assigned to but never used
+    |
+135 |             try:
+136 |                 await self._browser.close()
+137 |             except Exception as e:
+    |                                 ^ F841
+138 |                 self.logger.exception("Error cleaning up browser-use")
+139 |             finally:
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/browser_use_adapter.py:240:33: F841 Local variable `e` is assigned to but never used
+    |
+238 |                 await asyncio.sleep(2**retry_count)
+239 |
+240 |             except Exception as e:
+    |                                 ^ F841
+241 |                 retry_count += 1
+242 |                 error_msg = "browser-use execution error"
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/browser_use_adapter.py:405:29: F841 Local variable `e` is assigned to but never used
+    |
+403 |                 html = ""
+404 |                 title = ""
+405 |         except Exception as e:
+    |                             ^ F841
+406 |             self.logger.warning("Failed to extract page content")
+407 |             # Fallback to agent result
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/browser_use_adapter.py:582:29: F841 Local variable `e` is assigned to but never used
+    |
+580 |                 "available": True,
+581 |             }
+582 |         except Exception as e:
+    |                             ^ F841
+583 |             return {
+584 |                 "healthy": False,
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/crawl4ai_adapter.py:57:33: F841 Local variable `e` is assigned to but never used
+   |
+55 |                 await self._provider.cleanup()
+56 |                 self.logger.info("Crawl4AI adapter cleaned up")
+57 |             except Exception as e:
+   |                                 ^ F841
+58 |                 self.logger.exception("Error cleaning up Crawl4AI adapter")
+59 |             finally:
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/browser/crawl4ai_adapter.py:274:29: F841 Local variable `e` is assigned to but never used
+    |
+272 |                 "response_time_ms": 10000,
+273 |             }
+274 |         except Exception as e:
+    |                             ^ F841
+275 |             return {
+276 |                 "healthy": False,
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/monitoring.py:176:33: F841 Local variable `e` is assigned to but never used
+    |
+174 |                 self.metrics_registry = get_metrics_registry()
+175 |                 logger.info("Browser monitoring Prometheus integration enabled")
+176 |             except Exception as e:
+    |                                 ^ F841
+177 |                 logger.debug("Browser monitoring Prometheus integration disabled")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/monitoring.py:420:33: F841 Local variable `e` is assigned to but never used
+    |
+418 |             try:
+419 |                 handler(alert)
+420 |             except Exception as e:
+    |                                 ^ F841
+421 |                 logger.exception("Alert handler failed")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/monitoring.py:440:33: F841 Local variable `e` is assigned to but never used
+    |
+438 |             except asyncio.CancelledError:
+439 |                 break
+440 |             except Exception as e:
+    |                                 ^ F841
+441 |                 logger.exception("Monitoring loop error")
+442 |                 await asyncio.sleep(5)  # Brief pause before retry
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/playwright_adapter.py:130:29: F841 Local variable `e` is assigned to but never used
+    |
+128 |             self.logger.info("Playwright adapter cleaned up")
+129 |
+130 |         except Exception as e:
+    |                             ^ F841
+131 |             self.logger.exception("Error cleaning up Playwright")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/playwright_adapter.py:387:33: F841 Local variable `e` is assigned to but never used
+    |
+385 |             try:
+386 |                 await context.close()
+387 |             except Exception as e:
+    |                                 ^ F841
+388 |                 self.logger.warning("Failed to close context")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/playwright_adapter.py:492:29: F841 Local variable `e` is assigned to but never used
+    |
+490 |             self.logger.debug("Stealth JavaScript patterns injected successfully")
+491 |
+492 |         except Exception as e:
+    |                             ^ F841
+493 |             self.logger.warning("Failed to inject stealth scripts")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/playwright_adapter.py:685:33: F841 Local variable `e` is assigned to but never used
+    |
+683 |                         return {"text": text, "html": html}
+684 |
+685 |             except Exception as e:
+    |                                 ^ F841
+686 |                 self.logger.debug("Failed to extract with selector {selector}")
+687 |                 continue
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/playwright_adapter.py:695:29: F841 Local variable `e` is assigned to but never used
+    |
+693 |                 "html": await page.inner_html("body"),
+694 |             }
+695 |         except Exception as e:
+    |                             ^ F841
+696 |             self.logger.warning("Failed to extract body content")
+697 |             return {"text": "", "html": ""}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/playwright_adapter.py:750:29: F841 Local variable `e` is assigned to but never used
+    |
+748 |             """)
+749 |
+750 |         except Exception as e:
+    |                             ^ F841
+751 |             self.logger.warning("Failed to extract metadata")
+752 |             return {
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/playwright_adapter.py:788:29: F841 Local variable `e` is assigned to but never used
+    |
+786 |             """)
+787 |
+788 |         except Exception as e:
+    |                             ^ F841
+789 |             self.logger.debug("Failed to get performance metrics")
+790 |             return {}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/playwright_adapter.py:897:29: F841 Local variable `e` is assigned to but never used
+    |
+895 |                 "available": True,
+896 |             }
+897 |         except Exception as e:
+    |                             ^ F841
+898 |             return {
+899 |                 "healthy": False,
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/unified_manager.py:230:33: F841 Local variable `e` is assigned to but never used
+    |
+228 |             try:
+229 |                 await self._monitor.stop_monitoring()
+230 |             except Exception as e:
+    |                                 ^ F841
+231 |                 logger.warning("Failed to stop monitoring during cleanup")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/unified_manager.py:347:33: F841 Local variable `e` is assigned to but never used
+    |
+345 |             try:
+346 |                 router_metrics = self._automation_router.get_metrics()
+347 |             except Exception as e:
+    |                                 ^ F841
+348 |                 logger.warning("Failed to get router metrics")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/unified_manager.py:490:29: F841 Local variable `e` is assigned to but never used
+    |
+488 |                 failed_tiers=[],
+489 |             )
+490 |         except Exception as e:
+    |                             ^ F841
+491 |             logger.warning(
+492 |                 "Cache error for {request.url}, continuing with fresh scrape"
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/unified_manager.py:514:33: F841 Local variable `e` is assigned to but never used
+    |
+512 |                     cache_hit=True,
+513 |                 )
+514 |             except Exception as e:
+    |                                 ^ F841
+515 |                 logger.warning("Failed to record cache hit monitoring metrics")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/unified_manager.py:610:33: F841 Local variable `e` is assigned to but never used
+    |
+608 |                     cache_hit=False,  # Fresh scrape
+609 |                 )
+610 |             except Exception as e:
+    |                                 ^ F841
+611 |                 logger.warning("Failed to record monitoring metrics")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/unified_manager.py:655:29: F841 Local variable `e` is assigned to but never used
+    |
+653 |                 f"Cached browser result for {request.url} (tier: {response.tier_used})"
+654 |             )
+655 |         except Exception as e:
+    |                             ^ F841
+656 |             logger.warning("Failed to cache result for {request.url}")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/browser/unified_manager.py:679:17: F821 Undefined name `asyncio`
+    |
+677 |             try:
+678 |                 # Use fire-and-forget task for error metrics to avoid blocking
+679 |                 asyncio.create_task(
+    |                 ^^^^^^^ F821
+680 |                     self._monitor.record_request_metrics(
+681 |                         tier="unknown",
+    |
+
+src/services/browser/unified_manager.py:687:33: F841 Local variable `e` is assigned to but never used
+    |
+685 |                     )
+686 |                 )
+687 |             except Exception as e:
+    |                                 ^ F841
+688 |                 logger.warning("Failed to record error monitoring metrics")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/circuit_breaker/modern.py:192:29: F841 Local variable `e` is assigned to but never used
+    |
+190 |             )
+191 |             return False
+192 |         except Exception as e:
+    |                             ^ F841
+193 |             logger.exception("Failed to reset circuit breaker for {service_name}")
+194 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/circuit_breaker/modern.py:217:29: F841 Local variable `e` is assigned to but never used
+    |
+215 |             self._breakers.clear()
+216 |             logger.info("ModernCircuitBreakerManager closed successfully")
+217 |         except Exception as e:
+    |                             ^ F841
+218 |             logger.exception("Error closing ModernCircuitBreakerManager")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/config_drift_service.py:64:29: F841 Local variable `e` is assigned to but never used
+   |
+62 |             logger.info("Configuration drift detector initialized successfully")
+63 |
+64 |         except Exception as e:
+   |                             ^ F841
+65 |             logger.exception("Failed to initialize drift detector")
+66 |             self.drift_detector = None
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/config_drift_service.py:90:29: F841 Local variable `e` is assigned to but never used
+   |
+88 |             logger.info("Configuration drift monitoring service started successfully")
+89 |
+90 |         except Exception as e:
+   |                             ^ F841
+91 |             logger.exception("Failed to start drift monitoring service")
+92 |             self.is_running = False
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/config_drift_service.py:119:29: F841 Local variable `e` is assigned to but never used
+    |
+117 |             logger.debug("Scheduled next configuration snapshot task")
+118 |
+119 |         except Exception as e:
+    |                             ^ F841
+120 |             logger.exception("Failed to schedule snapshot task")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/config_drift_service.py:141:29: F841 Local variable `e` is assigned to but never used
+    |
+139 |             logger.debug("Scheduled next configuration comparison task")
+140 |
+141 |         except Exception as e:
+    |                             ^ F841
+142 |             logger.exception("Failed to schedule comparison task")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/config_drift_service.py:366:29: F841 Local variable `e` is assigned to but never used
+    |
+364 |             return True
+365 |
+366 |         except Exception as e:
+    |                             ^ F841
+367 |             logger.exception("Auto-remediation failed for event %s", event.id)
+368 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/config_drift_service.py:429:29: F841 Local variable `e` is assigned to but never used
+    |
+427 |             }
+428 |
+429 |         except Exception as e:
+    |                             ^ F841
+430 |             logger.exception("Manual detection failed")
+431 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/content_intelligence/adapters.py:251:29: F841 Local variable `e` is assigned to but never used
+    |
+249 |             # Remove 'www.' prefix
+250 |             return domain.removeprefix("www.")
+251 |         except Exception as e:
+    |                             ^ F841
+252 |             return ""
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/content_intelligence/classifiers.py:516:29: F841 Local variable `e` is assigned to but never used
+    |
+514 |                     )
+515 |             reasoning_parts.append("semantic analysis applied")
+516 |         except Exception as e:
+    |                             ^ F841
+517 |             logger.warning("Semantic analysis failed")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/content_intelligence/classifiers.py:652:29: F841 Local variable `e` is assigned to but never used
+    |
+650 |             return scores
+651 |
+652 |         except Exception as e:
+    |                             ^ F841
+653 |             logger.exception("Semantic classification failed")
+654 |             return {}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/content_intelligence/classifiers.py:680:29: F841 Local variable `e` is assigned to but never used
+    |
+679 |             return dot_product / (magnitude1 * magnitude2)
+680 |         except Exception as e:
+    |                             ^ F841
+681 |             return 0.0
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/content_intelligence/quality_assessor.py:716:29: F841 Local variable `e` is assigned to but never used
+    |
+715 |             return dot_product / (magnitude1 * magnitude2)
+716 |         except Exception as e:
+    |                             ^ F841
+717 |             return 0.0
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/content_intelligence/service.py:136:29: F841 Local variable `e` is assigned to but never used
+    |
+134 |             logger.info("ContentIntelligenceService cleaned up successfully")
+135 |
+136 |         except Exception as e:
+    |                             ^ F841
+137 |             logger.exception("Error during ContentIntelligenceService cleanup")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/content_intelligence/service.py:307:29: F841 Local variable `e` is assigned to but never used
+    |
+305 |             )
+306 |
+307 |         except Exception as e:
+    |                             ^ F841
+308 |             logger.exception("Metadata extraction failed")
+309 |             # Return minimal metadata on failure
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/content_intelligence/service.py:368:29: F841 Local variable `e` is assigned to but never used
+    |
+366 |             return recommendations[:5]  # Return top 5 recommendations
+367 |
+368 |         except Exception as e:
+    |                             ^ F841
+369 |             logger.exception("Adaptation recommendation failed")
+370 |             return []
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/core/qdrant_alias_manager.py:237:29: F841 Local variable `e` is assigned to but never used
+    |
+235 |             )  # TODO: Convert f-string to logging format
+236 |
+237 |         except Exception as e:
+    |                             ^ F841
+238 |             logger.exception("Failed to delete alias")
+239 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/core/qdrant_alias_manager.py:256:29: F841 Local variable `e` is assigned to but never used
+    |
+254 |             aliases = await self.client.get_aliases()
+255 |             return any(alias.alias_name == alias_name for alias in aliases.aliases)
+256 |         except Exception as e:
+    |                             ^ F841
+257 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/core/qdrant_alias_manager.py:274:29: F841 Local variable `e` is assigned to but never used
+    |
+272 |                 if alias.alias_name == alias_name:
+273 |                     return alias.collection_name
+274 |         except Exception as e:
+    |                             ^ F841
+275 |             return None
+276 |         else:
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/core/qdrant_alias_manager.py:291:29: F841 Local variable `e` is assigned to but never used
+    |
+289 |                 alias.alias_name: alias.collection_name for alias in aliases.aliases
+290 |             }
+291 |         except Exception as e:
+    |                             ^ F841
+292 |             logger.exception("Failed to list aliases")
+293 |             return {}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/crawling/crawl4ai_provider.py:156:37: F841 Local variable `e` is assigned to but never used
+    |
+154 |                         "Using LXMLWebScrapingStrategy for enhanced performance"
+155 |                     )
+156 |                 except Exception as e:
+    |                                     ^ F841
+157 |                     self.logger.warning("Could not set LXMLWebScrapingStrategy")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/crawling/crawl4ai_provider.py:188:33: F841 Local variable `e` is assigned to but never used
+    |
+186 |                 await self.dispatcher.cleanup()
+187 |                 self.logger.info("MemoryAdaptiveDispatcher cleaned up")
+188 |             except Exception as e:
+    |                                 ^ F841
+189 |                 self.logger.exception("Error cleaning up MemoryAdaptiveDispatcher")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/crawling/crawl4ai_provider.py:195:33: F841 Local variable `e` is assigned to but never used
+    |
+193 |             try:
+194 |                 await self._crawler.close()
+195 |             except Exception as e:
+    |                                 ^ F841
+196 |                 self.logger.exception("Error closing crawler")
+197 |             finally:
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/crawling/firecrawl_provider.py:244:29: F841 Local variable `e` is assigned to but never used
+    |
+242 |             result = self._client.cancel_crawl(crawl_id)
+243 |             return result.get("success", False)
+244 |         except Exception as e:
+    |                             ^ F841
+245 |             logger.exception("Failed to cancel crawl {crawl_id}")
+246 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/crawling/lightweight_scraper.py:109:33: F841 Local variable `e` is assigned to but never used
+    |
+107 |                 recommendation = await self._analyze_url(url)
+108 |                 return recommendation == TierRecommendation.LIGHTWEIGHT_OK
+109 |             except Exception as e:
+    |                                 ^ F841
+110 |                 logger.debug("HEAD analysis failed for {url}")
+111 |                 return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/crawling/lightweight_scraper.py:172:29: F841 Local variable `e` is assigned to but never used
+    |
+170 |             )  # TODO: Convert f-string to logging format
+171 |             return TierRecommendation.BROWSER_REQUIRED
+172 |         except Exception as e:
+    |                             ^ F841
+173 |             logger.debug("HEAD request failed for {url}")
+174 |             return TierRecommendation.BROWSER_REQUIRED
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/crawling/manager.py:73:33: F841 Local variable `e` is assigned to but never used
+   |
+71 |                 await self._unified_browser_manager.cleanup()
+72 |                 logger.info("Cleaned up UnifiedBrowserManager")
+73 |             except Exception as e:
+   |                                 ^ F841
+74 |                 logger.exception("Error cleaning up UnifiedBrowserManager")
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/crawling/manager.py:142:29: F841 Local variable `e` is assigned to but never used
+    |
+140 |             }
+141 |
+142 |         except Exception as e:
+    |                             ^ F841
+143 |             logger.exception("UnifiedBrowserManager failed for {url}")
+144 |             return {
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/crawling/manager.py:276:29: F841 Local variable `e` is assigned to but never used
+    |
+274 |             }
+275 |
+276 |         except Exception as e:
+    |                             ^ F841
+277 |             logger.exception("Site crawl failed for {url}")
+278 |             return {
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/dependencies.py:465:25: F841 Local variable `e` is assigned to but never used
+    |
+463 |         cache_type_enum = CacheType(cache_type)
+464 |         return await cache_manager.get(key, cache_type_enum)
+465 |     except Exception as e:
+    |                         ^ F841
+466 |         logger.exception("Cache get failed for key %s", key)
+467 |         return None
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/dependencies.py:486:25: F841 Local variable `e` is assigned to but never used
+    |
+484 |         cache_type_enum = CacheType(cache_type)
+485 |         return await cache_manager.set(key, value, cache_type_enum, ttl)
+486 |     except Exception as e:
+    |                         ^ F841
+487 |         logger.exception("Cache set failed for key %s", key)
+488 |         return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/dependencies.py:505:25: F841 Local variable `e` is assigned to but never used
+    |
+503 |         cache_type_enum = CacheType(cache_type)
+504 |         return await cache_manager.delete(key, cache_type_enum)
+505 |     except Exception as e:
+    |                         ^ F841
+506 |         logger.exception("Cache delete failed for key %s", key)
+507 |         return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/dependencies.py:1356:25: F841 Local variable `e` is assigned to but never used
+     |
+1354 |         await client_manager.cleanup()
+1355 |         logger.info("All services cleaned up successfully")
+1356 |     except Exception as e:
+     |                         ^ F841
+1357 |         logger.exception("Service cleanup failed")
+1358 |         raise
+     |
+     = help: Remove assignment to unused variable `e`
+
+src/services/dependencies.py:1839:25: F841 Local variable `e` is assigned to but never used
+     |
+1837 |             text_length, quality_required, budget_limit
+1838 |         )
+1839 |     except Exception as e:
+     |                         ^ F841
+1840 |         logger.exception("Optimal provider selection failed")
+1841 |         # Return reasonable default
+     |
+     = help: Remove assignment to unused variable `e`
+
+src/services/deployment/blue_green.py:151:29: F841 Local variable `e` is assigned to but never used
+    |
+149 |             logger.info("Blue-green deployment manager initialized successfully")
+150 |
+151 |         except Exception as e:
+    |                             ^ F841
+152 |             logger.exception("Failed to initialize blue-green deployment manager")
+153 |             self._initialized = False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/deployment/blue_green.py:263:29: F841 Local variable `e` is assigned to but never used
+    |
+261 |             return True
+262 |
+263 |         except Exception as e:
+    |                             ^ F841
+264 |             logger.exception("Failed to switch environments")
+265 |             self._deployment_status = BlueGreenStatus.FAILED
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/deployment/blue_green.py:292:29: F841 Local variable `e` is assigned to but never used
+    |
+290 |             return False
+291 |
+292 |         except Exception as e:
+    |                             ^ F841
+293 |             logger.exception("Error during rollback")
+294 |             self._deployment_status = BlueGreenStatus.FAILED
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/deployment/blue_green.py:369:29: F841 Local variable `e` is assigned to but never used
+    |
+367 |                 logger.info("Automatic switch disabled, manual intervention required")
+368 |
+369 |         except Exception as e:
+    |                             ^ F841
+370 |             logger.exception("Deployment failed")
+371 |             self._deployment_status = BlueGreenStatus.FAILED
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/deployment/blue_green.py:406:29: F841 Local variable `e` is assigned to but never used
+    |
+404 |             )
+405 |
+406 |         except Exception as e:
+    |                             ^ F841
+407 |             logger.exception("Failed to deploy to %s environment", env.name)
+408 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/deployment/blue_green.py:476:29: F841 Local variable `e` is assigned to but never used
+    |
+474 |             logger.info("Traffic switch completed")
+475 |
+476 |         except Exception as e:
+    |                             ^ F841
+477 |             logger.exception("Failed to switch traffic")
+478 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/deployment/blue_green.py:493:33: F841 Local variable `e` is assigned to but never used
+    |
+491 |             except asyncio.CancelledError:
+492 |                 break
+493 |             except Exception as e:
+    |                                 ^ F841
+494 |                 logger.exception("Error in health check loop")
+495 |                 await asyncio.sleep(30)
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/deployment/blue_green.py:505:29: F841 Local variable `e` is assigned to but never used
+    |
+503 |                 env.health.last_check = datetime.now(tz=UTC)
+504 |
+505 |         except Exception as e:
+    |                             ^ F841
+506 |             logger.exception("Error checking health for %s environment", env.name)
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/deployment/canary.py:203:29: F841 Local variable `e` is assigned to but never used
+    |
+201 |             logger.info("Canary deployment manager initialized successfully")
+202 |
+203 |         except Exception as e:
+    |                             ^ F841
+204 |             logger.exception("Failed to initialize canary deployment manager")
+205 |             self._initialized = False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/deployment/canary.py:373:29: F841 Local variable `e` is assigned to but never used
+    |
+371 |             return True
+372 |
+373 |         except Exception as e:
+    |                             ^ F841
+374 |             logger.exception("Failed to promote canary %s", deployment_id)
+375 |             self._deployment_status[deployment_id] = CanaryStatus.FAILED
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/deployment/canary.py:412:29: F841 Local variable `e` is assigned to but never used
+    |
+410 |             return True
+411 |
+412 |         except Exception as e:
+    |                             ^ F841
+413 |             logger.exception("Failed to rollback canary %s", deployment_id)
+414 |             self._deployment_status[deployment_id] = CanaryStatus.FAILED
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/deployment/canary.py:515:29: F841 Local variable `e` is assigned to but never used
+    |
+513 |         except asyncio.CancelledError:
+514 |             logger.info("Monitoring cancelled for canary deployment: %s", deployment_id)
+515 |         except Exception as e:
+    |                             ^ F841
+516 |             logger.exception("Error monitoring canary deployment %s", deployment_id)
+517 |             self._deployment_status[deployment_id] = CanaryStatus.FAILED
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/deployment/canary.py:554:29: F841 Local variable `e` is assigned to but never used
+    |
+552 |             metrics.stable_requests += int(total_requests * (1 - traffic_percentage))
+553 |
+554 |         except Exception as e:
+    |                             ^ F841
+555 |             logger.exception("Error updating metrics for canary %s", deployment_id)
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/deployment/canary.py:584:29: F841 Local variable `e` is assigned to but never used
+    |
+582 |             return metrics.stage_duration_minutes >= config.monitoring_window_minutes
+583 |
+584 |         except Exception as e:
+    |                             ^ F841
+585 |             logger.exception(
+586 |                 "Error evaluating success criteria for canary %s", deployment_id
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/deployment/canary.py:631:29: F841 Local variable `e` is assigned to but never used
+    |
+629 |             return False
+630 |
+631 |         except Exception as e:
+    |                             ^ F841
+632 |             logger.exception(
+633 |                 "Error checking rollback conditions for canary %s", deployment_id
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/deployment/canary.py:657:29: F841 Local variable `e` is assigned to but never used
+    |
+655 |             )
+656 |
+657 |         except Exception as e:
+    |                             ^ F841
+658 |             logger.exception("Failed to update traffic split for %s", deployment_id)
+659 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/deployment/canary.py:687:29: F841 Local variable `e` is assigned to but never used
+    |
+685 |             )  # 1 hour
+686 |
+687 |         except Exception as e:
+    |                             ^ F841
+688 |             logger.exception("Error completing canary deployment %s", deployment_id)
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/deployment/canary.py:701:29: F841 Local variable `e` is assigned to but never used
+    |
+699 |             logger.info("Cleaned up canary deployment: %s", deployment_id)
+700 |
+701 |         except Exception as e:
+    |                             ^ F841
+702 |             logger.exception("Error cleaning up canary deployment %s", deployment_id)
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/embeddings/fastembed_provider.py:112:29: F841 Local variable `e` is assigned to but never used
+    |
+110 |         try:
+111 |             self.metrics_registry = get_metrics_registry()
+112 |         except Exception as e:
+    |                             ^ F841
+113 |             logger.warning(
+114 |                 "Metrics registry not available - embedding monitoring disabled"
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/embeddings/manager.py:149:33: F841 Local variable `e` is assigned to but never used
+    |
+147 |                 self._reranker = FlagReranker(self._reranker_model, use_fp16=True)
+148 |                 logger.info("Initialized reranker")
+149 |             except Exception as e:
+    |                                 ^ F841
+150 |                 logger.warning("Failed to initialize reranker")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/embeddings/manager.py:180:33: F841 Local variable `e` is assigned to but never used
+    |
+178 |                     f"Initialized OpenAI provider with {self.config.openai.model}"
+179 |                 )
+180 |             except Exception as e:
+    |                                 ^ F841
+181 |                 logger.warning("Failed to initialize OpenAI provider")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/embeddings/manager.py:191:29: F841 Local variable `e` is assigned to but never used
+    |
+189 |                 f"Initialized FastEmbed provider with {self.config.fastembed.model}"
+190 |             )
+191 |         except Exception as e:
+    |                             ^ F841
+192 |             logger.warning("Failed to initialize FastEmbed provider")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/embeddings/manager.py:219:33: F841 Local variable `e` is assigned to but never used
+    |
+217 |                     f"Cleaned up {name} provider"
+218 |                 )  # TODO: Convert f-string to logging format
+219 |             except Exception as e:
+    |                                 ^ F841
+220 |                 logger.exception(f"Error cleaning up {name} provider")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/embeddings/manager.py:545:37: F841 Local variable `e` is assigned to but never used
+    |
+543 |                         f"Generated {len(sparse_embeddings)} sparse embeddings"
+544 |                     )  # TODO: Convert f-string to logging format
+545 |                 except Exception as e:
+    |                                     ^ F841
+546 |                     logger.warning("Failed to generate sparse embeddings")
+547 |                     # Continue with dense embeddings only
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/embeddings/manager.py:565:37: F841 Local variable `e` is assigned to but never used
+    |
+563 |                         )
+564 |                         logger.info("Cached embedding for future use")
+565 |                 except Exception as e:
+    |                                     ^ F841
+566 |                     logger.warning("Failed to cache embedding")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/embeddings/manager.py:587:29: F841 Local variable `e` is assigned to but never used
+    |
+586 |             return result
+587 |         except Exception as e:
+    |                             ^ F841
+588 |             logger.exception("Embedding generation failed")
+589 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/embeddings/manager.py:632:29: F841 Local variable `e` is assigned to but never used
+    |
+630 |             # Extract reordered results
+631 |             reranked = [result for result, _ in scored_results]
+632 |         except Exception as e:
+    |                             ^ F841
+633 |             logger.exception("Reranking failed")
+634 |             # Return original results on failure
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/embeddings/openai_provider.py:96:29: F841 Local variable `e` is assigned to but never used
+   |
+94 |         try:
+95 |             self.metrics_registry = get_metrics_registry()
+96 |         except Exception as e:
+   |                             ^ F841
+97 |             logger.warning(
+98 |                 "Metrics registry not available - embedding monitoring disabled"
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/cache.py:74:29: F841 Local variable `e` is assigned to but never used
+   |
+72 |             logger.info("Enterprise cache service initialized successfully")
+73 |
+74 |         except Exception as e:
+   |                             ^ F841
+75 |             logger.exception("Failed to initialize enterprise cache service")
+76 |             raise
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/cache.py:84:33: F841 Local variable `e` is assigned to but never used
+   |
+82 |             try:
+83 |                 await self.distributed_cache.close()
+84 |             except Exception as e:
+   |                                 ^ F841
+85 |                 logger.exception("Error closing distributed cache")
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/cache.py:137:29: F841 Local variable `e` is assigned to but never used
+    |
+135 |             return None
+136 |
+137 |         except Exception as e:
+    |                             ^ F841
+138 |             logger.exception("Cache get failed for key {key}")
+139 |             return None
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/cache.py:175:29: F841 Local variable `e` is assigned to but never used
+    |
+173 |             logger.debug("Cached value for key: %s in %s tier(s)", key, tier)
+174 |
+175 |         except Exception as e:
+    |                             ^ F841
+176 |             logger.exception("Cache set failed for key {key}")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/cache.py:209:29: F841 Local variable `e` is assigned to but never used
+    |
+207 |             return deleted
+208 |
+209 |         except Exception as e:
+    |                             ^ F841
+210 |             logger.exception("Cache delete failed for key {key}")
+211 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/cache.py:232:29: F841 Local variable `e` is assigned to but never used
+    |
+230 |             self._hot_keys.clear()
+231 |
+232 |         except Exception as e:
+    |                             ^ F841
+233 |             logger.exception("Cache clear failed")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/cache.py:270:33: F841 Local variable `e` is assigned to but never used
+    |
+268 |                 if value is not None:
+269 |                     await self._set_local(key, value, ttl=self.default_ttl)
+270 |             except Exception as e:
+    |                                 ^ F841
+271 |                 logger.exception("Cache warming failed for key {key}")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/cache.py:301:29: F841 Local variable `e` is assigned to but never used
+    |
+299 |             logger.warning("Distributed cache not available, using local cache only")
+300 |             self.enable_distributed = False
+301 |         except Exception as e:
+    |                             ^ F841
+302 |             logger.exception("Distributed cache initialization failed")
+303 |             self.enable_distributed = False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/cache.py:358:29: F841 Local variable `e` is assigned to but never used
+    |
+356 |         try:
+357 |             return await self.distributed_cache.get(key)
+358 |         except Exception as e:
+    |                             ^ F841
+359 |             logger.exception("Distributed cache get failed")
+360 |             return None
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/cache.py:369:29: F841 Local variable `e` is assigned to but never used
+    |
+367 |         try:
+368 |             await self.distributed_cache.set(key, value, ttl)
+369 |         except Exception as e:
+    |                             ^ F841
+370 |             logger.exception("Distributed cache set failed")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/cache.py:379:29: F841 Local variable `e` is assigned to but never used
+    |
+377 |         try:
+378 |             return await self.distributed_cache.delete(key)
+379 |         except Exception as e:
+    |                             ^ F841
+380 |             logger.exception("Distributed cache delete failed")
+381 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/cache.py:390:29: F841 Local variable `e` is assigned to but never used
+    |
+388 |         try:
+389 |             return await self.distributed_cache.exists(key)
+390 |         except Exception as e:
+    |                             ^ F841
+391 |             logger.exception("Distributed cache exists check failed")
+392 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/cache.py:401:29: F841 Local variable `e` is assigned to but never used
+    |
+399 |         try:
+400 |             await self.distributed_cache.clear()
+401 |         except Exception as e:
+    |                             ^ F841
+402 |             logger.exception("Distributed cache clear failed")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/integration.py:392:29: F841 Local variable `e` is assigned to but never used
+    |
+390 |             logger.info("Enterprise service orchestration completed successfully")
+391 |
+392 |         except Exception as e:
+    |                             ^ F841
+393 |             logger.exception("Service orchestration failed")
+394 |             await self.coordinate_shutdown()
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/integration.py:493:29: F841 Local variable `e` is assigned to but never used
+    |
+491 |                 raise RuntimeError(msg)
+492 |
+493 |         except Exception as e:
+    |                             ^ F841
+494 |             descriptor.status = ServiceStatus.FAILED
+495 |             descriptor.error_count += 1
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/integration.py:514:29: F841 Local variable `e` is assigned to but never used
+    |
+512 |             logger.info("Service %s stopped successfully", service_name)
+513 |
+514 |         except Exception as e:
+    |                             ^ F841
+515 |             descriptor.status = ServiceStatus.FAILED
+516 |             descriptor.error_count += 1
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/integration.py:527:41: F841 Local variable `e` is assigned to but never used
+    |
+525 |                     try:
+526 |                         await self.health_monitors[service_name].check_health()
+527 |                     except Exception as e:
+    |                                         ^ F841
+528 |                         logger.exception("Health check failed for {service_name}")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/integration.py:534:33: F841 Local variable `e` is assigned to but never used
+    |
+532 |             except asyncio.CancelledError:
+533 |                 break
+534 |             except Exception as e:
+    |                                 ^ F841
+535 |                 logger.exception("Error in health check loop")
+536 |                 await asyncio.sleep(self.health_check_interval)
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/integration.py:590:29: F841 Local variable `e` is assigned to but never used
+    |
+588 |             )
+589 |
+590 |         except Exception as e:
+    |                             ^ F841
+591 |             self.integration_phase = IntegrationPhase.FAILED
+592 |             logger.exception("Enterprise integration failed")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/integration.py:612:29: F841 Local variable `e` is assigned to but never used
+    |
+610 |             logger.info("Enterprise feature cleanup completed")
+611 |
+612 |         except Exception as e:
+    |                             ^ F841
+613 |             logger.exception("Error during enterprise cleanup")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/search.py:58:29: F841 Local variable `e` is assigned to but never used
+   |
+56 |             logger.info("Enterprise search service initialized successfully")
+57 |
+58 |         except Exception as e:
+   |                             ^ F841
+59 |             logger.exception("Failed to initialize enterprise search service")
+60 |             raise
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/search.py:193:29: F841 Local variable `e` is assigned to but never used
+    |
+191 |             return query  # Would implement actual expansion logic
+192 |
+193 |         except Exception as e:
+    |                             ^ F841
+194 |             logger.exception("Query expansion failed")
+195 |             return query
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/enterprise/search.py:212:29: F841 Local variable `e` is assigned to but never used
+    |
+210 |             return sorted(results, key=lambda x: x.get("score", 0), reverse=True)
+211 |
+212 |         except Exception as e:
+    |                             ^ F841
+213 |             logger.exception("Reranking failed")
+214 |             return results
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/errors.py:292:37: F841 Local variable `e` is assigned to but never used
+    |
+291 |                     await asyncio.sleep(delay)
+292 |                 except Exception as e:
+    |                                     ^ F841
+293 |                     # Non-retryable error
+294 |                     logger.exception("Non-retryable error in {func.__name__}")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/errors.py:840:29: F841 Local variable `e` is assigned to but never used
+    |
+838 |             logger.warning("{error_type.capitalize()} error in {func.__name__}")
+839 |             return safe_response(False, error=str(e), error_type=error_type)
+840 |         except Exception as e:
+    |                             ^ F841
+841 |             # Mask internal errors for security
+842 |             logger.error("Unexpected error in {func.__name__}", exc_info=True)
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/fastapi/background.py:367:33: F841 Local variable `e` is assigned to but never used
+    |
+365 |                     break
+366 |                 continue
+367 |             except Exception as e:
+    |                                 ^ F841
+368 |                 logger.exception("Worker {worker_name} error")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/fastapi/dependencies/core.py:69:29: F841 Local variable `e` is assigned to but never used
+   |
+67 |             logger.info("Dependency container initialized successfully")
+68 |
+69 |         except Exception as e:
+   |                             ^ F841
+70 |             logger.exception("Failed to initialize dependency container")
+71 |             raise
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/fastapi/dependencies/core.py:86:29: F841 Local variable `e` is assigned to but never used
+   |
+84 |             logger.info("Dependency container cleaned up")
+85 |
+86 |         except Exception as e:
+   |                             ^ F841
+87 |             logger.exception("Error during dependency cleanup")
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/fastapi/dependencies/core.py:223:25: F841 Local variable `e` is assigned to but never used
+    |
+221 |         else:
+222 |             return container.vector_service
+223 |     except Exception as e:
+    |                         ^ F841
+224 |         logger.exception("Failed to get vector service")
+225 |         raise HTTPException(
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/fastapi/dependencies/core.py:255:25: F841 Local variable `e` is assigned to but never used
+    |
+253 |         else:
+254 |             return container.embedding_manager
+255 |     except Exception as e:
+    |                         ^ F841
+256 |         logger.exception("Failed to get embedding manager")
+257 |         raise HTTPException(
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/fastapi/dependencies/core.py:287:25: F841 Local variable `e` is assigned to but never used
+    |
+285 |         else:
+286 |             return container.cache_manager
+287 |     except Exception as e:
+    |                         ^ F841
+288 |         logger.exception("Failed to get cache manager")
+289 |         raise HTTPException(
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/fastapi/dependencies/core.py:319:25: F841 Local variable `e` is assigned to but never used
+    |
+317 |         else:
+318 |             return container.client_manager
+319 |     except Exception as e:
+    |                         ^ F841
+320 |         logger.exception("Failed to get client manager")
+321 |         raise HTTPException(
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/fastapi/middleware/performance.py:158:29: F841 Local variable `e` is assigned to but never used
+    |
+156 |             return response
+157 |
+158 |         except Exception as e:
+    |                             ^ F841
+159 |             # Record failed request metrics
+160 |             end_time = time.perf_counter()
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/fastapi/middleware/performance.py:478:25: F841 Local variable `e` is assigned to but never used
+    |
+476 |         logger.info("Service warm-up completed")
+477 |
+478 |     except Exception as e:
+    |                         ^ F841
+479 |         logger.exception("Service warm-up failed")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/fastapi/middleware/security.py:241:17: F841 Local variable `new_count` is assigned to but never used
+    |
+240 |                 # Increment counter atomically
+241 |                 new_count = await self.redis_client.incr(rate_limit_key)
+    |                 ^^^^^^^^^ F841
+242 |                 return True
+243 |             # First request in window - set counter and expiry atomically
+    |
+    = help: Remove assignment to unused variable `new_count`
+
+src/services/fastapi/middleware/timeout.py:125:29: F841 Local variable `e` is assigned to but never used
+    |
+123 |             )
+124 |
+125 |         except Exception as e:
+    |                             ^ F841
+126 |             # Record failure for circuit breaker
+127 |             if self.config.enable_circuit_breaker:
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/fastapi/middleware/tracing.py:269:29: F841 Local variable `e` is assigned to but never used
+    |
+267 |                 return f"<binary data: {len(body)} bytes>"
+268 |
+269 |         except Exception as e:
+    |                             ^ F841
+270 |             return None
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/fastapi/middleware/tracing.py:306:29: F841 Local variable `e` is assigned to but never used
+    |
+304 |                 return f"<binary data: {len(body)} bytes>"
+305 |
+306 |         except Exception as e:
+    |                             ^ F841
+307 |             return None
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/fastapi/production_server.py:76:29: F841 Local variable `e` is assigned to but never used
+   |
+74 |             yield
+75 |
+76 |         except Exception as e:
+   |                             ^ F841
+77 |             logger.exception("Startup failed")
+78 |             raise
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/fastapi/production_server.py:104:29: F841 Local variable `e` is assigned to but never used
+    |
+102 |                 logger.info("FastMCP server cleanup complete")
+103 |
+104 |         except Exception as e:
+    |                             ^ F841
+105 |             logger.exception("Error during shutdown")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/fastapi/production_server.py:165:29: F841 Local variable `e` is assigned to but never used
+    |
+163 |             await server.serve()
+164 |
+165 |         except Exception as e:
+    |                             ^ F841
+166 |             logger.exception("Server error")
+167 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/fastapi/production_server.py:198:25: F841 Local variable `e` is assigned to but never used
+    |
+196 |     except KeyboardInterrupt:
+197 |         logger.info("Server interrupted by user")
+198 |     except Exception as e:
+    |                         ^ F841
+199 |         logger.exception("Server error")
+200 |         sys.exit(1)
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/functional/cache.py:61:25: F841 Local variable `e` is assigned to but never used
+   |
+59 |             )  # TODO: Convert f-string to logging format
+60 |
+61 |     except Exception as e:
+   |                         ^ F841
+62 |         logger.exception(f"Cache get failed for key {key}")
+63 |         return default
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/functional/cache.py:110:25: F841 Local variable `e` is assigned to but never used
+    |
+108 |             )  # TODO: Convert f-string to logging format
+109 |
+110 |     except Exception as e:
+    |                         ^ F841
+111 |         logger.exception(f"Cache set failed for key {key}")
+112 |         # Don't raise exception for cache failures
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/functional/cache.py:156:25: F841 Local variable `e` is assigned to but never used
+    |
+154 |             )  # TODO: Convert f-string to logging format
+155 |
+156 |     except Exception as e:
+    |                         ^ F841
+157 |         logger.exception(f"Cache delete failed for key {key}")
+158 |         return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/functional/cache.py:200:25: F841 Local variable `e` is assigned to but never used
+    |
+198 |             )  # TODO: Convert f-string to logging format
+199 |
+200 |     except Exception as e:
+    |                         ^ F841
+201 |         logger.exception("Cache clear failed")
+202 |         return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/functional/cache.py:268:25: F841 Local variable `e` is assigned to but never used
+    |
+266 |         logger.debug("Retrieved cache performance statistics")
+267 |
+268 |     except Exception as e:
+    |                         ^ F841
+269 |         logger.exception("Cache performance stats retrieval failed")
+270 |         return {}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/functional/cache.py:309:25: F841 Local variable `e` is assigned to but never used
+    |
+307 |                 )  # TODO: Convert f-string to logging format
+308 |
+309 |     except Exception as e:
+    |                         ^ F841
+310 |         logger.exception("Embedding cache failed")
+311 |         return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/functional/cache.py:349:25: F841 Local variable `e` is assigned to but never used
+    |
+347 |                 )  # TODO: Convert f-string to logging format
+348 |
+349 |     except Exception as e:
+    |                         ^ F841
+350 |         logger.exception("Cached embedding retrieval failed")
+351 |         return None
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/functional/cache.py:393:25: F841 Local variable `e` is assigned to but never used
+    |
+391 |                 )  # TODO: Convert f-string to logging format
+392 |
+393 |     except Exception as e:
+    |                         ^ F841
+394 |         logger.exception("Search results cache failed")
+395 |         return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/functional/cache.py:433:25: F841 Local variable `e` is assigned to but never used
+    |
+431 |                 )
+432 |
+433 |     except Exception as e:
+    |                         ^ F841
+434 |         logger.exception("Cached search results retrieval failed")
+435 |         return None
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/functional/crawling.py:163:25: F841 Local variable `e` is assigned to but never used
+    |
+161 |         )  # TODO: Convert f-string to logging format
+162 |
+163 |     except Exception as e:
+    |                         ^ F841
+164 |         logger.exception("Crawl metrics retrieval failed")
+165 |         return {}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/functional/crawling.py:203:25: F841 Local variable `e` is assigned to but never used
+    |
+201 |     except HTTPException:
+202 |         raise
+203 |     except Exception as e:
+    |                         ^ F841
+204 |         logger.exception(f"Tool recommendation failed for {url}")
+205 |         return "crawl4ai"  # Graceful fallback
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/functional/crawling.py:236:25: F841 Local variable `e` is assigned to but never used
+    |
+234 |         )  # TODO: Convert f-string to logging format
+235 |
+236 |     except Exception as e:
+    |                         ^ F841
+237 |         logger.exception("Provider info retrieval failed")
+238 |         return {}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/functional/crawling.py:269:25: F841 Local variable `e` is assigned to but never used
+    |
+267 |         )  # TODO: Convert f-string to logging format
+268 |
+269 |     except Exception as e:
+    |                         ^ F841
+270 |         logger.exception("Tier metrics retrieval failed")
+271 |         return {}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/functional/embeddings.py:115:25: F841 Local variable `e` is assigned to but never used
+    |
+113 |         )  # TODO: Convert f-string to logging format
+114 |
+115 |     except Exception as e:
+    |                         ^ F841
+116 |         logger.exception("Reranking failed")
+117 |         return results
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/hyde/engine.py:327:29: F841 Local variable `e` is assigned to but never used
+    |
+325 |             return results
+326 |
+327 |         except Exception as e:
+    |                             ^ F841
+328 |             logger.warning("Reranking failed, returning original results")
+329 |             return results
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/integration/modern_examples.py:110:33: F841 Local variable `e` is assigned to but never used
+    |
+108 |                 embedding = await self.generate_embedding(text, model)
+109 |                 embeddings.append(embedding)
+110 |             except Exception as e:
+    |                                 ^ F841
+111 |                 logger.exception("Failed to generate embedding for text")
+112 |                 # Use fallback embedding or skip
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/integration/modern_examples.py:169:29: F841 Local variable `e` is assigned to but never used
+    |
+167 |             logger.info("Invalidated %s search cache entries", count)
+168 |             return True
+169 |         except Exception as e:
+    |                             ^ F841
+170 |             logger.exception("Failed to invalidate search cache")
+171 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/integration/modern_examples.py:341:5: F841 Local variable `modern_cache` is assigned to but never used
+    |
+340 |     # Get services through migration manager
+341 |     modern_cache = await migration_manager.get_cache_manager()
+    |     ^^^^^^^^^^^^ F841
+342 |     modern_cb = await migration_manager.get_circuit_breaker("my_service")
+    |
+    = help: Remove assignment to unused variable `modern_cache`
+
+src/services/integration/modern_examples.py:342:5: F841 Local variable `modern_cb` is assigned to but never used
+    |
+340 |     # Get services through migration manager
+341 |     modern_cache = await migration_manager.get_cache_manager()
+342 |     modern_cb = await migration_manager.get_circuit_breaker("my_service")
+    |     ^^^^^^^^^ F841
+343 |
+344 |     # Check migration status
+    |
+    = help: Remove assignment to unused variable `modern_cb`
+
+src/services/managers/database_manager.py:354:33: F841 Local variable `e` is assigned to but never used
+    |
+352 |                 collections = await self.get_collections()
+353 |                 status["qdrant"]["collections"] = collections
+354 |             except Exception as e:
+    |                                 ^ F841
+355 |                 status["qdrant"]["available"] = False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/managers/database_manager.py:366:33: F841 Local variable `e` is assigned to but never used
+    |
+364 |                 cache_stats = await self._cache_manager.get_stats()
+365 |                 status["cache"]["stats"] = cache_stats
+366 |             except Exception as e:
+    |                                 ^ F841
+367 |                 status["cache"]["available"] = False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/managers/monitoring_manager.py:484:33: F841 Local variable `e` is assigned to but never used
+    |
+482 |                 logger.info("Health check loop cancelled")
+483 |                 break
+484 |             except Exception as e:
+    |                                 ^ F841
+485 |                 logger.exception("Error in health check loop")
+486 |                 await asyncio.sleep(10)  # Brief pause before retry
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/middleware/rate_limiting.py:197:29: F841 Local variable `e` is assigned to but never used
+    |
+195 |             logger.warning("Rate limit reset not supported")
+196 |             return False
+197 |         except Exception as e:
+    |                             ^ F841
+198 |             logger.exception("Error resetting limits for {key}")
+199 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/migration/library_migration.py:118:29: F841 Local variable `e` is assigned to but never used
+    |
+116 |             logger.info("Modern services initialized successfully")
+117 |
+118 |         except Exception as e:
+    |                             ^ F841
+119 |             logger.exception("Failed to initialize modern services")
+120 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/migration/library_migration.py:289:33: F841 Local variable `e` is assigned to but never used
+    |
+287 |                 await self._collect_metrics()
+288 |                 await self._check_rollback_conditions()
+289 |             except Exception as e:
+    |                                 ^ F841
+290 |                 logger.exception("Error in monitoring loop")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/migration/library_migration.py:307:29: F841 Local variable `e` is assigned to but never used
+    |
+305 |             logger.debug("Performance metrics collected")
+306 |
+307 |         except Exception as e:
+    |                             ^ F841
+308 |             logger.exception("Error collecting metrics")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/migration/library_migration.py:361:29: F841 Local variable `e` is assigned to but never used
+    |
+359 |             )  # TODO: Convert f-string to logging format
+360 |             return False
+361 |         except Exception as e:
+    |                             ^ F841
+362 |             logger.exception("Error forcing migration of {service}")
+363 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/migration/library_migration.py:376:29: F841 Local variable `e` is assigned to but never used
+    |
+374 |             logger.info("LibraryMigrationManager cleaned up successfully")
+375 |
+376 |         except Exception as e:
+    |                             ^ F841
+377 |             logger.exception("Error cleaning up LibraryMigrationManager")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/monitoring/initialization.py:229:29: F841 Local variable `e` is assigned to but never used
+    |
+227 |                 f"Prometheus metrics server started on port {metrics_config.export_port}"
+228 |             )
+229 |         except Exception as e:
+    |                             ^ F841
+230 |             logger.exception("Failed to start metrics server")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/monitoring/initialization.py:359:25: F841 Local variable `e` is assigned to but never used
+    |
+357 |             )
+358 |
+359 |     except Exception as e:
+    |                         ^ F841
+360 |         logger.exception("Failed to set up FastMCP monitoring")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/monitoring/initialization.py:384:29: F841 Local variable `e` is assigned to but never used
+    |
+382 |             await health_manager.check_all()
+383 |             logger.debug("Completed periodic health check")
+384 |         except Exception as e:
+    |                             ^ F841
+385 |             logger.exception("Error in periodic health check")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/monitoring/initialization.py:411:29: F841 Local variable `e` is assigned to but never used
+    |
+409 |             metrics_registry.update_system_metrics()
+410 |             logger.debug("Updated system metrics")
+411 |         except Exception as e:
+    |                             ^ F841
+412 |             logger.exception("Error updating system metrics")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/monitoring/initialization.py:439:29: F841 Local variable `e` is assigned to but never used
+    |
+437 |             metrics_registry.update_cache_stats(cache_manager)
+438 |             logger.debug("Updated cache metrics")
+439 |         except Exception as e:
+    |                             ^ F841
+440 |             logger.exception("Error updating cache metrics")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/monitoring/metrics.py:323:37: F841 Local variable `e` is assigned to but never used
+    |
+321 |                 try:
+322 |                     result = await func(*args, **kwargs)
+323 |                 except Exception as e:
+    |                                     ^ F841
+324 |                     self._metrics["search_requests"].labels(
+325 |                         collection=collection, status="error"
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/monitoring/metrics.py:356:37: F841 Local variable `e` is assigned to but never used
+    |
+354 |                 try:
+355 |                     result = func(*args, **kwargs)
+356 |                 except Exception as e:
+    |                                     ^ F841
+357 |                     self._metrics["search_requests"].labels(
+358 |                         collection=collection, status="error"
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/monitoring/metrics.py:411:37: F841 Local variable `e` is assigned to but never used
+    |
+409 |                     return result
+410 |
+411 |                 except Exception as e:
+    |                                     ^ F841
+412 |                     self._metrics["embedding_requests"].labels(
+413 |                         provider=provider, model=model, status="error"
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/monitoring/metrics.py:434:37: F841 Local variable `e` is assigned to but never used
+    |
+432 |                     return result
+433 |
+434 |                 except Exception as e:
+    |                                     ^ F841
+435 |                     self._metrics["embedding_requests"].labels(
+436 |                         provider=provider, model=model, status="error"
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/monitoring/metrics.py:478:37: F841 Local variable `e` is assigned to but never used
+    |
+476 |                         ).inc()
+477 |                     return result
+478 |                 except Exception as e:
+    |                                     ^ F841
+479 |                     self._metrics["cache_misses"].labels(
+480 |                         cache_type=cache_type, cache_name=cache_name
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/monitoring/metrics.py:497:37: F841 Local variable `e` is assigned to but never used
+    |
+495 |                         ).inc()
+496 |                     return result
+497 |                 except Exception as e:
+    |                                     ^ F841
+498 |                     self._metrics["cache_misses"].labels(
+499 |                         cache_type=cache_type, cache_name=cache_name
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/monitoring/metrics.py:533:37: F841 Local variable `e` is assigned to but never used
+    |
+531 |                     return result
+532 |
+533 |                 except Exception as e:
+    |                                     ^ F841
+534 |                     self._metrics["cache_operations"].labels(
+535 |                         cache_type=cache_type, operation=operation, result="error"
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/monitoring/metrics.py:556:37: F841 Local variable `e` is assigned to but never used
+    |
+554 |                     return result
+555 |
+556 |                 except Exception as e:
+    |                                     ^ F841
+557 |                     self._metrics["cache_operations"].labels(
+558 |                         cache_type=cache_type, operation=operation, result="error"
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/monitoring/performance_monitor.py:84:29: F841 Local variable `e` is assigned to but never used
+   |
+82 |         except asyncio.CancelledError:
+83 |             logger.info("Performance monitoring cancelled")
+84 |         except Exception as e:
+   |                             ^ F841
+85 |             logger.exception("Performance monitoring error")
+86 |         finally:
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/observability/dependencies.py:58:25: F841 Local variable `e` is assigned to but never used
+   |
+56 |         }
+57 |
+58 |     except Exception as e:
+   |                         ^ F841
+59 |         logger.warning("Failed to initialize observability service")
+60 |         return {
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/observability/dependencies.py:159:25: F841 Local variable `e` is assigned to but never used
+    |
+157 |         )
+158 |
+159 |     except Exception as e:
+    |                         ^ F841
+160 |         logger.debug("Failed to record AI operation metrics")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/observability/dependencies.py:188:25: F841 Local variable `e` is assigned to but never used
+    |
+186 |         )
+187 |
+188 |     except Exception as e:
+    |                         ^ F841
+189 |         logger.debug("Failed to track AI cost metrics")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/observability/enterprise.py:534:33: F841 Local variable `e` is assigned to but never used
+    |
+532 |                     self._record_alert_event(alert, "resolved", latest_value)
+533 |
+534 |             except Exception as e:
+    |                                 ^ F841
+535 |                 logger.exception("Error checking alert {alert.name}")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/observability/enterprise.py:587:33: F841 Local variable `e` is assigned to but never used
+    |
+585 |             try:
+586 |                 handler(alert)
+587 |             except Exception as e:
+    |                                 ^ F841
+588 |                 logger.exception("Error in alert notification handler")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/observability/enterprise.py:641:29: F841 Local variable `e` is assigned to but never used
+    |
+639 |             logger.info("Enterprise observability platform started successfully")
+640 |
+641 |         except Exception as e:
+    |                             ^ F841
+642 |             logger.exception("Failed to initialize observability platform")
+643 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/observability/enterprise.py:826:33: F841 Local variable `e` is assigned to but never used
+    |
+824 |             except asyncio.CancelledError:
+825 |                 break
+826 |             except Exception as e:
+    |                                 ^ F841
+827 |                 logger.exception("Error in cleanup loop")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/observability/enterprise.py:846:33: F841 Local variable `e` is assigned to but never used
+    |
+844 |             except asyncio.CancelledError:
+845 |                 break
+846 |             except Exception as e:
+    |                                 ^ F841
+847 |                 logger.exception("Error in monitoring loop")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/observability/enterprise.py:862:33: F841 Local variable `e` is assigned to but never used
+    |
+860 |                     self.anomaly_detector.update_baseline(metadata["name"], values)
+861 |
+862 |             except Exception as e:
+    |                                 ^ F841
+863 |                 logger.exception("Error updating baseline for {metric_key}")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/observability/init.py:227:25: F841 Local variable `e` is assigned to but never used
+    |
+225 |         logger.warning("OpenTelemetry packages not available")
+226 |         return False
+227 |     except Exception as e:
+    |                         ^ F841
+228 |         logger.exception("Failed to initialize OpenTelemetry")
+229 |         return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/observability/init.py:250:37: F841 Local variable `e` is assigned to but never used
+    |
+248 |                     FastAPIInstrumentor().instrument()
+249 |                     logger.info("FastAPI auto-instrumentation enabled")
+250 |                 except Exception as e:
+    |                                     ^ F841
+251 |                     logger.warning("Failed to enable FastAPI instrumentation")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/observability/init.py:261:37: F841 Local variable `e` is assigned to but never used
+    |
+259 |                     HTTPXClientInstrumentor().instrument()
+260 |                     logger.info("HTTPX client auto-instrumentation enabled")
+261 |                 except Exception as e:
+    |                                     ^ F841
+262 |                     logger.warning("Failed to enable HTTPX instrumentation")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/observability/init.py:272:37: F841 Local variable `e` is assigned to but never used
+    |
+270 |                     RedisInstrumentor().instrument()
+271 |                     logger.info("Redis auto-instrumentation enabled")
+272 |                 except Exception as e:
+    |                                     ^ F841
+273 |                     logger.warning("Failed to enable Redis instrumentation")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/observability/init.py:283:37: F841 Local variable `e` is assigned to but never used
+    |
+281 |                     SQLAlchemyInstrumentor().instrument()
+282 |                     logger.info("SQLAlchemy auto-instrumentation enabled")
+283 |                 except Exception as e:
+    |                                     ^ F841
+284 |                     logger.warning("Failed to enable SQLAlchemy instrumentation")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/observability/init.py:286:25: F841 Local variable `e` is assigned to but never used
+    |
+284 |                     logger.warning("Failed to enable SQLAlchemy instrumentation")
+285 |
+286 |     except Exception as e:
+    |                         ^ F841
+287 |         logger.warning("Auto-instrumentation setup failed")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/observability/init.py:303:29: F841 Local variable `e` is assigned to but never used
+    |
+301 |             logger.info("Shutting down OpenTelemetry tracer provider...")
+302 |             _tracer_provider.shutdown()
+303 |         except Exception as e:
+    |                             ^ F841
+304 |             logger.exception("Error during tracer provider shutdown")
+305 |         finally:
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/observability/init.py:313:29: F841 Local variable `e` is assigned to but never used
+    |
+311 |             logger.info("Shutting down OpenTelemetry meter provider...")
+312 |             _meter_provider.shutdown()
+313 |         except Exception as e:
+    |                             ^ F841
+314 |             logger.exception("Error during meter provider shutdown")
+315 |         finally:
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/query_processing/federated.py:492:29: F841 Local variable `e` is assigned to but never used
+    |
+490 |             self._logger.info("Registered collection")
+491 |
+492 |         except Exception as e:
+    |                             ^ F841
+493 |             self._logger.exception("Failed to register collection {collection_name}")
+494 |             raise
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/query_processing/federated.py:511:29: F841 Local variable `e` is assigned to but never used
+    |
+509 |             self._logger.info("Unregistered collection")
+510 |
+511 |         except Exception as e:
+    |                             ^ F841
+512 |             self._logger.exception("Failed to unregister collection {collection_name}")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/query_processing/intent_classifier.py:557:33: F841 Local variable `e` is assigned to but never used
+    |
+555 |                             intent_scores[intent] * 0.7 + semantic_scores[intent] * 0.3
+556 |                         )
+557 |             except Exception as e:
+    |                                 ^ F841
+558 |                 logger.warning("Semantic intent classification failed")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/query_processing/intent_classifier.py:702:29: F841 Local variable `e` is assigned to but never used
+    |
+700 |             return scores
+701 |
+702 |         except Exception as e:
+    |                             ^ F841
+703 |             logger.exception("Semantic intent classification failed")
+704 |             return {}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/query_processing/intent_classifier.py:720:29: F841 Local variable `e` is assigned to but never used
+    |
+719 |             return float(dot_product / (magnitude1 * magnitude2))
+720 |         except Exception as e:
+    |                             ^ F841
+721 |             return 0.0
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/query_processing/orchestrator.py:353:33: F841 Local variable `e` is assigned to but never used
+    |
+351 |                 return results
+352 |
+353 |             except Exception as e:
+    |                                 ^ F841
+354 |                 self._logger.warning("Federated search failed")
+355 |                 # Fall back to mock results
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/query_processing/pipeline.py:57:29: F841 Local variable `e` is assigned to but never used
+   |
+55 |             logger.info("QueryProcessingPipeline initialized successfully")
+56 |
+57 |         except Exception as e:
+   |                             ^ F841
+58 |             logger.exception("Failed to initialize QueryProcessingPipeline")
+59 |             raise
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/security/ai_security.py:565:9: F841 Local variable `full_text` is assigned to but never used
+    |
+563 |         """
+564 |         # Combine query and context for comprehensive validation
+565 |         full_text = f"{query} {context or ''}"
+    |         ^^^^^^^^^ F841
+566 |
+567 |         # Validate using standard query validation
+    |
+    = help: Remove assignment to unused variable `full_text`
+
+src/services/security/integration.py:88:29: F841 Local variable `e` is assigned to but never used
+   |
+86 |             logger.info("All security components initialized successfully")
+87 |
+88 |         except Exception as e:
+   |                             ^ F841
+89 |             logger.exception("Failed to initialize security components")
+90 |             # Set fallback configurations
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/security/integration.py:264:29: F841 Local variable `e` is assigned to but never used
+    |
+262 |             logger.info("Security resources cleaned up")
+263 |
+264 |         except Exception as e:
+    |                             ^ F841
+265 |             logger.exception("Error during security cleanup")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/security/monitoring.py:242:29: F841 Local variable `e` is assigned to but never used
+    |
+240 |             self._check_automated_responses(security_event)
+241 |
+242 |         except Exception as e:
+    |                             ^ F841
+243 |             logger.exception("Failed to log security event")
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/security/rate_limiter.py:345:79: F841 Local variable `e` is assigned to but never used
+    |
+343 |                     )  # TODO: Convert f-string to logging format
+344 |
+345 |         except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
+    |                                                                               ^ F841
+346 |             logger.exception("Failed to reset rate limit for {identifier}")
+347 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/simple/search.py:52:29: F841 Local variable `e` is assigned to but never used
+   |
+50 |             logger.info("Simple search service initialized successfully")
+51 |
+52 |         except Exception as e:
+   |                             ^ F841
+53 |             logger.exception("Failed to initialize simple search service")
+54 |             raise
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/task_queue/manager.py:44:33: F841 Local variable `e` is assigned to but never used
+   |
+42 |                 self.metrics_registry = get_metrics_registry()
+43 |                 logger.debug("Task queue monitoring enabled")
+44 |             except Exception as e:
+   |                                 ^ F841
+45 |                 logger.debug("Task queue monitoring disabled")
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/task_queue/manager.py:86:29: F841 Local variable `e` is assigned to but never used
+   |
+84 |             logger.info("Task queue manager initialized")
+85 |             self._initialized = True
+86 |         except Exception as e:
+   |                             ^ F841
+87 |             logger.exception("Failed to initialize task queue")
+88 |             raise
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/task_queue/manager.py:153:29: F841 Local variable `e` is assigned to but never used
+    |
+151 |             return None
+152 |
+153 |         except Exception as e:
+    |                             ^ F841
+154 |             logger.exception("Error enqueueing task {task_name}")
+155 |             return None
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/task_queue/manager.py:217:29: F841 Local variable `e` is assigned to but never used
+    |
+215 |             return False
+216 |
+217 |         except Exception as e:
+    |                             ^ F841
+218 |             logger.exception("Error cancelling job")
+219 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/task_queue/manager.py:249:29: F841 Local variable `e` is assigned to but never used
+    |
+247 |             # to implement more detailed statistics gathering
+248 |
+249 |         except Exception as e:
+    |                             ^ F841
+250 |             logger.exception("Error getting queue stats")
+251 |             return {"error": -1}
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/task_queue/tasks.py:473:25: F841 Local variable `e` is assigned to but never used
+    |
+471 |             await client_manager.cleanup()
+472 |
+473 |     except Exception as e:
+    |                         ^ F841
+474 |         logger.exception("Failed to create task {task_name}")
+475 |         return None
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/vector_db/documents.py:310:13: F841 Local variable `result` is assigned to but never used
+    |
+308 |             filter_obj = build_filter(filter_condition) if filter_condition else None
+309 |
+310 |             result = await self.client.count(
+    |             ^^^^^^ F841
+311 |                 collection_name=collection_name,
+312 |                 count_filter=filter_obj,
+    |
+    = help: Remove assignment to unused variable `result`
+
+src/services/vector_db/filters/base.py:297:33: F841 Local variable `e` is assigned to but never used
+    |
+295 |             try:
+296 |                 return filter_class(**kwargs)
+297 |             except Exception as e:
+    |                                 ^ F841
+298 |                 self._logger.exception("Failed to create filter {filter_name}")
+299 |                 return None
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/vector_db/filters/composer.py:343:41: F841 Local variable `e` is assigned to but never used
+    |
+341 |                         result = await task
+342 |                         results[name] = result
+343 |                     except Exception as e:
+    |                                         ^ F841
+344 |                         self._logger.exception("Filter {name} failed")
+345 |                         if criteria.fail_fast:
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/vector_db/filters/composer.py:382:33: F841 Local variable `e` is assigned to but never used
+    |
+380 |                     raise FilterError(msg)
+381 |
+382 |             except Exception as e:
+    |                                 ^ F841
+383 |                 self._logger.exception(
+384 |                     "Filter {filter_ref.filter_instance.name} failed"
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/vector_db/filters/composer.py:616:29: F841 Local variable `e` is assigned to but never used
+    |
+614 |             FilterCompositionCriteria.model_validate(filter_criteria)
+615 |             return True
+616 |         except Exception as e:
+    |                             ^ F841
+617 |             self._logger.warning("Invalid composition criteria")
+618 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/vector_db/filters/metadata.py:481:29: F841 Local variable `e` is assigned to but never used
+    |
+479 |             return None
+480 |
+481 |         except Exception as e:
+    |                             ^ F841
+482 |             self._logger.exception("Failed to build condition for field '{field}'")
+483 |             return None
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/vector_db/filters/metadata.py:552:29: F841 Local variable `e` is assigned to but never used
+    |
+550 |             MetadataFilterCriteria.model_validate(filter_criteria)
+551 |             return True
+552 |         except Exception as e:
+    |                             ^ F841
+553 |             self._logger.warning("Invalid metadata criteria")
+554 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/vector_db/filters/similarity.py:678:29: F841 Local variable `e` is assigned to but never used
+    |
+676 |             )
+677 |
+678 |         except Exception as e:
+    |                             ^ F841
+679 |             self._logger.exception("Clustering analysis failed")
+680 |             return None
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/vector_db/filters/similarity.py:767:29: F841 Local variable `e` is assigned to but never used
+    |
+765 |             SimilarityThresholdCriteria.model_validate(filter_criteria)
+766 |             return True
+767 |         except Exception as e:
+    |                             ^ F841
+768 |             self._logger.warning("Invalid similarity threshold criteria")
+769 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/vector_db/optimization.py:128:29: F841 Local variable `e` is assigned to but never used
+    |
+126 |             return True
+127 |
+128 |         except Exception as e:
+    |                             ^ F841
+129 |             logger.exception("Failed to create optimized collection")
+130 |             return False
+    |
+    = help: Remove assignment to unused variable `e`
+
+src/services/vector_db/splade_provider.py:64:29: F841 Local variable `e` is assigned to but never used
+   |
+62 |                 "Transformers library not available, using fallback sparse generation"
+63 |             )
+64 |         except Exception as e:
+   |                             ^ F841
+65 |             logger.exception("Failed to load SPLADE model")
+66 |             raise
+   |
+   = help: Remove assignment to unused variable `e`
+
+src/services/vector_db/splade_provider.py:104:29: F841 Local variable `e` is assigned to but never used
+    |
+102 |             return sparse_vector
+103 |
+104 |         except Exception as e:
+    |                             ^ F841
+105 |             logger.exception("Sparse vector generation failed")
+106 |             # Return empty sparse vector as fallback
+    |
+    = help: Remove assignment to unused variable `e`
+
+tests/benchmarks/performance_suite.py:946:17: F841 Local variable `tasks` is assigned to but never used
+    |
+944 |                 # Concurrent processing
+945 |                 concurrent_start = time.time()
+946 |                 tasks = [
+    |                 ^^^^^ F841
+947 |                     real_embedding_manager.generate_embeddings([text])
+948 |                     for text in test_texts
+    |
+    = help: Remove assignment to unused variable `tasks`
+
+tests/security/penetration/test_api_security.py:957:9: F841 Local variable `result` is assigned to but never used
+    |
+955 |         # This might succeed or fail based on implementation limits
+956 |
+957 |         result = await subprocess_test_client.execute_command(["echo", long_argument])
+    |         ^^^^^^ F841
+958 |         # Should have some protection against extremely long commands
+    |
+    = help: Remove assignment to unused variable `result`
+
+tests/security/penetration/test_api_security.py:961:9: F841 Local variable `many_args` is assigned to but never used
+    |
+960 |         # Test command with too many arguments
+961 |         many_args = ["echo"] + ["arg"] * 1000
+    |         ^^^^^^^^^ F841
+962 |         # Should have protection against argument overflow
+    |
+    = help: Remove assignment to unused variable `many_args`
+
+tests/security/penetration/test_api_security.py:998:9: F841 Local variable `result` is assigned to but never used
+     |
+ 997 |         # Test with negative timeout
+ 998 |         result = await subprocess_test_client.execute_command(
+     |         ^^^^^^ F841
+ 999 |             ["echo", "test"], timeout=-1
+1000 |         )
+     |
+     = help: Remove assignment to unused variable `result`
+
+tests/security/test_api_security.py:547:13: F841 Local variable `response` is assigned to but never used
+    |
+545 |             # Test with potentially valid data
+546 |             start_time = time.time()
+547 |             response = real_api_client.get(auth_endpoint)
+    |             ^^^^^^^^ F841
+548 |             valid_timings.append(time.time() - start_time)
+    |
+    = help: Remove assignment to unused variable `response`
+
+Found 345 errors.

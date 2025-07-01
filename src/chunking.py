@@ -190,7 +190,7 @@ class DocumentChunker:
                     f"Successfully loaded parser for '{lang}'"
                 )  # TODO: Convert f-string to logging format
 
-            except Exception as e:
+            except (ImportError, ModuleNotFoundError, AttributeError) as e:
                 self.logger.warning(
                     f"Failed to initialize parser for '{lang}': {e}. "
                     f"Will fall back to semantic chunking for this language."
@@ -755,7 +755,7 @@ class DocumentChunker:
                 chunk.char_count = len(chunk.content)
                 chunk.token_estimate = chunk.char_count // 4
 
-        except Exception:
+        except (AttributeError, RuntimeError, ValueError) as e:
             # Fall back to semantic chunking on error
             return self._semantic_chunking(content, language)
         else:
@@ -908,7 +908,7 @@ class DocumentChunker:
                     content, global_start, root_node, language
                 )
 
-        except Exception as e:
+        except (OSError, PermissionError, ValueError) as e:
             self.logger.debug(
                 f"AST-based splitting failed: {e}, falling back to line-based"
             )

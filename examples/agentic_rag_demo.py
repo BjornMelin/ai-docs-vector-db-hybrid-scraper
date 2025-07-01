@@ -96,7 +96,7 @@ async def demo_query_orchestration():
                     result_data = result["result"]
                     print(f"Analysis: {result_data.get('analysis', {})}")
                     orchestration_plan = result_data.get(
-                        'orchestration_plan', 'No plan available'
+                        "orchestration_plan", "No plan available"
                     )
                     print(f"Plan: {orchestration_plan}")
             else:
@@ -268,7 +268,7 @@ async def demo_agent_learning():
                 # Show session state evolution
                 history_count = len(deps.session_state.conversation_history)
                 print(f"  Conversation history length: {history_count}")
-                
+
                 metrics_count = len(deps.session_state.performance_metrics)
                 print(f"  Performance metrics count: {metrics_count}")
                 print(f"  Tool usage stats: {deps.session_state.tool_usage_stats}")

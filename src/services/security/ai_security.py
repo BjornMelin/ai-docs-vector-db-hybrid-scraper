@@ -258,7 +258,7 @@ class AISecurityValidator:
         # Basic sanitization
         sanitized_query = self._sanitize_query(query)
 
-        logger.debug("Search query validated and sanitized: %s", sanitized_query[:100])
+        logger.debug(f"Search query validated and sanitized: {sanitized_query[:100]}")
         return sanitized_query
 
     def _detect_threats(self, text: str) -> list[SecurityThreat]:
@@ -516,7 +516,7 @@ class AISecurityValidator:
         # Check for suspicious patterns
         for pattern in self.SUSPICIOUS_METADATA_PATTERNS:
             if re.search(pattern, key, re.IGNORECASE):
-                logger.warning("Rejecting suspicious metadata key: %s", key)
+                logger.warning(f"Rejecting suspicious metadata key: {key}")
                 return None
 
         # Remove dangerous characters and limit length

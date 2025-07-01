@@ -12,10 +12,23 @@ from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
+import httpx
 from pydantic import BaseModel, Field, field_validator
 
 
 logger = logging.getLogger(__name__)
+
+
+def _raise_no_collections_selected() -> None:
+    """Raise ValueError for no collections selected for search."""
+    msg = "No collections selected for search"
+    raise ValueError(msg)
+
+
+def _raise_insufficient_successful_collections(successful_count: int) -> None:
+    """Raise ValueError for insufficient successful collections."""
+    msg = f"Only {successful_count} collections succeeded, minimum required"
+    raise ValueError(msg)
 
 
 class SearchMode(str, Enum):
@@ -351,8 +364,7 @@ class FederatedSearchService:
             target_collections = await self._select_collections(request)
 
             if not target_collections:
-                msg = "No collections selected for search"
-                raise ValueError(msg)
+                _raise_no_collections_selected()
 
             # Execute searches across collections
             collection_results = await self._execute_federated_search(
@@ -372,11 +384,7 @@ class FederatedSearchService:
                 request.require_minimum_collections
                 and len(successful_results) < request.require_minimum_collections
             ):
-                msg = (
-                    f"Only {len(successful_results)} collections succeeded, "
-                    "minimum required"
-                )
-                raise ValueError(msg)
+                _raise_insufficient_successful_collections(len(successful_results))
 
             # Merge and deduplicate results
             merged_results = await self._merge_results(successful_results, request)
@@ -440,7 +448,7 @@ class FederatedSearchService:
 
         except Exception as e:
             total_search_time = (time.time() - start_time) * 1000
-            self._logger.error("Federated search failed", exc_info=True)
+            self._logger.exception("Federated search failed")
 
             # Return fallback result
             return FederatedSearchResult(
@@ -489,7 +497,7 @@ class FederatedSearchService:
 
             self._logger.info("Registered collection")
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError) as e:
             self._logger.exception("Failed to register collection {collection_name}")
             raise
 
@@ -508,7 +516,7 @@ class FederatedSearchService:
 
             self._logger.info("Unregistered collection")
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError) as e:
             self._logger.exception("Failed to unregister collection {collection_name}")
 
     async def _select_collections(self, request: FederatedSearchRequest) -> list[str]:
@@ -819,7 +827,12 @@ class FederatedSearchService:
                 has_errors=False,
             )
 
-        except Exception as e:
+        except (
+            httpx.HTTPError,
+            httpx.RequestError,
+            ConnectionError,
+            TimeoutError,
+        ) as e:
             search_time = (time.time() - start_time) * 1000
             self._update_collection_performance(collection_name, search_time, False)
 

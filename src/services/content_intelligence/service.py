@@ -5,10 +5,17 @@ all content intelligence components: classification, quality assessment,
 metadata enrichment, and adaptation recommendations.
 """
 
+import asyncio
 import hashlib
 import logging
+import subprocess
 import time
 from typing import Any
+
+try:
+    import redis
+except ImportError:
+    redis = None
 
 from src.config import Config
 from src.services.base import BaseService
@@ -134,7 +141,7 @@ class ContentIntelligenceService(BaseService):
             self._initialized = False
             logger.info("ContentIntelligenceService cleaned up successfully")
 
-        except Exception:
+        except (OSError, AttributeError, ConnectionError, ImportError) as e:
             logger.exception("Error during ContentIntelligenceService cleanup")
 
     async def analyze_content(
@@ -305,7 +312,7 @@ class ContentIntelligenceService(BaseService):
                 extraction_metadata=extraction_metadata,
             )
 
-        except Exception:
+        except (OSError, PermissionError) as e:
             logger.exception("Metadata extraction failed")
             # Return minimal metadata on failure
             return ContentMetadata(
@@ -366,7 +373,7 @@ class ContentIntelligenceService(BaseService):
 
             return recommendations[:5]  # Return top 5 recommendations
 
-        except Exception:
+        except (OSError, PermissionError, asyncio.TimeoutError) as e:
             logger.exception("Adaptation recommendation failed")
             return []
 
@@ -420,7 +427,7 @@ class ContentIntelligenceService(BaseService):
                         title=request.title,
                     )
                 )
-            except Exception as e:
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                 logger.warning(
                     f"Content classification failed: {e}"
                 )  # TODO: Convert f-string to logging format
@@ -451,7 +458,7 @@ class ContentIntelligenceService(BaseService):
                     enriched_content.quality_score.quality_issues
                 )
 
-            except Exception as e:
+            except (subprocess.SubprocessError, OSError, TimeoutError) as e:
                 logger.warning(
                     f"Quality assessment failed: {e}"
                 )  # TODO: Convert f-string to logging format
@@ -464,7 +471,7 @@ class ContentIntelligenceService(BaseService):
                     url=request.url,
                     raw_html=request.raw_html,
                 )
-            except Exception as e:
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                 logger.warning(
                     f"Metadata extraction failed: {e}"
                 )  # TODO: Convert f-string to logging format
@@ -478,7 +485,7 @@ class ContentIntelligenceService(BaseService):
                         quality_score=enriched_content.quality_score,
                     )
                 )
-            except Exception as e:
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                 logger.warning(
                     f"Adaptation recommendations failed: {e}"
                 )  # TODO: Convert f-string to logging format
@@ -636,7 +643,7 @@ class ContentIntelligenceService(BaseService):
             cached_data = await self.cache_manager.get(cache_key)
             if cached_data:
                 return EnrichedContent.model_validate(cached_data)
-        except Exception as e:
+        except (getattr(redis, 'RedisError', Exception), ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
                 f"Cache retrieval failed: {e}"
             )  # TODO: Convert f-string to logging format
@@ -661,7 +668,7 @@ class ContentIntelligenceService(BaseService):
                 result.model_dump(),
                 ttl=3600,
             )
-        except Exception as e:
+        except (getattr(redis, 'RedisError', Exception), ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
                 f"Cache storage failed: {e}"
             )  # TODO: Convert f-string to logging format

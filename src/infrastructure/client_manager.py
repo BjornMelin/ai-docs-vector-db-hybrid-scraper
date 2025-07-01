@@ -117,7 +117,7 @@ class ClientManager:
                     "Cannot initialize parallel processing system: "
                     "container not available"
                 )
-        except Exception:
+        except (ImportError, AttributeError, RuntimeError) as e:
             logger.exception("Failed to initialize parallel processing system")
             # Continue without parallel processing
             self._parallel_processing_system = None
@@ -266,8 +266,8 @@ class ClientManager:
             raise ValueError(msg)
         try:
             yield await getters[client_type]()
-        except Exception:
-            logger.exception("Error using %s client", client_type)
+        except (ConnectionError, TimeoutError, APIError, ValueError, RuntimeError) as e:
+            logger.exception("Error using {client_type} client")
             raise
 
     async def __aenter__(self):

@@ -82,9 +82,7 @@ class SecurityTestRunner:
         }
 
         # Run selected categories or all
-        categories_to_run = (
-            test_categories if test_categories else available_categories.keys()
-        )
+        categories_to_run = test_categories or available_categories.keys()
 
         for category in categories_to_run:
             if category in available_categories:

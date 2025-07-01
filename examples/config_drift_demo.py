@@ -213,7 +213,7 @@ def _display_drift_summary(detector: DriftDetector) -> None:
 
     summary = detector.get_drift_summary()
 
-    status = 'Enabled' if summary['detection_enabled'] else 'Disabled'
+    status = "Enabled" if summary["detection_enabled"] else "Disabled"
     print(f"🟢 Detection Status: {status}")
     print(f"📁 Monitored Sources: {summary['monitored_sources']}")
     print(f"📸 Snapshots Stored: {summary['snapshots_stored']}")

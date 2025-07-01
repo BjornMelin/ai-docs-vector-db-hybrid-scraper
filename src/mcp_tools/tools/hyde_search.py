@@ -42,7 +42,7 @@ def register_tools(mcp, client_manager: ClientManager):
         ctx: Context = None,
     ) -> dict[str, Any]:
         """Perform HyDE search by generating hypothetical documents.
-        
+
         Uses their embeddings for improved semantic search.
 
         Implements HyDE (Hypothetical Document Embeddings) with autonomous document
@@ -71,7 +71,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Validate query
             security_validator = SecurityValidator.from_unified_config()
-            validated_query = security_validator.validate_search_query(query)
+            validated_query = security_validator.validate_query_string(query)
 
             # Get services
             qdrant_service = await client_manager.get_qdrant_service()
@@ -286,7 +286,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     if iteration_result["hyde_metrics"][
                         "average_quality"
                     ] >= quality_threshold and (
-                        not best_result
+                        best_result is None
                         or iteration_result["hyde_metrics"]["average_quality"]
                         > best_result["hyde_metrics"]["average_quality"]
                     ):
@@ -367,7 +367,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Validate query
             security_validator = SecurityValidator.from_unified_config()
-            validated_query = security_validator.validate_search_query(query)
+            validated_query = security_validator.validate_query_string(query)
 
             # Get LLM client
             llm_client = await client_manager.get_llm_client()
@@ -627,7 +627,7 @@ async def _fallback_search(
             },
         }
 
-    except Exception as e:
+    except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
         return {
             "success": False,
             "error": f"Both HyDE and fallback search failed: {e}",

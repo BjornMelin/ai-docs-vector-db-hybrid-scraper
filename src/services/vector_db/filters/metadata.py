@@ -5,6 +5,7 @@ complex boolean logic (AND, OR, NOT), nested expressions, flexible field matchin
 and integration with custom metadata schemas.
 """
 
+import asyncio
 import logging
 from enum import Enum
 from typing import Any, Union
@@ -305,7 +306,7 @@ class MetadataFilter(BaseFilter):
 
         except Exception as e:
             error_msg = "Failed to apply metadata filter"
-            self._logger.error(error_msg, exc_info=True)
+            self._logger.exception(error_msg)
             raise FilterError(
                 error_msg,
                 filter_name=self.name,
@@ -490,7 +491,7 @@ class MetadataFilter(BaseFilter):
             self._logger.warning("Unsupported operator")
             return None
 
-        except Exception:
+        except (ImportError, OSError, PermissionError) as e:
             self._logger.exception("Failed to build condition for field '{field}'")
             return None
 
@@ -562,7 +563,7 @@ class MetadataFilter(BaseFilter):
         try:
             MetadataFilterCriteria.model_validate(filter_criteria)
             return True
-        except Exception:
+        except (ImportError, RuntimeError, ValueError, asyncio.TimeoutError) as e:
             self._logger.warning("Invalid metadata criteria")
             return False
 

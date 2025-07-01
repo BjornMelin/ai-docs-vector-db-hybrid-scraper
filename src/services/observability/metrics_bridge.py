@@ -8,6 +8,8 @@ trace and metric data while maintaining backward compatibility.
 import logging
 from typing import Any
 
+import httpx
+
 from opentelemetry import metrics
 from opentelemetry.metrics import Counter, Histogram, UpDownCounter
 
@@ -220,7 +222,7 @@ class OpenTelemetryMetricsBridge:
                 self.prometheus_registry._metrics["search_duration"].labels(
                     collection=collection, query_type=query_type
                 ).observe(duration_ms / 1000)  # Convert to seconds for Prometheus
-            except Exception as e:
+            except (httpx.HTTPError, httpx.TimeoutException, ConnectionError) as e:
                 logger.warning(
                     f"Failed to update Prometheus metrics: {e}"
                 )  # TODO: Convert f-string to logging format
@@ -396,7 +398,7 @@ class OpenTelemetryMetricsBridge:
                     elif hasattr(instrument, "set"):
                         instrument.set(value, labels)
 
-            except Exception as e:
+            except (ValueError, TypeError, UnicodeDecodeError) as e:
                 logger.warning(
                     f"Failed to record metric {metric_name}: {e}"
                 )  # TODO: Convert f-string to logging format

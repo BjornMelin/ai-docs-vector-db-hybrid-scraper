@@ -143,7 +143,7 @@ class TestContentClassifier:
         A: We accept credit cards, PayPal, and bank transfers.
 
         ## Q: How can I contact support?
-        A: You can reach our support team at support@example.com or through 
+        A: You can reach our support team at support@example.com or through
         the chat widget.
 
         ## Q: Is there a mobile app available?
@@ -206,12 +206,12 @@ class TestContentClassifier:
 
         Published on March 15, 2024 by Dr. Jane Smith
 
-        Artificial Intelligence is revolutionizing the healthcare industry in ways 
+        Artificial Intelligence is revolutionizing the healthcare industry in ways
         we never imagined.
-        From diagnostic imaging to drug discovery, AI is making healthcare more 
+        From diagnostic imaging to drug discovery, AI is making healthcare more
         precise, efficient, and accessible.
 
-        In this post, I'll explore the latest developments and share my thoughts on 
+        In this post, I'll explore the latest developments and share my thoughts on
         what lies ahead.
 
         ## Current Applications
@@ -222,7 +222,7 @@ class TestContentClassifier:
         - Personalized treatment plans
         - Predictive analytics for patient outcomes
 
-        What do you think about these developments? Share your thoughts in the 
+        What do you think about these developments? Share your thoughts in the
         comments below.
         """
         url = "https://healthblog.example.com/ai-in-healthcare"
@@ -236,12 +236,12 @@ class TestContentClassifier:
     async def test_classify_forum_content(self, classifier):
         """Test classification of forum content."""
         content = """
-        **Topic: Need help with Python error - TypeError: 'NoneType' object is not 
+        **Topic: Need help with Python error - TypeError: 'NoneType' object is not
         subscriptable**
 
         Posted by user123 - 2 hours ago
 
-        Hi everyone, I'm getting this error in my Python code and can't figure out 
+        Hi everyone, I'm getting this error in my Python code and can't figure out
         what's wrong:
 
         ```
@@ -259,7 +259,7 @@ class TestContentClassifier:
 
         **Reply by expert_dev - 1 hour ago**
 
-        This error occurs when you're trying to access an element of a variable 
+        This error occurs when you're trying to access an element of a variable
         that is None.
         Check if your `result` variable is actually returning data.
 
@@ -267,7 +267,7 @@ class TestContentClassifier:
 
         **Reply by user123 - 30 minutes ago**
 
-        @expert_dev Thanks! That was exactly the issue. I was not handling the case 
+        @expert_dev Thanks! That was exactly the issue. I was not handling the case
         where the function returns None.
         """
         url = "https://forum.example.com/thread/12345"
@@ -283,18 +283,18 @@ class TestContentClassifier:
         content = """
         # Tech Giant Announces Breakthrough in Quantum Computing
 
-        NEW YORK, March 15, 2024 - A major technology company announced today that 
-        it has achieved a significant breakthrough in quantum computing, potentially 
+        NEW YORK, March 15, 2024 - A major technology company announced today that
+        it has achieved a significant breakthrough in quantum computing, potentially
         bringing quantum computers closer to mainstream adoption.
 
-        The announcement was made during the company's annual developer conference, 
-        where CEO John Doe revealed that their new quantum processor can perform 
+        The announcement was made during the company's annual developer conference,
+        where CEO John Doe revealed that their new quantum processor can perform
         certain calculations 1000 times faster than traditional computers.
 
-        "This represents a major milestone in our quantum computing research," said 
+        "This represents a major milestone in our quantum computing research," said
         Doe during his keynote speech.
 
-        Industry experts are calling this development a game-changer for fields 
+        Industry experts are calling this development a game-changer for fields
         including cryptography,
         drug discovery, and financial modeling.
 
@@ -431,7 +431,7 @@ class TestContentClassifier:
         """Test classification of content that doesn't fit clear categories."""
         content = """
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
-        incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis 
+        incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
         nostrud
         exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
         """

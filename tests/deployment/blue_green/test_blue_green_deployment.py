@@ -589,7 +589,7 @@ class GradualTrafficRouter:
                 step_results.append(step_result)
 
                 # Auto-rollback if configured
-                if config.get("auto_rollback", False):
+                if config.get("auto_rollback"):
                     return {
                         "success": False,
                         "error_detected": True,

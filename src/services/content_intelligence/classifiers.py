@@ -513,7 +513,7 @@ class ContentClassifier:
                         + semantic_scores[content_type] * blend_ratio
                     )
             reasoning_parts.append("semantic analysis applied")
-        except Exception:
+        except (OSError, PermissionError) as e:
             logger.warning("Semantic analysis failed")
 
         return type_scores
@@ -650,7 +650,7 @@ class ContentClassifier:
 
             return scores
 
-        except Exception:
+        except (OSError, PermissionError) as e:
             logger.exception("Semantic classification failed")
             return {}
 
@@ -678,7 +678,7 @@ class ContentClassifier:
                 return 0.0
 
             return dot_product / (magnitude1 * magnitude2)
-        except Exception:
+        except (OSError, PermissionError) as e:
             return 0.0
 
     def _detect_code_blocks(self, content: str) -> bool:

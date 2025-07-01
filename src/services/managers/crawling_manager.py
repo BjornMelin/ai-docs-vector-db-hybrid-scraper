@@ -55,7 +55,7 @@ class CrawlingManager:
 
         except Exception as e:
             logger.exception(
-                f"Failed to initialize CrawlingManager: {e}"
+                "Failed to initialize CrawlingManager: "
             )  # TODO: Convert f-string to logging format
             msg = f"Failed to initialize crawling manager: {e}"
             raise CrawlServiceError(msg) from e
@@ -101,7 +101,7 @@ class CrawlingManager:
             return await self._core_manager.scrape_url(url, preferred_provider)
         except Exception as e:
             logger.exception(
-                f"URL scraping failed for {url}: {e}"
+                "URL scraping failed for : {e}"
             )  # TODO: Convert f-string to logging format
             return {
                 "success": False,
@@ -144,7 +144,7 @@ class CrawlingManager:
             )
         except Exception as e:
             logger.exception(
-                f"Site crawling failed for {url}: {e}"
+                "Site crawling failed for : {e}"
             )  # TODO: Convert f-string to logging format
             return {
                 "success": False,
@@ -172,7 +172,7 @@ class CrawlingManager:
 
         try:
             return await self._core_manager.get_recommended_tool(url)
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             logger.warning(
                 f"Tool recommendation failed for {url}: {e}"
             )  # TODO: Convert f-string to logging format
@@ -201,7 +201,7 @@ class CrawlingManager:
 
         try:
             return await self._core_manager.map_url(url, include_subdomains)
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             logger.warning(
                 f"URL mapping failed for {url}: {e}"
             )  # TODO: Convert f-string to logging format
@@ -226,7 +226,7 @@ class CrawlingManager:
 
         try:
             return self._core_manager.get_metrics()
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Failed to get crawling metrics: {e}"
             )  # TODO: Convert f-string to logging format
@@ -246,7 +246,7 @@ class CrawlingManager:
 
         try:
             return self._core_manager.get_provider_info()
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Failed to get provider info: {e}"
             )  # TODO: Convert f-string to logging format
@@ -266,7 +266,7 @@ class CrawlingManager:
 
         try:
             return self._core_manager.get_tier_metrics()
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Failed to get tier metrics: {e}"
             )  # TODO: Convert f-string to logging format
@@ -290,7 +290,7 @@ class CrawlingManager:
                 status["providers"] = self.get_provider_info()
                 status["metrics"] = self.get_metrics()
                 status["tier_metrics"] = self.get_tier_metrics()
-            except Exception as e:
+            except (ValueError, TypeError, UnicodeDecodeError) as e:
                 logger.warning(
                     f"Failed to get crawling status: {e}"
                 )  # TODO: Convert f-string to logging format
@@ -363,7 +363,7 @@ class CrawlingManager:
 
         except Exception as e:
             logger.exception(
-                f"Content extraction failed for {url}: {e}"
+                "Content extraction failed for : {e}"
             )  # TODO: Convert f-string to logging format
             return {
                 "success": False,
@@ -425,7 +425,7 @@ class CrawlingManager:
 
         except Exception as e:
             logger.exception(
-                f"Bulk scraping failed: {e}"
+                "Bulk scraping failed: "
             )  # TODO: Convert f-string to logging format
             # Return error results for all URLs
             return [

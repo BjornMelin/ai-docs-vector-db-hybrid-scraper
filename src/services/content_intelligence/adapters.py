@@ -248,7 +248,7 @@ class SiteAdapter:
             domain = parsed.netloc.lower()
             # Remove 'www.' prefix
             return domain.removeprefix("www.")
-        except Exception:
+        except (AttributeError, TypeError, ValueError) as e:
             return ""
 
     def _detect_content_patterns(self, content: str) -> list[str]:

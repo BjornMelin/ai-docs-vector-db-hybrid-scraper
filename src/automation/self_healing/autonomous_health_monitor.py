@@ -111,7 +111,7 @@ class FailurePredictionEngine:
                 prediction = await predictor(metrics)
                 if prediction and prediction.risk_level != FailureRiskLevel.MINIMAL:
                     predictions.append(prediction)
-            except Exception as e:
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                 logger.warning(f"Failed to generate prediction for {failure_type}: {e}")
 
         return sorted(
@@ -447,7 +447,7 @@ class FailurePredictionEngine:
         return 60  # 1 hour
 
     def _calculate_risk_level(
-        self, current_value: float, trend: float, time_to_failure: int | None
+        self, current_value: float, _trend: float, time_to_failure: int | None
     ) -> FailureRiskLevel:
         """Calculate risk level based on current value, trend, and time to failure."""
         if current_value > 95 or (time_to_failure and time_to_failure < 5):
@@ -624,7 +624,7 @@ class AutonomousHealthMonitor:
 
         try:
             await self.continuous_monitoring_loop()
-        except Exception:
+        except (TimeoutError, OSError, PermissionError) as e:
             logger.exception("Health monitoring loop failed")
             self.monitoring_active = False
             raise
@@ -895,8 +895,7 @@ class AutonomousHealthMonitor:
             f"DB Connections: {metrics.database_connections}",
             (
                 f"Active Predictions: {len(predictions)} | "
-                f"High Risk: {len([p for p in predictions "
-                f"if p.risk_level == FailureRiskLevel.HIGH])}"
+                f"High Risk: {len([p for p in predictions if p.risk_level == FailureRiskLevel.HIGH])}"
             ),
             f"System Stability: {insights['system_stability']}",
             "=== End Summary ===",

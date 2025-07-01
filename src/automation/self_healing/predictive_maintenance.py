@@ -436,7 +436,7 @@ class ComponentHealthAnalyzer:
         return ComponentHealth.CRITICAL
 
     def _calculate_degradation_rate(
-        self, component: str, current_health_score: float
+        self, component: str, _current_health_score: float
     ) -> float:
         """Calculate health degradation rate."""
         if (
@@ -1007,7 +1007,6 @@ class PredictiveMaintenanceScheduler:
                 f"Maintenance execution completed: {execution.execution_id} - "
                 f"Success: {success}"
             )
-
             return execution
 
         except Exception as e:

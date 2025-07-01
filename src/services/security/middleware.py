@@ -15,6 +15,7 @@ applications with comprehensive protection against various attack vectors:
 import hashlib
 import json
 import logging
+import re
 import time
 from collections.abc import Callable
 from typing import Any
@@ -349,8 +350,6 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         # Check for SQL injection patterns
         query_lower = query_string.lower()
         for pattern in self.suspicious_patterns:
-            import re
-
             if re.search(pattern, query_lower, re.IGNORECASE):
                 self.security_monitor.log_suspicious_activity(
                     "sql_injection_attempt", {"query": query_string, "pattern": pattern}
@@ -567,7 +566,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             response.headers[header] = value
 
     def _create_security_error_response(
-        self, exception: HTTPException, request: Request
+        self, exception: HTTPException, _request: Request
     ) -> JSONResponse:
         """Create standardized security error response.
 
@@ -618,7 +617,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             reason: Reason for blocking
         """
         self.blocked_ips.add(ip_address)
-        logger.warning("Blocked IP address %s: %s", ip_address, reason)
+        logger.warning(f"Blocked IP address {ip_address}: {reason}")
 
         # Log blocking event
         self.security_monitor.log_security_event(
@@ -636,7 +635,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         """
         if ip_address in self.blocked_ips:
             self.blocked_ips.remove(ip_address)
-            logger.info("Unblocked IP address %s", ip_address)
+            logger.info(f"Unblocked IP address {ip_address}")
             return True
         return False
 

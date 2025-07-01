@@ -270,7 +270,7 @@ class ModeAwareServiceFactory:
             try:
                 await service.cleanup()
                 logger.debug("Cleaned up service '%s'", name)
-            except Exception:
+            except (OSError, AttributeError, ConnectionError, ImportError) as e:
                 logger.exception("Error cleaning up service '%s'", name)
 
         self._service_instances.clear()

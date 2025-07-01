@@ -15,6 +15,14 @@ from typing import Any, Dict, List, Optional
 
 import redis.asyncio as redis
 
+# Imports to avoid circular dependencies
+try:
+    from src.config import Config
+    from src.services.search.search import QdrantSearch
+except ImportError:
+    Config = None
+    QdrantSearch = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -209,9 +217,9 @@ class PerformanceCache:
         if not self._initialized:
             await self.initialize()
 
-        # Import here to avoid circular dependencies
-        from src.services.search.search import QdrantSearch
-        from src.config import Config
+        if Config is None or QdrantSearch is None:
+            logger.warning("Required imports not available for cache warming")
+            return
 
         try:
             config = Config()

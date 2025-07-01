@@ -5,6 +5,7 @@ absolute and relative date filtering, content freshness scoring, and
 time-based content relevance analysis.
 """
 
+import asyncio
 import logging
 import math
 import re
@@ -213,7 +214,7 @@ class TemporalFilter(BaseFilter):
 
         except Exception as e:
             error_msg = f"Failed to apply temporal filter: {e}"
-            self._logger.error(error_msg, exc_info=True)
+            self._logger.exception(error_msg)
             raise FilterError(
                 error_msg,
                 filter_name=self.name,
@@ -397,7 +398,7 @@ class TemporalFilter(BaseFilter):
         try:
             TemporalCriteria.model_validate(filter_criteria)
             return True
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             self._logger.warning(
                 f"Invalid temporal criteria: {e}"
             )  # TODO: Convert f-string to logging format
@@ -520,7 +521,7 @@ class TemporalFilter(BaseFilter):
             if match:
                 try:
                     return calculator(match)
-                except Exception as e:
+                except (OSError, PermissionError, ValueError) as e:
                     self._logger.warning(
                         f"Failed to calculate relative date for '{relative_date_str}': {e}"
                     )

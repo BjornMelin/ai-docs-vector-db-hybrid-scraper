@@ -290,7 +290,7 @@ def retry_async(
                     )
 
                     await asyncio.sleep(delay)
-                except Exception:
+                except (TimeoutError, OSError, PermissionError) as e:
                     # Non-retryable error
                     logger.exception("Non-retryable error in {func.__name__}")
                     raise
@@ -838,9 +838,9 @@ def handle_mcp_errors(func: Callable[..., Any]) -> Callable[..., Any]:
             error_type = error_type_map.get(type(e), "general")
             logger.warning("{error_type.capitalize()} error in {func.__name__}")
             return safe_response(False, error=str(e), error_type=error_type)
-        except Exception:
+        except (ConnectionError, OSError, PermissionError) as e:
             # Mask internal errors for security
-            logger.error("Unexpected error in {func.__name__}", exc_info=True)
+            logger.exception("Unexpected error in {func.__name__}")
             return safe_response(
                 False, error="Internal server error", error_type="internal"
             )

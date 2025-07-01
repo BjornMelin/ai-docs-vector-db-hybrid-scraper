@@ -147,7 +147,7 @@ async def main():
 
             return True
 
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError, TimeoutError) as e:
         print(f"❌ Integration failed: {e}")
         traceback.print_exc()
         return False

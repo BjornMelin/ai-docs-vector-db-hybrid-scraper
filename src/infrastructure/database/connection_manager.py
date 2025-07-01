@@ -110,7 +110,7 @@ class DatabaseManager:
                 self.config.database.pool_size,
             )
 
-        except Exception:
+        except (OSError, AttributeError, ConnectionError, ImportError) as e:
             logger.exception("Failed to initialize enterprise database manager")
             raise
 
@@ -131,7 +131,7 @@ class DatabaseManager:
 
             logger.info("Enterprise database manager cleaned up")
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError) as e:
             logger.exception("Error during database cleanup")
 
     @asynccontextmanager

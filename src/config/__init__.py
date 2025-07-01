@@ -391,7 +391,7 @@ def retry_config_operation(*args: Any, **kwargs: Any) -> None:
     """Mock retry operation."""
 
 
-def get_config_reloader():
+def get_config_reloader() -> ConfigManager:
     """Mock config reloader getter."""
     return ConfigManager()
 

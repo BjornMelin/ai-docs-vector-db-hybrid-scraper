@@ -123,7 +123,7 @@ class DynamicToolDiscovery(BaseAgent):
             "selection and orchestration."
         )
 
-    async def initialize_tools(self, deps: BaseAgentDependencies) -> None:
+    async def initialize_tools(self, _deps: BaseAgentDependencies) -> None:
         """Initialize tool discovery capabilities.
 
         Args:
@@ -132,11 +132,7 @@ class DynamicToolDiscovery(BaseAgent):
         # Check if we're in fallback mode
         fallback_reason = getattr(self, "_fallback_reason", None)
         if fallback_reason:
-            logger.info(
-                "DynamicToolDiscovery tools initialized in fallback mode "
-                "(reason: %s)",
-                fallback_reason
-            )
+            logger.info(f"DynamicToolDiscovery tools initialized in fallback mode (reason: {fallback_reason})")
         else:
             logger.info("DynamicToolDiscovery tools initialized (discovery-based)")
 
@@ -155,8 +151,7 @@ class DynamicToolDiscovery(BaseAgent):
         # Initialize performance monitoring
         await self._initialize_performance_tracking()
 
-        logger.info(
-            "DynamicToolDiscovery initialized with %d tools", len(self.discovered_tools)
+        logger.info(f"DynamicToolDiscovery initialized with {len(self.discovered_tools} tools")
         )
 
     async def _scan_available_tools(self, _deps: BaseAgentDependencies) -> None:
@@ -380,7 +375,7 @@ class DynamicToolDiscovery(BaseAgent):
                     asyncio.get_event_loop().time().__str__()
                 )
 
-            logger.debug("Updated performance metrics for tool: %s", tool_name)
+            logger.debug(f"Updated performance metrics for tool: {tool_name}")
 
     def _calculate_average_metrics(
         self, metrics_list: list[ToolMetrics]
@@ -543,7 +538,7 @@ class DynamicToolDiscovery(BaseAgent):
         return chains
 
     async def _fallback_discover_tools(
-        self, task_description: str, requirements: dict[str, Any]
+        self, task_description: str, _requirements: dict[str, Any]
     ) -> list[ToolCapability]:
         """Fallback tool discovery when agent is in fallback mode.
 
@@ -555,7 +550,7 @@ class DynamicToolDiscovery(BaseAgent):
             List of mock suitable tools
         """
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
-        logger.info("Using fallback tool discovery (reason: %s)", fallback_reason)
+        logger.info(f"Using fallback tool discovery (reason: {fallback_reason})")
 
         # Create mock tools based on task analysis
         mock_tools = []
@@ -656,7 +651,7 @@ class DynamicToolDiscovery(BaseAgent):
             Mock tool recommendations
         """
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
-        logger.info("Using fallback tool recommendations (reason: %s)", fallback_reason)
+        logger.info(f"Using fallback tool recommendations (reason: {fallback_reason})")
 
         # Get fallback tools
         fallback_tools = await self._fallback_discover_tools(task_type, constraints)

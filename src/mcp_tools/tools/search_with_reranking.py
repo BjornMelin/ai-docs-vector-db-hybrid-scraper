@@ -4,6 +4,7 @@ Provides intelligent search result reranking with ML-powered quality assessment,
 autonomous ranking optimization, and multi-criteria result evaluation.
 """
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -68,7 +69,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Validate query
             security_validator = SecurityValidator.from_unified_config()
-            validated_query = security_validator.validate_search_query(query)
+            validated_query = security_validator.validate_query_string(query)
 
             # Get services
             qdrant_service = await client_manager.get_qdrant_service()
@@ -187,7 +188,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Validate query
             security_validator = SecurityValidator.from_unified_config()
-            validated_query = security_validator.validate_search_query(query)
+            validated_query = security_validator.validate_query_string(query)
 
             # Get services
             qdrant_service = await client_manager.get_qdrant_service()
@@ -310,11 +311,11 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Validate queries
             security_validator = SecurityValidator.from_unified_config()
-            validated_query = security_validator.validate_search_query(query)
+            validated_query = security_validator.validate_query_string(query)
             validated_context = None
 
             if context_query:
-                validated_context = security_validator.validate_search_query(
+                validated_context = security_validator.validate_query_string(
                     context_query
                 )
 
@@ -1127,7 +1128,7 @@ async def _apply_contextual_assessment(
                     context_relevance = _calculate_cosine_similarity(
                         context_embeddings, result_embedding
                     )
-                except Exception as e:
+                except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                     logger.warning(f"Failed to calculate context relevance: {e}")
 
         # Add contextual metadata

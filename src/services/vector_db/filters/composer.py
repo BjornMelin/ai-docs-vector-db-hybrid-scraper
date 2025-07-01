@@ -223,7 +223,7 @@ class FilterComposer(BaseFilter):
 
         except Exception as e:
             error_msg = "Failed to apply filter composition"
-            self._logger.error(error_msg, exc_info=True)
+            self._logger.exception(error_msg)
             raise FilterError(
                 error_msg,
                 filter_name=self.name,
@@ -283,7 +283,7 @@ class FilterComposer(BaseFilter):
                 total_execution_time_ms=execution_time_ms,
             )
 
-        except Exception as e:
+        except (RuntimeError, ValueError, TypeError) as e:
             execution_time_ms = (time.time() - start_time) * 1000
 
             return CompositionResult(
@@ -340,7 +340,7 @@ class FilterComposer(BaseFilter):
                     try:
                         result = await task
                         results[name] = result
-                    except Exception:
+                    except (TimeoutError, OSError, PermissionError) as e:
                         self._logger.exception("Filter {name} failed")
                         if criteria.fail_fast:
                             raise
@@ -379,7 +379,7 @@ class FilterComposer(BaseFilter):
                     msg = f"Required filter {filter_ref.filter_instance.name} failed"
                     raise FilterError(msg)
 
-            except Exception:
+            except (OSError, PermissionError) as e:
                 self._logger.exception(
                     "Filter {filter_ref.filter_instance.name} failed"
                 )
@@ -614,7 +614,7 @@ class FilterComposer(BaseFilter):
         try:
             FilterCompositionCriteria.model_validate(filter_criteria)
             return True
-        except Exception:
+        except (ImportError, OSError, PermissionError) as e:
             self._logger.warning("Invalid composition criteria")
             return False
 

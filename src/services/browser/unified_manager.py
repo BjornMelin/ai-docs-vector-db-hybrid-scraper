@@ -10,6 +10,7 @@ import time
 from typing import Any, Literal
 from urllib.parse import urlparse
 
+import redis
 from pydantic import BaseModel, Field
 
 from src.config import Config
@@ -228,7 +229,7 @@ class UnifiedBrowserManager(BaseService):
         if self._monitoring_enabled and self._monitor:
             try:
                 await self._monitor.stop_monitoring()
-            except Exception:
+            except (ConnectionError, OSError, RuntimeError, TimeoutError) as e:
                 logger.warning("Failed to stop monitoring during cleanup")
 
         if self._client_manager:
@@ -308,7 +309,7 @@ class UnifiedBrowserManager(BaseService):
                                 response_time_ms=execution_time,
                                 cache_hit=True,
                             )
-                        except Exception:
+                        except (ConnectionError, OSError, PermissionError) as e:
                             logger.warning(
                                 "Failed to record cache hit monitoring metrics"
                             )
@@ -333,7 +334,7 @@ class UnifiedBrowserManager(BaseService):
                         ),
                         failed_tiers=[],
                     )
-            except Exception:
+            except (ConnectionError, RuntimeError, TimeoutError, ValueError) as e:
                 logger.warning(
                     "Cache error for {request.url}, continuing with fresh scrape"
                 )
@@ -370,7 +371,7 @@ class UnifiedBrowserManager(BaseService):
                         response_time_ms=execution_time,
                         cache_hit=False,  # Fresh scrape
                     )
-                except Exception:
+                except (ConnectionError, OSError, PermissionError) as e:
                     logger.warning("Failed to record monitoring metrics")
 
             # Create unified response
@@ -421,7 +422,7 @@ class UnifiedBrowserManager(BaseService):
                     logger.debug(
                         f"Cached browser result for {request.url} (tier: {tier_used})"
                     )
-                except Exception:
+                except (ConnectionError, OSError, PermissionError) as e:
                     logger.warning("Failed to cache result for {request.url}")
 
             logger.info(
@@ -442,7 +443,7 @@ class UnifiedBrowserManager(BaseService):
                         response_time_ms=execution_time,
                         error_type=type(e).__name__,
                     )
-                except Exception:
+                except (ConnectionError, OSError, PermissionError) as e:
                     logger.warning("Failed to record error monitoring metrics")
 
             logger.exception("Unified scraping failed for {request.url}")
@@ -529,7 +530,7 @@ class UnifiedBrowserManager(BaseService):
         if self._automation_router:
             try:
                 router_metrics = self._automation_router.get_metrics()
-            except Exception:
+            except (ConnectionError, OSError, PermissionError) as e:
                 logger.warning("Failed to get router metrics")
 
         # Calculate overall health
@@ -553,7 +554,7 @@ class UnifiedBrowserManager(BaseService):
         if self._monitoring_enabled and self._monitor:
             try:
                 monitoring_health = self._monitor.get_system_health()
-            except Exception as e:
+            except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
                 logger.warning("Failed to get monitoring health")
                 monitoring_health = {"error": str(e)}
 

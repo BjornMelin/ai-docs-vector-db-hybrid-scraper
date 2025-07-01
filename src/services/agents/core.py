@@ -155,12 +155,12 @@ class BaseAgent(ABC):
                 )
                 self._fallback_reason = None
                 logger.info(f"Agent {name} initialized with Pydantic-AI")
-            except Exception as e:
+            except (ValueError, TypeError, RuntimeError, ImportError) as e:
                 logger.warning(
                     "Failed to initialize Pydantic-AI agent %s: %s. "
                     "Using fallback mode.",
                     name,
-                    e
+                    e,
                 )
                 self.agent = None
                 self._fallback_reason = f"initialization_failed: {e}"
@@ -255,22 +255,12 @@ class BaseAgent(ABC):
                 },
             )
 
-            return {
-                "success": True,
-                "result": result.data,
-                "metadata": {
-                    "agent": self.name,
-                    "execution_time": execution_time,
-                    "model": self.model,
-                },
-            }
-
         except Exception as e:
             self.error_count += 1
             execution_time = time.time() - start_time
             self.total_execution_time += execution_time
 
-            logger.error(f"Agent {self.name} execution failed: {e}", exc_info=True)
+            logger.exception("Agent {self.name} execution failed: ")
 
             return {
                 "success": False,
@@ -281,12 +271,22 @@ class BaseAgent(ABC):
                     "error_type": type(e).__name__,
                 },
             }
+        else:
+            return {
+                "success": True,
+                "result": result.data,
+                "metadata": {
+                    "agent": self.name,
+                    "execution_time": execution_time,
+                    "model": self.model,
+                },
+            }
 
     async def _fallback_execute(
         self,
         task: str,
-        deps: BaseAgentDependencies,
-        context: dict[str, Any] | None = None,
+        _deps: BaseAgentDependencies,
+        _context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Fallback execution when Pydantic-AI is not available.
 
@@ -299,11 +299,7 @@ class BaseAgent(ABC):
             Fallback execution result
         """
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
-        logger.info(
-            "Using fallback execution for agent %s (reason: %s)",
-            self.name,
-            fallback_reason
-        )
+        logger.info(f"Using fallback execution for agent {self.name} (reason: {fallback_reason})")
 
         # Enhanced fallback logic with context-aware responses
         if "search" in task.lower():

@@ -365,7 +365,7 @@ class BackgroundTaskManager:
                 if self._shutdown_event.is_set():
                     break
                 continue
-            except Exception:
+            except (OSError, PermissionError) as e:
                 logger.exception("Worker {worker_name} error")
 
         logger.debug(

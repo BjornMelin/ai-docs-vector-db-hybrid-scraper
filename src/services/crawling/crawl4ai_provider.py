@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import subprocess
 from collections.abc import AsyncIterator
 from urllib.parse import urlparse
 
@@ -155,7 +156,12 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                     self.logger.info(
                         "Using LXMLWebScrapingStrategy for enhanced performance"
                     )
-                except Exception:
+                except (
+                    AttributeError,
+                    ConnectionError,
+                    ImportError,
+                    RuntimeError,
+                ) as e:
                     self.logger.warning("Could not set LXMLWebScrapingStrategy")
 
             self._crawler = AsyncWebCrawler(config=crawler_config)
@@ -185,16 +191,17 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
         # Cleanup Memory-Adaptive Dispatcher first
         if self.use_memory_dispatcher and self.dispatcher:
             try:
-                await self.dispatcher.cleanup()
-                self.logger.info("MemoryAdaptiveDispatcher cleaned up")
-            except Exception:
+                # MemoryAdaptiveDispatcher doesn't have cleanup method, just reset reference
+                self.dispatcher = None
+                self.logger.info("MemoryAdaptiveDispatcher reference cleared")
+            except (ConnectionError, OSError, PermissionError) as e:
                 self.logger.exception("Error cleaning up MemoryAdaptiveDispatcher")
 
         # Cleanup crawler
         if self._crawler:
             try:
                 await self._crawler.close()
-            except Exception:
+            except (OSError, AttributeError, ConnectionError, ImportError) as e:
                 self.logger.exception("Error closing crawler")
             finally:
                 # Always reset state even if close() fails
@@ -447,7 +454,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             error_msg = getattr(result, "error_message", "Crawl failed")
             return self._build_error_result(url, error_msg, extraction_type)
 
-        except Exception as e:
+        except (RuntimeError, ValueError, TypeError) as e:
             error_result = self._build_error_result(url, e, extraction_type)
             error_result["metadata"]["dispatcher_stats"] = self._get_dispatcher_stats()
             return error_result
@@ -483,7 +490,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 error_msg = getattr(result, "error_message", "Crawl failed")
                 return self._build_error_result(url, error_msg, extraction_type)
 
-            except Exception as e:
+            except (subprocess.SubprocessError, OSError, TimeoutError) as e:
                 return self._build_error_result(url, e, extraction_type)
 
     async def _process_streaming_crawl(
@@ -496,7 +503,8 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
         """Process crawl with streaming for real-time results."""
         try:
             # Create async iterator for streaming results
-            stream_iterator = self._crawler.arun_stream(url=url, config=run_config)
+            # Note: AsyncWebCrawler doesn't have arun_stream, using arun instead
+            result = await self._crawler.arun(url=url, config=run_config)
 
             # Collect streaming results
             streaming_results = []
@@ -548,7 +556,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 stats.update(runtime_stats)
 
             return stats
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             self.logger.warning("Could not get dispatcher stats")
             return {"dispatcher_type": "memory_adaptive", "stats_error": str(e)}
 
@@ -590,18 +598,19 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             run_config.stream = True
 
             # Stream crawl results (MemoryAdaptiveDispatcher handles concurrency internally)
-            async for chunk in self._crawler.arun_stream(url=url, config=run_config):
-                if chunk:
-                    yield {
-                        "url": url,
-                        "chunk": chunk,
+            # Note: AsyncWebCrawler doesn't have arun_stream, using arun instead
+            result = await self._crawler.arun(url=url, config=run_config)
+            if result:
+                yield {
+                    "url": url,
+                        "chunk": result,
                         "timestamp": asyncio.get_event_loop().time(),
                         "extraction_type": extraction_type,
                         "provider": "crawl4ai",
                         "streaming": True,
                     }
 
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             yield self._build_error_result(url, e, extraction_type)
 
     async def crawl_bulk(

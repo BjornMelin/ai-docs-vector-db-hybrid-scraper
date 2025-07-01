@@ -6,6 +6,7 @@ processing system, orchestrating all components through a single entry point.
 
 import asyncio
 import logging
+import subprocess
 import time
 from typing import Any
 
@@ -54,7 +55,7 @@ class QueryProcessingPipeline(BaseService):
             self._initialized = True
             logger.info("QueryProcessingPipeline initialized successfully")
 
-        except Exception:
+        except (AttributeError, ImportError, OSError) as e:
             logger.exception("Failed to initialize QueryProcessingPipeline")
             raise
 
@@ -368,7 +369,7 @@ class QueryProcessingPipeline(BaseService):
                 ],
             }
 
-        except Exception as e:
+        except (subprocess.SubprocessError, OSError, TimeoutError) as e:
             end_time = time.time()
             warmup_time_ms = (end_time - start_time) * 1000
 

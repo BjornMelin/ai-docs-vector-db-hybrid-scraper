@@ -557,7 +557,7 @@ class QueryIntentClassifier:
                         intent_scores[intent] = (
                             intent_scores[intent] * 0.7 + semantic_scores[intent] * 0.3
                         )
-            except Exception:
+            except (OSError, PermissionError) as e:
                 logger.warning("Semantic intent classification failed")
 
         # Determine complexity level
@@ -702,7 +702,7 @@ class QueryIntentClassifier:
 
             return scores
 
-        except Exception:
+        except (OSError, PermissionError) as e:
             logger.exception("Semantic intent classification failed")
             return {}
 
@@ -720,7 +720,7 @@ class QueryIntentClassifier:
                 return 0.0
 
             return float(dot_product / (magnitude1 * magnitude2))
-        except Exception:
+        except (AttributeError, RuntimeError, ValueError) as e:
             return 0.0
 
     def _assess_complexity(self, query: str) -> QueryComplexity:

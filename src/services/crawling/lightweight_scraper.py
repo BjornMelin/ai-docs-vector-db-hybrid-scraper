@@ -107,7 +107,7 @@ class LightweightScraper(CrawlProvider):
             try:
                 recommendation = await self._analyze_url(url)
                 return recommendation == TierRecommendation.LIGHTWEIGHT_OK
-            except Exception:
+            except (ConnectionError, OSError, PermissionError) as e:
                 logger.debug("HEAD analysis failed for {url}")
                 return False
 
@@ -171,7 +171,7 @@ class LightweightScraper(CrawlProvider):
                 f"HEAD request timeout for {url}"
             )  # TODO: Convert f-string to logging format
             return TierRecommendation.BROWSER_REQUIRED
-        except Exception:
+        except (ConnectionError, OSError, PermissionError) as e:
             logger.debug("HEAD request failed for {url}")
             return TierRecommendation.BROWSER_REQUIRED
 

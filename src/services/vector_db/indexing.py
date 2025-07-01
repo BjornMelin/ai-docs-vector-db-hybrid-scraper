@@ -4,6 +4,7 @@ This module provides a clean, focused implementation of indexing functionality
 extracted from QdrantService, focusing specifically on payload index management.
 """
 
+import asyncio
 import logging
 import time
 from typing import Any
@@ -123,12 +124,7 @@ class QdrantIndexing:
             )
 
         except Exception as e:
-            logger.error(
-                "Failed to create payload indexes for collection %s: %s",
-                collection_name,
-                e,
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
             msg = f"Failed to create payload indexes: {e}"
             raise QdrantServiceError(msg) from e
 
@@ -165,12 +161,7 @@ class QdrantIndexing:
             return indexed_fields
 
         except Exception as e:
-            logger.error(
-                "Failed to list payload indexes for collection %s: %s",
-                collection_name,
-                e,
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
             msg = f"Failed to list payload indexes: {e}"
             raise QdrantServiceError(msg) from e
 
@@ -192,12 +183,7 @@ class QdrantIndexing:
             logger.info("Dropped payload index for field: %s", field_name)
 
         except Exception as e:
-            logger.error(
-                "Failed to drop payload index for field %s: %s",
-                field_name,
-                e,
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
             msg = f"Failed to drop payload index: {e}"
             raise QdrantServiceError(msg) from e
 
@@ -223,7 +209,7 @@ class QdrantIndexing:
             for field_name in existing_indexes:
                 try:
                     await self.drop_payload_index(collection_name, field_name)
-                except Exception as e:
+                except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                     logger.warning("Failed to drop index for %s: %s", field_name, e)
 
             # Recreate all indexes
@@ -232,9 +218,7 @@ class QdrantIndexing:
             logger.info("Successfully reindexed collection: %s", collection_name)
 
         except Exception as e:
-            logger.error(
-                "Failed to reindex collection %s: %s", collection_name, e, exc_info=True
-            )
+            logger.exception("Failed to reindex collection: %s", collection_name)
             msg = f"Failed to reindex collection: {e}"
             raise QdrantServiceError(msg) from e
 
@@ -277,12 +261,7 @@ class QdrantIndexing:
             return stats
 
         except Exception as e:
-            logger.error(
-                "Failed to get payload index stats for collection %s: %s",
-                collection_name,
-                e,
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
             msg = f"Failed to get payload index stats: {e}"
             raise QdrantServiceError(msg) from e
 
@@ -386,12 +365,7 @@ class QdrantIndexing:
             return health_report
 
         except Exception as e:
-            logger.error(
-                "Failed to validate index health for collection %s: %s",
-                collection_name,
-                e,
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
             msg = f"Failed to validate index health: {e}"
             raise QdrantServiceError(msg) from e
 
@@ -518,12 +492,7 @@ class QdrantIndexing:
             return usage_stats
 
         except Exception as e:
-            logger.error(
-                "Failed to get index usage stats for collection %s: %s",
-                collection_name,
-                e,
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
             msg = f"Failed to get index usage stats: {e}"
             raise QdrantServiceError(msg) from e
 

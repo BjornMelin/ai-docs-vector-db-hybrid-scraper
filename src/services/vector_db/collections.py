@@ -150,9 +150,7 @@ class QdrantCollections(BaseService):
             # after collection creation
 
         except ResponseHandlingException as e:
-            logger.error(
-                "Failed to create collection %s: %s", collection_name, e, exc_info=True
-            )
+            logger.exception("Failed to create collection", collection_name)
 
             error_msg = str(e).lower()
             if "already exists" in error_msg:

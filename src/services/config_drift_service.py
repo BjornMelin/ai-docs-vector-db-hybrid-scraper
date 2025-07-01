@@ -20,6 +20,19 @@ from src.config.drift_detection import (
 from src.services.observability.performance import get_performance_monitor
 
 
+# Import at top level to avoid import-outside-top-level violations
+try:
+    from src.services.task_queue.tasks import (
+        create_task,
+        schedule_drift_check,
+        trigger_drift_alert,
+    )
+except ImportError:
+    create_task = None
+    schedule_drift_check = None
+    trigger_drift_alert = None
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -61,7 +74,7 @@ class ConfigDriftService:
             self.drift_detector = initialize_drift_detector(drift_config)
             logger.info("Configuration drift detector initialized successfully")
 
-        except Exception:
+        except (AttributeError, ImportError, OSError) as e:
             logger.exception("Failed to initialize drift detector")
             self.drift_detector = None
 
@@ -87,7 +100,7 @@ class ConfigDriftService:
 
             logger.info("Configuration drift monitoring service started successfully")
 
-        except Exception:
+        except (OSError, PermissionError, RuntimeError) as e:
             logger.exception("Failed to start drift monitoring service")
             self.is_running = False
             raise
@@ -103,9 +116,6 @@ class ConfigDriftService:
             return
 
         try:
-            # Import here to avoid circular dependency
-            from src.services.task_queue.tasks import create_task
-
             # Create task for taking configuration snapshots
             await create_task(
                 "config_drift_snapshot",
@@ -116,7 +126,7 @@ class ConfigDriftService:
             )
             logger.debug("Scheduled next configuration snapshot task")
 
-        except Exception:
+        except (OSError, PermissionError, RuntimeError) as e:
             logger.exception("Failed to schedule snapshot task")
 
     async def _schedule_comparison_task(self) -> None:
@@ -125,9 +135,6 @@ class ConfigDriftService:
             return
 
         try:
-            # Import here to avoid circular dependency
-            from src.services.task_queue.tasks import create_task
-
             # Create task for comparing configurations
             await create_task(
                 "config_drift_comparison",
@@ -138,7 +145,7 @@ class ConfigDriftService:
             )
             logger.debug("Scheduled next configuration comparison task")
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError) as e:
             logger.exception("Failed to schedule comparison task")
 
     async def take_configuration_snapshot(self) -> dict[str, Any]:
@@ -191,7 +198,7 @@ class ConfigDriftService:
                             f"Took snapshot for {source}"
                         )  # TODO: Convert f-string to logging format
 
-                    except Exception as e:
+                    except (ValueError, TypeError, UnicodeDecodeError) as e:
                         error_msg = f"Failed to snapshot {source}: {e}"
                         snapshot_results["errors"].append(error_msg)
                         logger.warning(error_msg)
@@ -292,7 +299,7 @@ class ConfigDriftService:
                                 f"Detected {len(events)} drift events for {source}"
                             )
 
-                    except Exception as e:
+                    except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                         error_msg = f"Failed to compare {source}: {e}"
                         comparison_results["errors"].append(error_msg)
                         logger.warning(error_msg)
@@ -347,9 +354,6 @@ class ConfigDriftService:
                     f"Remediation suggestion: {event.remediation_suggestion}"
                 )  # TODO: Convert f-string to logging format
 
-            # Import here to avoid circular dependency
-            from src.services.task_queue.tasks import create_task
-
             # Create a task to track the remediation
             await create_task(
                 "config_drift_remediation",
@@ -363,7 +367,7 @@ class ConfigDriftService:
 
             return True
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError) as e:
             logger.exception("Auto-remediation failed for event %s", event.id)
             return False
 
@@ -391,7 +395,7 @@ class ConfigDriftService:
             try:
                 drift_summary = self.drift_detector.get_drift_summary()
                 status["drift_summary"] = drift_summary
-            except Exception as e:
+            except (ValueError, KeyError, TypeError, AttributeError) as e:
                 status["drift_summary_error"] = str(e)
 
         return status
@@ -426,7 +430,7 @@ class ConfigDriftService:
                 "comparison_results": comparison_results,
             }
 
-        except Exception:
+        except (OSError, PermissionError) as e:
             logger.exception("Manual detection failed")
             raise
 

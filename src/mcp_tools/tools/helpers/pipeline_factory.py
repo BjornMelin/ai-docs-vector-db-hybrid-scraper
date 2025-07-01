@@ -47,7 +47,7 @@ class QueryProcessingPipelineFactory:
             cache_manager = None
             try:
                 cache_manager = await self.client_manager.get_cache_manager()
-            except Exception:
+            except (ConnectionError, OSError, RuntimeError, TimeoutError) as e:
                 if ctx:
                     await ctx.debug(
                         "Cache manager not available, proceeding without caching"
@@ -55,10 +55,8 @@ class QueryProcessingPipelineFactory:
 
             # Create orchestrator
             orchestrator = SearchOrchestrator(
-                embedding_manager=embedding_manager,
-                qdrant_service=qdrant_service,
-                hyde_engine=hyde_engine,
-                cache_manager=cache_manager,
+                cache_size=1000,
+                enable_performance_optimization=True,
             )
 
             # Create pipeline
@@ -67,7 +65,7 @@ class QueryProcessingPipelineFactory:
 
             return pipeline
 
-        except Exception:
+        except (AttributeError, ImportError, OSError) as e:
             if ctx:
                 await ctx.error("Failed to initialize query processing pipeline")
             logger.exception("Pipeline initialization failed")

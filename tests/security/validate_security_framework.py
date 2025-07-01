@@ -66,13 +66,11 @@ class SecurityFrameworkValidator:
             self._generate_final_assessment()
 
         except (RuntimeError, subprocess.SubprocessError, ValueError) as e:
-            logger.error("Security validation failed: %s", e)
+            logger.exception("Security validation failed: %s")
             self.results["validation_status"] = "FAILED"
             self.results["error"] = str(e)
         except Exception as e:
-            logger.error(
-                "Unexpected error during security validation: %s", e, exc_info=True
-            )
+            logger.exception("Unexpected error during security validation: %s")
             self.results["validation_status"] = "FAILED"
             self.results["error"] = f"Unexpected error: {e}"
 
@@ -120,7 +118,7 @@ class SecurityFrameworkValidator:
                 self.results["tests_failed"] += 1
 
         except Exception as e:
-            logger.error(f"Subprocess security validation failed: {e}")
+            logger.exception("Subprocess security validation failed: ")
             self.results["tests_failed"] += 1
 
     def _validate_penetration_tests(self):
@@ -212,7 +210,7 @@ class SecurityFrameworkValidator:
                 self.results["tests_failed"] += 1
 
         except Exception as e:
-            logger.error(f"Input validation test failed: {e}")
+            logger.exception("Input validation test failed: ")
             self.results["tests_failed"] += 1
 
     def _validate_load_testing_security(self):
@@ -253,16 +251,16 @@ class SecurityFrameworkValidator:
             }
 
         except subprocess.TimeoutExpired:
-            logger.error("❌ Load testing security integration: TIMEOUT")
+            logger.exception("❌ Load testing security integration: TIMEOUT")
             self.results["tests_failed"] += 1
         except Exception as e:
-            logger.error(f"Load testing security validation failed: {e}")
+            logger.exception("Load testing security validation failed: ")
             self.results["tests_failed"] += 1
 
     def _run_pytest_command(self, args: list[str]) -> dict[str, Any]:
         """Run pytest command and return results."""
         try:
-            cmd = ["uv", "run", "pytest"] + args
+            cmd = ["uv", "run", "pytest", *args]
             result = subprocess.run(
                 cmd,
                 capture_output=True,
@@ -286,7 +284,7 @@ class SecurityFrameworkValidator:
                 "stderr": "Test execution timed out",
                 "command": " ".join(cmd),
             }
-        except Exception as e:
+        except (subprocess.SubprocessError, OSError, TimeoutError) as e:
             return {
                 "return_code": -2,
                 "stdout": "",
@@ -361,7 +359,7 @@ class SecurityFrameworkValidator:
             )
             logger.info(f"{status_emoji} {control_name}: {control_data['status']}")
 
-    def save_report(self, filepath: str = None):
+    def save_report(self, filepath: str | None = None):
         """Save validation report to file."""
         if not filepath:
             timestamp = int(time.time())
@@ -398,7 +396,7 @@ def main():
         logger.info("Security validation interrupted by user")
         sys.exit(1)
     except Exception as e:
-        logger.exception(f"Security validation failed: {e}")
+        logger.exception("Security validation failed: ")
         sys.exit(1)
 
 

@@ -113,7 +113,7 @@ class ParallelProcessor(Generic[T, R]):
         except* Exception as eg:
             # Handle task group exceptions
             logger.exception(
-                f"Parallel processing failed: {eg}"
+                "Parallel processing failed: "
             )  # TODO: Convert f-string to logging format
             msg = f"Parallel processing failed: {eg}"
             raise EmbeddingServiceError(msg) from eg
@@ -187,13 +187,13 @@ class ParallelProcessor(Generic[T, R]):
 
             except TimeoutError:
                 logger.exception(
-                    f"Batch {batch_idx} processing timeout"
+                    "Batch  processing timeout"
                 )  # TODO: Convert f-string to logging format
                 msg = f"Batch {batch_idx} processing timeout"
                 raise EmbeddingServiceError(msg)
             except Exception as e:
                 logger.exception(
-                    f"Batch {batch_idx} processing failed: {e}"
+                    "Batch  processing failed: {e}"
                 )  # TODO: Convert f-string to logging format
                 msg = f"Batch processing failed: {e}"
                 raise EmbeddingServiceError(msg) from e
@@ -274,7 +274,7 @@ class ParallelProcessor(Generic[T, R]):
     def _calculate_metrics(
         self,
         items: list[T],
-        results: list[R],
+        _results: list[R],
         start_time: float,
         end_time: float,
         batch_config: dict[str, Any],
@@ -320,7 +320,7 @@ class ParallelProcessor(Generic[T, R]):
             memory_usage_mb=0.0,  # Will be updated by memory monitoring
         )
 
-    async def _check_batch_cache(self, batch: list[T]) -> list[R] | None:
+    async def _check_batch_cache(self, _batch: list[T]) -> list[R] | None:
         """Check if batch results are cached.
 
         Args:
@@ -399,7 +399,7 @@ class ParallelEmbeddingProcessor:
     async def generate_embeddings_parallel(
         self,
         texts: list[str],
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> dict[str, Any]:
         """Generate embeddings in parallel with optimal performance.
 

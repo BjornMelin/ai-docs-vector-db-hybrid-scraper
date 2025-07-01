@@ -3,6 +3,7 @@
 import contextlib
 import json
 import logging
+import subprocess
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -101,7 +102,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     sparse_vector_name="sparse" if enable_hybrid else None,
                     enable_quantization=request.quality_tier != "premium",
                 )
-            except Exception:
+            except (AttributeError, ConnectionError, OSError) as e:
                 # Clean up the project if collection creation fails
                 with contextlib.suppress(Exception):
                     await project_storage.delete_project(project_id)
@@ -125,7 +126,7 @@ def register_tools(mcp, client_manager: ClientManager):
                             and crawl_result.get("content")
                         ):
                             successful_count += 1
-                    except Exception as e:
+                    except (subprocess.SubprocessError, OSError, TimeoutError) as e:
                         if ctx:
                             await ctx.warning(f"Failed to process URL {url}: {e}")
                         logger.warning(
@@ -192,7 +193,7 @@ def register_tools(mcp, client_manager: ClientManager):
                         await ctx.debug(
                             f"Project {project['name']}: {info.vectors_count} vectors"
                         )
-                except Exception as e:
+                except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
                     project["vector_count"] = 0
                     project["indexed_count"] = 0
                     if ctx:
@@ -381,7 +382,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     )
                     if ctx:
                         await ctx.debug(f"Deleted collection: {project['collection']}")
-                except Exception as e:
+                except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
                     if ctx:
                         await ctx.warning(
                             f"Failed to delete collection {project['collection']}: {e}"
@@ -533,7 +534,7 @@ def register_tools(mcp, client_manager: ClientManager):
                         urls_added += 1
                         if ctx:
                             await ctx.debug(f"Successfully added URL: {url}")
-                except Exception as e:
+                except (subprocess.SubprocessError, OSError, TimeoutError) as e:
                     if ctx:
                         await ctx.warning(f"Failed to process URL {url}: {e}")
                     logger.warning(
@@ -597,7 +598,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     await ctx.debug(
                         f"Project {project.get('name', project_id)}: {info.vectors_count} vectors"
                     )
-            except Exception as e:
+            except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
                 project["vector_count"] = 0
                 project["indexed_count"] = 0
                 if ctx:

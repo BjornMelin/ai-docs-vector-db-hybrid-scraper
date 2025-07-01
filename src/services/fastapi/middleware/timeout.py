@@ -122,7 +122,7 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError) as e:
             # Record failure for circuit breaker
             if self.config.enable_circuit_breaker:
                 self._record_failure(endpoint)

@@ -179,8 +179,8 @@ class ModelSelector:
             }
 
         except Exception as e:
-            logger.error(
-                f"Model selection failed: {e}", exc_info=True
+            logger.exception(
+                "Model selection failed: "
             )  # TODO: Convert f-string to logging format
             return self._get_fallback_strategy(query_classification)
 
@@ -526,8 +526,8 @@ class ModelSelector:
             )
 
         except Exception as e:
-            logger.error(
-                f"Failed to update performance history: {e}", exc_info=True
+            logger.exception(
+                "Failed to update performance history: "
             )  # TODO: Convert f-string to logging format
 
     def get_model_info(self, model_id: str) -> dict[str, Any] | None:

@@ -170,8 +170,8 @@ async def query_expansion_tool(
 
     except Exception as e:
         await ctx.error(f"Query expansion search failed: {e!s}")
-        logger.error(
-            f"Query expansion error: {e}", exc_info=True
+        logger.exception(
+            "Query expansion error: "
         )  # TODO: Convert f-string to logging format
         raise
 
@@ -223,8 +223,8 @@ async def clustered_search_tool(
 
     except Exception as e:
         await ctx.error(f"Clustered search failed: {e!s}")
-        logger.error(
-            f"Clustered search error: {e}", exc_info=True
+        logger.exception(
+            "Clustered search error: "
         )  # TODO: Convert f-string to logging format
         raise
 
@@ -276,8 +276,8 @@ async def federated_search_tool(
 
     except Exception as e:
         await ctx.error(f"Federated search failed: {e!s}")
-        logger.error(
-            f"Federated search error: {e}", exc_info=True
+        logger.exception(
+            "Federated search error: "
         )  # TODO: Convert f-string to logging format
         raise
 
@@ -332,8 +332,8 @@ async def personalized_search_tool(
 
     except Exception as e:
         await ctx.error(f"Personalized search failed: {e!s}")
-        logger.error(
-            f"Personalized search error: {e}", exc_info=True
+        logger.exception(
+            "Personalized search error: "
         )  # TODO: Convert f-string to logging format
         raise
 
@@ -390,8 +390,8 @@ async def orchestrated_search_tool(
 
     except Exception as e:
         await ctx.error(f"Orchestrated search failed: {e!s}")
-        logger.error(
-            f"Orchestrated search error: {e}", exc_info=True
+        logger.exception(
+            "Orchestrated search error: "
         )  # TODO: Convert f-string to logging format
         raise
 

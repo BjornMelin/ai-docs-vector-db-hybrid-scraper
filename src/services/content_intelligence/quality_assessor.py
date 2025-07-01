@@ -299,7 +299,7 @@ class QualityAssessor:
 
             return relevance_score
 
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Relevance assessment failed: {e}"
             )  # TODO: Convert f-string to logging format
@@ -398,7 +398,7 @@ class QualityAssessor:
                     elif isinstance(last_modified, datetime):
                         days_old = (now - last_modified).days
                         return self._calculate_freshness_score(days_old)
-                except Exception as e:
+                except (ValueError, TypeError, UnicodeDecodeError) as e:
                     logger.debug(
                         f"Failed to parse last_modified date: {e}"
                     )  # TODO: Convert f-string to logging format
@@ -692,7 +692,7 @@ class QualityAssessor:
 
             return max_similarity
 
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Duplicate similarity assessment failed: {e}"
             )  # TODO: Convert f-string to logging format
@@ -718,7 +718,7 @@ class QualityAssessor:
                 return 0.0
 
             return dot_product / (magnitude1 * magnitude2)
-        except Exception:
+        except (AttributeError, RuntimeError, ValueError) as e:
             return 0.0
 
     def _identify_quality_issues(

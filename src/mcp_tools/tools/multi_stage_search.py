@@ -4,6 +4,7 @@ Implements intelligent multi-stage search with adaptive query refinement,
 result quality assessment, and autonomous stage optimization.
 """
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -68,7 +69,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Validate query
             security_validator = SecurityValidator.from_unified_config()
-            validated_query = security_validator.validate_search_query(query)
+            validated_query = security_validator.validate_query_string(query)
 
             # Get services
             qdrant_service = await client_manager.get_qdrant_service()
@@ -329,7 +330,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Validate query
             security_validator = SecurityValidator.from_unified_config()
-            validated_query = security_validator.validate_search_query(query)
+            validated_query = security_validator.validate_query_string(query)
 
             # Get services
             qdrant_service = await client_manager.get_qdrant_service()
@@ -1038,7 +1039,7 @@ async def _gather_contextual_data(
                         f"Context from {source}: {len(search_result['points'])} items"
                     )
 
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             if ctx:
                 await ctx.warning(f"Failed to gather context from {source}: {e}")
 

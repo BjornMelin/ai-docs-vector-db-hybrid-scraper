@@ -221,7 +221,7 @@ class SessionManager:
                     return session
                 # Clean up expired session
                 session_file.unlink(missing_ok=True)
-            except Exception:
+            except (FileNotFoundError, OSError, PermissionError) as e:
                 # Clean up corrupted session file
                 session_file.unlink(missing_ok=True)
 
@@ -233,7 +233,7 @@ class SessionManager:
         try:
             with session_file.open("w") as f:
                 json.dump(session.model_dump(), f, indent=2)
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError, TypeError) as e:
             logger.debug(
                 f"Failed to save session {session.session_id}: {e}"
             )  # TODO: Convert f-string to logging format
@@ -277,7 +277,7 @@ class SessionManager:
 
                 if session.is_expired():
                     session_file.unlink()
-            except Exception:
+            except (FileNotFoundError, ImportError, OSError) as e:
                 session_file.unlink(missing_ok=True)
 
 

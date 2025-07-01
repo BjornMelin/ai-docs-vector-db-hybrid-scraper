@@ -749,7 +749,7 @@ class DeploymentConfig(BaseModel):
     @field_validator("flagsmith_api_key", mode="before")
     @classmethod
     def validate_flagsmith_key(cls, v: str | None) -> str | None:
-        if v and not (v.startswith(("fs_", "env_"))):
+        if v and not v.startswith(("fs_", "env_")):
             msg = "Flagsmith API key must start with 'fs_' or 'env_'"
             raise ValueError(msg)
         return v
@@ -1063,7 +1063,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def create_directories(self) -> Self:
         """Create required directories."""
-        for dir_path in [self.data_dir, self.cache_dir, self.logs_dir]:
+        for dir_path in (self.data_dir, self.cache_dir, self.logs_dir):
             dir_path.mkdir(parents=True, exist_ok=True)
         return self
 
@@ -1116,14 +1116,14 @@ def get_settings() -> Settings:
     return _settings_instance
 
 
-def set_settings(settings: Settings) -> None:
+def set_settings(new_settings: Settings) -> None:
     """Set the global settings instance.
 
     Args:
-        settings: The settings instance to set globally.
+        new_settings: The settings instance to set globally.
     """
     global _settings_instance
-    _settings_instance = settings
+    _settings_instance = new_settings
 
 
 def reset_settings() -> None:

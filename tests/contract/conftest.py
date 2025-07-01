@@ -5,6 +5,7 @@ API contract validation, schema validation, consumer-driven contract testing,
 OpenAPI specification testing, and Pact integration.
 """
 
+import math
 from typing import Any
 from unittest.mock import AsyncMock
 
@@ -648,7 +649,7 @@ def openapi_contract_manager():
             if schema_type == "integer":
                 return 42
             if schema_type == "number":
-                return 3.14
+                return math.pi
             if schema_type == "boolean":
                 return True
             return "default_value"

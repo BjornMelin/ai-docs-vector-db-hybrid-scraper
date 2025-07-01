@@ -71,7 +71,7 @@ class SecureConfigManager:
         self.audit_events: list[ConfigurationAuditEvent] = []
 
     def encrypt_value(
-        self, value: str, classification: ConfigDataClassification
+        self, value: str, _classification: ConfigDataClassification
     ) -> str:
         """Encrypt a configuration value."""
         # Placeholder implementation for testing
@@ -212,21 +212,9 @@ class SecurityConfig(BaseModel):
         default=1024 * 1024, description="Max content length in bytes"
     )
 
-    # HTTP Security Headers
-    x_frame_options: str | None = Field(
-        default="DENY", description="X-Frame-Options header value"
-    )
-    x_content_type_options: str | None = Field(
-        default="nosniff", description="X-Content-Type-Options header value"
-    )
-    x_xss_protection: str | None = Field(
-        default="1; mode=block", description="X-XSS-Protection header value"
-    )
-    strict_transport_security: str | None = Field(
-        default="max-age=31536000; includeSubDomains",
-        description="Strict-Transport-Security header value",
-    )
-    content_security_policy: str | None = Field(
+    # Additional security configuration
+    # Note: HTTP Security Headers are already defined above
+    additional_content_security_policy: str | None = Field(
         default="default-src 'self'", description="Content-Security-Policy header value"
     )
 

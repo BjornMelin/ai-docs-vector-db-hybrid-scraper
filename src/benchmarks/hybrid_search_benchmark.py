@@ -299,8 +299,8 @@ class HybridSearchBenchmark:
             )  # TODO: Convert f-string to logging format
 
         except Exception as e:
-            logger.error(
-                f"Benchmark failed: {e}", exc_info=True
+            logger.exception(
+                "Benchmark failed: "
             )  # TODO: Convert f-string to logging format
             results.duration_seconds = time.time() - start_time
             results.failed_targets.append(f"Benchmark execution failed: {e!s}")
@@ -392,7 +392,7 @@ class HybridSearchBenchmark:
                     correct_predictions += 1
                 total_predictions += 1
 
-            except Exception as e:
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                 logger.warning(
                     f"Classification failed for query '{query_text}': {e}"
                 )  # TODO: Convert f-string to logging format
@@ -435,7 +435,7 @@ class HybridSearchBenchmark:
                     appropriate_selections += 1
                 total_selections += 1
 
-            except Exception as e:
+            except (ValueError, TypeError, UnicodeDecodeError) as e:
                 logger.warning(
                     f"Model selection failed for query '{query_text}': {e}"
                 )  # TODO: Convert f-string to logging format
@@ -465,7 +465,7 @@ class HybridSearchBenchmark:
                     effective_fusions += 1
                 total_fusions += 1
 
-            except Exception as e:
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                 logger.warning(
                     f"Fusion tuning failed for query '{query.query}': {e}"
                 )  # TODO: Convert f-string to logging format

@@ -102,7 +102,7 @@ class FeatureFlagManager:
             self._initialized = True
 
         except Exception as e:
-            logger.exception("Failed to initialize feature flag manager: %s", e)
+            logger.exception("Failed to initialize feature flag manager: %s")
             self._current_tier = self.config.fallback_tier
             self._initialized = True
 
@@ -143,7 +143,7 @@ class FeatureFlagManager:
             return self._get_feature_by_tier(feature_name)
 
         except Exception as e:
-            logger.exception("Error checking feature flag %s: %s", feature_name, e)
+            logger.exception("Error checking feature flag %s: %s", feature_name)
             return self._get_feature_by_tier(feature_name)
 
     async def get_config_value(
@@ -172,7 +172,7 @@ class FeatureFlagManager:
             return self._get_config_by_tier(config_key, default)
 
         except Exception as e:
-            logger.exception("Error getting config value %s: %s", config_key, e)
+            logger.exception("Error getting config value %s: %s", config_key)
             return default
 
     def _get_feature_by_tier(self, feature_name: str) -> bool:
@@ -280,7 +280,7 @@ class FeatureFlagManager:
             return DeploymentTier(tier_env)
 
         except Exception as e:
-            logger.exception("Error determining deployment tier: %s", e)
+            logger.exception("Error determining deployment tier: %s")
             return self.config.fallback_tier
 
     async def _get_flags_from_client(
@@ -342,7 +342,7 @@ class FeatureFlagManager:
             return flags
 
         except Exception as e:
-            logger.exception("Error fetching flags from client: %s", e)
+            logger.exception("Error fetching flags from client: %s")
             return {}
 
     async def cleanup(self) -> None:

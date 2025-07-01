@@ -349,10 +349,7 @@ class TestEnhancedOrchestratorIntegration:
         assert len(top_queries) > 0
 
         # Test visualization of aggregated results
-        if np is not None:
-            rng = np.random.default_rng(42)
-        else:
-            rng = random.Random(42)
+        rng = np.random.default_rng(42) if np is not None else random.Random(42)
 
         # Simulate embeddings for all results
         all_documents = []

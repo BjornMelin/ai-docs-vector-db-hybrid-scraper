@@ -270,8 +270,8 @@ class TestRealWorldErrorScenarios:
         def tracking_listener(old, new):
             listener_calls.append(
                 (
-                    old.openai.api_key if old.openai.api_key else None,
-                    new.openai.api_key if new.openai.api_key else None,
+                    old.openai.api_key or None,
+                    new.openai.api_key or None,
                 )
             )
 

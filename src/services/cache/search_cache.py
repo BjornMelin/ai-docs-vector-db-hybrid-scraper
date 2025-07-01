@@ -1,6 +1,7 @@
 import typing
 """Specialized cache for search results with intelligent invalidation."""
 
+import asyncio
 import hashlib
 import json  # noqa: PLC0415
 import logging  # noqa: PLC0415
@@ -71,7 +72,7 @@ class SearchResultCache:
             logger.debug(f"Search cache miss for query: {query[:50]}...")
             return None
 
-        except Exception:
+        except (ConnectionError, RuntimeError, TimeoutError, asyncio.TimeoutError) as e:
             logger.error(f"Error retrieving search results from cache: {e}")
             return None
 
@@ -137,7 +138,7 @@ class SearchResultCache:
 
             return success
 
-        except Exception:
+        except (ConnectionError, IOError, OSError, PermissionError) as e:
             logger.error(f"Error caching search results: {e}")
             return False
 
@@ -175,7 +176,7 @@ class SearchResultCache:
 
             return 0
 
-        except Exception:
+        except (ConnectionError, IOError, OSError, PermissionError) as e:
             logger.error(f"Error invalidating collection cache: {e}")
             return 0
 
@@ -206,7 +207,7 @@ class SearchResultCache:
 
             return 0
 
-        except Exception:
+        except (ConnectionError, RuntimeError, TimeoutError, asyncio.TimeoutError) as e:
             logger.error(f"Error invalidating query pattern cache: {e}")
             return 0
 
@@ -242,7 +243,7 @@ class SearchResultCache:
 
             return []
 
-        except Exception:
+        except (ConnectionError, RuntimeError, TimeoutError, asyncio.TimeoutError) as e:
             logger.error(f"Error getting popular queries: {e}")
             return []
 
@@ -271,7 +272,7 @@ class SearchResultCache:
 
             return 0
 
-        except Exception:
+        except (ConnectionError, RuntimeError, TimeoutError, asyncio.TimeoutError) as e:
             logger.error(f"Error cleaning up expired popularity: {e}")
             return 0
 
@@ -303,7 +304,7 @@ class SearchResultCache:
                         collection = parts[1]
                         collections[collection] = collections.get(collection, 0) + 1
 
-                except Exception:
+                except (IOError, OSError, PermissionError) as e:
                     continue
 
             stats["by_collection"] = collections
@@ -314,7 +315,7 @@ class SearchResultCache:
 
             return stats
 
-        except Exception:
+        except (ConnectionError, RuntimeError, TimeoutError, asyncio.TimeoutError) as e:
             logger.error(f"Error getting cache stats: {e}")
             return {"error": str(e)}
 
@@ -369,7 +370,7 @@ class SearchResultCache:
             count = await self.cache.get(key)
             return int(count) if count else 0
 
-        except Exception:
+        except (ConnectionError, IOError, OSError, PermissionError) as e:
             logger.debug(f"Error getting query popularity: {e}")
             return 0
 
@@ -390,7 +391,7 @@ class SearchResultCache:
             if current == 1:
                 await client.expire(key, 86400)  # 24 hours
 
-        except Exception:
+        except (ConnectionError, OSError, TimeoutError, asyncio.TimeoutError) as e:
             logger.debug(f"Error tracking query popularity: {e}")
 
     async def warm_popular_searches(
@@ -431,7 +432,7 @@ class SearchResultCache:
                             warmed_count += 1
                             logger.debug(f"Warmed search cache for: {query[:50]}...")
 
-                    except Exception:
+                    except (ConnectionError, IOError, OSError, PermissionError) as e:
                         logger.warning(f"Failed to warm search for '{query}': {e}")
 
             logger.info(
@@ -439,6 +440,6 @@ class SearchResultCache:
             )
             return warmed_count
 
-        except Exception:
+        except (ConnectionError, RuntimeError, TimeoutError) as e:
             logger.error(f"Error in search cache warming: {e}")
             return warmed_count

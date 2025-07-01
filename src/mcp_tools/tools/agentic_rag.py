@@ -9,9 +9,9 @@ import logging
 from typing import Any
 from uuid import uuid4
 
-from fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
+from fastmcp import FastMCP
 from src.infrastructure.client_manager import ClientManager
 from src.services.agents import (
     QueryOrchestrator,
@@ -21,6 +21,18 @@ from src.services.agents import (
 
 
 logger = logging.getLogger(__name__)
+
+
+def _raise_orchestration_failed(error_message: str) -> None:
+    """Raise RuntimeError for orchestration failure."""
+    msg = f"Orchestration failed: {error_message}"
+    raise RuntimeError(msg)
+
+
+def _raise_analysis_execution_failed(error_message: str) -> None:
+    """Raise RuntimeError for analysis execution failure."""
+    msg = f"Analysis execution failed: {error_message}"
+    raise RuntimeError(msg)
 
 
 class AgenticSearchRequest(BaseModel):
@@ -183,8 +195,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
             )
 
             if not orchestration_result["success"]:
-                msg = f"Orchestration failed: {orchestration_result.get('error')}"
-                raise RuntimeError(msg)
+                _raise_orchestration_failed(orchestration_result.get("error"))
 
             # Extract results from orchestration
             result_data = orchestration_result["result"]
@@ -230,7 +241,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
             return response
 
         except Exception as e:
-            logger.error(f"Agentic search failed: {e}", exc_info=True)
+            logger.exception("Agentic search failed: ")
 
             return AgenticSearchResponse(
                 success=False,
@@ -287,8 +298,9 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
             )
 
             if not orchestration_result.success:
-                msg = f"Analysis execution failed: {orchestration_result.results.get('error')}"
-                raise RuntimeError(msg)
+                _raise_analysis_execution_failed(
+                    orchestration_result.results.get("error")
+                )
 
             # Extract insights from orchestration results
             analysis_results = orchestration_result.results
@@ -344,7 +356,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
             )
 
         except Exception as e:
-            logger.error(f"Agentic analysis failed: {e}", exc_info=True)
+            logger.exception("Agentic analysis failed: ")
 
             return AgenticAnalysisResponse(
                 success=False,

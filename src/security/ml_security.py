@@ -245,7 +245,7 @@ class MLSecurityValidator:
             )
             self.checks_performed.append(result)
             return result
-        except Exception:
+        except (OSError, PermissionError) as e:
             logger.exception("Dependency check error")
             result = SecurityCheckResult(
                 check_type="dependency_scan",
@@ -347,7 +347,7 @@ class MLSecurityValidator:
             self.checks_performed.append(result)
             return result
 
-        except Exception:
+        except (AttributeError, RuntimeError, ValueError) as e:
             logger.info("Container scan skipped")
             result = SecurityCheckResult(
                 check_type="container_scan",
@@ -381,6 +381,18 @@ class MLSecurityValidator:
 
         """
         return self.base_validator.validate_query_string(query)
+
+    def validate_url(self, url: str) -> str:
+        """Validate URL using base validator.
+
+        Args:
+            url: URL to validate
+
+        Returns:
+            Validated URL
+
+        """
+        return self.base_validator.validate_url(url)
 
     def sanitize_filename(self, filename: str) -> str:
         """Sanitize filename using base validator.

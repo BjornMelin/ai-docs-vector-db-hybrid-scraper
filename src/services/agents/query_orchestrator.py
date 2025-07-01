@@ -87,10 +87,7 @@ class QueryOrchestrator(BaseAgent):
         fallback_reason = getattr(self, "_fallback_reason", None)
 
         if not PYDANTIC_AI_AVAILABLE or self.agent is None:
-            logger.warning(
-                "QueryOrchestrator using fallback mode (reason: %s)",
-                fallback_reason or "pydantic_ai_unavailable"
-            )
+            logger.warning(f"QueryOrchestrator using fallback mode (reason: {fallback_reason or "pydantic_ai_unavailable"})")
             return
 
         @self.agent.tool
@@ -207,7 +204,7 @@ class QueryOrchestrator(BaseAgent):
                 ),
             }
 
-            logger.info("Delegated task to %s with priority %s", agent_type, priority)
+            logger.info(f"Delegated task to {agent_type} with priority {priority}")
 
             return delegation_result
 
@@ -429,7 +426,7 @@ class QueryOrchestrator(BaseAgent):
             "orchestration_id": str(uuid4()),
         }
 
-        logger.info("Starting query orchestration for: %s...", query[:50])
+        logger.info(f"Starting query orchestration for: {query[:50]}...")
 
         try:
             if PYDANTIC_AI_AVAILABLE and self.agent is not None:
@@ -472,7 +469,7 @@ class QueryOrchestrator(BaseAgent):
         query = context["query"]
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
 
-        logger.info("Using fallback query orchestration (reason: %s)", fallback_reason)
+        logger.info(f"Using fallback query orchestration (reason: {fallback_reason})")
 
         # Enhanced fallback logic with better analysis
         query_lower = query.lower()

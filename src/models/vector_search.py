@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import math
 import re
+from datetime import datetime
 from enum import Enum
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, Literal, Self
@@ -31,7 +32,7 @@ from pydantic import (
 
 
 if TYPE_CHECKING:
-    from datetime import datetime
+    from src.services.security.ai_security import AISecurityValidator
 
 
 # =============================================================================
@@ -46,6 +47,7 @@ class SearchAccuracy(str, Enum):
     MEDIUM = "medium"  # Balanced quality/speed
     LOW = "low"  # Fastest, lower quality
     ADAPTIVE = "adaptive"  # Dynamic based on query
+    ACCURATE = "accurate"  # High accuracy mode
 
 
 class VectorType(str, Enum):
@@ -55,6 +57,7 @@ class VectorType(str, Enum):
     SPARSE = "sparse"  # Sparse vectors with indices
     HYBRID = "hybrid"  # Combined dense + sparse
     BINARY = "binary"  # Binary quantized vectors
+    HYDE = "hyde"  # HyDE (Hypothetical Document Embeddings)
 
 
 class FusionAlgorithm(str, Enum):
@@ -64,6 +67,59 @@ class FusionAlgorithm(str, Enum):
     WEIGHTED_SUM = "weighted_sum"  # Weighted score combination
     MAX_SCORE = "max_score"  # Maximum score selection
     ADAPTIVE = "adaptive"  # Context-aware fusion
+
+
+class SearchMode(str, Enum):
+    """Search modes with different complexity levels."""
+
+    SIMPLE = "simple"  # Basic search
+    INTELLIGENT = "intelligent"  # AI-enhanced search
+    PERSONALIZED = "personalized"  # User-specific search
+    ENHANCED = "enhanced"  # Advanced features
+
+
+class SearchPipeline(str, Enum):
+    """Search pipeline configurations."""
+
+    FAST = "fast"  # Speed-optimized
+    BALANCED = "balanced"  # Balanced speed/quality
+    PRECISION = "precision"  # Quality-optimized
+    COMPREHENSIVE = "comprehensive"  # Full-featured
+
+
+class QueryType(str, Enum):
+    """Types of queries for model selection."""
+
+    GENERAL = "general"  # General purpose queries
+    CODE = "code"  # Code-related queries
+    MULTIMODAL = "multimodal"  # Text + other modalities
+    CONCEPTUAL = "conceptual"  # Abstract concepts
+    DOCUMENTATION = "documentation"  # Documentation queries
+    API_REFERENCE = "api_reference"  # API documentation
+
+
+class ModelType(str, Enum):
+    """Types of embedding models."""
+
+    GENERAL_PURPOSE = "general_purpose"  # General embedding model
+    CODE_SPECIALIZED = "code_specialized"  # Code-specific model
+    MULTIMODAL = "multimodal"  # Multi-modal model
+
+
+class OptimizationStrategy(str, Enum):
+    """Optimization strategies for search."""
+
+    QUALITY_OPTIMIZED = "quality_optimized"  # Best quality
+    SPEED_OPTIMIZED = "speed_optimized"  # Fastest results
+    COST_OPTIMIZED = "cost_optimized"  # Cost-effective
+    BALANCED = "balanced"  # Balanced approach
+
+
+class EmbeddingModel(str, Enum):
+    """Available embedding models."""
+
+    BGE_LARGE_EN_V1_5 = "bge_large_en_v1_5"  # BGE large English model
+    BGE_LARGE_EN_V15 = "bge_large_en_v15"  # Alternative name
 
 
 # =============================================================================
@@ -408,12 +464,16 @@ class SecurePayloadModel(SecureBaseModel):
     @classmethod
     def validate_content_security(cls, v: str) -> str:
         """Validate content for security (lazy import to avoid circular dependency)."""
+        # Use lazy import to avoid circular dependency
         try:
-            from src.services.security.ai_security import (
-                AISecurityValidator,
-            )
+            # Import at runtime to avoid circular dependency
+            import importlib
 
-            validator = AISecurityValidator()
+            security_module = importlib.import_module(
+                "src.services.security.ai_security"
+            )
+            validator = security_module.AISecurityValidator()
+
             if not validator.validate_search_query(v):
                 msg = "Content failed AI security validation"
                 raise SecurityValidationError(msg)
@@ -453,7 +513,8 @@ class BasicSearchRequest(SecureBaseModel):
     include_vectors: bool = Field(default=False)
 
     @model_validator(mode="before")
-    def set_default_search_params(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+    @classmethod
+    def set_default_search_params(cls, values: dict[str, Any]) -> dict[str, Any]:
         """Set default search_params if not provided."""
         if values.get("search_params") is None:
             values["search_params"] = SecureSearchParamsModel()
@@ -503,11 +564,14 @@ class HyDESearchRequest(AdvancedFilteredSearchRequest):
     def validate_query_security(cls, v: str) -> str:
         """Validate query text for security."""
         try:
-            from src.services.security.ai_security import (
-                AISecurityValidator,
-            )
+            # Import at runtime to avoid circular dependency
+            import importlib
 
-            validator = AISecurityValidator()
+            security_module = importlib.import_module(
+                "src.services.security.ai_security"
+            )
+            validator = security_module.AISecurityValidator()
+
             if not validator.validate_search_query(v):
                 msg = "Query failed AI security validation"
                 raise SecurityValidationError(msg)
@@ -582,7 +646,8 @@ class SearchStage(SecureBaseModel):
     weight: float = Field(default=1.0, ge=0.0, le=1.0)
 
     @model_validator(mode="before")
-    def set_default_search_params(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+    @classmethod
+    def set_default_search_params(cls, values: dict[str, Any]) -> dict[str, Any]:
         """Set default search_params if not provided."""
         if values.get("search_params") is None:
             values["search_params"] = SecureSearchParamsModel()
@@ -734,7 +799,6 @@ class QueryClassification(SecureBaseModel):
         ..., ge=0.0, le=1.0, description="Classification confidence"
     )
     features: dict[str, Any] = Field(default_factory=dict, description="Query features")
-
 
 
 class SearchResult(SecureBaseModel):

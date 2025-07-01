@@ -91,13 +91,13 @@ async def demonstrate_container_integration():
                 status = await parallel_system.get_system_status()
                 print(f"✅ System status: {status['system_health']['status']}")
 
-            except Exception as e:
+            except (subprocess.SubprocessError, OSError, TimeoutError) as e:
                 print(f"❌ Failed to get parallel processing system: {e}")
                 return False
             else:
                 return True
 
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError, TimeoutError) as e:
         print(f"❌ Container integration failed: {e}")
         return False
 
@@ -196,7 +196,7 @@ async def demonstrate_client_manager_integration():
             await shutdown_container()
             print("✅ Container shutdown completed")
 
-        except Exception as e:
+        except (subprocess.SubprocessError, OSError, TimeoutError) as e:
             print(f"❌ ClientManager integration failed: {e}")
             traceback.print_exc()
             return False
@@ -260,10 +260,10 @@ async def demonstrate_document_processing():
             # Display results
             print("📊 Processing Results:")
             print(f"   • Documents processed: {len(results['documents'])}")
-            processing_time = results['processing_stats']['processing_time_ms']
+            processing_time = results["processing_stats"]["processing_time_ms"]
             print(f"   • Processing time: {processing_time:.2f}ms")
-            
-            throughput = results['processing_stats']['throughput_docs_per_second']
+
+            throughput = results["processing_stats"]["throughput_docs_per_second"]
             print(f"   • Throughput: {throughput:.2f} docs/sec")
 
             # Display optimization status
@@ -275,7 +275,7 @@ async def demonstrate_document_processing():
 
             return True
 
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError, TimeoutError) as e:
         print(f"❌ Document processing failed: {e}")
         traceback.print_exc()
         return False
@@ -315,7 +315,9 @@ async def main():
 
     total_tests = len(results)
     success_rate = success_count / total_tests * 100
-    print(f"\nOverall Success Rate: {success_count}/{total_tests} ({success_rate:.1f}%)")
+    print(
+        f"\nOverall Success Rate: {success_count}/{total_tests} ({success_rate:.1f}%)"
+    )
 
     if success_count == len(results):
         print("\n🎉 ALL INTEGRATION TESTS PASSED!")

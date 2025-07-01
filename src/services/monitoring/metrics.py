@@ -12,6 +12,7 @@ from collections.abc import Callable
 from typing import Any, TypeVar
 
 import psutil
+import redis
 from prometheus_client import Counter, Gauge, Histogram, start_http_server
 from prometheus_client.registry import REGISTRY, CollectorRegistry
 from pydantic import BaseModel, Field
@@ -327,7 +328,7 @@ class MetricsRegistry:
 
                 try:
                     result = await func(*args, **kwargs)
-                except Exception:
+                except (ConnectionError, OSError, PermissionError) as e:
                     self._metrics["search_requests"].labels(
                         collection=collection, status="error"
                     ).inc()
@@ -360,7 +361,7 @@ class MetricsRegistry:
 
                 try:
                     result = func(*args, **kwargs)
-                except Exception:
+                except (ConnectionError, OSError, PermissionError) as e:
                     self._metrics["search_requests"].labels(
                         collection=collection, status="error"
                     ).inc()
@@ -415,7 +416,12 @@ class MetricsRegistry:
 
                     return result
 
-                except Exception:
+                except (
+                    AttributeError,
+                    ConnectionError,
+                    ImportError,
+                    RuntimeError,
+                ) as e:
                     self._metrics["embedding_requests"].labels(
                         provider=provider, model=model, status="error"
                     ).inc()
@@ -438,7 +444,12 @@ class MetricsRegistry:
                     ).inc()
                     return result
 
-                except Exception:
+                except (
+                    AttributeError,
+                    ConnectionError,
+                    ImportError,
+                    RuntimeError,
+                ) as e:
                     self._metrics["embedding_requests"].labels(
                         provider=provider, model=model, status="error"
                     ).inc()
@@ -482,7 +493,7 @@ class MetricsRegistry:
                             cache_type=cache_type, cache_name=cache_name
                         ).inc()
                     return result
-                except Exception:
+                except (ConnectionError, RuntimeError, TimeoutError) as e:
                     self._metrics["cache_misses"].labels(
                         cache_type=cache_type, cache_name=cache_name
                     ).inc()
@@ -501,7 +512,7 @@ class MetricsRegistry:
                             cache_type=cache_type, cache_name=cache_name
                         ).inc()
                     return result
-                except Exception:
+                except (ConnectionError, RuntimeError, TimeoutError) as e:
                     self._metrics["cache_misses"].labels(
                         cache_type=cache_type, cache_name=cache_name
                     ).inc()
@@ -537,7 +548,7 @@ class MetricsRegistry:
                     ).inc()
                     return result
 
-                except Exception:
+                except (ConnectionError, OSError, PermissionError) as e:
                     self._metrics["cache_operations"].labels(
                         cache_type=cache_type, operation=operation, result="error"
                     ).inc()
@@ -560,7 +571,7 @@ class MetricsRegistry:
                     ).inc()
                     return result
 
-                except Exception:
+                except (ConnectionError, OSError, PermissionError) as e:
                     self._metrics["cache_operations"].labels(
                         cache_type=cache_type, operation=operation, result="error"
                     ).inc()
@@ -634,7 +645,7 @@ class MetricsRegistry:
                 # This is a placeholder for future implementation
                 pass
 
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             # Log error but don't raise to avoid breaking monitoring
 
             logging.getLogger(__name__).warning(

@@ -41,7 +41,7 @@ class TaskQueueManager(BaseService):
             try:
                 self.metrics_registry = get_metrics_registry()
                 logger.debug("Task queue monitoring enabled")
-            except Exception:
+            except (AttributeError, ConnectionError, RuntimeError, TimeoutError) as e:
                 logger.debug("Task queue monitoring disabled")
 
     def _create_redis_settings(self) -> RedisSettings:
@@ -83,7 +83,7 @@ class TaskQueueManager(BaseService):
             self._redis_pool = await create_pool(self._redis_settings)
             logger.info("Task queue manager initialized")
             self._initialized = True
-        except Exception:
+        except (OSError, AttributeError, ConnectionError, ImportError) as e:
             logger.exception("Failed to initialize task queue")
             raise
 
@@ -150,7 +150,7 @@ class TaskQueueManager(BaseService):
 
             return None
 
-        except Exception:
+        except (OSError, PermissionError, asyncio.TimeoutError) as e:
             logger.exception("Error enqueueing task {task_name}")
             return None
 
@@ -214,7 +214,7 @@ class TaskQueueManager(BaseService):
                 return True
             return False
 
-        except Exception:
+        except (OSError, PermissionError, asyncio.TimeoutError) as e:
             logger.exception("Error cancelling job")
             return False
 
@@ -246,7 +246,7 @@ class TaskQueueManager(BaseService):
             # This is a simplified version - in production you might want
             # to implement more detailed statistics gathering
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError) as e:
             logger.exception("Error getting queue stats")
             return {"error": -1}
 

@@ -1,5 +1,6 @@
 """Search and retrieval tools for MCP server."""
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING
 
@@ -130,7 +131,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 )
             return final_results
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError) as e:
             if ctx:
                 await ctx.error("Similar search failed")
             logger.exception("Similar search failed")

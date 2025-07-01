@@ -6,6 +6,7 @@ focusing on hierarchical and parallel coordination patterns identified in J4 res
 
 import asyncio
 import time
+from itertools import starmap
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -255,7 +256,7 @@ class TestHierarchicalCoordination:
         # Execute tasks concurrently
         start_time = time.time()
         responses = await asyncio.gather(
-            *[assign_and_execute_task(i, task) for i, task in enumerate(tasks)]
+            *list(starmap(assign_and_execute_task, enumerate(tasks)))
         )
         total_time = time.time() - start_time
 
@@ -339,10 +340,7 @@ class TestParallelAgentCoordination:
         ]
 
         results = await asyncio.gather(
-            *[
-                execute_parallel_task(task, orch, disc)
-                for task, orch, disc in tasks_with_agents
-            ]
+            *list(starmap(execute_parallel_task, tasks_with_agents))
         )
         parallel_execution_time = time.time() - start_time
 

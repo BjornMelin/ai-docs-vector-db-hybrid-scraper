@@ -153,7 +153,7 @@ class TestCascadeFailures:
             service = topology[service_name]
 
             # Check circuit breaker
-            if circuit_breakers.get(service_name, False):
+            if circuit_breakers.get(service_name):
                 msg = f"Circuit breaker open for {service_name}"
                 raise TestError(msg)
 

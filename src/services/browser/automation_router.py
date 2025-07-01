@@ -1,5 +1,6 @@
 """Intelligent browser automation router with three-tier hierarchy."""
 
+import asyncio
 import json
 import logging
 import time
@@ -107,7 +108,7 @@ class AutomationRouter(BaseService):
             else:
                 logger.warning("Routing rules file not found")
 
-        except Exception:
+        except (AttributeError, FileNotFoundError, OSError) as e:
             logger.exception("Failed to load routing rules")
 
         # Fallback to default rules if loading fails
@@ -154,7 +155,7 @@ class AutomationRouter(BaseService):
             self._adapters["lightweight"] = adapter
             self.logger.info("Initialized Lightweight HTTP adapter")
 
-        except Exception:
+        except (AttributeError, ConnectionError, ImportError, RuntimeError) as e:
             self.logger.warning("Failed to initialize Lightweight adapter")
 
         # Initialize Tier 1: Crawl4AI Basic
@@ -164,7 +165,7 @@ class AutomationRouter(BaseService):
             self._adapters["crawl4ai"] = adapter
             self.logger.info("Initialized Crawl4AI adapter")
 
-        except Exception:
+        except (AttributeError, ImportError, RuntimeError, ValueError) as e:
             self.logger.warning("Failed to initialize Crawl4AI adapter")
 
         # Initialize Tier 2: BrowserUse (Enhanced)
@@ -174,7 +175,7 @@ class AutomationRouter(BaseService):
             self._adapters["browser_use"] = adapter
             self.logger.info("Initialized BrowserUse adapter")
 
-        except Exception:
+        except (AttributeError, ImportError, RuntimeError, ValueError) as e:
             self.logger.warning("Failed to initialize BrowserUse adapter")
 
         # Initialize Tier 3: Playwright
@@ -184,7 +185,7 @@ class AutomationRouter(BaseService):
             self._adapters["playwright"] = adapter
             self.logger.info("Initialized Playwright adapter")
 
-        except Exception:
+        except (AttributeError, ImportError, ModuleNotFoundError, RuntimeError) as e:
             self.logger.warning("Failed to initialize Playwright adapter")
 
         # TODO: Initialize Tier 4: Firecrawl adapter when available
@@ -214,7 +215,7 @@ class AutomationRouter(BaseService):
                 self.logger.info(
                     f"Cleaned up {name} adapter"
                 )  # TODO: Convert f-string to logging format
-            except Exception:
+            except (OSError, AttributeError, ConnectionError, ImportError) as e:
                 self.logger.exception(f"Error cleaning up {name} adapter")
 
         self._adapters.clear()
@@ -298,7 +299,7 @@ class AutomationRouter(BaseService):
             result["automation_time_ms"] = elapsed * 1000
             return result
 
-        except Exception:
+        except (OSError, PermissionError) as e:
             self.logger.exception(f"{tool} failed for {url}")
             elapsed = time.time() - start_time
             self._update_metrics(tool, False, elapsed)
@@ -340,7 +341,7 @@ class AutomationRouter(BaseService):
                 can_handle = await self._adapters["lightweight"].can_handle(url)
                 if can_handle:
                     return "lightweight"
-            except Exception:
+            except asyncio.TimeoutError as e:
                 self.logger.debug("Lightweight adapter can_handle check failed")
 
         # Check for JavaScript-heavy patterns that need higher tiers
@@ -556,7 +557,7 @@ class AutomationRouter(BaseService):
                 result["automation_time_ms"] = elapsed * 1000
                 return result
 
-            except Exception:
+            except (OSError, PermissionError) as e:
                 self.logger.exception(f"Fallback {fallback_tool} also failed")
                 elapsed = time.time() - start_time
                 self._update_metrics(fallback_tool, False, elapsed)

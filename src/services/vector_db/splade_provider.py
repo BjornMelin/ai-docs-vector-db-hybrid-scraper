@@ -45,7 +45,7 @@ class SPLADEProvider:
             logger.info("SPLADE provider initialized successfully")
         except (ImportError, ValueError, AttributeError, RuntimeError) as e:
             logger.warning(
-                "Failed to load SPLADE model: %s. Using fallback sparse generation.", e
+                "Failed to load SPLADE model: %s. Using fallback sparse generation.", str(e)
             )
             self._model = None
             self._tokenizer = None
@@ -64,11 +64,13 @@ class SPLADEProvider:
             # For now, use fallback implementation
             logger.info("Using fallback SPLADE implementation")
 
+        except (OSError, AttributeError, ModuleNotFoundError) as e:
+            logger.exception("Failed to load SPLADE model")
+            raise
         except ImportError:
             logger.warning(
                 "Transformers library not available, using fallback sparse generation"
             )
-        except Exception:
             logger.exception("Failed to load SPLADE model")
             raise
 
@@ -108,7 +110,7 @@ class SPLADEProvider:
 
             return sparse_vector
 
-        except Exception:
+        except (OSError, AttributeError, ConnectionError, ImportError) as e:
             logger.exception("Sparse vector generation failed")
             # Return empty sparse vector as fallback
             return {}

@@ -31,6 +31,11 @@ from src.services.security.rate_limiter import DistributedRateLimiter
 logger = logging.getLogger(__name__)
 
 
+def _raise_security_system_unhealthy() -> None:
+    """Raise HTTPException for unhealthy security system."""
+    raise HTTPException(status_code=503, detail="Security system unhealthy")
+
+
 class SecurityManager:
     """Centralized security management for the application.
 
@@ -339,7 +344,7 @@ def setup_application_security(
 
             if is_healthy:
                 return {"status": "healthy", "details": status}
-            raise HTTPException(status_code=503, detail="Security system unhealthy")
+            _raise_security_system_unhealthy()
 
         except Exception as e:
             logger.exception("Security health check failed")

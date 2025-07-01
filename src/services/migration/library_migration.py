@@ -148,7 +148,7 @@ class LibraryMigrationManager:
 
             logger.info("Legacy services initialized successfully")
 
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
                 f"Failed to initialize legacy services: {e}"
             )  # TODO: Convert f-string to logging format

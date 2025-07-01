@@ -173,7 +173,7 @@ class BrowserAutomationMonitor:
             try:
                 self.metrics_registry = get_metrics_registry()
                 logger.info("Browser monitoring Prometheus integration enabled")
-            except Exception:
+            except (AttributeError, ImportError, OSError) as e:
                 logger.debug("Browser monitoring Prometheus integration disabled")
 
         logger.info("BrowserAutomationMonitor initialized")
@@ -417,7 +417,7 @@ class BrowserAutomationMonitor:
         for handler in self.alert_handlers:
             try:
                 handler(alert)
-            except Exception:
+            except (TimeoutError, OSError, PermissionError) as e:
                 logger.exception("Alert handler failed")
 
         logger.warning("Alert raised")
@@ -437,7 +437,7 @@ class BrowserAutomationMonitor:
 
             except asyncio.CancelledError:
                 break
-            except Exception:
+            except (ConnectionError, OSError, PermissionError) as e:
                 logger.exception("Monitoring loop error")
                 await asyncio.sleep(5)  # Brief pause before retry
 

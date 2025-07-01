@@ -8,7 +8,6 @@ compose and coordinate complex tool workflows.
 import asyncio
 import logging
 import time
-
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -19,11 +18,18 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from src.infrastructure.client_manager import ClientManager
+
 # BaseAgent and BaseAgentDependencies imports removed (unused)
 from src.services.cache.patterns import CircuitBreakerPattern
 
 
 logger = logging.getLogger(__name__)
+
+
+def _raise_circuit_breaker_open(tool_id: str) -> None:
+    """Raise RuntimeError for circuit breaker open."""
+    msg = f"Circuit breaker open for tool {tool_id}"
+    raise RuntimeError(msg)
 
 
 class ToolExecutionMode(str, Enum):
@@ -236,11 +242,7 @@ class AdvancedToolOrchestrator:
                 self.capability_performance[capability] = []
             self.capability_performance[capability].append(tool_def.tool_id)
 
-        logger.info(
-            "Registered tool %s with capabilities: %s",
-            tool_def.tool_id,
-            tool_def.capabilities,
-        )
+        logger.info(f"Registered tool {tool_def.tool_id} with capabilities: {tool_def.capabilities}")
 
     async def compose_tool_chain(
         self,
@@ -262,7 +264,7 @@ class AdvancedToolOrchestrator:
         constraints = constraints or {}
         preferences = preferences or {}
 
-        logger.info("Composing tool chain %s for goal: %s", plan_id, goal)
+        logger.info(f"Composing tool chain {plan_id} for goal: {goal}")
 
         try:
             # Analyze goal to determine required capabilities
@@ -296,12 +298,12 @@ class AdvancedToolOrchestrator:
 
             self.orchestration_plans[plan_id] = plan
 
-            logger.info("Composed tool chain %s with %s tools", plan_id, len(nodes))
+            logger.info(f"Composed tool chain {plan_id} with {len(nodes)} tools")
 
             return plan
 
         except Exception as e:
-            logger.error("Failed to compose tool chain: %s", e, exc_info=True)
+            logger.exception("Failed to compose tool chain")
             raise
 
     async def execute_tool_chain(
@@ -324,11 +326,7 @@ class AdvancedToolOrchestrator:
         timeout_seconds = timeout_seconds or plan.timeout_seconds
         start_time = time.time()
 
-        logger.info(
-            "Executing tool chain %s with execution ID %s",
-            plan.plan_id,
-            execution_id,
-        )
+        logger.info(f"Executing tool chain {plan.plan_id} with execution ID {execution_id}")
 
         try:
             # Initialize execution state
@@ -389,20 +387,14 @@ class AdvancedToolOrchestrator:
                 },
             }
 
-            logger.info(
-                "Tool chain execution %s completed with %.2%% success rate",
-                execution_id,
-                success_rate * 100,
-            )
+            logger.info(f"Tool chain execution {execution_id} completed with {success_rate * 100:.2f}%% success rate")
 
             return final_results
 
         except Exception as e:
             execution_time = time.time() - start_time
 
-            logger.error(
-                "Tool chain execution %s failed: %s", execution_id, e, exc_info=True
-            )
+            logger.exception(f"Tool chain execution {execution_id} failed")
 
             return {
                 "execution_id": execution_id,
@@ -441,7 +433,7 @@ class AdvancedToolOrchestrator:
         tool_def = self.registered_tools[tool_id]
         timeout_seconds = timeout_seconds or (tool_def.timeout_ms or 30000) / 1000.0
 
-        logger.debug("Executing tool %s with execution ID %s", tool_id, execution_id)
+        logger.debug(f"Executing tool {tool_id} with execution ID {execution_id}")
 
         try:
             # Check circuit breaker
@@ -454,8 +446,7 @@ class AdvancedToolOrchestrator:
                         timeout_seconds,
                         execution_id,
                     )
-                msg = f"Circuit breaker open for tool {tool_id}"
-                raise RuntimeError(msg)
+                _raise_circuit_breaker_open(tool_id)
 
             # Execute tool with timeout
             if tool_def.executor:
@@ -493,7 +484,7 @@ class AdvancedToolOrchestrator:
             end_time = datetime.now(tz=datetime.timezone.utc)
             duration_ms = (end_time - start_time).total_seconds() * 1000
 
-            logger.warning("Tool %s execution timed out", tool_id)
+            logger.warning(f"Tool {tool_id} execution timed out")
 
             # Try fallback if available
             if fallback_enabled and tool_def.fallback_tools:
@@ -527,10 +518,10 @@ class AdvancedToolOrchestrator:
                     await circuit_breaker.call(
                         lambda: (_ for _ in ()).throw(exception_to_throw)
                     )
-                except Exception:  # nosec # Expected to fail for circuit breaker testing
+                except (asyncio.CancelledError, TimeoutError, RuntimeError):  # nosec # Expected to fail for circuit breaker testing
                     pass
 
-            logger.exception("Tool %s execution failed", tool_id)
+            logger.exception(f"Tool {tool_id} execution failed")
 
             # Try fallback if available
             if fallback_enabled and tool_def.fallback_tools:
@@ -608,7 +599,7 @@ class AdvancedToolOrchestrator:
     # Private helper methods
 
     async def _analyze_goal_capabilities(
-        self, goal: str, constraints: dict[str, Any]
+        self, goal: str, _constraints: dict[str, Any]
     ) -> list[ToolCapability]:
         """Analyze goal to determine required tool capabilities."""
         # This would implement NLP analysis of the goal
@@ -656,7 +647,7 @@ class AdvancedToolOrchestrator:
     async def _select_optimal_tools(
         self,
         required_capabilities: list[ToolCapability],
-        constraints: dict[str, Any],
+        _constraints: dict[str, Any],
         preferences: dict[str, Any],
     ) -> list[str]:
         """Select optimal tools for required capabilities."""
@@ -705,7 +696,7 @@ class AdvancedToolOrchestrator:
         return selected_tools
 
     async def _create_execution_nodes(
-        self, selected_tools: list[str], constraints: dict[str, Any]
+        self, selected_tools: list[str], _constraints: dict[str, Any]
     ) -> list[ToolChainNode]:
         """Create execution nodes from selected tools."""
         nodes = []
@@ -840,7 +831,7 @@ class AdvancedToolOrchestrator:
             try:
                 result = await self._execute_node(node, execution_state)
                 results[node.node_id] = result
-            except Exception as e:
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                 results[node.node_id] = {"error": str(e)}
 
         return results
@@ -849,7 +840,7 @@ class AdvancedToolOrchestrator:
         self,
         plan: ToolOrchestrationPlan,
         execution_state: dict[str, Any],
-        timeout_seconds: float,
+        _timeout_seconds: float,
     ) -> dict[str, Any]:
         """Execute only essential nodes to minimize cost."""
         # Select high-priority nodes only
@@ -865,7 +856,7 @@ class AdvancedToolOrchestrator:
             try:
                 result = await self._execute_node(node, execution_state)
                 results[node.node_id] = result
-            except Exception as e:
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                 results[node.node_id] = {"error": str(e)}
 
         return results
@@ -882,7 +873,7 @@ class AdvancedToolOrchestrator:
             return await self._execute_parallel_nodes(
                 plan, execution_state, timeout_seconds / 2
             )
-        except Exception:
+        except (OSError, PermissionError, RuntimeError) as e:
             return await self._execute_sequential_nodes(
                 plan, execution_state, timeout_seconds / 2
             )
@@ -938,7 +929,7 @@ class AdvancedToolOrchestrator:
             node.error = str(e)
             execution_state["failed_nodes"].add(node.node_id)
 
-            logger.exception("Node {node.node_id} execution failed")
+            logger.exception(f"Node {node.node_id} execution failed")
 
             return {"error": str(e)}
 
@@ -950,11 +941,7 @@ class AdvancedToolOrchestrator:
         original_execution_id: str,
     ) -> ToolExecutionResult:
         """Execute a fallback tool."""
-        logger.info(
-            "Executing fallback tool %s for execution %s",
-            fallback_tool_id,
-            original_execution_id,
-        )
+        logger.info(f"Executing fallback tool {fallback_tool_id} for execution {original_execution_id}")
 
         result = await self.execute_single_tool(
             fallback_tool_id,
@@ -967,7 +954,7 @@ class AdvancedToolOrchestrator:
         return result
 
     async def _mock_tool_execution(
-        self, tool_def: ToolDefinition, input_data: dict[str, Any]
+        self, tool_def: ToolDefinition, _input_data: dict[str, Any]
     ) -> dict[str, Any]:
         """Mock tool execution for tools without executors."""
         # Simulate execution time
@@ -1014,9 +1001,9 @@ class AdvancedToolOrchestrator:
         ) / len(recent_results)
 
     async def _update_performance_history(
-        self, plan: ToolOrchestrationPlan, execution_state: dict[str, Any]
+        self, plan: ToolOrchestrationPlan, _execution_state: dict[str, Any]
     ) -> None:
         """Update performance history for the orchestration plan."""
         # This would implement comprehensive performance tracking
         # For now, just log the completion
-        logger.info("Updated performance history for plan %s", plan.plan_id)
+        logger.info(f"Updated performance history for plan {plan.plan_id}")

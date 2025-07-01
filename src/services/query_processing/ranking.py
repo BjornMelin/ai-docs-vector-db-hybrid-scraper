@@ -420,8 +420,8 @@ class PersonalizedRankingService:
 
         except Exception as e:
             processing_time_ms = (time.time() - start_time) * 1000
-            self._logger.error(
-                f"Personalized ranking failed: {e}", exc_info=True
+            self._logger.exception(
+                "Personalized ranking failed: "
             )  # TODO: Convert f-string to logging format
 
             # Return fallback result with default ranking
@@ -475,8 +475,8 @@ class PersonalizedRankingService:
             )
 
         except Exception as e:
-            self._logger.error(
-                f"Failed to record interaction: {e}", exc_info=True
+            self._logger.exception(
+                "Failed to record interaction: "
             )  # TODO: Convert f-string to logging format
 
     async def _get_user_profile(self, user_id: str) -> UserProfile:

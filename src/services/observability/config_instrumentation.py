@@ -650,7 +650,7 @@ def _extract_config_source_info(span: trace.Span, args: tuple, kwargs: dict) -> 
         if "env" in kwargs or any("env" in str(arg).lower() for arg in args):
             span.set_attribute(ConfigAttributes.SOURCE_TYPE, "environment")
 
-    except Exception as e:
+    except (OSError, FileNotFoundError, PermissionError) as e:
         # Don't fail the operation due to instrumentation issues
         logger.debug(
             f"Failed to extract config source info: {e}"
@@ -705,7 +705,7 @@ def _extract_config_content_metrics(span: trace.Span, result: Any) -> None:
                     ConfigAttributes.VALIDATION_WARNINGS, len(result["warnings"])
                 )
 
-    except Exception as e:
+    except (ValueError, TypeError, UnicodeDecodeError) as e:
         # Don't fail the operation due to instrumentation issues
         logger.debug(
             f"Failed to extract config content metrics: {e}"

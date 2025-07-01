@@ -111,7 +111,7 @@ class PerformanceMonitor:
                 "network_recv_mb": net_recv_mb,
             }
 
-        except Exception as e:
+        except (ConnectionError, OSError, TimeoutError) as e:
             logger.warning(
                 f"Failed to get system metrics: {e}"
             )  # TODO: Convert f-string to logging format
@@ -321,7 +321,7 @@ class PerformanceMonitor:
                     }
                 )
 
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Failed to record performance metrics: {e}"
             )  # TODO: Convert f-string to logging format

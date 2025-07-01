@@ -193,7 +193,7 @@ def register_tools(mcp, client_manager: ClientManager):
             )
             return search_results
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError) as e:
             await ctx.error("Multi-stage search {request_id} failed")
             logger.exception("Multi-stage search failed")
             raise
@@ -224,7 +224,7 @@ def register_tools(mcp, client_manager: ClientManager):
             # Get services
             try:
                 hyde_engine = await client_manager.get_hyde_engine()
-            except Exception:
+            except (ConnectionError, OSError, TimeoutError, ValueError) as e:
                 await ctx.warning(
                     "HyDE engine not available, falling back to regular search"
                 )
@@ -415,7 +415,7 @@ def register_tools(mcp, client_manager: ClientManager):
                         query, collection, limit, domain, use_cache, client_manager, ctx
                     )
                     result_dict["ab_test_results"] = ab_test_results
-                except Exception:
+                except (ConnectionError, OSError, PermissionError) as e:
                     if ctx:
                         await ctx.warning("A/B testing failed")
                     # Fallback to regular HyDE search
@@ -510,7 +510,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return HyDEAdvancedResponse(**result_dict)
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError) as e:
             if ctx:
                 await ctx.error("Advanced HyDE search {request_id} failed")
             logger.exception("Advanced HyDE search failed")
@@ -576,7 +576,7 @@ def register_tools(mcp, client_manager: ClientManager):
             )
             return search_results
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError) as e:
             await ctx.error("Filtered search {request_id} failed")
             logger.exception("Filtered search failed")
             raise

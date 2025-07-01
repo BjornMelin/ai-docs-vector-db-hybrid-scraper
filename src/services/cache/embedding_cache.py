@@ -65,7 +65,7 @@ class EmbeddingCache:
 
             return None
 
-        except Exception:
+        except (AttributeError, ConnectionError, RuntimeError, TimeoutError) as e:
             logger.error(f"Error retrieving embedding from cache: {e}")
             return None
 
@@ -113,7 +113,7 @@ class EmbeddingCache:
 
             return success
 
-        except Exception:
+        except (AttributeError, ImportError, RuntimeError, ValueError) as e:
             logger.error(f"Error caching embedding: {e}")
             return False
 
@@ -170,7 +170,7 @@ class EmbeddingCache:
 
             return cached, missing
 
-        except Exception:
+        except (AttributeError, ConnectionError, RuntimeError, TimeoutError) as e:
             logger.error(f"Error in batch embedding retrieval: {e}")
             # Return all as missing on error
             return {}, texts
@@ -237,7 +237,7 @@ class EmbeddingCache:
 
             return success
 
-        except Exception:
+        except (AttributeError, ConnectionError, ImportError, RuntimeError) as e:
             logger.error(f"Error in batch embedding caching: {e}")
             return False
 
@@ -285,7 +285,7 @@ class EmbeddingCache:
 
             return missing_texts
 
-        except Exception:
+        except (ConnectionError, ImportError, RuntimeError, TimeoutError) as e:
             logger.error(f"Error in cache warming: {e}")
             return common_queries  # Return all as missing on error
 
@@ -328,7 +328,7 @@ class EmbeddingCache:
 
             return 0
 
-        except Exception:
+        except (AttributeError, ConnectionError, ImportError, RuntimeError) as e:
             logger.error(f"Error invalidating model cache: {e}")
             return 0
 
@@ -365,7 +365,7 @@ class EmbeddingCache:
                             models.get(f"{provider}:{model}", 0) + 1
                         )
 
-                except Exception:
+                except (ImportError, RuntimeError, ValueError) as e:
                     continue
 
             stats["by_provider"] = providers
@@ -373,7 +373,7 @@ class EmbeddingCache:
 
             return stats
 
-        except Exception:
+        except (ConnectionError, ImportError, RuntimeError, TimeoutError) as e:
             logger.error(f"Error getting cache stats: {e}")
             return {"error": str(e)}
 

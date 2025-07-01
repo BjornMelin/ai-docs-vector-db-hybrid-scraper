@@ -263,7 +263,7 @@ class TestAPISecurityFramework:
                 if violations:
                     print(f"Security header warnings for {endpoint}: {violations}")
 
-            except Exception as e:
+            except (OSError, PermissionError, ValueError) as e:
                 print(f"Could not test endpoint {endpoint}: {e}")
 
     @security_test
@@ -281,7 +281,12 @@ class TestAPISecurityFramework:
                     "status_code": response.status_code,
                     "timestamp": time.time(),
                 }
-            except Exception as e:
+            except (
+                httpx.HTTPError,
+                httpx.RequestError,
+                ConnectionError,
+                TimeoutError,
+            ) as e:
                 return {
                     "request_id": request_id,
                     "status_code": 500,
@@ -353,7 +358,7 @@ class TestAPISecurityFramework:
                     "/api/v1/documents", json=test_input
                 )
                 assert post_response.status_code in [200, 201, 400, 422]
-            except Exception:
+            except (json.JSONDecodeError, ValueError, TypeError):
                 # Some inputs may cause connection issues - this is acceptable
                 pass
 
@@ -494,7 +499,7 @@ class TestAPISecurityFramework:
                         f"Malicious file {filename} was accepted on {endpoint}"
                     )
 
-                except Exception as e:
+                except (OSError, FileNotFoundError, PermissionError) as e:
                     # Connection errors are acceptable for malicious uploads
                     print(f"Upload test failed for {filename} on {endpoint}: {e}")
 
@@ -542,7 +547,7 @@ class TestAPISecurityFramework:
         invalid_timings = []
 
         # Measure response times for valid vs invalid scenarios
-        for i in range(10):
+        for _i in range(10):
             # Test with potentially valid data
             start_time = time.time()
             response = real_api_client.get(auth_endpoint)

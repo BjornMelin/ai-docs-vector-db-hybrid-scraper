@@ -6,6 +6,7 @@ Portfolio feature showcasing data analytics and visualization capabilities.
 """
 
 import asyncio
+
 # json import removed (unused)
 import logging
 import re
@@ -105,7 +106,7 @@ class SearchAnalyticsDashboard(BaseService):
             self._initialized = True
             self._logger.info("SearchAnalyticsDashboard initialized successfully")
 
-        except Exception:
+        except (AttributeError, ImportError, OSError) as e:
             self._logger.exception("Failed to initialize SearchAnalyticsDashboard")
             raise
 
@@ -167,7 +168,7 @@ class SearchAnalyticsDashboard(BaseService):
             # Update real-time stats
             await self._update_realtime_stats()
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError) as e:
             self._logger.exception("Failed to track query")
 
     async def track_performance_metric(
@@ -194,7 +195,7 @@ class SearchAnalyticsDashboard(BaseService):
             if len(self.performance_metrics) > 500:
                 self.performance_metrics = self.performance_metrics[-500:]
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError) as e:
             self._logger.exception("Failed to track performance metric")
 
     async def get_realtime_dashboard(self) -> dict[str, Any]:
@@ -227,7 +228,7 @@ class SearchAnalyticsDashboard(BaseService):
                 "last_updated": datetime.now(tz=UTC).isoformat(),
             }
 
-        except Exception:
+        except (AttributeError, OSError, PermissionError) as e:
             self._logger.exception("Failed to generate realtime dashboard")
             return {"error": "Failed to generate dashboard data"}
 
@@ -308,7 +309,7 @@ class SearchAnalyticsDashboard(BaseService):
                 "generated_at": datetime.now(tz=UTC).isoformat(),
             }
 
-        except Exception:
+        except (AttributeError, OSError, PermissionError) as e:
             self._logger.exception("Failed to generate query analytics")
             return {"error": "Failed to generate analytics"}
 
@@ -393,7 +394,7 @@ class SearchAnalyticsDashboard(BaseService):
 
             return recommendations
 
-        except Exception:
+        except (AttributeError, OSError, PermissionError) as e:
             self._logger.exception("Failed to generate optimization recommendations")
             return []
 
@@ -439,7 +440,7 @@ class SearchAnalyticsDashboard(BaseService):
                     {"query": query, "count": count} for query, count in popular
                 ]
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError) as e:
             self._logger.exception("Failed to update realtime stats")
 
     async def _detect_query_patterns(self) -> None:
@@ -493,7 +494,7 @@ class SearchAnalyticsDashboard(BaseService):
             self.detected_patterns.sort(key=lambda x: x.frequency, reverse=True)
             self.last_pattern_analysis = current_time
 
-        except Exception:
+        except (OSError, PermissionError) as e:
             self._logger.exception("Failed to detect query patterns")
 
     def _extract_pattern(self, query: str) -> str:
@@ -583,7 +584,7 @@ class SearchAnalyticsDashboard(BaseService):
 
             return insights
 
-        except Exception:
+        except (AttributeError, OSError, PermissionError) as e:
             self._logger.exception("Failed to generate behavior insights")
             return []
 
@@ -650,7 +651,7 @@ class SearchAnalyticsDashboard(BaseService):
 
             return trends
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError) as e:
             self._logger.exception("Failed to calculate performance trends")
             return {}
 
@@ -674,7 +675,7 @@ class SearchAnalyticsDashboard(BaseService):
 
             return utilization
 
-        except Exception:
+        except (OSError, PermissionError) as e:
             self._logger.exception("Failed to calculate feature utilization")
             return {}
 
@@ -720,7 +721,7 @@ class SearchAnalyticsDashboard(BaseService):
 
             return timeline
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError) as e:
             self._logger.exception("Failed to get query volume timeline")
             return []
 
@@ -774,7 +775,7 @@ class SearchAnalyticsDashboard(BaseService):
             top_queries.sort(key=lambda x: x["performance_score"], reverse=True)
             return top_queries[:10]
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError) as e:
             self._logger.exception("Failed to get top performing queries")
             return []
 
@@ -838,7 +839,7 @@ class SearchAnalyticsDashboard(BaseService):
 
             return opportunities
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError) as e:
             self._logger.exception("Failed to identify optimization opportunities")
             return []
 
@@ -850,7 +851,7 @@ class SearchAnalyticsDashboard(BaseService):
                 await self._detect_query_patterns()
             except asyncio.CancelledError:
                 break
-            except Exception:
+            except (TimeoutError, OSError, PermissionError) as e:
                 self._logger.exception("Error in pattern detection loop")
 
     async def _analyze_temporal_patterns(
@@ -905,7 +906,7 @@ class SearchAnalyticsDashboard(BaseService):
                 else 0,
             }
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError) as e:
             self._logger.exception("Failed to analyze temporal patterns")
             return {}
 

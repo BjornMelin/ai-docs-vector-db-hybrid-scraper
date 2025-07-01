@@ -4,6 +4,7 @@ Provides dependency injection functions that integrate OpenTelemetry
 observability with the existing function-based service architecture.
 """
 
+import asyncio
 import logging
 from functools import lru_cache
 from typing import Annotated
@@ -55,7 +56,7 @@ def get_observability_service() -> dict[str, any]:
             "enabled": is_observability_enabled(),
         }
 
-    except Exception:
+    except (AttributeError, ImportError, RuntimeError, ValueError) as e:
         logger.warning("Failed to initialize observability service")
         return {
             "config": ObservabilityConfig(),
@@ -156,7 +157,7 @@ async def record_ai_operation_metrics(
             **kwargs,
         )
 
-    except Exception:
+    except (OSError, PermissionError, asyncio.TimeoutError) as e:
         logger.debug("Failed to record AI operation metrics")
 
 
@@ -185,7 +186,7 @@ async def track_ai_cost_metrics(
             **kwargs,
         )
 
-    except Exception:
+    except asyncio.TimeoutError as e:
         logger.debug("Failed to track AI cost metrics")
 
 

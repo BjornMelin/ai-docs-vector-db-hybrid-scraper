@@ -1120,8 +1120,7 @@ class TestServiceDependencyValidation:
                     ]
                     results = await asyncio.gather(*startup_tasks)
 
-                    for result in results:
-                        started_services.add(result["service"])
+                    started_services.update(result["service"] for result in results)
                 else:
                     # No services ready - potential circular dependency
                     break

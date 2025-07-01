@@ -3,6 +3,7 @@ import typing
 
 import json  # noqa: PLC0415
 import logging  # noqa: PLC0415
+import zlib
 from typing import Any
 
 import redis.asyncio as redis
@@ -62,6 +63,7 @@ class DragonflyCache(CacheInterface[Any]):
         self.key_prefix = key_prefix
         self.enable_compression = enable_compression
         self.compression_threshold = compression_threshold
+        self.max_connections = max_connections
 
         # Configure retry strategy with exponential backoff
         retry_strategy = None
@@ -91,7 +93,7 @@ class DragonflyCache(CacheInterface[Any]):
             try:
                 self.metrics_registry = get_metrics_registry()
                 logger.debug("DragonflyDB cache monitoring enabled")
-            except Exception:
+            except (ConnectionError, IOError, OSError, PermissionError) as e:
                 logger.debug(f"DragonflyDB cache monitoring disabled: {e}")
 
     @property
@@ -116,8 +118,6 @@ class DragonflyCache(CacheInterface[Any]):
 
         # Compress if enabled and above threshold
         if self.enable_compression and len(data) > self.compression_threshold:
-            import zlib
-
             # Use compression with DragonflyDB optimization
             # DragonflyDB handles zstd natively, but we'll use zlib for compatibility
             data = b"Z:" + zlib.compress(data, level=6)
@@ -131,8 +131,6 @@ class DragonflyCache(CacheInterface[Any]):
 
         # Check for compression marker
         if self.enable_compression and data.startswith(b"Z:"):
-            import zlib
-
             data = zlib.decompress(data[2:])
 
         # Decode and parse JSON

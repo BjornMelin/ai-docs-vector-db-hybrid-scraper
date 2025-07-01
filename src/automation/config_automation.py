@@ -198,7 +198,7 @@ class AutoConfigManager:
                 f"scale_threshold={self.config.scale_up_threshold:.2f}"
             )
 
-        except Exception:
+        except (AttributeError, ImportError, OSError) as e:
             logger.exception("Failed to initialize configuration")
             # Fallback to minimal configuration
             return await self._create_fallback_config()
@@ -248,12 +248,12 @@ class AutoConfigManager:
             self.config = new_config
             self._config_hash = self._calculate_hash()
 
-            logger.info("Configuration refreshed successfully")
-            return True
-
-        except Exception:
+        except (OSError, PermissionError) as e:
             logger.exception("Failed to refresh configuration")
             return False
+        else:
+            logger.info("Configuration refreshed successfully")
+            return True
 
     def _configs_equivalent(
         self, config1: ZeroMaintenanceConfig, config2: ZeroMaintenanceConfig
@@ -295,7 +295,7 @@ class ConfigDriftHealer:
                 await self._check_and_heal_drift()
                 await asyncio.sleep(check_interval)
 
-            except Exception:
+            except (TimeoutError, OSError, PermissionError) as e:
                 logger.exception("Configuration drift monitoring error")
                 await asyncio.sleep(60)  # Shorter interval on error
 
@@ -321,7 +321,7 @@ class ConfigDriftHealer:
             # If refresh fails, try to restore from backup
             return await self._restore_from_backup()
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError) as e:
             logger.exception("Configuration healing failed")
             return False
 

@@ -977,7 +977,7 @@ async def _apply_healing_actions(
                     }
                 )
 
-        except Exception as e:
+        except (RuntimeError, ValueError, TypeError) as e:
             failed_actions.append(
                 {
                     "action_id": action["action_id"],

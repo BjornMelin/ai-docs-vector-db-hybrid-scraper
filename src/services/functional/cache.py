@@ -58,7 +58,7 @@ async def cache_get(
                 f"Cache miss for key: {key}"
             )  # TODO: Convert f-string to logging format
 
-    except Exception:
+    except (AttributeError, ConnectionError, OSError) as e:
         logger.exception(f"Cache get failed for key {key}")
         # Return default on cache failure (graceful degradation)
         return default
@@ -108,7 +108,7 @@ async def cache_set(
                 f"Cache set failed for key: {key}"
             )  # TODO: Convert f-string to logging format
 
-    except Exception:
+    except (ConnectionError, OSError, PermissionError) as e:
         logger.exception(f"Cache set failed for key {key}")
         # Don't raise exception for cache failures
         return False
@@ -154,7 +154,7 @@ async def cache_delete(
                 f"Cache delete failed for key: {key}"
             )  # TODO: Convert f-string to logging format
 
-    except Exception:
+    except (ConnectionError, OSError, PermissionError) as e:
         logger.exception(f"Cache delete failed for key {key}")
         return False
     else:
@@ -198,7 +198,7 @@ async def cache_clear(
                 f"Cache clear failed for cache_type: {cache_type}"
             )  # TODO: Convert f-string to logging format
 
-    except Exception:
+    except (ConnectionError, OSError, PermissionError) as e:
         logger.exception("Cache clear failed")
         return False
     else:
@@ -266,7 +266,7 @@ async def get_performance_stats(
         stats = await cache_client.get_performance_stats()
         logger.debug("Retrieved cache performance statistics")
 
-    except Exception:
+    except (ConnectionError, OSError, PermissionError) as e:
         logger.exception("Cache performance stats retrieval failed")
         return {}
     else:
@@ -307,7 +307,7 @@ async def cache_embedding(
                     f"Cached embedding for model {model}"
                 )  # TODO: Convert f-string to logging format
 
-    except Exception:
+    except (OSError, AttributeError, ConnectionError, ImportError) as e:
         logger.exception("Embedding cache failed")
         return False
     else:
@@ -347,7 +347,7 @@ async def get_cached_embedding(
                     f"Retrieved cached embedding for model {model}"
                 )  # TODO: Convert f-string to logging format
 
-    except Exception:
+    except (OSError, AttributeError, ConnectionError, ImportError) as e:
         logger.exception("Cached embedding retrieval failed")
         return None
     else:
@@ -391,7 +391,7 @@ async def cache_search_results(
                     f"Cached search results for collection {collection}"
                 )  # TODO: Convert f-string to logging format
 
-    except Exception:
+    except (ConnectionError, OSError, PermissionError) as e:
         logger.exception("Search results cache failed")
         return False
     else:
@@ -431,7 +431,7 @@ async def get_cached_search_results(
                     f"Retrieved cached search results for collection {collection}"
                 )
 
-    except Exception:
+    except (ConnectionError, OSError, PermissionError) as e:
         logger.exception("Cached search results retrieval failed")
         return None
     else:
@@ -508,7 +508,7 @@ async def bulk_cache_operations(
                     results["failed"] += 1
                     results["errors"].append(f"Unknown operation: {op_type}")
 
-            except Exception as e:
+            except (OSError, PermissionError, ValueError) as e:
                 results["failed"] += 1
                 results["errors"].append(f"Operation {i} failed: {e!s}")
 

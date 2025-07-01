@@ -20,6 +20,12 @@ from .models import AnswerMetrics, RAGConfig, RAGRequest, RAGResult, SourceAttri
 logger = logging.getLogger(__name__)
 
 
+def _raise_openai_client_unavailable() -> None:
+    """Raise EmbeddingServiceError for unavailable OpenAI client."""
+    msg = "OpenAI client not available for RAG"
+    raise EmbeddingServiceError(msg)
+
+
 class RAGGenerator(BaseService):
     """Generate contextual answers from search results using LLMs.
 
@@ -78,8 +84,7 @@ class RAGGenerator(BaseService):
             self._llm_client = await self.client_manager.get_openai_client()
 
             if not self._llm_client:
-                msg = "OpenAI client not available for RAG"
-                raise EmbeddingServiceError(msg)
+                _raise_openai_client_unavailable()
 
             # Test LLM connection
             await self._llm_client.models.list()
@@ -183,8 +188,8 @@ class RAGGenerator(BaseService):
             return result
 
         except Exception as e:
-            logger.error(
-                f"Failed to generate RAG answer: {e}", exc_info=True
+            logger.exception(
+                "Failed to generate RAG answer: "
             )  # TODO: Convert f-string to logging format
             msg = f"RAG generation failed: {e}"
             raise EmbeddingServiceError(msg) from e
@@ -228,11 +233,15 @@ class RAGGenerator(BaseService):
 
         # Add query context to help LLM understand the user's intent
         # This primes the model with the specific question being asked
-        query_context = "User Query: " + request.query + """
+        query_context = (
+            "User Query: "
+            + request.query
+            + """
 
 Relevant Information:
 
 """
+        )
         context_parts.append(query_context)
         token_count += len(query_context.split()) * 1.3  # Rough token estimate
 

@@ -191,11 +191,9 @@ class QdrantSearch:
             ]
 
         except Exception as e:
-            logger.error(
-                "Hybrid search failed in collection %s: %s",
+            logger.exception(
+                "Hybrid search failed for collection %s",
                 collection_name,
-                e,
-                exc_info=True,
             )
 
             error_msg = str(e).lower()
@@ -344,11 +342,9 @@ class QdrantSearch:
             ]
 
         except Exception as e:
-            logger.error(
-                "Multi-stage search failed in collection %s: %s",
+            logger.exception(
+                "Multi-stage search failed for collection %s",
                 collection_name,
-                e,
-                exc_info=True,
             )
             msg = f"Multi-stage search failed: {e}"
             raise QdrantServiceError(msg) from e
@@ -476,11 +472,9 @@ class QdrantSearch:
             ]
 
         except Exception as e:
-            logger.error(
-                "HyDE search failed in collection %s: %s",
+            logger.exception(
+                "HyDE search failed for collection %s",
                 collection_name,
-                e,
-                exc_info=True,
             )
             msg = f"HyDE search failed: {e}"
             raise QdrantServiceError(msg) from e
@@ -583,11 +577,9 @@ class QdrantSearch:
             ]
 
         except Exception as e:
-            logger.error(
-                "Filtered search failed in collection %s: %s",
+            logger.exception(
+                "Filtered search failed for collection %s",
                 collection_name,
-                e,
-                exc_info=True,
             )
             msg = f"Filtered search failed: {e}"
             raise QdrantServiceError(msg) from e

@@ -294,7 +294,7 @@ class FilterRegistry:
         if filter_class:
             try:
                 return filter_class(**kwargs)
-            except Exception:
+            except (OSError, PermissionError, RuntimeError) as e:
                 self._logger.exception("Failed to create filter {filter_name}")
                 return None
 

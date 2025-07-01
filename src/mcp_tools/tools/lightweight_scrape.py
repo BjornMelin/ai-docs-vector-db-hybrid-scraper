@@ -56,7 +56,7 @@ async def _analyze_url_suitability(
                 "Consider using standard search or crawl tools for complex pages."
             )
         return can_handle
-    except Exception:
+    except (AttributeError, ConnectionError, RuntimeError, TimeoutError) as e:
         return True  # Default to allowing the attempt
 
 

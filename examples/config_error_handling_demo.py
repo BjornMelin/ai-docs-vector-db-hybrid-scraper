@@ -204,7 +204,7 @@ def demonstrate_graceful_degradation():
 
     print(f"Degradation active: {degradation.degradation_active}")
     print(f"Should skip file_watch: {degradation.should_skip_operation('file_watch')}")
-    skip_reload = degradation.should_skip_operation('reload_config')
+    skip_reload = degradation.should_skip_operation("reload_config")
     print(f"Should skip reload_config: {skip_reload}")
 
     # Reset degradation

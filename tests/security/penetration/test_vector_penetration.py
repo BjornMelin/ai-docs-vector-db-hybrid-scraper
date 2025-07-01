@@ -140,7 +140,7 @@ class TestVectorPenetrationAttacks:
                 return (attack_id, "success", True)
             except (ValueError, DimensionError) as e:
                 return (attack_id, str(e), "security:" in str(e))
-            except Exception as e:
+            except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
                 return (attack_id, str(e), False)
 
         # Launch concurrent attacks
@@ -302,7 +302,7 @@ class TestVectorFuzzingAttacks:
             error_msg = str(e)
             assert len(error_msg) > 0
             # Should not crash or raise unexpected exceptions
-        except Exception as e:
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             # Unexpected exceptions indicate a problem
             pytest.fail(f"Unexpected exception with input {fuzz_vector[:5]}...: {e}")
 
@@ -483,7 +483,7 @@ class TestVectorResourceExhaustion:
                             stage_name=f"mem-test-{i}",
                             query_vector=SecureVectorModel(values=vector),
                         )
-            except Exception:
+            except (ValueError, ConnectionError, TimeoutError, RuntimeError):
                 pass  # Expected for invalid cases
 
             # Periodic garbage collection

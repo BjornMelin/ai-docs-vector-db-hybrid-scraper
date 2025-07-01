@@ -5,6 +5,7 @@ adaptive threshold adjustment, cluster-based optimization, performance-based tun
 and context-aware threshold selection for optimal search results.
 """
 
+import asyncio
 import logging
 import statistics
 from datetime import UTC, datetime, timedelta
@@ -273,7 +274,7 @@ class SimilarityThresholdManager(BaseFilter):
 
         except Exception as e:
             error_msg = "Failed to apply similarity threshold management"
-            self._logger.error(error_msg, exc_info=True)
+            self._logger.exception(error_msg)
             raise FilterError(
                 error_msg,
                 filter_name=self.name,
@@ -677,7 +678,7 @@ class SimilarityThresholdManager(BaseFilter):
                 noise_ratio=noise_ratio,
             )
 
-        except Exception:
+        except (OSError, PermissionError) as e:
             self._logger.exception("Clustering analysis failed")
             return None
 
@@ -767,7 +768,7 @@ class SimilarityThresholdManager(BaseFilter):
         try:
             SimilarityThresholdCriteria.model_validate(filter_criteria)
             return True
-        except Exception:
+        except (ImportError, RuntimeError, ValueError, asyncio.TimeoutError) as e:
             self._logger.warning("Invalid similarity threshold criteria")
             return False
 

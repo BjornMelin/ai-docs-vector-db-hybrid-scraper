@@ -136,7 +136,7 @@ class BrowserUseAdapter(BaseService):
         if hasattr(self, "_browser") and self._browser:
             try:
                 await self._browser.close()
-            except Exception:
+            except (OSError, AttributeError, ConnectionError, ImportError) as e:
                 self.logger.exception("Error cleaning up browser-use")
             finally:
                 # Always reset state even if close() fails
@@ -241,7 +241,7 @@ class BrowserUseAdapter(BaseService):
                 # Exponential backoff
                 await asyncio.sleep(2**retry_count)
 
-            except Exception:
+            except (TimeoutError, OSError, PermissionError) as e:
                 retry_count += 1
                 error_msg = "browser-use execution error"
                 self.logger.warning(
@@ -408,7 +408,7 @@ class BrowserUseAdapter(BaseService):
                 content = str(result) if result else ""
                 html = ""
                 title = ""
-        except Exception:
+        except (AttributeError, RuntimeError, ValueError) as e:
             self.logger.warning("Failed to extract page content")
             # Fallback to agent result
             content = str(result) if result else ""
@@ -585,7 +585,7 @@ class BrowserUseAdapter(BaseService):
                 "response_time_ms": 15000,
                 "available": True,
             }
-        except Exception:
+        except (AttributeError, RuntimeError, ValueError) as e:
             return {
                 "healthy": False,
                 "status": "error",
@@ -636,7 +636,7 @@ class BrowserUseAdapter(BaseService):
                 "error": result.get("error") if not result.get("success") else None,
             }
 
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             return {
                 "success": False,
                 "error": str(e),

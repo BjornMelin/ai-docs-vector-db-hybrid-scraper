@@ -147,7 +147,8 @@ class TestEmbeddingTracking:
                 input_texts="Test text",
             ),
         ):
-            raise ValueError("API rate limit exceeded")
+            msg = "API rate limit exceeded"
+            raise ValueError(msg)
 
     def test_track_embedding_generation_cache_hit(self):
         """Test tracking embedding generation with cache hit."""
@@ -217,7 +218,8 @@ class TestLLMTracking:
                 provider="openai", model="gpt-4", operation="completion"
             ),
         ):
-            raise ConnectionError("API service unavailable")
+            msg = "API service unavailable"
+            raise ConnectionError(msg)
 
     def test_track_llm_call_multiple_choices(self):
         """Test LLM call tracking with multiple response choices."""
@@ -276,7 +278,8 @@ class TestVectorSearchTracking:
                 collection_name="documents", query_type="semantic"
             ),
         ):
-            raise ConnectionError("Qdrant connection failed")
+            msg = "Qdrant connection failed"
+            raise ConnectionError(msg)
 
     def test_track_vector_search_empty_results(self):
         """Test vector search tracking with empty results."""
@@ -337,7 +340,8 @@ class TestRAGPipelineTracking:
                 query="Test query", retrieval_method="hybrid", generation_model="gpt-4"
             ),
         ):
-            raise ValueError("Generation model failed")
+            msg = "Generation model failed"
+            raise ValueError(msg)
 
     def test_track_rag_pipeline_with_timing_breakdown(self):
         """Test RAG pipeline with detailed timing breakdown."""

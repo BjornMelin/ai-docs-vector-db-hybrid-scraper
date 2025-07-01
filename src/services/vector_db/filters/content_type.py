@@ -5,6 +5,7 @@ document type classification, semantic category filtering, intent-based filterin
 and content quality assessment.
 """
 
+import asyncio
 import logging
 import re
 from enum import Enum
@@ -358,7 +359,7 @@ class ContentTypeFilter(BaseFilter):
 
         except Exception as e:
             error_msg = f"Failed to apply content type filter: {e}"
-            self._logger.error(error_msg, exc_info=True)
+            self._logger.exception(error_msg)
             raise FilterError(
                 error_msg,
                 filter_name=self.name,
@@ -637,7 +638,7 @@ class ContentTypeFilter(BaseFilter):
         try:
             ContentTypeCriteria.model_validate(filter_criteria)
             return True
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             self._logger.warning(
                 f"Invalid content type criteria: {e}"
             )  # TODO: Convert f-string to logging format

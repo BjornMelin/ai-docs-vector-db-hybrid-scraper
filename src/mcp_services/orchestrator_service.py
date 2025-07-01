@@ -9,7 +9,6 @@ import logging
 from typing import Any
 
 from fastmcp import FastMCP
-
 from src.infrastructure.client_manager import ClientManager
 from src.services.agents import (
     AgenticOrchestrator,
@@ -124,8 +123,8 @@ class OrchestratorService:
                 elif service_name == "system":
                     self.system_service = service
                 logger.info("Initialized %s service", service_name)
-            except Exception:
-                logger.exception("Failed to initialize %s service", service_name)
+            except (ImportError, ValueError, RuntimeError, AttributeError) as e:
+                logger.exception("Failed to initialize {service_name} service")
 
     async def _initialize_agentic_orchestration(self) -> None:
         """Initialize agentic orchestration components."""
@@ -213,7 +212,7 @@ class OrchestratorService:
                     try:
                         service_info = await service.get_service_info()
                         capabilities["services"][service_name] = service_info
-                    except Exception as e:
+                    except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                         capabilities["services"][service_name] = {
                             "status": "error",
                             "error": str(e),
@@ -316,7 +315,7 @@ class OrchestratorService:
             if service:
                 try:
                     services_info[service_name] = await service.get_service_info()
-                except Exception as e:
+                except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                     services_info[service_name] = {"status": "error", "error": str(e)}
             else:
                 services_info[service_name] = {"status": "not_initialized"}

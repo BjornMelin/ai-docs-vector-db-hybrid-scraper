@@ -66,7 +66,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Validate query
             security_validator = SecurityValidator.from_unified_config()
-            validated_query = security_validator.validate_search_query(query)
+            validated_query = security_validator.validate_query_string(query)
 
             # Autonomous provider selection if not specified
             if not providers:
@@ -211,7 +211,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Validate query
             security_validator = SecurityValidator.from_unified_config()
-            validated_query = security_validator.validate_search_query(query)
+            validated_query = security_validator.validate_query_string(query)
 
             # Analyze query characteristics for adaptive optimization
             query_analysis = await _analyze_query_characteristics(
@@ -264,7 +264,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
                     # Update best result if this iteration performed better
                     if (
-                        not best_result
+                        best_result is None
                         or performance_score > best_result["performance_score"]
                     ):
                         best_result = search_result.copy()
@@ -363,7 +363,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Validate query
             security_validator = SecurityValidator.from_unified_config()
-            validated_query = security_validator.validate_search_query(query)
+            validated_query = security_validator.validate_query_string(query)
 
             # Get all available providers
             available_providers = await _get_available_providers(ctx)

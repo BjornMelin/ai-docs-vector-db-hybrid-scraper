@@ -19,6 +19,12 @@ from .generator import GenerationResult
 logger = logging.getLogger(__name__)
 
 
+def _raise_cache_test_failed() -> None:
+    """Raise EmbeddingServiceError for failed cache test."""
+    msg = "Cache test failed"
+    raise EmbeddingServiceError(msg)
+
+
 class HyDECache(BaseService):
     """Intelligent caching layer for HyDE embeddings and results."""
 
@@ -61,8 +67,7 @@ class HyDECache(BaseService):
             test_value = await self.cache_manager.get(test_key)
 
             if test_value != "test_value":
-                msg = "Cache test failed"
-                raise EmbeddingServiceError(msg)
+                _raise_cache_test_failed()
 
             await self.cache_manager.delete(test_key)
 
@@ -128,7 +133,7 @@ class HyDECache(BaseService):
             self.cache_misses += 1
             return None
 
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
             logger.warning(
                 f"Cache get error for HyDE embedding: {e}"
@@ -192,7 +197,7 @@ class HyDECache(BaseService):
 
             return success
 
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
             logger.warning(
                 f"Cache set error for HyDE embedding: {e}"
@@ -230,7 +235,7 @@ class HyDECache(BaseService):
             self.cache_misses += 1
             return None
 
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
             logger.warning(
                 f"Cache get error for hypothetical documents: {e}"
@@ -286,7 +291,7 @@ class HyDECache(BaseService):
 
             return success
 
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
             logger.warning(
                 f"Cache set error for hypothetical documents: {e}"
@@ -324,7 +329,7 @@ class HyDECache(BaseService):
             self.cache_misses += 1
             return None
 
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
             logger.warning(
                 f"Cache get error for search results: {e}"
@@ -381,7 +386,7 @@ class HyDECache(BaseService):
 
             return success
 
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
             logger.warning(
                 f"Cache set error for search results: {e}"
@@ -415,7 +420,7 @@ class HyDECache(BaseService):
                 else:
                     results[query] = False  # Needs generation
 
-            except Exception as e:
+            except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
                 logger.warning(
                     f"Cache warm-up error for query '{query}': {e}"
                 )  # TODO: Convert f-string to logging format
@@ -461,7 +466,7 @@ class HyDECache(BaseService):
 
             return success_count > 0
 
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
                 f"Cache invalidation error for query '{query}': {e}"
             )  # TODO: Convert f-string to logging format

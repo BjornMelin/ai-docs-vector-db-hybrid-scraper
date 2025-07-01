@@ -210,7 +210,7 @@ class HyDEQueryEngine(BaseService):
             return results
 
         except Exception as e:
-            logger.error("HyDE search failed", exc_info=True)
+            logger.exception("HyDE search failed")
 
             # Fallback to regular search if enabled
             if self.config.enable_fallback:
@@ -325,7 +325,7 @@ class HyDEQueryEngine(BaseService):
             logger.debug("Reranking not available, returning original results")
             return results
 
-        except Exception:
+        except (TimeoutError, AttributeError, RuntimeError, ValueError) as e:
             logger.warning("Reranking failed, returning original results")
             return results
 

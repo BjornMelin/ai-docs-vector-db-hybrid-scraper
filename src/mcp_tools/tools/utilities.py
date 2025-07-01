@@ -1,5 +1,6 @@
 """Utility tools for MCP server."""
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING
 
@@ -87,7 +88,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return GenericDictResponse(**costs)
 
-        except Exception:
+        except (AttributeError, OSError, PermissionError) as e:
             if ctx:
                 await ctx.error("Failed to estimate costs")
             logger.exception("Failed to estimate costs")
@@ -160,7 +161,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 details=config_status,
             )
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError) as e:
             if ctx:
                 await ctx.error("Failed to validate configuration")
             logger.exception("Failed to validate configuration")

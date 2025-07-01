@@ -4,8 +4,11 @@ This module provides MCP tools for AI-powered content analysis, quality assessme
 and adaptive extraction recommendations using the Content Intelligence Service.
 """
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING
+
+import redis
 
 from src.services.content_intelligence.models import ContentType
 
@@ -110,7 +113,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 error=result.error,
             )
 
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             await ctx.error(f"Content intelligence analysis failed: {e}")
             return ContentIntelligenceResult(
                 success=False,
@@ -167,7 +170,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return result
 
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             await ctx.error(f"Content classification failed: {e}")
 
             return ContentClassification(
@@ -229,7 +232,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return result
 
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             await ctx.error(f"Quality assessment failed: {e}")
             return QualityScore(
                 overall_score=0.1,
@@ -287,7 +290,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return result
 
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             await ctx.error(f"Metadata extraction failed: {e}")
             return ContentMetadata(
                 word_count=len(request.content.split()),
@@ -347,7 +350,7 @@ def register_tools(mcp, client_manager: ClientManager):
             # Convert to serializable format
             return [rec.model_dump() for rec in recommendations]
 
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             await ctx.error(f"Adaptation recommendation failed: {e}")
             return []
 
@@ -391,7 +394,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return metrics
 
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             await ctx.error(f"Failed to retrieve metrics: {e}")
             return {
                 "service_available": False,

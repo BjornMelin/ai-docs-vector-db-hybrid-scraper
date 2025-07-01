@@ -65,7 +65,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Validate query and filters
             security_validator = SecurityValidator.from_unified_config()
-            validated_query = security_validator.validate_search_query(query)
+            validated_query = security_validator.validate_query_string(query)
 
             # Analyze query characteristics for filter optimization
             query_analysis = await _analyze_query_for_filtering(validated_query, ctx)
@@ -699,7 +699,7 @@ async def _analyze_collection_characteristics(
             ],
         }
 
-    except Exception as e:
+    except (OSError, PermissionError, ValueError) as e:
         logger.warning(f"Failed to analyze collection {collection_name}: {e}")
         return {
             "collection_name": collection_name,

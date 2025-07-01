@@ -141,7 +141,7 @@ class SimpleSearchService(BaseService):
         self._cache[key] = response
 
     @conditional_feature("enable_hybrid_search", fallback_value=[])
-    async def hybrid_search(self, request: SearchRequest) -> list[dict[str, Any]]:
+    async def hybrid_search(self, _request: SearchRequest) -> list[dict[str, Any]]:
         """Hybrid search - disabled in simple mode."""
         return []
 

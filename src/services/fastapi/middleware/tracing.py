@@ -27,6 +27,12 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+def _raise_opentelemetry_not_available() -> None:
+    """Raise ImportError for opentelemetry not available."""
+    msg = "opentelemetry not available"
+    raise ImportError(msg)
+
+
 def _safe_escape_for_logging(value: str | None) -> str | None:
     """Safely escape user input for logging to prevent XSS in log viewers.
 
@@ -187,7 +193,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
                 body = await self._get_request_body(request)
                 if body:
                     log_data["request_body"] = _safe_escape_for_logging(body)
-            except Exception as e:
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                 log_data["request_body_error"] = _safe_escape_for_logging(str(e))
 
         logger.info("Incoming request", extra=log_data)
@@ -224,7 +230,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
                 body = self._get_response_body(response)
                 if body:
                     log_data["response_body"] = _safe_escape_for_logging(body)
-            except Exception as e:
+            except (httpx.HTTPError, httpx.ResponseNotRead, ValueError) as e:
                 log_data["response_body_error"] = _safe_escape_for_logging(str(e))
 
         # Choose log level based on status code
@@ -267,7 +273,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
             except UnicodeDecodeError:
                 return f"<binary data: {len(body)} bytes>"
 
-        except Exception:
+        except (RuntimeError, TypeError, UnicodeDecodeError, ValueError) as e:
             return None
 
     def _get_response_body(self, response: Response) -> str | None:
@@ -304,7 +310,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
             except UnicodeDecodeError:
                 return f"<binary data: {len(body)} bytes>"
 
-        except Exception:
+        except (ConnectionError, OSError, RuntimeError, TimeoutError) as e:
             return None
 
     def _get_client_ip(self, request: Request) -> str:
@@ -355,8 +361,7 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
         # Try to import OpenTelemetry
         try:
             if trace is None:
-                msg = "opentelemetry not available"
-                raise ImportError(msg)
+                _raise_opentelemetry_not_available()
 
             self.tracer = trace.get_tracer(__name__)
             self.Status = Status

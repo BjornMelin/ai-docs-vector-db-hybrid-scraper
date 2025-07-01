@@ -176,7 +176,7 @@ class LoadTestUser:
                         f"User {self.user_id}: Request timeout"
                     )  # TODO: Convert f-string to logging format
 
-                except Exception as e:
+                except (httpx.HTTPError, httpx.TimeoutException, ConnectionError) as e:
                     self.failures += 1
                     error_type = type(e).__name__
                     self.errors.append(error_type)
@@ -206,7 +206,12 @@ class LoadTestUser:
                             self.requests_sent += 1
                             break
 
-                        except Exception:
+                        except (
+                            ConnectionError,
+                            TimeoutError,
+                            ValueError,
+                            httpx.RequestError,
+                        ) as e:
                             if retry == self.config.max_retries - 1:
                                 self.failures += 1
 
@@ -219,7 +224,7 @@ class LoadTestUser:
                 )
                 await asyncio.sleep(think_time)
 
-            except Exception:
+            except (TimeoutError, OSError, PermissionError) as e:
                 logger.exception(f"User {self.user_id} session error")
                 self.failures += 1
                 break
@@ -490,7 +495,7 @@ class LoadTestRunner:
                     )  # TODO: Convert f-string to logging format
                     break
 
-            except Exception:
+            except (OSError, PermissionError) as e:
                 logger.exception(f"Stress test failed at {user_count} users")
                 break
 

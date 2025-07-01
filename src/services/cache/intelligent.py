@@ -6,6 +6,7 @@ intelligent cache warming, and memory usage optimization for ML operations.
 
 import asyncio
 import functools
+import gzip
 import hashlib
 import json
 import logging
@@ -14,7 +15,7 @@ import time
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Generic, TypeVar
+from typing import Any, Callable, Generic, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -148,7 +149,7 @@ class IntelligentCache(Generic[K, V]):
                 persisted_value = await self._get_from_persistence(key)
                 if persisted_value is not None:
                     # Add back to memory cache
-                    await self._set_memory_cache(key, persisted_value)
+                    await self.set(key, persisted_value)
                     self._stats.hits += 1
                     return persisted_value
         
@@ -371,7 +372,6 @@ class IntelligentCache(Generic[K, V]):
             
             # Only compress if value is large enough to benefit
             if len(serialized) > 1024:  # 1KB threshold
-                import gzip
                 compressed = gzip.compress(serialized)
                 
                 # Only use compression if it actually reduces size
@@ -400,7 +400,6 @@ class IntelligentCache(Generic[K, V]):
             return value
         
         try:
-            import gzip
             decompressed = gzip.decompress(value)
             return pickle.loads(decompressed)
         except Exception as e:
@@ -421,7 +420,7 @@ class IntelligentCache(Generic[K, V]):
                 return len(value)
             else:
                 return len(pickle.dumps(value))
-        except Exception:
+        except (IOError, OSError, PermissionError, asyncio.TimeoutError) as e:
             # Fallback estimation
             return len(str(value))
     

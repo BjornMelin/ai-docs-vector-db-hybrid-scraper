@@ -10,16 +10,25 @@ import contextlib
 import json
 import logging
 import statistics
+import uuid
 from collections import defaultdict, deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from src.config.enterprise import EnterpriseConfig
+from src.config import Config, create_enterprise_config
+
+
+if TYPE_CHECKING:
+    from src.config import Config as EnterpriseConfigType
+
+
+# Type alias for clarity  
+EnterpriseConfig = Config
 
 
 logger = logging.getLogger(__name__)
@@ -393,8 +402,6 @@ class DistributedTracer:
 
     def _generate_span_id(self) -> str:
         """Generate unique span ID."""
-        import uuid
-
         return str(uuid.uuid4())[:16]
 
     def cleanup_old_traces(self) -> None:
@@ -532,7 +539,7 @@ class AlertManager:
                     self._record_alert_event(alert, "resolved", latest_value)
 
             except Exception as e:
-                logger.exception("Error checking alert {alert.name}")
+                logger.exception("Error checking alert %s", alert.name)
 
         return triggered_alerts
 
@@ -690,8 +697,6 @@ class EnterpriseObservabilityPlatform:
     ) -> TraceSpan:
         """Start a new distributed trace."""
         if trace_id is None:
-            import uuid
-
             trace_id = str(uuid.uuid4())
 
         return self.distributed_tracer.start_trace(
@@ -860,7 +865,7 @@ class EnterpriseObservabilityPlatform:
                     self.anomaly_detector.update_baseline(metadata["name"], values)
 
             except Exception as e:
-                logger.exception("Error updating baseline for {metric_key}")
+                logger.exception("Error updating baseline for %s", metric_key)
 
     def _handle_alert_notification(self, alert: Alert) -> None:
         """Handle alert notifications."""
@@ -888,9 +893,7 @@ async def get_observability_platform(
 
     if _observability_platform is None:
         if config is None:
-            from src.config.enterprise import load_enterprise_configuration
-
-            config = await load_enterprise_configuration()
+            config = create_enterprise_config()
 
         _observability_platform = EnterpriseObservabilityPlatform(config)
         await _observability_platform.initialize()

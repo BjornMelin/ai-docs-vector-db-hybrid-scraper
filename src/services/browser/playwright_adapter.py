@@ -128,7 +128,7 @@ class PlaywrightAdapter(BaseService):
             self._initialized = False
             self.logger.info("Playwright adapter cleaned up")
 
-        except Exception:
+        except (AttributeError, ImportError, OSError) as e:
             self.logger.exception("Error cleaning up Playwright")
 
     async def scrape(
@@ -181,8 +181,15 @@ class PlaywrightAdapter(BaseService):
                 page, actions, action_results, start_time, site_profile, stealth_config
             )
 
-        except Exception as e:
+        except (ValidationError, CrawlServiceError, TimeoutError, RuntimeError) as e:
             return await self._build_error_result(e, url, start_time, site_profile)
+        except (OSError, FileNotFoundError, PermissionError) as e:
+            # Catch any unexpected errors and wrap them
+            wrapped_error = CrawlServiceError(f"Unexpected error during scraping: {e}")
+            wrapped_error.__cause__ = e
+            return await self._build_error_result(
+                wrapped_error, url, start_time, site_profile
+            )
 
         finally:
             await self._cleanup_context(context)
@@ -277,7 +284,7 @@ class PlaywrightAdapter(BaseService):
             try:
                 result = await self._execute_action(page, action, i)
                 action_results.append(result)
-            except Exception as e:
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                 self.logger.warning(
                     f"Action {i} failed"
                 )  # TODO: Convert f-string to logging format
@@ -385,7 +392,7 @@ class PlaywrightAdapter(BaseService):
         if context:
             try:
                 await context.close()
-            except Exception:
+            except (ConnectionError, OSError, PermissionError) as e:
                 self.logger.warning("Failed to close context")
 
     async def _inject_stealth_scripts(self, page: Any, stealth_config: Any) -> None:
@@ -490,7 +497,7 @@ class PlaywrightAdapter(BaseService):
             await page.add_init_script(stealth_script)
             self.logger.debug("Stealth JavaScript patterns injected successfully")
 
-        except Exception:
+        except (OSError, PermissionError, RuntimeError) as e:
             self.logger.warning("Failed to inject stealth scripts")
 
     async def _execute_action(
@@ -517,7 +524,7 @@ class PlaywrightAdapter(BaseService):
 
             return self._create_success_result(index, action_type, start_time)
 
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             return self._create_error_result(index, action_type, start_time, str(e))
 
     async def _perform_action(
@@ -683,7 +690,7 @@ class PlaywrightAdapter(BaseService):
                     if text and len(text.strip()) > 50:
                         return {"text": text, "html": html}
 
-            except Exception:
+            except (AttributeError, RuntimeError, ValueError) as e:
                 self.logger.debug("Failed to extract with selector {selector}")
                 continue
 
@@ -693,7 +700,7 @@ class PlaywrightAdapter(BaseService):
                 "text": await page.inner_text("body"),
                 "html": await page.inner_html("body"),
             }
-        except Exception:
+        except TimeoutError as e:
             self.logger.warning("Failed to extract body content")
             return {"text": "", "html": ""}
 
@@ -748,7 +755,7 @@ class PlaywrightAdapter(BaseService):
             }
             """)
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError) as e:
             self.logger.warning("Failed to extract metadata")
             return {
                 "title": await page.title() if page else "",
@@ -786,7 +793,7 @@ class PlaywrightAdapter(BaseService):
             }
             """)
 
-        except Exception:
+        except (OSError, PermissionError) as e:
             self.logger.debug("Failed to get performance metrics")
             return {}
 
@@ -895,7 +902,7 @@ class PlaywrightAdapter(BaseService):
                 "response_time_ms": 15000,
                 "available": True,
             }
-        except Exception:
+        except (AttributeError, RuntimeError, ValueError) as e:
             return {
                 "healthy": False,
                 "status": "error",
@@ -947,7 +954,7 @@ class PlaywrightAdapter(BaseService):
                 "error": result.get("error") if not result.get("success") else None,
             }
 
-        except Exception as e:
+        except (ValueError, TypeError, AttributeError) as e:
             return {
                 "success": False,
                 "error": str(e),

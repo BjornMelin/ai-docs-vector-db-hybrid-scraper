@@ -11,7 +11,6 @@ import os
 from contextlib import asynccontextmanager, suppress
 
 from fastmcp import FastMCP
-
 from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tool_registry import register_all_tools

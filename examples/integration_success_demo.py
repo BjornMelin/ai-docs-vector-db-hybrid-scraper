@@ -82,10 +82,10 @@ async def main():
             performance_metrics = status["performance_metrics"]
             print("\n📊 PERFORMANCE MONITORING ACTIVE:")
             print("-" * 40)
-            avg_response = performance_metrics['avg_response_time_ms']
+            avg_response = performance_metrics["avg_response_time_ms"]
             print(f"✅ Response time tracking: {avg_response:.2f}ms")
-            
-            throughput = performance_metrics['throughput_rps']
+
+            throughput = performance_metrics["throughput_rps"]
             print(f"✅ Throughput monitoring: {throughput:.2f} RPS")
             print(f"✅ Cache hit rate: {performance_metrics['cache_hit_rate']:.1%}")
             print(f"✅ Memory usage: {performance_metrics['memory_usage_mb']:.1f}MB")
@@ -120,7 +120,7 @@ async def main():
 
             return True
 
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError, TimeoutError) as e:
         print(f"❌ Integration test failed: {e}")
         return False
 
@@ -128,8 +128,7 @@ async def main():
 if __name__ == "__main__":
     success = asyncio.run(main())
     result_msg = (
-        '🏆 PORTFOLIO ACHIEVEMENT COMPLETE' if success 
-        else '❌ INTEGRATION FAILED'
+        "🏆 PORTFOLIO ACHIEVEMENT COMPLETE" if success else "❌ INTEGRATION FAILED"
     )
     print(f"\n{result_msg}")
     print("✅ Parallel Processing System with DI Integration - DELIVERED")

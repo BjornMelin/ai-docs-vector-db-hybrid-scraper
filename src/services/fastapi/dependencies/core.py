@@ -66,7 +66,7 @@ class DependencyContainer:
             self._initialized = True
             logger.info("Dependency container initialized successfully")
 
-        except Exception:
+        except (OSError, AttributeError, ConnectionError, ImportError) as e:
             logger.exception("Failed to initialize dependency container")
             raise
 
@@ -83,7 +83,7 @@ class DependencyContainer:
             self._initialized = False
             logger.info("Dependency container cleaned up")
 
-        except Exception:
+        except (OSError, AttributeError, ConnectionError, ImportError) as e:
             logger.exception("Error during dependency cleanup")
 
     @property
@@ -220,7 +220,7 @@ async def get_vector_service() -> QdrantService:
             _raise_vector_service_unavailable()
         else:
             return container.vector_service
-    except Exception:
+    except (OSError, AttributeError, ConnectionError, ImportError) as e:
         logger.exception("Failed to get vector service")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
@@ -252,7 +252,7 @@ async def get_embedding_manager_legacy() -> Any:
             _raise_embedding_service_unavailable()
         else:
             return container.embedding_manager
-    except Exception:
+    except (OSError, AttributeError, ConnectionError, ImportError) as e:
         logger.exception("Failed to get embedding manager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
@@ -284,7 +284,7 @@ async def get_cache_manager_legacy() -> Any:
             _raise_cache_service_unavailable()
         else:
             return container.cache_manager
-    except Exception:
+    except (OSError, AttributeError, ConnectionError, ImportError) as e:
         logger.exception("Failed to get cache manager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
@@ -316,7 +316,7 @@ def get_client_manager() -> ClientManager:
             _raise_client_manager_unavailable()
         else:
             return container.client_manager
-    except Exception:
+    except (OSError, AttributeError, ConnectionError, ImportError) as e:
         logger.exception("Failed to get client manager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
@@ -407,7 +407,7 @@ class ServiceHealthChecker:
             # Attempt a simple health check operation
             await self.container.vector_service.list_collections()
             health["services"]["vector_db"] = {"status": "healthy"}
-        except Exception as e:
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             health["status"] = "degraded"
             health["services"]["vector_db"] = {"status": "unhealthy", "error": str(e)}
 
@@ -415,7 +415,7 @@ class ServiceHealthChecker:
         try:
             # Check if embedding manager is responsive
             health["services"]["embeddings"] = {"status": "healthy"}
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             health["status"] = "degraded"
             health["services"]["embeddings"] = {"status": "unhealthy", "error": str(e)}
 
@@ -423,7 +423,7 @@ class ServiceHealthChecker:
         try:
             # Check cache manager health
             health["services"]["cache"] = {"status": "healthy"}
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             health["status"] = "degraded"
             health["services"]["cache"] = {"status": "unhealthy", "error": str(e)}
 

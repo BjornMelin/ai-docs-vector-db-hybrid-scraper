@@ -24,6 +24,16 @@ from starlette.responses import Response
 from src.config import PerformanceConfig
 
 
+# Optional imports to avoid circular dependencies
+try:
+    from src.config import Config
+    from src.infrastructure.client_manager import ClientManager
+    from src.services.embeddings.manager import EmbeddingManager
+except ImportError:
+    Config = None
+    ClientManager = None
+    EmbeddingManager = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -155,7 +165,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 
             return response
 
-        except Exception:
+        except (ConnectionError, TimeoutError, ValueError, httpx.RequestError) as e:
             # Record failed request metrics
             end_time = time.perf_counter()
             response_time = end_time - start_time
@@ -196,7 +206,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
             if self._process:
                 memory_info = self._process.memory_info()
                 return memory_info.rss / 1024 / 1024  # Convert to MB
-        except Exception as e:
+        except (subprocess.SubprocessError, OSError, TimeoutError) as e:
             logger.warning(
                 f"Failed to get memory usage: {e}"
             )  # TODO: Convert f-string to logging format
@@ -291,7 +301,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
                         "memory_usage_percent": self._process.memory_percent(),
                         "cpu_percent": cpu_percent,
                     }
-                except Exception as e:
+                except (subprocess.SubprocessError, OSError, TimeoutError) as e:
                     logger.warning(
                         f"Failed to get system metrics: {e}"
                     )  # TODO: Convert f-string to logging format
@@ -424,7 +434,7 @@ async def optimized_lifespan(app):
     try:
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         logger.info("uvloop event loop policy installed for better performance")
-    except Exception as e:
+    except (ConnectionError, OSError, TimeoutError) as e:
         logger.warning(
             f"Failed to install uvloop: {e}"
         )  # TODO: Convert f-string to logging format
@@ -441,10 +451,9 @@ async def optimized_lifespan(app):
 async def _warm_services():
     """Warm up critical services for better first-request performance."""
     try:
-        # Import here to avoid circular dependencies
-        from src.config import Config
-        from src.infrastructure.client_manager import ClientManager
-        from src.services.embeddings.manager import EmbeddingManager
+        if Config is None or ClientManager is None or EmbeddingManager is None:
+            logger.warning("Required imports not available for service warm-up")
+            return
 
         logger.info("Starting service warm-up...")
 
@@ -458,7 +467,7 @@ async def _warm_services():
             await embedding_manager.initialize()
             await embedding_manager.generate_single("warmup query")
             logger.info("Embedding service warmed up successfully")
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             logger.warning(
                 f"Failed to warm embedding service: {e}"
             )  # TODO: Convert f-string to logging format
@@ -469,7 +478,7 @@ async def _warm_services():
             # Simple health check to warm the connection
             await qdrant_client.get_collections()
             logger.info("Vector database connection warmed up successfully")
-        except Exception as e:
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             logger.warning(
                 f"Failed to warm vector database: {e}"
             )  # TODO: Convert f-string to logging format
@@ -483,16 +492,16 @@ async def _warm_services():
 async def _cleanup_services():
     """Clean up services and connections."""
     try:
-        # Import here to avoid circular dependencies
-        from src.config import Config
-        from src.infrastructure.client_manager import ClientManager
+        if Config is None or ClientManager is None:
+            logger.warning("Required imports not available for service cleanup")
+            return
 
         config = Config()
         client_manager = ClientManager(config)
         await client_manager.cleanup()
         logger.info("Service cleanup completed")
 
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError, AttributeError) as e:
         logger.warning(
             f"Service cleanup failed: {e}"
         )  # TODO: Convert f-string to logging format

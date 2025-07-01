@@ -110,10 +110,7 @@ maintaining high performance and reliability. Always explain your reasoning."""
         fallback_reason = getattr(self, "_fallback_reason", None)
 
         if not PYDANTIC_AI_AVAILABLE or self.agent is None:
-            logger.warning(
-                "AgenticOrchestrator using fallback mode (reason: %s)",
-                fallback_reason or "pydantic_ai_unavailable"
-            )
+            logger.warning(f"AgenticOrchestrator using fallback mode (reason: {fallback_reason or 'pydantic_ai_unavailable'})")
             return
 
         # Set up native Pydantic-AI tool discovery and orchestration
@@ -193,8 +190,6 @@ maintaining high performance and reliability. Always explain your reasoning."""
                 },
             )
 
-            return response
-
         except Exception as e:
             logger.exception("Autonomous orchestration failed")
             return ToolResponse(
@@ -205,6 +200,8 @@ maintaining high performance and reliability. Always explain your reasoning."""
                 latency_ms=0.0,
                 confidence=0.0,
             )
+        else:
+            return response
 
     async def _orchestrate_autonomous(
         self, request: ToolRequest, deps: BaseAgentDependencies
@@ -245,7 +242,7 @@ maintaining high performance and reliability. Always explain your reasoning."""
                 confidence=self._calculate_confidence(results, selected_tools),
             )
 
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             latency_ms = (time.time() - start_time) * 1000
             return ToolResponse(
                 success=False,
@@ -256,7 +253,7 @@ maintaining high performance and reliability. Always explain your reasoning."""
                 confidence=0.0,
             )
 
-    async def _discover_tools(self, deps: BaseAgentDependencies) -> dict[str, Any]:
+    async def _discover_tools(self, _deps: BaseAgentDependencies) -> dict[str, Any]:
         """Dynamic tool discovery based on J3 research findings."""
         # This would integrate with actual MCP tool registry
         # For now, return core tools available in the system
@@ -279,7 +276,7 @@ maintaining high performance and reliability. Always explain your reasoning."""
         }
 
     def _select_tools_for_task(
-        self, task: str, available_tools: dict[str, Any], constraints: dict[str, Any]
+        self, task: str, _available_tools: dict[str, Any], constraints: dict[str, Any]
     ) -> list[str]:
         """Intelligent tool selection based on task analysis."""
         task_lower = task.lower()
@@ -324,14 +321,14 @@ maintaining high performance and reliability. Always explain your reasoning."""
                 # Update context for next tool
                 context.update(tool_result)
 
-            except Exception as e:
-                logger.warning("Tool %s failed: %s", tool_name, e)
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
+                logger.warning(f"Tool {tool_name} failed: {e}")
                 results[f"{tool_name}_error"] = str(e)
 
         return results
 
     async def _execute_tool(
-        self, tool_name: str, context: dict[str, Any], deps: BaseAgentDependencies
+        self, tool_name: str, context: dict[str, Any], _deps: BaseAgentDependencies
     ) -> dict[str, Any]:
         """Execute individual tool (mock implementation)."""
         # Simulate tool execution
@@ -391,9 +388,7 @@ maintaining high performance and reliability. Always explain your reasoning."""
     ) -> ToolResponse:
         """Fallback orchestration when Pydantic-AI unavailable."""
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
-        logger.warning(
-            "Using fallback orchestration mode (reason: %s)", fallback_reason
-        )
+        logger.warning(f"Using fallback orchestration mode (reason: {fallback_reason})")
         start_time = time.time()
 
         # Enhanced fallback logic with context-aware responses

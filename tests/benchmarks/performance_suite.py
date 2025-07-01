@@ -743,7 +743,7 @@ async def generate_embeddings(texts: list[str]) -> list[list[float]]:
 class VectorSearch:
     def __init__(self, collection_name: str):
         self.collection = collection_name
-        
+
     async def hybrid_search(self, query: str, limit: int = 10):
         dense_results = await self.vector_search(query, limit)
         sparse_results = await self.keyword_search(query, limit)

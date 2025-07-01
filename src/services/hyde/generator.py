@@ -17,6 +17,12 @@ from .config import HyDEConfig, HyDEPromptConfig
 logger = logging.getLogger(__name__)
 
 
+def _raise_openai_client_not_available() -> None:
+    """Raise EmbeddingServiceError for unavailable OpenAI client."""
+    msg = "OpenAI client not available"
+    raise EmbeddingServiceError(msg)
+
+
 class GenerationResult(BaseModel):
     """Result of hypothetical document generation."""
 
@@ -82,8 +88,7 @@ class HypotheticalDocumentGenerator(BaseService):
             self._llm_client = await self.client_manager.get_openai_client()
 
             if not self._llm_client:
-                msg = "OpenAI client not available"
-                raise EmbeddingServiceError(msg)
+                _raise_openai_client_not_available()
 
             # Test LLM connection
             await self._llm_client.models.list()
@@ -182,9 +187,7 @@ class HypotheticalDocumentGenerator(BaseService):
             return result
 
         except Exception as e:
-            logger.error(
-                f"Failed to generate hypothetical documents: {e}", exc_info=True
-            )
+            logger.exception("Failed to generate hypothetical documents: ")
             msg = f"Document generation failed: {e}"
             raise EmbeddingServiceError(msg) from e
 
@@ -318,7 +321,7 @@ class HypotheticalDocumentGenerator(BaseService):
                 document = await self._generate_single_document(prompt)
                 if len(document.strip()) >= self.config.min_generation_length:
                     documents.append(document)
-            except Exception as e:
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                 logger.warning(
                     f"Failed to generate document: {e}"
                 )  # TODO: Convert f-string to logging format
@@ -345,7 +348,7 @@ class HypotheticalDocumentGenerator(BaseService):
         except TimeoutError:
             logger.warning("Document generation timed out")
             return ""
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Failed to generate document: {e}"
             )  # TODO: Convert f-string to logging format

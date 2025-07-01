@@ -9,7 +9,6 @@ import logging
 from typing import Any
 
 from fastmcp import FastMCP
-
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.tools import (
     agentic_rag,

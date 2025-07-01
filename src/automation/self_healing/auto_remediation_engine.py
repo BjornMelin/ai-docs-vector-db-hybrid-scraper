@@ -868,9 +868,7 @@ class RollbackManager:
 
             logger.info("Successfully rolled back to checkpoint: %s", checkpoint_id)
         except Exception as e:
-            logger.exception(
-                "Failed to rollback to checkpoint %s: %s", checkpoint_id, e
-            )
+            logger.exception("Failed to rollback to checkpoint %s", checkpoint_id)
             return False
         else:
             return True
@@ -936,17 +934,19 @@ class RollbackManager:
 
         return processes[:100]  # Limit to first 100 processes
 
-    async def _rollback_circuit_breakers(self, circuit_breaker_states: dict[str, Any]):
+    async def _rollback_circuit_breakers(self, _circuit_breaker_states: dict[str, Any]):
         """Rollback circuit breaker states."""
         logger.info("Rolling back circuit breaker states")
         await asyncio.sleep(0.5)  # Simulate rollback time
 
-    async def _rollback_service_states(self, service_states: dict[str, dict[str, Any]]):
+    async def _rollback_service_states(
+        self, _service_states: dict[str, dict[str, Any]]
+    ):
         """Rollback service states."""
         logger.info("Rolling back service states")
         await asyncio.sleep(1.0)  # Simulate rollback time
 
-    async def _rollback_configuration_state(self, configuration_state: dict[str, Any]):
+    async def _rollback_configuration_state(self, _configuration_state: dict[str, Any]):
         """Rollback configuration state."""
         logger.info("Rolling back configuration state")
         await asyncio.sleep(0.5)  # Simulate rollback time
@@ -1069,7 +1069,7 @@ class AutoRemediationEngine:
         issue: DetectedIssue,
         strategy: RemediationStrategy,
         actions: list[RemediationAction],
-        safety_result: SafetyValidationResult,
+        _safety_result: SafetyValidationResult,
     ) -> RemediationResult:
         """Execute remediation actions with safety measures."""
 
@@ -1151,7 +1151,7 @@ class AutoRemediationEngine:
                         f"{issue.issue_id}"
                     )
             except Exception as rollback_error:
-                logger.exception(f"Rollback failed: {rollback_error}")
+                logger.exception("Rollback failed: ")
 
         finally:
             # Update timing and cleanup

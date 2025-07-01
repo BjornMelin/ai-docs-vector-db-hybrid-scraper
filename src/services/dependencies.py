@@ -462,8 +462,8 @@ async def cache_get(
 
         cache_type_enum = CacheType(cache_type)
         return await cache_manager.get(key, cache_type_enum)
-    except Exception:
-        logger.exception("Cache get failed for key %s", key)
+    except (OSError, ConnectionError, ImportError, ModuleNotFoundError) as e:
+        logger.exception("Cache get failed for key")
         return None
 
 
@@ -483,8 +483,8 @@ async def cache_set(
 
         cache_type_enum = CacheType(cache_type)
         return await cache_manager.set(key, value, cache_type_enum, ttl)
-    except Exception:
-        logger.exception("Cache set failed for key %s", key)
+    except (OSError, ConnectionError, ImportError, ModuleNotFoundError) as e:
+        logger.exception("Cache set failed for key")
         return False
 
 
@@ -502,8 +502,8 @@ async def cache_delete(
 
         cache_type_enum = CacheType(cache_type)
         return await cache_manager.delete(key, cache_type_enum)
-    except Exception:
-        logger.exception("Cache delete failed for key %s", key)
+    except (OSError, ConnectionError, ImportError, ModuleNotFoundError) as e:
+        logger.exception("Cache delete failed for key")
         return False
 
 
@@ -663,7 +663,7 @@ async def get_task_status(
     try:
         status = await task_manager.get_job_status(job_id)
     except Exception as e:
-        logger.exception("Task status check failed for %s", job_id)
+        logger.exception("Task status check failed for")
         return {"status": "error", "message": str(e)}
     else:
         return status
@@ -1024,7 +1024,7 @@ async def reset_circuit_breaker(service_name: str) -> dict[str, Any]:
             "new_status": breaker.get_status(),
         }
     except Exception as e:
-        logger.exception("Failed to reset circuit breaker for %s", service_name)
+        logger.exception("Failed to reset circuit breaker for")
         return {
             "success": False,
             "error": str(e),
@@ -1354,7 +1354,7 @@ async def cleanup_services() -> None:
         client_manager = get_client_manager()
         await client_manager.cleanup()
         logger.info("All services cleaned up successfully")
-    except Exception:
+    except (ConnectionError, OSError, PermissionError) as e:
         logger.exception("Service cleanup failed")
         raise
 
@@ -1402,7 +1402,7 @@ async def store_qdrant_embeddings(
     try:
         await qdrant_service.upsert_points(collection_name, points)
     except Exception as e:
-        logger.exception("Failed to store embeddings in %s", collection_name)
+        logger.exception("Failed to store embeddings in")
         msg = f"Failed to store embeddings: {e}"
         raise EmbeddingServiceError(msg) from e
     else:
@@ -1428,7 +1428,7 @@ async def search_qdrant_similar(
             filter_conditions=filter_conditions,
         )
     except Exception as e:
-        logger.exception("Failed to search vectors in %s", collection_name)
+        logger.exception("Failed to search vectors in")
         msg = f"Failed to search vectors: {e}"
         raise EmbeddingServiceError(msg) from e
 
@@ -1691,7 +1691,7 @@ async def check_service_health_function(service_name: str) -> bool:
 
             return is_healthy
     except Exception as e:
-        logger.exception("Health check failed for %s: %s", service_name, e)
+        logger.exception("Health check failed for %s: %s", service_name)
         health["last_check"] = time.time()
         health["last_error"] = str(e)
         health["consecutive_failures"] = health.get("consecutive_failures", 0) + 1
@@ -1765,9 +1765,7 @@ async def track_operation_performance(
     except Exception as e:
         # Record failure metrics
         duration_ms = (time.time() - start_time) * 1000
-        logger.exception(
-            "Operation %s failed in %.2fms: %s", operation_name, duration_ms, e
-        )
+        logger.exception("Operation %s failed in %.2fms", operation_name, duration_ms)
         raise
     else:
         # Record success metrics (could integrate with metrics system)
@@ -1795,7 +1793,7 @@ async def rerank_search_results(
     try:
         return await embedding_manager.rerank_results(request.query, request.results)
     except Exception as e:
-        logger.exception("Result reranking failed: %s", e)
+        logger.exception("Result reranking failed: %s")
         # Return original results on failure
         return request.results
 

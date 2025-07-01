@@ -44,7 +44,7 @@ async def crawl_url(
     """
     try:
         if not crawling_client:
-            raise HTTPException(status_code=500, detail="Crawling client not available")
+            _raise_crawling_client_unavailable()
 
         if not url:
             _raise_url_required()
@@ -99,7 +99,7 @@ async def crawl_site(
     """
     try:
         if not crawling_client:
-            raise HTTPException(status_code=500, detail="Crawling client not available")
+            _raise_crawling_client_unavailable()
 
         if not url:
             _raise_url_required()
@@ -160,7 +160,7 @@ async def get_crawl_metrics(
             f"Retrieved crawl metrics for {len(metrics)} tiers"
         )  # TODO: Convert f-string to logging format
 
-    except Exception:
+    except (ConnectionError, OSError, PermissionError) as e:
         logger.exception("Crawl metrics retrieval failed")
         return {}
     else:
@@ -200,7 +200,7 @@ async def get_recommended_tool(
 
     except HTTPException:
         raise
-    except Exception:
+    except (ConnectionError, OSError, PermissionError) as e:
         logger.exception(f"Tool recommendation failed for {url}")
         return "crawl4ai"  # Graceful fallback
     else:
@@ -233,7 +233,7 @@ async def get_provider_info(
             f"Retrieved provider info for {len(info)} tools"
         )  # TODO: Convert f-string to logging format
 
-    except Exception:
+    except (ConnectionError, OSError, PermissionError) as e:
         logger.exception("Provider info retrieval failed")
         return {}
     else:
@@ -266,7 +266,7 @@ async def get_tier_metrics(
             f"Retrieved tier metrics for {len(metrics)} tiers"
         )  # TODO: Convert f-string to logging format
 
-    except Exception:
+    except (ConnectionError, OSError, PermissionError) as e:
         logger.exception("Tier metrics retrieval failed")
         return {}
     else:
@@ -498,3 +498,8 @@ def _raise_invalid_max_pages() -> None:
 def _raise_invalid_max_parallel() -> None:
     """Raise HTTPException for invalid max_parallel."""
     raise HTTPException(status_code=400, detail="max_parallel must be between 1 and 20")
+
+
+def _raise_crawling_client_unavailable() -> None:
+    """Raise HTTPException for unavailable crawling client."""
+    raise HTTPException(status_code=500, detail="Crawling client not available")

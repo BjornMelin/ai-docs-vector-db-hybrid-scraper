@@ -228,7 +228,7 @@ def initialize_monitoring_system(
             logger.info(
                 f"Prometheus metrics server started on port {metrics_config.export_port}"
             )
-        except Exception:
+        except (OSError, PermissionError) as e:
             logger.exception("Failed to start metrics server")
 
     logger.info("Monitoring system initialization complete")
@@ -358,7 +358,7 @@ def setup_fastmcp_monitoring(
                 "FastMCP app does not expose underlying FastAPI app - health endpoints not added"
             )
 
-    except Exception:
+    except (ConnectionError, OSError, PermissionError) as e:
         logger.exception("Failed to set up FastMCP monitoring")
 
 
@@ -383,7 +383,7 @@ async def run_periodic_health_checks(
         try:
             await health_manager.check_all()
             logger.debug("Completed periodic health check")
-        except Exception:
+        except (TimeoutError, OSError, PermissionError) as e:
             logger.exception("Error in periodic health check")
 
         await asyncio.sleep(interval_seconds)
@@ -410,7 +410,7 @@ async def update_system_metrics_periodically(
         try:
             metrics_registry.update_system_metrics()
             logger.debug("Updated system metrics")
-        except Exception:
+        except (TimeoutError, OSError, PermissionError) as e:
             logger.exception("Error updating system metrics")
 
         await asyncio.sleep(interval_seconds)
@@ -438,7 +438,7 @@ async def update_cache_metrics_periodically(
         try:
             metrics_registry.update_cache_stats(cache_manager)
             logger.debug("Updated cache metrics")
-        except Exception:
+        except (ConnectionError, OSError, PermissionError) as e:
             logger.exception("Error updating cache metrics")
 
         await asyncio.sleep(interval_seconds)

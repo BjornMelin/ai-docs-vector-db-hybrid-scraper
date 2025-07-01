@@ -84,7 +84,7 @@ class EmbeddingServiceWithProtection:
             model=model,
         )
 
-    async def _generate_embedding_impl(self, text: str, model: str) -> list[float]:
+    async def _generate_embedding_impl(self, text: str, _model: str) -> list[float]:
         """Internal implementation of embedding generation."""
         # Simulate external API call
         await asyncio.sleep(0.1)

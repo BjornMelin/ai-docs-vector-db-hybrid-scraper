@@ -70,7 +70,7 @@ class CrawlManager:
             try:
                 await self._unified_browser_manager.cleanup()
                 logger.info("Cleaned up UnifiedBrowserManager")
-            except Exception:
+            except (OSError, AttributeError, ConnectionError, ImportError) as e:
                 logger.exception("Error cleaning up UnifiedBrowserManager")
 
             self._unified_browser_manager = None
@@ -139,7 +139,7 @@ class CrawlManager:
                 "failed_tiers": result.failed_tiers,
             }
 
-        except Exception:
+        except (OSError, PermissionError) as e:
             logger.exception("UnifiedBrowserManager failed for {url}")
             return {
                 "success": False,
@@ -275,7 +275,7 @@ class CrawlManager:
                 "error": None if pages else "No pages could be crawled",
             }
 
-        except Exception:
+        except (OSError, PermissionError) as e:
             logger.exception("Site crawl failed for {url}")
             return {
                 "success": False,

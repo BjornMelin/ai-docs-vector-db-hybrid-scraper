@@ -4,6 +4,7 @@ Implements advanced hybrid search with multiple fusion strategies,
 autonomous optimization, and performance correlation analysis.
 """
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -68,7 +69,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Validate inputs
             security_validator = SecurityValidator.from_unified_config()
-            validated_query = security_validator.validate_search_query(query)
+            validated_query = security_validator.validate_query_string(query)
 
             # Get services
             qdrant_service = await client_manager.get_qdrant_service()
@@ -307,7 +308,7 @@ def register_tools(mcp, client_manager: ClientManager):
                                 f"Collection {collection}: {len(collection_result['results'])} results"
                             )
 
-                except Exception as e:
+                except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                     if ctx:
                         await ctx.warning(
                             f"Failed to search collection {collection}: {e}"
@@ -454,7 +455,7 @@ async def _perform_text_search(
 
         return search_result or {"points": []}
 
-    except Exception as e:
+    except (OSError, FileNotFoundError, ValueError) as e:
         logger.warning(f"Text search failed, using fallback: {e}")
         return {"points": []}
 

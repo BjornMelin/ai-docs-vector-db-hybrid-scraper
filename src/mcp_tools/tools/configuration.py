@@ -136,8 +136,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Config optimization completed: {len(optimization_recommendations['recommendations'])} recommendations generated"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform intelligent config optimization")
             if ctx:
@@ -148,6 +146,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 "config_scope": config_scope,
                 "optimization_target": optimization_target,
             }
+        else:
+            return final_results
 
     @mcp.tool()
     async def adaptive_config_monitoring(
@@ -325,8 +325,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Profile management completed: action='{action}', success={result.get('success', False)}"
                 )
 
-            return result
-
         except Exception as e:
             logger.exception("Failed to manage configuration profile")
             if ctx:
@@ -335,7 +333,6 @@ def register_tools(mcp, client_manager: ClientManager):
                 "success": False,
                 "error": str(e),
                 "action": action,
-                "profile_name": profile_name,
             }
 
     @mcp.tool()
@@ -602,7 +599,7 @@ async def _apply_safe_optimization(
                     }
                 )
 
-        except Exception as e:
+        except (ValueError, TypeError, KeyError) as e:
             failed_changes.append(
                 {
                     "parameter": recommendation["parameter"],
@@ -653,7 +650,7 @@ async def _apply_configuration_change(
             "validation_passed": True,
         }
 
-    except Exception as e:
+    except (ValueError, TypeError, KeyError) as e:
         return {
             "success": False,
             "error": str(e),

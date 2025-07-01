@@ -121,7 +121,9 @@ def get_drift_summary() -> dict[str, Any]:
             drift_type.value: len([e for e in events if e.drift_type == drift_type])
             for drift_type in DriftType
         },
-        "latest_snapshot": detector.get_latest_snapshot().model_dump()
-        if detector.get_latest_snapshot()
-        else None,
+        "latest_snapshot": (
+            latest_snapshot.model_dump()
+            if (latest_snapshot := detector.get_latest_snapshot())
+            else None
+        ),
     }

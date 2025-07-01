@@ -85,13 +85,7 @@ class QdrantDocuments:
                 )
 
         except Exception as e:
-            logger.error(
-                "Failed to upsert %d points to %s: %s",
-                len(points),
-                collection_name,
-                e,
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
 
             error_msg = str(e).lower()
             if "collection not found" in error_msg:
@@ -164,12 +158,7 @@ class QdrantDocuments:
                 formatted_results.append(result)
 
         except Exception as e:
-            logger.error(
-                "Failed to retrieve points from %s: %s",
-                collection_name,
-                e,
-                exc_info=True,
-            )
+            logger.exception("Failed to retrieve points from %s", collection_name)
             msg = f"Failed to retrieve points: {e}"
             raise QdrantServiceError(msg) from e
         else:
@@ -219,12 +208,7 @@ class QdrantDocuments:
                 logger.info("Deleted points by filter condition")
 
         except Exception as e:
-            logger.error(
-                "Failed to delete points from %s: %s",
-                collection_name,
-                e,
-                exc_info=True,
-            )
+            logger.exception("Failed to delete points from %s", collection_name)
             msg = f"Failed to delete points: {e}"
             raise QdrantServiceError(msg) from e
         else:
@@ -273,12 +257,7 @@ class QdrantDocuments:
                 logger.info("Updated payload for point %s", point_id)
 
         except Exception as e:
-            logger.error(
-                "Failed to update payload for point %s: %s",
-                point_id,
-                e,
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
             msg = f"Failed to update point payload: {e}"
             raise QdrantServiceError(msg) from e
         else:
@@ -314,11 +293,13 @@ class QdrantDocuments:
             )
 
         except Exception as e:
-            logger.error(
-                "Failed to count points in %s: %s", collection_name, e, exc_info=True
+            logger.exception(
+                "Failed to count points in collection: %s", collection_name
             )
             msg = f"Failed to count points: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return result.count
 
     async def scroll_points(
         self,
@@ -377,12 +358,7 @@ class QdrantDocuments:
             }
 
         except Exception as e:
-            logger.error(
-                "Failed to scroll points in %s: %s",
-                collection_name,
-                e,
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
             msg = f"Failed to scroll points: {e}"
             raise QdrantServiceError(msg) from e
 
@@ -413,11 +389,6 @@ class QdrantDocuments:
             return True
 
         except Exception as e:
-            logger.error(
-                "Failed to clear collection %s: %s",
-                collection_name,
-                e,
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
             msg = f"Failed to clear collection: {e}"
             raise QdrantServiceError(msg) from e

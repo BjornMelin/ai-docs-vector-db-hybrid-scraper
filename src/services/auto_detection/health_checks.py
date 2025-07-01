@@ -33,6 +33,18 @@ from src.services.errors import circuit_breaker
 logger = logging.getLogger(__name__)
 
 
+def _raise_redis_unavailable() -> None:
+    """Raise ImportError for unavailable redis package."""
+    msg = "redis not available"
+    raise ImportError(msg)
+
+
+def _raise_httpx_unavailable() -> None:
+    """Raise ImportError for unavailable httpx package."""
+    msg = "httpx package not available"
+    raise ImportError(msg)
+
+
 class HealthCheckResult(BaseModel):
     """Result of a health check operation."""
 
@@ -180,7 +192,7 @@ class HealthChecker:
                 return await self._check_postgresql_health(service, start_time)
             return await self._check_generic_health(service, start_time)
 
-        except Exception as e:
+        except (asyncpg.PostgresError, ConnectionError, TimeoutError) as e:
             response_time_ms = (time.time() - start_time) * 1000
 
             self.logger.warning("Health check failed for {service.service_name}")
@@ -200,8 +212,7 @@ class HealthChecker:
         """Check Redis service health."""
         try:
             if redis is None:
-                msg = "redis not available"
-                raise ImportError(msg)
+                _raise_redis_unavailable()
 
             client = redis.Redis(host=service.host, port=service.port, socket_timeout=5)
 
@@ -241,8 +252,7 @@ class HealthChecker:
         """Check Qdrant service health."""
         try:
             if httpx is None:
-                msg = "httpx package not available"
-                raise ImportError(msg)
+                _raise_httpx_unavailable()
 
             async with httpx.AsyncClient(timeout=5.0) as client:
                 # Use HTTP health endpoint
@@ -264,7 +274,12 @@ class HealthChecker:
                     try:
                         health_data = response.json()
                         metadata.update(health_data)
-                    except Exception:
+                    except (
+                        AttributeError,
+                        TypeError,
+                        ValueError,
+                        json.JSONDecodeError,
+                    ) as e:
                         logger.debug(
                             "Failed to parse health data from {service.service_name}"
                         )
@@ -320,8 +335,7 @@ class HealthChecker:
             if service.health_check_url:
                 # HTTP health check
                 if httpx is None:
-                    msg = "httpx package not available"
-                    raise ImportError(msg)
+                    _raise_httpx_unavailable()
 
                 async with httpx.AsyncClient(timeout=5.0) as client:
                     response = await client.get(service.health_check_url)
@@ -383,7 +397,7 @@ class HealthChecker:
 
             except asyncio.CancelledError:
                 break
-            except Exception:
+            except (TimeoutError, OSError, PermissionError) as e:
                 self.logger.exception("Health monitoring error")
                 await asyncio.sleep(60)  # Wait longer on error
 

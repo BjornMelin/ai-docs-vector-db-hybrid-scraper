@@ -166,7 +166,7 @@ class QdrantOptimizer:
                     latency = (time.time() - start_time) * 1000  # Convert to ms
                     latencies.append(latency)
 
-                except Exception as e:
+                except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
                     logger.warning("Search failed for ef=%s: %s", ef, e)
                     continue
 

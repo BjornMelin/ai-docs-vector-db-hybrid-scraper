@@ -54,7 +54,7 @@ class Crawl4AIAdapter(BaseService):
             try:
                 await self._provider.cleanup()
                 self.logger.info("Crawl4AI adapter cleaned up")
-            except Exception:
+            except (OSError, AttributeError, ConnectionError, ImportError) as e:
                 self.logger.exception("Error cleaning up Crawl4AI adapter")
             finally:
                 self._initialized = False
@@ -271,7 +271,7 @@ class Crawl4AIAdapter(BaseService):
                 "message": "Health check timed out",
                 "response_time_ms": 10000,
             }
-        except Exception:
+        except (AttributeError, RuntimeError, ValueError) as e:
             return {
                 "healthy": False,
                 "status": "error",

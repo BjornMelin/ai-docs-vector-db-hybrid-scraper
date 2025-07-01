@@ -446,7 +446,7 @@ class TestConfigIntegration:
 
 # Consolidated Provider Configuration Tests
 @pytest.mark.parametrize(
-    "provider,config_class,valid_params,invalid_params",
+    ("provider", "config_class", "valid_params", "invalid_params"),
     [
         pytest.param(
             EmbeddingProvider.OPENAI,
@@ -492,7 +492,7 @@ class TestProviderConfigurationParametrized:
 
 
 @pytest.mark.parametrize(
-    "crawl_provider,config_class",
+    ("crawl_provider", "config_class"),
     [
         (CrawlProvider.CRAWL4AI, Crawl4AIConfig),
         (CrawlProvider.FIRECRAWL, FirecrawlConfig),
@@ -514,7 +514,7 @@ class TestCrawlProviderConfiguration:
 
 
 @pytest.mark.parametrize(
-    "config_class,required_field,valid_value,invalid_value",
+    ("config_class", "required_field", "valid_value", "invalid_value"),
     [
         (OpenAIConfig, "api_key", "sk-valid-key", "invalid-key"),
         (FirecrawlConfig, "api_key", "fc-valid-key", "invalid-key"),
@@ -695,7 +695,7 @@ def create_test_config_file(
 
 
 def assert_config_equality(
-    config1: Any, config2: Any, exclude_fields: list[str] = None
+    config1: Any, config2: Any, exclude_fields: list[str] | None = None
 ) -> None:
     """Assert that two configurations are equal, optionally excluding fields."""
     exclude_fields = exclude_fields or []
@@ -713,7 +713,7 @@ def get_config_validation_errors(config_class: type, **invalid_params) -> list[s
     try:
         config_class(**invalid_params)
         return []
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, AttributeError) as e:
         return [str(e)]
 
 

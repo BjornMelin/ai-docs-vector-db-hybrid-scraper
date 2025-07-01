@@ -76,10 +76,10 @@ class TextAnalysis:
 class EmbeddingManager:
     """Enterprise-grade embedding provider manager with intelligent selection.
 
-    This manager orchestrates multiple embedding providers (OpenAI, FastEmbed) with 
+    This manager orchestrates multiple embedding providers (OpenAI, FastEmbed) with
     smart selection algorithms, cost optimization, and performance tracking. It provides:
-    
-    - **Smart Provider Selection**: Automatic provider/model selection based on text 
+
+    - **Smart Provider Selection**: Automatic provider/model selection based on text
       characteristics, quality requirements, and cost constraints
     - **Budget Management**: Real-time cost tracking with configurable daily limits
     - **Performance Optimization**: Caching, batching, and reranking capabilities
@@ -136,9 +136,9 @@ class EmbeddingManager:
 
         # Quality tier to provider mappings - can be dynamically updated based on availability
         self._tier_providers = {
-            QualityTier.FAST: "fastembed",      # Local processing for speed
+            QualityTier.FAST: "fastembed",  # Local processing for speed
             QualityTier.BALANCED: "fastembed",  # Cost-effective default
-            QualityTier.BEST: "openai",         # Highest quality available
+            QualityTier.BEST: "openai",  # Highest quality available
         }
 
         # Initialize reranker for search result optimization (optional component)
@@ -148,8 +148,8 @@ class EmbeddingManager:
             try:
                 self._reranker = FlagReranker(self._reranker_model, use_fp16=True)
                 logger.info("Initialized reranker")
-            except Exception:
-                logger.warning("Failed to initialize reranker")
+            except (ImportError, RuntimeError, OSError) as e:
+                logger.warning(f"Failed to initialize reranker: {e}")
 
     async def initialize(self) -> None:
         """Initialize available providers with connection validation.
@@ -179,8 +179,8 @@ class EmbeddingManager:
                 logger.info(
                     f"Initialized OpenAI provider with {self.config.openai.model}"
                 )
-            except Exception:
-                logger.warning("Failed to initialize OpenAI provider")
+            except (ImportError, ValueError, ConnectionError, RuntimeError) as e:
+                logger.warning(f"Failed to initialize OpenAI provider: {e}")
 
         # Initialize FastEmbed provider - always available for local embeddings
         try:
@@ -190,8 +190,8 @@ class EmbeddingManager:
             logger.info(
                 f"Initialized FastEmbed provider with {self.config.fastembed.model}"
             )
-        except Exception:
-            logger.warning("Failed to initialize FastEmbed provider")
+        except (ImportError, ValueError, RuntimeError, OSError) as e:
+            logger.warning(f"Failed to initialize FastEmbed provider: {e}")
 
         # Validate that at least one provider is available
         if not self.providers:
@@ -218,8 +218,8 @@ class EmbeddingManager:
                 logger.info(
                     f"Cleaned up {name} provider"
                 )  # TODO: Convert f-string to logging format
-            except Exception:
-                logger.exception(f"Error cleaning up {name} provider")
+            except (RuntimeError, ConnectionError, TimeoutError) as e:
+                logger.exception("Error cleaning up  provider: {e}")
 
         self.providers.clear()
         self._initialized = False
@@ -396,7 +396,7 @@ class EmbeddingManager:
         """
         end_time = time.time()
         latency_ms = (end_time - start_time) * 1000
-        
+
         # Estimate tokens using configured character-to-token ratio
         actual_tokens = sum(len(text) for text in texts) // int(
             self._smart_config.chars_per_token
@@ -546,8 +546,8 @@ class EmbeddingManager:
                     logger.info(
                         f"Generated {len(sparse_embeddings)} sparse embeddings"
                     )  # TODO: Convert f-string to logging format
-                except Exception:
-                    logger.warning("Failed to generate sparse embeddings")
+                except (AttributeError, RuntimeError, ValueError) as e:
+                    logger.warning(f"Failed to generate sparse embeddings: {e}")
                     # Continue with dense embeddings only
 
             # Calculate comprehensive metrics and update usage statistics
@@ -567,8 +567,8 @@ class EmbeddingManager:
                             dimensions=len(embeddings[0]),
                         )
                         logger.info("Cached embedding for future use")
-                except Exception:
-                    logger.warning("Failed to cache embedding")
+                except (AttributeError, RuntimeError, ConnectionError) as e:
+                    logger.warning(f"Failed to cache embedding: {e}")
 
             # Build comprehensive result with all metadata
             result = {
@@ -589,9 +589,9 @@ class EmbeddingManager:
                 result["sparse_embeddings"] = sparse_embeddings
 
             return result
-        except Exception:
-            logger.exception("Embedding generation failed")
-            raise
+        except (ValueError, RuntimeError, ConnectionError, TimeoutError) as e:
+            logger.exception("Embedding generation failed: ")
+            raise EmbeddingServiceError(f"Failed to generate embeddings: {e}") from e
 
     async def rerank_results(
         self, query: str, results: list[dict[str, object]]
@@ -634,8 +634,8 @@ class EmbeddingManager:
 
             # Extract reordered results
             reranked = [result for result, _ in scored_results]
-        except Exception:
-            logger.exception("Reranking failed")
+        except (ValueError, RuntimeError, AttributeError) as e:
+            logger.exception("Reranking failed: ")
             # Return original results on failure
             return results
         else:

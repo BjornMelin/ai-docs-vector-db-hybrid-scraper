@@ -8,6 +8,8 @@ import logging
 import time
 from collections.abc import Callable
 
+import httpx
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -83,7 +85,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
                 description="Number of active HTTP requests",
             )
 
-        except Exception as e:
+        except (httpx.HTTPError, httpx.TimeoutException, ConnectionError) as e:
             logger.warning(
                 f"Failed to initialize request metrics: {e}"
             )  # TODO: Convert f-string to logging format
@@ -209,7 +211,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             if content_type:
                 span.set_attribute("http.request.content_type", content_type)
 
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.debug(
                 f"Failed to add AI context: {e}"
             )  # TODO: Convert f-string to logging format
@@ -248,7 +250,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             self.request_duration.record(duration, attributes)
             self.request_counter.add(1, attributes)
 
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Failed to record request metrics: {e}"
             )  # TODO: Convert f-string to logging format
@@ -278,7 +280,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             self.request_duration.record(duration, attributes)
             self.request_counter.add(1, attributes)
 
-        except Exception as e:
+        except (OSError, FileNotFoundError, PermissionError) as e:
             logger.warning(
                 f"Failed to record error metrics: {e}"
             )  # TODO: Convert f-string to logging format

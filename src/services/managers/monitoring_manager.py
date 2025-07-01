@@ -163,7 +163,7 @@ class MonitoringManager:
                 return is_healthy
         except Exception as e:
             logger.exception(
-                f"Health check failed for {service_name}: {e}"
+                "Health check failed for : {e}"
             )  # TODO: Convert f-string to logging format
             health.last_check = time.time()
             health.last_error = str(e)
@@ -236,7 +236,7 @@ class MonitoringManager:
         try:
             if hasattr(self._metrics_registry, "record_metric"):
                 self._metrics_registry.record_metric(metric_name, value, labels or {})
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Failed to record metric {metric_name}: {e}"
             )  # TODO: Convert f-string to logging format
@@ -256,7 +256,7 @@ class MonitoringManager:
         try:
             if hasattr(self._metrics_registry, "increment_counter"):
                 self._metrics_registry.increment_counter(counter_name, labels or {})
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Failed to increment counter {counter_name}: {e}"
             )  # TODO: Convert f-string to logging format
@@ -279,7 +279,7 @@ class MonitoringManager:
                 self._metrics_registry.record_histogram(
                     histogram_name, value, labels or {}
                 )
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Failed to record histogram {histogram_name}: {e}"
             )  # TODO: Convert f-string to logging format
@@ -319,7 +319,7 @@ class MonitoringManager:
             self.increment_counter(f"{operation_name}_errors")
 
             logger.exception(
-                f"Operation {operation_name} failed: {e}"
+                "Operation  failed: {e}"
             )  # TODO: Convert f-string to logging format
             raise
 
@@ -335,7 +335,7 @@ class MonitoringManager:
         try:
             if hasattr(self._performance_monitor, "get_metrics"):
                 return self._performance_monitor.get_metrics()
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Failed to get performance metrics: {e}"
             )  # TODO: Convert f-string to logging format
@@ -436,7 +436,7 @@ class MonitoringManager:
         # Get overall health
         try:
             status["overall_health"] = await self.get_overall_health()
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             logger.warning(
                 f"Failed to get overall health: {e}"
             )  # TODO: Convert f-string to logging format
@@ -445,7 +445,7 @@ class MonitoringManager:
         # Get performance metrics
         try:
             status["performance_metrics"] = self.get_performance_metrics()
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             logger.warning(
                 f"Failed to get performance metrics: {e}"
             )  # TODO: Convert f-string to logging format

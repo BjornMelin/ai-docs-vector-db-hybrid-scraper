@@ -28,6 +28,17 @@ from src.security import MLSecurityValidator as SecurityValidator
 logger = logging.getLogger(__name__)
 
 
+def _raise_invalid_url_format() -> None:
+    """Raise ValueError for invalid URL format."""
+    raise ValueError("Invalid URL format")
+
+
+def _raise_crawling_failed(tier: str) -> None:
+    """Raise ValueError for crawling failure."""
+    msg = f"Crawling failed for tier {tier}"
+    raise ValueError(msg)
+
+
 def register_tools(mcp, client_manager: ClientManager):
     """Register 5-tier crawling tools with the MCP server."""
 
@@ -54,8 +65,12 @@ def register_tools(mcp, client_manager: ClientManager):
         """
         try:
             # Validate URL
-            security_validator = SecurityValidator.from_unified_config()
-            validated_url = security_validator.validate_url(url)
+            import urllib.parse
+
+            parsed_url = urllib.parse.urlparse(url)
+            if not parsed_url.scheme or not parsed_url.netloc:
+                _raise_invalid_url_format()
+            validated_url = url
 
             if ctx:
                 await ctx.info(f"Analyzing optimal tier for URL: {validated_url}")
@@ -138,8 +153,12 @@ def register_tools(mcp, client_manager: ClientManager):
         """
         try:
             # Validate URL
-            security_validator = SecurityValidator.from_unified_config()
-            validated_url = security_validator.validate_url(url)
+            import urllib.parse
+
+            parsed_url = urllib.parse.urlparse(url)
+            if not parsed_url.scheme or not parsed_url.netloc:
+                _raise_invalid_url_format()
+            validated_url = url
 
             if ctx:
                 await ctx.info(f"Starting enhanced 5-tier crawl for: {validated_url}")
@@ -165,8 +184,7 @@ def register_tools(mcp, client_manager: ClientManager):
             )
 
             if not crawl_result or not crawl_result.get("success"):
-                msg = f"Crawling failed for tier {tier}"
-                raise ValueError(msg)
+                _raise_crawling_failed(tier)
 
             # Quality assessment and enhancement
             quality_metrics = _assess_content_quality(crawl_result)

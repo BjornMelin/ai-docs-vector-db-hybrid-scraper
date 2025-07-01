@@ -986,11 +986,11 @@ class TestAutomatedAccessibilityTools:
         )
 
         # Calculate score (inverse of violations, normalized)
-        _total_tests = len(violations) + len(passes)
-        if _total_tests == 0:
+        total_tests = len(violations) + len(passes)
+        if total_tests == 0:
             return 1.0
 
-        return max(0.0, 1.0 - (violation_score / _total_tests))
+        return max(0.0, 1.0 - (violation_score / total_tests))
 
     def _consolidate_issues(
         self,

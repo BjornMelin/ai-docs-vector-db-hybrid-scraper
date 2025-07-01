@@ -235,7 +235,7 @@ class QdrantAliasManager(BaseService):
                 f"Deleted alias {alias_name}"
             )  # TODO: Convert f-string to logging format
 
-        except Exception:
+        except (OSError, PermissionError) as e:
             logger.exception("Failed to delete alias")
             return False
         else:
@@ -254,7 +254,7 @@ class QdrantAliasManager(BaseService):
         try:
             aliases = await self.client.get_aliases()
             return any(alias.alias_name == alias_name for alias in aliases.aliases)
-        except Exception:
+        except (ConnectionError, OSError, PermissionError) as e:
             return False
 
     async def get_collection_for_alias(self, alias_name: str) -> str | None:
@@ -272,7 +272,7 @@ class QdrantAliasManager(BaseService):
             for alias in aliases.aliases:
                 if alias.alias_name == alias_name:
                     return alias.collection_name
-        except Exception:
+        except (ConnectionError, OSError, PermissionError) as e:
             return None
         else:
             return None
@@ -289,7 +289,7 @@ class QdrantAliasManager(BaseService):
             return {
                 alias.alias_name: alias.collection_name for alias in aliases.aliases
             }
-        except Exception:
+        except (ConnectionError, OSError, PermissionError) as e:
             logger.exception("Failed to list aliases")
             return {}
 
@@ -461,7 +461,7 @@ class QdrantAliasManager(BaseService):
                 if progress_callback:
                     try:
                         await progress_callback(total_copied, total_points)
-                    except Exception as e:
+                    except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                         logger.warning(
                             f"Progress callback failed: {e}"
                         )  # TODO: Convert f-string to logging format

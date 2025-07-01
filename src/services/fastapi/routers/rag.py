@@ -201,7 +201,7 @@ async def health_check(
         health_status["status"] = "healthy"
         health_status["connectivity_test"] = True
 
-    except Exception as e:
+    except (ValueError, TypeError, AttributeError) as e:
         health_status["status"] = "unhealthy"
         health_status["error"] = str(e)
         logger.warning("RAG health check failed")

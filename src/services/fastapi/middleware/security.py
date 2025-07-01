@@ -91,7 +91,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
                 "Redis connection failed, falling back to in-memory rate limiting",
                 extra={
@@ -249,7 +249,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 await pipe.execute()
             return True
 
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
                 "Redis rate limiting failed, falling back to in-memory",
                 extra={
@@ -308,7 +308,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 self._redis_healthy = True
             return True
 
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             if self._redis_healthy:
                 logger.warning(
                     "Redis connection lost",
@@ -326,7 +326,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             try:
                 await self.redis_client.aclose()
                 logger.info("Redis connection closed")
-            except Exception as e:
+            except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
                 logger.warning("Error closing Redis connection: %s", e)
             finally:
                 self.redis_client = None

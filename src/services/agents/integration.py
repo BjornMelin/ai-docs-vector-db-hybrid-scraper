@@ -223,9 +223,7 @@ class UnifiedAgenticSystem:
             logger.info("UnifiedAgenticSystem fully initialized")
 
         except Exception as e:
-            logger.error(
-                "Failed to initialize UnifiedAgenticSystem: %s", e, exc_info=True
-            )
+            logger.exception("Failed to initialize UnifiedAgenticSystem: %s")
             raise
 
     async def execute_unified_request(
@@ -245,9 +243,7 @@ class UnifiedAgenticSystem:
         start_time = time.time()
         request_start = datetime.now(tz=datetime.timezone.utc)
 
-        logger.info(
-            "Executing unified request %s: %s", request.request_id, request.goal
-        )
+        logger.info(f"Executing unified request {request.request_id}: {request.goal}")
 
         # Track active request
         self.active_requests[request.request_id] = {
@@ -310,20 +306,14 @@ class UnifiedAgenticSystem:
             await self._update_system_metrics(response)
             self.active_requests.pop(request.request_id, None)
 
-            logger.info(
-                "Unified request %s completed successfully in %.2fs",
-                request.request_id,
-                execution_time,
-            )
+            logger.info(f"Unified request {request.request_id} completed successfully in {execution_time:.2f}s")
 
             return response
 
         except Exception as e:
             execution_time = time.time() - start_time
 
-            logger.error(
-                "Unified request %s failed: %s", request.request_id, e, exc_info=True
-            )
+            logger.exception(f"Unified request {request.request_id} failed")
 
             # Create error response
             error_response = UnifiedAgentResponse(
@@ -439,7 +429,7 @@ class UnifiedAgenticSystem:
             )
 
         except Exception as e:
-            logger.error("Failed to get system status: %s", e, exc_info=True)
+            logger.exception("Failed to get system status: %s")
 
             return AgenticSystemStatus(
                 overall_health="unknown",
@@ -453,7 +443,7 @@ class UnifiedAgenticSystem:
         try:
             # Cancel active requests
             for request_id in list(self.active_requests.keys()):
-                logger.warning("Cancelling active request %s", request_id)
+                logger.warning(f"Cancelling active request {request_id}")
 
             # Cleanup subsystems
             await self.coordinator.cleanup()
@@ -463,7 +453,7 @@ class UnifiedAgenticSystem:
             logger.info("UnifiedAgenticSystem cleaned up")
 
         except Exception as e:
-            logger.error("Error during cleanup: %s", e, exc_info=True)
+            logger.exception("Error during cleanup: %s")
 
     # Private implementation methods
 
@@ -537,7 +527,7 @@ class UnifiedAgenticSystem:
 
     async def _create_coordination_tasks(
         self,
-        request: UnifiedAgentRequest,
+        _request: UnifiedAgentRequest,
         vector_results: dict[str, Any],
         orchestration_plan: ToolOrchestrationPlan,
     ) -> list[TaskDefinition]:

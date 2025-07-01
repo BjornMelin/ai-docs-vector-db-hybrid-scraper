@@ -182,7 +182,7 @@ async def persist_cache(
         try:
             _validate_dynamic_import(persist_func_module, persist_func_name)
         except ValueError as ve:
-            logger.exception(f"Security validation failed for dynamic import: {ve}")
+            logger.exception("Security validation failed for dynamic import: ")
             return {
                 "status": "failed",
                 "key": key,

@@ -7,6 +7,8 @@ performance metrics that integrate with the existing function-based services.
 import asyncio
 import functools
 import logging
+import subprocess
+import time
 from collections.abc import Callable
 from typing import Any, TypeVar
 
@@ -22,6 +24,19 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 F = TypeVar("F", bound=Callable[..., Any])
+
+
+def _raise_opentelemetry_trace_unavailable() -> None:
+    """Raise ImportError for unavailable OpenTelemetry trace."""
+    msg = "OpenTelemetry trace not available"
+    raise ImportError(msg)
+
+
+def _raise_opentelemetry_metrics_unavailable() -> None:
+    """Raise ImportError for unavailable OpenTelemetry metrics."""
+    msg = "OpenTelemetry metrics not available"
+    raise ImportError(msg)
+
 
 # Global metrics for AI operations
 _ai_operation_duration: Any = None
@@ -42,8 +57,7 @@ def get_tracer(name: str = "ai-docs-vector-db") -> Any:
     """
     try:
         if trace is None:
-            msg = "OpenTelemetry trace not available"
-            raise ImportError(msg)
+            _raise_opentelemetry_trace_unavailable()
         return trace.get_tracer(name)
     except ImportError:
         logger.warning("OpenTelemetry not available, returning NoOp tracer")
@@ -62,8 +76,7 @@ def get_meter(name: str = "ai-docs-vector-db") -> Any:
     """
     try:
         if metrics is None:
-            msg = "OpenTelemetry metrics not available"
-            raise ImportError(msg)
+            _raise_opentelemetry_metrics_unavailable()
         return metrics.get_meter(name)
     except ImportError:
         logger.warning("OpenTelemetry not available, returning NoOp meter")
@@ -103,7 +116,7 @@ def _initialize_metrics() -> None:
             description="Total tokens processed by AI operations",
         )
 
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError, TimeoutError) as e:
         logger.warning(
             f"Failed to initialize AI metrics: {e}"
         )  # TODO: Convert f-string to logging format
@@ -153,7 +166,7 @@ def instrument_function(
                                 span.set_attribute(
                                     f"function.kwarg.{key}", str(value)[:100]
                                 )
-                    except Exception as e:
+                    except (ValueError, TypeError, UnicodeDecodeError) as e:
                         logger.debug(
                             f"Failed to record function arguments: {e}"
                         )  # TODO: Convert f-string to logging format
@@ -198,7 +211,7 @@ def instrument_function(
                                 span.set_attribute(
                                     f"function.kwarg.{key}", str(value)[:100]
                                 )
-                    except Exception as e:
+                    except (ValueError, TypeError, UnicodeDecodeError) as e:
                         logger.debug(
                             f"Failed to record function arguments: {e}"
                         )  # TODO: Convert f-string to logging format
@@ -284,7 +297,7 @@ def record_ai_operation(
                 token_attrs = {**attrs, "token_type": "output"}
                 _ai_token_counter.add(output_tokens, token_attrs)
 
-    except Exception as e:
+    except (ValueError, TypeError, UnicodeDecodeError) as e:
         logger.warning(
             f"Failed to record AI operation metrics: {e}"
         )  # TODO: Convert f-string to logging format
@@ -324,7 +337,7 @@ def track_cost(
         if _ai_cost_counter:
             _ai_cost_counter.add(cost_usd, attrs)
 
-    except Exception as e:
+    except (ValueError, TypeError, UnicodeDecodeError) as e:
         logger.warning(
             f"Failed to record AI cost: {e}"
         )  # TODO: Convert f-string to logging format
@@ -426,7 +439,7 @@ class PerformanceTracker:
                 description="Resource usage metrics",
             )
 
-        except Exception as e:
+        except (ValueError, TypeError, RuntimeError, ImportError) as e:
             logger.warning("Failed to setup performance metrics: %s", e)
 
     def start_operation(
@@ -442,8 +455,6 @@ class PerformanceTracker:
             operation_type: Type of operation (e.g., 'tool_execution', 'agent_coordination')
             metadata: Additional metadata for the operation
         """
-        import time
-
         current_time = time.time()
 
         self.current_operations[operation_id] = {
@@ -487,8 +498,6 @@ class PerformanceTracker:
         if operation_id not in self.current_operations:
             logger.warning("Operation %s not found in current operations", operation_id)
             return None
-
-        import time
 
         operation = self.current_operations.pop(operation_id)
         end_time = time.time()
@@ -543,7 +552,7 @@ class PerformanceTracker:
             if performance_score is not None:
                 self.performance_gauge.record(performance_score, attrs)
 
-        except Exception as e:
+        except (ValueError, TypeError, AttributeError) as e:
             logger.warning("Failed to record performance metrics: %s", e)
 
         return performance_record
@@ -640,8 +649,6 @@ class PerformanceTracker:
         Returns:
             Dictionary of active operations
         """
-        import time
-
         current_time = time.time()
 
         return {

@@ -109,7 +109,7 @@ class FastEmbedProvider(EmbeddingProvider):
         # Initialize metrics if available
         try:
             self.metrics_registry = get_metrics_registry()
-        except Exception:
+        except (AttributeError, ImportError, RuntimeError, TypeError) as e:
             logger.warning(
                 "Metrics registry not available - embedding monitoring disabled"
             )

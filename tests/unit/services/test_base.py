@@ -298,7 +298,8 @@ class TestServiceIntegration:
         async def _test_service_with_exception():
             async with service.context():
                 assert service.init_called
-                raise ValueError("test exception")
+                msg = "test exception"
+                raise ValueError(msg)
 
         with pytest.raises(ValueError, match="test exception"):
             await _test_service_with_exception()

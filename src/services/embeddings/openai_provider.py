@@ -23,6 +23,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _raise_openai_api_key_not_configured() -> None:
+    """Raise EmbeddingServiceError for missing OpenAI API key."""
+    msg = "OpenAI API key not configured"
+    raise EmbeddingServiceError(msg)
+
+
 class OpenAIEmbeddingProvider(EmbeddingProvider):
     """OpenAI embedding provider with batch processing."""
 
@@ -93,7 +99,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         # Initialize metrics if available
         try:
             self.metrics_registry = get_metrics_registry()
-        except Exception:
+        except (AttributeError, ImportError, OSError) as e:
             logger.warning(
                 "Metrics registry not available - embedding monitoring disabled"
             )
@@ -109,8 +115,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             self._client = await self._client_manager.get_openai_client()
 
             if self._client is None:
-                msg = "OpenAI API key not configured"
-                raise EmbeddingServiceError(msg)
+                _raise_openai_api_key_not_configured()
 
             self._initialized = True
             logger.info(
@@ -210,10 +215,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             return embeddings
 
         except Exception as e:
-            logger.error(
-                f"Failed to generate embeddings for {len(texts)} texts: {e}",
-                exc_info=True,
-            )
+            logger.exception("Failed to generate embeddings for %d texts", len(texts))
 
             # Provide specific error messages based on error type
             error_msg = str(e)

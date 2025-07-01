@@ -88,22 +88,22 @@ class AdaptiveCircuitBreaker:
             msg = f"Circuit breaker {self.name} is open"
             raise CircuitBreakerOpenError(msg)
 
+        start_time = time.time()
         try:
-            start_time = time.time()
             result = (
                 await func(*args, **kwargs)
                 if asyncio.iscoroutinefunction(func)
                 else func(*args, **kwargs)
             )
 
-            # Record success
-            self._record_success(time.time() - start_time)
-            return result
-
-        except Exception:
+        except (TimeoutError, OSError, PermissionError) as e:
             # Record failure
             self._record_failure(time.time() - start_time)
             raise
+        else:
+            # Record success
+            self._record_success(time.time() - start_time)
+            return result
 
     def _should_reject(self) -> bool:
         """Determine if request should be rejected."""
@@ -224,7 +224,7 @@ class SelfHealingDatabaseManager:
             self.engine = await self._create_engine_with_retry()
             logger.info("Database connection initialized successfully")
 
-        except Exception:
+        except (OSError, AttributeError, ConnectionError, ImportError) as e:
             logger.exception("Failed to initialize database")
             # Start background recovery
             asyncio.create_task(self._background_recovery())
@@ -244,8 +244,6 @@ class SelfHealingDatabaseManager:
                 async with engine.begin() as conn:
                     await conn.execute("SELECT 1")
 
-                return engine
-
             except Exception as e:
                 if attempt == self.max_retries - 1:
                     raise
@@ -256,6 +254,8 @@ class SelfHealingDatabaseManager:
                     f"retrying in {delay}s: {e}"
                 )
                 await asyncio.sleep(delay)
+            else:
+                return engine
 
         msg = "Failed to establish database connection after retries"
         raise RuntimeError(msg)
@@ -274,7 +274,7 @@ class SelfHealingDatabaseManager:
 
             yield session
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError) as e:
             self.error_count += 1
             logger.exception("Database session error")
 
@@ -316,7 +316,7 @@ class SelfHealingDatabaseManager:
             self.engine = await self._create_engine_with_retry()
             logger.info("Database recovery successful")
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError) as e:
             logger.exception("Database recovery failed")
             # Schedule retry
             asyncio.create_task(self._delayed_recovery())
@@ -343,14 +343,14 @@ class SelfHealingDatabaseManager:
             async with self.engine.begin() as conn:
                 await conn.execute("SELECT 1")
 
+        except (AttributeError, RuntimeError, ValueError) as e:
+            return HealthStatus.UNHEALTHY
+        else:
             failure_rate = self.circuit_breaker.state.failure_rate
             if failure_rate < 0.1:
                 return HealthStatus.HEALTHY
             if failure_rate < 0.5:
                 return HealthStatus.DEGRADED
-            return HealthStatus.UNHEALTHY
-
-        except Exception:
             return HealthStatus.UNHEALTHY
 
 
@@ -387,7 +387,7 @@ class AutoScalingManager:
 
                 await asyncio.sleep(check_interval)
 
-            except Exception:
+            except (TimeoutError, OSError, PermissionError) as e:
                 logger.exception("Auto-scaling monitoring error")
                 await asyncio.sleep(30)  # Shorter interval on error
 

@@ -14,7 +14,26 @@ if TYPE_CHECKING:
     from src.infrastructure.client_manager import ClientManager
     from src.services.embeddings.manager import EmbeddingManager as CoreEmbeddingManager
 
+# Imports to avoid circular dependencies
+try:
+    from src.services.embeddings.manager import EmbeddingManager as CoreManager
+    from src.services.embeddings.manager import QualityTier, TextAnalysis
+except ImportError:
+    CoreManager = None
+    QualityTier = None
+    TextAnalysis = None
+
 logger = logging.getLogger(__name__)
+
+
+def _raise_core_manager_not_available() -> None:
+    """Raise ImportError for CoreManager not available."""
+    raise ImportError("CoreManager not available")
+
+
+def _raise_quality_tier_not_available() -> None:
+    """Raise ImportError for QualityTier not available."""
+    raise ImportError("QualityTier not available")
 
 
 class EmbeddingManager:
@@ -45,7 +64,8 @@ class EmbeddingManager:
             return
 
         try:
-            from src.services.embeddings.manager import EmbeddingManager as CoreManager
+            if CoreManager is None:
+                _raise_core_manager_not_available()
 
             self._core_manager = CoreManager(
                 config=config,
@@ -58,7 +78,7 @@ class EmbeddingManager:
 
         except Exception as e:
             logger.exception(
-                f"Failed to initialize EmbeddingManager: {e}"
+                "Failed to initialize EmbeddingManager: "
             )  # TODO: Convert f-string to logging format
             msg = f"Failed to initialize embedding manager: {e}"
             raise EmbeddingServiceError(msg) from e
@@ -107,7 +127,8 @@ class EmbeddingManager:
             # Convert quality tier string to enum if provided
             tier = None
             if quality_tier:
-                from src.services.embeddings.manager import QualityTier
+                if QualityTier is None:
+                    _raise_quality_tier_not_available()
 
                 tier_map = {
                     "FAST": QualityTier.FAST,
@@ -127,7 +148,7 @@ class EmbeddingManager:
             )
         except Exception as e:
             logger.exception(
-                f"Embedding generation failed: {e}"
+                "Embedding generation failed: "
             )  # TODO: Convert f-string to logging format
             msg = f"Embedding generation failed: {e}"
             raise EmbeddingServiceError(msg) from e
@@ -155,7 +176,7 @@ class EmbeddingManager:
             return await self._core_manager.rerank_results(query, results)
         except Exception as e:
             logger.exception(
-                f"Result reranking failed: {e}"
+                "Result reranking failed: "
             )  # TODO: Convert f-string to logging format
             # Return original results on failure
             return results
@@ -215,7 +236,7 @@ class EmbeddingManager:
             Optimal provider name
 
         Raises:
-            EmbeddingServiceError: If manager not initialized or no provider meets 
+            EmbeddingServiceError: If manager not initialized or no provider meets
                 constraints
         """
         if not self._initialized or not self._core_manager:
@@ -280,7 +301,8 @@ class EmbeddingManager:
             raise EmbeddingServiceError(msg)
 
         # Convert dict back to TextAnalysis for core manager
-        from src.services.embeddings.manager import QualityTier, TextAnalysis
+        if QualityTier is None or TextAnalysis is None:
+            raise ImportError("Required classes not available")
 
         analysis = TextAnalysis(
             total_length=text_analysis["total_length"],
@@ -335,7 +357,7 @@ class EmbeddingManager:
             try:
                 status["providers"] = self.get_provider_info()
                 status["usage"] = self.get_usage_report()
-            except Exception as e:
+            except (ValueError, TypeError, UnicodeDecodeError) as e:
                 logger.warning(
                     f"Failed to get embedding status: {e}"
                 )  # TODO: Convert f-string to logging format

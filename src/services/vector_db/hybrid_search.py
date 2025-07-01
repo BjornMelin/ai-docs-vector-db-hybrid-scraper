@@ -88,9 +88,7 @@ class HybridSearchService:
             await self.splade_provider.initialize()
             logger.info("Advanced hybrid search service initialized successfully")
         except Exception as e:
-            logger.exception(
-                "Failed to initialize advanced search service: %s", e
-            )
+            logger.exception("Failed to initialize advanced search service: %s")
             if not self.enable_fallback:
                 raise
 
@@ -219,7 +217,7 @@ class HybridSearchService:
             return response
 
         except Exception as e:
-            logger.exception("Advanced hybrid search failed: %s", e)
+            logger.exception("Advanced hybrid search failed: %s")
 
             # Fallback to basic search
             if self.enable_fallback:
@@ -261,7 +259,7 @@ class HybridSearchService:
                 "Query classification timed out, using default classification"
             )
             return None
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             logger.warning("Query classification failed: %s", e)
             return None
 
@@ -279,7 +277,7 @@ class HybridSearchService:
         except TimeoutError:
             logger.warning("Model selection timed out, using default model")
             return None
-        except Exception as e:
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             logger.warning("Model selection failed: %s", e)
             return None
 
@@ -295,7 +293,7 @@ class HybridSearchService:
         except TimeoutError:
             logger.warning("SPLADE generation timed out, skipping sparse vector")
             return None
-        except Exception as e:
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             logger.warning("SPLADE generation failed: %s", e)
             return None
 
@@ -351,7 +349,7 @@ class HybridSearchService:
             )
 
         except Exception as e:
-            logger.exception("Fallback search also failed: %s", e)
+            logger.exception("Fallback search also failed: %s")
             return HybridSearchResponse(
                 results=[],
                 retrieval_metrics=RetrievalMetrics(
@@ -402,7 +400,7 @@ class HybridSearchService:
             logger.debug("Stored search data for learning: %s", query_id)
 
         except Exception as e:
-            logger.exception("Failed to store search for learning: %s", e)
+            logger.exception("Failed to store search for learning: %s")
 
     async def update_with_user_feedback(
         self, query_id: str, _user_feedback: dict[str, Any]
@@ -414,7 +412,7 @@ class HybridSearchService:
             logger.debug("Processing user feedback for query %s", query_id)
 
         except Exception as e:
-            logger.exception("Failed to process user feedback: %s", e)
+            logger.exception("Failed to process user feedback: %s")
 
     def get_performance_statistics(self) -> dict[str, Any]:
         """Get performance statistics for monitoring."""
