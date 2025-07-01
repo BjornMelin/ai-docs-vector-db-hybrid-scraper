@@ -151,8 +151,7 @@ class DynamicToolDiscovery(BaseAgent):
         # Initialize performance monitoring
         await self._initialize_performance_tracking()
 
-        logger.info(f"DynamicToolDiscovery initialized with {len(self.discovered_tools} tools")
-        )
+        logger.info(f"DynamicToolDiscovery initialized with {len(self.discovered_tools)} tools")
 
     async def _scan_available_tools(self, _deps: BaseAgentDependencies) -> None:
         """Scan system for available tools and assess capabilities.
