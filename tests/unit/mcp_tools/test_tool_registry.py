@@ -20,6 +20,7 @@ from src.mcp_tools.tool_registry import register_all_tools
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
+
     from src.infrastructure.client_manager import ClientManager
 
 

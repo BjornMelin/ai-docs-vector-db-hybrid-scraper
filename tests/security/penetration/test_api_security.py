@@ -5,6 +5,7 @@ authentication bypass, authorization flaws, and injection attacks.
 """
 
 import asyncio
+import json
 import os
 import re
 import time

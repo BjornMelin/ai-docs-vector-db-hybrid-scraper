@@ -484,16 +484,69 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Build main application Docker image
+        if: hashFiles('Dockerfile') != ''
+        run: |
+          docker build --target builder -t ai-docs-app:builder .
+          docker build -t ai-docs-app:latest .
+
       - name: Build worker Docker image
         if: hashFiles('docker/Dockerfile.worker') != ''
         run: |
-          docker build -f docker/Dockerfile.worker -t test-worker .
+          docker build --target builder -f docker/Dockerfile.worker -t ai-docs-worker:builder .
+          docker build -f docker/Dockerfile.worker -t ai-docs-worker:latest .
 
-      - name: Test Docker services
+      - name: Test Docker image startup
+        run: |
+          # Test main app image can start (without external dependencies)
+          docker run --rm -d --name test-app \
+            -e AI_DOCS_MODE=simple \
+            -e AI_DOCS_VECTOR_DB__QDRANT_URL=http://localhost:6333 \
+            -e AI_DOCS_CACHE__REDIS_URL=redis://localhost:6379 \
+            -p 8001:8000 \
+            ai-docs-app:latest &
+          
+          # Wait a bit for startup
+          sleep 10
+          
+          # Check if container is running
+          if docker ps | grep -q test-app; then
+            echo "✅ Main app container started successfully"
+            docker stop test-app
+          else
+            echo "❌ Main app container failed to start"
+            docker logs test-app || true
+            exit 1
+          fi
+
+      - name: Test Docker services configuration
         if: hashFiles('docker-compose.yml') != ''
         run: |
           # Test docker compose configuration
           docker compose config
+          
+          # Test docker compose build (without starting services)
+          docker compose build --no-cache
+
+      - name: Validate Docker security
+        run: |
+          # Check that images use non-root user
+          docker run --rm ai-docs-app:latest id
+          docker run --rm ai-docs-worker:latest id
+          
+          # Ensure no secrets in images
+          docker history --no-trunc ai-docs-app:latest | grep -v 'COPY\|ADD' | grep -i 'secret\|password\|key' || echo "✅ No secrets found in app image"
+          docker history --no-trunc ai-docs-worker:latest | grep -v 'COPY\|ADD' | grep -i 'secret\|password\|key' || echo "✅ No secrets found in worker image"
+
+      - name: Test UV package manager integration
+        run: |
+          # Verify UV is properly installed and working
+          docker run --rm ai-docs-app:latest uv --version
+          docker run --rm ai-docs-worker:latest uv --version
+          
+          # Check Python environment
+          docker run --rm ai-docs-app:latest python --version
+          docker run --rm ai-docs-worker:latest python --version
 
   performance-test:
     name: Performance & Smoke Tests

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Multi-stage Dockerfile for ARQ task queue worker - 2025 UV Edition
+# Multi-stage Dockerfile for AI Docs Vector DB Hybrid Scraper - 2025 UV Edition
 
 # =========================================
 # Stage 1: Build Environment
@@ -81,6 +81,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy the virtual environment from builder stage
 COPY --from=builder /opt/venv /opt/venv
+ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy application code
@@ -92,15 +93,18 @@ ENV PYTHONPATH=/app/src
 
 # Create non-root user for security
 ARG UID=1000
-RUN useradd --system --no-create-home --uid ${UID} --shell /bin/false worker \
-    && chown -R worker:worker /app
+RUN useradd --system --no-create-home --uid ${UID} --shell /bin/false appuser \
+    && chown -R appuser:appuser /app
 
 # Switch to non-root user
-USER worker
+USER appuser
+
+# Expose the FastAPI port
+EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD python -c "import redis; r = redis.Redis(host='dragonfly', port=6379); r.ping()"
+  CMD curl -f http://localhost:8000/api/v1/config/status || exit 1
 
-# Run the worker
-CMD ["arq", "src.services.task_queue.worker.WorkerSettings"]
+# Run the FastAPI application
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

@@ -9,9 +9,11 @@ This module provides comprehensive security testing for AI/ML systems including:
 - SQL injection and XSS protection
 """
 
+import json
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient

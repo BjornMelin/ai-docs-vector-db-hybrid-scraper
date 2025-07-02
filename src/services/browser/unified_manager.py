@@ -510,9 +510,9 @@ class UnifiedBrowserManager(BaseService):
             logger.info(
                 "Unified scraping completed: %s via %s (%.1fms, quality: %.2f)",
                 request.url,
-                tier_used,
+                response.tier_used,
                 execution_time,
-                quality_score,
+                response.quality_score,
             )
 
         except Exception as e:
@@ -569,8 +569,6 @@ class UnifiedBrowserManager(BaseService):
                 "error": str(e),
                 "recommended_tier": "crawl4ai",  # Safe default
             }
-        else:
-            return analysis
 
     def get_tier_metrics(self) -> dict[str, TierMetrics]:
         """Get performance metrics for all tiers.

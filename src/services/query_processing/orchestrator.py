@@ -299,10 +299,16 @@ class SearchOrchestrator(BaseService):
             if cached_result:
                 return cached_result
 
+            # Get pipeline configuration
+            config = self._apply_pipeline_config(request)
+
             # Execute search pipeline
             search_results, expanded_query = await self._execute_search_pipeline(
                 request, features_used
             )
+            
+            # Determine the processed query (use expanded if available, otherwise original)
+            processed_query = expanded_query if expanded_query else request.query
 
             # Step 3: Post-processing (clustering, ranking, etc.)
             if search_results:

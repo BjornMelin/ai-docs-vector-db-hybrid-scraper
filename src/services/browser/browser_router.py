@@ -378,6 +378,7 @@ class EnhancedAutomationRouter(AutomationRouter):
         failed_tiers = [failed_tier]
 
         for fallback_tier in fallback_order:
+            start_time = time.time()
             # Check circuit breaker
             breaker = self.circuit_breakers.get(fallback_tier)
             if breaker and not breaker.can_attempt():

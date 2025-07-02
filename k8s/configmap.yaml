@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-docs-config
+  namespace: ai-docs-system
+  labels:
+    app.kubernetes.io/name: ai-docs-config
+    app.kubernetes.io/part-of: ai-docs-system
+data:
+  # Application configuration
+  AI_DOCS_MODE: "simple"
+  AI_DOCS_LOG_LEVEL: "INFO"
+  PYTHONPATH: "/app/src"
+  
+  # Vector database configuration
+  AI_DOCS_VECTOR_DB__QDRANT_URL: "http://qdrant:6333"
+  AI_DOCS_VECTOR_DB__COLLECTION_NAME: "ai_docs"
+  AI_DOCS_VECTOR_DB__TIMEOUT: "30"
+  
+  # Cache configuration
+  AI_DOCS_CACHE__REDIS_URL: "redis://dragonfly:6379"
+  AI_DOCS_CACHE__REDIS_DATABASE: "0"
+  AI_DOCS_CACHE__TTL: "3600"
+  
+  # Task queue configuration
+  AI_DOCS_TASK_QUEUE__REDIS_URL: "redis://dragonfly:6379"
+  AI_DOCS_TASK_QUEUE__REDIS_DATABASE: "1"
+  AI_DOCS_TASK_QUEUE__WORKER_POOL_SIZE: "4"
+  
+  # Performance tuning
+  AI_DOCS_SEARCH__MAX_RESULTS: "100"
+  AI_DOCS_SEARCH__DEFAULT_LIMIT: "20"
+  AI_DOCS_EMBEDDING__BATCH_SIZE: "100"
+  
+  # Security settings
+  AI_DOCS_SECURITY__RATE_LIMIT_ENABLED: "true"
+  AI_DOCS_SECURITY__CORS_ENABLED: "true"
+  AI_DOCS_SECURITY__ALLOWED_HOSTS: "*"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-docs-secrets
+  namespace: ai-docs-system
+  labels:
+    app.kubernetes.io/name: ai-docs-secrets
+    app.kubernetes.io/part-of: ai-docs-system
+type: Opaque
+data:
+  # Base64 encoded secrets - replace with actual values
+  # Example: echo -n "your-api-key" | base64
+  OPENAI_API_KEY: ""  # Add your OpenAI API key (base64 encoded)
+  ANTHROPIC_API_KEY: ""  # Add your Anthropic API key (base64 encoded)
+  
+  # Database credentials (if needed)
+  DB_PASSWORD: ""  # Add database password (base64 encoded)
+  
+  # JWT secret for authentication
+  JWT_SECRET: ""  # Add JWT secret (base64 encoded)

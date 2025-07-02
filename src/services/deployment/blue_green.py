@@ -506,17 +506,6 @@ class BlueGreenDeployment:
             attempt + 1,
         )
         return True
-        # All health checks failed
-        env.health = DeploymentHealth(
-            status="unhealthy",
-            response_time_ms=0.0,
-            error_rate=100.0,
-            success_count=0,
-            error_count=config.health_check_retries,
-            last_check=datetime.now(tz=UTC),
-        )
-
-        return False
 
     async def _switch_traffic(self, from_env: str, to_env: str) -> None:
         """Switch traffic from one environment to another."""
