@@ -13,7 +13,13 @@ from typing import Any
 
 from qdrant_client import AsyncQdrantClient
 
-from src.config import ABTestVariant, Config, OptimizationStrategy
+from src.config import (
+    ABTestVariant,
+    Config,
+    OptimizationStrategy,
+    SearchMode,
+    SearchPipeline,
+)
 from src.models.vector_search import (
     HybridSearchRequest,
     HybridSearchResponse,
@@ -24,8 +30,6 @@ from src.services.errors import ServiceError
 from src.services.query_processing import (
     AdvancedSearchOrchestrator,
     AdvancedSearchRequest,
-    SearchMode,
-    SearchPipeline,
 )
 
 from .adaptive_fusion_tuner import AdaptiveFusionTuner

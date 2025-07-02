@@ -105,10 +105,8 @@ async def get_auto_detected_services(
     and environment information. Protected by circuit breaker for
     external metadata API failures.
     """
-    auto_detected = config.get_auto_detected_services()
-    if auto_detected is None:
+    if (auto_detected := config.get_auto_detected_services()) is None:
         # Return empty services if auto-detection wasn't performed
-
         return AutoDetectedServices(
             environment=DetectedEnvironment(
                 environment_type=Environment.DEVELOPMENT,
@@ -262,11 +260,8 @@ async def perform_auto_detection(
     Function-based auto-detection that can be called from API endpoints.
     Protected by Tenacity-powered circuit breaker with retry logic.
     """
+    start_time = time.time()
     try:
-        # All imports moved to top-level
-
-        start_time = time.time()
-
         # Override config if request specifies timeout
         detection_config = config.auto_detection
         if request.timeout_seconds:
@@ -394,8 +389,6 @@ async def generate_embeddings(
     Protected by Tenacity-powered circuit breaker with exponential backoff.
     """
     try:
-        # QualityTier imported at top-level
-
         # Convert string to enum if provided
         quality_tier = None
         if request.quality_tier:
@@ -459,10 +452,7 @@ async def cache_get(
     Function-based replacement for CacheManager.get().
     """
     try:
-        # CacheType imported at top-level
-
-        cache_type_enum = CacheType(cache_type)
-        return await cache_manager.get(key, cache_type_enum)
+        return await cache_manager.get(key, CacheType(cache_type))
     except (OSError, ConnectionError, ImportError, ModuleNotFoundError):
         logger.exception("Cache get failed for key")
         return None
@@ -480,10 +470,7 @@ async def cache_set(
     Function-based replacement for CacheManager.set().
     """
     try:
-        # CacheType imported at top-level
-
-        cache_type_enum = CacheType(cache_type)
-        return await cache_manager.set(key, value, cache_type_enum, ttl)
+        return await cache_manager.set(key, value, CacheType(cache_type), ttl)
     except (OSError, ConnectionError, ImportError, ModuleNotFoundError):
         logger.exception("Cache set failed for key")
         return False
@@ -499,10 +486,7 @@ async def cache_delete(
     Function-based replacement for CacheManager.delete().
     """
     try:
-        # CacheType imported at top-level
-
-        cache_type_enum = CacheType(cache_type)
-        return await cache_manager.delete(key, cache_type_enum)
+        return await cache_manager.delete(key, CacheType(cache_type))
     except (OSError, ConnectionError, ImportError, ModuleNotFoundError):
         logger.exception("Cache delete failed for key")
         return False
@@ -573,8 +557,7 @@ async def scrape_url(
     """
     try:
         result = await crawl_manager.scrape_url(
-            url=request.url,
-            preferred_provider=request.preferred_provider,
+            url=request.url, preferred_provider=request.preferred_provider
         )
         return CrawlResponse(**result)
     except Exception as e:
@@ -967,8 +950,6 @@ async def get_circuit_breaker_status() -> dict[str, Any]:
             1 for status in all_status.values() if status["state"] == "half_open"
         )
 
-        # datetime imported at top-level
-
         return {
             "timestamp": datetime.now(tz=UTC).isoformat(),
             "summary": {
@@ -1010,8 +991,7 @@ async def reset_circuit_breaker(service_name: str) -> dict[str, Any]:
 
     """
     try:
-        breaker = CircuitBreakerRegistry.get(service_name)
-        if breaker is None:
+        if (breaker := CircuitBreakerRegistry.get(service_name)) is None:
             return {
                 "success": False,
                 "error": f"Circuit breaker not found for service: {service_name}",
@@ -1080,8 +1060,6 @@ async def get_service_health() -> dict[str, Any]:
         # Add circuit breaker status
         circuit_status = await get_circuit_breaker_status()
 
-        # datetime imported at top-level
-
         return {
             "status": "healthy",
             "services": health_status,
@@ -1119,8 +1097,6 @@ async def get_auto_detected_service_health(
 
         # Get health trends
         trends = health_checker.get_health_trends()
-
-        # datetime imported at top-level
 
         return {
             "status": "healthy"
@@ -1185,8 +1161,6 @@ async def get_auto_detection_pool_metrics(
         # Get individual pool health metrics
         all_pool_health = pool_manager.get_all_pool_health()
 
-        # datetime imported at top-level
-
         return {
             "status": "active",
             "summary": {
@@ -1225,17 +1199,14 @@ async def get_auto_detection_summary(
     Provides complete overview of auto-detected services, their health,
     connection pools, and performance metrics.
     """
+    summary = {
+        "timestamp": datetime.now(tz=UTC).isoformat(),
+        "auto_detection": {},
+        "service_health": {},
+        "connection_pools": {},
+        "overall_status": "unknown",
+    }
     try:
-        # datetime imported at top-level
-
-        summary = {
-            "timestamp": datetime.now(tz=UTC).isoformat(),
-            "auto_detection": {},
-            "service_health": {},
-            "connection_pools": {},
-            "overall_status": "unknown",
-        }
-
         # Get auto-detection information
         if auto_detected:
             summary["auto_detection"] = {
@@ -1383,8 +1354,9 @@ async def get_qdrant_collections(
     Protected by circuit breaker for Qdrant database failures.
     """
     try:
-        collections = await qdrant_service.get_collections()
-        return [col.name for col in collections.collections]
+        return [
+            col.name for col in (await qdrant_service.get_collections()).collections
+        ]
     except Exception as e:
         logger.exception("Failed to get Qdrant collections")
         msg = f"Failed to get collections: {e}"
@@ -1762,15 +1734,15 @@ async def track_operation_performance(
 
     try:
         result = await operation_func(*args, **kwargs)
+        # Record success metrics (could integrate with metrics system)
+        duration_ms = (time.time() - start_time) * 1000
+        logger.debug("Operation %s completed in %.2fms", operation_name, duration_ms)
     except Exception:
         # Record failure metrics
         duration_ms = (time.time() - start_time) * 1000
         logger.exception("Operation %s failed in %.2fms", operation_name, duration_ms)
         raise
     else:
-        # Record success metrics (could integrate with metrics system)
-        duration_ms = (time.time() - start_time) * 1000
-        logger.debug("Operation %s completed in %.2fms", operation_name, duration_ms)
         return result
 
 
@@ -1864,6 +1836,15 @@ async def analyze_text_characteristics(
     """
     try:
         analysis = embedding_manager.analyze_text_characteristics(request.texts)
+        # Convert TextAnalysis to dict for service boundary
+        analysis_result = {
+            "total_length": analysis.total_length,
+            "avg_length": analysis.avg_length,
+            "complexity_score": analysis.complexity_score,
+            "estimated_tokens": analysis.estimated_tokens,
+            "text_type": analysis.text_type,
+            "requires_high_quality": analysis.requires_high_quality,
+        }
     except Exception as e:
         logger.exception("Text analysis failed")
         return {
@@ -1876,15 +1857,7 @@ async def analyze_text_characteristics(
             "error": str(e),
         }
     else:
-        # Convert TextAnalysis to dict for service boundary
-        return {
-            "total_length": analysis.total_length,
-            "avg_length": analysis.avg_length,
-            "complexity_score": analysis.complexity_score,
-            "estimated_tokens": analysis.estimated_tokens,
-            "text_type": analysis.text_type,
-            "requires_high_quality": analysis.requires_high_quality,
-        }
+        return analysis_result
 
 
 async def get_embedding_usage_report(

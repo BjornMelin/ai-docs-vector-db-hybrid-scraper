@@ -16,6 +16,7 @@ from src.infrastructure.clients import (
     RedisClientProvider,
 )
 from src.infrastructure.container import ApplicationContainer, get_container
+from src.services.browser.automation_router import AutomationRouter
 from src.services.errors import APIError
 
 
@@ -253,6 +254,17 @@ class ClientManager:
     async def get_parallel_processing_system(self):
         """Get parallel processing system instance."""
         return self._parallel_processing_system
+
+    async def get_browser_automation_router(self):
+        """Get browser automation router for intelligent scraping.
+
+        Returns:
+            AutomationRouter instance for intelligent browser automation
+        """
+        if not hasattr(self, "_automation_router"):
+            self._automation_router = AutomationRouter(self.config)
+            await self._automation_router.initialize()
+        return self._automation_router
 
     @asynccontextmanager
     async def managed_client(self, client_type: str):

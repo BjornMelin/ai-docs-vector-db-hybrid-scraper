@@ -69,6 +69,9 @@ class PerformanceMonitor:
         self._error_counts: dict[str, int] = defaultdict(int)
         self._success_counts: dict[str, int] = defaultdict(int)
 
+        # Operation statistics tracking
+        self.operation_stats: dict[str, Any] = {}
+
         # System resource monitoring
         self._last_cpu_check = time.time()
         self._last_memory_check = time.time()

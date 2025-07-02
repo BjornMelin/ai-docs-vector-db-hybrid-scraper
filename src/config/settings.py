@@ -66,6 +66,7 @@ class EmbeddingModel(str, Enum):
     TEXT_EMBEDDING_3_LARGE = "text-embedding-3-large"
     BGE_SMALL_EN_V1_5 = "BAAI/bge-small-en-v1.5"
     BGE_LARGE_EN_V1_5 = "BAAI/bge-large-en-v1.5"
+    NV_EMBED_V2 = "nvidia/nv-embed-v2"
 
 
 class CrawlProvider(str, Enum):
@@ -119,6 +120,7 @@ class QueryComplexity(str, Enum):
 
     SIMPLE = "simple"
     MEDIUM = "medium"
+    MODERATE = "moderate"  # Missing member
     COMPLEX = "complex"
 
 
@@ -128,6 +130,10 @@ class ModelType(str, Enum):
     EMBEDDING = "embedding"
     RERANKING = "reranking"
     GENERATION = "generation"
+    # Additional model types for embedding selection
+    GENERAL_PURPOSE = "general_purpose"
+    CODE_SPECIALIZED = "code_specialized"
+    MULTIMODAL = "multimodal"
 
 
 class VectorType(str, Enum):
@@ -135,6 +141,8 @@ class VectorType(str, Enum):
 
     DENSE = "dense"
     SPARSE = "sparse"
+    HYDE = "hyde"  # HyDE (Hypothetical Document Embeddings)
+    HYBRID = "hybrid"
 
 
 class QueryType(str, Enum):
@@ -143,6 +151,14 @@ class QueryType(str, Enum):
     SEMANTIC = "semantic"
     KEYWORD = "keyword"
     HYBRID = "hybrid"
+    # Additional query types for model selection
+    GENERAL = "general"
+    CODE = "code"
+    MULTIMODAL = "multimodal"
+    CONCEPTUAL = "conceptual"
+    DOCUMENTATION = "documentation"
+    API_REFERENCE = "api_reference"
+    TROUBLESHOOTING = "troubleshooting"
 
 
 class SearchAccuracy(str, Enum):
@@ -151,6 +167,9 @@ class SearchAccuracy(str, Enum):
     FAST = "fast"
     BALANCED = "balanced"
     PRECISE = "precise"
+    # Additional accuracy levels
+    ACCURATE = "accurate"
+    EXACT = "exact"
 
 
 class FusionAlgorithm(str, Enum):
@@ -175,6 +194,30 @@ class OptimizationStrategy(str, Enum):
     THROUGHPUT = "throughput"
     LATENCY = "latency"
     BALANCED = "balanced"
+    # Additional optimization strategies
+    QUALITY_OPTIMIZED = "quality_optimized"
+    SPEED_OPTIMIZED = "speed_optimized"
+    COST_OPTIMIZED = "cost_optimized"
+
+
+class SearchMode(str, Enum):
+    """Search execution modes."""
+
+    BASIC = "basic"
+    SIMPLE = "simple"
+    ENHANCED = "enhanced"
+    INTELLIGENT = "intelligent"
+    PERSONALIZED = "personalized"
+    FULL = "full"
+
+
+class SearchPipeline(str, Enum):
+    """Search pipeline configurations."""
+
+    FAST = "fast"
+    BALANCED = "balanced"
+    COMPREHENSIVE = "comprehensive"
+    PRECISION = "precision"
 
 
 class DeploymentTier(str, Enum):

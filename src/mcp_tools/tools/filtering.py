@@ -23,7 +23,7 @@ else:
 
 
 from src.infrastructure.client_manager import ClientManager
-from src.security import MLSecurityValidator as SecurityValidator
+from src.security import MLSecurityValidator
 
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 )
 
             # Validate query and filters
-            security_validator = SecurityValidator.from_unified_config()
+            security_validator = MLSecurityValidator.from_unified_config()
             validated_query = security_validator.validate_query_string(query)
 
             # Analyze query characteristics for filter optimization

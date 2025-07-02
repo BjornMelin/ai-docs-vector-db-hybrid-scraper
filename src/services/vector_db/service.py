@@ -321,6 +321,50 @@ class QdrantService(BaseService):
 
     # Search API (delegates to QdrantSearch)
 
+    async def search(
+        self,
+        collection_name: str,
+        query_vector: list[float],
+        limit: int = 10,
+        filter_conditions: dict[str, Any] | None = None,
+        score_threshold: float | None = None,
+    ) -> list[dict[str, Any]]:
+        """Basic vector search method.
+
+        Args:
+            collection_name: Name of the collection to search
+            query_vector: Query vector for similarity search
+            limit: Maximum number of results
+            filter_conditions: Optional filter conditions
+            score_threshold: Optional score threshold
+
+        Returns:
+            List of search results
+
+        Raises:
+            QdrantServiceError: If search fails
+        """
+        if not self._search:
+            msg = "Search module not initialized"
+            raise QdrantServiceError(msg)
+
+        # Use filtered search if we have filter conditions, otherwise hybrid search
+        if filter_conditions:
+            return await self.filtered_search(
+                collection_name=collection_name,
+                query_vector=query_vector,
+                limit=limit,
+                filter_conditions=filter_conditions,
+                score_threshold=score_threshold,
+            )
+        # Use hybrid search as the default search method
+        return await self.hybrid_search(
+            collection_name=collection_name,
+            query_vector=query_vector,
+            limit=limit,
+            score_threshold=score_threshold or 0.0,
+        )
+
     async def hybrid_search(
         self,
         collection_name: str,

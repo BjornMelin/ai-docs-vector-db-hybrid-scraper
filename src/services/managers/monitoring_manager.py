@@ -11,7 +11,7 @@ from dependency_injector.wiring import Provide, inject
 from src.infrastructure.container import ApplicationContainer
 from src.infrastructure.shared import ClientHealth, ClientState
 from src.services.monitoring.metrics import get_metrics_registry
-from src.services.monitoring.performance_monitor import PerformanceMonitor
+from src.services.monitoring.performance_monitor import RealTimePerformanceMonitor
 
 
 if TYPE_CHECKING:
@@ -60,7 +60,7 @@ class MonitoringManager:
 
         # Initialize performance monitor
         try:
-            self._performance_monitor = PerformanceMonitor()
+            self._performance_monitor = RealTimePerformanceMonitor()
             logger.info("Performance monitor initialized")
         except ImportError:
             logger.warning("Performance monitor not available")

@@ -777,6 +777,49 @@ class PrefetchConfig(SecureBaseModel):
 
 
 # =============================================================================
+# SPLADE CONFIGURATION
+# =============================================================================
+
+
+class SPLADEConfig(SecureBaseModel):
+    """Configuration for SPLADE (Sparse Lexical and Expansion model)."""
+
+    model_name: str = Field(
+        default="naver/splade-cocondenser-ensembledistil",
+        description="SPLADE model name",
+    )
+    max_length: int = Field(
+        default=512, ge=1, le=2048, description="Maximum input length"
+    )
+    top_k_tokens: int = Field(
+        default=256, ge=1, le=1000, description="Top-k tokens to keep"
+    )
+    cache_embeddings: bool = Field(
+        default=True, description="Whether to cache embeddings"
+    )
+    batch_size: int = Field(
+        default=32, ge=1, le=128, description="Batch size for processing"
+    )
+    device: str = Field(default="cpu", description="Device to use (cpu/cuda)")
+
+    @field_validator("model_name", mode="after")
+    @classmethod
+    def validate_model_name(cls, v: str) -> str:
+        """Validate model name format."""
+        # Basic validation for model name format
+        if not v or len(v.strip()) == 0:
+            msg = "Model name cannot be empty"
+            raise ValueError(msg)
+
+        # Check for basic format (org/model or model)
+        if len(v) > 200:
+            msg = "Model name too long"
+            raise ValueError(msg)
+
+        return v.strip()
+
+
+# =============================================================================
 # EXPORT DEFINITIONS
 # =============================================================================
 # MISSING CLASSES FOR BACKWARD COMPATIBILITY
@@ -932,9 +975,7 @@ __all__ = [
     "ABTestConfig",
     "AdvancedFilteredSearchRequest",
     "AdvancedHybridSearchRequest",
-    # Async models
     "AsyncSearchContext",
-    # Request models
     "BasicSearchRequest",
     "BatchSearchRequest",
     "BatchSearchResponse",
@@ -947,31 +988,25 @@ __all__ = [
     "HybridSearchResponse",
     "ModelSelectionStrategy",
     "MultiStageSearchRequest",
-    # Prefetch models
     "PrefetchConfig",
     "QueryClassification",
     "RetrievalMetrics",
+    "SPLADEConfig",
     "SearchAccuracy",
     "SearchConfigurationError",
     "SearchResponse",
     "SearchResult",
-    # Search stage models
     "SearchStage",
-    # Base classes and enums
     "SecureBaseModel",
     "SecureFilterGroupModel",
     "SecureFilterModel",
-    # Security models
     "SecureMetadataModel",
     "SecurePayloadModel",
     "SecureSearchParamsModel",
-    # Response models
     "SecureSearchResult",
     "SecureSparseVectorModel",
-    # Vector models
     "SecureVectorModel",
     "SecurityValidationError",
-    # Exception classes
     "VectorSearchError",
     "VectorType",
 ]

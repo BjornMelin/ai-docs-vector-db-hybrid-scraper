@@ -4,11 +4,18 @@ This middleware provides request correlation IDs, distributed tracing support,
 and comprehensive request/response logging for production monitoring.
 """
 
+import asyncio
 import html
 import logging
 import time
 import uuid
 from collections.abc import Callable
+
+
+try:
+    import httpx
+except ImportError:
+    httpx = None
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request

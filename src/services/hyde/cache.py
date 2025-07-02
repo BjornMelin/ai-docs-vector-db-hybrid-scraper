@@ -9,6 +9,12 @@ from typing import Any
 
 import numpy as np
 
+
+try:
+    import redis
+except ImportError:
+    redis = None
+
 from src.services.base import BaseService
 from src.services.errors import EmbeddingServiceError
 

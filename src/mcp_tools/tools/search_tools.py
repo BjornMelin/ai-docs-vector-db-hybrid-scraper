@@ -31,7 +31,7 @@ from src.mcp_tools.models.requests import (
     SearchRequest,
 )
 from src.mcp_tools.models.responses import HyDEAdvancedResponse, SearchResult
-from src.security import MLSecurityValidator as SecurityValidator
+from src.security import MLSecurityValidator
 
 
 logger = logging.getLogger(__name__)
@@ -135,7 +135,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             # Validate collection name
-            security_validator = SecurityValidator.from_unified_config()
+            security_validator = MLSecurityValidator.from_unified_config()
             request.collection = security_validator.validate_collection_name(
                 request.collection
             )
@@ -217,7 +217,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             # Validate collection name and query
-            security_validator = SecurityValidator.from_unified_config()
+            security_validator = MLSecurityValidator.from_unified_config()
             request.collection = security_validator.validate_collection_name(
                 request.collection
             )
@@ -374,7 +374,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             # Validate inputs
-            security_validator = SecurityValidator.from_unified_config()
+            security_validator = MLSecurityValidator.from_unified_config()
             collection = security_validator.validate_collection_name(collection)
             query = security_validator.validate_query_string(query)
 
@@ -532,7 +532,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             # Validate collection name and query
-            security_validator = SecurityValidator.from_unified_config()
+            security_validator = MLSecurityValidator.from_unified_config()
             request.collection = security_validator.validate_collection_name(
                 request.collection
             )

@@ -110,6 +110,16 @@ class ParallelProcessingSystem:
         if self.config.enable_optimized_algorithms:
             self.text_analyzer = OptimizedTextAnalyzer()
 
+        # Initialize content processing components
+        # These are placeholder implementations - can be replaced with actual ML models
+        if self.config.enable_content_classification:
+            self.content_classifier = (
+                None  # Placeholder for content classification model
+            )
+
+        if self.config.enable_metadata_extraction:
+            self.metadata_extractor = None  # Placeholder for metadata extraction model
+
         # Initialize caching systems
         if self.config.enable_intelligent_caching:
             self.embedding_cache = EmbeddingCache(self.config.cache_config)

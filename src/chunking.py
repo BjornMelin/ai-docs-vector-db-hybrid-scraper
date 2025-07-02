@@ -14,45 +14,33 @@ from src.models.document_processing import Chunk, CodeBlock, CodeLanguage
 
 
 try:
-    from tree_sitter import Language, Node, Parser
-
-    TREE_SITTER_AVAILABLE = True
-
-    # Try to import language parsers using modern syntax
-    try:
-        import tree_sitter_python as tspython
-
-        PYTHON_AVAILABLE = True
-    except ImportError:
-        PYTHON_AVAILABLE = False
-        tspython = None  # type: ignore[assignment]
-
-    try:
-        import tree_sitter_javascript as tsjavascript
-
-        JAVASCRIPT_AVAILABLE = True
-    except ImportError:
-        JAVASCRIPT_AVAILABLE = False
-        tsjavascript = None  # type: ignore[assignment]
-
-    try:
-        import tree_sitter_typescript as tstypescript
-
-        TYPESCRIPT_AVAILABLE = True
-    except ImportError:
-        TYPESCRIPT_AVAILABLE = False
-        tstypescript = None  # type: ignore[assignment]
-
+    from tree_sitter import Language, Parser
 except ImportError:
-    TREE_SITTER_AVAILABLE = False
+    Language = None  # type: ignore[assignment,misc]
     Parser = None  # type: ignore[assignment]
-    Node = None  # type: ignore[assignment]
-    PYTHON_AVAILABLE = False
-    JAVASCRIPT_AVAILABLE = False
-    TYPESCRIPT_AVAILABLE = False
+TREE_SITTER_AVAILABLE = Parser is not None
+
+# Try to import language parsers using modern syntax
+try:
+    import tree_sitter_python as tspython
+except ImportError:
     tspython = None  # type: ignore[assignment]
+
+PYTHON_AVAILABLE = tspython is not None
+
+try:
+    import tree_sitter_javascript as tsjavascript
+except ImportError:
     tsjavascript = None  # type: ignore[assignment]
+
+JAVASCRIPT_AVAILABLE = tsjavascript is not None
+
+try:
+    import tree_sitter_typescript as tstypescript
+except ImportError:
     tstypescript = None  # type: ignore[assignment]
+
+TYPESCRIPT_AVAILABLE = tstypescript is not None
 
 
 class DocumentChunker:
@@ -154,8 +142,10 @@ class DocumentChunker:
         for lang in self.config.supported_languages:
             if lang not in language_parsers:
                 self.logger.warning(
-                    f"Language '{lang}' is not supported for AST parsing. "
-                    f"Supported languages: {list(language_parsers.keys())}"
+                    "Language '%s' is not supported for AST parsing. "
+                    "Supported languages: %s",
+                    lang,
+                    list(language_parsers.keys()),
                 )
                 continue
 
@@ -163,38 +153,43 @@ class DocumentChunker:
 
             if not is_available or parser_module is None:
                 self.logger.warning(
-                    f"Parser for '{lang}' is not available. "
-                    f"Install with: pip install tree-sitter-{lang}"
+                    "Parser for '%s' is not available. "
+                    "Install with: pip install tree-sitter-%s",
+                    lang,
+                    lang,
+                )
+                continue
+
+            # Create language function based on lang type
+            if lang == "typescript":
+                lang_func = parser_module.language_typescript
+            elif lang in ("javascript", "python"):
+                lang_func = parser_module.language
+            else:
+                lang_func = parser_module.language
+            try:
+                language = Language(lang_func())
+            except (ImportError, ModuleNotFoundError, AttributeError) as e:
+                self.logger.warning(
+                    "Failed to initialize language for '%s': %s. "
+                    "Will fall back to semantic chunking for this language.",
+                    lang,
+                    e,
                 )
                 continue
 
             try:
-                # Initialize language using modern Tree-sitter pattern
-                if lang == "typescript":
-                    # TypeScript has specific function name
-                    language = Language(parser_module.language_typescript())
-                elif lang == "javascript":
-                    # JavaScript standard function name
-                    language = Language(parser_module.language())
-                elif lang == "python":
-                    # Python standard function name
-                    language = Language(parser_module.language())
-                else:
-                    # Fallback to standard function name
-                    language = Language(parser_module.language())
-
-                # Create parser with the language
                 parser = Parser(language)
-                self.parsers[lang] = parser
-                self.logger.debug(
-                    f"Successfully loaded parser for '{lang}'"
-                )  # TODO: Convert f-string to logging format
-
             except (ImportError, ModuleNotFoundError, AttributeError) as e:
                 self.logger.warning(
-                    f"Failed to initialize parser for '{lang}': {e}. "
-                    f"Will fall back to semantic chunking for this language."
+                    "Failed to create parser for '%s': %s. "
+                    "Will fall back to semantic chunking for this language.",
+                    lang,
+                    e,
                 )
+                continue
+            self.parsers[lang] = parser
+            self.logger.debug("Successfully loaded parser for '%s'", lang)
 
     def chunk_content(
         self,
@@ -226,14 +221,17 @@ class DocumentChunker:
     def _detect_language(self, content: str, url: str = "") -> str:
         """Detect programming language from content and URL."""
         # Check file extension in URL
-        if url:
-            lang = self._detect_language_from_url(url)
-            if lang != CodeLanguage.UNKNOWN.value:
-                return lang
+        if (
+            url
+            and (lang := self._detect_language_from_url(url))
+            != CodeLanguage.UNKNOWN.value
+        ):
+            return lang
 
         # Check for code fence languages
-        lang = self._detect_language_from_code_fences(content)
-        if lang != CodeLanguage.UNKNOWN.value:
+        if (
+            lang := self._detect_language_from_code_fences(content)
+        ) != CodeLanguage.UNKNOWN.value:
             return lang
 
         # Pattern-based detection
@@ -256,13 +254,11 @@ class DocumentChunker:
 
     def _detect_language_from_code_fences(self, content: str) -> str:
         """Detect language from code fence declarations."""
-        code_fences = self.CODE_FENCE_PATTERN.findall(content)
-        if not code_fences:
+        if not (code_fences := self.CODE_FENCE_PATTERN.findall(content)):
             return CodeLanguage.UNKNOWN.value
 
         # Get most common language
-        languages = [fence[1].lower() for fence in code_fences if fence[1]]
-        if not languages:
+        if not (languages := [fence[1].lower() for fence in code_fences if fence[1]]):
             return CodeLanguage.UNKNOWN.value
 
         lang_counts = {}
@@ -352,8 +348,7 @@ class DocumentChunker:
                 chunk_start = current_pos
             else:
                 # Handle remaining content as regular text
-                remaining_content = content[chunk_start:].strip()
-                if remaining_content:
+                if remaining_content := content[chunk_start:].strip():
                     chunks.extend(
                         self._chunk_text_content(
                             remaining_content, chunk_start, len(content)
@@ -410,9 +405,8 @@ class DocumentChunker:
         """
         start = code_block.start_pos
         end = code_block.end_pos
-        block_size = end - start
 
-        if block_size <= self.config.max_function_chunk_size:
+        if (end - start) <= self.config.max_function_chunk_size:
             chunks.append(
                 Chunk(
                     content=content[start:end],
@@ -444,8 +438,7 @@ class DocumentChunker:
 
         # Try each boundary pattern
         for pattern in self.BOUNDARY_PATTERNS:
-            matches = list(re.finditer(pattern, content[search_start:target_end]))
-            if matches:
+            if matches := list(re.finditer(pattern, content[search_start:target_end])):
                 # Get the last match (closest to target)
                 match = matches[-1]
                 boundary_pos = search_start + match.end()
@@ -463,9 +456,7 @@ class DocumentChunker:
                 else:
                     type_score = 0.4
 
-                score = distance_score * type_score
-
-                if score > best_score:
+                if (score := distance_score * type_score) > best_score:
                     best_score = score
                     best_boundary = boundary_pos
 
@@ -479,14 +470,12 @@ class DocumentChunker:
         local_pos = 0
 
         while local_pos < len(content):
-            chunk_end = min(local_pos + self.config.chunk_size, len(content))
-
-            # Find boundary
-            if chunk_end < len(content):
+            if (
+                chunk_end := min(local_pos + self.config.chunk_size, len(content))
+            ) < len(content):
                 chunk_end = self._find_text_boundary(content, local_pos, chunk_end)
 
-            chunk_content = content[local_pos:chunk_end].strip()
-            if chunk_content:
+            if chunk_content := content[local_pos:chunk_end].strip():
                 chunks.append(
                     Chunk(
                         content=chunk_content,
@@ -522,8 +511,7 @@ class DocumentChunker:
 
         best_pos = target_end
         for pattern, _score in boundaries:
-            matches = list(re.finditer(pattern, content[search_start:target_end]))
-            if matches:
+            if matches := list(re.finditer(pattern, content[search_start:target_end])):
                 # Use the last match
                 last_match = matches[-1]
                 boundary_pos = search_start + last_match.end()
@@ -542,9 +530,8 @@ class DocumentChunker:
         # Try to split on function boundaries if we know the language
         if language in self.FUNCTION_PATTERNS:
             function_pattern = self.FUNCTION_PATTERNS[language]
-            functions = list(function_pattern.finditer(code_content))
 
-            if functions:
+            if functions := list(function_pattern.finditer(code_content)):
                 # Chunk by functions
                 for i, match in enumerate(functions):
                     func_start = match.start()
@@ -555,8 +542,7 @@ class DocumentChunker:
                     else:
                         func_end = len(code_content)
 
-                    func_content = code_content[func_start:func_end].strip()
-                    if func_content:
+                    if func_content := code_content[func_start:func_end].strip():
                         chunks.append(
                             Chunk(
                                 content=func_content,
@@ -571,21 +557,23 @@ class DocumentChunker:
                         )
 
                 # Handle any code before first function
-                if functions and functions[0].start() > 0:
-                    pre_func = code_content[: functions[0].start()].strip()
-                    if pre_func:
-                        chunks.insert(
-                            0,
-                            Chunk(
-                                content=pre_func,
-                                start_pos=global_start,
-                                end_pos=global_start + functions[0].start(),
-                                chunk_index=0,
-                                chunk_type="code",
-                                language=language,
-                                has_code=True,
-                            ),
-                        )
+                if (
+                    functions
+                    and functions[0].start() > 0
+                    and (pre_func := code_content[: functions[0].start()].strip())
+                ):
+                    chunks.insert(
+                        0,
+                        Chunk(
+                            content=pre_func,
+                            start_pos=global_start,
+                            end_pos=global_start + functions[0].start(),
+                            chunk_index=0,
+                            chunk_type="code",
+                            language=language,
+                            has_code=True,
+                        ),
+                    )
 
                 return chunks
 
@@ -680,86 +668,86 @@ class DocumentChunker:
 
         try:
             parser = self.parsers[language]
-            tree = parser.parse(bytes(content, "utf8"))
-            root_node = tree.root_node
-
-            # Extract all function and class nodes
-            code_units = self._extract_code_units(root_node, content, language)
-
-            if not code_units:
-                # No significant code structures found, use semantic chunking
-                return self._semantic_chunking(content, language)
-
-            # Sort by position in file
-            code_units.sort(key=lambda unit: unit["start_pos"])
-
-            chunks = []
-            last_end = 0
-
-            for unit in code_units:
-                # Handle any content before this code unit
-                if unit["start_pos"] > last_end:
-                    pre_content = content[last_end : unit["start_pos"]].strip()
-                    if pre_content:
-                        # Chunk the non-code content
-                        pre_chunks = self._chunk_text_content(
-                            pre_content, last_end, unit["start_pos"]
-                        )
-                        chunks.extend(pre_chunks)
-
-                # Add the code unit as a chunk
-                unit_content = content[unit["start_pos"] : unit["end_pos"]]
-
-                # Check if the unit is too large
-                if len(unit_content) <= self.config.max_function_chunk_size:
-                    chunks.append(
-                        Chunk(
-                            content=unit_content,
-                            start_pos=unit["start_pos"],
-                            end_pos=unit["end_pos"],
-                            chunk_index=len(chunks),
-                            chunk_type="code",
-                            language=language,
-                            has_code=True,
-                            metadata={
-                                "node_type": unit["type"],
-                                "name": unit.get("name", ""),
-                            },
-                        )
-                    )
-                else:
-                    # Split large code units intelligently
-                    sub_chunks = self._split_large_code_unit(
-                        unit_content,
-                        unit["start_pos"],
-                        unit["type"],
-                        language,
-                    )
-                    chunks.extend(sub_chunks)
-
-                last_end = unit["end_pos"]
-
-            # Handle any remaining content
-            if last_end < len(content):
-                remaining = content[last_end:].strip()
-                if remaining:
-                    remaining_chunks = self._chunk_text_content(
-                        remaining, last_end, len(content)
-                    )
-                    chunks.extend(remaining_chunks)
-
-            # Update chunk indices and metadata
-            for i, chunk in enumerate(chunks):
-                chunk.chunk_index = i
-                chunk.total_chunks = len(chunks)
-                chunk.char_count = len(chunk.content)
-                chunk.token_estimate = chunk.char_count // 4
-
-        except (AttributeError, RuntimeError, ValueError):
-            # Fall back to semantic chunking on error
+        except KeyError:
             return self._semantic_chunking(content, language)
-        else:
-            return chunks
+        try:
+            tree = parser.parse(bytes(content, "utf8"))
+        except (AttributeError, RuntimeError, ValueError):
+            return self._semantic_chunking(content, language)
+        try:
+            root_node = tree.root_node
+        except AttributeError:
+            return self._semantic_chunking(content, language)
+
+        # Extract all function and class nodes
+        if not (code_units := self._extract_code_units(root_node, content, language)):
+            # No significant code structures found, use semantic chunking
+            return self._semantic_chunking(content, language)
+
+        # Sort by position in file
+        code_units.sort(key=lambda unit: unit["start_pos"])
+
+        chunks = []
+        last_end = 0
+
+        for unit in code_units:
+            # Handle any content before this code unit
+            if unit["start_pos"] > last_end and (
+                pre_content := content[last_end : unit["start_pos"]].strip()
+            ):
+                # Chunk the non-code content
+                pre_chunks = self._chunk_text_content(
+                    pre_content, last_end, unit["start_pos"]
+                )
+                chunks.extend(pre_chunks)
+
+            # Add the code unit as a chunk
+            unit_content = content[unit["start_pos"] : unit["end_pos"]]
+
+            # Check if the unit is too large
+            if len(unit_content) <= self.config.max_function_chunk_size:
+                chunks.append(
+                    Chunk(
+                        content=unit_content,
+                        start_pos=unit["start_pos"],
+                        end_pos=unit["end_pos"],
+                        chunk_index=len(chunks),
+                        chunk_type="code",
+                        language=language,
+                        has_code=True,
+                        metadata={
+                            "node_type": unit["type"],
+                            "name": unit.get("name", ""),
+                        },
+                    )
+                )
+            else:
+                # Split large code units intelligently
+                sub_chunks = self._split_large_code_unit(
+                    unit_content,
+                    unit["start_pos"],
+                    unit["type"],
+                    language,
+                )
+                chunks.extend(sub_chunks)
+
+            last_end = unit["end_pos"]
+
+        # Handle any remaining content
+        if last_end < len(content) and (remaining := content[last_end:].strip()):
+            remaining_chunks = self._chunk_text_content(
+                remaining, last_end, len(content)
+            )
+            chunks.extend(remaining_chunks)
+
+        # Update chunk indices and metadata
+        for i, chunk in enumerate(chunks):
+            chunk.chunk_index = i
+            chunk.total_chunks = len(chunks)
+            chunk.char_count = len(chunk.content)
+            chunk.token_estimate = chunk.char_count // 4
+
+        return chunks
 
     def _extract_code_units(
         self, node: Any, content: str, language: str
@@ -896,22 +884,24 @@ class DocumentChunker:
 
         try:
             parser = self.parsers[language]
+        except KeyError:
+            return self._chunk_large_code_block(content, global_start, language)
+        try:
             tree = parser.parse(bytes(content, "utf8"))
-            root_node = tree.root_node
-
-            if unit_type == "class":
-                return self._split_class_unit(
-                    content, global_start, root_node, language
-                )
-            if unit_type == "function":
-                return self._split_function_unit(
-                    content, global_start, root_node, language
-                )
-
         except (OSError, PermissionError, ValueError) as e:
             self.logger.debug(
-                f"AST-based splitting failed: {e}, falling back to line-based"
+                "AST-based splitting failed: %s, falling back to line-based", e
             )
+            return self._chunk_large_code_block(content, global_start, language)
+        try:
+            root_node = tree.root_node
+        except AttributeError:
+            return self._chunk_large_code_block(content, global_start, language)
+
+        if unit_type == "class":
+            return self._split_class_unit(content, global_start, root_node, language)
+        if unit_type == "function":
+            return self._split_function_unit(content, global_start, root_node, language)
 
         return self._chunk_large_code_block(content, global_start, language)
 
@@ -920,21 +910,20 @@ class DocumentChunker:
     ) -> list[Chunk]:
         """Split class unit by method boundaries."""
         chunks = []
-        method_nodes = self._extract_class_methods(root_node, content, language)
-
-        if not method_nodes:
+        if not (
+            method_nodes := self._extract_class_methods(root_node, content, language)
+        ):
             return []
 
         # Add class header as first chunk
-        first_method_start = method_nodes[0]["start_pos"]
-        if first_method_start > 0:
-            class_header = content[:first_method_start].strip()
-            if class_header:
-                chunks.append(
-                    self._create_class_header_chunk(
-                        class_header, global_start, first_method_start, language
-                    )
+        if (first_method_start := method_nodes[0]["start_pos"]) > 0 and (
+            class_header := content[:first_method_start].strip()
+        ):
+            chunks.append(
+                self._create_class_header_chunk(
+                    class_header, global_start, first_method_start, language
                 )
+            )
 
         # Process each method
         for method in method_nodes:
@@ -1243,8 +1232,7 @@ class DocumentChunker:
                     return content[node.start_byte : sig_end].strip()
 
         # Fallback: just get the first line
-        first_line_end = content.find("\n", node.start_byte)
-        if first_line_end > node.start_byte:
+        if (first_line_end := content.find("\n", node.start_byte)) > node.start_byte:
             return content[node.start_byte : first_line_end].strip()
 
         return ""
@@ -1271,12 +1259,12 @@ class DocumentChunker:
         pos = 0
 
         while pos < len(content):
-            chunk_end = min(pos + self.config.chunk_size, len(content))
-
             # Basic boundary detection
-            if chunk_end < len(content):
+            if (chunk_end := min(pos + self.config.chunk_size, len(content))) < len(
+                content
+            ):
                 # Look for sentence endings
-                for boundary in [".\n", "\n\n", ". ", "!\n", "?\n"]:
+                for boundary in (".\n", "\n\n", ". ", "!\n", "?\n"):
                     boundary_idx = content.rfind(
                         boundary,
                         pos + self.config.chunk_size - 200,
@@ -1286,8 +1274,7 @@ class DocumentChunker:
                         chunk_end = boundary_idx + len(boundary)
                         break
 
-            chunk_content = content[pos:chunk_end].strip()
-            if chunk_content:
+            if chunk_content := content[pos:chunk_end].strip():
                 chunks.append(
                     Chunk(
                         content=chunk_content,

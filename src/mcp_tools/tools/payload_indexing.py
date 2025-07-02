@@ -24,7 +24,7 @@ else:
 
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.responses import GenericDictResponse
-from src.security import MLSecurityValidator as SecurityValidator
+from src.security import MLSecurityValidator
 
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             # Validate collection name
-            security_validator = SecurityValidator.from_unified_config()
+            security_validator = MLSecurityValidator.from_unified_config()
             collection_name = security_validator.validate_collection_name(
                 collection_name
             )
@@ -99,7 +99,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             # Validate collection name
-            security_validator = SecurityValidator.from_unified_config()
+            security_validator = MLSecurityValidator.from_unified_config()
             collection_name = security_validator.validate_collection_name(
                 collection_name
             )
@@ -137,7 +137,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             # Validate collection name
-            security_validator = SecurityValidator.from_unified_config()
+            security_validator = MLSecurityValidator.from_unified_config()
             collection_name = security_validator.validate_collection_name(
                 collection_name
             )
@@ -192,7 +192,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             # Validate collection name and filters
-            security_validator = SecurityValidator.from_unified_config()
+            security_validator = MLSecurityValidator.from_unified_config()
             collection_name = security_validator.validate_collection_name(
                 collection_name
             )

@@ -8,6 +8,7 @@ for maximum portfolio demonstration performance.
 import asyncio
 import gc
 import logging
+import subprocess
 import threading
 import time
 from collections import defaultdict, deque
@@ -17,6 +18,12 @@ from dataclasses import dataclass, field
 
 import psutil
 import uvloop
+
+
+try:
+    import httpx
+except ImportError:
+    httpx = None
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -464,9 +471,9 @@ async def _warm_services():
             client_manager = ClientManager(config)
             await client_manager.initialize()
 
-            embedding_manager = EmbeddingManager(config)
+            embedding_manager = EmbeddingManager(config, client_manager)
             await embedding_manager.initialize()
-            await embedding_manager.generate_single("warmup query")
+            await embedding_manager.generate_embeddings(["warmup query"])
             logger.info("Embedding service warmed up successfully")
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             logger.warning(

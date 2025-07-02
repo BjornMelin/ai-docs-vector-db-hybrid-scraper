@@ -10,6 +10,12 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Any
 
+
+try:
+    import redis
+except ImportError:
+    redis = None
+
 from fastapi import HTTPException, Request
 from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
 

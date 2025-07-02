@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from src.architecture.service_factory import get_service
-from src.models.vector_search import SearchRequest
+from src.models.requests import SearchRequest
 
 
 logger = logging.getLogger(__name__)

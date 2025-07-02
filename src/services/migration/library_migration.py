@@ -11,6 +11,12 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
+
+try:
+    import redis
+except ImportError:
+    redis = None
+
 from src.config import Config
 from src.services.cache.manager import CacheManager
 from src.services.cache.modern import ModernCacheManager

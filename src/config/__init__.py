@@ -73,6 +73,8 @@ from .settings import (
     RAGConfig,
     ReRankingConfig,
     SearchAccuracy,
+    SearchMode,
+    SearchPipeline,
     SearchStrategy,
     SecurityConfig,
     Settings,
@@ -524,6 +526,8 @@ __all__ = [
     "SQLAlchemyConfig",
     "SafeConfigLoader",
     "SearchAccuracy",
+    "SearchMode",
+    "SearchPipeline",
     "SearchStrategy",
     "SecurityConfig",
     # Main configuration class
