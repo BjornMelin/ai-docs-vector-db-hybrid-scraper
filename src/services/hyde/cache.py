@@ -233,17 +233,17 @@ class HyDECache(BaseService):
             success = await self.cache_manager.set(
                 cache_key, cache_data, ttl=self.config.cache_ttl_seconds
             )
-
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
+            self.cache_errors += 1
+            logger.warning("Cache set error for HyDE embedding: %s", e)
+            return False
+        else:
             if success:
                 self.cache_sets += 1
                 logger.debug("Cached HyDE embedding for query: %s", query)
             else:
                 logger.debug("Failed to cache HyDE embedding for query: %s", query)
             return success
-        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            self.cache_errors += 1
-            logger.warning("Cache set error for HyDE embedding: %s", e)
-            return False
 
     async def get_hypothetical_documents(
         self, query: str, domain: str | None = None
@@ -279,15 +279,16 @@ class HyDECache(BaseService):
         """Get cached documents with error handling."""
         try:
             cached_docs = await self.cache_manager.get(cache_key)
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
+            self.cache_errors += 1
+            logger.warning("Cache get error for hypothetical documents: %s", e)
+            return None
+        else:
             if cached_docs is not None:
                 logger.debug("Cache hit for hypothetical documents: %s", query)
             else:
                 logger.debug("Cache miss for hypothetical documents: %s", query)
             return cached_docs
-        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            self.cache_errors += 1
-            logger.warning("Cache get error for hypothetical documents: %s", e)
-            return None
 
     async def set_hypothetical_documents(
         self,
@@ -335,17 +336,19 @@ class HyDECache(BaseService):
             success = await self.cache_manager.set(
                 cache_key, cache_data, ttl=self.config.cache_ttl_seconds
             )
-
-            if success:
-                self.cache_sets += 1
-                logger.debug("Cached hypothetical documents for query: %s", query)
-            else:
-                logger.debug("Failed to cache hypothetical documents for query: %s", query)
-            return success
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
             logger.warning("Cache set error for hypothetical documents: %s", e)
             return False
+        else:
+            if success:
+                self.cache_sets += 1
+                logger.debug("Cached hypothetical documents for query: %s", query)
+            else:
+                logger.debug(
+                    "Failed to cache hypothetical documents for query: %s", query
+                )
+            return success
 
     async def get_search_results(
         self, query: str, collection_name: str, search_params: dict[str, Any]
@@ -379,15 +382,16 @@ class HyDECache(BaseService):
         """Get cached search results with error handling."""
         try:
             cached_results = await self.cache_manager.get(cache_key)
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
+            self.cache_errors += 1
+            logger.warning("Cache get error for search results: %s", e)
+            return None
+        else:
             if cached_results is not None:
                 logger.debug("Cache hit for search results: %s", query)
             else:
                 logger.debug("Cache miss for search results: %s", query)
             return cached_results
-        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            self.cache_errors += 1
-            logger.warning("Cache get error for search results: %s", e)
-            return None
 
     async def set_search_results(
         self,
@@ -434,17 +438,17 @@ class HyDECache(BaseService):
         """Store search results in cache with error handling."""
         try:
             success = await self.cache_manager.set(cache_key, cache_data, ttl=ttl)
-
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
+            self.cache_errors += 1
+            logger.warning("Cache set error for search results: %s", e)
+            return False
+        else:
             if success:
                 self.cache_sets += 1
                 logger.debug("Cached search results for query: %s", query)
             else:
                 logger.debug("Failed to cache search results for query: %s", query)
             return success
-        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            self.cache_errors += 1
-            logger.warning("Cache set error for search results: %s", e)
-            return False
 
     async def warm_cache(
         self, common_queries: list[str], domain: str | None = None

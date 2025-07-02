@@ -1706,15 +1706,16 @@ async def check_service_health_function(service_name: str) -> bool:
 
     try:
         is_healthy = await health["check_function"]()
+    except Exception as e:
+        logger.exception("Health check failed for %s", service_name)
+        _update_health_failure(health, str(e))
+        return False
+    else:
         if is_healthy:
             _update_health_success(health)
             return is_healthy
         _update_health_failure(health, "Health check returned false")
         return is_healthy
-    except Exception as e:
-        logger.exception("Health check failed for %s", service_name)
-        _update_health_failure(health, str(e))
-        return False
 
 
 async def get_all_health_status() -> dict[str, dict[str, Any]]:

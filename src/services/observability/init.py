@@ -91,6 +91,29 @@ except ImportError:
     get_observability_config = None
     get_resource_attributes = None
 
+# Telemetry helper imports
+try:
+    from .telemetry_helpers import (
+        _create_resource,
+        _initialize_metrics,
+        _initialize_tracing,
+        _setup_fastapi_instrumentation,
+        _setup_httpx_instrumentation,
+        _setup_redis_instrumentation,
+        _setup_sqlalchemy_instrumentation,
+        _validate_telemetry_components,
+    )
+except ImportError:
+    # Mock functions for when telemetry helpers aren't available
+    _create_resource = None
+    _initialize_metrics = None
+    _initialize_tracing = None
+    _setup_fastapi_instrumentation = None
+    _setup_httpx_instrumentation = None
+    _setup_redis_instrumentation = None
+    _setup_sqlalchemy_instrumentation = None
+    _validate_telemetry_components = None
+
 
 logger = logging.getLogger(__name__)
 
@@ -125,27 +148,28 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
         return False
 
     try:
-        from .telemetry_helpers import (
-            _create_resource,
-            _initialize_metrics,
-            _initialize_tracing,
-            _validate_telemetry_components,
-        )
-
-        if not _validate_telemetry_components():
+        if not _validate_telemetry_components or not _validate_telemetry_components():
             return False
 
         logger.info("Initializing OpenTelemetry observability...")
 
-        resource = _create_resource(config)
+        resource = _create_resource(config) if _create_resource else None
         if resource is None:
             return False
 
-        if not _initialize_tracing(config, resource):
+        if not _initialize_tracing or not _initialize_tracing(config, resource):
             return False
 
-        if not _initialize_metrics(config, resource):
+        # Store the tracer provider reference for shutdown
+        if trace and hasattr(trace, "get_tracer_provider"):
+            _tracer_provider = trace.get_tracer_provider()
+
+        if not _initialize_metrics or not _initialize_metrics(config, resource):
             return False
+
+        # Store the meter provider reference for shutdown
+        if metrics and hasattr(metrics, "get_meter_provider"):
+            _meter_provider = metrics.get_meter_provider()
 
         _setup_auto_instrumentation(config)
 
@@ -173,17 +197,14 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
 
     """
     try:
-        from .telemetry_helpers import (
-            _setup_fastapi_instrumentation,
-            _setup_httpx_instrumentation,
-            _setup_redis_instrumentation,
-            _setup_sqlalchemy_instrumentation,
-        )
-
-        _setup_fastapi_instrumentation(config)
-        _setup_httpx_instrumentation(config)
-        _setup_redis_instrumentation(config)
-        _setup_sqlalchemy_instrumentation(config)
+        if _setup_fastapi_instrumentation:
+            _setup_fastapi_instrumentation(config)
+        if _setup_httpx_instrumentation:
+            _setup_httpx_instrumentation(config)
+        if _setup_redis_instrumentation:
+            _setup_redis_instrumentation(config)
+        if _setup_sqlalchemy_instrumentation:
+            _setup_sqlalchemy_instrumentation(config)
 
     except (OSError, PermissionError):
         logger.warning("Auto-instrumentation setup failed")

@@ -133,13 +133,13 @@ class EnterpriseCacheService(BaseService):
                 self._track_access(key)
                 self._record_operation_time("get", time.time() - start_time)
                 return value
+        except Exception:
+            logger.exception("Cache get failed for key: %s", key)
+            return None
+        else:
             # Cache miss
             self._cache_misses += 1
             self._record_operation_time("get", time.time() - start_time)
-            return None
-
-        except Exception:
-            logger.exception("Cache get failed for key: %s", key)
             return None
 
     async def set(
@@ -184,11 +184,11 @@ class EnterpriseCacheService(BaseService):
 
             if tier in ("distributed", "both") and self.distributed_cache:
                 await self._set_distributed(key, value, ttl)
-
-            return True
         except Exception:
             logger.exception("Cache set failed for key: %s", key)
             return False
+        else:
+            return True
 
     async def delete(self, key: str) -> bool:
         """Delete value from all cache tiers.

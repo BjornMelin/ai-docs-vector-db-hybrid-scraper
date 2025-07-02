@@ -403,8 +403,6 @@ class MetricsRegistry:
                 start_time = time.time()
                 try:
                     result = await func(*args, **kwargs)
-                    self._record_embedding_success(provider, model, result)
-                    return result
                 except (
                     AttributeError,
                     ConnectionError,
@@ -413,6 +411,9 @@ class MetricsRegistry:
                 ):
                     self._record_embedding_error(provider, model)
                     raise
+                else:
+                    self._record_embedding_success(provider, model, result)
+                    return result
                 finally:
                     self._record_embedding_duration(provider, model, start_time)
 
@@ -421,8 +422,6 @@ class MetricsRegistry:
                 start_time = time.time()
                 try:
                     result = func(*args, **kwargs)
-                    self._record_embedding_success(provider, model, result)
-                    return result
                 except (
                     AttributeError,
                     ConnectionError,
@@ -431,6 +430,9 @@ class MetricsRegistry:
                 ):
                     self._record_embedding_error(provider, model)
                     raise
+                else:
+                    self._record_embedding_success(provider, model, result)
+                    return result
                 finally:
                     duration = time.time() - start_time
                     self._metrics["embedding_duration"].labels(
@@ -460,21 +462,23 @@ class MetricsRegistry:
             async def async_wrapper(*args, **kwargs):
                 try:
                     result = await func(*args, **kwargs)
-                    self._record_cache_result(cache_type, cache_name, result)
-                    return result
                 except (ConnectionError, RuntimeError, TimeoutError):
                     self._record_cache_miss(cache_type, cache_name)
                     raise
+                else:
+                    self._record_cache_result(cache_type, cache_name, result)
+                    return result
 
             @functools.wraps(func)
             def sync_wrapper(*args, **kwargs):
                 try:
                     result = func(*args, **kwargs)
-                    self._record_cache_result(cache_type, cache_name, result)
-                    return result
                 except (ConnectionError, RuntimeError, TimeoutError):
                     self._record_cache_miss(cache_type, cache_name)
                     raise
+                else:
+                    self._record_cache_result(cache_type, cache_name, result)
+                    return result
 
             return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
 
@@ -500,11 +504,12 @@ class MetricsRegistry:
                 start_time = time.time()
                 try:
                     result = await func(*args, **kwargs)
-                    self._record_cache_operation_success(cache_type, operation)
-                    return result
                 except (ConnectionError, OSError, PermissionError):
                     self._record_cache_operation_error(cache_type, operation)
                     raise
+                else:
+                    self._record_cache_operation_success(cache_type, operation)
+                    return result
                 finally:
                     self._record_cache_operation_duration(
                         cache_type, operation, start_time
@@ -515,11 +520,12 @@ class MetricsRegistry:
                 start_time = time.time()
                 try:
                     result = func(*args, **kwargs)
-                    self._record_cache_operation_success(cache_type, operation)
-                    return result
                 except (ConnectionError, OSError, PermissionError):
                     self._record_cache_operation_error(cache_type, operation)
                     raise
+                else:
+                    self._record_cache_operation_success(cache_type, operation)
+                    return result
                 finally:
                     self._record_cache_operation_duration(
                         cache_type, operation, start_time

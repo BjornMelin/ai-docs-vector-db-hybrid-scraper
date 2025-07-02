@@ -4,6 +4,12 @@ import logging
 from typing import TYPE_CHECKING
 
 
+# Import for resource attributes - safe to import as it's configuration only
+try:
+    from .config import get_resource_attributes
+except ImportError:
+    get_resource_attributes = None
+
 if TYPE_CHECKING:
     from .config import ObservabilityConfig
 
@@ -65,9 +71,6 @@ def _create_resource(config: "ObservabilityConfig") -> object | None:
         Resource object or None if creation fails
     """
     try:
-        # Import here to avoid circular imports
-        from .dependencies import get_resource_attributes
-
         if get_resource_attributes is None:
             logger.error("Resource attributes function not available")
             return None
@@ -116,11 +119,11 @@ def _initialize_tracing(config: "ObservabilityConfig", resource: object) -> bool
 
         # Set global tracer provider
         trace.set_tracer_provider(tracer_provider)
-
-        return True
     except (ImportError, ValueError, TypeError, ConnectionError):
         logger.exception("Failed to initialize tracing")
         return False
+    else:
+        return True
 
 
 def _initialize_metrics(config: "ObservabilityConfig", resource: object) -> bool:
@@ -151,11 +154,11 @@ def _initialize_metrics(config: "ObservabilityConfig", resource: object) -> bool
 
         # Set global meter provider
         metrics.set_meter_provider(meter_provider)
-
-        return True
     except (ImportError, ValueError, TypeError, ConnectionError):
         logger.exception("Failed to initialize metrics")
         return False
+    else:
+        return True
 
 
 def _setup_fastapi_instrumentation(config: "ObservabilityConfig") -> None:

@@ -116,7 +116,7 @@ class EnhancedAutomationRouter(AutomationRouter):
         interaction_required: bool = False,
         custom_actions: list[dict] | None = None,
         force_tool: str | None = None,
-        timeout: int = 30000,  # noqa: ASYNC109
+        request_timeout_ms: int = 30000,
     ) -> dict[str, Any]:
         """Enhanced scraping with performance tracking and intelligent routing."""
         if not self._initialized:
@@ -171,7 +171,13 @@ class EnhancedAutomationRouter(AutomationRouter):
         # Execute scraping with rate limiting
         try:
             result = await self._execute_scraping_with_rate_limiting(
-                selected_tier, url, domain, custom_actions, timeout, start_time, breaker
+                selected_tier,
+                url,
+                domain,
+                custom_actions,
+                request_timeout_ms,
+                start_time,
+                breaker,
             )
 
         except Exception as e:
@@ -194,7 +200,7 @@ class EnhancedAutomationRouter(AutomationRouter):
 
             # Try intelligent fallback
             return await self._intelligent_fallback(
-                url, domain, selected_tier, custom_actions, timeout, str(e)
+                url, domain, selected_tier, custom_actions, request_timeout_ms, str(e)
             )
 
         else:
@@ -347,21 +353,21 @@ class EnhancedAutomationRouter(AutomationRouter):
         domain: str,
         failed_tier: str,
         custom_actions: list[dict] | None,
-        timeout: int,  # noqa: ASYNC109
+        request_timeout_ms: int,
         error_message: str,
     ) -> dict[str, Any]:
         """Intelligent fallback with performance awareness."""
         if not self.routing_config.enable_intelligent_fallback:
             # Use standard fallback
             return await self._fallback_scrape(
-                url, failed_tier, custom_actions, timeout
+                url, failed_tier, custom_actions, request_timeout_ms
             )
 
         # Get tier configuration
         tier_config = self.routing_config.tier_configs.get(failed_tier)
         if not tier_config:
             return await self._fallback_scrape(
-                url, failed_tier, custom_actions, timeout
+                url, failed_tier, custom_actions, request_timeout_ms
             )
 
         # Build fallback order based on configuration and performance
@@ -384,7 +390,7 @@ class EnhancedAutomationRouter(AutomationRouter):
                     url,
                     domain,
                     custom_actions,
-                    timeout,
+                    request_timeout_ms,
                     failed_tier,
                     failed_tiers,
                     breaker,
@@ -487,22 +493,24 @@ class EnhancedAutomationRouter(AutomationRouter):
         tier: str,
         url: str,
         custom_actions: list[dict] | None,
-        timeout: int,  # noqa: ASYNC109
+        request_timeout_ms: int,
     ) -> dict[str, Any]:
         """Execute scraping for a specific tier."""
         # Use parent class methods for actual execution
         if tier == "lightweight":
-            return await self._try_lightweight(url, timeout)
+            return await self._try_lightweight(url, request_timeout_ms)
         if tier == "crawl4ai":
-            return await self._try_crawl4ai(url, custom_actions, timeout)
+            return await self._try_crawl4ai(url, custom_actions, request_timeout_ms)
         if tier == "crawl4ai_enhanced":
-            return await self._try_crawl4ai_enhanced(url, custom_actions, timeout)
+            return await self._try_crawl4ai_enhanced(
+                url, custom_actions, request_timeout_ms
+            )
         if tier == "browser_use":
-            return await self._try_browser_use(url, custom_actions, timeout)
+            return await self._try_browser_use(url, custom_actions, request_timeout_ms)
         if tier == "playwright":
-            return await self._try_playwright(url, custom_actions, timeout)
+            return await self._try_playwright(url, custom_actions, request_timeout_ms)
         if tier == "firecrawl":
-            return await self._try_firecrawl(url, timeout)
+            return await self._try_firecrawl(url, request_timeout_ms)
         msg = "Unknown tier"
         raise CrawlServiceError(msg)
 
@@ -678,7 +686,7 @@ class EnhancedAutomationRouter(AutomationRouter):
         url: str,
         domain: str,
         custom_actions: list[dict] | None,
-        timeout: int,
+        request_timeout_ms: int,
         start_time: float,
         breaker: TierCircuitBreaker | None,
     ) -> dict[str, Any]:
@@ -696,12 +704,12 @@ class EnhancedAutomationRouter(AutomationRouter):
                     domain,
                     selected_tier,
                     custom_actions,
-                    timeout,
+                    request_timeout_ms,
                     "Rate limit exceeded",
                 )
 
             result = await self._execute_tier_scraping(
-                selected_tier, url, custom_actions, timeout
+                selected_tier, url, custom_actions, request_timeout_ms
             )
 
         # Record success
@@ -730,7 +738,7 @@ class EnhancedAutomationRouter(AutomationRouter):
         url: str,
         domain: str,
         custom_actions: list[dict] | None,
-        timeout: int,
+        request_timeout_ms: int,
         failed_tier: str,
         failed_tiers: list[str],
         breaker: TierCircuitBreaker | None,
@@ -740,7 +748,7 @@ class EnhancedAutomationRouter(AutomationRouter):
         start_time = time.time()
 
         result = await self._execute_tier_scraping(
-            fallback_tier, url, custom_actions, timeout
+            fallback_tier, url, custom_actions, request_timeout_ms
         )
 
         # Record success
