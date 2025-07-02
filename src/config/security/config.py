@@ -170,7 +170,13 @@ class SecurityConfig(BaseModel):
 
     # CORS configuration
     allowed_origins: list[str] = Field(
-        default_factory=lambda: ["*"], description="Allowed CORS origins"
+        default_factory=lambda: [
+            "http://localhost:3000",
+            "http://localhost:8000",
+            "https://localhost:3000",
+            "https://localhost:8000",
+        ],
+        description="Allowed CORS origins - restrict to known domains for security",
     )
     allowed_methods: list[str] = Field(
         default_factory=lambda: ["GET", "POST", "PUT", "DELETE"],

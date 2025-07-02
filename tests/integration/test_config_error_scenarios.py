@@ -10,7 +10,7 @@ import pytest
 import yaml
 
 from src.config import Config, ConfigLoadError, ConfigManager, get_degradation_handler
-from src.config.reload import ConfigReloader
+from src.config.reloader import ConfigReloader
 
 
 @pytest.fixture

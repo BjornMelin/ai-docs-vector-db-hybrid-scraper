@@ -233,12 +233,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             current_count = await self.redis_client.get(rate_limit_key)
 
             if current_count:
-                count = int(current_count)
-
-                # Check if limit exceeded - return the negated condition directly
-                # Increment counter atomically
-                # new_count = await self.redis_client.incr(rate_limit_key)
-                return count < self.config.default_rate_limit
+                # Increment counter atomically and check limit
+                new_count = await self.redis_client.incr(rate_limit_key)
+                return new_count <= self.config.default_rate_limit
             # First request in window - set counter and expiry atomically
             async with self.redis_client.pipeline(transaction=True) as pipe:
                 pipe.incr(rate_limit_key)
@@ -343,19 +340,13 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             Client IP address
 
         """
-        # Check X-Forwarded-For header first
-        forwarded_for = request.headers.get("x-forwarded-for")
-        if forwarded_for:
-            return forwarded_for.split(",")[0].strip()
-
-        # Check X-Real-IP header
-        real_ip = request.headers.get("x-real-ip")
-        if real_ip:
-            return real_ip
-
-        # Fall back to direct client IP
+        # Prioritize direct client IP for security - avoids X-Forwarded-For spoofing
         if request.client:
             return request.client.host
+
+        # Only trust proxy headers from known/configured proxy IPs in production
+        # TODO: Implement trusted_proxies configuration for load balancer scenarios
+        # For now, we use direct IP to prevent spoofing attacks
 
         return "unknown"
 

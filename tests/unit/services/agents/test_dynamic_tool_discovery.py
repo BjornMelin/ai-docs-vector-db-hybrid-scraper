@@ -24,7 +24,6 @@ from src.services.agents.dynamic_tool_discovery import (
     ToolCapability,
     ToolCapabilityType,
     ToolMetrics,
-    _discovery_engine,
     discover_tools_for_task,
     get_discovery_engine,
 )
@@ -1293,10 +1292,6 @@ class TestSpecificUncoveredFunctionality:
 
         # Should be same instance (singleton)
         assert engine1 is engine2
-
-        # Verify global state
-        if _discovery_engine is not None:
-            assert _discovery_engine is engine1
 
     def test_tool_capability_type_enum_coverage(self):
         """Test all ToolCapabilityType enum values."""

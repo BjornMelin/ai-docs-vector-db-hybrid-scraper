@@ -35,7 +35,7 @@ data:
   # Security settings
   AI_DOCS_SECURITY__RATE_LIMIT_ENABLED: "true"
   AI_DOCS_SECURITY__CORS_ENABLED: "true"
-  AI_DOCS_SECURITY__ALLOWED_HOSTS: "*"
+  AI_DOCS_SECURITY__ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:8000,https://localhost:3000,https://localhost:8000"
 
 ---
 apiVersion: v1

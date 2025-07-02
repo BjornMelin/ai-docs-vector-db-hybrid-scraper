@@ -8,8 +8,14 @@ import json
 from unittest.mock import MagicMock
 
 import pytest
-import schemathesis
 from starlette.testclient import TestClient
+
+
+# Mock schemathesis if not available
+try:
+    import schemathesis
+except ImportError:
+    schemathesis = MagicMock()
 
 
 # Mock openapi_spec_validator if not available

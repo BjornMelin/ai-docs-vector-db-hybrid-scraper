@@ -50,7 +50,11 @@ async def search_documents(request: SimpleSearchRequest) -> SimpleSearchResponse
         return await _perform_search(request)
     except Exception as e:
         logger.exception("Search failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        # Return generic error message to prevent information disclosure
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred while processing your search request",
+        ) from e
 
 
 async def _perform_search(request: SimpleSearchRequest) -> SimpleSearchResponse:
