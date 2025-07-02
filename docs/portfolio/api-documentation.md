@@ -21,7 +21,7 @@ demonstrating enterprise-grade AI/ML engineering capabilities.
 - [GitHub Repository](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper)
 - [Technical Documentation](docs/portfolio/technical-deep-dive.md)
 - [Performance Benchmarks](docs/portfolio/performance-analysis.md)
-- [Deployment Guide](docs/operators/deployment.md)
+- [Operations Guide](docs/operators/operations.md)
 
 ## 🏗️ API Architecture
 
