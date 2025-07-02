@@ -488,7 +488,7 @@ addopts = [
     "--cov-fail-under=80",           # Fail if coverage below 80%
     "--durations=10",                # Show 10 slowest tests
     "--maxfail=5",                   # Stop after 5 failures
-    "--import-mode=importlib",       # Modern import mode
+    "--import-mode=prepend",         # Prepend mode for src imports
     "--showlocals",                  # Show local variables in tracebacks
     "--doctest-modules",             # Run doctests in modules
     "--doctest-continue-on-failure", # Continue after doctest failures

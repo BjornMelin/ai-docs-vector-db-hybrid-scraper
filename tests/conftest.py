@@ -16,7 +16,12 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 
-# Add src to path
+# Add project root to path for src imports
+project_root = str(Path(__file__).parent.parent)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# Also add src directory for backwards compatibility
 src_path = str(Path(__file__).parent.parent / "src")
 if src_path not in sys.path:
     sys.path.insert(0, src_path)
