@@ -306,7 +306,7 @@ class SearchOrchestrator(BaseService):
             search_results, expanded_query = await self._execute_search_pipeline(
                 request, features_used
             )
-            
+
             # Determine the processed query (use expanded if available, otherwise original)
             processed_query = expanded_query if expanded_query else request.query
 

@@ -1,7 +1,5 @@
 """Tests for MCP tools hybrid_search module."""
 
-import pytest
-
 
 class TestHybridSearch:
     """Test hybrid search functionality."""

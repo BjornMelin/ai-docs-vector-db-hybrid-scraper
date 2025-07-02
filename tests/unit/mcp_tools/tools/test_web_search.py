@@ -1,7 +1,5 @@
 """Tests for MCP tools web_search module."""
 
-import pytest
-
 
 class TestWebSearch:
     """Test web search functionality."""

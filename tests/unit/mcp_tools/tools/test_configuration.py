@@ -1,7 +1,5 @@
 """Tests for MCP tools configuration module."""
 
-import pytest
-
 
 class TestConfiguration:
     """Test configuration functionality."""
