@@ -112,8 +112,7 @@ class WorkflowOrchestrator:
                 )
 
                 if not ready_nodes:
-                    msg = "Circular dependency or deadlock detected"
-                    raise RuntimeError(msg)
+                    self._raise_deadlock_error()
 
                 # Execute ready nodes in parallel
                 node_tasks = []
@@ -131,7 +130,7 @@ class WorkflowOrchestrator:
             workflow.performance_metrics = self._calculate_workflow_metrics(workflow)
             workflow.state = WorkflowState.COMPLETED
 
-        except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
+        except (TimeoutError, ConnectionError, RuntimeError, TypeError) as e:
             workflow.state = WorkflowState.FAILED
             workflow.error = str(e)
         finally:
@@ -153,15 +152,15 @@ class WorkflowOrchestrator:
         executed_nodes: set[str],
     ) -> list[WorkflowNode]:
         """Find nodes ready for execution."""
-        ready = []
-        for node in nodes:
+        return [
+            node
+            for node in nodes
             if (
                 node.node_id not in executed_nodes
                 and node.state == WorkflowState.PENDING
                 and dependency_graph[node.node_id].issubset(executed_nodes)
-            ):
-                ready.append(node)
-        return ready
+            )
+        ]
 
     async def _execute_node(
         self,
@@ -177,8 +176,7 @@ class WorkflowOrchestrator:
             # Find suitable agent for the node
             agent_id = self._select_agent_for_node(node)
             if not agent_id:
-                msg = f"No suitable agent found for node {node.node_id}"
-                raise RuntimeError(msg)
+                self._raise_no_agent_error(node.node_id)
 
             agent_info = self.agent_pool[agent_id]
             agent = agent_info["agent"]
@@ -285,6 +283,16 @@ class WorkflowOrchestrator:
             else 0,
             "performance_improvement": min(parallelization_factor, 10.0),  # Cap at 10x
         }
+
+    def _raise_deadlock_error(self) -> None:
+        """Raise a deadlock detection error."""
+        msg = "Circular dependency or deadlock detected"
+        raise RuntimeError(msg)
+
+    def _raise_no_agent_error(self, node_id: str) -> None:
+        """Raise an error when no suitable agent is found."""
+        msg = f"No suitable agent found for node {node_id}"
+        raise RuntimeError(msg)
 
 
 class TestDistributedWorkflowExecution:
@@ -745,16 +753,15 @@ class TestDistributedWorkflowExecution:
             )
 
         # Create workflow with many parallel tasks
-        parallel_tasks = []
-        for i in range(9):  # 9 tasks, 3 agents = 3 tasks per agent
-            parallel_tasks.append(
-                WorkflowNode(
-                    node_id=f"parallel_task_{i}",
-                    agent_role=AgentRole.COORDINATOR,
-                    task_description=f"load balanced task {i}",
-                    constraints={"task_id": i, "load_test": True},
-                )
+        parallel_tasks = [
+            WorkflowNode(
+                node_id=f"parallel_task_{i}",
+                agent_role=AgentRole.COORDINATOR,
+                task_description=f"load balanced task {i}",
+                constraints={"task_id": i, "load_test": True},
             )
+            for i in range(9)  # 9 tasks, 3 agents = 3 tasks per agent
+        ]
 
         # Add aggregation task
         aggregation_task = WorkflowNode(

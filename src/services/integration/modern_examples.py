@@ -14,6 +14,10 @@ from src.config import Config
 from src.services.cache.modern import ModernCacheManager
 from src.services.circuit_breaker.modern import ModernCircuitBreakerManager
 from src.services.middleware.rate_limiting import setup_rate_limiting
+from src.services.migration.library_migration import (
+    MigrationMode,
+    create_migration_manager,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -107,7 +111,7 @@ class EmbeddingServiceWithProtection:
             try:
                 embedding = await self.generate_embedding(text, model)
                 embeddings.append(embedding)
-            except Exception as e:
+            except Exception:
                 logger.exception("Failed to generate embedding for text")
                 # Use fallback embedding or skip
                 embeddings.append([0.0] * 1536)
@@ -165,10 +169,12 @@ class SearchServiceWithCaching:
         try:
             count = await self.cache_manager.invalidate_pattern(pattern)
             logger.info("Invalidated %s search cache entries", count)
-            return True
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to invalidate search cache")
             return False
+
+        else:
+            return True
 
 
 def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
@@ -222,10 +228,12 @@ def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
         service = request.app.state.modern_service
         try:
             embedding = await service.embedding_service.generate_embedding(text, model)
-            return {"embedding": embedding, "model": model}
         except Exception as e:
             logger.exception("Embedding generation failed")
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail=str(e)) from e
+
+        else:
+            return {"embedding": embedding, "model": model}
 
     @app.get("/search")
     @rate_limiter.limit("50/minute")
@@ -237,10 +245,12 @@ def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
         """Search documents with rate limiting and caching."""
         service = request.app.state.modern_service
         try:
-            return await service.search_service.search_documents(query, limit=limit)
+            results = await service.search_service.search_documents(query, limit=limit)
         except Exception as e:
             logger.exception("Search failed")
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail=str(e)) from e
+        else:
+            return results
 
     @app.get("/health/modern")
     async def modern_health_check(request: Request):
@@ -270,10 +280,12 @@ def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
         service = request.app.state.modern_service
         try:
             success = await service.cache_manager.clear()
-            return {"success": success, "message": "Cache cleared"}
         except Exception as e:
             logger.exception("Cache clear failed")
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail=str(e)) from e
+
+        else:
+            return {"success": success, "message": "Cache cleared"}
 
     @app.post("/admin/circuit-breaker/{service_name}/reset")
     @rate_limiter.limit("5/minute")
@@ -285,10 +297,12 @@ def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
         service = request.app.state.modern_service
         try:
             success = await service.circuit_breaker_manager.reset_breaker(service_name)
-            return {"success": success, "service": service_name}
         except Exception as e:
             logger.exception("Circuit breaker reset failed")
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail=str(e)) from e
+
+        else:
+            return {"success": success, "service": service_name}
 
     return app
 
@@ -323,10 +337,6 @@ async def example_usage_patterns():
         return {"result": f"Success with {param1}"}
 
     # Example 3: Migration manager usage
-    from src.services.migration.library_migration import (
-        MigrationMode,
-        create_migration_manager,
-    )
 
     config = Config()  # Your config instance
     migration_manager = create_migration_manager(
@@ -338,8 +348,8 @@ async def example_usage_patterns():
     await migration_manager.initialize()
 
     # Get services through migration manager
-    modern_cache = await migration_manager.get_cache_manager()
-    modern_cb = await migration_manager.get_circuit_breaker("my_service")
+    # modern_cache = await migration_manager.get_cache_manager()
+    # modern_cb = await migration_manager.get_circuit_breaker("my_service")
 
     # Check migration status
     status = await migration_manager.get_migration_status()

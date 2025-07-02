@@ -87,7 +87,7 @@ class BackgroundTask:
         """Post-initialization validation."""
         if not callable(self.func):
             msg = "Task function must be callable"
-            raise ValueError(msg)
+            raise TypeError(msg)
         if self.max_retries < 0:
             msg = "Max retries cannot be negative"
             raise ValueError(msg)
@@ -258,7 +258,6 @@ class BackgroundTaskManager:
             logger.debug(
                 f"Task {task_id} submitted successfully"
             )  # TODO: Convert f-string to logging format
-            return task_id
         except asyncio.QueueFull as e:
             # Remove from storage if queue is full
             with self._task_lock:
@@ -267,6 +266,9 @@ class BackgroundTaskManager:
                 self._total_tasks -= 1
             msg = "Task queue is full"
             raise ValueError(msg) from e
+
+        else:
+            return task_id
 
     async def get_task_result(self, task_id: str) -> TaskResult | None:
         """Get result of a specific task.
@@ -365,7 +367,7 @@ class BackgroundTaskManager:
                 if self._shutdown_event.is_set():
                     break
                 continue
-            except (OSError, PermissionError) as e:
+            except (OSError, PermissionError):
                 logger.exception("Worker {worker_name} error")
 
         logger.debug(
@@ -569,8 +571,33 @@ class BackgroundTaskManager:
         return task_list
 
 
-# Global task manager instance
-_task_manager: BackgroundTaskManager | None = None
+class _TaskManagerSingleton:
+    """Singleton holder for background task manager instance."""
+
+    _instance: BackgroundTaskManager | None = None
+
+    @classmethod
+    def get_instance(cls) -> BackgroundTaskManager:
+        """Get the singleton background task manager instance."""
+        if cls._instance is None:
+            cls._instance = BackgroundTaskManager()
+        return cls._instance
+
+    @classmethod
+    async def initialize_instance(
+        cls, max_workers: int = 4, max_queue_size: int = 1000
+    ) -> None:
+        """Initialize the singleton with specific configuration."""
+        if cls._instance is None:
+            cls._instance = BackgroundTaskManager(max_workers, max_queue_size)
+        await cls._instance.start()
+
+    @classmethod
+    async def cleanup_instance(cls) -> None:
+        """Cleanup the singleton instance."""
+        if cls._instance:
+            await cls._instance.stop()
+            cls._instance = None
 
 
 def get_task_manager() -> BackgroundTaskManager:
@@ -580,10 +607,7 @@ def get_task_manager() -> BackgroundTaskManager:
         Background task manager instance
 
     """
-    global _task_manager
-    if _task_manager is None:
-        _task_manager = BackgroundTaskManager()
-    return _task_manager
+    return _TaskManagerSingleton.get_instance()
 
 
 async def initialize_task_manager(
@@ -596,18 +620,12 @@ async def initialize_task_manager(
         max_queue_size: Maximum size of task queue
 
     """
-    global _task_manager
-    if _task_manager is None:
-        _task_manager = BackgroundTaskManager(max_workers, max_queue_size)
-    await _task_manager.start()
+    await _TaskManagerSingleton.initialize_instance(max_workers, max_queue_size)
 
 
 async def cleanup_task_manager() -> None:
     """Clean up the global background task manager."""
-    global _task_manager
-    if _task_manager:
-        await _task_manager.stop()
-        _task_manager = None
+    await _TaskManagerSingleton.cleanup_instance()
 
 
 # Convenience functions for FastAPI integration

@@ -5,6 +5,7 @@ replacing the 50+ Manager classes with clean, testable functions.
 Achieves 60% complexity reduction while maintaining full functionality.
 """
 
+import asyncio
 import logging
 import time
 from collections.abc import AsyncGenerator
@@ -462,7 +463,7 @@ async def cache_get(
 
         cache_type_enum = CacheType(cache_type)
         return await cache_manager.get(key, cache_type_enum)
-    except (OSError, ConnectionError, ImportError, ModuleNotFoundError) as e:
+    except (OSError, ConnectionError, ImportError, ModuleNotFoundError):
         logger.exception("Cache get failed for key")
         return None
 
@@ -483,7 +484,7 @@ async def cache_set(
 
         cache_type_enum = CacheType(cache_type)
         return await cache_manager.set(key, value, cache_type_enum, ttl)
-    except (OSError, ConnectionError, ImportError, ModuleNotFoundError) as e:
+    except (OSError, ConnectionError, ImportError, ModuleNotFoundError):
         logger.exception("Cache set failed for key")
         return False
 
@@ -502,7 +503,7 @@ async def cache_delete(
 
         cache_type_enum = CacheType(cache_type)
         return await cache_manager.delete(key, cache_type_enum)
-    except (OSError, ConnectionError, ImportError, ModuleNotFoundError) as e:
+    except (OSError, ConnectionError, ImportError, ModuleNotFoundError):
         logger.exception("Cache delete failed for key")
         return False
 
@@ -1354,7 +1355,7 @@ async def cleanup_services() -> None:
         client_manager = get_client_manager()
         await client_manager.cleanup()
         logger.info("All services cleaned up successfully")
-    except (ConnectionError, OSError, PermissionError) as e:
+    except (ConnectionError, OSError, PermissionError):
         logger.exception("Service cleanup failed")
         raise
 
@@ -1520,7 +1521,6 @@ async def bulk_scrape_urls(
             )
         else:
             # Fallback to individual scraping
-            import asyncio
 
             semaphore = asyncio.Semaphore(request.max_concurrent)
 
@@ -1691,7 +1691,7 @@ async def check_service_health_function(service_name: str) -> bool:
 
             return is_healthy
     except Exception as e:
-        logger.exception("Health check failed for %s: %s", service_name)
+        logger.exception("Health check failed for %s", service_name)
         health["last_check"] = time.time()
         health["last_error"] = str(e)
         health["consecutive_failures"] = health.get("consecutive_failures", 0) + 1
@@ -1762,7 +1762,7 @@ async def track_operation_performance(
 
     try:
         result = await operation_func(*args, **kwargs)
-    except Exception as e:
+    except Exception:
         # Record failure metrics
         duration_ms = (time.time() - start_time) * 1000
         logger.exception("Operation %s failed in %.2fms", operation_name, duration_ms)
@@ -1792,7 +1792,7 @@ async def rerank_search_results(
     """
     try:
         return await embedding_manager.rerank_results(request.query, request.results)
-    except Exception as e:
+    except Exception:
         logger.exception("Result reranking failed: %s")
         # Return original results on failure
         return request.results
@@ -1842,7 +1842,7 @@ async def get_optimal_embedding_provider(
         return await embedding_manager.get_optimal_provider(
             text_length, quality_required, budget_limit
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Optimal provider selection failed")
         # Return reasonable default
         return "fastembed" if text_length > 10000 else "openai"

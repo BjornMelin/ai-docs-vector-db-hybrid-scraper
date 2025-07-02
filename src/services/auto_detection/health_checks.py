@@ -279,7 +279,7 @@ class HealthChecker:
                         TypeError,
                         ValueError,
                         json.JSONDecodeError,
-                    ) as e:
+                    ):
                         logger.debug(
                             "Failed to parse health data from {service.service_name}"
                         )
@@ -397,7 +397,7 @@ class HealthChecker:
 
             except asyncio.CancelledError:
                 break
-            except (TimeoutError, OSError, PermissionError) as e:
+            except (TimeoutError, OSError, PermissionError):
                 self.logger.exception("Health monitoring error")
                 await asyncio.sleep(60)  # Wait longer on error
 

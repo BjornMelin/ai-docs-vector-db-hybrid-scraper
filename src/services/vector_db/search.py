@@ -276,12 +276,12 @@ class QdrantSearch:
 
         if not isinstance(stages, list):
             msg = "Stages must be a list"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         for i, stage in enumerate(stages):
             if not isinstance(stage, dict):
                 msg = f"Stage {i} must be a dictionary"
-                raise ValueError(msg)
+                raise TypeError(msg)
             if "query_vector" not in stage:
                 msg = f"Stage {i} must contain 'query_vector'"
                 raise ValueError(msg)
@@ -531,7 +531,7 @@ class QdrantSearch:
         # Validate input parameters
         if not isinstance(query_vector, list):
             msg = "query_vector must be a list"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         if not query_vector:
             msg = "query_vector cannot be empty"
@@ -539,7 +539,7 @@ class QdrantSearch:
 
         if not isinstance(filters, dict):
             msg = "filters must be a dictionary"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         # Validate vector dimensions (assuming 1536 for OpenAI embeddings)
         expected_dim = 1536

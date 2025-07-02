@@ -185,14 +185,15 @@ class RAGGenerator(BaseService):
             # Update tracking
             self._update_metrics(metrics)
 
-            return result
-
         except Exception as e:
             logger.exception(
                 "Failed to generate RAG answer: "
             )  # TODO: Convert f-string to logging format
             msg = f"RAG generation failed: {e}"
             raise EmbeddingServiceError(msg) from e
+
+        else:
+            return result
 
     def _process_search_results(self, request: RAGRequest) -> list[dict[str, Any]]:
         """Process and filter search results for context building."""
@@ -338,7 +339,17 @@ Relevant Information:
                 ),
                 timeout=self.config.timeout_seconds,
             )
-
+        except TimeoutError:
+            logger.warning("RAG answer generation timed out")
+            msg = "Answer generation timed out"
+            raise EmbeddingServiceError(msg) from None
+        except Exception as e:
+            logger.warning(
+                f"Failed to generate answer: {e}"
+            )  # TODO: Convert f-string to logging format
+            msg = f"Answer generation failed: {e}"
+            raise EmbeddingServiceError(msg) from e
+        else:
             answer = response.choices[0].message.content.strip()
 
             # Extract reasoning if answer includes it
@@ -350,17 +361,6 @@ Relevant Information:
                     reasoning_trace = [parts[1].strip()]
 
             return answer, reasoning_trace
-
-        except TimeoutError:
-            logger.warning("RAG answer generation timed out")
-            msg = "Answer generation timed out"
-            raise EmbeddingServiceError(msg) from None
-        except Exception as e:
-            logger.warning(
-                f"Failed to generate answer: {e}"
-            )  # TODO: Convert f-string to logging format
-            msg = f"Answer generation failed: {e}"
-            raise EmbeddingServiceError(msg) from e
 
     def _build_system_prompt(self, request: RAGRequest) -> str:
         """Build system prompt for RAG answer generation."""
@@ -591,3 +591,12 @@ Provide a clear, accurate answer based solely on the information provided above.
         """Clear the answer cache."""
         self._answer_cache.clear()
         logger.info("RAG answer cache cleared")
+
+    @property
+    def llm_client_available(self) -> bool:
+        """Check if LLM client is available.
+
+        Returns:
+            bool: True if LLM client is initialized and available
+        """
+        return self._llm_client is not None

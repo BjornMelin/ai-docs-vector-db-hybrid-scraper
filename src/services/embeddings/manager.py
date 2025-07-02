@@ -218,7 +218,7 @@ class EmbeddingManager:
                 logger.info(
                     f"Cleaned up {name} provider"
                 )  # TODO: Convert f-string to logging format
-            except (RuntimeError, ConnectionError, TimeoutError) as e:
+            except (RuntimeError, ConnectionError, TimeoutError):
                 logger.exception("Error cleaning up  provider: {e}")
 
         self.providers.clear()
@@ -569,6 +569,8 @@ class EmbeddingManager:
                         logger.info("Cached embedding for future use")
                 except (AttributeError, RuntimeError, ConnectionError) as e:
                     logger.warning(f"Failed to cache embedding: {e}")
+                else:
+                    return result
 
             # Build comprehensive result with all metadata
             result = {
@@ -588,10 +590,10 @@ class EmbeddingManager:
             if sparse_embeddings is not None:
                 result["sparse_embeddings"] = sparse_embeddings
 
-            return result
         except (ValueError, RuntimeError, ConnectionError, TimeoutError) as e:
             logger.exception("Embedding generation failed: ")
-            raise EmbeddingServiceError(f"Failed to generate embeddings: {e}") from e
+            msg = f"Failed to generate embeddings: {e}"
+            raise EmbeddingServiceError(msg) from e
 
     async def rerank_results(
         self, query: str, results: list[dict[str, object]]
@@ -634,7 +636,7 @@ class EmbeddingManager:
 
             # Extract reordered results
             reranked = [result for result, _ in scored_results]
-        except (ValueError, RuntimeError, AttributeError) as e:
+        except (ValueError, RuntimeError, AttributeError):
             logger.exception("Reranking failed: ")
             # Return original results on failure
             return results

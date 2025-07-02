@@ -259,24 +259,38 @@ class TestSpikeLoad:
                 """Simulate service call through circuit breaker."""
                 current_time = time.time()
 
-                if self.state == "OPEN":
-                    if current_time - self.last_failure_time > self.timeout_duration:
-                        self.state = "HALF_OPEN"
-                        self.events.append(
-                            {"timestamp": current_time, "event": "HALF_OPEN"}
-                        )
-                        msg = "Circuit breaker is OPEN"
-                        raise TestError(msg)
-                        msg = "Circuit breaker is OPEN"
-                        raise TestError(msg)
+                if (
+                    self.state == "OPEN"
+                    and current_time - self.last_failure_time > self.timeout_duration
+                ):
+                    self.state = "HALF_OPEN"
+                    self.events.append(
+                        {"timestamp": current_time, "event": "HALF_OPEN"}
+                    )
+                    msg = "Circuit breaker is OPEN"
+                    raise TestError(msg)
+                    msg = "Circuit breaker is OPEN"
+                    raise TestError(msg)
 
                 try:
                     # Simulate higher failure rate during spikes
                     failure_rate = _kwargs.get("spike_intensity", 0.1)
                     if current_time % 1.0 < failure_rate:
-                        msg = "Service temporarily unavailable"
-                        raise TestError(msg)
+                        self._raise_service_unavailable()
+                except Exception:
+                    self.failure_count += 1
+                    self.last_failure_time = current_time
 
+                    if (
+                        self.state in ["CLOSED", "HALF_OPEN"]
+                        and self.failure_count >= self.failure_threshold
+                    ):
+                        self.state = "OPEN"
+                        self.success_count = 0
+                        self.events.append({"timestamp": current_time, "event": "OPEN"})
+
+                    raise
+                else:
                     # Success
                     if self.state == "HALF_OPEN":
                         self.success_count += 1
@@ -291,19 +305,10 @@ class TestSpikeLoad:
                     await asyncio.sleep(0.05)  # Simulate processing time
                     return {"status": "success", "circuit_state": self.state}
 
-                except Exception:
-                    self.failure_count += 1
-                    self.last_failure_time = current_time
-
-                    if (
-                        self.state in ["CLOSED", "HALF_OPEN"]
-                        and self.failure_count >= self.failure_threshold
-                    ):
-                        self.state = "OPEN"
-                        self.success_count = 0
-                        self.events.append({"timestamp": current_time, "event": "OPEN"})
-
-                    raise
+            def _raise_service_unavailable(self) -> None:
+                """Raise a service unavailable error."""
+                msg = "Service temporarily unavailable"
+                raise TestError(msg)
 
         circuit_breaker = CircuitBreakerSimulator()
 

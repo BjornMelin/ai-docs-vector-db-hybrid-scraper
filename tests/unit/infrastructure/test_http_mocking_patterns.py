@@ -90,10 +90,10 @@ class MockLightweightScraper:
             if "unsafe-inline" in csp:
                 return "BROWSER_REQUIRED"
 
-            return "LIGHTWEIGHT_OK"
-
         except (httpx.HTTPError, ValueError, KeyError):
             return "BROWSER_REQUIRED"
+        else:
+            return "LIGHTWEIGHT_OK"
 
 
 class TestModernHTTPMocking:
@@ -394,9 +394,10 @@ class TestAsyncTestPatterns:
         async def resilient_operation():
             try:
                 await failing_operation()
-                return "success"
             except ValueError as e:
                 return f"handled_error: {e}"
+            else:
+                return "success"
 
         # Act
         result = await resilient_operation()

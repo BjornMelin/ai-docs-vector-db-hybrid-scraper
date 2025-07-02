@@ -5,7 +5,6 @@ complex boolean logic (AND, OR, NOT), nested expressions, flexible field matchin
 and integration with custom metadata schemas.
 """
 
-import asyncio
 import logging
 from enum import Enum
 from typing import Any, Union
@@ -489,10 +488,11 @@ class MetadataFilter(BaseFilter):
                 )
 
             self._logger.warning("Unsupported operator")
-            return None
 
-        except (ImportError, OSError, PermissionError) as e:
+        except (ImportError, OSError, PermissionError):
             self._logger.exception("Failed to build condition for field '{field}'")
+            return None
+        else:
             return None
 
     def _build_boolean_expression(
@@ -562,10 +562,11 @@ class MetadataFilter(BaseFilter):
         """Validate metadata filter criteria."""
         try:
             MetadataFilterCriteria.model_validate(filter_criteria)
-            return True
-        except (ImportError, RuntimeError, ValueError, asyncio.TimeoutError) as e:
+        except (TimeoutError, ImportError, RuntimeError, ValueError):
             self._logger.warning("Invalid metadata criteria")
             return False
+        else:
+            return True
 
     def get_supported_operators(self) -> list[str]:
         """Get supported metadata operators."""
@@ -624,7 +625,7 @@ class MetadataFilter(BaseFilter):
                     parsed_conditions.append(self.build_expression_from_dict(condition))
             else:
                 msg = "Invalid condition format"
-                raise ValueError(msg)
+                raise TypeError(msg)
 
         return BooleanExpressionModel(operator=operator, conditions=parsed_conditions)
 

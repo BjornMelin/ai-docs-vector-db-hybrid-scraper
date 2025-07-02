@@ -132,7 +132,9 @@ class DynamicToolDiscovery(BaseAgent):
         # Check if we're in fallback mode
         fallback_reason = getattr(self, "_fallback_reason", None)
         if fallback_reason:
-            logger.info(f"DynamicToolDiscovery tools initialized in fallback mode (reason: {fallback_reason})")
+            logger.info(
+                f"DynamicToolDiscovery tools initialized in fallback mode (reason: {fallback_reason})"
+            )
         else:
             logger.info("DynamicToolDiscovery tools initialized (discovery-based)")
 
@@ -151,7 +153,9 @@ class DynamicToolDiscovery(BaseAgent):
         # Initialize performance monitoring
         await self._initialize_performance_tracking()
 
-        logger.info(f"DynamicToolDiscovery initialized with {len(self.discovered_tools)} tools")
+        logger.info(
+            f"DynamicToolDiscovery initialized with {len(self.discovered_tools)} tools"
+        )
 
     async def _scan_available_tools(self, _deps: BaseAgentDependencies) -> None:
         """Scan system for available tools and assess capabilities.
@@ -693,15 +697,22 @@ class DynamicToolDiscovery(BaseAgent):
 
 
 # Global discovery engine instance
-_discovery_engine: DynamicToolDiscovery | None = None
+class _DiscoveryEngineSingleton:
+    """Singleton holder for discovery engine instance."""
+
+    _instance: DynamicToolDiscovery | None = None
+
+    @classmethod
+    def get_instance(cls) -> DynamicToolDiscovery:
+        """Get the singleton discovery engine instance."""
+        if cls._instance is None:
+            cls._instance = DynamicToolDiscovery()
+        return cls._instance
 
 
 def get_discovery_engine() -> DynamicToolDiscovery:
     """Get singleton discovery engine instance."""
-    global _discovery_engine
-    if _discovery_engine is None:
-        _discovery_engine = DynamicToolDiscovery()
-    return _discovery_engine
+    return _DiscoveryEngineSingleton.get_instance()
 
 
 async def discover_tools_for_task(
@@ -718,6 +729,6 @@ async def discover_tools_for_task(
         List of suitable tools for the task
     """
     engine = get_discovery_engine()
-    if not engine._initialized:
+    if not engine.is_initialized:
         await engine.initialize_discovery(deps)
     return await engine.discover_tools_for_task(task, requirements)

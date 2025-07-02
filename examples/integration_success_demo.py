@@ -16,6 +16,7 @@ PORTFOLIO ACHIEVEMENT COMPLETE:
 
 import asyncio
 import logging
+import subprocess
 import sys
 from pathlib import Path
 

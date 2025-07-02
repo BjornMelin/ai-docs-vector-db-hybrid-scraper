@@ -163,9 +163,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
                 memory_delta = memory_after - memory_before
                 response.headers["X-Memory-Delta"] = f"{memory_delta:.2f}"
 
-            return response
-
-        except (ConnectionError, TimeoutError, ValueError, httpx.RequestError) as e:
+        except (ConnectionError, TimeoutError, ValueError, httpx.RequestError):
             # Record failed request metrics
             end_time = time.perf_counter()
             response_time = end_time - start_time
@@ -182,6 +180,9 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 
             # Re-raise the exception
             raise
+
+        else:
+            return response
 
     def _get_endpoint_key(self, request: Request) -> str:
         """Generate endpoint key for metrics grouping.
@@ -485,7 +486,7 @@ async def _warm_services():
 
         logger.info("Service warm-up completed")
 
-    except Exception as e:
+    except Exception:
         logger.exception("Service warm-up failed")
 
 

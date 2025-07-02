@@ -178,7 +178,7 @@ class ModelSelector:
                 "query_classification": query_classification,
             }
 
-        except Exception as e:
+        except Exception:
             logger.exception(
                 "Model selection failed: "
             )  # TODO: Convert f-string to logging format
@@ -525,7 +525,7 @@ class ModelSelector:
                 f"Updated performance history for {model_id} on {query_type_key}: {updated_score:.3f}"
             )
 
-        except Exception as e:
+        except Exception:
             logger.exception(
                 "Failed to update performance history: "
             )  # TODO: Convert f-string to logging format

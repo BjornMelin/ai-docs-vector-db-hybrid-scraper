@@ -192,7 +192,6 @@ class TestMCPPerformanceBenchmarks:
                     try:
                         result = await operation_func(idx)
                         op_time = time.time() - op_start
-                        return op_time, result
                     except (
                         TimeoutError,
                         ConnectionError,
@@ -200,6 +199,8 @@ class TestMCPPerformanceBenchmarks:
                         ValueError,
                     ) as e:
                         return None, e
+                    else:
+                        return op_time, result
 
                 batch_tasks.append(timed_operation(batch_start + i))
 

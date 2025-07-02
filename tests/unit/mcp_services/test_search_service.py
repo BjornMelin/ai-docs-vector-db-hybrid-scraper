@@ -68,10 +68,9 @@ class TestSearchService:
             with caplog.at_level(logging.INFO):
                 await service.initialize(mock_client_manager)
 
-                assert (
-                    "SearchService initialized with autonomous capabilities"
-                    in caplog.text
-                )
+            assert (
+                "SearchService initialized with autonomous capabilities" in caplog.text
+            )
 
     async def test_register_search_tools_raises_error_when_not_initialized(self):
         """Test that tool registration raises error when service not initialized."""
@@ -252,10 +251,10 @@ class TestSearchServiceAdvancedFeatures:
             ):
                 await service._register_search_tools()
 
-                # Verify web search tools were registered (I5 research implementation)
-                mock_web_search.register_tools.assert_called_once_with(
-                    service.mcp, mock_client_manager
-                )
+            # Verify web search tools were registered (I5 research implementation)
+            mock_web_search.register_tools.assert_called_once_with(
+                service.mcp, mock_client_manager
+            )
 
     def test_service_instructions_contain_i5_research_features(self):
         """Test that service instructions reference I5 research features."""
@@ -281,17 +280,19 @@ class TestSearchServiceAdvancedFeatures:
             "Tool registration failed"
         )
 
-        with patch("src.mcp_services.search_service.hybrid_search", mock_failing_tool):
-            with patch.multiple(
+        with (
+            patch("src.mcp_services.search_service.hybrid_search", mock_failing_tool),
+            patch.multiple(
                 "src.mcp_services.search_service",
                 hyde_search=Mock(register_tools=Mock()),
                 multi_stage_search=Mock(register_tools=Mock()),
                 search_with_reranking=Mock(register_tools=Mock()),
                 web_search=Mock(register_tools=Mock()),
-            ):
-                # Tool registration should raise the exception
-                with pytest.raises(Exception, match="Tool registration failed"):
-                    await service._register_search_tools()
+            ),
+            pytest.raises(Exception, match="Tool registration failed"),
+        ):
+            # Tool registration should raise the exception
+            await service._register_search_tools()
 
     async def test_service_capability_discovery_and_reporting(self):
         """Test service capability discovery and comprehensive reporting."""

@@ -76,9 +76,10 @@ class TestAsyncConfigurationLoading:
             await asyncio.sleep(0.01)  # Simulate validation work
             try:
                 config = Config.model_validate(config_data)
-                return config, None
             except (ConnectionError, RuntimeError, ValueError) as e:
                 return None, str(e)
+            else:
+                return config, None
 
         # Valid config
         valid_config_data = {

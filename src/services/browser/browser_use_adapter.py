@@ -24,12 +24,12 @@ try:
 except ImportError:
     BROWSER_USE_AVAILABLE = False
     logger.warning("browser-use not available")
-    Agent = None  # type: ignore
-    Browser = None  # type: ignore
-    BrowserConfig = None  # type: ignore
-    ChatOpenAI = None  # type: ignore
-    ChatAnthropic = None  # type: ignore
-    ChatGoogleGenerativeAI = None  # type: ignore
+    Agent = None  # type: ignore[assignment]
+    Browser = None  # type: ignore[assignment]
+    BrowserConfig = None  # type: ignore[assignment]
+    ChatOpenAI = None  # type: ignore[assignment]
+    ChatAnthropic = None  # type: ignore[assignment]
+    ChatGoogleGenerativeAI = None  # type: ignore[assignment]
 
 
 class BrowserUseAdapter(BaseService):
@@ -136,7 +136,7 @@ class BrowserUseAdapter(BaseService):
         if hasattr(self, "_browser") and self._browser:
             try:
                 await self._browser.close()
-            except (OSError, AttributeError, ConnectionError, ImportError) as e:
+            except (OSError, AttributeError, ConnectionError, ImportError):
                 self.logger.exception("Error cleaning up browser-use")
             finally:
                 # Always reset state even if close() fails
@@ -241,7 +241,7 @@ class BrowserUseAdapter(BaseService):
                 # Exponential backoff
                 await asyncio.sleep(2**retry_count)
 
-            except (TimeoutError, OSError, PermissionError) as e:
+            except (OSError, PermissionError):
                 retry_count += 1
                 error_msg = "browser-use execution error"
                 self.logger.warning(
@@ -408,7 +408,7 @@ class BrowserUseAdapter(BaseService):
                 content = str(result) if result else ""
                 html = ""
                 title = ""
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError):
             self.logger.warning("Failed to extract page content")
             # Fallback to agent result
             content = str(result) if result else ""
@@ -585,7 +585,7 @@ class BrowserUseAdapter(BaseService):
                 "response_time_ms": 15000,
                 "available": True,
             }
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError):
             return {
                 "healthy": False,
                 "status": "error",

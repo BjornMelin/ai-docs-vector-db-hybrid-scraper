@@ -106,11 +106,12 @@ class LightweightScraper(CrawlProvider):
         if self.config.use_head_analysis:
             try:
                 recommendation = await self._analyze_url(url)
-                return recommendation == TierRecommendation.LIGHTWEIGHT_OK
-            except (ConnectionError, OSError, PermissionError) as e:
+            except (ConnectionError, OSError, PermissionError):
                 logger.debug("HEAD analysis failed for {url}")
                 return False
 
+            else:
+                return recommendation == TierRecommendation.LIGHTWEIGHT_OK
         return False
 
     async def _analyze_url(self, url: str) -> str:
@@ -132,6 +133,15 @@ class LightweightScraper(CrawlProvider):
                 url, timeout=self.config.head_timeout
             )
 
+        except httpx.TimeoutException:
+            logger.debug(
+                f"HEAD request timeout for {url}"
+            )  # TODO: Convert f-string to logging format
+            return TierRecommendation.BROWSER_REQUIRED
+        except (ConnectionError, OSError, PermissionError):
+            logger.debug("HEAD request failed for {url}")
+            return TierRecommendation.BROWSER_REQUIRED
+        else:
             # Check content type
             content_type = response.headers.get("content-type", "").lower()
             if "text/html" not in content_type:
@@ -165,15 +175,6 @@ class LightweightScraper(CrawlProvider):
                 return TierRecommendation.BROWSER_REQUIRED
 
             return TierRecommendation.LIGHTWEIGHT_OK
-
-        except httpx.TimeoutException:
-            logger.debug(
-                f"HEAD request timeout for {url}"
-            )  # TODO: Convert f-string to logging format
-            return TierRecommendation.BROWSER_REQUIRED
-        except (ConnectionError, OSError, PermissionError) as e:
-            logger.debug("HEAD request failed for {url}")
-            return TierRecommendation.BROWSER_REQUIRED
 
     async def scrape_url(
         self, url: str, formats: list[str] | None = None
@@ -210,6 +211,21 @@ class LightweightScraper(CrawlProvider):
             # Extract content
             extracted = await self._extract_content(soup, url)
 
+        except httpx.HTTPStatusError as e:
+            logger.warning("HTTP error scraping {url}")
+            return {
+                "success": False,
+                "error": f"HTTP {e.response.status_code}",
+                "should_escalate": e.response.status_code not in [404, 403, 401],
+            }
+        except Exception as e:
+            logger.exception("Error scraping {url} with lightweight tier")
+            return {
+                "success": False,
+                "error": str(e),
+                "should_escalate": True,
+            }
+        else:
             # Check if content is sufficient
             if (
                 not extracted
@@ -248,21 +264,6 @@ class LightweightScraper(CrawlProvider):
                 result["content"]["text"] = extracted["text"]
 
             return result
-
-        except httpx.HTTPStatusError as e:
-            logger.warning("HTTP error scraping {url}")
-            return {
-                "success": False,
-                "error": f"HTTP {e.response.status_code}",
-                "should_escalate": e.response.status_code not in [404, 403, 401],
-            }
-        except Exception as e:
-            logger.exception("Error scraping {url} with lightweight tier")
-            return {
-                "success": False,
-                "error": str(e),
-                "should_escalate": True,
-            }
 
     async def _extract_content(
         self, soup: BeautifulSoup, url: str
@@ -381,7 +382,7 @@ class LightweightScraper(CrawlProvider):
 
         return None
 
-    def _convert_to_markdown(self, content_element: Any, title: str = "") -> str:
+    def _convert_to_markdown(self, content_element, title="") -> str:
         """Convert HTML content to markdown.
 
         Args:

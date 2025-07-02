@@ -234,7 +234,8 @@ class TestAddDocument:
                 raise AssertionError(msg)
             except (ConnectionError, RuntimeError, ValueError) as e:
                 # Verify error is propagated correctly
-                assert "URL not allowed" in str(e)
+                error_msg = str(e)
+                assert "URL not allowed" in error_msg
 
             # Verify error logging
             assert any(
@@ -261,7 +262,8 @@ class TestAddDocument:
                 raise AssertionError(msg)
             except AttributeError as e:
                 # Verify error is related to None crawl manager
-                assert "'NoneType' object has no attribute 'scrape_url'" in str(e)
+                error_msg = str(e)
+                assert "'NoneType' object has no attribute 'scrape_url'" in error_msg
 
             # Verify error logging
             assert any(
@@ -298,7 +300,8 @@ class TestAddDocument:
                 raise AssertionError(msg)
             except ValueError as e:
                 # Verify error relates to scraping failure
-                assert "Failed to scrape" in str(e)
+                error_msg = str(e)
+                assert "Failed to scrape" in error_msg
 
             # Verify error logging
             assert any("Failed to scrape" in msg for msg in mock_context.logs["error"])
@@ -335,7 +338,8 @@ class TestAddDocument:
                 raise AssertionError(msg)
             except (ConnectionError, RuntimeError, ValueError) as e:
                 # Verify error relates to embedding failure
-                assert "Embedding service error" in str(e)
+                error_msg = str(e)
+                assert "Embedding service error" in error_msg
 
             # Verify error logging
             assert any(
@@ -379,7 +383,8 @@ class TestAddDocument:
                 raise AssertionError(msg)
             except (ConnectionError, RuntimeError, ValueError) as e:
                 # Verify error relates to vector DB failure
-                assert "Vector DB storage error" in str(e)
+                error_msg = str(e)
+                assert "Vector DB storage error" in error_msg
 
             # Verify error logging
             assert any(
@@ -542,7 +547,8 @@ class TestDocumentIntegration:
                 raise AssertionError(msg)
             except ValueError as e:
                 # Should handle minimal data gracefully even when URL validation fails
-                assert "URL not allowed" in str(e)
+                error_msg = str(e)
+                assert "URL not allowed" in error_msg
 
     async def test_comprehensive_document_workflow(
         self, mock_mcp, mock_context, mock_client_manager

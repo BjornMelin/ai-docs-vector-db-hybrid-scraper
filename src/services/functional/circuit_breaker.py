@@ -192,12 +192,13 @@ class CircuitBreaker:
             execution_time = time.time() - start_time
             await self._record_success(execution_time)
 
-            return result
-
         except self.config.monitored_exceptions:
             execution_time = time.time() - start_time
             await self._record_failure(execution_time)
             raise
+
+        else:
+            return result
 
     async def _record_success(self, execution_time: float) -> None:
         """Record successful execution."""
@@ -340,8 +341,12 @@ def circuit_breaker(config: CircuitBreakerConfig | None = None):
         async def wrapper(*args: Any, **kwargs: Any) -> T:
             return await breaker.call(func, *args, **kwargs)
 
-        # Attach circuit breaker for metrics access
-        wrapper._circuit_breaker = breaker  # type: ignore
+        # Add public accessor method for circuit breaker metrics
+        def get_circuit_breaker() -> CircuitBreaker:
+            """Get the circuit breaker instance for this wrapper."""
+            return breaker
+
+        wrapper.get_circuit_breaker = get_circuit_breaker  # type: ignore[misc]
         return wrapper
 
     return decorator

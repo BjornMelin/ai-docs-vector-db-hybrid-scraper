@@ -134,8 +134,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Health assessment completed: overall score {health_score['score']:.2f}/1.0"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform comprehensive health assessment")
             if ctx:
@@ -145,6 +143,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "error": str(e),
                 "assessment_scope": assessment_scope,
             }
+
+        else:
+            return final_results
 
     @mcp.tool()
     async def autonomous_self_healing(
@@ -247,8 +248,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Self-healing completed: {len(healing_results.get('applied_actions', []))} actions applied"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform autonomous self-healing")
             if ctx:
@@ -258,6 +257,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "error": str(e),
                 "healing_scope": healing_scope,
             }
+
+        else:
+            return final_results
 
     @mcp.tool()
     async def predictive_health_monitoring(
@@ -356,8 +358,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Predictive monitoring completed: {len(predictive_alerts.get('alerts', []))} alerts generated"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform predictive health monitoring")
             if ctx:
@@ -367,6 +367,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "error": str(e),
                 "prediction_horizon": prediction_horizon,
             }
+
+        else:
+            return final_results
 
     @mcp.tool()
     async def get_system_health_capabilities() -> dict[str, Any]:

@@ -166,14 +166,15 @@ async def query_expansion_tool(
             f"(expanded query: {result.query_processed})"
         )
 
-        return converted_results
-
     except Exception as e:
         await ctx.error(f"Query expansion search failed: {e!s}")
         logger.exception(
             "Query expansion error: "
         )  # TODO: Convert f-string to logging format
         raise
+
+    else:
+        return converted_results
 
 
 async def clustered_search_tool(
@@ -219,14 +220,15 @@ async def clustered_search_tool(
             f"in {request.num_clusters} clusters"
         )
 
-        return converted_results
-
     except Exception as e:
         await ctx.error(f"Clustered search failed: {e!s}")
         logger.exception(
             "Clustered search error: "
         )  # TODO: Convert f-string to logging format
         raise
+
+    else:
+        return converted_results
 
 
 async def federated_search_tool(
@@ -272,14 +274,15 @@ async def federated_search_tool(
             f"from {len(request.collections)} collections"
         )
 
-        return converted_results
-
     except Exception as e:
         await ctx.error(f"Federated search failed: {e!s}")
         logger.exception(
             "Federated search error: "
         )  # TODO: Convert f-string to logging format
         raise
+
+    else:
+        return converted_results
 
 
 async def personalized_search_tool(
@@ -328,14 +331,15 @@ async def personalized_search_tool(
             f"for user {request.user_id}"
         )
 
-        return converted_results
-
     except Exception as e:
         await ctx.error(f"Personalized search failed: {e!s}")
         logger.exception(
             "Personalized search error: "
         )  # TODO: Convert f-string to logging format
         raise
+
+    else:
+        return converted_results
 
 
 async def orchestrated_search_tool(
@@ -386,14 +390,15 @@ async def orchestrated_search_tool(
             f"Processing time: {result.processing_time_ms:.1f}ms"
         )
 
-        return converted_results
-
     except Exception as e:
         await ctx.error(f"Orchestrated search failed: {e!s}")
         logger.exception(
             "Orchestrated search error: "
         )  # TODO: Convert f-string to logging format
         raise
+
+    else:
+        return converted_results
 
 
 def register_query_processing_tools(mcp, _client_manager: ClientManager):

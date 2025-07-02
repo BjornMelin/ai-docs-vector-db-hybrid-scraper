@@ -724,14 +724,6 @@ class TestResourceExhaustion:
                         if len(active_failures) >= 3:
                             self._raise_system_overload()
 
-                    return {
-                        "status": "multi_resource_complete",
-                        "memory_mb": memory_mb,
-                        "cpu_percent": cpu_percent,
-                        "active_failures": active_failures,
-                        "cpu_result": cpu_result,
-                    }
-
                 except TimeoutError as e:
                     failure_types["cpu"] += 1
                     msg = "CPU timeout during multi-resource operation"
@@ -752,6 +744,14 @@ class TestResourceExhaustion:
                     else:
                         failure_types["database"] += 1
                     raise
+                else:
+                    return {
+                        "status": "multi_resource_complete",
+                        "memory_mb": memory_mb,
+                        "cpu_percent": cpu_percent,
+                        "active_failures": active_failures,
+                        "cpu_result": cpu_result,
+                    }
 
             # Configure multi-resource stress test
             config = LoadTestConfig(

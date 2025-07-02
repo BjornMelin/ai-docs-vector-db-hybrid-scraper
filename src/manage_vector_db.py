@@ -93,7 +93,7 @@ class VectorDBManager:
             config.qdrant.url = self.qdrant_url
 
         # Ensure ClientManager is initialized
-        if not self.client_manager._initialized:
+        if not self.client_manager.is_initialized:
             await self.client_manager.initialize()
 
         self._initialized = True
@@ -217,11 +217,12 @@ class VectorDBManager:
                         metadata=payload,
                     )
                 )
-            return results
 
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(f"❌ Error searching vectors: {e}", style="red")
             return []
+        else:
+            return results
 
     async def get_database_stats(self) -> DatabaseStats | None:
         """Get comprehensive database statistics."""
@@ -280,12 +281,14 @@ class VectorDBManager:
             console.print(
                 f"✅ Successfully cleared collection: {collection_name}", style="green"
             )
-            return True
+
         except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             console.print(
                 f"❌ Error clearing collection {collection_name}: {e}", style="red"
             )
             return False
+        else:
+            return True
 
     async def get_stats(self) -> DatabaseStats | None:
         """Alias for get_database_stats for backward compatibility."""

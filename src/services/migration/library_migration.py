@@ -12,8 +12,10 @@ from enum import Enum
 from typing import Any
 
 from src.config import Config
+from src.services.cache.manager import CacheManager
 from src.services.cache.modern import ModernCacheManager
 from src.services.circuit_breaker.modern import ModernCircuitBreakerManager
+from src.services.functional.circuit_breaker import CircuitBreaker
 from src.services.middleware.rate_limiting import ModernRateLimiter
 
 
@@ -115,7 +117,7 @@ class LibraryMigrationManager:
             # Rate limiter initialization will be handled in FastAPI app setup
             logger.info("Modern services initialized successfully")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize modern services")
             raise
 
@@ -123,8 +125,6 @@ class LibraryMigrationManager:
         """Initialize legacy service implementations for fallback."""
         try:
             # Import legacy services
-            from src.services.cache.manager import CacheManager
-            from src.services.functional.circuit_breaker import CircuitBreaker
 
             # Create legacy instances
             if self.migration_config.circuit_breaker_enabled:
@@ -158,7 +158,11 @@ class LibraryMigrationManager:
         """Set up performance monitoring for migration."""
         if self.migration_config.performance_monitoring:
             # Start background monitoring task
-            asyncio.create_task(self._monitoring_loop())
+            monitoring_task = asyncio.create_task(self._monitoring_loop())
+            # Store reference to prevent task garbage collection
+            monitoring_task.add_done_callback(
+                lambda _: logger.debug("Migration monitoring loop completed")
+            )
             logger.info("Performance monitoring enabled")
 
     async def get_circuit_breaker(self, service_name: str = "default") -> Any:
@@ -264,10 +268,10 @@ class LibraryMigrationManager:
         modern_latency = modern_metrics.get("avg_latency", float("inf"))
         legacy_latency = legacy_metrics.get("avg_latency", float("inf"))
 
-        if modern_latency <= legacy_latency * 1.2:  # Allow 20% performance degradation
-            return True
-
-        return False
+        # Return the condition directly instead of if-else
+        return (
+            modern_latency <= legacy_latency * 1.2
+        )  # Allow 20% performance degradation
 
     async def _track_parallel_performance(self, service: str, operation: str) -> None:
         """Track performance for parallel mode operation.
@@ -286,7 +290,7 @@ class LibraryMigrationManager:
                 await asyncio.sleep(60)  # Monitor every minute
                 await self._collect_metrics()
                 await self._check_rollback_conditions()
-            except Exception as e:
+            except Exception:
                 logger.exception("Error in monitoring loop")
 
     async def _collect_metrics(self) -> None:
@@ -304,7 +308,7 @@ class LibraryMigrationManager:
 
             logger.debug("Performance metrics collected")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error collecting metrics")
 
     async def _check_rollback_conditions(self) -> None:
@@ -357,9 +361,11 @@ class LibraryMigrationManager:
             logger.error(
                 f"Unknown service for migration: {service}"
             )  # TODO: Convert f-string to logging format
-            return False
-        except Exception as e:
+        except Exception:
             logger.exception("Error forcing migration of {service}")
+            return False
+
+        else:
             return False
 
     async def cleanup(self) -> None:
@@ -373,7 +379,7 @@ class LibraryMigrationManager:
 
             logger.info("LibraryMigrationManager cleaned up successfully")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error cleaning up LibraryMigrationManager")
 
 

@@ -190,8 +190,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"HyDE search completed: {len(fused_results['results'])} results from {len(hypothetical_docs['documents'])} hypothetical documents"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform HyDE search")
             if ctx:
@@ -202,6 +200,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "query": query,
                 "generation_strategy": generation_strategy,
             }
+
+        else:
+            return final_results
 
     @mcp.tool()
     async def adaptive_hyde_search(
@@ -325,8 +326,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Adaptive HyDE completed in {len(iteration_results)} iterations with quality {best_result['hyde_metrics']['average_quality']:.2f}"
                 )
 
-            return best_result
-
         except Exception as e:
             logger.exception("Failed to perform adaptive HyDE search")
             if ctx:
@@ -337,6 +336,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "query": query,
                 "quality_threshold": quality_threshold,
             }
+
+        else:
+            return best_result
 
     @mcp.tool()
     async def hyde_query_expansion(
@@ -417,8 +419,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Query expansion completed: {len(expanded_queries)} queries generated"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform HyDE query expansion")
             if ctx:
@@ -428,6 +428,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "error": str(e),
                 "original_query": query,
             }
+
+        else:
+            return final_results
 
     @mcp.tool()
     async def get_hyde_capabilities() -> dict[str, Any]:
@@ -954,8 +957,8 @@ async def _extract_expansion_queries(
         f"best practices {original_query}",
     ]
 
-    for var in semantic_variations:
-        expanded_queries.append(
+    expanded_queries.extend(
+        [
             {
                 "query": var,
                 "source_document": -1,
@@ -963,7 +966,9 @@ async def _extract_expansion_queries(
                 "relevance_score": 0.8,
                 "expansion_type": "semantic_variation",
             }
-        )
+            for var in semantic_variations
+        ]
+    )
 
     return expanded_queries
 

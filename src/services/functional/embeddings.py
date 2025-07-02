@@ -112,7 +112,7 @@ async def rerank_results(
             f"Reranked {len(results)} results"
         )  # TODO: Convert f-string to logging format
 
-    except (AttributeError, ConnectionError, OSError) as e:
+    except (AttributeError, ConnectionError, OSError):
         logger.exception("Reranking failed")
         # Return original results on failure (graceful degradation)
         return results

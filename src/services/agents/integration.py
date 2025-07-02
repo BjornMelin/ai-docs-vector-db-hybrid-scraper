@@ -222,7 +222,7 @@ class UnifiedAgenticSystem:
             self._initialized = True
             logger.info("UnifiedAgenticSystem fully initialized")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize UnifiedAgenticSystem: %s")
             raise
 
@@ -306,9 +306,9 @@ class UnifiedAgenticSystem:
             await self._update_system_metrics(response)
             self.active_requests.pop(request.request_id, None)
 
-            logger.info(f"Unified request {request.request_id} completed successfully in {execution_time:.2f}s")
-
-            return response
+            logger.info(
+                f"Unified request {request.request_id} completed successfully in {execution_time:.2f}s"
+            )
 
         except Exception as e:
             execution_time = time.time() - start_time
@@ -329,6 +329,9 @@ class UnifiedAgenticSystem:
             self.active_requests.pop(request.request_id, None)
 
             return error_response
+
+        else:
+            return response
 
     async def get_system_status(self) -> AgenticSystemStatus:
         """Get comprehensive system status.
@@ -429,7 +432,7 @@ class UnifiedAgenticSystem:
             )
 
         except Exception as e:
-            logger.exception("Failed to get system status: %s")
+            logger.exception("Failed to get system status")
 
             return AgenticSystemStatus(
                 overall_health="unknown",
@@ -452,8 +455,8 @@ class UnifiedAgenticSystem:
             self._initialized = False
             logger.info("UnifiedAgenticSystem cleaned up")
 
-        except Exception as e:
-            logger.exception("Error during cleanup: %s")
+        except Exception:
+            logger.exception("Error during cleanup")
 
     # Private implementation methods
 
@@ -492,11 +495,12 @@ class UnifiedAgenticSystem:
                         )
                         vector_results["optimizations_applied"].append(opt_result)
 
-            return vector_results
-
         except Exception as e:
             logger.exception("Vector environment preparation failed")
             return {"error": str(e)}
+
+        else:
+            return vector_results
 
     async def _compose_tool_chain(
         self, request: UnifiedAgentRequest, vector_results: dict[str, Any]
@@ -521,7 +525,7 @@ class UnifiedAgenticSystem:
                 goal=request.goal, constraints=constraints, preferences=preferences
             )
 
-        except Exception as e:
+        except Exception:
             logger.exception("Tool chain composition failed")
             raise
 
@@ -560,11 +564,12 @@ class UnifiedAgenticSystem:
 
                 tasks.append(task)
 
-            return tasks
-
-        except Exception as e:
+        except Exception:
             logger.exception("Coordination task creation failed")
             raise
+
+        else:
+            return tasks
 
     async def _execute_unified_workflow(
         self,
@@ -598,15 +603,16 @@ class UnifiedAgenticSystem:
                 timeout_seconds=request.max_execution_time_seconds,
             )
 
+        except Exception as e:
+            logger.exception("Unified workflow execution failed")
+            return {"error": str(e), "integration_success": False}
+
+        else:
             return {
                 "coordination_results": coordination_result,
                 "tool_results": tool_result,
                 "integration_success": True,
             }
-
-        except Exception as e:
-            logger.exception("Unified workflow execution failed")
-            return {"error": str(e), "integration_success": False}
 
     async def _integrate_results(
         self,
@@ -646,11 +652,12 @@ class UnifiedAgenticSystem:
                     "coordination_results"
                 ]["results"]
 
-            return integrated
-
         except Exception as e:
             logger.exception("Results integration failed")
             return {"error": str(e)}
+
+        else:
+            return integrated
 
     async def _calculate_quality_metrics(
         self,
@@ -711,7 +718,7 @@ class UnifiedAgenticSystem:
                 "resource_usage": resource_usage,
             }
 
-        except Exception as e:
+        except Exception:
             logger.exception("Quality metrics calculation failed")
             return {
                 "quality_score": 0.5,
@@ -768,11 +775,12 @@ class UnifiedAgenticSystem:
             if not recommendations:
                 recommendations.append("System performing optimally")
 
-            return recommendations
-
-        except Exception as e:
+        except Exception:
             logger.exception("Recommendation generation failed")
             return ["Unable to generate recommendations"]
+
+        else:
+            return recommendations
 
     async def _register_default_tools(self) -> None:
         """Register default tools with the orchestrator."""
@@ -823,7 +831,7 @@ class UnifiedAgenticSystem:
 
             logger.info("Default tools registered with orchestrator")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to register default tools")
 
     async def _update_system_metrics(self, response: UnifiedAgentResponse) -> None:
@@ -861,7 +869,7 @@ class UnifiedAgenticSystem:
             if len(self.request_history) > 1000:
                 self.request_history = self.request_history[-1000:]
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to update system metrics")
 
     async def _identify_system_optimizations(self) -> list[str]:
@@ -899,8 +907,8 @@ class UnifiedAgenticSystem:
             if not optimizations:
                 optimizations.append("System operating efficiently")
 
-            return optimizations
-
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to identify optimizations")
             return ["Unable to analyze optimizations"]
+        else:
+            return optimizations

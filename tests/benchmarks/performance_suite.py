@@ -7,19 +7,24 @@ achievements and measure system performance across various scenarios.
 import argparse
 import asyncio
 import logging
+import os
 import random
 import statistics
 import time
 from dataclasses import dataclass, field
 from typing import Any
 
+# Mock classes for testing
+import psutil
 import pytest
 
 # Mock imports - these modules might not exist, so we'll create mocks
 from src.config import CacheConfig
+from src.config.settings import get_settings
+from src.services.embeddings.manager import EmbeddingManager
+from src.services.vector_db.service import QdrantService
 
 
-# Mock classes for testing
 class EmbeddingCache:
     def __init__(self):
         pass
@@ -654,8 +659,6 @@ class TestPerformanceBenchmarks:
     @pytest.fixture
     async def real_embedding_manager(self):
         """Create real embedding manager with test configuration."""
-        from src.config.settings import get_settings
-        from src.services.embeddings.manager import EmbeddingManager
 
         settings = get_settings()
         manager = EmbeddingManager(settings)
@@ -666,8 +669,6 @@ class TestPerformanceBenchmarks:
     @pytest.fixture
     async def real_qdrant_service(self):
         """Create real Qdrant service for vector operations."""
-        from src.config.settings import get_settings
-        from src.services.vector_db.service import QdrantService
 
         settings = get_settings()
         service = QdrantService(settings)
@@ -956,11 +957,11 @@ class VectorSearch:
 
                 # Concurrent processing
                 concurrent_start = time.time()
-                tasks = [
+                _ = [
                     real_embedding_manager.generate_embeddings([text])
                     for text in test_texts
                 ]
-                concurrent_results = await asyncio.gather(*tasks)
+                # concurrent_results = await asyncio.gather(*tasks)
                 concurrent_time = time.time() - concurrent_start
 
                 speedup_ratio = sequential_time / max(concurrent_time, 0.001)
@@ -994,9 +995,6 @@ class VectorSearch:
 
         def memory_usage_sync():
             """Test memory efficiency of embedding operations."""
-            import os
-
-            import psutil
 
             async def memory_usage():
                 process = psutil.Process(os.getpid())

@@ -14,6 +14,7 @@ Portfolio Achievement: Parallel Processing System integrated with DI container
 
 import asyncio
 import logging
+import subprocess
 import sys
 import time
 import traceback

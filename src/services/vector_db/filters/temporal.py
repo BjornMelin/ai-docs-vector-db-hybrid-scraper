@@ -397,12 +397,13 @@ class TemporalFilter(BaseFilter):
         """Validate temporal filter criteria."""
         try:
             TemporalCriteria.model_validate(filter_criteria)
-            return True
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             self._logger.warning(
                 f"Invalid temporal criteria: {e}"
             )  # TODO: Convert f-string to logging format
             return False
+        else:
+            return True
 
     def get_supported_operators(self) -> list[str]:
         """Get supported temporal operators."""

@@ -201,7 +201,7 @@ class CanaryDeployment:
             self._initialized = True
             logger.info("Canary deployment manager initialized successfully")
 
-        except (AttributeError, ImportError, OSError) as e:
+        except (AttributeError, ImportError, OSError):
             logger.exception("Failed to initialize canary deployment manager")
             self._initialized = False
             raise
@@ -370,12 +370,14 @@ class CanaryDeployment:
                 next_percentage,
                 metrics.stage.value,
             )
-            return True
 
-        except (TimeoutError, OSError, PermissionError) as e:
+        except (TimeoutError, OSError, PermissionError):
             logger.exception("Failed to promote canary %s", deployment_id)
             self._deployment_status[deployment_id] = CanaryStatus.FAILED
             return False
+
+        else:
+            return True
 
     async def rollback_canary(self, deployment_id: str, reason: str = "") -> bool:
         """Rollback a canary deployment.
@@ -409,12 +411,14 @@ class CanaryDeployment:
             logger.info(
                 "Rolled back canary deployment %s. Reason: %s", deployment_id, reason
             )
-            return True
 
-        except (TimeoutError, OSError, PermissionError) as e:
+        except (TimeoutError, OSError, PermissionError):
             logger.exception("Failed to rollback canary %s", deployment_id)
             self._deployment_status[deployment_id] = CanaryStatus.FAILED
             return False
+
+        else:
+            return True
 
     async def pause_canary(self, deployment_id: str) -> bool:
         """Pause a canary deployment.
@@ -514,7 +518,7 @@ class CanaryDeployment:
 
         except asyncio.CancelledError:
             logger.info("Monitoring cancelled for canary deployment: %s", deployment_id)
-        except (TimeoutError, OSError, PermissionError) as e:
+        except (TimeoutError, OSError, PermissionError):
             logger.exception("Error monitoring canary deployment %s", deployment_id)
             self._deployment_status[deployment_id] = CanaryStatus.FAILED
 
@@ -557,7 +561,7 @@ class CanaryDeployment:
             metrics.canary_requests += int(total_requests * traffic_percentage)
             metrics.stable_requests += int(total_requests * (1 - traffic_percentage))
 
-        except (ConnectionError, OSError, PermissionError) as e:
+        except (ConnectionError, OSError, PermissionError):
             logger.exception("Error updating metrics for canary %s", deployment_id)
 
     async def _evaluate_success_criteria(self, deployment_id: str) -> bool:
@@ -585,13 +589,15 @@ class CanaryDeployment:
                     return False
 
             # Check minimum monitoring duration
-            return metrics.stage_duration_minutes >= config.monitoring_window_minutes
 
-        except (OSError, PermissionError) as e:
+        except (OSError, PermissionError):
             logger.exception(
                 "Error evaluating success criteria for canary %s", deployment_id
             )
             return False
+
+        else:
+            return metrics.stage_duration_minutes >= config.monitoring_window_minutes
 
     async def _should_rollback(self, deployment_id: str) -> bool:
         """Check if canary deployment should be automatically rolled back."""
@@ -632,12 +638,13 @@ class CanaryDeployment:
                 )
                 return True
 
-            return False
-
-        except (OSError, PermissionError) as e:
+        except (OSError, PermissionError):
             logger.exception(
                 "Error checking rollback conditions for canary %s", deployment_id
             )
+            return False
+
+        else:
             return False
 
     async def _update_traffic_split(
@@ -660,7 +667,7 @@ class CanaryDeployment:
                 stable_percentage,
             )
 
-        except (TimeoutError, OSError, PermissionError) as e:
+        except (TimeoutError, OSError, PermissionError):
             logger.exception("Failed to update traffic split for %s", deployment_id)
             raise
 
@@ -691,7 +698,7 @@ class CanaryDeployment:
                 self._cleanup_deployment(deployment_id, delay_seconds=3600)
             )  # 1 hour
 
-        except (ConnectionError, OSError, PermissionError) as e:
+        except (ConnectionError, OSError, PermissionError):
             logger.exception("Error completing canary deployment %s", deployment_id)
 
     async def _cleanup_deployment(self, deployment_id: str, delay_seconds: int) -> None:
@@ -706,7 +713,7 @@ class CanaryDeployment:
 
             logger.info("Cleaned up canary deployment: %s", deployment_id)
 
-        except (ConnectionError, OSError, PermissionError) as e:
+        except (ConnectionError, OSError, PermissionError):
             logger.exception("Error cleaning up canary deployment %s", deployment_id)
 
     async def _load_active_deployments(self) -> None:

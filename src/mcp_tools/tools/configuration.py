@@ -239,8 +239,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Config monitoring completed: drift={drift_analysis['drift_detected']}, anomalies={anomaly_detection['anomalies_detected']}"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform adaptive config monitoring")
             if ctx:
@@ -250,6 +248,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 "error": str(e),
                 "monitoring_scope": monitoring_scope,
             }
+        else:
+            return final_results
 
     @mcp.tool()
     async def configuration_profile_management(
@@ -962,17 +962,17 @@ async def _create_configuration_profile(
         if ctx:
             await ctx.debug(f"Created configuration profile: {profile_name}")
 
-        return {
-            "success": True,
-            "profile": profile,
-            "action": "create",
-        }
-
     except Exception as e:
         logger.exception("Failed to create configuration profile")
         return {
             "success": False,
             "error": str(e),
+            "action": "create",
+        }
+    else:
+        return {
+            "success": True,
+            "profile": profile,
             "action": "create",
         }
 
@@ -1029,17 +1029,17 @@ async def _load_configuration_profile(
         if ctx:
             await ctx.debug(f"Loaded configuration profile: {profile_name}")
 
-        return {
-            "success": True,
-            "profile": mock_profile,
-            "action": "load",
-        }
-
     except Exception as e:
         logger.exception("Failed to load configuration profile")
         return {
             "success": False,
             "error": str(e),
+            "action": "load",
+        }
+    else:
+        return {
+            "success": True,
+            "profile": mock_profile,
             "action": "load",
         }
 
@@ -1065,17 +1065,17 @@ async def _save_current_configuration_profile(profile_name: str, ctx) -> dict[st
         if ctx:
             await ctx.debug(f"Saved current configuration as profile: {profile_name}")
 
-        return {
-            "success": True,
-            "profile": saved_profile,
-            "action": "save",
-        }
-
     except Exception as e:
         logger.exception("Failed to save configuration profile")
         return {
             "success": False,
             "error": str(e),
+            "action": "save",
+        }
+    else:
+        return {
+            "success": True,
+            "profile": saved_profile,
             "action": "save",
         }
 
@@ -1108,18 +1108,18 @@ async def _list_configuration_profiles(ctx) -> dict[str, Any]:
             },
         ]
 
-        return {
-            "success": True,
-            "profiles": profiles,
-            "total_profiles": len(profiles),
-            "action": "list",
-        }
-
     except Exception as e:
         logger.exception("Failed to list configuration profiles")
         return {
             "success": False,
             "error": str(e),
+            "action": "list",
+        }
+    else:
+        return {
+            "success": True,
+            "profiles": profiles,
+            "total_profiles": len(profiles),
             "action": "list",
         }
 
@@ -1146,18 +1146,18 @@ async def _optimize_configuration_profile(profile_name: str, ctx) -> dict[str, A
         if ctx:
             await ctx.debug(f"Optimized configuration profile: {profile_name}")
 
-        return {
-            "success": True,
-            "optimization_result": optimization_result,
-            "profile_name": profile_name,
-            "action": "optimize",
-        }
-
     except Exception as e:
         logger.exception("Failed to optimize configuration profile")
         return {
             "success": False,
             "error": str(e),
+            "action": "optimize",
+        }
+    else:
+        return {
+            "success": True,
+            "optimization_result": optimization_result,
+            "profile_name": profile_name,
             "action": "optimize",
         }
 
@@ -1196,16 +1196,16 @@ async def _compare_configuration_profiles(profile_name: str, ctx) -> dict[str, A
         if ctx:
             await ctx.debug(f"Compared configuration profiles with: {profile_name}")
 
-        return {
-            "success": True,
-            "comparison_result": comparison_result,
-            "action": "compare",
-        }
-
     except Exception as e:
         logger.exception("Failed to compare configuration profiles")
         return {
             "success": False,
             "error": str(e),
+            "action": "compare",
+        }
+    else:
+        return {
+            "success": True,
+            "comparison_result": comparison_result,
             "action": "compare",
         }

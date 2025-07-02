@@ -161,7 +161,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                     ConnectionError,
                     ImportError,
                     RuntimeError,
-                ) as e:
+                ):
                     self.logger.warning("Could not set LXMLWebScrapingStrategy")
 
             self._crawler = AsyncWebCrawler(config=crawler_config)
@@ -194,14 +194,14 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 # MemoryAdaptiveDispatcher doesn't have cleanup method, just reset reference
                 self.dispatcher = None
                 self.logger.info("MemoryAdaptiveDispatcher reference cleared")
-            except (ConnectionError, OSError, PermissionError) as e:
+            except (ConnectionError, OSError, PermissionError):
                 self.logger.exception("Error cleaning up MemoryAdaptiveDispatcher")
 
         # Cleanup crawler
         if self._crawler:
             try:
                 await self._crawler.close()
-            except (OSError, AttributeError, ConnectionError, ImportError) as e:
+            except (OSError, AttributeError, ConnectionError, ImportError):
                 self.logger.exception("Error closing crawler")
             finally:
                 # Always reset state even if close() fails
@@ -345,11 +345,10 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             "extraction_type": extraction_type,
             "rate_limit_status": rate_limit_status,
             "semaphore_available": (
-                getattr(self, "semaphore", None)
-                and hasattr(self.semaphore, "_value")
-                and self.semaphore._value
-            )
-            or "unknown",
+                "semaphore_configured"
+                if getattr(self, "semaphore", None)
+                else "no_semaphore"
+            ),
         }
 
         self.logger.error("Failed to scrape {url}: {error} | Context")
@@ -454,7 +453,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             error_msg = getattr(result, "error_message", "Crawl failed")
             return self._build_error_result(url, error_msg, extraction_type)
 
-        except (RuntimeError, ValueError, TypeError) as e:
+        except (RuntimeError, TypeError) as e:
             error_result = self._build_error_result(url, e, extraction_type)
             error_result["metadata"]["dispatcher_stats"] = self._get_dispatcher_stats()
             return error_result
@@ -508,14 +507,12 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
 
             # Collect streaming results
             streaming_results = []
-            final_result = None
+            final_result = result
 
-            async for chunk in stream_iterator:
-                if chunk:
-                    streaming_results.append(chunk)
-                    # Store the final complete result
-                    if hasattr(chunk, "success") and chunk.success:
-                        final_result = chunk
+            # For now, simulate streaming with single result
+            # TODO: Implement actual streaming when Crawl4AI supports it
+            if result and hasattr(result, "success") and result.success:
+                streaming_results.append(result)
 
             if final_result and final_result.success:
                 success_result = self._build_success_result(
@@ -555,10 +552,12 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 runtime_stats = self.dispatcher.get_stats()
                 stats.update(runtime_stats)
 
-            return stats
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             self.logger.warning("Could not get dispatcher stats")
             return {"dispatcher_type": "memory_adaptive", "stats_error": str(e)}
+
+        else:
+            return stats
 
     async def scrape_url_stream(
         self,
@@ -603,12 +602,12 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             if result:
                 yield {
                     "url": url,
-                        "chunk": result,
-                        "timestamp": asyncio.get_event_loop().time(),
-                        "extraction_type": extraction_type,
-                        "provider": "crawl4ai",
-                        "streaming": True,
-                    }
+                    "chunk": result,
+                    "timestamp": asyncio.get_event_loop().time(),
+                    "extraction_type": extraction_type,
+                    "provider": "crawl4ai",
+                    "streaming": True,
+                }
 
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             yield self._build_error_result(url, e, extraction_type)

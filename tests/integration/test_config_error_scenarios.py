@@ -10,6 +10,7 @@ import pytest
 import yaml
 
 from src.config import Config, ConfigLoadError, ConfigManager, get_degradation_handler
+from src.config.reload import ConfigReloader
 
 
 @pytest.fixture
@@ -332,8 +333,6 @@ class TestEnvironmentSpecificErrors:
         """Test signal handler error recovery."""
         if not hasattr(signal, "SIGHUP"):
             pytest.skip("SIGHUP not available on this platform")
-
-        from src.config.reload import ConfigReloader
 
         config_file = config_dir / "config.json"
         config_file.write_text('{"openai": {"api_key": "sk-test"}}')

@@ -8,6 +8,13 @@ import pytest
 from src.config.settings import Settings
 from src.infrastructure.client_manager import ClientManager
 from src.infrastructure.container import initialize_container, shutdown_container
+from src.services.cache.intelligent import CacheConfig
+from src.services.embeddings.parallel import ParallelConfig
+from src.services.processing.parallel_integration import (
+    OptimizationConfig,
+    ParallelProcessingSystem,
+    create_optimized_system,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -242,13 +249,6 @@ class TestParallelProcessingIntegration:
                 lambda: mock_embedding_manager,
             )
 
-            from src.services.cache.intelligent import CacheConfig
-            from src.services.embeddings.parallel import ParallelConfig
-            from src.services.processing.parallel_integration import (
-                OptimizationConfig,
-                ParallelProcessingSystem,
-            )
-
             # Create custom configuration
             custom_config = OptimizationConfig(
                 enable_parallel_processing=True,
@@ -308,10 +308,6 @@ class TestParallelProcessingPerformance:
         ]
 
         async def process_documents():
-            from src.services.processing.parallel_integration import (
-                create_optimized_system,
-            )
-
             # Create optimized system
             parallel_system = create_optimized_system(
                 embedding_manager=mock_embedding_manager,

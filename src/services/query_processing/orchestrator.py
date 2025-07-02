@@ -274,7 +274,7 @@ class SearchOrchestrator(BaseService):
                         expanded_query = expansion_result.expanded_query
                         processed_query = expanded_query
                         features_used.append("query_expansion")
-                except (ConnectionError, OSError, PermissionError) as e:
+                except (ConnectionError, OSError, PermissionError):
                     self._logger.warning("Query expansion failed")
 
             # Step 2: Execute search (would call actual search service)
@@ -304,7 +304,7 @@ class SearchOrchestrator(BaseService):
                                         sr["cluster_id"] = cluster.cluster_id
                                         sr["cluster_label"] = cluster.label
                         features_used.append("result_clustering")
-                    except (ConnectionError, OSError, PermissionError) as e:
+                    except (ConnectionError, OSError, PermissionError):
                         self._logger.warning("Clustering failed")
 
                 # Personalized ranking (if enabled)
@@ -323,7 +323,7 @@ class SearchOrchestrator(BaseService):
                             search_results, ranking_result
                         )
                         features_used.append("personalized_ranking")
-                    except (OSError, PermissionError) as e:
+                    except (OSError, PermissionError):
                         self._logger.warning("Personalized ranking failed")
 
             # Step 4: RAG answer generation (if enabled)
@@ -378,9 +378,11 @@ class SearchOrchestrator(BaseService):
                             )
                             features_used.append("rag_answer_generation")
 
-                except (OSError, PermissionError, RuntimeError) as e:
+                except (OSError, PermissionError, RuntimeError):
                     self._logger.warning("RAG answer generation failed")
                     # Continue without RAG - don't fail the entire search
+                else:
+                    return result
 
             # Calculate processing time
             processing_time = (time.time() - start_time) * 1000
@@ -412,9 +414,7 @@ class SearchOrchestrator(BaseService):
                 + processing_time
             ) / self.stats["total_searches"]
 
-            return result
-
-        except (OSError, PermissionError, RuntimeError) as e:
+        except (OSError, PermissionError, RuntimeError):
             self._logger.exception("Search failed")
             # Return minimal result on error
             return SearchResult(
@@ -494,12 +494,12 @@ class SearchOrchestrator(BaseService):
                         }
                     )
 
-                return results
-
-            except (AttributeError, OSError, PermissionError) as e:
+            except (AttributeError, OSError, PermissionError):
                 self._logger.warning("Federated search failed")
                 # Fall back to mock results
 
+            else:
+                return results
         # Default mock search implementation for non-federated search
         results = []
         for i in range(20):  # Mock 20 results

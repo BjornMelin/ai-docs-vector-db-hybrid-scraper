@@ -147,9 +147,9 @@ async def search_documents_core(
         if ctx:
             await ctx.info(f"Search completed: {len(search_results)} results found")
 
-        return search_results
-
     except Exception as e:
         if ctx:
             await ctx.error(f"Search failed: {e!s}")
         raise
+    else:
+        return search_results

@@ -98,22 +98,24 @@ class TestOrchestratorService:
         """Test that initialization logs success message with multi-service coordination."""
         service = OrchestratorService()
 
-        with patch.object(
-            service, "_initialize_domain_services", new_callable=AsyncMock
-        ):
-            with patch.object(
+        with (
+            patch.object(
+                service, "_initialize_domain_services", new_callable=AsyncMock
+            ),
+            patch.object(
                 service, "_initialize_agentic_orchestration", new_callable=AsyncMock
-            ):
-                with patch.object(
-                    service, "_register_orchestrator_tools", new_callable=AsyncMock
-                ):
-                    with caplog.at_level(logging.INFO):
-                        await service.initialize(mock_client_manager)
+            ),
+            patch.object(
+                service, "_register_orchestrator_tools", new_callable=AsyncMock
+            ),
+            caplog.at_level(logging.INFO),
+        ):
+            await service.initialize(mock_client_manager)
 
-                        assert (
-                            "OrchestratorService initialized with multi-service coordination"
-                            in caplog.text
-                        )
+            assert (
+                "OrchestratorService initialized with multi-service coordination"
+                in caplog.text
+            )
 
 
 class TestOrchestratorServiceDomainServicesInitialization:

@@ -196,8 +196,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Multi-stage search completed: {len(stage_results)} stages, {len(fused_results['results'])} final results"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform multi-stage search")
             if ctx:
@@ -210,6 +208,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 if "stage_results" in locals()
                 else 0,
             }
+
+        else:
+            return final_results
 
     @mcp.tool()
     async def adaptive_multi_stage_search(
@@ -282,8 +283,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Adaptive multi-stage search completed with {optimal_params['stages']} stages"
                 )
 
-            return search_result
-
         except Exception as e:
             logger.exception("Failed to perform adaptive multi-stage search")
             if ctx:
@@ -294,6 +293,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "query": query,
                 "performance_target": performance_target,
             }
+
+        else:
+            return search_result
 
     @mcp.tool()
     async def contextual_refinement_search(
@@ -426,8 +428,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Contextual refinement completed: {refinement_depth} iterations, {len(final_results['results'])} final results"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform contextual refinement search")
             if ctx:
@@ -438,6 +438,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "query": query,
                 "context_sources": context_sources,
             }
+
+        else:
+            return final_results
 
     @mcp.tool()
     async def get_multi_stage_capabilities() -> dict[str, Any]:
@@ -734,9 +737,9 @@ async def _contextual_query_refinement(query: str, results: list[dict], ctx) -> 
 
         if title:
             title_words = title.lower().split()
-            for word in title_words:
-                if len(word) > 4 and word.isalpha():
-                    contextual_terms.append(word)
+            contextual_terms.extend(
+                [word for word in title_words if len(word) > 4 and word.isalpha()]
+            )
 
     # Use most common contextual term
     if contextual_terms:
@@ -1070,9 +1073,9 @@ async def _apply_contextual_refinement(
                 # Extract key terms (simplified)
                 for text in [content, title]:
                     words = text.lower().split()
-                    for word in words:
-                        if len(word) > 5 and word.isalpha():
-                            context_terms.append(word)
+                    context_terms.extend(
+                        [word for word in words if len(word) > 5 and word.isalpha()]
+                    )
 
         # Find most relevant context terms
         term_counts = {}

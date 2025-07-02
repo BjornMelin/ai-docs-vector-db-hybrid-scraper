@@ -55,7 +55,7 @@ class QueryProcessingPipeline(BaseService):
             self._initialized = True
             logger.info("QueryProcessingPipeline initialized successfully")
 
-        except (AttributeError, ImportError, OSError) as e:
+        except (AttributeError, ImportError, OSError):
             logger.exception("Failed to initialize QueryProcessingPipeline")
             raise
 

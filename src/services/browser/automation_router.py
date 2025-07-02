@@ -1,6 +1,5 @@
 """Intelligent browser automation router with three-tier hierarchy."""
 
-import asyncio
 import json
 import logging
 import time
@@ -108,7 +107,7 @@ class AutomationRouter(BaseService):
             else:
                 logger.warning("Routing rules file not found")
 
-        except (AttributeError, FileNotFoundError, OSError) as e:
+        except (AttributeError, FileNotFoundError, OSError):
             logger.exception("Failed to load routing rules")
 
         # Fallback to default rules if loading fails
@@ -155,7 +154,7 @@ class AutomationRouter(BaseService):
             self._adapters["lightweight"] = adapter
             self.logger.info("Initialized Lightweight HTTP adapter")
 
-        except (AttributeError, ConnectionError, ImportError, RuntimeError) as e:
+        except (AttributeError, ConnectionError, ImportError, RuntimeError):
             self.logger.warning("Failed to initialize Lightweight adapter")
 
         # Initialize Tier 1: Crawl4AI Basic
@@ -165,7 +164,7 @@ class AutomationRouter(BaseService):
             self._adapters["crawl4ai"] = adapter
             self.logger.info("Initialized Crawl4AI adapter")
 
-        except (AttributeError, ImportError, RuntimeError, ValueError) as e:
+        except (AttributeError, ImportError, RuntimeError, ValueError):
             self.logger.warning("Failed to initialize Crawl4AI adapter")
 
         # Initialize Tier 2: BrowserUse (Enhanced)
@@ -175,7 +174,7 @@ class AutomationRouter(BaseService):
             self._adapters["browser_use"] = adapter
             self.logger.info("Initialized BrowserUse adapter")
 
-        except (AttributeError, ImportError, RuntimeError, ValueError) as e:
+        except (AttributeError, ImportError, RuntimeError, ValueError):
             self.logger.warning("Failed to initialize BrowserUse adapter")
 
         # Initialize Tier 3: Playwright
@@ -185,7 +184,7 @@ class AutomationRouter(BaseService):
             self._adapters["playwright"] = adapter
             self.logger.info("Initialized Playwright adapter")
 
-        except (AttributeError, ImportError, ModuleNotFoundError, RuntimeError) as e:
+        except (AttributeError, ImportError, ModuleNotFoundError, RuntimeError):
             self.logger.warning("Failed to initialize Playwright adapter")
 
         # TODO: Initialize Tier 4: Firecrawl adapter when available
@@ -215,7 +214,7 @@ class AutomationRouter(BaseService):
                 self.logger.info(
                     f"Cleaned up {name} adapter"
                 )  # TODO: Convert f-string to logging format
-            except (OSError, AttributeError, ConnectionError, ImportError) as e:
+            except (OSError, AttributeError, ConnectionError, ImportError):
                 self.logger.exception(f"Error cleaning up {name} adapter")
 
         self._adapters.clear()
@@ -297,15 +296,17 @@ class AutomationRouter(BaseService):
 
             result["provider"] = tool
             result["automation_time_ms"] = elapsed * 1000
-            return result
 
-        except (OSError, PermissionError) as e:
+        except (OSError, PermissionError):
             self.logger.exception(f"{tool} failed for {url}")
             elapsed = time.time() - start_time
             self._update_metrics(tool, False, elapsed)
 
             # Try fallback
             return await self._fallback_scrape(url, tool, custom_actions, timeout)
+
+        else:
+            return result
 
     async def _select_tool(
         self,
@@ -341,7 +342,7 @@ class AutomationRouter(BaseService):
                 can_handle = await self._adapters["lightweight"].can_handle(url)
                 if can_handle:
                     return "lightweight"
-            except asyncio.TimeoutError as e:
+            except TimeoutError:
                 self.logger.debug("Lightweight adapter can_handle check failed")
 
         # Check for JavaScript-heavy patterns that need higher tiers
@@ -555,14 +556,15 @@ class AutomationRouter(BaseService):
                 result["provider"] = fallback_tool
                 result["fallback_from"] = failed_tool
                 result["automation_time_ms"] = elapsed * 1000
-                return result
 
-            except (OSError, PermissionError) as e:
+            except (OSError, PermissionError):
                 self.logger.exception(f"Fallback {fallback_tool} also failed")
                 elapsed = time.time() - start_time
                 self._update_metrics(fallback_tool, False, elapsed)
                 continue
 
+            else:
+                return result
         # All tools failed
         return {
             "success": False,

@@ -70,7 +70,7 @@ class CrawlManager:
             try:
                 await self._unified_browser_manager.cleanup()
                 logger.info("Cleaned up UnifiedBrowserManager")
-            except (OSError, AttributeError, ConnectionError, ImportError) as e:
+            except (OSError, AttributeError, ConnectionError, ImportError):
                 logger.exception("Error cleaning up UnifiedBrowserManager")
 
             self._unified_browser_manager = None
@@ -125,6 +125,22 @@ class CrawlManager:
             result = await self._unified_browser_manager.scrape(request)
 
             # Return response in standardized format
+
+        except (OSError, PermissionError):
+            logger.exception("UnifiedBrowserManager failed for {url}")
+            return {
+                "success": False,
+                "error": "UnifiedBrowserManager error",
+                "content": "",
+                "url": url,
+                "title": "",
+                "metadata": {},
+                "tier_used": "none",
+                "automation_time_ms": 0,
+                "quality_score": 0.0,
+            }
+
+        else:
             return {
                 "success": result.success,
                 "content": result.content,
@@ -137,20 +153,6 @@ class CrawlManager:
                 "error": result.error,
                 "fallback_attempted": result.fallback_attempted,
                 "failed_tiers": result.failed_tiers,
-            }
-
-        except (OSError, PermissionError) as e:
-            logger.exception("UnifiedBrowserManager failed for {url}")
-            return {
-                "success": False,
-                "error": "UnifiedBrowserManager error",
-                "content": "",
-                "url": url,
-                "title": "",
-                "metadata": {},
-                "tier_used": "none",
-                "automation_time_ms": 0,
-                "quality_score": 0.0,
             }
 
     def get_metrics(self) -> dict[str, dict]:
@@ -275,7 +277,7 @@ class CrawlManager:
                 "error": None if pages else "No pages could be crawled",
             }
 
-        except (OSError, PermissionError) as e:
+        except (OSError, PermissionError):
             logger.exception("Site crawl failed for {url}")
             return {
                 "success": False,

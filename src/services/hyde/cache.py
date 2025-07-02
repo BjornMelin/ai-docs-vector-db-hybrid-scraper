@@ -131,13 +131,15 @@ class HyDECache(BaseService):
                 )  # TODO: Convert f-string to logging format
                 return embedding
             self.cache_misses += 1
-            return None
 
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
             logger.warning(
                 f"Cache get error for HyDE embedding: {e}"
             )  # TODO: Convert f-string to logging format
+            return None
+
+        else:
             return None
 
     async def set_hyde_embedding(
@@ -195,14 +197,15 @@ class HyDECache(BaseService):
                     f"Cached HyDE embedding for query: {query}"
                 )  # TODO: Convert f-string to logging format
 
-            return success
-
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
             logger.warning(
                 f"Cache set error for HyDE embedding: {e}"
             )  # TODO: Convert f-string to logging format
             return False
+
+        else:
+            return success
 
     async def get_hypothetical_documents(
         self, query: str, domain: str | None = None
@@ -233,13 +236,15 @@ class HyDECache(BaseService):
                 )  # TODO: Convert f-string to logging format
                 return cached_docs
             self.cache_misses += 1
-            return None
 
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
             logger.warning(
                 f"Cache get error for hypothetical documents: {e}"
             )  # TODO: Convert f-string to logging format
+            return None
+
+        else:
             return None
 
     async def set_hypothetical_documents(
@@ -289,14 +294,15 @@ class HyDECache(BaseService):
                     f"Cached hypothetical documents for query: {query}"
                 )  # TODO: Convert f-string to logging format
 
-            return success
-
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
             logger.warning(
                 f"Cache set error for hypothetical documents: {e}"
             )  # TODO: Convert f-string to logging format
             return False
+
+        else:
+            return success
 
     async def get_search_results(
         self, query: str, collection_name: str, search_params: dict[str, Any]
@@ -327,13 +333,15 @@ class HyDECache(BaseService):
                 )  # TODO: Convert f-string to logging format
                 return cached_results
             self.cache_misses += 1
-            return None
 
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
             logger.warning(
                 f"Cache get error for search results: {e}"
             )  # TODO: Convert f-string to logging format
+            return None
+
+        else:
             return None
 
     async def set_search_results(
@@ -384,14 +392,15 @@ class HyDECache(BaseService):
                     f"Cached search results for query: {query}"
                 )  # TODO: Convert f-string to logging format
 
-            return success
-
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
             logger.warning(
                 f"Cache set error for search results: {e}"
             )  # TODO: Convert f-string to logging format
             return False
+
+        else:
+            return success
 
     async def warm_cache(
         self, common_queries: list[str], domain: str | None = None
@@ -464,13 +473,14 @@ class HyDECache(BaseService):
                 f"Invalidated {success_count} cache entries for query: {query}"
             )
 
-            return success_count > 0
-
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
                 f"Cache invalidation error for query '{query}': {e}"
             )  # TODO: Convert f-string to logging format
             return False
+
+        else:
+            return success_count > 0
 
     def _get_embedding_cache_key(self, query: str, domain: str | None = None) -> str:
         """Generate cache key for HyDE embedding."""

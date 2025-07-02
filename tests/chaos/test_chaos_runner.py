@@ -73,6 +73,11 @@ class ChaosTestRunner:
             "report_generation": True,
         }
 
+    def _raise_safety_error(self, reason: str) -> None:
+        """Raise a safety error with the given reason."""
+        msg = f"Safety check failed: {reason}"
+        raise TestError(msg)
+
     def register_test_suite(self, suite: ChaosTestSuite):
         """Register a chaos test suite."""
         self.test_suites[suite.suite_name] = suite
@@ -96,12 +101,7 @@ class ChaosTestRunner:
             if self.global_config["safety_mode"]:
                 safety_check = await self._perform_safety_checks(experiment)
                 if not safety_check.get("passed", True):
-
-                    def _raise_safety_error():
-                        msg = f"Safety check failed: {safety_check['reason']}"
-                        raise TestError(msg)
-
-                    _raise_safety_error()
+                    self._raise_safety_error(safety_check["reason"])
 
             # Execute the experiment
             result = await self._run_experiment_implementation(

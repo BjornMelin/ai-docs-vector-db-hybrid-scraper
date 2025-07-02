@@ -5,7 +5,6 @@ semantic similarity analysis, and embedding quality assessment. Portfolio featur
 showcasing deep ML understanding and data visualization expertise.
 """
 
-import asyncio
 import logging
 from typing import Any
 
@@ -118,7 +117,7 @@ class VectorVisualizationEngine(BaseService):
             self._initialized = True
             self._logger.info("VectorVisualizationEngine initialized successfully")
 
-        except (AttributeError, ImportError, OSError) as e:
+        except (AttributeError, ImportError, OSError):
             self._logger.exception("Failed to initialize VectorVisualizationEngine")
             raise
 
@@ -276,7 +275,7 @@ class VectorVisualizationEngine(BaseService):
                 },
             }
 
-        except (AttributeError, OSError, PermissionError) as e:
+        except (AttributeError, OSError, PermissionError):
             self._logger.exception("Failed to create embedding visualization")
             return {"error": "Failed to create visualization"}
 
@@ -343,7 +342,7 @@ class VectorVisualizationEngine(BaseService):
                 ),
             }
 
-        except (AttributeError, OSError, PermissionError) as e:
+        except (AttributeError, OSError, PermissionError):
             self._logger.exception("Failed to analyze embedding space")
             return {"error": "Failed to analyze embedding space"}
 
@@ -466,7 +465,7 @@ class VectorVisualizationEngine(BaseService):
                 ),
             }
 
-        except (AttributeError, OSError, PermissionError) as e:
+        except (AttributeError, OSError, PermissionError):
             self._logger.exception("Failed to compare query embeddings")
             return {"error": "Failed to compare embeddings"}
 
@@ -540,7 +539,7 @@ class VectorVisualizationEngine(BaseService):
                 "optimal_k": optimal_k,
             }
 
-        except (ImportError, OSError, PermissionError) as e:
+        except (ImportError, OSError, PermissionError):
             self._logger.exception("Failed to perform clustering")
             return None
 
@@ -625,7 +624,7 @@ class VectorVisualizationEngine(BaseService):
             # Return top 50 relationships
             return relationships[:50]
 
-        except (OSError, PermissionError, asyncio.TimeoutError) as e:
+        except (TimeoutError, OSError, PermissionError):
             self._logger.exception("Failed to find similarity relationships")
             return []
 
@@ -725,7 +724,7 @@ class VectorVisualizationEngine(BaseService):
                 quality_grade=quality_grade,
             )
 
-        except (AttributeError, OSError, PermissionError) as e:
+        except (AttributeError, OSError, PermissionError):
             self._logger.exception("Failed to calculate quality metrics")
             return EmbeddingQualityMetrics(
                 dimensionality=embeddings_array.shape[1],
@@ -844,11 +843,12 @@ class VectorVisualizationEngine(BaseService):
                     }
                 )
 
-            return insights
-
-        except (AttributeError, OSError, PermissionError) as e:
+        except (AttributeError, OSError, PermissionError):
             self._logger.exception("Failed to generate visualization insights")
             return []
+
+        else:
+            return insights
 
     async def _calculate_distance_metrics(
         self, embeddings_array: np.ndarray
@@ -875,7 +875,7 @@ class VectorVisualizationEngine(BaseService):
                 "min_euclidean_distance": float(np.min(euclidean_distances)),
             }
 
-        except (AttributeError, OSError, PermissionError) as e:
+        except (AttributeError, OSError, PermissionError):
             self._logger.exception("Failed to calculate distance metrics")
             return {}
 
@@ -907,7 +907,7 @@ class VectorVisualizationEngine(BaseService):
                 else 1.0,
             }
 
-        except (AttributeError, OSError, PermissionError) as e:
+        except (AttributeError, OSError, PermissionError):
             self._logger.exception("Failed to analyze dimensionality")
             return {}
 
@@ -967,7 +967,7 @@ class VectorVisualizationEngine(BaseService):
                 "coherence_samples": len(coherence_scores),
             }
 
-        except (AttributeError, OSError, PermissionError) as e:
+        except (AttributeError, OSError, PermissionError):
             self._logger.exception("Failed to analyze semantic coherence")
             return {}
 
@@ -1003,7 +1003,7 @@ class VectorVisualizationEngine(BaseService):
                 "sample_outliers": outliers_info,
             }
 
-        except (AttributeError, OSError, PermissionError) as e:
+        except (AttributeError, OSError, PermissionError):
             self._logger.exception("Failed to detect outliers")
             return {}
 
@@ -1035,7 +1035,7 @@ class VectorVisualizationEngine(BaseService):
                 },
             }
 
-        except (AttributeError, OSError, PermissionError) as e:
+        except (AttributeError, OSError, PermissionError):
             self._logger.exception("Failed to analyze embedding density")
             return {}
 
@@ -1088,11 +1088,12 @@ class VectorVisualizationEngine(BaseService):
                     }
                 )
 
-            return recommendations
-
-        except (AttributeError, OSError, PermissionError) as e:
+        except (AttributeError, OSError, PermissionError):
             self._logger.exception("Failed to generate space recommendations")
             return []
+
+        else:
+            return recommendations
 
     async def _generate_query_recommendations(
         self, query_qualities: list[dict[str, Any]], overall_stats: dict[str, Any]
@@ -1149,11 +1150,12 @@ class VectorVisualizationEngine(BaseService):
                     }
                 )
 
-            return recommendations
-
-        except (AttributeError, ConnectionError, OSError) as e:
+        except (AttributeError, ConnectionError, OSError):
             self._logger.exception("Failed to generate query recommendations")
             return []
+
+        else:
+            return recommendations
 
     async def cleanup(self) -> None:
         """Cleanup visualization engine resources."""

@@ -254,9 +254,7 @@ class ParallelProcessingSystem:
             # Update system metrics
             await self._update_system_metrics(processing_time_ms, success=True)
 
-            return results
-
-        except Exception as e:
+        except Exception:
             logger.exception(
                 "Parallel document processing failed: "
             )  # TODO: Convert f-string to logging format
@@ -264,6 +262,9 @@ class ParallelProcessingSystem:
                 (time.time() - request_start) * 1000, success=False
             )
             raise
+
+        else:
+            return results
 
     async def _parallel_text_analysis(self, texts: list[str]) -> list[Any]:
         """Perform parallel text analysis using optimized algorithms.
@@ -582,7 +583,7 @@ class ParallelProcessingSystem:
 
             logger.info("ParallelProcessingSystem cleanup completed")
 
-        except Exception as e:
+        except Exception:
             logger.exception(
                 "Error during cleanup: "
             )  # TODO: Convert f-string to logging format

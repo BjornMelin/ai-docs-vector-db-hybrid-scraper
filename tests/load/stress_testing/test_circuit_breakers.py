@@ -95,11 +95,11 @@ class MockCircuitBreaker:
             self.metrics.successful_requests += 1
 
             # Check if we should close the circuit (from half-open)
-            if self.state == CircuitBreakerState.HALF_OPEN:
-                if self.success_count >= self.config.success_threshold:
-                    self._transition_to_closed()
-
-            return result
+            if (
+                self.state == CircuitBreakerState.HALF_OPEN
+                and self.success_count >= self.config.success_threshold
+            ):
+                self._transition_to_closed()
 
         except Exception:
             # Failure - increment failure count
@@ -117,6 +117,8 @@ class MockCircuitBreaker:
                 self._transition_to_open()
 
             raise
+        else:
+            return result
 
     def _transition_to_open(self):
         """Transition circuit breaker to open state."""

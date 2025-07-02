@@ -305,35 +305,6 @@ class ReloadStatus:
     """Mock reload status for backward compatibility."""
 
 
-class ConfigDriftDetector:
-    """Mock config drift detector for backward compatibility."""
-
-
-class ConfigSnapshot:
-    """Mock config snapshot for backward compatibility."""
-
-
-class DriftEvent:
-    """Mock drift event for backward compatibility."""
-
-
-class DriftSeverity:
-    """Mock drift severity for backward compatibility."""
-
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
-
-
-class DriftType:
-    """Mock drift type for backward compatibility."""
-
-    ADDED = "added"
-    REMOVED = "removed"
-    MODIFIED = "modified"
-
-
 # Mock functions for backward compatibility
 def default_tier_manager() -> TierManager:
     """Mock default tier manager."""
@@ -506,13 +477,13 @@ __all__ = [
     "default_tier_manager",
     "get_cache_config",
     "get_config",
-    "get_drift_detector",
-    "get_drift_summary",
     "get_config_manager",
     "get_config_reloader",
     "get_config_with_auto_detection",
     "get_current_tier_config",
     "get_degradation_handler",
+    "get_drift_detector",
+    "get_drift_summary",
     "get_embedding_config",
     # Legacy functions
     "get_legacy_config",

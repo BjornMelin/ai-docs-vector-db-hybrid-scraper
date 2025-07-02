@@ -110,11 +110,6 @@ class ServiceDiscovery:
                     error_msg = f"Failed to discover {service_type}: {e}"
                     errors.append(error_msg)
                     self.logger.warning(error_msg)
-                except (ConnectionError, OSError, TimeoutError) as e:
-                    # Catch any unexpected errors during service discovery
-                    error_msg = f"Unexpected error discovering {service_type}: {e}"
-                    errors.append(error_msg)
-                    self.logger.warning(error_msg)
 
         # Execute all discovery tasks
         await asyncio.gather(
@@ -203,7 +198,7 @@ class ServiceDiscovery:
                     f"Redis discovery failed for {host}:{port}: {e}"
                 )  # TODO: Convert f-string to logging format
                 continue
-            except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
+            except (redis.RedisError, ValueError) as e:
                 # Catch any unexpected errors during Redis discovery
                 self.logger.debug(
                     f"Unexpected Redis discovery error for {host}:{port}: {e}"
@@ -277,7 +272,7 @@ class ServiceDiscovery:
                     f"Qdrant discovery failed for {host}:{port}: {e}"
                 )  # TODO: Convert f-string to logging format
                 continue
-            except (httpx.HTTPError, httpx.TimeoutException, ConnectionError) as e:
+            except httpx.TimeoutException as e:
                 # Catch any unexpected errors during Qdrant discovery
                 self.logger.debug(
                     f"Unexpected Qdrant discovery error for {host}:{port}: {e}"
@@ -361,9 +356,11 @@ class ServiceDiscovery:
             )
             writer.close()
             await writer.wait_closed()
-            return True
-        except (ConnectionError, OSError, PermissionError) as e:
+        except (ConnectionError, OSError, PermissionError):
             return False
+
+        else:
+            return True
 
     async def _test_redis_connection(
         self, host: str, port: int
@@ -454,9 +451,11 @@ class ServiceDiscovery:
             )
             writer.close()
             await writer.wait_closed()
-            return True
-        except (TimeoutError, OSError, PermissionError) as e:
+        except (TimeoutError, OSError, PermissionError):
             return False
+
+        else:
+            return True
 
     async def _test_postgresql_connection(
         self, host: str, port: int

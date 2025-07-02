@@ -39,22 +39,26 @@ logger = logging.getLogger(__name__)
 
 def _raise_hybrid_search_service_not_available() -> None:
     """Raise ImportError for HybridSearchService not available."""
-    raise ImportError("HybridSearchService not available")
+    msg = "HybridSearchService not available"
+    raise ImportError(msg)
 
 
 def _raise_ranking_service_not_available() -> None:
     """Raise ImportError for RankingService not available."""
-    raise ImportError("RankingService not available")
+    msg = "RankingService not available"
+    raise ImportError(msg)
 
 
 def _raise_query_expansion_service_not_available() -> None:
     """Raise ImportError for QueryExpansionService not available."""
-    raise ImportError("QueryExpansionService not available")
+    msg = "QueryExpansionService not available"
+    raise ImportError(msg)
 
 
 def _raise_metrics_collector_not_available() -> None:
     """Raise ImportError for MetricsCollector not available."""
-    raise ImportError("MetricsCollector not available")
+    msg = "MetricsCollector not available"
+    raise ImportError(msg)
 
 
 class EnterpriseSearchService(BaseService):
@@ -96,7 +100,7 @@ class EnterpriseSearchService(BaseService):
             self._mark_initialized()
             logger.info("Enterprise search service initialized successfully")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize enterprise search service")
             raise
 
@@ -180,8 +184,6 @@ class EnterpriseSearchService(BaseService):
             # Record analytics
             await self._record_search_analytics(request, response)
 
-            return response
-
         except Exception as e:
             logger.exception("Enterprise search failed")
             return SearchResponse(
@@ -192,6 +194,9 @@ class EnterpriseSearchService(BaseService):
                 processing_time_ms=(time.time() - start_time) * 1000,
                 error=str(e),
             )
+
+        else:
+            return response
 
     async def hybrid_search(
         self, request: SearchRequest, expanded_query: str | None = None
@@ -231,11 +236,13 @@ class EnterpriseSearchService(BaseService):
                 return await self.query_expander.expand(query)
 
             # Fallback: simple synonym expansion (placeholder)
-            return query  # Would implement actual expansion logic
 
-        except Exception as e:
+        except Exception:
             logger.exception("Query expansion failed")
             return query
+
+        else:
+            return query  # Would implement actual expansion logic
 
     async def rerank_results(
         self, results: list[dict[str, Any]], query: str
@@ -252,7 +259,7 @@ class EnterpriseSearchService(BaseService):
             # Fallback: simple relevance-based reranking
             return sorted(results, key=lambda x: x.get("score", 0), reverse=True)
 
-        except Exception as e:
+        except Exception:
             logger.exception("Reranking failed")
             return results
 
@@ -330,7 +337,8 @@ class EnterpriseSearchService(BaseService):
     ) -> list[dict[str, Any]]:
         """Perform vector search."""
         if EmbeddingManager is None:
-            raise ImportError("EmbeddingManager not available")
+            msg = "EmbeddingManager not available"
+            raise ImportError(msg)
 
         embedding_manager = EmbeddingManager()
         query_embedding = await embedding_manager.generate_embedding(query)

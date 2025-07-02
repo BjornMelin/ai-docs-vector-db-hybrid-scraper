@@ -5,6 +5,7 @@ and autonomous document processing enhancement.
 """
 
 import logging
+import urllib.parse
 from typing import TYPE_CHECKING, Any
 
 
@@ -22,7 +23,6 @@ else:
 
 
 from src.infrastructure.client_manager import ClientManager
-from src.security import MLSecurityValidator as SecurityValidator
 
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,8 @@ logger = logging.getLogger(__name__)
 
 def _raise_invalid_url_format() -> None:
     """Raise ValueError for invalid URL format."""
-    raise ValueError("Invalid URL format")
+    msg = "Invalid URL format"
+    raise ValueError(msg)
 
 
 def _raise_crawling_failed(tier: str) -> None:
@@ -65,8 +66,6 @@ def register_tools(mcp, client_manager: ClientManager):
         """
         try:
             # Validate URL
-            import urllib.parse
-
             parsed_url = urllib.parse.urlparse(url)
             if not parsed_url.scheme or not parsed_url.netloc:
                 _raise_invalid_url_format()
@@ -76,7 +75,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 await ctx.info(f"Analyzing optimal tier for URL: {validated_url}")
 
             # Get browser manager for tier selection
-            browser_manager = await client_manager.get_browser_manager()
+            # browser_manager = await client_manager.get_browser_manager()
 
             # Analyze URL characteristics for tier selection
             url_analysis = {
@@ -108,6 +107,16 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Selected tier {recommended_tier} with confidence {optimization_metadata['selection_confidence']}"
                 )
 
+        except Exception as e:
+            logger.exception("Failed to perform intelligent tier selection")
+            if ctx:
+                await ctx.error(f"Tier selection failed: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "fallback_tier": "crawl4ai",  # Safe fallback
+            }
+        else:
             return {
                 "success": True,
                 "recommended_tier": recommended_tier,
@@ -118,16 +127,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     "performance_optimization": True,
                     "content_awareness": True,
                 },
-            }
-
-        except Exception as e:
-            logger.exception("Failed to perform intelligent tier selection")
-            if ctx:
-                await ctx.error(f"Tier selection failed: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "fallback_tier": "crawl4ai",  # Safe fallback
             }
 
     @mcp.tool()
@@ -153,8 +152,6 @@ def register_tools(mcp, client_manager: ClientManager):
         """
         try:
             # Validate URL
-            import urllib.parse
-
             parsed_url = urllib.parse.urlparse(url)
             if not parsed_url.scheme or not parsed_url.netloc:
                 _raise_invalid_url_format()
@@ -224,8 +221,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Enhanced crawl completed: tier={tier}, quality={quality_metrics.get('overall_score', 0.0):.2f}"
                 )
 
-            return response
-
         except Exception as e:
             logger.exception("Failed to perform enhanced 5-tier crawl")
             if ctx:
@@ -235,6 +230,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 "error": str(e),
                 "tier_attempted": tier,
             }
+        else:
+            return response
 
     @mcp.tool()
     async def get_crawling_capabilities() -> dict[str, Any]:
@@ -244,7 +241,7 @@ def register_tools(mcp, client_manager: ClientManager):
             Comprehensive capabilities information for 5-tier crawling system
         """
         try:
-            browser_manager = await client_manager.get_browser_manager()
+            # browser_manager = await client_manager.get_browser_manager()
 
             return {
                 "available_tiers": [

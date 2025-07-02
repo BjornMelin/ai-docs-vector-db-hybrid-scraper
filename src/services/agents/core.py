@@ -200,6 +200,15 @@ class BaseAgent(ABC):
         self._initialized = True
         logger.info(f"Agent {self.name} initialized successfully")
 
+    @property
+    def is_initialized(self) -> bool:
+        """Check if the agent is initialized.
+
+        Returns:
+            bool: True if agent is initialized and ready for use
+        """
+        return self._initialized
+
     async def execute(
         self,
         task: str,
@@ -299,7 +308,9 @@ class BaseAgent(ABC):
             Fallback execution result
         """
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
-        logger.info(f"Using fallback execution for agent {self.name} (reason: {fallback_reason})")
+        logger.info(
+            f"Using fallback execution for agent {self.name} (reason: {fallback_reason})"
+        )
 
         # Enhanced fallback logic with context-aware responses
         if "search" in task.lower():

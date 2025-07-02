@@ -199,13 +199,16 @@ def data_quality_validator():
                             continue
 
                     # Pattern validation
-                    if rule.pattern and isinstance(value, str):
-                        if not re.match(rule.pattern, value):
-                            failed_records += 1
-                            validation_errors.append(
-                                f"Pattern mismatch: {value} does not match {rule.pattern}"
-                            )
-                            continue
+                    if (
+                        rule.pattern
+                        and isinstance(value, str)
+                        and not re.match(rule.pattern, value)
+                    ):
+                        failed_records += 1
+                        validation_errors.append(
+                            f"Pattern mismatch: {value} does not match {rule.pattern}"
+                        )
+                        continue
 
                     # Range validation
                     if (

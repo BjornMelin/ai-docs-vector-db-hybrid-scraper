@@ -119,7 +119,7 @@ class BulkEmbedder:
                         f"Resumed from state: {len(state.completed_urls)} completed"
                     )
                     return state
-            except (ImportError, OSError, PermissionError) as e:
+            except (ImportError, OSError, PermissionError):
                 logger.warning("Failed to load state")
         return ProcessingState(collection_name=self.collection_name)
 

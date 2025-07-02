@@ -667,7 +667,7 @@ class PredictiveMaintenanceScheduler:
 
         try:
             await self.continuous_prediction_loop()
-        except Exception as e:
+        except Exception:
             logger.exception("Predictive maintenance monitoring failed")
             self.monitoring_enabled = False
             raise
@@ -719,7 +719,7 @@ class PredictiveMaintenanceScheduler:
                         f"{len(anomalies)} anomalies detected"
                     )
 
-            except Exception as e:
+            except Exception:
                 logger.exception("Error in predictive maintenance loop")
 
             # Wait for next cycle
@@ -727,7 +727,7 @@ class PredictiveMaintenanceScheduler:
 
     async def update_time_series_data(self, metrics: SystemMetrics):
         """Update time series data with current metrics."""
-        timestamp = datetime.utcnow()
+        timestamp = datetime.now(tz=datetime.UTC)
 
         # Add system-level metrics
         system_metrics = [
@@ -758,7 +758,7 @@ class PredictiveMaintenanceScheduler:
         self, metrics: SystemMetrics
     ) -> list[AnomalyDetection]:
         """Detect anomalies in current metrics."""
-        timestamp = datetime.utcnow()
+        timestamp = datetime.now(tz=datetime.UTC)
         anomalies = []
 
         # Check each metric for anomalies
@@ -832,7 +832,7 @@ class PredictiveMaintenanceScheduler:
         """Generate maintenance recommendations based on health assessments and
         anomalies."""
         recommendations = []
-        current_time = datetime.utcnow()
+        current_time = datetime.now(tz=datetime.UTC)
 
         # Generate recommendations based on health assessments
         for assessment in health_assessments:
@@ -935,7 +935,7 @@ class PredictiveMaintenanceScheduler:
             rec
             for rec in self.pending_recommendations
             if rec.urgency in [MaintenanceUrgency.CRITICAL, MaintenanceUrgency.HIGH]
-            and datetime.utcnow() >= rec.optimal_execution_window[0]
+            and datetime.now(tz=datetime.UTC) >= rec.optimal_execution_window[0]
         ]
 
         # Sort by urgency and confidence
@@ -961,7 +961,7 @@ class PredictiveMaintenanceScheduler:
             execution_id=f"exec_{recommendation.recommendation_id}",
             recommendation=recommendation,
             status="starting",
-            start_time=datetime.utcnow(),
+            start_time=datetime.now(tz=datetime.UTC),
         )
 
         try:
@@ -990,7 +990,7 @@ class PredictiveMaintenanceScheduler:
 
             execution.success = success
             execution.status = "completed" if success else "failed"
-            execution.end_time = datetime.utcnow()
+            execution.end_time = datetime.now(tz=datetime.UTC)
 
             # Capture metrics after maintenance
             post_metrics = (
@@ -1007,14 +1007,15 @@ class PredictiveMaintenanceScheduler:
                 f"Maintenance execution completed: {execution.execution_id} - "
                 f"Success: {success}"
             )
-            return execution
 
         except Exception as e:
             logger.exception("Maintenance execution failed")
             execution.status = "failed"
             execution.success = False
-            execution.end_time = datetime.utcnow()
+            execution.end_time = datetime.now(tz=datetime.UTC)
             execution.notes = f"Execution failed: {e!s}"
+            return execution
+        else:
             return execution
 
     async def _execute_predictive_maintenance(
@@ -1054,7 +1055,7 @@ class PredictiveMaintenanceScheduler:
             description=recommendation.description,
             affected_components=[recommendation.component],
             metrics_snapshot={},
-            detection_time=datetime.utcnow(),
+            detection_time=datetime.now(tz=datetime.UTC),
             contributing_factors=["Predictive maintenance detected anomaly"],
             business_impact_score=0.5,
             auto_remediation_eligible=True,

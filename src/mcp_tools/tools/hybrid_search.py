@@ -152,8 +152,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Hybrid search completed: {len(fused_results['results'])} results with {fusion_strategy} fusion"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform hybrid search")
             if ctx:
@@ -164,6 +162,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "query": query,
                 "fusion_strategy": fusion_strategy,
             }
+
+        else:
+            return final_results
 
     @mcp.tool()
     async def adaptive_hybrid_search(
@@ -241,8 +242,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Adaptive search completed with {optimal_params['fusion_strategy']} fusion"
                 )
 
-            return search_result
-
         except Exception as e:
             logger.exception("Failed to perform adaptive hybrid search")
             if ctx:
@@ -253,6 +252,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "query": query,
                 "performance_target": performance_target,
             }
+
+        else:
+            return search_result
 
     @mcp.tool()
     async def multi_collection_hybrid_search(
@@ -313,6 +315,8 @@ def register_tools(mcp, client_manager: ClientManager):
                         await ctx.warning(
                             f"Failed to search collection {collection}: {e}"
                         )
+                else:
+                    return final_results
 
             if not collection_results:
                 return {
@@ -355,8 +359,6 @@ def register_tools(mcp, client_manager: ClientManager):
                 await ctx.info(
                     f"Multi-collection search completed: {len(fused_results['results'])} final results"
                 )
-
-            return final_results
 
         except Exception as e:
             logger.exception("Failed to perform multi-collection hybrid search")
@@ -453,11 +455,12 @@ async def _perform_text_search(
                     query, point.get("payload", {}).get("content", "")
                 )
 
-        return search_result or {"points": []}
-
     except (OSError, FileNotFoundError, ValueError) as e:
         logger.warning(f"Text search failed, using fallback: {e}")
         return {"points": []}
+
+    else:
+        return search_result or {"points": []}
 
 
 def _calculate_text_relevance(query: str, content: str) -> float:

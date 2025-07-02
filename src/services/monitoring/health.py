@@ -107,10 +107,6 @@ class HealthCheck(ABC):
 
         try:
             result = await asyncio.wait_for(coro, timeout=self.timeout_seconds)
-            duration_ms = (time.time() - start_time) * 1000
-            result.duration_ms = duration_ms
-            return result
-
         except TimeoutError:
             duration_ms = (time.time() - start_time) * 1000
             return HealthCheckResult(
@@ -119,7 +115,6 @@ class HealthCheck(ABC):
                 message=f"Health check timed out after {self.timeout_seconds}s",
                 duration_ms=duration_ms,
             )
-
         except (ValueError, TypeError, AttributeError) as e:
             duration_ms = (time.time() - start_time) * 1000
             return HealthCheckResult(
@@ -128,6 +123,10 @@ class HealthCheck(ABC):
                 message=f"Health check failed: {e!s}",
                 duration_ms=duration_ms,
             )
+        else:
+            duration_ms = (time.time() - start_time) * 1000
+            result.duration_ms = duration_ms
+            return result
 
 
 class QdrantHealthCheck(HealthCheck):

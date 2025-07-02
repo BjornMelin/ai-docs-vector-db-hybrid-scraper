@@ -138,8 +138,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Reranking completed: {len(reranked_results)} results with {reranking_metrics['quality_improvement']:.2f} quality improvement"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform semantic reranking search")
             if ctx:
@@ -150,6 +148,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "query": query,
                 "reranking_strategy": reranking_strategy,
             }
+
+        else:
+            return final_results
 
     @mcp.tool()
     async def multi_criteria_reranking(
@@ -261,8 +262,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Multi-criteria reranking completed with {len(multi_ranked_results)} results"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform multi-criteria reranking")
             if ctx:
@@ -273,6 +272,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "query": query,
                 "adaptive_weighting": adaptive_weighting,
             }
+
+        else:
+            return final_results
 
     @mcp.tool()
     async def contextual_reranking_search(
@@ -394,8 +396,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Contextual reranking completed with {contextual_metrics['context_influence']:.2f} context influence"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform contextual reranking search")
             if ctx:
@@ -406,6 +406,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "query": query,
                 "context_query": context_query,
             }
+
+        else:
+            return final_results
 
     @mcp.tool()
     async def get_reranking_capabilities() -> dict[str, Any]:
@@ -504,17 +507,18 @@ async def _perform_initial_search(
         if ctx:
             await ctx.debug(f"Initial search returned {len(results)} results")
 
-        return {
-            "success": True,
-            "results": results,
-            "query_embedding": query_embedding,
-        }
-
     except Exception as e:
         logger.exception("Initial search failed")
         return {
             "success": False,
             "error": str(e),
+        }
+
+    else:
+        return {
+            "success": True,
+            "results": results,
+            "query_embedding": query_embedding,
         }
 
 

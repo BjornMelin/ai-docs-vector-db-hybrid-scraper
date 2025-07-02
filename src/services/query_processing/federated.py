@@ -444,8 +444,6 @@ class FederatedSearchService:
                 f"collections, {len(merged_results)} total results in {total_search_time:.1f}ms"
             )
 
-            return result
-
         except Exception as e:
             total_search_time = (time.time() - start_time) * 1000
             self._logger.exception("Federated search failed")
@@ -468,6 +466,9 @@ class FederatedSearchService:
                 diversity_score=0.0,
                 federated_metadata={"error": str(e)},
             )
+
+        else:
+            return result
 
     async def register_collection(
         self, collection_name: str, metadata: CollectionMetadata, client: Any = None
@@ -497,7 +498,7 @@ class FederatedSearchService:
 
             self._logger.info("Registered collection")
 
-        except (TimeoutError, OSError, PermissionError) as e:
+        except (TimeoutError, OSError, PermissionError):
             self._logger.exception("Failed to register collection {collection_name}")
             raise
 
@@ -516,7 +517,7 @@ class FederatedSearchService:
 
             self._logger.info("Unregistered collection")
 
-        except (ConnectionError, OSError, PermissionError) as e:
+        except (ConnectionError, OSError, PermissionError):
             self._logger.exception("Failed to unregister collection {collection_name}")
 
     async def _select_collections(self, request: FederatedSearchRequest) -> list[str]:
@@ -696,8 +697,6 @@ class FederatedSearchService:
                 else:
                     collection_results.append(result)
 
-            return collection_results
-
         except TimeoutError:
             self._logger.warning(
                 f"Parallel search timed out after {request.timeout_ms}ms"
@@ -705,6 +704,9 @@ class FederatedSearchService:
             return [
                 self._create_error_result("Search timeout") for _ in target_collections
             ]
+
+        else:
+            return collection_results
 
     async def _execute_sequential_search(
         self, request: FederatedSearchRequest, target_collections: list[str]

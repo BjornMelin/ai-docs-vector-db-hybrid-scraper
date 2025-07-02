@@ -160,13 +160,13 @@ class TestStressScenarios:
                         for key in old_keys:
                             del self.memory_pressure[key]
 
-                    return result
-
                 except Exception:
                     # Clean up on error
                     if memory_key in self.memory_pressure:
                         del self.memory_pressure[memory_key]
                     raise
+                else:
+                    return result
 
         memory_stress = MemoryStressSimulator(mock_load_test_service)
 

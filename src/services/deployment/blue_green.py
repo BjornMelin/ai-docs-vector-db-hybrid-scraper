@@ -149,7 +149,7 @@ class BlueGreenDeployment:
             self._initialized = True
             logger.info("Blue-green deployment manager initialized successfully")
 
-        except (AttributeError, ImportError, OSError) as e:
+        except (AttributeError, ImportError, OSError):
             logger.exception("Failed to initialize blue-green deployment manager")
             self._initialized = False
             raise
@@ -260,12 +260,14 @@ class BlueGreenDeployment:
             logger.info(
                 "Successfully switched from %s to %s", source_env.name, target_env.name
             )
-            return True
 
-        except (TimeoutError, OSError, PermissionError) as e:
+        except (TimeoutError, OSError, PermissionError):
             logger.exception("Failed to switch environments")
             self._deployment_status = BlueGreenStatus.FAILED
             return False
+
+        else:
+            return True
 
     async def rollback(self) -> bool:
         """Rollback to previous environment.
@@ -289,11 +291,13 @@ class BlueGreenDeployment:
                 logger.info("Rollback completed successfully")
                 return True
             logger.error("Rollback failed")
-            return False
 
-        except (TimeoutError, OSError, PermissionError) as e:
+        except (TimeoutError, OSError, PermissionError):
             logger.exception("Error during rollback")
             self._deployment_status = BlueGreenStatus.FAILED
+            return False
+
+        else:
             return False
 
     async def get_deployment_metrics(self) -> dict[str, DeploymentMetrics]:
@@ -371,7 +375,7 @@ class BlueGreenDeployment:
             else:
                 logger.info("Automatic switch disabled, manual intervention required")
 
-        except (OSError, PermissionError) as e:
+        except (OSError, PermissionError):
             logger.exception("Deployment failed")
             self._deployment_status = BlueGreenStatus.FAILED
 
@@ -408,7 +412,7 @@ class BlueGreenDeployment:
                 "Deployed version %s to %s environment", config.target_version, env.name
             )
 
-        except (TimeoutError, OSError, PermissionError) as e:
+        except (TimeoutError, OSError, PermissionError):
             logger.exception("Failed to deploy to %s environment", env.name)
             raise
 
@@ -438,7 +442,6 @@ class BlueGreenDeployment:
                     env.name,
                     attempt + 1,
                 )
-                return True
 
             except (ValueError, TypeError, AttributeError) as e:
                 logger.warning(
@@ -451,6 +454,8 @@ class BlueGreenDeployment:
                 if attempt < config.health_check_retries - 1:
                     await asyncio.sleep(config.health_check_interval)
 
+            else:
+                return True
         # All health checks failed
         env.health = DeploymentHealth(
             status="unhealthy",
@@ -479,7 +484,7 @@ class BlueGreenDeployment:
 
             logger.info("Traffic switch completed")
 
-        except (TimeoutError, OSError, PermissionError) as e:
+        except (TimeoutError, OSError, PermissionError):
             logger.exception("Failed to switch traffic")
             raise
 
@@ -496,7 +501,7 @@ class BlueGreenDeployment:
 
             except asyncio.CancelledError:
                 break
-            except (TimeoutError, OSError, PermissionError) as e:
+            except (TimeoutError, OSError, PermissionError):
                 logger.exception("Error in health check loop")
                 await asyncio.sleep(30)
 
@@ -508,7 +513,7 @@ class BlueGreenDeployment:
             if env.health:
                 env.health.last_check = datetime.now(tz=UTC)
 
-        except (ConnectionError, OSError, PermissionError) as e:
+        except (ConnectionError, OSError, PermissionError):
             logger.exception("Error checking health for %s environment", env.name)
 
     async def _load_environment_state(self) -> None:

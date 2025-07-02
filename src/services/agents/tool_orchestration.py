@@ -242,7 +242,9 @@ class AdvancedToolOrchestrator:
                 self.capability_performance[capability] = []
             self.capability_performance[capability].append(tool_def.tool_id)
 
-        logger.info(f"Registered tool {tool_def.tool_id} with capabilities: {tool_def.capabilities}")
+        logger.info(
+            f"Registered tool {tool_def.tool_id} with capabilities: {tool_def.capabilities}"
+        )
 
     async def compose_tool_chain(
         self,
@@ -300,11 +302,11 @@ class AdvancedToolOrchestrator:
 
             logger.info(f"Composed tool chain {plan_id} with {len(nodes)} tools")
 
-            return plan
-
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to compose tool chain")
             raise
+
+        return plan
 
     async def execute_tool_chain(
         self,
@@ -326,7 +328,9 @@ class AdvancedToolOrchestrator:
         timeout_seconds = timeout_seconds or plan.timeout_seconds
         start_time = time.time()
 
-        logger.info(f"Executing tool chain {plan.plan_id} with execution ID {execution_id}")
+        logger.info(
+            f"Executing tool chain {plan.plan_id} with execution ID {execution_id}"
+        )
 
         try:
             # Initialize execution state
@@ -387,9 +391,9 @@ class AdvancedToolOrchestrator:
                 },
             }
 
-            logger.info(f"Tool chain execution {execution_id} completed with {success_rate * 100:.2f}%% success rate")
-
-            return final_results
+            logger.info(
+                f"Tool chain execution {execution_id} completed with {success_rate * 100:.2f}%% success rate"
+            )
 
         except Exception as e:
             execution_time = time.time() - start_time
@@ -404,6 +408,8 @@ class AdvancedToolOrchestrator:
                 "execution_time_seconds": execution_time,
                 "metadata": {"goal": plan.goal, "failure_point": "orchestration"},
             }
+
+        return final_results
 
     async def execute_single_tool(
         self,
@@ -477,9 +483,6 @@ class AdvancedToolOrchestrator:
 
             # Update performance metrics
             await self._update_tool_metrics(tool_id, execution_result)
-
-            return execution_result
-
         except TimeoutError:
             end_time = datetime.now(tz=datetime.timezone.utc)
             duration_ms = (end_time - start_time).total_seconds() * 1000
@@ -873,7 +876,7 @@ class AdvancedToolOrchestrator:
             return await self._execute_parallel_nodes(
                 plan, execution_state, timeout_seconds / 2
             )
-        except (OSError, PermissionError, RuntimeError) as e:
+        except (OSError, PermissionError, RuntimeError):
             return await self._execute_sequential_nodes(
                 plan, execution_state, timeout_seconds / 2
             )
@@ -921,8 +924,6 @@ class AdvancedToolOrchestrator:
                 node.error = result.error
                 execution_state["failed_nodes"].add(node.node_id)
 
-            return result.result or {"error": result.error}
-
         except Exception as e:
             node.end_time = datetime.now(tz=UTC)
             node.status = "failed"
@@ -933,6 +934,9 @@ class AdvancedToolOrchestrator:
 
             return {"error": str(e)}
 
+        else:
+            return result.result or {"error": result.error}
+
     async def _execute_fallback_tool(
         self,
         fallback_tool_id: str,
@@ -941,7 +945,9 @@ class AdvancedToolOrchestrator:
         original_execution_id: str,
     ) -> ToolExecutionResult:
         """Execute a fallback tool."""
-        logger.info(f"Executing fallback tool {fallback_tool_id} for execution {original_execution_id}")
+        logger.info(
+            f"Executing fallback tool {fallback_tool_id} for execution {original_execution_id}"
+        )
 
         result = await self.execute_single_tool(
             fallback_tool_id,

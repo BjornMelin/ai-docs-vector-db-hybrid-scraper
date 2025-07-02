@@ -20,6 +20,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from hypothesis import given, strategies as st
 
+import src.services.agents.agentic_orchestrator as orchestrator_module
 from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
 from src.services.agents.agentic_orchestrator import (
@@ -888,7 +889,6 @@ class TestSingletonPattern:
     def test_get_orchestrator_singleton(self):
         """Test get_orchestrator returns singleton instance."""
         # Clear any existing instance
-        import src.services.agents.agentic_orchestrator as orchestrator_module
 
         orchestrator_module._orchestrator_instance = None
 
@@ -904,7 +904,6 @@ class TestSingletonPattern:
 
     def test_get_orchestrator_creates_new_when_none(self):
         """Test get_orchestrator creates new instance when none exists."""
-        import src.services.agents.agentic_orchestrator as orchestrator_module
 
         orchestrator_module._orchestrator_instance = None
 
@@ -916,7 +915,6 @@ class TestSingletonPattern:
     @pytest.mark.asyncio
     async def test_orchestrate_tools_convenience_function(self):
         """Test orchestrate_tools convenience function."""
-        import src.services.agents.agentic_orchestrator as orchestrator_module
 
         orchestrator_module._orchestrator_instance = None
 
@@ -1001,7 +999,8 @@ class TestErrorHandlingAndEdgeCases:
                     assert isinstance(response, ToolResponse)
             except (ConnectionError, RuntimeError, ValueError) as e:
                 # If it does raise an exception, it should be handled gracefully
-                assert "error" in str(e).lower() or "invalid" in str(e).lower()
+                error_msg = str(e).lower()
+                assert "error" in error_msg or "invalid" in error_msg
 
     @pytest.mark.asyncio
     async def test_tool_execution_timeout_simulation(self):

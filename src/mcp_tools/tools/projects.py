@@ -102,7 +102,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     sparse_vector_name="sparse" if enable_hybrid else None,
                     enable_quantization=request.quality_tier != "premium",
                 )
-            except (AttributeError, ConnectionError, OSError) as e:
+            except (AttributeError, ConnectionError, OSError):
                 # Clean up the project if collection creation fails
                 with contextlib.suppress(Exception):
                     await project_storage.delete_project(project_id)

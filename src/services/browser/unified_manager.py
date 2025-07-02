@@ -229,7 +229,7 @@ class UnifiedBrowserManager(BaseService):
         if self._monitoring_enabled and self._monitor:
             try:
                 await self._monitor.stop_monitoring()
-            except (ConnectionError, OSError, RuntimeError, TimeoutError) as e:
+            except (ConnectionError, OSError, RuntimeError, TimeoutError):
                 logger.warning("Failed to stop monitoring during cleanup")
 
         if self._client_manager:
@@ -281,7 +281,7 @@ class UnifiedBrowserManager(BaseService):
         ):
             try:
                 # Generate cache key
-                cache_key = self._browser_cache._generate_cache_key(
+                cache_key = self._browser_cache.generate_cache_key(
                     request.url, None if request.tier == "auto" else request.tier
                 )
 
@@ -309,7 +309,7 @@ class UnifiedBrowserManager(BaseService):
                                 response_time_ms=execution_time,
                                 cache_hit=True,
                             )
-                        except (ConnectionError, OSError, PermissionError) as e:
+                        except (ConnectionError, OSError, PermissionError):
                             logger.warning(
                                 "Failed to record cache hit monitoring metrics"
                             )
@@ -334,7 +334,7 @@ class UnifiedBrowserManager(BaseService):
                         ),
                         failed_tiers=[],
                     )
-            except (ConnectionError, RuntimeError, TimeoutError, ValueError) as e:
+            except (ConnectionError, RuntimeError, TimeoutError, ValueError):
                 logger.warning(
                     "Cache error for {request.url}, continuing with fresh scrape"
                 )
@@ -371,7 +371,7 @@ class UnifiedBrowserManager(BaseService):
                         response_time_ms=execution_time,
                         cache_hit=False,  # Fresh scrape
                     )
-                except (ConnectionError, OSError, PermissionError) as e:
+                except (ConnectionError, OSError, PermissionError):
                     logger.warning("Failed to record monitoring metrics")
 
             # Create unified response
@@ -414,7 +414,7 @@ class UnifiedBrowserManager(BaseService):
                         tier_used=response.tier_used,
                     )
 
-                    cache_key = self._browser_cache._generate_cache_key(
+                    cache_key = self._browser_cache.generate_cache_key(
                         request.url, None if request.tier == "auto" else request.tier
                     )
 
@@ -422,7 +422,7 @@ class UnifiedBrowserManager(BaseService):
                     logger.debug(
                         f"Cached browser result for {request.url} (tier: {tier_used})"
                     )
-                except (ConnectionError, OSError, PermissionError) as e:
+                except (ConnectionError, OSError, PermissionError):
                     logger.warning("Failed to cache result for {request.url}")
 
             logger.info(
@@ -530,7 +530,7 @@ class UnifiedBrowserManager(BaseService):
         if self._automation_router:
             try:
                 router_metrics = self._automation_router.get_metrics()
-            except (ConnectionError, OSError, PermissionError) as e:
+            except (ConnectionError, OSError, PermissionError):
                 logger.warning("Failed to get router metrics")
 
         # Calculate overall health

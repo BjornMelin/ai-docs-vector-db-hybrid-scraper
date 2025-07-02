@@ -97,9 +97,11 @@ class DistributedStateManager:
 
         try:
             if state_id not in self.shared_states:
-                msg = f"State {state_id} does not exist"
-                raise ValueError(msg)
-
+                self._raise_state_not_found(state_id)
+        except Exception:
+            update.success = False
+            raise
+        else:
             state = self.shared_states[state_id]
             state.access_count += 1
 
@@ -116,10 +118,6 @@ class DistributedStateManager:
 
             update.success = True
             return update.old_value
-
-        except Exception:
-            update.success = False
-            raise
         finally:
             self.update_history.append(update)
 
@@ -143,8 +141,7 @@ class DistributedStateManager:
 
         try:
             if state_id not in self.shared_states:
-                msg = f"State {state_id} does not exist"
-                raise ValueError(msg)
+                self._raise_state_not_found(state_id)
 
             # Check for lock requirement
             if require_lock and not await self._check_lock(state_id, agent_id):
@@ -186,11 +183,12 @@ class DistributedStateManager:
             state.updated_by = agent_id
 
             update.success = True
-            return True
 
         except Exception:
             update.success = False
             raise
+        else:
+            return True
         finally:
             self.update_history.append(update)
 
@@ -213,8 +211,7 @@ class DistributedStateManager:
 
         try:
             if state_id not in self.shared_states:
-                msg = f"State {state_id} does not exist"
-                raise ValueError(msg)
+                self._raise_state_not_found(state_id)
 
             state = self.shared_states[state_id]
             update.old_value = state.data.copy()
@@ -225,8 +222,7 @@ class DistributedStateManager:
             elif merge_strategy == "shallow_merge":
                 state.data.update(updates)
             else:
-                msg = f"Unknown merge strategy: {merge_strategy}"
-                raise ValueError(msg)
+                self._raise_unknown_merge_strategy(merge_strategy)
 
             # Update metadata
             state.version += 1
@@ -234,11 +230,12 @@ class DistributedStateManager:
             state.updated_by = agent_id
 
             update.success = True
-            return True
 
         except Exception:
             update.success = False
             raise
+        else:
+            return True
         finally:
             self.update_history.append(update)
 
@@ -357,6 +354,16 @@ class DistributedStateManager:
             if self.shared_states
             else 0,
         }
+
+    def _raise_state_not_found(self, state_id: str) -> None:
+        """Raise an error when a state is not found."""
+        msg = f"State {state_id} does not exist"
+        raise ValueError(msg)
+
+    def _raise_unknown_merge_strategy(self, merge_strategy: str) -> None:
+        """Raise an error for unknown merge strategy."""
+        msg = f"Unknown merge strategy: {merge_strategy}"
+        raise ValueError(msg)
 
 
 class TestStateManagementBasics:

@@ -179,14 +179,15 @@ def instrument_function(
                     if record_result and isinstance(result, str | int | float | bool):
                         span.set_attribute("function.result", str(result)[:100])
 
-                    return result
-
                 except Exception as e:
                     span.set_attribute("function.success", False)
                     span.set_attribute("error.type", type(e).__name__)
                     span.set_attribute("error.message", str(e)[:200])
                     span.record_exception(e)
                     raise
+
+                else:
+                    return result
 
         @functools.wraps(func)
         def sync_wrapper(*args, **kwargs):
@@ -223,14 +224,15 @@ def instrument_function(
                     if record_result and isinstance(result, str | int | float | bool):
                         span.set_attribute("function.result", str(result)[:100])
 
-                    return result
-
                 except Exception as e:
                     span.set_attribute("function.success", False)
                     span.set_attribute("error.type", type(e).__name__)
                     span.set_attribute("error.message", str(e)[:200])
                     span.record_exception(e)
                     raise
+
+                else:
+                    return result
 
         # Return appropriate wrapper based on function type
         return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper

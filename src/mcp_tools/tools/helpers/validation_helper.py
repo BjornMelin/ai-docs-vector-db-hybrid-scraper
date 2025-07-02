@@ -62,7 +62,7 @@ class QueryValidationHelper:
                     await ctx.warning(
                         f"Invalid force_dimension '{request.force_dimension}', ignoring"
                     )
-            except (ConnectionError, OSError, PermissionError) as e:
+            except (ConnectionError, OSError, PermissionError):
                 await ctx.warning(
                     f"Invalid force_dimension '{request.force_dimension}', ignoring"
                 )

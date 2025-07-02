@@ -526,9 +526,10 @@ class TestNetworkPartitions:
                         suspected_node,
                         {"type": "ping", "timestamp": time.time()},
                     )
-                    return False  # Node is reachable, no partition
                 except ConnectionError:
                     return True  # Node is unreachable, partition confirmed
+                else:
+                    return False  # Node is reachable, no partition
 
         detector = PartitionDetector(network_simulator)
 
@@ -607,9 +608,9 @@ class TestNetworkPartitions:
                             all_operations[op_id] = op_data
 
                 # Resolve conflicts using vector clocks
-                resolved_operations = {}
-                for op_id, op_data in all_operations.items():
-                    resolved_operations[op_id] = op_data
+                resolved_operations = {
+                    op_id: op_data for op_id, op_data in all_operations.items()
+                }
 
                 # Merge vector clocks
                 merged_vector_clock = {}

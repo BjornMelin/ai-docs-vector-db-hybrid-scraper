@@ -232,12 +232,13 @@ class SecurityTestRunner:
                     ),
                     "report_file": str(bandit_report_file),
                 }
-            return {"status": "failed", "error": "No report generated"}
 
         except subprocess.TimeoutExpired:
             return {"status": "timeout", "error": "Bandit analysis timed out"}
         except (ValueError, RuntimeError, ImportError) as e:
             return {"status": "error", "error": str(e)}
+        else:
+            return {"status": "failed", "error": "No report generated"}
 
     def _run_dependency_scan(self) -> dict[str, Any]:
         """Run dependency vulnerability scanning with Safety."""
@@ -288,6 +289,12 @@ class SecurityTestRunner:
                     "vulnerabilities_found": vulnerabilities,
                     "report_file": str(safety_report_file),
                 }
+
+        except subprocess.TimeoutExpired:
+            return {"status": "timeout", "error": "Safety scan timed out"}
+        except (ValueError, RuntimeError, ImportError) as e:
+            return {"status": "error", "error": str(e)}
+        else:
             # No vulnerabilities found (Safety returns 0 exit code)
             return {
                 "status": "completed",
@@ -295,11 +302,6 @@ class SecurityTestRunner:
                 "vulnerabilities_found": 0,
                 "message": "No vulnerabilities detected",
             }
-
-        except subprocess.TimeoutExpired:
-            return {"status": "timeout", "error": "Safety scan timed out"}
-        except (ValueError, RuntimeError, ImportError) as e:
-            return {"status": "error", "error": str(e)}
 
     def _run_pytest_category(
         self, category: str, test_files: list[str]

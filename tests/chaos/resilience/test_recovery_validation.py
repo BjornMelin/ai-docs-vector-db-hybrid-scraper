@@ -263,8 +263,6 @@ class TestRecoveryValidation:
                         }
                     )
 
-                    return metrics
-
                 except Exception as e:
                     # Record failed recovery
                     self.recovery_history.append(
@@ -276,6 +274,8 @@ class TestRecoveryValidation:
                         }
                     )
                     raise
+                else:
+                    return metrics
 
         return RecoveryOrchestrator()
 

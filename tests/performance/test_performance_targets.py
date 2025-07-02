@@ -74,9 +74,10 @@ class TestPerformanceTargets:
                 result = await search_manager.search(
                     f"concurrent test query {query_id}"
                 )
-                return {"success": True, "result": result}
             except (TimeoutError, ConnectionError, RuntimeError) as e:
                 return {"success": False, "error": str(e)}
+            else:
+                return {"success": True, "result": result}
 
         # Launch 500 concurrent searches
         start_time = time.perf_counter()

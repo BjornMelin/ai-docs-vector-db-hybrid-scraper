@@ -145,7 +145,6 @@ class MLSecurityValidator:
                 message="Input validation passed",
             )
             self.checks_performed.append(result)
-            return result
 
         except Exception as e:
             logger.exception("Input validation error")
@@ -156,6 +155,7 @@ class MLSecurityValidator:
                 severity="error",
             )
             self.checks_performed.append(result)
+        else:
             return result
 
     def check_dependencies(self) -> SecurityCheckResult:
@@ -234,7 +234,6 @@ class MLSecurityValidator:
                 message="Dependency scan skipped (pip-audit not available)",
             )
             self.checks_performed.append(result)
-            return result
 
         except subprocess.TimeoutExpired:
             result = SecurityCheckResult(
@@ -245,7 +244,8 @@ class MLSecurityValidator:
             )
             self.checks_performed.append(result)
             return result
-        except (OSError, PermissionError) as e:
+
+        except (OSError, PermissionError):
             logger.exception("Dependency check error")
             result = SecurityCheckResult(
                 check_type="dependency_scan",
@@ -254,6 +254,7 @@ class MLSecurityValidator:
                 severity="info",
             )
             self.checks_performed.append(result)
+        else:
             return result
 
     def check_container(self, image_name: str) -> SecurityCheckResult:
@@ -345,9 +346,8 @@ class MLSecurityValidator:
                 message="Container scan skipped (trivy not available)",
             )
             self.checks_performed.append(result)
-            return result
 
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError):
             logger.info("Container scan skipped")
             result = SecurityCheckResult(
                 check_type="container_scan",
@@ -356,6 +356,9 @@ class MLSecurityValidator:
                 severity="info",
             )
             self.checks_performed.append(result)
+            return result
+
+        else:
             return result
 
     def validate_collection_name(self, name: str) -> str:

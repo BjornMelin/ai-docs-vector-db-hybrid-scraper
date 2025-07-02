@@ -14,15 +14,24 @@ Run with: pytest tests/benchmarks/ -k config --benchmark-only
 
 import asyncio
 import json
+import os
+import sys
 import tempfile
 from functools import lru_cache
 from pathlib import Path
 
 import pytest
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from pydantic_settings import BaseSettings
 
 from src.config import Config
+from src.config.settings import (
+    Settings,
+    create_settings_from_env,
+    get_settings,
+    reset_settings,
+    set_settings,
+)
 
 
 class CachedConfigModel(BaseModel):
@@ -200,7 +209,6 @@ class TestConfigurationPerformance:
 
     def test_real_settings_instantiation_performance(self, benchmark, real_config_data):
         """Benchmark real Settings class instantiation with validation."""
-        from src.config.settings import Settings
 
         def create_settings():
             """Create Settings instance with validation."""
@@ -216,9 +224,6 @@ class TestConfigurationPerformance:
 
     def test_real_settings_from_environment(self, benchmark):
         """Benchmark Settings creation from environment variables."""
-        import os
-
-        from src.config.settings import create_settings_from_env
 
         # Set test environment variables
         test_env = {
@@ -257,12 +262,6 @@ class TestConfigurationPerformance:
 
     def test_real_config_caching_performance(self, benchmark, real_config_data):
         """Benchmark configuration caching with real Settings."""
-        from src.config.settings import (
-            Settings,
-            get_settings,
-            reset_settings,
-            set_settings,
-        )
 
         def cached_config_access():
             """Test configuration caching performance."""
@@ -290,9 +289,6 @@ class TestConfigurationPerformance:
 
     def test_real_config_validation_performance(self, benchmark, complex_config_data):
         """Benchmark configuration validation with complex data."""
-        from pydantic import ValidationError
-
-        from src.config.settings import Settings
 
         def validate_complex_config():
             """Validate complex configuration data."""
@@ -305,9 +301,10 @@ class TestConfigurationPerformance:
 
             try:
                 settings = Settings(**config_with_base)
-                return {"success": True, "settings": settings}
             except ValidationError as e:
                 return {"success": False, "errors": len(e.errors())}
+            else:
+                return {"success": True, "settings": settings}
 
         # Run benchmark
         result = benchmark(validate_complex_config)
@@ -319,10 +316,6 @@ class TestConfigurationPerformance:
     @pytest.mark.slow
     def test_real_config_hot_reload_performance(self, benchmark, real_config_data):
         """Benchmark configuration hot reload capabilities."""
-        import json
-        import tempfile
-
-        from src.config.settings import Settings, get_settings, set_settings
 
         def config_hot_reload():
             """Test configuration hot reload performance."""
@@ -361,7 +354,6 @@ class TestConfigurationPerformance:
 
             finally:
                 # Clean up
-                import os
 
                 os.unlink(config_file)
 
@@ -377,9 +369,6 @@ class TestConfigurationPerformance:
 
     def test_real_config_serialization_performance(self, benchmark, real_config_data):
         """Benchmark configuration serialization/deserialization."""
-        import json
-
-        from src.config.settings import Settings
 
         def config_serialization():
             """Test configuration serialization performance."""
@@ -415,9 +404,6 @@ class TestConfigurationPerformance:
 
     def test_real_config_memory_optimization(self, benchmark, complex_config_data):
         """Benchmark memory usage of configuration objects."""
-        import sys
-
-        from src.config.settings import Settings
 
         def config_memory_usage():
             """Test memory efficiency of configuration objects."""

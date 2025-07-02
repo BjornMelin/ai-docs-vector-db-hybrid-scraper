@@ -198,7 +198,7 @@ class AutoConfigManager:
                 f"scale_threshold={self.config.scale_up_threshold:.2f}"
             )
 
-        except (AttributeError, ImportError, OSError) as e:
+        except (AttributeError, ImportError, OSError):
             logger.exception("Failed to initialize configuration")
             # Fallback to minimal configuration
             return await self._create_fallback_config()
@@ -248,7 +248,7 @@ class AutoConfigManager:
             self.config = new_config
             self._config_hash = self._calculate_hash()
 
-        except (OSError, PermissionError) as e:
+        except (OSError, PermissionError):
             logger.exception("Failed to refresh configuration")
             return False
         else:
@@ -295,7 +295,7 @@ class ConfigDriftHealer:
                 await self._check_and_heal_drift()
                 await asyncio.sleep(check_interval)
 
-            except (TimeoutError, OSError, PermissionError) as e:
+            except (TimeoutError, OSError, PermissionError):
                 logger.exception("Configuration drift monitoring error")
                 await asyncio.sleep(60)  # Shorter interval on error
 
@@ -321,7 +321,7 @@ class ConfigDriftHealer:
             # If refresh fails, try to restore from backup
             return await self._restore_from_backup()
 
-        except (TimeoutError, OSError, PermissionError) as e:
+        except (TimeoutError, OSError, PermissionError):
             logger.exception("Configuration healing failed")
             return False
 
@@ -348,33 +348,42 @@ class ConfigDriftHealer:
         logger.info("Configuration drift monitoring stopped")
 
 
-# Global instance for easy access
-_config_manager: AutoConfigManager | None = None
+class _ConfigManagerSingleton:
+    """Singleton holder for config manager instance."""
+
+    _instance: AutoConfigManager | None = None
+
+    @classmethod
+    async def get_instance(cls) -> AutoConfigManager:
+        """Get the singleton config manager instance."""
+        if cls._instance is None:
+            cls._instance = AutoConfigManager()
+        return cls._instance
 
 
 async def get_auto_config() -> ZeroMaintenanceConfig:
     """Get the global auto-managed configuration instance."""
-    global _config_manager
+    config_manager = await _ConfigManagerSingleton.get_instance()
 
-    if _config_manager is None:
-        _config_manager = AutoConfigManager()
+    if config_manager.config is None:
+        await config_manager.initialize()
 
-    if _config_manager.config is None:
-        await _config_manager.initialize()
-
-    return _config_manager.config
+    return config_manager.config
 
 
 async def start_config_automation():
     """Start the configuration automation system."""
-    global _config_manager
+    config_manager = await _ConfigManagerSingleton.get_instance()
 
-    if _config_manager is None:
-        _config_manager = AutoConfigManager()
-        await _config_manager.initialize()
+    if config_manager.config is None:
+        await config_manager.initialize()
 
     # Start drift healing
-    drift_healer = ConfigDriftHealer(_config_manager)
-    asyncio.create_task(drift_healer.start_monitoring())
+    drift_healer = ConfigDriftHealer(config_manager)
+    monitoring_task = asyncio.create_task(drift_healer.start_monitoring())
+    # Store reference to prevent task garbage collection
+    monitoring_task.add_done_callback(
+        lambda _: logger.debug("Config drift monitoring task completed")
+    )
 
     logger.info("Configuration automation system started")

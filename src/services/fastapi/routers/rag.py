@@ -9,7 +9,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 
-from ...dependencies import (
+from src.services.dependencies import (
     ConfigDep,
     RAGGeneratorDep,
     RAGRequest,
@@ -93,16 +93,18 @@ async def get_metrics(
     """
     try:
         metrics = await get_rag_metrics(rag_generator)
-        return {
-            "status": "success",
-            "metrics": metrics,
-        }
     except Exception as e:
         logger.exception("Failed to get RAG metrics")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get RAG metrics",
         ) from e
+
+    else:
+        return {
+            "status": "success",
+            "metrics": metrics,
+        }
 
 
 @router.post("/cache/clear")

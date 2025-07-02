@@ -127,9 +127,10 @@ class TestConcurrentConfigurationAccess:
                 async with reload_lock:
                     reload_results.append((version_idx, result))
 
-                return result
             except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
                 pytest.fail(f"Reload failed: {e}")
+            else:
+                return result
 
         # Execute concurrent reloads
         reload_tasks = [

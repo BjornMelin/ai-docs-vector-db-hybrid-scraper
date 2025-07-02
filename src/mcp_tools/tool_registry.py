@@ -94,7 +94,7 @@ async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") ->
         registered_tools.append("agentic_rag")
     except ImportError as e:
         logger.warning(f"Agentic RAG tools not available (missing dependencies): {e}")
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to register agentic RAG tools")
 
     logger.info(

@@ -66,7 +66,7 @@ class DependencyContainer:
             self._initialized = True
             logger.info("Dependency container initialized successfully")
 
-        except (OSError, AttributeError, ConnectionError, ImportError) as e:
+        except (OSError, AttributeError, ConnectionError, ImportError):
             logger.exception("Failed to initialize dependency container")
             raise
 
@@ -83,7 +83,7 @@ class DependencyContainer:
             self._initialized = False
             logger.info("Dependency container cleaned up")
 
-        except (OSError, AttributeError, ConnectionError, ImportError) as e:
+        except (OSError, AttributeError, ConnectionError, ImportError):
             logger.exception("Error during dependency cleanup")
 
     @property
@@ -132,8 +132,32 @@ class DependencyContainer:
         return self._client_manager
 
 
-# Global dependency container instance
-_container: DependencyContainer | None = None
+class _DependencyContainerSingleton:
+    """Singleton holder for dependency container instance."""
+
+    _instance: DependencyContainer | None = None
+
+    @classmethod
+    def get_instance(cls) -> DependencyContainer:
+        """Get the singleton dependency container instance."""
+        if cls._instance is None:
+            msg = "Dependency container not initialized. Call initialize_dependencies() first."
+            raise RuntimeError(msg)
+        return cls._instance
+
+    @classmethod
+    async def initialize_instance(cls, config: Config | None = None) -> None:
+        """Initialize the singleton with configuration."""
+        if cls._instance is None:
+            cls._instance = DependencyContainer()
+        await cls._instance.initialize(config)
+
+    @classmethod
+    async def cleanup_instance(cls) -> None:
+        """Cleanup the singleton instance."""
+        if cls._instance:
+            await cls._instance.cleanup()
+            cls._instance = None
 
 
 def get_container() -> DependencyContainer:
@@ -146,10 +170,7 @@ def get_container() -> DependencyContainer:
         RuntimeError: If container is not initialized
 
     """
-    if _container is None:
-        msg = "Dependency container not initialized. Call initialize_dependencies() first."
-        raise RuntimeError(msg)
-    return _container
+    return _DependencyContainerSingleton.get_instance()
 
 
 async def initialize_dependencies(config: Config | None = None) -> None:
@@ -159,18 +180,12 @@ async def initialize_dependencies(config: Config | None = None) -> None:
         config: Application configuration
 
     """
-    global _container
-    if _container is None:
-        _container = DependencyContainer()
-    await _container.initialize(config)
+    await _DependencyContainerSingleton.initialize_instance(config)
 
 
 async def cleanup_dependencies() -> None:
     """Clean up the global dependency container."""
-    global _container
-    if _container:
-        await _container.cleanup()
-        _container = None
+    await _DependencyContainerSingleton.cleanup_instance()
 
 
 # FastAPI dependency functions
@@ -220,7 +235,7 @@ async def get_vector_service() -> QdrantService:
             _raise_vector_service_unavailable()
         else:
             return container.vector_service
-    except (OSError, AttributeError, ConnectionError, ImportError) as e:
+    except (OSError, AttributeError, ConnectionError, ImportError):
         logger.exception("Failed to get vector service")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
@@ -252,7 +267,7 @@ async def get_embedding_manager_legacy() -> Any:
             _raise_embedding_service_unavailable()
         else:
             return container.embedding_manager
-    except (OSError, AttributeError, ConnectionError, ImportError) as e:
+    except (OSError, AttributeError, ConnectionError, ImportError):
         logger.exception("Failed to get embedding manager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
@@ -284,7 +299,7 @@ async def get_cache_manager_legacy() -> Any:
             _raise_cache_service_unavailable()
         else:
             return container.cache_manager
-    except (OSError, AttributeError, ConnectionError, ImportError) as e:
+    except (OSError, AttributeError, ConnectionError, ImportError):
         logger.exception("Failed to get cache manager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
@@ -316,7 +331,7 @@ def get_client_manager() -> ClientManager:
             _raise_client_manager_unavailable()
         else:
             return container.client_manager
-    except (OSError, AttributeError, ConnectionError, ImportError) as e:
+    except (OSError, AttributeError, ConnectionError, ImportError):
         logger.exception("Failed to get client manager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,

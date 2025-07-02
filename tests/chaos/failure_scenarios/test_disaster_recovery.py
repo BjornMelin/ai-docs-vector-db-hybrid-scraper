@@ -812,15 +812,16 @@ class TestDisasterRecovery:
                 # Update metrics
                 recovery_metrics["last_recovery_test"] = test_start
 
-                return {
-                    "test_successful": restored_data == test_data,
-                    "test_duration": test_duration,
-                    "timestamp": test_start,
-                }
             except (ConnectionError, RuntimeError, ValueError, OSError) as e:
                 return {
                     "test_successful": False,
                     "error": str(e),
+                    "timestamp": test_start,
+                }
+            else:
+                return {
+                    "test_successful": restored_data == test_data,
+                    "test_duration": test_duration,
                     "timestamp": test_start,
                 }
 

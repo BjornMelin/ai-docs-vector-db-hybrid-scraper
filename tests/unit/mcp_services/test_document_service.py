@@ -342,10 +342,10 @@ class TestDocumentServiceProjectOrganization:
             ):
                 await service._register_document_tools()
 
-                # Verify projects tools were registered
-                mock_projects.register_tools.assert_called_once_with(
-                    service.mcp, mock_client_manager
-                )
+            # Verify projects tools were registered
+            mock_projects.register_tools.assert_called_once_with(
+                service.mcp, mock_client_manager
+            )
 
     async def test_document_management_tool_registration(self, mock_client_manager):
         """Test that document management tools are properly registered."""
@@ -445,10 +445,10 @@ class TestDocumentServiceErrorHandling:
                 crawling=Mock(register_tools=Mock()),
                 content_intelligence=Mock(register_tools=Mock()),
             ),
+            pytest.raises(Exception, match="Tool registration failed"),
         ):
             # Tool registration should raise the exception
-            with pytest.raises(Exception, match="Tool registration failed"):
-                await service._register_document_tools()
+            await service._register_document_tools()
 
     async def test_service_recovery_after_tool_registration_failure(
         self, mock_client_manager

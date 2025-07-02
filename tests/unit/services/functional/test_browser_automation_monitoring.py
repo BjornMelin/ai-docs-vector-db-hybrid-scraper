@@ -184,11 +184,12 @@ class MockBrowserMonitoringSystem:
                 result = await tier.execute_request(request_type)
                 result["failover_tier"] = tier_name
                 result["attempts"] = tier_order.index(tier_name) + 1
-                return result
 
             except (ConnectionError, RuntimeError, OSError) as e:
                 last_error = e
                 continue
+            else:
+                return result
 
         # All tiers failed
         msg = f"All tiers failed. Last error: {last_error}"
@@ -316,8 +317,11 @@ class TestBrowserAutomationMonitoring:
         lightweight_tier.max_sessions = 2
 
         # First two requests should succeed
-        _task1 = asyncio.create_task(lightweight_tier.execute_request("test1"))
-        _task2 = asyncio.create_task(lightweight_tier.execute_request("test2"))
+        task1 = asyncio.create_task(lightweight_tier.execute_request("test1"))
+        task2 = asyncio.create_task(lightweight_tier.execute_request("test2"))
+        # Store references to prevent task garbage collection
+        task1.add_done_callback(lambda _: None)
+        task2.add_done_callback(lambda _: None)
 
         # Third request should fail due to capacity
         with pytest.raises(Exception, match="at capacity"):

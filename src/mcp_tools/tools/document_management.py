@@ -222,12 +222,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Lifecycle action '{lifecycle_action}' completed for {collection_name}"
                 )
 
-            return {
-                "success": True,
-                "lifecycle_results": results,
-                "autonomous_policies_applied": True,
-            }
-
         except Exception as e:
             logger.exception("Failed to manage document lifecycle")
             if ctx:
@@ -236,6 +230,12 @@ def register_tools(mcp, client_manager: ClientManager):
                 "success": False,
                 "error": str(e),
                 "action_attempted": lifecycle_action,
+            }
+        else:
+            return {
+                "success": True,
+                "lifecycle_results": results,
+                "autonomous_policies_applied": True,
             }
 
     @mcp.tool()
@@ -328,8 +328,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Organization completed: {len(documents)} documents processed using {organization_strategy}"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to organize documents intelligently")
             if ctx:
@@ -339,6 +337,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 "error": str(e),
                 "strategy_attempted": organization_strategy,
             }
+        else:
+            return final_results
 
     @mcp.tool()
     async def get_workspace_analytics(
@@ -413,11 +413,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Generated analytics for {analytics['global_metrics']['total_workspaces']} workspaces"
                 )
 
-            return {
-                "success": True,
-                "analytics": analytics,
-            }
-
         except Exception as e:
             logger.exception("Failed to get workspace analytics")
             if ctx:
@@ -425,6 +420,11 @@ def register_tools(mcp, client_manager: ClientManager):
             return {
                 "success": False,
                 "error": str(e),
+            }
+        else:
+            return {
+                "success": True,
+                "analytics": analytics,
             }
 
 

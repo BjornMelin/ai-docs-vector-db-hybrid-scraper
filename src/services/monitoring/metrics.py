@@ -328,7 +328,7 @@ class MetricsRegistry:
 
                 try:
                     result = await func(*args, **kwargs)
-                except (ConnectionError, OSError, PermissionError) as e:
+                except (ConnectionError, OSError, PermissionError):
                     self._metrics["search_requests"].labels(
                         collection=collection, status="error"
                     ).inc()
@@ -361,7 +361,7 @@ class MetricsRegistry:
 
                 try:
                     result = func(*args, **kwargs)
-                except (ConnectionError, OSError, PermissionError) as e:
+                except (ConnectionError, OSError, PermissionError):
                     self._metrics["search_requests"].labels(
                         collection=collection, status="error"
                     ).inc()
@@ -414,18 +414,18 @@ class MetricsRegistry:
                             provider=provider
                         ).observe(len(result))
 
-                    return result
-
                 except (
                     AttributeError,
                     ConnectionError,
                     ImportError,
                     RuntimeError,
-                ) as e:
+                ):
                     self._metrics["embedding_requests"].labels(
                         provider=provider, model=model, status="error"
                     ).inc()
                     raise
+                else:
+                    return result
 
                 finally:
                     duration = time.time() - start_time
@@ -442,18 +442,19 @@ class MetricsRegistry:
                     self._metrics["embedding_requests"].labels(
                         provider=provider, model=model, status="success"
                     ).inc()
-                    return result
 
                 except (
                     AttributeError,
                     ConnectionError,
                     ImportError,
                     RuntimeError,
-                ) as e:
+                ):
                     self._metrics["embedding_requests"].labels(
                         provider=provider, model=model, status="error"
                     ).inc()
                     raise
+                else:
+                    return result
 
                 finally:
                     duration = time.time() - start_time
@@ -492,12 +493,14 @@ class MetricsRegistry:
                         self._metrics["cache_misses"].labels(
                             cache_type=cache_type, cache_name=cache_name
                         ).inc()
-                    return result
-                except (ConnectionError, RuntimeError, TimeoutError) as e:
+                except (ConnectionError, RuntimeError, TimeoutError):
                     self._metrics["cache_misses"].labels(
                         cache_type=cache_type, cache_name=cache_name
                     ).inc()
                     raise
+
+                else:
+                    return result
 
             @functools.wraps(func)
             def sync_wrapper(*args, **kwargs):
@@ -511,12 +514,14 @@ class MetricsRegistry:
                         self._metrics["cache_misses"].labels(
                             cache_type=cache_type, cache_name=cache_name
                         ).inc()
-                    return result
-                except (ConnectionError, RuntimeError, TimeoutError) as e:
+                except (ConnectionError, RuntimeError, TimeoutError):
                     self._metrics["cache_misses"].labels(
                         cache_type=cache_type, cache_name=cache_name
                     ).inc()
                     raise
+
+                else:
+                    return result
 
             return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
 
@@ -546,14 +551,15 @@ class MetricsRegistry:
                     self._metrics["cache_operations"].labels(
                         cache_type=cache_type, operation=operation, result="success"
                     ).inc()
-                    return result
 
-                except (ConnectionError, OSError, PermissionError) as e:
+                except (ConnectionError, OSError, PermissionError):
                     self._metrics["cache_operations"].labels(
                         cache_type=cache_type, operation=operation, result="error"
                     ).inc()
                     raise
 
+                else:
+                    return result
                 finally:
                     duration = time.time() - start_time
                     self._metrics["cache_duration"].labels(
@@ -569,14 +575,15 @@ class MetricsRegistry:
                     self._metrics["cache_operations"].labels(
                         cache_type=cache_type, operation=operation, result="success"
                     ).inc()
-                    return result
 
-                except (ConnectionError, OSError, PermissionError) as e:
+                except (ConnectionError, OSError, PermissionError):
                     self._metrics["cache_operations"].labels(
                         cache_type=cache_type, operation=operation, result="error"
                     ).inc()
                     raise
 
+                else:
+                    return result
                 finally:
                     duration = time.time() - start_time
                     self._metrics["cache_duration"].labels(
@@ -810,8 +817,24 @@ class MetricsRegistry:
         return self._metrics.get(name)
 
 
-# Global metrics registry instance
-_global_registry: MetricsRegistry | None = None
+class _MetricsRegistrySingleton:
+    """Singleton holder for metrics registry instance."""
+
+    _instance: MetricsRegistry | None = None
+
+    @classmethod
+    def get_instance(cls) -> MetricsRegistry:
+        """Get the singleton metrics registry instance."""
+        if cls._instance is None:
+            msg = "Metrics registry not initialized. Call initialize_metrics() first."
+            raise RuntimeError(msg)
+        return cls._instance
+
+    @classmethod
+    def initialize_instance(cls, config: MetricsConfig) -> MetricsRegistry:
+        """Initialize the singleton with configuration."""
+        cls._instance = MetricsRegistry(config)
+        return cls._instance
 
 
 def get_metrics_registry() -> MetricsRegistry:
@@ -824,10 +847,7 @@ def get_metrics_registry() -> MetricsRegistry:
         RuntimeError: If registry not initialized
 
     """
-    if _global_registry is None:
-        msg = "Metrics registry not initialized. Call initialize_metrics() first."
-        raise RuntimeError(msg)
-    return _global_registry
+    return _MetricsRegistrySingleton.get_instance()
 
 
 def initialize_metrics(config: MetricsConfig) -> MetricsRegistry:
@@ -840,6 +860,4 @@ def initialize_metrics(config: MetricsConfig) -> MetricsRegistry:
         Initialized MetricsRegistry instance
 
     """
-    global _global_registry
-    _global_registry = MetricsRegistry(config)
-    return _global_registry
+    return _MetricsRegistrySingleton.initialize_instance(config)

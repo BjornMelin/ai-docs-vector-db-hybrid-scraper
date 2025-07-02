@@ -195,18 +195,7 @@ class QueryClassifier:
             # Check for multimodal indicators
             is_multimodal = self._detect_multimodal(query, features)
 
-            # TODO: Replace with proper QueryClassification type
-            return {
-                "query_type": query_type,
-                "complexity_level": complexity,
-                "domain": domain,
-                "programming_language": programming_language,
-                "is_multimodal": is_multimodal,
-                "confidence": confidence,
-                "features": features,
-            }
-
-        except Exception as e:
+        except Exception:
             # TODO: Convert f-string to logging format
             logger.exception("Query classification failed: %s")
             # Return default classification
@@ -219,6 +208,17 @@ class QueryClassifier:
                 "is_multimodal": False,
                 "confidence": 0.5,
                 "features": {},
+            }
+        else:
+            # TODO: Replace with proper QueryClassification type
+            return {
+                "query_type": query_type,
+                "complexity_level": complexity,
+                "domain": domain,
+                "programming_language": programming_language,
+                "is_multimodal": is_multimodal,
+                "confidence": confidence,
+                "features": features,
             }
 
     def _extract_features(

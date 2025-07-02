@@ -7,6 +7,7 @@ error handling patterns.
 """
 
 import asyncio
+import contextlib
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -155,10 +156,8 @@ class TestCircuitBreakerMutationTesting:
             raise ValueError(msg)
 
         # Test normal behavior - ConnectionError should be caught
-        try:
+        with contextlib.suppress(ConnectionError):
             await circuit_breaker.call(operation_with_specific_error)
-        except ConnectionError:
-            pass  # Expected
 
         assert circuit_breaker.failure_count == 1
 
@@ -397,7 +396,7 @@ class TestServiceLogicMutationTesting:
             """Example validation function."""
             if not isinstance(config_dict, dict):
                 msg = "Config must be a dictionary"
-                raise ValueError(msg)
+                raise TypeError(msg)
 
             required_fields = ["database_url", "cache_url"]
             for field in required_fields:

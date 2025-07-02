@@ -166,8 +166,6 @@ def instrument_config_operation(
                         },
                     )
 
-                    return result
-
                 except Exception as e:
                     # Record exception with configuration context
                     span.record_exception(e)
@@ -186,6 +184,8 @@ def instrument_config_operation(
 
                     raise
 
+                else:
+                    return result
                 finally:
                     if include_performance_metrics:
                         duration = time.time() - start_time
@@ -232,8 +232,6 @@ def instrument_config_operation(
                         },
                     )
 
-                    return result
-
                 except Exception as e:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
@@ -251,6 +249,8 @@ def instrument_config_operation(
 
                     raise
 
+                else:
+                    return result
                 finally:
                     if include_performance_metrics:
                         duration = time.time() - start_time
@@ -321,13 +321,14 @@ def instrument_config_validation(
                             )
 
                     span.set_status(Status(StatusCode.OK))
-                    return result
 
                 except Exception as e:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
 
+                else:
+                    return result
                 finally:
                     duration = time.time() - start_time
                     span.set_attribute(
@@ -375,13 +376,14 @@ def instrument_config_validation(
                             )
 
                     span.set_status(Status(StatusCode.OK))
-                    return result
 
                 except Exception as e:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
 
+                else:
+                    return result
                 finally:
                     duration = time.time() - start_time
                     span.set_attribute(
@@ -457,13 +459,14 @@ def instrument_auto_detection(
                         )
 
                     span.set_status(Status(StatusCode.OK))
-                    return result
 
                 except Exception as e:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
 
+                else:
+                    return result
                 finally:
                     duration = time.time() - start_time
                     span.set_attribute("auto_detect.duration_ms", duration * 1000)
@@ -500,13 +503,14 @@ def instrument_auto_detection(
                         )
 
                     span.set_status(Status(StatusCode.OK))
-                    return result
 
                 except Exception as e:
                     span.record_exception(e)
                     span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
 
+                else:
+                    return result
                 finally:
                     duration = time.time() - start_time
                     span.set_attribute("auto_detect.duration_ms", duration * 1000)

@@ -1008,3 +1008,26 @@ class QdrantService(BaseService):
         if not self._initialized or not self._collections:
             msg = "Service not initialized. Call initialize() first."
             raise QdrantServiceError(msg)
+
+    @property
+    def is_initialized(self) -> bool:
+        """Check if the service is properly initialized.
+
+        Returns:
+            bool: True if service is initialized and ready for use
+
+        """
+        return self._initialized and self._collections is not None
+
+    async def get_client(self):
+        """Get the Qdrant client instance.
+
+        Returns:
+            The Qdrant client instance for direct operations
+
+        Raises:
+            QdrantServiceError: If service is not initialized
+
+        """
+        self._validate_initialized()
+        return await self._client_manager.get_qdrant_client()

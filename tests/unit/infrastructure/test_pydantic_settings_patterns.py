@@ -295,7 +295,7 @@ class TestPydanticSettingsPatterns:
         settings = SerializableSettings(
             app_name="my-app",
             version="2.0.0",
-            secret_key="super-secret",  # Test data
+            secret_key="super-secret",  # noqa: S106
         )
 
         # Test serialization
@@ -367,14 +367,16 @@ class TestPydanticSettingsPatterns:
         # Test invalid configurations
         with pytest.raises(ValidationError) as exc_info:
             CustomValidatedSettings(
-                email="invalid-email", password="SecurePass123"
-            )  # Test data
+                email="invalid-email",
+                password="SecurePass123",  # noqa: S106
+            )
         assert "Invalid email format" in str(exc_info.value)
 
         with pytest.raises(ValidationError) as exc_info:
             CustomValidatedSettings(
-                email="user@example.com", password="weakpass"
-            )  # Test data
+                email="user@example.com",
+                password="weakpass",  # noqa: S106
+            )
         assert "uppercase" in str(exc_info.value)
 
     def test_configuration_model_rebuild(self):

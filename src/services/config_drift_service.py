@@ -74,7 +74,7 @@ class ConfigDriftService:
             self.drift_detector = initialize_drift_detector(drift_config)
             logger.info("Configuration drift detector initialized successfully")
 
-        except (AttributeError, ImportError, OSError) as e:
+        except (AttributeError, ImportError, OSError):
             logger.exception("Failed to initialize drift detector")
             self.drift_detector = None
 
@@ -100,7 +100,7 @@ class ConfigDriftService:
 
             logger.info("Configuration drift monitoring service started successfully")
 
-        except (OSError, PermissionError, RuntimeError) as e:
+        except (OSError, PermissionError, RuntimeError):
             logger.exception("Failed to start drift monitoring service")
             self.is_running = False
             raise
@@ -126,7 +126,7 @@ class ConfigDriftService:
             )
             logger.debug("Scheduled next configuration snapshot task")
 
-        except (OSError, PermissionError, RuntimeError) as e:
+        except (OSError, PermissionError, RuntimeError):
             logger.exception("Failed to schedule snapshot task")
 
     async def _schedule_comparison_task(self) -> None:
@@ -145,7 +145,7 @@ class ConfigDriftService:
             )
             logger.debug("Scheduled next configuration comparison task")
 
-        except (TimeoutError, OSError, PermissionError) as e:
+        except (TimeoutError, OSError, PermissionError):
             logger.exception("Failed to schedule comparison task")
 
     async def take_configuration_snapshot(self) -> dict[str, Any]:
@@ -365,11 +365,12 @@ class ConfigDriftService:
                 },
             )
 
-            return True
-
-        except (TimeoutError, OSError, PermissionError) as e:
+        except (TimeoutError, OSError, PermissionError):
             logger.exception("Auto-remediation failed for event %s", event.id)
             return False
+
+        else:
+            return True
 
     async def get_service_status(self) -> dict[str, Any]:
         """Get current status of the configuration drift service.
@@ -430,7 +431,7 @@ class ConfigDriftService:
                 "comparison_results": comparison_results,
             }
 
-        except (OSError, PermissionError) as e:
+        except (OSError, PermissionError):
             logger.exception("Manual detection failed")
             raise
 

@@ -209,7 +209,6 @@ class EnhancedAutomationRouter(AutomationRouter):
             result["tier_used"] = selected_tier
             result["provider"] = selected_tier
             result["automation_time_ms"] = elapsed * 1000
-            return result
 
         except Exception as e:
             elapsed = time.time() - start_time
@@ -233,6 +232,9 @@ class EnhancedAutomationRouter(AutomationRouter):
             return await self._intelligent_fallback(
                 url, domain, selected_tier, custom_actions, timeout, str(e)
             )
+
+        else:
+            return result
 
     async def _enhanced_select_tier(
         self,
@@ -443,7 +445,6 @@ class EnhancedAutomationRouter(AutomationRouter):
                 result["fallback_from"] = failed_tier
                 result["failed_tiers"] = failed_tiers
                 result["automation_time_ms"] = elapsed * 1000
-                return result
 
             except Exception as e:
                 elapsed = time.time() - start_time
@@ -465,6 +466,8 @@ class EnhancedAutomationRouter(AutomationRouter):
 
                 failed_tiers.append(fallback_tier)
 
+            else:
+                return result
         # All tiers failed
         return {
             "success": False,

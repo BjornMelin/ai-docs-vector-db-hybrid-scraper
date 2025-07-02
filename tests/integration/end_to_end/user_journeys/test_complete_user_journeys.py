@@ -154,8 +154,9 @@ class TestCompleteUserJourneys:
         assert result.steps_failed == 0, "No API validation steps should fail"
 
         # Validate API endpoints
-        validated_endpoints = []
-        for step in result.step_results:
+        validated_endpoints = [
+            step["result"]["result"]["endpoint"]
+            for step in result.step_results
             if (
                 "validate" in step["step_name"]
                 and step["success"]
@@ -164,8 +165,8 @@ class TestCompleteUserJourneys:
                     and "result" in step["result"]
                     and "endpoint" in step["result"]["result"]
                 )
-            ):
-                validated_endpoints.append(step["result"]["result"]["endpoint"])
+            )
+        ]
 
         assert len(validated_endpoints) >= 3, "Not enough API endpoints validated"
 

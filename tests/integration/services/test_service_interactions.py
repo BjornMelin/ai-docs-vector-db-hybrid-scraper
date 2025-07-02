@@ -20,6 +20,7 @@ from src.config import Config
 from src.services.functional.circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerConfig,
+    CircuitBreakerError,
     create_circuit_breaker,
 )
 
@@ -816,7 +817,6 @@ class TestCircuitBreakerCoordination:
                 await embedding_circuit.call(embedding_operation)
 
         # Now embedding circuit should be open
-        from src.services.functional.circuit_breaker import CircuitBreakerError
 
         try:
             await embedding_circuit.call(embedding_operation)

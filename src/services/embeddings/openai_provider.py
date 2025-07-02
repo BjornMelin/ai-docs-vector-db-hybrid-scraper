@@ -99,7 +99,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         # Initialize metrics if available
         try:
             self.metrics_registry = get_metrics_registry()
-        except (AttributeError, ImportError, OSError) as e:
+        except (AttributeError, ImportError, OSError):
             logger.warning(
                 "Metrics registry not available - embedding monitoring disabled"
             )
@@ -212,8 +212,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                     f"({len(batch)} texts)"
                 )
 
-            return embeddings
-
         except Exception as e:
             logger.exception("Failed to generate embeddings for %d texts", len(texts))
 
@@ -235,6 +233,9 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 raise EmbeddingServiceError(msg) from e
             msg = f"Failed to generate embeddings: {e}"
             raise EmbeddingServiceError(msg) from e
+
+        else:
+            return embeddings
 
     async def _generate_embeddings_with_rate_limit(self, params: dict[str, Any]) -> Any:
         """Generate embeddings with rate limiting.
@@ -346,11 +347,12 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             logger.info(
                 f"Created batch job {batch_response.id} for {len(texts)} texts"
             )  # TODO: Convert f-string to logging format
-            return batch_response.id
 
         except Exception as e:
             msg = f"Failed to create batch job: {e}"
             raise EmbeddingServiceError(msg) from e
+        else:
+            return batch_response.id
         finally:
             # Clean up temp file
             if "temp_file" in locals() and temp_file and Path(temp_file).exists():

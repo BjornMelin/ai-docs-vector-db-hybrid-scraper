@@ -117,8 +117,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Cost analysis completed: ${current_costs['total_cost']:.2f} current, ${potential_savings['total_savings']:.2f} potential savings"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform intelligent cost analysis")
             if ctx:
@@ -129,6 +127,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 "analysis_scope": analysis_scope,
                 "time_period": time_period,
             }
+        else:
+            return final_results
 
     @mcp.tool()
     async def autonomous_budget_optimization(
@@ -216,8 +216,6 @@ def register_tools(mcp, client_manager: ClientManager):
                 await ctx.info(
                     f"Budget optimization completed: {optimization_plan['estimated_savings']:.1f}% potential savings"
                 )
-
-            return final_results
 
         except Exception as e:
             logger.exception("Failed to perform autonomous budget optimization")
@@ -319,8 +317,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Predictive modeling completed: {base_predictions['total_predicted_cost']:.2f} predicted cost"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to generate predictive cost models")
             if ctx:
@@ -330,6 +326,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 "error": str(e),
                 "prediction_horizon": prediction_horizon,
             }
+        else:
+            return final_results
 
     @mcp.tool()
     async def get_cost_estimation_capabilities() -> dict[str, Any]:

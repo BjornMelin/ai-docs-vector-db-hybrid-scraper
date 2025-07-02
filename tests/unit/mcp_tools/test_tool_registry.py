@@ -18,6 +18,11 @@ from src.mcp_tools import tools
 from src.mcp_tools.tool_registry import register_all_tools
 
 
+if TYPE_CHECKING:
+    from fastmcp import FastMCP
+    from src.infrastructure.client_manager import ClientManager
+
+
 class TestRegisterAllTools:
     """Test the register_all_tools function behavior."""
 
@@ -409,9 +414,6 @@ class TestToolRegistryIntegration:
         # This test verifies the function can be called with properly typed arguments
 
         if TYPE_CHECKING:
-            from fastmcp import FastMCP
-            from src.infrastructure.client_manager import ClientManager
-
             # This should not raise type errors
             async def type_check():
                 mcp: FastMCP = MagicMock()

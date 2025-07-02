@@ -16,18 +16,14 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import numpy as np
 
 from src.config import Config, create_enterprise_config
 
 
-if TYPE_CHECKING:
-    from src.config import Config as EnterpriseConfigType
-
-
-# Type alias for clarity  
+# Type alias for clarity
 EnterpriseConfig = Config
 
 
@@ -538,7 +534,7 @@ class AlertManager:
                     alert.resolve()
                     self._record_alert_event(alert, "resolved", latest_value)
 
-            except Exception as e:
+            except Exception:
                 logger.exception("Error checking alert %s", alert.name)
 
         return triggered_alerts
@@ -591,7 +587,7 @@ class AlertManager:
         for handler in self.notification_handlers:
             try:
                 handler(alert)
-            except Exception as e:
+            except Exception:
                 logger.exception("Error in alert notification handler")
 
 
@@ -645,7 +641,7 @@ class EnterpriseObservabilityPlatform:
             self.is_initialized = True
             logger.info("Enterprise observability platform started successfully")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize observability platform")
             raise
 
@@ -721,16 +717,15 @@ class EnterpriseObservabilityPlatform:
         """Finish a span."""
         self.distributed_tracer.finish_span(span, status)
 
-        if status == TraceStatus.SUCCESS:
+        if status == TraceStatus.SUCCESS and span.duration_ms:
             # Record performance metrics
-            if span.duration_ms:
-                self.record_metric(
-                    "span.duration",
-                    span.duration_ms,
-                    MetricType.TIMER,
-                    {"operation": span.operation_name},
-                    span.service_name,
-                )
+            self.record_metric(
+                "span.duration",
+                span.duration_ms,
+                MetricType.TIMER,
+                {"operation": span.operation_name},
+                span.service_name,
+            )
 
         # Check if trace is complete
         trace = self.distributed_tracer.get_trace(span.trace_id)
@@ -828,7 +823,7 @@ class EnterpriseObservabilityPlatform:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception:
                 logger.exception("Error in cleanup loop")
 
     async def _monitoring_loop(self) -> None:
@@ -848,7 +843,7 @@ class EnterpriseObservabilityPlatform:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception:
                 logger.exception("Error in monitoring loop")
 
     async def _update_anomaly_baselines(self) -> None:
@@ -864,7 +859,7 @@ class EnterpriseObservabilityPlatform:
                 if len(values) >= 10:  # Need minimum samples
                     self.anomaly_detector.update_baseline(metadata["name"], values)
 
-            except Exception as e:
+            except Exception:
                 logger.exception("Error updating baseline for %s", metric_key)
 
     def _handle_alert_notification(self, alert: Alert) -> None:

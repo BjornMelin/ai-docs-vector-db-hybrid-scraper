@@ -87,7 +87,9 @@ class QueryOrchestrator(BaseAgent):
         fallback_reason = getattr(self, "_fallback_reason", None)
 
         if not PYDANTIC_AI_AVAILABLE or self.agent is None:
-            logger.warning(f"QueryOrchestrator using fallback mode (reason: {fallback_reason or "pydantic_ai_unavailable"})")
+            logger.warning(
+                f"QueryOrchestrator using fallback mode (reason: {fallback_reason or 'pydantic_ai_unavailable'})"
+            )
             return
 
         @self.agent.tool
@@ -230,18 +232,16 @@ class QueryOrchestrator(BaseAgent):
 
             # Get search service from client manager
             try:
-                search_orchestrator = (
-                    await ctx.deps.client_manager.get_search_orchestrator()
-                )
+                # search_orchestrator = await ctx.deps.client_manager.get_search_orchestrator()
 
                 # Execute coordinated search
-                search_request = {
-                    "query": query,
-                    "collection_name": collection,
-                    "enable_federation": len(stages) > 1,
-                    "enable_clustering": True,
-                    "mode": "enhanced",
-                }
+                # search_request = {
+                #     "query": query,
+                #     "collection_name": collection,
+                #     "enable_federation": len(stages) > 1,
+                #     "enable_clustering": True,
+                #     "mode": "enhanced",
+                # }
 
                 # This would use the existing SearchOrchestrator
                 # For now, return a structured response

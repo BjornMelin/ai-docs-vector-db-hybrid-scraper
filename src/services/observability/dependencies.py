@@ -4,7 +4,6 @@ Provides dependency injection functions that integrate OpenTelemetry
 observability with the existing function-based service architecture.
 """
 
-import asyncio
 import logging
 from functools import lru_cache
 from typing import Annotated
@@ -56,7 +55,7 @@ def get_observability_service() -> dict[str, any]:
             "enabled": is_observability_enabled(),
         }
 
-    except (AttributeError, ImportError, RuntimeError, ValueError) as e:
+    except (AttributeError, ImportError, RuntimeError, ValueError):
         logger.warning("Failed to initialize observability service")
         return {
             "config": ObservabilityConfig(),
@@ -157,7 +156,7 @@ async def record_ai_operation_metrics(
             **kwargs,
         )
 
-    except (OSError, PermissionError, asyncio.TimeoutError) as e:
+    except (TimeoutError, OSError, PermissionError):
         logger.debug("Failed to record AI operation metrics")
 
 
@@ -186,7 +185,7 @@ async def track_ai_cost_metrics(
             **kwargs,
         )
 
-    except asyncio.TimeoutError as e:
+    except TimeoutError:
         logger.debug("Failed to track AI cost metrics")
 
 
@@ -207,6 +206,14 @@ async def get_observability_health(
         config = observability_service["config"]
         enabled = observability_service["enabled"]
 
+    except Exception as e:
+        logger.exception("Failed to get observability health")
+        return {
+            "enabled": False,
+            "status": "error",
+            "error": str(e),
+        }
+    else:
         return {
             "enabled": enabled,
             "service_name": config.service_name,
@@ -222,12 +229,4 @@ async def get_observability_health(
                 "costs": config.track_costs if enabled else False,
             },
             "status": "healthy" if enabled else "disabled",
-        }
-
-    except Exception as e:
-        logger.exception("Failed to get observability health")
-        return {
-            "enabled": False,
-            "status": "error",
-            "error": str(e),
         }

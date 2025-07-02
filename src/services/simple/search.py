@@ -10,6 +10,8 @@ from typing import Any
 from src.architecture.features import conditional_feature
 from src.architecture.service_factory import BaseService
 from src.models.vector_search import SearchRequest, SearchResponse
+from src.services.embeddings.manager import EmbeddingManager
+from src.services.vector_db.service import VectorDBService
 
 
 logger = logging.getLogger(__name__)
@@ -41,15 +43,13 @@ class SimpleSearchService(BaseService):
 
         # Initialize basic vector search only
         try:
-            from src.services.vector_db.service import VectorDBService
-
             self.vector_db = VectorDBService()
             await self.vector_db.initialize()
 
             self._mark_initialized()
             logger.info("Simple search service initialized successfully")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize simple search service")
             raise
 
@@ -100,8 +100,6 @@ class SimpleSearchService(BaseService):
             # Cache result (with size limit)
             self._cache_result(cache_key, response)
 
-            return response
-
         except Exception as e:
             logger.exception("Search failed")
             return SearchResponse(
@@ -113,12 +111,14 @@ class SimpleSearchService(BaseService):
                 error=str(e),
             )
 
+        else:
+            return response
+
     async def _perform_vector_search(
         self, request: SearchRequest
     ) -> list[dict[str, Any]]:
         """Perform basic vector search without advanced features."""
         # Generate embedding for query
-        from src.services.embeddings.manager import EmbeddingManager
 
         embedding_manager = EmbeddingManager()
         query_embedding = await embedding_manager.generate_embedding(request.query)

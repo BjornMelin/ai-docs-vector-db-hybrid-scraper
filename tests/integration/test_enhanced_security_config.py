@@ -34,7 +34,7 @@ except ImportError:
         PUBLIC = "public"
         INTERNAL = "internal"
         CONFIDENTIAL = "confidential"
-        SECRET = "secret"  # nosec
+        SECRET = "secret"  # noqa: S105
 
     class ConfigOperationType:
         ENCRYPT = "encrypt"
@@ -494,7 +494,7 @@ class TestEnhancedSecurityConfigIntegration:
         assert ConfigDataClassification.PUBLIC == "public"
         assert ConfigDataClassification.INTERNAL == "internal"
         assert ConfigDataClassification.CONFIDENTIAL == "confidential"
-        assert ConfigDataClassification.SECRET == "secret"  # nosec
+        assert ConfigDataClassification.SECRET == "secret"  # noqa: S105
 
         # Test enum ordering (more sensitive = higher value)
         classifications = list(ConfigDataClassification)

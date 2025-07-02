@@ -12,6 +12,7 @@ import subprocess
 import time
 from typing import Any
 
+
 try:
     import redis
 except ImportError:
@@ -141,7 +142,7 @@ class ContentIntelligenceService(BaseService):
             self._initialized = False
             logger.info("ContentIntelligenceService cleaned up successfully")
 
-        except (OSError, AttributeError, ConnectionError, ImportError) as e:
+        except (OSError, AttributeError, ConnectionError, ImportError):
             logger.exception("Error during ContentIntelligenceService cleanup")
 
     async def analyze_content(
@@ -312,7 +313,7 @@ class ContentIntelligenceService(BaseService):
                 extraction_metadata=extraction_metadata,
             )
 
-        except (OSError, PermissionError) as e:
+        except (OSError, PermissionError):
             logger.exception("Metadata extraction failed")
             # Return minimal metadata on failure
             return ContentMetadata(
@@ -373,7 +374,7 @@ class ContentIntelligenceService(BaseService):
 
             return recommendations[:5]  # Return top 5 recommendations
 
-        except (OSError, PermissionError, asyncio.TimeoutError) as e:
+        except (TimeoutError, OSError, PermissionError):
             logger.exception("Adaptation recommendation failed")
             return []
 
@@ -643,7 +644,12 @@ class ContentIntelligenceService(BaseService):
             cached_data = await self.cache_manager.get(cache_key)
             if cached_data:
                 return EnrichedContent.model_validate(cached_data)
-        except (getattr(redis, 'RedisError', Exception), ConnectionError, TimeoutError, ValueError) as e:
+        except (
+            getattr(redis, "RedisError", Exception),
+            ConnectionError,
+            TimeoutError,
+            ValueError,
+        ) as e:
             logger.warning(
                 f"Cache retrieval failed: {e}"
             )  # TODO: Convert f-string to logging format
@@ -668,7 +674,12 @@ class ContentIntelligenceService(BaseService):
                 result.model_dump(),
                 ttl=3600,
             )
-        except (getattr(redis, 'RedisError', Exception), ConnectionError, TimeoutError, ValueError) as e:
+        except (
+            getattr(redis, "RedisError", Exception),
+            ConnectionError,
+            TimeoutError,
+            ValueError,
+        ) as e:
             logger.warning(
                 f"Cache storage failed: {e}"
             )  # TODO: Convert f-string to logging format

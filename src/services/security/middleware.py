@@ -195,10 +195,10 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                     raise HTTPException(
                         status_code=413, detail="Request payload too large"
                     )
-            except ValueError:
+            except ValueError as e:
                 raise HTTPException(
                     status_code=400, detail="Invalid content-length header"
-                )
+                ) from e
 
         # Validate HTTP method
         allowed_methods = {"GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"}
@@ -402,8 +402,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         if not host or len(host) > 253:
             return False
 
-        # Check for suspicious patterns
-        suspicious_hosts = ["localhost", "127.0.0.1", "0.0.0.0"]
+        # Check for suspicious patterns - 0.0.0.0 intentionally flagged for security
+        suspicious_hosts = ["localhost", "127.0.0.1", "0.0.0.0"]  # noqa: S104
         return host.lower() not in suspicious_hosts
 
     async def _validate_request_body(self, request: Request) -> None:
@@ -427,16 +427,20 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                         # Parse and validate JSON
                         data = json.loads(body.decode("utf-8"))
                         self._validate_json_data(data)
-                except json.JSONDecodeError:
-                    raise HTTPException(status_code=400, detail="Invalid JSON format")
+                except json.JSONDecodeError as e:
+                    raise HTTPException(
+                        status_code=400, detail="Invalid JSON format"
+                    ) from e
 
             # Handle form data
             elif "application/x-www-form-urlencoded" in content_type:
                 # Basic validation for form data
                 pass  # FastAPI handles this automatically
 
-        except UnicodeDecodeError:
-            raise HTTPException(status_code=400, detail="Invalid request encoding")
+        except UnicodeDecodeError as e:
+            raise HTTPException(
+                status_code=400, detail="Invalid request encoding"
+            ) from e
 
     def _validate_json_data(self, data: Any, depth: int = 0) -> None:
         """Recursively validate JSON data for security threats.
@@ -485,11 +489,11 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             ):
                 try:
                     self.ai_validator.validate_search_query(data)
-                except HTTPException:
+                except HTTPException as e:
                     # Re-raise with more context
                     raise HTTPException(
                         status_code=400, detail="Request contains prohibited content"
-                    )
+                    ) from e
 
     def _get_client_identifier(self, request: Request) -> str:
         """Get unique client identifier for rate limiting.

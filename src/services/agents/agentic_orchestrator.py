@@ -110,7 +110,9 @@ maintaining high performance and reliability. Always explain your reasoning."""
         fallback_reason = getattr(self, "_fallback_reason", None)
 
         if not PYDANTIC_AI_AVAILABLE or self.agent is None:
-            logger.warning(f"AgenticOrchestrator using fallback mode (reason: {fallback_reason or 'pydantic_ai_unavailable'})")
+            logger.warning(
+                f"AgenticOrchestrator using fallback mode (reason: {fallback_reason or 'pydantic_ai_unavailable'})"
+            )
             return
 
         # Set up native Pydantic-AI tool discovery and orchestration
@@ -469,15 +471,22 @@ maintaining high performance and reliability. Always explain your reasoning."""
 
 
 # Global orchestrator instance for singleton pattern
-_orchestrator_instance: AgenticOrchestrator | None = None
+class _OrchestratorSingleton:
+    """Singleton holder for orchestrator instance."""
+
+    _instance: AgenticOrchestrator | None = None
+
+    @classmethod
+    def get_instance(cls) -> AgenticOrchestrator:
+        """Get the singleton orchestrator instance."""
+        if cls._instance is None:
+            cls._instance = AgenticOrchestrator()
+        return cls._instance
 
 
 def get_orchestrator() -> AgenticOrchestrator:
     """Get singleton orchestrator instance."""
-    global _orchestrator_instance
-    if _orchestrator_instance is None:
-        _orchestrator_instance = AgenticOrchestrator()
-    return _orchestrator_instance
+    return _OrchestratorSingleton.get_instance()
 
 
 async def orchestrate_tools(

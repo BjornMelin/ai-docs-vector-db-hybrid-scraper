@@ -270,7 +270,7 @@ class ModeAwareServiceFactory:
             try:
                 await service.cleanup()
                 logger.debug("Cleaned up service '%s'", name)
-            except (OSError, AttributeError, ConnectionError, ImportError) as e:
+            except (OSError, AttributeError, ConnectionError, ImportError):
                 logger.exception("Error cleaning up service '%s'", name)
 
         self._service_instances.clear()
@@ -327,21 +327,32 @@ class BaseService(ABC):
 
 
 # Global service factory instance
-_service_factory: ModeAwareServiceFactory | None = None
+class _ServiceFactorySingleton:
+    """Singleton holder for service factory instance."""
+
+    _instance: ModeAwareServiceFactory | None = None
+
+    @classmethod
+    def get_instance(cls) -> ModeAwareServiceFactory:
+        """Get the singleton service factory instance."""
+        if cls._instance is None:
+            cls._instance = ModeAwareServiceFactory()
+        return cls._instance
+
+    @classmethod
+    def reset_instance(cls) -> None:
+        """Reset the singleton service factory instance."""
+        cls._instance = None
 
 
 def get_service_factory() -> ModeAwareServiceFactory:
     """Get the global service factory instance."""
-    global _service_factory
-    if _service_factory is None:
-        _service_factory = ModeAwareServiceFactory()
-    return _service_factory
+    return _ServiceFactorySingleton.get_instance()
 
 
 def reset_service_factory() -> None:
     """Reset the global service factory instance."""
-    global _service_factory
-    _service_factory = None
+    _ServiceFactorySingleton.reset_instance()
 
 
 async def get_service(name: str) -> ServiceProtocol:

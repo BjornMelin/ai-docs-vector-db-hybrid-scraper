@@ -10,6 +10,8 @@ from dependency_injector.wiring import Provide, inject
 
 from src.infrastructure.container import ApplicationContainer
 from src.infrastructure.shared import ClientHealth, ClientState
+from src.services.monitoring.metrics import get_metrics_registry
+from src.services.monitoring.performance_monitor import PerformanceMonitor
 
 
 if TYPE_CHECKING:
@@ -51,8 +53,6 @@ class MonitoringManager:
 
         # Initialize metrics registry
         try:
-            from src.services.monitoring.metrics import get_metrics_registry
-
             self._metrics_registry = get_metrics_registry()
             logger.info("Monitoring metrics registry initialized")
         except ImportError:
@@ -60,8 +60,6 @@ class MonitoringManager:
 
         # Initialize performance monitor
         try:
-            from src.services.monitoring.performance_monitor import PerformanceMonitor
-
             self._performance_monitor = PerformanceMonitor()
             logger.info("Performance monitor initialized")
         except ImportError:
@@ -309,9 +307,7 @@ class MonitoringManager:
             self.record_histogram(f"{operation_name}_duration_ms", duration_ms)
             self.increment_counter(f"{operation_name}_total", {"status": "success"})
 
-            return result
-
-        except Exception as e:
+        except Exception:
             # Record failure metrics
             duration_ms = (time.time() - start_time) * 1000
             self.record_histogram(f"{operation_name}_duration_ms", duration_ms)
@@ -322,6 +318,9 @@ class MonitoringManager:
                 "Operation  failed: {e}"
             )  # TODO: Convert f-string to logging format
             raise
+
+        else:
+            return result
 
     def get_performance_metrics(self) -> dict[str, Any]:
         """Get performance metrics summary.
@@ -482,6 +481,6 @@ class MonitoringManager:
             except asyncio.CancelledError:
                 logger.info("Health check loop cancelled")
                 break
-            except Exception as e:
+            except Exception:
                 logger.exception("Error in health check loop")
                 await asyncio.sleep(10)  # Brief pause before retry

@@ -624,7 +624,7 @@ class AutonomousHealthMonitor:
 
         try:
             await self.continuous_monitoring_loop()
-        except (TimeoutError, OSError, PermissionError) as e:
+        except (TimeoutError, OSError, PermissionError):
             logger.exception("Health monitoring loop failed")
             self.monitoring_active = False
             raise
@@ -668,7 +668,7 @@ class AutonomousHealthMonitor:
                     health_metrics, predictions, insights
                 )
 
-            except Exception as e:
+            except Exception:
                 logger.exception("Error in monitoring loop")
 
             # Wait for next monitoring cycle
@@ -704,7 +704,7 @@ class AutonomousHealthMonitor:
             system_performance = performance_monitor.get_system_performance_summary()
 
             return SystemMetrics(
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(tz=datetime.UTC),
                 cpu_percent=cpu_percent,
                 memory_percent=memory.percent,
                 disk_percent=(disk.used / disk.total) * 100,
@@ -723,11 +723,11 @@ class AutonomousHealthMonitor:
                 service_health_scores=service_health_scores,
             )
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to collect health metrics")
             # Return minimal metrics on failure
             return SystemMetrics(
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(tz=datetime.UTC),
                 cpu_percent=0.0,
                 memory_percent=0.0,
                 disk_percent=0.0,
@@ -779,7 +779,7 @@ class AutonomousHealthMonitor:
             # Record in remediation history
             self.remediation_history.append(
                 {
-                    "timestamp": datetime.utcnow(),
+                    "timestamp": datetime.now(tz=datetime.UTC),
                     "type": "current_issues",
                     "issues": issues_detected,
                     "metrics_snapshot": metrics,
@@ -827,7 +827,7 @@ class AutonomousHealthMonitor:
 
         self.remediation_history.append(
             {
-                "timestamp": datetime.utcnow(),
+                "timestamp": datetime.now(tz=datetime.UTC),
                 "type": "prediction",
                 "prediction": prediction,
                 "action_taken": "logged_recommendations",
@@ -1091,7 +1091,10 @@ class AutonomousHealthMonitor:
                 [
                     p
                     for p in self.prediction_history
-                    if (datetime.utcnow() - datetime.utcnow()).total_seconds() < 3600
+                    if (
+                        datetime.now(tz=datetime.UTC) - datetime.now(tz=datetime.UTC)
+                    ).total_seconds()
+                    < 3600
                 ]
             ),
             "high_risk_predictions_last_hour": len(
@@ -1100,7 +1103,10 @@ class AutonomousHealthMonitor:
                     for p in self.prediction_history
                     if p.risk_level
                     in [FailureRiskLevel.HIGH, FailureRiskLevel.CRITICAL]
-                    and (datetime.utcnow() - datetime.utcnow()).total_seconds() < 3600
+                    and (
+                        datetime.now(tz=datetime.UTC) - datetime.now(tz=datetime.UTC)
+                    ).total_seconds()
+                    < 3600
                 ]
             ),
         }

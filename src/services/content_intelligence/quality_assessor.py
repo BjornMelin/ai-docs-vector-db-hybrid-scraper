@@ -297,13 +297,14 @@ class QualityAssessor:
             if query_lower in content_lower:
                 relevance_score = min(relevance_score + 0.3, 1.0)
 
-            return relevance_score
-
         except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Relevance assessment failed: {e}"
             )  # TODO: Convert f-string to logging format
             return 0.5
+
+        else:
+            return relevance_score
 
     def _assess_confidence(
         self, content: str, extraction_metadata: dict[str, Any] | None
@@ -690,13 +691,14 @@ class QualityAssessor:
                     jaccard_similarity = len(intersection) / len(union)
                     max_similarity = max(max_similarity, jaccard_similarity)
 
-            return max_similarity
-
         except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Duplicate similarity assessment failed: {e}"
             )  # TODO: Convert f-string to logging format
             return 0.0
+
+        else:
+            return max_similarity
 
     def _cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:
         """Calculate cosine similarity between two vectors.
@@ -718,7 +720,7 @@ class QualityAssessor:
                 return 0.0
 
             return dot_product / (magnitude1 * magnitude2)
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError):
             return 0.0
 
     def _identify_quality_issues(

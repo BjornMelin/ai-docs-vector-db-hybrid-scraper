@@ -20,7 +20,6 @@ from src.models.vector_search import (
     RetrievalMetrics,
     SearchResult,
 )
-from src.services.errors import QdrantServiceError
 from src.services.query_processing import (
     AdvancedSearchOrchestrator,
     AdvancedSearchRequest,
@@ -87,7 +86,7 @@ class HybridSearchService:
         try:
             await self.splade_provider.initialize()
             logger.info("Advanced hybrid search service initialized successfully")
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize advanced search service: %s")
             if not self.enable_fallback:
                 raise
@@ -214,16 +213,17 @@ class HybridSearchService:
             # Store for learning
             await self._store_search_for_learning(query_id, request, response)
 
-            return response
-
         except Exception as e:
             logger.exception("Advanced hybrid search failed: %s")
 
             # Fallback to basic search
             if self.enable_fallback:
                 return await self._perform_fallback_search(request, start_time, str(e))
-            msg = f"Advanced hybrid search failed: {e}"
-            raise QdrantServiceError(msg) from e
+            # Re-raise if no fallback
+            msg = f"Hybrid search failed: {e}"
+            raise HybridSearchError(msg) from e
+        else:
+            return response
 
     def _determine_search_mode(self, request: HybridSearchRequest) -> SearchMode:
         """Determine the appropriate search mode based on request features."""
@@ -259,7 +259,7 @@ class HybridSearchService:
                 "Query classification timed out, using default classification"
             )
             return None
-        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
+        except (asyncio.CancelledError, RuntimeError) as e:
             logger.warning("Query classification failed: %s", e)
             return None
 
@@ -277,7 +277,7 @@ class HybridSearchService:
         except TimeoutError:
             logger.warning("Model selection timed out, using default model")
             return None
-        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
+        except (ValueError, ConnectionError, RuntimeError) as e:
             logger.warning("Model selection failed: %s", e)
             return None
 
@@ -293,7 +293,7 @@ class HybridSearchService:
         except TimeoutError:
             logger.warning("SPLADE generation timed out, skipping sparse vector")
             return None
-        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
+        except (ValueError, ConnectionError, RuntimeError) as e:
             logger.warning("SPLADE generation failed: %s", e)
             return None
 
@@ -348,7 +348,7 @@ class HybridSearchService:
                 fallback_reason=f"Advanced search failed: {error_msg}",
             )
 
-        except Exception as e:
+        except Exception:
             logger.exception("Fallback search also failed: %s")
             return HybridSearchResponse(
                 results=[],
@@ -399,7 +399,7 @@ class HybridSearchService:
 
             logger.debug("Stored search data for learning: %s", query_id)
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to store search for learning: %s")
 
     async def update_with_user_feedback(
@@ -411,7 +411,7 @@ class HybridSearchService:
             # with user feedback for continuous improvement
             logger.debug("Processing user feedback for query %s", query_id)
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to process user feedback: %s")
 
     def get_performance_statistics(self) -> dict[str, Any]:

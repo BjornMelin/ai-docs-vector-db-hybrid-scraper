@@ -24,6 +24,7 @@ from src.services.agents.dynamic_tool_discovery import (
     ToolCapability,
     ToolCapabilityType,
     ToolMetrics,
+    _discovery_engine,
     discover_tools_for_task,
     get_discovery_engine,
 )
@@ -1285,7 +1286,6 @@ class TestSpecificUncoveredFunctionality:
     async def test_get_discovery_engine_reset_functionality(self):
         """Test discovery engine global state management."""
         # Access global variable to test singleton behavior
-        from src.services.agents.dynamic_tool_discovery import _discovery_engine
 
         # Get engine instances
         engine1 = get_discovery_engine()

@@ -386,9 +386,10 @@ class QdrantDocuments:
             )
 
             logger.info("Cleared all points from collection: %s", collection_name)
-            return True
 
         except Exception as e:
             logger.exception("Operation failed")
             msg = f"Failed to clear collection: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return True

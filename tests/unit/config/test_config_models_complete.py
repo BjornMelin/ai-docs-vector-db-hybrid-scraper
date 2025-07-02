@@ -26,7 +26,7 @@ from src.config import (
 
 
 # Test constants to avoid hardcoded sensitive values
-TEST_REDIS_PASSWORD = "test_redis_secret"
+TEST_REDIS_PASSWORD = "test_redis_secret"  # noqa: S105
 
 
 # Hypothesis strategies

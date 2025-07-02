@@ -183,7 +183,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
 
             # Initialize query orchestrator
             orchestrator = QueryOrchestrator()
-            if not orchestrator._initialized:
+            if not orchestrator.is_initialized:
                 await orchestrator.initialize(deps)
 
             # Execute agentic orchestration
@@ -238,8 +238,6 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
                     },
                 )
 
-            return response
-
         except Exception as e:
             logger.exception("Agentic search failed: ")
 
@@ -252,6 +250,8 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
                 orchestration_plan={"error": str(e)},
                 agent_reasoning=f"Search failed due to: {e!s}",
             )
+        else:
+            return response
 
     @mcp.tool()
     async def agentic_analysis(

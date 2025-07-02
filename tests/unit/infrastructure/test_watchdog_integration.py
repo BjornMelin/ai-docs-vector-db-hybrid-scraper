@@ -160,8 +160,7 @@ class TestWatchdogIntegration:
             nonlocal error_count
             try:
                 # Simulate config reload that fails
-                msg = "Invalid configuration format"
-                raise ValueError(msg)
+                self._raise_config_error()
             except (TimeoutError, ConnectionError, RuntimeError, ValueError):
                 error_count += 1
                 # In real implementation, this would be logged
@@ -236,9 +235,11 @@ class TestWatchdogIntegration:
                     shutdown_event.set()
 
             # Simulate the observer stopping after a short time
-            _task = asyncio.create_task(
+            simulation_task = asyncio.create_task(
                 _simulate_observer_stop(observer, shutdown_event)
             )
+            # Store reference to prevent task garbage collection
+            simulation_task.add_done_callback(lambda _: None)
             await shutdown_event.wait()
 
         async def _simulate_observer_stop(observer, event):
@@ -266,7 +267,7 @@ class TestWatchdogIntegration:
 
             if not isinstance(config_data, dict):
                 msg = "Config must be a dictionary"
-                raise ValueError(msg)
+                raise TypeError(msg)
 
             for key in required_keys:
                 if key not in config_data:
@@ -307,6 +308,11 @@ class TestWatchdogIntegration:
             with pytest.raises(ValueError, match=r".*"):
                 validate_config(invalid_config)
 
+    def _raise_config_error(self) -> None:
+        """Raise a configuration error."""
+        msg = "Invalid configuration format"
+        raise ValueError(msg)
+
 
 class TestConfigurationReloadPatterns:
     """Test modern configuration reload patterns."""
@@ -329,7 +335,7 @@ class TestConfigurationReloadPatterns:
                     # Validate before applying
                     if not isinstance(new_config, dict):
                         msg = "Invalid config format"
-                        raise ValueError(msg)
+                        raise TypeError(msg)
 
                     # Apply atomically
                     old_config = self._config.copy()

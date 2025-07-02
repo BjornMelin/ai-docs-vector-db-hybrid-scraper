@@ -84,9 +84,9 @@ class TestErrorContext:
 
     def test_error_context_with_exception(self, _caplog):
         """Test ErrorContext when exception occurs."""
+        test_error_msg = "test error"
         with pytest.raises(ValueError), ErrorContext("failing_operation", test_id=123):
-            msg = "test error"
-            raise ValueError(msg)
+            raise ValueError(test_error_msg)
 
         # Check that error was logged with context
         assert "Error in failing_operation" in _caplog.text
@@ -95,10 +95,10 @@ class TestErrorContext:
     @pytest.mark.asyncio
     async def test_async_error_context(self, _caplog):
         """Test async error context manager."""
+        async_error_msg = "async error"
         with pytest.raises(RuntimeError):
             async with async_error_context("async_operation", async_id=456):
-                msg = "async error"
-                raise RuntimeError(msg)
+                raise RuntimeError(async_error_msg)
 
         assert "Error in async_operation" in _caplog.text
         assert "async_id" in _caplog.text

@@ -5,6 +5,7 @@ and modern pytest patterns following 2025 standards.
 """
 
 import asyncio
+import contextlib
 import copy
 import logging
 from unittest.mock import AsyncMock, MagicMock
@@ -190,14 +191,11 @@ class TestPropertyBasedPatterns:
             error_message = str(e)
 
         # Check validation errors if they occurred
-        try:
+        with contextlib.suppress(NameError):
             assert (
                 "chunk_overlap must be less than chunk_size" in error_message
                 or "max_chunk_size must be >= chunk_size" in error_message
             )
-        except NameError:
-            # No error occurred, which is fine
-            pass
 
 
 class TestModernFixturePatterns:
@@ -268,9 +266,7 @@ class TestAsyncGenerators:
     @pytest.mark.asyncio
     async def test_async_generator_consumption(self):
         """Test consuming async generators."""
-        results = []
-        async for value in self.async_range(5):
-            results.append(value)
+        results = [value async for value in self.async_range(5)]
 
         assert results == [0, 1, 2, 3, 4]
 

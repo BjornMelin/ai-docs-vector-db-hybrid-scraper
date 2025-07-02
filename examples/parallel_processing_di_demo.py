@@ -13,6 +13,7 @@ Portfolio Achievement: Full ML optimization pipeline with 3-5x performance impro
 
 import asyncio
 import logging
+import subprocess
 import sys
 import time
 import traceback

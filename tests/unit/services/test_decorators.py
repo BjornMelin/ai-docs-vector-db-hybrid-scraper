@@ -345,7 +345,7 @@ class TestValidateInput:
         def validate_number(value):
             if not isinstance(value, int | float):
                 msg = "Must be a number"
-                raise ValueError(msg)
+                raise TypeError(msg)
             return float(value)
 
         @validate_input(num=validate_number)
@@ -379,7 +379,7 @@ class TestValidateInput:
         def validate_string(value):
             if not isinstance(value, str):
                 msg = "Must be string"
-                raise ValueError(msg)
+                raise TypeError(msg)
             return value.strip()
 
         def validate_number(value):

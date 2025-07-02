@@ -158,12 +158,13 @@ class QdrantIndexing:
             logger.info(
                 "Found %d indexed fields in %s", len(indexed_fields), collection_name
             )
-            return indexed_fields
 
         except Exception as e:
             logger.exception("Operation failed")
             msg = f"Failed to list payload indexes: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return indexed_fields
 
     async def drop_payload_index(self, collection_name: str, field_name: str) -> None:
         """Drop a specific payload index.
@@ -258,12 +259,12 @@ class QdrantIndexing:
                         "type": str(getattr(field_info, "data_type", "unknown")),
                     }
 
-            return stats
-
         except Exception as e:
             logger.exception("Operation failed")
             msg = f"Failed to get payload index stats: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return stats
 
     async def validate_index_health(self, collection_name: str) -> dict[str, Any]:
         """Validate the health and status of payload indexes for a collection.
@@ -362,12 +363,12 @@ class QdrantIndexing:
                 health_score,
             )
 
-            return health_report
-
         except Exception as e:
             logger.exception("Operation failed")
             msg = f"Failed to validate index health: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return health_report
 
     async def get_index_usage_stats(self, collection_name: str) -> dict[str, Any]:
         """Get detailed usage statistics for payload indexes.
@@ -489,12 +490,12 @@ class QdrantIndexing:
 
             usage_stats["generated_at"] = int(time.time())
 
-            return usage_stats
-
         except Exception as e:
             logger.exception("Operation failed")
             msg = f"Failed to get index usage stats: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return usage_stats
 
     def _generate_index_recommendations(
         self, missing_indexes: list[str], extra_indexes: list[str], status: str

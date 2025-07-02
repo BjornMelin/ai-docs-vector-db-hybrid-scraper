@@ -184,12 +184,13 @@ class HypotheticalDocumentGenerator(BaseService):
                     f"in {generation_time:.2f}s, diversity={diversity_score:.2f}"
                 )
 
-            return result
-
         except Exception as e:
             logger.exception("Failed to generate hypothetical documents: ")
             msg = f"Document generation failed: {e}"
             raise EmbeddingServiceError(msg) from e
+
+        else:
+            return result
 
     def _build_diverse_prompts(
         self,

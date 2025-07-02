@@ -11,7 +11,7 @@ import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from src.services.errors import EmbeddingServiceError
 
@@ -50,7 +50,7 @@ class ProcessingMetrics:
     speedup_factor: float = 1.0
 
 
-class ParallelProcessor(Generic[T, R]):
+class ParallelProcessor:
     """High-performance parallel processor for ML operations."""
 
     def __init__(
@@ -183,20 +183,21 @@ class ParallelProcessor(Generic[T, R]):
                 logger.debug(
                     f"Processed batch {batch_idx} with {len(batch)} items"
                 )  # TODO: Convert f-string to logging format
-                return results
 
-            except TimeoutError:
+            except TimeoutError as e:
                 logger.exception(
                     "Batch  processing timeout"
                 )  # TODO: Convert f-string to logging format
                 msg = f"Batch {batch_idx} processing timeout"
-                raise EmbeddingServiceError(msg)
+                raise EmbeddingServiceError(msg) from e
             except Exception as e:
                 logger.exception(
                     "Batch  processing failed: {e}"
                 )  # TODO: Convert f-string to logging format
                 msg = f"Batch processing failed: {e}"
                 raise EmbeddingServiceError(msg) from e
+            else:
+                return results
 
     def _calculate_optimal_batching(self, total_items: int) -> dict[str, Any]:
         """Calculate optimal batch configuration based on system resources and history.

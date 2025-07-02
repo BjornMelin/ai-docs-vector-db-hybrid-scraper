@@ -88,6 +88,11 @@ class ClientManager:
             "http": http_provider,
         }
 
+    @property
+    def is_initialized(self) -> bool:
+        """Check if the client manager is initialized."""
+        return self._initialized
+
     async def initialize(self) -> None:
         """Initialize client manager with function-based dependencies."""
         if self._initialized:
@@ -117,7 +122,7 @@ class ClientManager:
                     "Cannot initialize parallel processing system: "
                     "container not available"
                 )
-        except (ImportError, AttributeError, RuntimeError) as e:
+        except (ImportError, AttributeError, RuntimeError):
             logger.exception("Failed to initialize parallel processing system")
             # Continue without parallel processing
             self._parallel_processing_system = None
@@ -266,7 +271,7 @@ class ClientManager:
             raise ValueError(msg)
         try:
             yield await getters[client_type]()
-        except (ConnectionError, TimeoutError, APIError, ValueError, RuntimeError) as e:
+        except (ConnectionError, TimeoutError, APIError, ValueError, RuntimeError):
             logger.exception("Error using {client_type} client")
             raise
 

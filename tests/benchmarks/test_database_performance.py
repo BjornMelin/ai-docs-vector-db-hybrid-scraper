@@ -11,19 +11,32 @@ Run with: pytest tests/benchmarks/ --benchmark-only
 
 import asyncio
 import logging
+import random
 import time
 from contextlib import asynccontextmanager
 from typing import Any
 
+import psutil
 import pytest
 from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import Distance, PointStruct, VectorParams
-from testcontainers.core.container import DockerContainer
-
-from src.config import Config
-
 
 # Mock classes for testing since modules don't exist
+from qdrant_client.models import (
+    Distance,
+    FieldCondition,
+    Filter,
+    PointStruct,
+    VectorParams,
+)
+from testcontainers.core.container import DockerContainer
+
+from src.config import Config, get_config
+from src.services.vector_db.collections import QdrantCollections
+from src.services.vector_db.documents import QdrantDocuments
+from src.services.vector_db.indexing import QdrantIndexing
+from src.services.vector_db.search import QdrantSearch
+
+
 class RealPerformanceMonitor:
     """Real performance monitoring for containerized tests."""
 
@@ -87,7 +100,6 @@ class ContainerizedQdrantFixture:
         self.client = AsyncQdrantClient(url=self.url)
 
         # Wait for Qdrant to be ready
-        import asyncio
 
         max_retries = 30
         for _ in range(max_retries):
@@ -117,7 +129,6 @@ class RealLoadMonitor:
 
     async def get_current_load(self):
         """Get real system load metrics."""
-        import psutil
 
         return psutil.cpu_percent(interval=0.1) / 100.0
 
@@ -309,16 +320,6 @@ class TestDatabasePerformance:
     @pytest.fixture
     async def real_qdrant_service(self):
         """Create real Qdrant service using containerized Qdrant instance."""
-        import asyncio
-
-        from qdrant_client import AsyncQdrantClient
-        from testcontainers.core.container import DockerContainer
-
-        from src.config import get_config
-        from src.services.vector_db.collections import QdrantCollections
-        from src.services.vector_db.documents import QdrantDocuments
-        from src.services.vector_db.indexing import QdrantIndexing
-        from src.services.vector_db.search import QdrantSearch
 
         # Get config
         config = get_config()
@@ -378,7 +379,6 @@ class TestDatabasePerformance:
     @pytest.fixture
     def sample_vectors(self):
         """Generate sample vectors for database operations."""
-        import random
 
         vectors = []
         for i in range(100):
@@ -718,7 +718,6 @@ class TestDatabasePerformance:
                 client = real_qdrant_service.client
 
                 # Create collection using direct client
-                from qdrant_client.models import FieldCondition, Filter
 
                 await client.create_collection(
                     collection_name=collection_name,

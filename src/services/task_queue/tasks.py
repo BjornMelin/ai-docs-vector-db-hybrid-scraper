@@ -234,7 +234,6 @@ async def config_drift_snapshot(_ctx: dict[str, Any]) -> dict[str, Any]:
 
     try:
         # Use dynamic import to avoid circular dependency
-        import importlib
 
         config_drift_module = importlib.import_module(
             "src.services.config_drift_service"
@@ -257,8 +256,6 @@ async def config_drift_snapshot(_ctx: dict[str, Any]) -> dict[str, Any]:
             }
         )
 
-        return result
-
     except Exception as e:
         logger.exception("Configuration snapshot task failed")
         return {
@@ -266,6 +263,9 @@ async def config_drift_snapshot(_ctx: dict[str, Any]) -> dict[str, Any]:
             "error": str(e),
             "task_duration": time.time() - start_time,
         }
+
+    else:
+        return result
 
 
 async def config_drift_comparison(_ctx: dict[str, Any]) -> dict[str, Any]:
@@ -283,7 +283,6 @@ async def config_drift_comparison(_ctx: dict[str, Any]) -> dict[str, Any]:
 
     try:
         # Use dynamic import to avoid circular dependency
-        import importlib
 
         config_drift_module = importlib.import_module(
             "src.services.config_drift_service"
@@ -307,8 +306,6 @@ async def config_drift_comparison(_ctx: dict[str, Any]) -> dict[str, Any]:
             }
         )
 
-        return result
-
     except Exception as e:
         logger.exception("Configuration comparison task failed")
         return {
@@ -316,6 +313,9 @@ async def config_drift_comparison(_ctx: dict[str, Any]) -> dict[str, Any]:
             "error": str(e),
             "task_duration": time.time() - start_time,
         }
+
+    else:
+        return result
 
 
 async def config_drift_remediation(
@@ -476,6 +476,6 @@ async def create_task(
         finally:
             await client_manager.cleanup()
 
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to create task {task_name}")
         return None

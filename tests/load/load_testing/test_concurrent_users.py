@@ -5,6 +5,7 @@ behavior under different concurrency levels and user interaction patterns.
 """
 
 import random
+import statistics
 
 import pytest
 
@@ -284,7 +285,6 @@ class TestConcurrentUsersLoad:
                 response_times = result.metrics.response_times
                 if response_times:
                     # Check for response time stability (coefficient of variation)
-                    import statistics
 
                     mean_rt = statistics.mean(response_times)
                     stdev_rt = (

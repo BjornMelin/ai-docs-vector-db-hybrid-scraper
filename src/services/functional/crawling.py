@@ -160,7 +160,7 @@ async def get_crawl_metrics(
             f"Retrieved crawl metrics for {len(metrics)} tiers"
         )  # TODO: Convert f-string to logging format
 
-    except (ConnectionError, OSError, PermissionError) as e:
+    except (ConnectionError, OSError, PermissionError):
         logger.exception("Crawl metrics retrieval failed")
         return {}
     else:
@@ -200,7 +200,7 @@ async def get_recommended_tool(
 
     except HTTPException:
         raise
-    except (ConnectionError, OSError, PermissionError) as e:
+    except (ConnectionError, OSError, PermissionError):
         logger.exception(f"Tool recommendation failed for {url}")
         return "crawl4ai"  # Graceful fallback
     else:
@@ -233,7 +233,7 @@ async def get_provider_info(
             f"Retrieved provider info for {len(info)} tools"
         )  # TODO: Convert f-string to logging format
 
-    except (ConnectionError, OSError, PermissionError) as e:
+    except (ConnectionError, OSError, PermissionError):
         logger.exception("Provider info retrieval failed")
         return {}
     else:
@@ -266,7 +266,7 @@ async def get_tier_metrics(
             f"Retrieved tier metrics for {len(metrics)} tiers"
         )  # TODO: Convert f-string to logging format
 
-    except (ConnectionError, OSError, PermissionError) as e:
+    except (ConnectionError, OSError, PermissionError):
         logger.exception("Tier metrics retrieval failed")
         return {}
     else:

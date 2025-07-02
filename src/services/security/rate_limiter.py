@@ -342,7 +342,7 @@ class DistributedRateLimiter:
                         f"Reset local rate limit for {identifier}"
                     )  # TODO: Convert f-string to logging format
 
-        except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
+        except (ConnectionError, ValueError, AttributeError, RuntimeError):
             logger.exception("Failed to reset rate limit for {identifier}")
             return False
         else:

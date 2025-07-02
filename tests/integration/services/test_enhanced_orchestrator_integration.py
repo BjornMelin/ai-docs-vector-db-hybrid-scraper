@@ -354,14 +354,16 @@ class TestEnhancedOrchestratorIntegration:
         # Simulate embeddings for all results
         all_documents = []
         for result in all_results:
-            for doc in result.results:
-                all_documents.append(
+            all_documents.extend(
+                [
                     {
                         "id": doc["id"],
                         "text": doc.get("content", ""),
                         "metadata": doc.get("metadata", {}),
                     }
-                )
+                    for doc in result.results
+                ]
+            )
 
         if len(all_documents) > 0:
             if np is not None:

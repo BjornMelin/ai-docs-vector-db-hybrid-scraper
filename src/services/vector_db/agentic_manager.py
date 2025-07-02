@@ -177,7 +177,7 @@ class AgenticVectorManager:
 
             logger.info("AgenticVectorManager initialization completed")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize AgenticVectorManager: ")
             raise
 
@@ -258,7 +258,7 @@ class AgenticVectorManager:
                 failure_threshold=5, recovery_timeout=60.0, expected_exception=Exception
             )
 
-        except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
+        except (ConnectionError, ValueError, AttributeError, RuntimeError):
             logger.exception("Failed to create agent collection: %s")
             raise
         else:
@@ -646,7 +646,7 @@ class AgenticVectorManager:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception:
                 logger.exception("Error in health monitoring loop: %s")
                 await asyncio.sleep(self.health_check_interval_seconds * 2)
 
@@ -659,7 +659,7 @@ class AgenticVectorManager:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception:
                 logger.exception("Error in optimization loop: %s")
                 await asyncio.sleep(3600)  # Wait 1 hour on error
 
@@ -680,7 +680,7 @@ class AgenticVectorManager:
                         f"High latency detected for collection {collection_name}"
                     )
 
-            except Exception as e:
+            except Exception:
                 logger.exception("Health check failed for collection : {e}")
 
     async def _run_periodic_optimization(self) -> None:
@@ -703,7 +703,7 @@ class AgenticVectorManager:
             if needs_optimization:
                 try:
                     await self.optimize_collection(collection_name)
-                except Exception as e:
+                except Exception:
                     logger.exception("Periodic optimization failed for : {e}")
 
     def _get_optimal_hnsw_config(self, config: AgentCollectionConfig) -> HnswConfigDiff:

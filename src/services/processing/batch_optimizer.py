@@ -9,7 +9,7 @@ import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class BatchConfig:
     performance_target_ms: float = 100.0  # Target processing time per batch
 
 
-class BatchProcessor(Generic[T, R]):
+class BatchProcessor:
     """Intelligent batch processing for optimal throughput."""
 
     def __init__(
@@ -79,7 +79,11 @@ class BatchProcessor(Generic[T, R]):
 
         # Schedule delayed batch processing if not already processed
         if not should_process:
-            asyncio.create_task(self._delayed_batch_processing())
+            delayed_task = asyncio.create_task(self._delayed_batch_processing())
+            # Store reference to prevent task garbage collection
+            delayed_task.add_done_callback(
+                lambda _: logger.debug("Delayed batch processing completed")
+            )
 
         return await future
 

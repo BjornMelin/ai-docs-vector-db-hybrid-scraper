@@ -25,7 +25,7 @@ try:
         PYTHON_AVAILABLE = True
     except ImportError:
         PYTHON_AVAILABLE = False
-        tspython = None  # type: ignore
+        tspython = None  # type: ignore[assignment]
 
     try:
         import tree_sitter_javascript as tsjavascript
@@ -33,7 +33,7 @@ try:
         JAVASCRIPT_AVAILABLE = True
     except ImportError:
         JAVASCRIPT_AVAILABLE = False
-        tsjavascript = None  # type: ignore
+        tsjavascript = None  # type: ignore[assignment]
 
     try:
         import tree_sitter_typescript as tstypescript
@@ -41,18 +41,18 @@ try:
         TYPESCRIPT_AVAILABLE = True
     except ImportError:
         TYPESCRIPT_AVAILABLE = False
-        tstypescript = None  # type: ignore
+        tstypescript = None  # type: ignore[assignment]
 
 except ImportError:
     TREE_SITTER_AVAILABLE = False
-    Parser = None  # type: ignore
-    Node = None  # type: ignore
+    Parser = None  # type: ignore[assignment]
+    Node = None  # type: ignore[assignment]
     PYTHON_AVAILABLE = False
     JAVASCRIPT_AVAILABLE = False
     TYPESCRIPT_AVAILABLE = False
-    tspython = None  # type: ignore
-    tsjavascript = None  # type: ignore
-    tstypescript = None  # type: ignore
+    tspython = None  # type: ignore[assignment]
+    tsjavascript = None  # type: ignore[assignment]
+    tstypescript = None  # type: ignore[assignment]
 
 
 class DocumentChunker:
@@ -268,7 +268,7 @@ class DocumentChunker:
         lang_counts = {}
         for lang in languages:
             lang_counts[lang] = lang_counts.get(lang, 0) + 1
-        detected_lang = max(lang_counts, key=lang_counts.get)  # type: ignore
+        detected_lang = max(lang_counts, key=lang_counts.get)  # type: ignore[arg-type]
 
         lang_map = {
             "python": CodeLanguage.PYTHON.value,
@@ -755,7 +755,7 @@ class DocumentChunker:
                 chunk.char_count = len(chunk.content)
                 chunk.token_estimate = chunk.char_count // 4
 
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError):
             # Fall back to semantic chunking on error
             return self._semantic_chunking(content, language)
         else:

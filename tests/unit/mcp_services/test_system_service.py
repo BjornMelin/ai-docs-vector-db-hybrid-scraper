@@ -76,14 +76,13 @@ class TestSystemService:
         """Test that initialization logs success message with self-healing capabilities."""
         service = SystemService()
 
-        with patch.object(service, "_register_system_tools", new_callable=AsyncMock):
-            with caplog.at_level(logging.INFO):
-                await service.initialize(mock_client_manager)
+        with (
+            patch.object(service, "_register_system_tools", new_callable=AsyncMock),
+            caplog.at_level(logging.INFO),
+        ):
+            await service.initialize(mock_client_manager)
 
-                assert (
-                    "SystemService initialized with self-healing capabilities"
-                    in caplog.text
-                )
+        assert "SystemService initialized with self-healing capabilities" in caplog.text
 
     async def test_register_system_tools_raises_error_when_not_initialized(self):
         """Test that tool registration raises error when service not initialized."""
@@ -208,20 +207,22 @@ class TestSystemServiceHealthAndMonitoring:
         mock_system_health = Mock()
         mock_system_health.register_tools = Mock()
 
-        with patch("src.mcp_services.system_service.system_health", mock_system_health):
-            with patch.multiple(
+        with (
+            patch("src.mcp_services.system_service.system_health", mock_system_health),
+            patch.multiple(
                 "src.mcp_services.system_service",
                 configuration=Mock(register_tools=Mock()),
                 cost_estimation=Mock(register_tools=Mock()),
                 embeddings=Mock(register_tools=Mock()),
                 filtering=Mock(register_tools=Mock()),
-            ):
-                await service._register_system_tools()
+            ),
+        ):
+            await service._register_system_tools()
 
-                # Verify system health tools were registered
-                mock_system_health.register_tools.assert_called_once_with(
-                    service.mcp, mock_client_manager
-                )
+        # Verify system health tools were registered
+        mock_system_health.register_tools.assert_called_once_with(
+            service.mcp, mock_client_manager
+        )
 
     async def test_health_monitoring_capability(self):
         """Test that service reports health monitoring capability."""
@@ -265,20 +266,22 @@ class TestSystemServiceConfigurationManagement:
         mock_configuration = Mock()
         mock_configuration.register_tools = Mock()
 
-        with patch("src.mcp_services.system_service.configuration", mock_configuration):
-            with patch.multiple(
+        with (
+            patch("src.mcp_services.system_service.configuration", mock_configuration),
+            patch.multiple(
                 "src.mcp_services.system_service",
                 system_health=Mock(register_tools=Mock()),
                 cost_estimation=Mock(register_tools=Mock()),
                 embeddings=Mock(register_tools=Mock()),
                 filtering=Mock(register_tools=Mock()),
-            ):
-                await service._register_system_tools()
+            ),
+        ):
+            await service._register_system_tools()
 
-                # Verify configuration tools were registered
-                mock_configuration.register_tools.assert_called_once_with(
-                    service.mcp, mock_client_manager
-                )
+            # Verify configuration tools were registered
+            mock_configuration.register_tools.assert_called_once_with(
+                service.mcp, mock_client_manager
+            )
 
     async def test_configuration_management_capability(self):
         """Test that service supports configuration management."""
@@ -371,20 +374,22 @@ class TestSystemServiceEmbeddingAndDataProcessing:
         mock_embeddings = Mock()
         mock_embeddings.register_tools = Mock()
 
-        with patch("src.mcp_services.system_service.embeddings", mock_embeddings):
-            with patch.multiple(
+        with (
+            patch("src.mcp_services.system_service.embeddings", mock_embeddings),
+            patch.multiple(
                 "src.mcp_services.system_service",
                 system_health=Mock(register_tools=Mock()),
                 configuration=Mock(register_tools=Mock()),
                 cost_estimation=Mock(register_tools=Mock()),
                 filtering=Mock(register_tools=Mock()),
-            ):
-                await service._register_system_tools()
+            ),
+        ):
+            await service._register_system_tools()
 
-                # Verify embeddings tools were registered
-                mock_embeddings.register_tools.assert_called_once_with(
-                    service.mcp, mock_client_manager
-                )
+            # Verify embeddings tools were registered
+            mock_embeddings.register_tools.assert_called_once_with(
+                service.mcp, mock_client_manager
+            )
 
     async def test_filtering_tool_registration(self, mock_client_manager):
         """Test that filtering tools are properly registered."""
@@ -395,20 +400,22 @@ class TestSystemServiceEmbeddingAndDataProcessing:
         mock_filtering = Mock()
         mock_filtering.register_tools = Mock()
 
-        with patch("src.mcp_services.system_service.filtering", mock_filtering):
-            with patch.multiple(
+        with (
+            patch("src.mcp_services.system_service.filtering", mock_filtering),
+            patch.multiple(
                 "src.mcp_services.system_service",
                 system_health=Mock(register_tools=Mock()),
                 configuration=Mock(register_tools=Mock()),
                 cost_estimation=Mock(register_tools=Mock()),
                 embeddings=Mock(register_tools=Mock()),
-            ):
-                await service._register_system_tools()
+            ),
+        ):
+            await service._register_system_tools()
 
-                # Verify filtering tools were registered
-                mock_filtering.register_tools.assert_called_once_with(
-                    service.mcp, mock_client_manager
-                )
+            # Verify filtering tools were registered
+            mock_filtering.register_tools.assert_called_once_with(
+                service.mcp, mock_client_manager
+            )
 
     async def test_embedding_optimization_capability(self):
         """Test that service supports embedding optimization."""
@@ -472,17 +479,19 @@ class TestSystemServiceErrorHandling:
             "Tool registration failed"
         )
 
-        with patch("src.mcp_services.system_service.system_health", mock_failing_tool):
-            with patch.multiple(
+        with (
+            patch("src.mcp_services.system_service.system_health", mock_failing_tool),
+            patch.multiple(
                 "src.mcp_services.system_service",
                 configuration=Mock(register_tools=Mock()),
                 cost_estimation=Mock(register_tools=Mock()),
                 embeddings=Mock(register_tools=Mock()),
                 filtering=Mock(register_tools=Mock()),
-            ):
-                # Tool registration should raise the exception
-                with pytest.raises(Exception, match="Tool registration failed"):
-                    await service._register_system_tools()
+            ),
+            pytest.raises(Exception, match="Tool registration failed"),
+        ):
+            # Tool registration should raise the exception
+            await service._register_system_tools()
 
     async def test_service_recovery_after_tool_registration_failure(
         self, mock_client_manager

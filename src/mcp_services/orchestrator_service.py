@@ -123,7 +123,7 @@ class OrchestratorService:
                 elif service_name == "system":
                     self.system_service = service
                 logger.info("Initialized %s service", service_name)
-            except (ImportError, ValueError, RuntimeError, AttributeError) as e:
+            except (ImportError, ValueError, RuntimeError, AttributeError):
                 logger.exception("Failed to initialize {service_name} service")
 
     async def _initialize_agentic_orchestration(self) -> None:

@@ -281,8 +281,6 @@ class QueryExpansionService:
                 f"with {len(filtered_terms)} terms in {processing_time_ms:.1f}ms"
             )
 
-            return result
-
         except Exception as e:
             processing_time_ms = (time.time() - start_time) * 1000
             self._logger.exception(
@@ -301,6 +299,9 @@ class QueryExpansionService:
                 cache_hit=False,
                 expansion_metadata={"error": str(e)},
             )
+
+        else:
+            return result
 
     async def _generate_expansions(
         self, key_terms: list[str], request: QueryExpansionRequest
@@ -655,8 +656,9 @@ class QueryExpansionService:
         for original_term, related_terms in term_groups.items():
             if original_term in expanded_query:
                 # Add related terms as OR alternatives
-                all_terms = [original_term] + related_terms[
-                    :3
+                all_terms = [
+                    original_term,
+                    *related_terms[:3],
                 ]  # Limit to avoid overly complex queries
                 term_expansion = f"({' OR '.join(all_terms)})"
                 expanded_query = expanded_query.replace(

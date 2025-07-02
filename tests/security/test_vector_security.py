@@ -9,8 +9,15 @@ to DoS attacks through unlimited vector dimensions.
 import sys
 from pathlib import Path
 
-
 # Add project root to path
+from src.models.vector_search import (
+    AdvancedHybridSearchRequest,
+    BasicSearchRequest,
+    SearchStage,
+    SecureVectorModel,
+)
+
+
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 
@@ -18,12 +25,6 @@ def test_vector_security():
     """Test all vector security validators are working correctly."""
 
     # Import all the models with vector fields
-    from src.models.vector_search import (
-        AdvancedHybridSearchRequest,
-        BasicSearchRequest,
-        SearchStage,
-        SecureVectorModel,
-    )
 
     print("🔒 Testing Vector Security Validation Fixes")
     print("=" * 60)

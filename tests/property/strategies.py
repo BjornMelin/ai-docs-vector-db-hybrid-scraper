@@ -4,6 +4,7 @@ This module provides custom Hypothesis strategies for generating test data
 that matches the structure and constraints of configuration models.
 """
 
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -117,7 +118,6 @@ def http_urls(draw, schemes: list[str] | None = None) -> str:
 @st.composite
 def file_paths(draw, relative: bool = False) -> Path:
     """Generate valid file paths."""
-    import tempfile
 
     components = draw(
         st.lists(

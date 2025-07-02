@@ -1,11 +1,13 @@
 """Crawling manager service coordinator."""
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Optional
 
 from dependency_injector.wiring import Provide, inject
 
 from src.infrastructure.container import ApplicationContainer
+from src.services.crawling.manager import CrawlManager as CoreManager
 from src.services.errors import CrawlServiceError
 
 
@@ -42,8 +44,6 @@ class CrawlingManager:
             return
 
         try:
-            from src.services.crawling.manager import CrawlManager as CoreManager
-
             self._core_manager = CoreManager(
                 config=config,
                 rate_limiter=None,  # TODO: Add rate limiter injection
@@ -359,8 +359,6 @@ class CrawlingManager:
                     "metadata": metadata,
                 }
 
-            return extracted
-
         except Exception as e:
             logger.exception(
                 "Content extraction failed for : {e}"
@@ -372,6 +370,9 @@ class CrawlingManager:
                 "content_type": content_type,
                 "content": None,
             }
+
+        else:
+            return extracted
 
     async def bulk_scrape(
         self,
@@ -392,8 +393,6 @@ class CrawlingManager:
         if not self._initialized or not self._core_manager:
             msg = "Crawling manager not initialized"
             raise CrawlServiceError(msg)
-
-        import asyncio
 
         semaphore = asyncio.Semaphore(max_concurrent)
 
@@ -421,8 +420,6 @@ class CrawlingManager:
                 else:
                     processed_results.append(result)
 
-            return processed_results
-
         except Exception as e:
             logger.exception(
                 "Bulk scraping failed: "
@@ -438,3 +435,5 @@ class CrawlingManager:
                 }
                 for url in urls
             ]
+        else:
+            return processed_results

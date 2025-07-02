@@ -101,7 +101,7 @@ class FeatureFlagManager:
             self._current_tier = await self._determine_tier()
             self._initialized = True
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize feature flag manager: %s")
             self._current_tier = self.config.fallback_tier
             self._initialized = True
@@ -142,8 +142,8 @@ class FeatureFlagManager:
             # Use tier-based fallback
             return self._get_feature_by_tier(feature_name)
 
-        except Exception as e:
-            logger.exception("Error checking feature flag %s: %s", feature_name)
+        except Exception:
+            logger.exception("Error checking feature flag %s", feature_name)
             return self._get_feature_by_tier(feature_name)
 
     async def get_config_value(
@@ -171,8 +171,8 @@ class FeatureFlagManager:
             # Use tier-based fallback
             return self._get_config_by_tier(config_key, default)
 
-        except Exception as e:
-            logger.exception("Error getting config value %s: %s", config_key)
+        except Exception:
+            logger.exception("Error getting config value %s", config_key)
             return default
 
     def _get_feature_by_tier(self, feature_name: str) -> bool:
@@ -279,7 +279,7 @@ class FeatureFlagManager:
             tier_env = os.getenv("DEPLOYMENT_TIER", "personal").lower()
             return DeploymentTier(tier_env)
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error determining deployment tier: %s")
             return self.config.fallback_tier
 
@@ -334,14 +334,14 @@ class FeatureFlagManager:
                             flags[flag.feature.name] = value
                     except (AttributeError, ValueError):
                         flags[flag.feature.name] = flag.feature_state_value
+                    else:
+                        return flags
 
             # Cache results
             self._cache[cache_key] = flags
             self._cache_timestamps[cache_key] = current_time
 
-            return flags
-
-        except Exception as e:
+        except Exception:
             logger.exception("Error fetching flags from client: %s")
             return {}
 

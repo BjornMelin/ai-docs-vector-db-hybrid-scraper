@@ -832,7 +832,7 @@ class RollbackManager:
         # Capture current system state
         checkpoint = SystemCheckpoint(
             checkpoint_id=checkpoint_id,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=datetime.UTC),
             configuration_state=await self._capture_configuration_state(),
             service_states=await self._capture_service_states(),
             resource_metrics=await self._capture_resource_metrics(),
@@ -867,7 +867,7 @@ class RollbackManager:
             await self._rollback_configuration_state(checkpoint.configuration_state)
 
             logger.info("Successfully rolled back to checkpoint: %s", checkpoint_id)
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to rollback to checkpoint %s", checkpoint_id)
             return False
         else:
@@ -877,7 +877,7 @@ class RollbackManager:
         """Capture current configuration state."""
         # In a real implementation, this would capture actual configuration
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(tz=datetime.UTC).isoformat(),
             "configuration_version": "1.0.0",
             "environment_variables": dict(os.environ) if hasattr(self, "os") else {},
             "application_settings": {},
@@ -908,13 +908,13 @@ class RollbackManager:
             "network_io": psutil.net_io_counters()._asdict()
             if hasattr(psutil, "net_io_counters")
             else {},
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(tz=datetime.UTC).isoformat(),
         }
 
     async def _capture_circuit_breaker_states(self) -> dict[str, Any]:
         """Capture current circuit breaker states."""
         # In a real implementation, this would capture actual circuit breaker states
-        return {"timestamp": datetime.utcnow().isoformat(), "breakers": {}}
+        return {"timestamp": datetime.now(tz=datetime.UTC).isoformat(), "breakers": {}}
 
     def _get_database_connections(self) -> int:
         """Get current database connection count."""
@@ -1150,7 +1150,7 @@ class AutoRemediationEngine:
                         f"Successfully rolled back remediation for issue "
                         f"{issue.issue_id}"
                     )
-            except Exception as rollback_error:
+            except Exception:
                 logger.exception("Rollback failed: ")
 
         finally:
@@ -1175,7 +1175,9 @@ class AutoRemediationEngine:
         recent_remediations = [
             r
             for r in self.remediation_history
-            if (datetime.utcnow() - datetime.utcnow()).total_seconds()
+            if (
+                datetime.now(tz=datetime.UTC) - datetime.now(tz=datetime.UTC)
+            ).total_seconds()
             < 3600  # Last hour
         ]
 

@@ -81,7 +81,7 @@ class RealTimePerformanceMonitor:
 
         except asyncio.CancelledError:
             logger.info("Performance monitoring cancelled")
-        except Exception as e:
+        except Exception:
             logger.exception("Performance monitoring error")
         finally:
             self.monitoring_active = False

@@ -135,6 +135,19 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
         return f"browser:{key_hash}:{parsed.netloc}"
 
+    def generate_cache_key(self, url: str, tier: str | None = None) -> str:
+        """Generate cache key from URL and tier (public interface).
+
+        Args:
+            url: URL to cache
+            tier: Tier used for scraping
+
+        Returns:
+            Cache key string
+
+        """
+        return self._generate_cache_key(url, tier)
+
     def _determine_ttl(self, url: str, content_length: int) -> int:
         """Determine appropriate TTL based on URL and content.
 

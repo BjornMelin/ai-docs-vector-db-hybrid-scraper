@@ -111,15 +111,16 @@ class MockCircuitBreaker:
 
         try:
             result = func(*args, **_kwargs)
-            self.success_count += 1
-            if self.failure_count > 0:
-                self.failure_count = max(0, self.failure_count - 1)
-            return result
         except Exception:
             self.failure_count += 1
             if self.failure_count >= 5:
                 self.state = "open"
             raise
+        else:
+            self.success_count += 1
+            if self.failure_count > 0:
+                self.failure_count = max(0, self.failure_count - 1)
+            return result
 
     def get_uptime_sla(self) -> float:
         """Get current uptime SLA."""

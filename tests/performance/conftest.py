@@ -761,10 +761,11 @@ def redis_url():
         try:
             client = redis.from_url(redis_url)
             client.ping()
-            return redis_url
         except (ImportError, AttributeError, RuntimeError):
             # Fall back to fakeredis for testing
             pass
+        else:
+            return redis_url
 
     # Fall back to fakeredis for testing
     return "redis://fake:6379/0"

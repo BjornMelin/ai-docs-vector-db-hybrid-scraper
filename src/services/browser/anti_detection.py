@@ -221,7 +221,7 @@ class SessionManager:
                     return session
                 # Clean up expired session
                 session_file.unlink(missing_ok=True)
-            except (FileNotFoundError, OSError, PermissionError) as e:
+            except (FileNotFoundError, OSError, PermissionError):
                 # Clean up corrupted session file
                 session_file.unlink(missing_ok=True)
 
@@ -277,7 +277,7 @@ class SessionManager:
 
                 if session.is_expired():
                     session_file.unlink()
-            except (FileNotFoundError, ImportError, OSError) as e:
+            except (FileNotFoundError, ImportError, OSError):
                 session_file.unlink(missing_ok=True)
 
 

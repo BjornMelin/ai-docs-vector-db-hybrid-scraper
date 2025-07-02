@@ -9,7 +9,6 @@ import time
 from collections.abc import Callable
 
 import httpx
-
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -143,8 +142,6 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
                 if self.meter:
                     self._record_request_metrics(request, response, start_time)
 
-                return response
-
             except Exception as e:
                 # Record exception
                 span.record_exception(e)
@@ -157,6 +154,8 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
 
                 raise
 
+            else:
+                return response
             finally:
                 # Track active requests
                 if self.meter:

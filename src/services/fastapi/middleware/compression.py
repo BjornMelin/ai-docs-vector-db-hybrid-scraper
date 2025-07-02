@@ -160,13 +160,14 @@ class CompressionMiddleware(BaseHTTPMiddleware):
                 f"(ratio: {compression_ratio:.2f}x)"
             )
 
-            return compressed_response
-
         except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Failed to compress response: {e}"
             )  # TODO: Convert f-string to logging format
             return response
+
+        else:
+            return compressed_response
 
 
 class BrotliCompressionMiddleware(BaseHTTPMiddleware):
@@ -314,13 +315,14 @@ class BrotliCompressionMiddleware(BaseHTTPMiddleware):
                 f"(ratio: {compression_ratio:.2f}x)"
             )
 
-            return compressed_response
-
         except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Failed to compress response with Brotli: {e}"
             )  # TODO: Convert f-string to logging format
             return response
+
+        else:
+            return compressed_response
 
 
 # Export middleware classes

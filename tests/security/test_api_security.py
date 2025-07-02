@@ -10,13 +10,16 @@ This module provides comprehensive security testing for AI/ML systems including:
 """
 
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.services.security import (
-    AISecurityValidator,
-)
+from src.api.main import app
+from src.services.security import AISecurityValidator
+from src.services.security.integration import SecurityManager
+from src.services.security.monitoring import SecurityEventType, SecurityMonitor
 
 
 # Security test markers
@@ -32,10 +35,6 @@ class TestAPISecurityFramework:
     @pytest.fixture
     def real_api_client(self):
         """Real API client that tests actual FastAPI endpoints."""
-        from fastapi.testclient import TestClient
-
-        from src.api.main import app
-
         # Use the actual FastAPI application
         return TestClient(app)
 
@@ -66,12 +65,12 @@ class TestAPISecurityFramework:
                         violations[header] = "Missing required security header"
                     else:
                         header_value = response_headers[header]
-                        if isinstance(expected, list):
-                            if not any(exp in header_value for exp in expected):
-                                violations[header] = f"Invalid value: {header_value}"
-                        elif isinstance(expected, str):
-                            if expected not in header_value:
-                                violations[header] = f"Invalid value: {header_value}"
+                        if isinstance(expected, list) and not any(
+                            exp in header_value for exp in expected
+                        ):
+                            violations[header] = f"Invalid value: {header_value}"
+                        if isinstance(expected, str) and expected not in header_value:
+                            violations[header] = f"Invalid value: {header_value}"
 
                 return violations
 
@@ -270,7 +269,6 @@ class TestAPISecurityFramework:
     @rate_limit_test
     async def test_real_rate_limiting_effectiveness(self, real_api_client):
         """Test rate limiting on real API endpoints."""
-        from concurrent.futures import ThreadPoolExecutor
 
         def make_request(endpoint: str, request_id: int):
             """Make a single request to test rate limiting."""
@@ -550,12 +548,12 @@ class TestAPISecurityFramework:
         for _i in range(10):
             # Test with potentially valid data
             start_time = time.time()
-            response = real_api_client.get(auth_endpoint)
+            _ = real_api_client.get(auth_endpoint)
             valid_timings.append(time.time() - start_time)
 
             # Test with invalid data
             start_time = time.time()
-            response = real_api_client.get(f"{auth_endpoint}?invalid_param=true")
+            # response = real_api_client.get(f"{auth_endpoint}?invalid_param=true")
             invalid_timings.append(time.time() - start_time)
 
         # Calculate timing statistics
@@ -580,7 +578,6 @@ class TestSecurityIntegration:
     @security_test
     async def test_security_manager_integration(self):
         """Test integrated security manager functionality."""
-        from src.services.security.integration import SecurityManager
 
         security_manager = SecurityManager()
 
@@ -597,7 +594,6 @@ class TestSecurityIntegration:
     @security_test
     async def test_security_monitoring_integration(self):
         """Test security monitoring and alerting."""
-        from src.services.security.monitoring import SecurityEventType, SecurityMonitor
 
         monitor = SecurityMonitor()
 
@@ -651,7 +647,6 @@ async def mock_security_validator():
 @pytest.fixture
 async def mock_api_client(mock_security_validator):
     """Mock API client with security middleware."""
-    from fastapi import FastAPI
 
     app = FastAPI()
 

@@ -19,8 +19,10 @@ import time
 from pathlib import Path
 from typing import Any
 
-
 # Add project root to path
+from tests.load.run_load_tests import LoadTestRunner
+
+
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
@@ -82,8 +84,6 @@ class SecurityFrameworkValidator:
 
         # Test 1: Command injection prevention
         try:
-            from tests.load.run_load_tests import LoadTestRunner
-
             runner = LoadTestRunner()
 
             # Test malicious input validation
@@ -117,7 +117,7 @@ class SecurityFrameworkValidator:
                 logger.error("❌ Command injection prevention: FAIL")
                 self.results["tests_failed"] += 1
 
-        except Exception as e:
+        except Exception:
             logger.exception("Subprocess security validation failed: ")
             self.results["tests_failed"] += 1
 
@@ -174,8 +174,6 @@ class SecurityFrameworkValidator:
         logger.info("🔍 Validating Input Validation Enhancements")
 
         try:
-            from tests.load.run_load_tests import LoadTestRunner
-
             runner = LoadTestRunner()
 
             # Test marker validation
@@ -209,7 +207,7 @@ class SecurityFrameworkValidator:
                 logger.error("❌ Marker validation: FAIL")
                 self.results["tests_failed"] += 1
 
-        except Exception as e:
+        except Exception:
             logger.exception("Input validation test failed: ")
             self.results["tests_failed"] += 1
 
@@ -253,7 +251,7 @@ class SecurityFrameworkValidator:
         except subprocess.TimeoutExpired:
             logger.exception("❌ Load testing security integration: TIMEOUT")
             self.results["tests_failed"] += 1
-        except Exception as e:
+        except Exception:
             logger.exception("Load testing security validation failed: ")
             self.results["tests_failed"] += 1
 
@@ -382,7 +380,7 @@ def main():
         results = validator.run_validation()
 
         # Save report
-        report_file = validator.save_report()
+        # report_file = validator.save_report()
 
         # Exit with appropriate code
         if results["validation_status"] in ["EXCELLENT", "GOOD", "ACCEPTABLE"]:
@@ -395,7 +393,7 @@ def main():
     except KeyboardInterrupt:
         logger.info("Security validation interrupted by user")
         sys.exit(1)
-    except Exception as e:
+    except Exception:
         logger.exception("Security validation failed: ")
         sys.exit(1)
 

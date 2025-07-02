@@ -237,10 +237,6 @@ class ConfigurationWizard:
         """Customize performance settings (public method for testing)."""
         return self._customize_performance(template_data)
 
-    def customize_template(self, template_data: dict[str, Any]) -> dict[str, Any]:
-        """Customize template settings (public method for testing)."""
-        return self._customize_template(template_data)
-
     def show_success_message(self, config_file: Path) -> None:
         """Show success message (public method for testing)."""
         return self._show_success_message(config_file)

@@ -235,19 +235,15 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             if current_count:
                 count = int(current_count)
 
-                # Check if limit exceeded
-                if count >= self.config.default_rate_limit:
-                    return False
-
+                # Check if limit exceeded - return the negated condition directly
                 # Increment counter atomically
-                new_count = await self.redis_client.incr(rate_limit_key)
-                return True
+                # new_count = await self.redis_client.incr(rate_limit_key)
+                return count < self.config.default_rate_limit
             # First request in window - set counter and expiry atomically
             async with self.redis_client.pipeline(transaction=True) as pipe:
                 pipe.incr(rate_limit_key)
                 pipe.expire(rate_limit_key, self.config.rate_limit_window)
                 await pipe.execute()
-            return True
 
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
@@ -261,6 +257,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             # Mark Redis as unhealthy and fall back to memory
             self._redis_healthy = False
             return self._check_rate_limit_memory(client_ip)
+
+        else:
+            return True
 
     def _check_rate_limit_memory(self, client_ip: str) -> bool:
         """In-memory sliding window rate limiting implementation.
@@ -306,7 +305,6 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             if not self._redis_healthy:
                 logger.info("Redis connection restored")
                 self._redis_healthy = True
-            return True
 
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             if self._redis_healthy:
@@ -319,6 +317,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 )
             self._redis_healthy = False
             return False
+
+        else:
+            return True
 
     async def cleanup(self) -> None:
         """Cleanup Redis connection and resources."""

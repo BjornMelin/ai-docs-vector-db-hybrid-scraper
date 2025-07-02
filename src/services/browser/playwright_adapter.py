@@ -128,7 +128,7 @@ class PlaywrightAdapter(BaseService):
             self._initialized = False
             self.logger.info("Playwright adapter cleaned up")
 
-        except (AttributeError, ImportError, OSError) as e:
+        except (AttributeError, ImportError, OSError):
             self.logger.exception("Error cleaning up Playwright")
 
     async def scrape(
@@ -392,7 +392,7 @@ class PlaywrightAdapter(BaseService):
         if context:
             try:
                 await context.close()
-            except (ConnectionError, OSError, PermissionError) as e:
+            except (ConnectionError, OSError, PermissionError):
                 self.logger.warning("Failed to close context")
 
     async def _inject_stealth_scripts(self, page: Any, stealth_config: Any) -> None:
@@ -497,7 +497,7 @@ class PlaywrightAdapter(BaseService):
             await page.add_init_script(stealth_script)
             self.logger.debug("Stealth JavaScript patterns injected successfully")
 
-        except (OSError, PermissionError, RuntimeError) as e:
+        except (OSError, PermissionError, RuntimeError):
             self.logger.warning("Failed to inject stealth scripts")
 
     async def _execute_action(
@@ -690,7 +690,7 @@ class PlaywrightAdapter(BaseService):
                     if text and len(text.strip()) > 50:
                         return {"text": text, "html": html}
 
-            except (AttributeError, RuntimeError, ValueError) as e:
+            except (AttributeError, RuntimeError, ValueError):
                 self.logger.debug("Failed to extract with selector {selector}")
                 continue
 
@@ -700,7 +700,7 @@ class PlaywrightAdapter(BaseService):
                 "text": await page.inner_text("body"),
                 "html": await page.inner_html("body"),
             }
-        except TimeoutError as e:
+        except TimeoutError:
             self.logger.warning("Failed to extract body content")
             return {"text": "", "html": ""}
 
@@ -755,7 +755,7 @@ class PlaywrightAdapter(BaseService):
             }
             """)
 
-        except (TimeoutError, OSError, PermissionError) as e:
+        except (TimeoutError, OSError, PermissionError):
             self.logger.warning("Failed to extract metadata")
             return {
                 "title": await page.title() if page else "",
@@ -793,7 +793,7 @@ class PlaywrightAdapter(BaseService):
             }
             """)
 
-        except (OSError, PermissionError) as e:
+        except (OSError, PermissionError):
             self.logger.debug("Failed to get performance metrics")
             return {}
 
@@ -902,7 +902,7 @@ class PlaywrightAdapter(BaseService):
                 "response_time_ms": 15000,
                 "available": True,
             }
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError):
             return {
                 "healthy": False,
                 "status": "error",

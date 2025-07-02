@@ -134,7 +134,7 @@ class CircuitBreaker:
                 self._half_open_attempts = 0
                 self._state = ClientState.HEALTHY
 
-        except (ConnectionError, OSError, TimeoutError) as e:
+        except (ConnectionError, OSError, TimeoutError):
             async with self._lock:
                 self._failure_count += 1
                 self._last_failure_time = time.time()

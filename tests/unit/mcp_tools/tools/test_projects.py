@@ -718,9 +718,8 @@ async def test_error_handling_collection_creation_failure(
         mock_uuid.return_value.__str__ = Mock(return_value="proj_123")
 
         # Test that exception is propagated
+        request = ProjectRequest(name="Test Project", quality_tier="balanced")
         with pytest.raises(Exception, match="Collection creation failed"):
-            request = ProjectRequest(name="Test Project", quality_tier="balanced")
-
             await registered_tools["create_project"](request, mock_context)
 
         # Verify cleanup was attempted

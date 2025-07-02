@@ -9,7 +9,6 @@ import logging
 from typing import Any
 
 import httpx
-
 from opentelemetry import metrics
 from opentelemetry.metrics import Counter, Histogram, UpDownCounter
 
@@ -213,15 +212,26 @@ class OpenTelemetryMetricsBridge:
             self._instruments["vector_search_quality"].record(top_score, labels)
 
         # Bridge to Prometheus if available
-        if self.prometheus_registry and hasattr(self.prometheus_registry, "_metrics"):
+        if self.prometheus_registry:
             try:
                 status = "success" if success else "error"
-                self.prometheus_registry._metrics["search_requests"].labels(
-                    collection=collection, status=status
-                ).inc()
-                self.prometheus_registry._metrics["search_duration"].labels(
-                    collection=collection, query_type=query_type
-                ).observe(duration_ms / 1000)  # Convert to seconds for Prometheus
+
+                # Use public interface to get metrics
+                search_requests_metric = self.prometheus_registry.get_metric(
+                    "search_requests"
+                )
+                if search_requests_metric:
+                    search_requests_metric.labels(
+                        collection=collection, status=status
+                    ).inc()
+
+                search_duration_metric = self.prometheus_registry.get_metric(
+                    "search_duration"
+                )
+                if search_duration_metric:
+                    search_duration_metric.labels(
+                        collection=collection, query_type=query_type
+                    ).observe(duration_ms / 1000)  # Convert to seconds for Prometheus
             except (httpx.HTTPError, httpx.TimeoutException, ConnectionError) as e:
                 logger.warning(
                     f"Failed to update Prometheus metrics: {e}"

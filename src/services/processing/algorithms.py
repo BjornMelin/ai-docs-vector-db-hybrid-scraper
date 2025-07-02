@@ -7,6 +7,7 @@ achieving 80% performance improvement through efficient algorithms and caching.
 import functools
 import logging
 import re
+import time
 from collections import Counter
 from dataclasses import dataclass
 from typing import Any
@@ -177,7 +178,6 @@ class OptimizedTextAnalyzer:
         Returns:
             Comprehensive analysis results
         """
-        import time
 
         start_time = time.time()
 
@@ -464,7 +464,6 @@ class OptimizedTextAnalyzer:
         Returns:
             Performance benchmark results
         """
-        import time
 
         results = {
             "algorithm_complexity": "O(n)",

@@ -139,16 +139,13 @@ class TestEmbeddingTracking:
         """Test embedding tracking with exceptions."""
         tracker = AIOperationTracker()
 
-        with (
-            pytest.raises(ValueError),
-            tracker.track_embedding_generation(
-                provider="openai",
-                model="text-embedding-ada-002",
-                input_texts="Test text",
-            ),
+        with tracker.track_embedding_generation(
+            provider="openai",
+            model="text-embedding-ada-002",
+            input_texts="Test text",
         ):
-            msg = "API rate limit exceeded"
-            raise ValueError(msg)
+            with pytest.raises(ValueError, match="API rate limit exceeded"):
+                raise ValueError("API rate limit exceeded")
 
     def test_track_embedding_generation_cache_hit(self):
         """Test tracking embedding generation with cache hit."""
@@ -212,14 +209,11 @@ class TestLLMTracking:
         """Test LLM call tracking with exceptions."""
         tracker = AIOperationTracker()
 
-        with (
-            pytest.raises(ConnectionError),
-            tracker.track_llm_call(
-                provider="openai", model="gpt-4", operation="completion"
-            ),
+        with tracker.track_llm_call(
+            provider="openai", model="gpt-4", operation="completion"
         ):
-            msg = "API service unavailable"
-            raise ConnectionError(msg)
+            with pytest.raises(ConnectionError, match="API service unavailable"):
+                raise ConnectionError("API service unavailable")
 
     def test_track_llm_call_multiple_choices(self):
         """Test LLM call tracking with multiple response choices."""
@@ -272,14 +266,11 @@ class TestVectorSearchTracking:
         """Test vector search tracking with exceptions."""
         tracker = AIOperationTracker()
 
-        with (
-            pytest.raises(ConnectionError),
-            tracker.track_vector_search(
-                collection_name="documents", query_type="semantic"
-            ),
+        with tracker.track_vector_search(
+            collection_name="documents", query_type="semantic"
         ):
-            msg = "Qdrant connection failed"
-            raise ConnectionError(msg)
+            with pytest.raises(ConnectionError, match="Qdrant connection failed"):
+                raise ConnectionError("Qdrant connection failed")
 
     def test_track_vector_search_empty_results(self):
         """Test vector search tracking with empty results."""
@@ -334,14 +325,11 @@ class TestRAGPipelineTracking:
         """Test RAG pipeline tracking with exceptions."""
         tracker = AIOperationTracker()
 
-        with (
-            pytest.raises(ValueError),
-            tracker.track_rag_pipeline(
-                query="Test query", retrieval_method="hybrid", generation_model="gpt-4"
-            ),
+        with tracker.track_rag_pipeline(
+            query="Test query", retrieval_method="hybrid", generation_model="gpt-4"
         ):
-            msg = "Generation model failed"
-            raise ValueError(msg)
+            with pytest.raises(ValueError, match="Generation model failed"):
+                raise ValueError("Generation model failed")
 
     def test_track_rag_pipeline_with_timing_breakdown(self):
         """Test RAG pipeline with detailed timing breakdown."""

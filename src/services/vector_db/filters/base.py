@@ -252,7 +252,7 @@ class FilterRegistry:
         """
         if not issubclass(filter_class, BaseFilter):
             msg = "Filter class must inherit from BaseFilter"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         filter_name = filter_class.__name__
         self._filters[filter_name] = filter_class
@@ -294,7 +294,7 @@ class FilterRegistry:
         if filter_class:
             try:
                 return filter_class(**kwargs)
-            except (OSError, PermissionError, RuntimeError) as e:
+            except (OSError, PermissionError, RuntimeError):
                 self._logger.exception("Failed to create filter {filter_name}")
                 return None
 

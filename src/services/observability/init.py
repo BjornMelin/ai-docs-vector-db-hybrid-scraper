@@ -224,7 +224,7 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
     except ImportError:
         logger.warning("OpenTelemetry packages not available")
         return False
-    except (OSError, AttributeError, ImportError, ModuleNotFoundError) as e:
+    except (OSError, AttributeError, ModuleNotFoundError):
         logger.exception("Failed to initialize OpenTelemetry")
         return False
     else:
@@ -247,7 +247,7 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
                 try:
                     FastAPIInstrumentor().instrument()
                     logger.info("FastAPI auto-instrumentation enabled")
-                except (ConnectionError, OSError, PermissionError) as e:
+                except (ConnectionError, OSError, PermissionError):
                     logger.warning("Failed to enable FastAPI instrumentation")
 
         # HTTP client instrumentation
@@ -258,7 +258,7 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
                 try:
                     HTTPXClientInstrumentor().instrument()
                     logger.info("HTTPX client auto-instrumentation enabled")
-                except (ConnectionError, OSError, PermissionError) as e:
+                except (ConnectionError, OSError, PermissionError):
                     logger.warning("Failed to enable HTTPX instrumentation")
 
         # Redis instrumentation
@@ -269,7 +269,7 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
                 try:
                     RedisInstrumentor().instrument()
                     logger.info("Redis auto-instrumentation enabled")
-                except (ConnectionError, OSError, PermissionError) as e:
+                except (ConnectionError, OSError, PermissionError):
                     logger.warning("Failed to enable Redis instrumentation")
 
         # SQLAlchemy instrumentation
@@ -280,10 +280,10 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
                 try:
                     SQLAlchemyInstrumentor().instrument()
                     logger.info("SQLAlchemy auto-instrumentation enabled")
-                except (OSError, PermissionError) as e:
+                except (OSError, PermissionError):
                     logger.warning("Failed to enable SQLAlchemy instrumentation")
 
-    except (OSError, PermissionError) as e:
+    except (OSError, PermissionError):
         logger.warning("Auto-instrumentation setup failed")
 
 
@@ -300,7 +300,7 @@ def shutdown_observability() -> None:
         try:
             logger.info("Shutting down OpenTelemetry tracer provider...")
             _tracer_provider.shutdown()
-        except (OSError, PermissionError) as e:
+        except (OSError, PermissionError):
             logger.exception("Error during tracer provider shutdown")
         finally:
             _tracer_provider = None
@@ -310,7 +310,7 @@ def shutdown_observability() -> None:
         try:
             logger.info("Shutting down OpenTelemetry meter provider...")
             _meter_provider.shutdown()
-        except (OSError, PermissionError) as e:
+        except (OSError, PermissionError):
             logger.exception("Error during meter provider shutdown")
         finally:
             _meter_provider = None

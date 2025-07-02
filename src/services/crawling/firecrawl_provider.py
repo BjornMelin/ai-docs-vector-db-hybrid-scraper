@@ -212,13 +212,6 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                 await asyncio.sleep(5)
 
             # Timeout
-            return {
-                "success": False,
-                "error": "Crawl timed out",
-                "pages": [],
-                "total": 0,
-                "crawl_id": crawl_id,
-            }
 
         except Exception as e:
             logger.exception("Failed to crawl {url}")
@@ -227,6 +220,15 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                 "error": str(e),
                 "pages": [],
                 "total": 0,
+            }
+
+        else:
+            return {
+                "success": False,
+                "error": "Crawl timed out",
+                "pages": [],
+                "total": 0,
+                "crawl_id": crawl_id,
             }
 
     async def cancel_crawl(self, crawl_id: str) -> bool:
@@ -246,7 +248,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
         try:
             result = self._client.cancel_crawl(crawl_id)
             return result.get("success", False)
-        except (ConnectionError, OSError, PermissionError) as e:
+        except (ConnectionError, OSError, PermissionError):
             logger.exception("Failed to cancel crawl {crawl_id}")
             return False
 

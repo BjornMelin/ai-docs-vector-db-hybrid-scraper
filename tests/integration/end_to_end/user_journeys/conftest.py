@@ -123,6 +123,16 @@ def journey_executor():
             self.journey_history = []
             self.artifacts = {}
 
+        def _raise_validation_error(self, step_name: str) -> None:
+            """Raise a validation error for the given step."""
+            msg = f"Step validation failed: {step_name}"
+            raise ValueError(msg)
+
+        def _raise_expected_result_error(self, step_name: str) -> None:
+            """Raise an expected result error for the given step."""
+            msg = f"Result doesn't match expected: {step_name}"
+            raise ValueError(msg)
+
         async def execute_journey(
             self, journey: UserJourney, context: dict[str, Any] | None = None
         ) -> JourneyResult:
@@ -234,24 +244,13 @@ def journey_executor():
                     if step.validation_func:
                         validation_result = await step.validation_func(result, context)
                         if not validation_result:
-
-                            def _raise_validation_error():
-                                msg = f"Step validation failed: {step.name}"
-                                raise ValueError(msg)
-
-                            _raise_validation_error()
+                            self._raise_validation_error(step.name)
 
                     # Check against expected result
-                    if step.expected_result:
-                        if not self._validate_expected_result(
-                            result, step.expected_result
-                        ):
-
-                            def _raise_expected_result_error():
-                                msg = f"Result doesn't match expected: {step.name}"
-                                raise ValueError(msg)
-
-                            _raise_expected_result_error()
+                    if step.expected_result and not self._validate_expected_result(
+                        result, step.expected_result
+                    ):
+                        self._raise_expected_result_error(step.name)
 
                     end_time = time.perf_counter()
                     duration_ms = (end_time - start_time) * 1000

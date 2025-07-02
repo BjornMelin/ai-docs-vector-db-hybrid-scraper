@@ -224,7 +224,7 @@ class LoadTestUser:
                 )
                 await asyncio.sleep(think_time)
 
-            except (TimeoutError, OSError, PermissionError) as e:
+            except (TimeoutError, OSError, PermissionError):
                 logger.exception(f"User {self.user_id} session error")
                 self.failures += 1
                 break
@@ -495,7 +495,7 @@ class LoadTestRunner:
                     )  # TODO: Convert f-string to logging format
                     break
 
-            except (OSError, PermissionError) as e:
+            except (OSError, PermissionError):
                 logger.exception(f"Stress test failed at {user_count} users")
                 break
 

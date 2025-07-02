@@ -539,8 +539,6 @@ class PipelineExecutor:
             if simulate_failure:
                 msg = f"Simulated failure in {stage_name} stage"
                 raise TestError(msg)
-                msg = f"Simulated failure in {stage_name} stage"
-                raise TestError(msg)
 
             # Execute stage-specific logic
             executor = self.stage_executors.get(stage_type)
@@ -664,9 +662,13 @@ class PipelineConfigValidator:
 
         # Required fields
         required_fields = ["pipeline_id", "environment", "stages"]
-        for field in required_fields:
-            if field not in config:
-                errors.append(f"Missing required field: {field}")
+        errors.extend(
+            [
+                f"Missing required field: {field}"
+                for field in required_fields
+                if field not in config
+            ]
+        )
 
         # Validate stages
         if "stages" in config:
@@ -692,9 +694,13 @@ class PipelineConfigValidator:
 
         # Required stage fields
         required_fields = ["name", "type"]
-        for field in required_fields:
-            if field not in stage:
-                errors.append(f"Stage {index}: Missing required field '{field}'")
+        errors.extend(
+            [
+                f"Stage {index}: Missing required field '{field}'"
+                for field in required_fields
+                if field not in stage
+            ]
+        )
 
         # Valid stage types
         valid_types = ["build", "test", "security", "deploy", "verification"]
@@ -747,8 +753,6 @@ class DockerBuildManager:
                     "size_reduction_mb": 50,
                 }
 
-            return result
-
         except (RuntimeError, OSError, subprocess.CalledProcessError) as e:
             return {
                 "success": False,
@@ -757,6 +761,8 @@ class DockerBuildManager:
                     datetime.now(tz=UTC) - start_time
                 )._total_seconds(),
             }
+        else:
+            return result
 
 
 class BuildSecurityScanner:
@@ -811,17 +817,10 @@ class PipelineTestExecutor:
                 result = self._simulate_load_test_results(config)
             else:
                 msg = f"Unknown test type: {test_type}"
-                raise ValueError(msg)
+                raise TypeError(msg)
 
             end_time = datetime.now(tz=UTC)
             duration = (end_time - start_time)._total_seconds()
-
-            return {
-                "success": True,
-                "test_type": test_type,
-                "duration_seconds": duration,
-                **result,
-            }
 
         except (RuntimeError, OSError, subprocess.CalledProcessError) as e:
             return {
@@ -831,6 +830,13 @@ class PipelineTestExecutor:
                 "duration_seconds": (
                     datetime.now(tz=UTC) - start_time
                 )._total_seconds(),
+            }
+        else:
+            return {
+                "success": True,
+                "test_type": test_type,
+                "duration_seconds": duration,
+                **result,
             }
 
     def _simulate_unit_test_results(self) -> dict[str, Any]:

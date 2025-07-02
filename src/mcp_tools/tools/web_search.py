@@ -165,8 +165,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Autonomous web search completed: {len(fused_results['results'])} results from {len(provider_results)} providers"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform autonomous web search")
             if ctx:
@@ -177,6 +175,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "query": query,
                 "fusion_strategy": fusion_strategy,
             }
+
+        else:
+            return final_results
 
     @mcp.tool()
     async def adaptive_web_search_orchestration(
@@ -319,8 +320,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Adaptive orchestration completed in {len(iteration_results)} iterations with score {best_result.get('performance_score', 0.0):.3f}"
                 )
 
-            return best_result
-
         except Exception as e:
             logger.exception("Failed to perform adaptive web search orchestration")
             if ctx:
@@ -331,6 +330,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "query": query,
                 "search_intent": search_intent,
             }
+
+        else:
+            return best_result
 
     @mcp.tool()
     async def multi_provider_result_synthesis(
@@ -426,8 +428,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Synthesis completed: {len(synthesized_results['results'])} results from {len(provider_results)} providers"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform multi-provider result synthesis")
             if ctx:
@@ -438,6 +438,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "query": query,
                 "synthesis_depth": synthesis_depth,
             }
+
+        else:
+            return final_results
 
     @mcp.tool()
     async def get_web_search_capabilities() -> dict[str, Any]:

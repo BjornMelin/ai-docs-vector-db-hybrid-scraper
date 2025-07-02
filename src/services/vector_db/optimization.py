@@ -9,10 +9,6 @@ import time
 from typing import Any
 
 import numpy as np
-
-
-# Initialize numpy random generator
-rng = np.random.default_rng()
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
@@ -21,6 +17,10 @@ from qdrant_client.models import (
     ScalarQuantization,
     VectorParams,
 )
+
+
+# Initialize numpy random generator
+rng = np.random.default_rng()
 
 
 logger = logging.getLogger(__name__)
@@ -123,11 +123,12 @@ class QdrantOptimizer:
                 f"Created optimized collection '{collection_name}' "
                 f"with vector size {vector_size} and quantization enabled"
             )
-            return True
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to create optimized collection")
             return False
+        else:
+            return True
 
     async def benchmark_search_performance(
         self,
@@ -334,11 +335,12 @@ class QdrantOptimizer:
             )
 
             logger.info("Enabled quantization for collection '%s'", collection_name)
-            return {"status": "success", "quantization_enabled": True}
 
         except Exception as e:
             logger.exception("Failed to enable quantization")
             return {"status": "error", "error": str(e)}
+        else:
+            return {"status": "success", "quantization_enabled": True}
 
     async def get_optimization_metrics(self, collection_name: str) -> dict[str, Any]:
         """Get current optimization metrics for a collection.
@@ -354,6 +356,10 @@ class QdrantOptimizer:
             collection_info = await self.client.get_collection(collection_name)
             config = collection_info.config
 
+        except Exception as e:
+            logger.exception("Failed to get optimization metrics")
+            return {"error": str(e)}
+        else:
             return {
                 "collection_name": collection_name,
                 "vector_count": collection_info.vectors_count,
@@ -371,7 +377,3 @@ class QdrantOptimizer:
                 is not None,
                 "distance_metric": config.params.vectors.distance.value,
             }
-
-        except Exception as e:
-            logger.exception("Failed to get optimization metrics")
-            return {"error": str(e)}

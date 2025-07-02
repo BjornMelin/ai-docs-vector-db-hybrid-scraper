@@ -386,7 +386,7 @@ async def _initialize_critical_services(factory: ModeAwareServiceFactory) -> Non
                 logger.info("Initialized critical service: %s", service_name)
             else:
                 logger.warning("Critical service not available: %s", service_name)
-        except (OSError, AttributeError, ConnectionError, ImportError) as e:
+        except (OSError, AttributeError, ConnectionError, ImportError):
             logger.exception("Failed to initialize critical service %s", service_name)
 
 

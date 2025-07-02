@@ -270,15 +270,15 @@ class CustomMetricsMiddleware(BaseHTTPMiddleware):
         duration = time.time() - start_time
 
         # Record custom metrics (if enabled)
-        if (
-            self.metrics_registry
-            and hasattr(self.metrics_registry, "_metrics")
-            and "custom_request_duration" in self.metrics_registry._metrics
-        ):
-            # Record request duration by endpoint
-            self.metrics_registry._metrics["custom_request_duration"].labels(
-                method=method, endpoint=path, status_code=response.status_code
-            ).observe(duration)
+        if self.metrics_registry:
+            custom_duration_metric = self.metrics_registry.get_metric(
+                "custom_request_duration"
+            )
+            if custom_duration_metric:
+                # Record request duration by endpoint
+                custom_duration_metric.labels(
+                    method=method, endpoint=path, status_code=response.status_code
+                ).observe(duration)
 
         return response
 

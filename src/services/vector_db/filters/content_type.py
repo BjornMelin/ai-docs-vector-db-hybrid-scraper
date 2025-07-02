@@ -637,12 +637,13 @@ class ContentTypeFilter(BaseFilter):
         """Validate content type filter criteria."""
         try:
             ContentTypeCriteria.model_validate(filter_criteria)
-            return True
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             self._logger.warning(
                 f"Invalid content type criteria: {e}"
             )  # TODO: Convert f-string to logging format
             return False
+        else:
+            return True
 
     def get_supported_operators(self) -> list[str]:
         """Get supported content type operators."""

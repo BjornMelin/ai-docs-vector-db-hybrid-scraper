@@ -145,7 +145,7 @@ class SystemWeaknessAnalyzer:
     async def identify_weaknesses(self, metrics: SystemMetrics) -> list[SystemWeakness]:
         """Identify system weaknesses based on current metrics and patterns."""
         weaknesses = []
-        current_time = datetime.utcnow()
+        current_time = datetime.now(tz=datetime.UTC)
 
         # Analyze different types of weaknesses
         weaknesses.extend(
@@ -631,7 +631,7 @@ class AdaptiveChaosTestGenerator:
     ) -> list[ChaosExperiment]:
         """Generate targeted chaos experiments based on identified weaknesses."""
         experiments = []
-        current_time = datetime.utcnow()
+        # current_time = datetime.now(tz=datetime.UTC)
 
         for weakness in weaknesses:
             # Find suitable templates for this weakness
@@ -731,7 +731,7 @@ class AdaptiveChaosTestGenerator:
                 rollback_strategy="immediate",
             )
 
-        except Exception as e:
+        except Exception:
             logger.exception(
                 "Failed to generate experiment from template %s", template.template_id
             )
@@ -787,7 +787,8 @@ class AdaptiveChaosTestGenerator:
             recent_learnings = [
                 learning
                 for learning in self.learning_database[learning_key]
-                if (datetime.utcnow() - learning.learning_timestamp).days < 7
+                if (datetime.now(tz=datetime.UTC) - learning.learning_timestamp).days
+                < 7
             ]
             if recent_learnings:
                 base_value *= 0.7  # Reduce value for recent tests
@@ -1101,7 +1102,7 @@ class IntelligentChaosOrchestrator:
 
         try:
             await self.continuous_chaos_loop()
-        except Exception as e:
+        except Exception:
             logger.exception("Chaos orchestration failed")
             self.orchestration_active = False
             raise
@@ -1141,7 +1142,7 @@ class IntelligentChaosOrchestrator:
                 # 6. Generate resilience report
                 await self.generate_resilience_insights()
 
-            except Exception as e:
+            except Exception:
                 logger.exception("Error in chaos orchestration loop")
 
             # Wait for next testing cycle
@@ -1149,7 +1150,7 @@ class IntelligentChaosOrchestrator:
 
     async def assess_system_resilience(self) -> ResilienceAssessment:
         """Assess current system resilience and identify weaknesses."""
-        current_time = datetime.utcnow()
+        current_time = datetime.now(tz=datetime.UTC)
 
         # Collect current system metrics
         current_metrics = (
@@ -1272,7 +1273,7 @@ class IntelligentChaosOrchestrator:
                 # Brief pause between experiments
                 await asyncio.sleep(30)
 
-            except Exception as e:
+            except Exception:
                 logger.exception("Failed to execute experiment {experiment.name}")
 
         return session_results
@@ -1356,7 +1357,6 @@ class IntelligentChaosOrchestrator:
             # Keep only recent history
             if len(self.experiment_history) > 500:
                 self.experiment_history = self.experiment_history[-500:]
-            return chaos_result
 
         except Exception as e:
             logger.exception("Chaos experiment execution failed")
@@ -1389,12 +1389,14 @@ class IntelligentChaosOrchestrator:
                         "Review experiment safety and system state before retry"
                     ],
                     confidence_score=0.0,
-                    learning_timestamp=datetime.utcnow(),
+                    learning_timestamp=datetime.now(tz=datetime.UTC),
                 ),
                 resilience_impact=0.0,
                 unexpected_effects=[f"Experiment execution failed: {e!s}"],
                 system_adaptations=[],
             )
+        else:
+            return chaos_result
 
     async def learn_from_experiments(self, experiment_results: list[ChaosResult]):
         """Learn from experiment results and update knowledge base."""
@@ -1721,7 +1723,7 @@ class IntelligentChaosOrchestrator:
                 execution_result.success
                 + recovery_analysis.get("resilience_score", 0) / 2,
             ),
-            learning_timestamp=datetime.utcnow(),
+            learning_timestamp=datetime.now(tz=datetime.UTC),
         )
 
     async def _calculate_resilience_impact(
@@ -1839,7 +1841,7 @@ class IntelligentChaosOrchestrator:
                             "recovery_time": result.recovery_analysis.get(
                                 "total_recovery_time", 0
                             ),
-                            "timestamp": datetime.utcnow(),
+                            "timestamp": datetime.now(tz=datetime.UTC),
                         }
                     )
 

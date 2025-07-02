@@ -235,7 +235,7 @@ class QdrantAliasManager(BaseService):
                 f"Deleted alias {alias_name}"
             )  # TODO: Convert f-string to logging format
 
-        except (OSError, PermissionError) as e:
+        except (OSError, PermissionError):
             logger.exception("Failed to delete alias")
             return False
         else:
@@ -254,7 +254,7 @@ class QdrantAliasManager(BaseService):
         try:
             aliases = await self.client.get_aliases()
             return any(alias.alias_name == alias_name for alias in aliases.aliases)
-        except (ConnectionError, OSError, PermissionError) as e:
+        except (ConnectionError, OSError, PermissionError):
             return False
 
     async def get_collection_for_alias(self, alias_name: str) -> str | None:
@@ -272,7 +272,7 @@ class QdrantAliasManager(BaseService):
             for alias in aliases.aliases:
                 if alias.alias_name == alias_name:
                     return alias.collection_name
-        except (ConnectionError, OSError, PermissionError) as e:
+        except (ConnectionError, OSError, PermissionError):
             return None
         else:
             return None
@@ -289,7 +289,7 @@ class QdrantAliasManager(BaseService):
             return {
                 alias.alias_name: alias.collection_name for alias in aliases.aliases
             }
-        except (ConnectionError, OSError, PermissionError) as e:
+        except (ConnectionError, OSError, PermissionError):
             logger.exception("Failed to list aliases")
             return {}
 

@@ -101,6 +101,13 @@ class PerformanceMonitor:
             net_sent_mb = net_io.bytes_sent / (1024 * 1024) if net_io else 0
             net_recv_mb = net_io.bytes_recv / (1024 * 1024) if net_io else 0
 
+        except (ConnectionError, OSError, TimeoutError) as e:
+            logger.warning(
+                f"Failed to get system metrics: {e}"
+            )  # TODO: Convert f-string to logging format
+            return {}
+
+        else:
             return {
                 "cpu_percent": cpu_percent,
                 "memory_used_mb": memory_used_mb,
@@ -110,12 +117,6 @@ class PerformanceMonitor:
                 "network_sent_mb": net_sent_mb,
                 "network_recv_mb": net_recv_mb,
             }
-
-        except (ConnectionError, OSError, TimeoutError) as e:
-            logger.warning(
-                f"Failed to get system metrics: {e}"
-            )  # TODO: Convert f-string to logging format
-            return {}
 
     @contextmanager
     def monitor_operation(

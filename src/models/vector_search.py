@@ -14,9 +14,9 @@ Key Features:
 
 from __future__ import annotations
 
+import importlib
 import math
 import re
-from datetime import datetime
 from enum import Enum
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, Literal, Self
@@ -32,7 +32,7 @@ from pydantic import (
 
 
 if TYPE_CHECKING:
-    from src.services.security.ai_security import AISecurityValidator
+    from datetime import datetime
 
 
 # =============================================================================
@@ -467,8 +467,6 @@ class SecurePayloadModel(SecureBaseModel):
         # Use lazy import to avoid circular dependency
         try:
             # Import at runtime to avoid circular dependency
-            import importlib
-
             security_module = importlib.import_module(
                 "src.services.security.ai_security"
             )
@@ -565,8 +563,6 @@ class HyDESearchRequest(AdvancedFilteredSearchRequest):
         """Validate query text for security."""
         try:
             # Import at runtime to avoid circular dependency
-            import importlib
-
             security_module = importlib.import_module(
                 "src.services.security.ai_security"
             )
@@ -946,9 +942,9 @@ __all__ = [
     "FilterValidationError",
     "FusionAlgorithm",
     "FusionConfig",
+    "HyDESearchRequest",
     "HybridSearchRequest",
     "HybridSearchResponse",
-    "HyDESearchRequest",
     "ModelSelectionStrategy",
     "MultiStageSearchRequest",
     # Prefetch models

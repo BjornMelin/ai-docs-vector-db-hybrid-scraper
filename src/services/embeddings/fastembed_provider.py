@@ -109,7 +109,7 @@ class FastEmbedProvider(EmbeddingProvider):
         # Initialize metrics if available
         try:
             self.metrics_registry = get_metrics_registry()
-        except (AttributeError, ImportError, RuntimeError, TypeError) as e:
+        except (AttributeError, ImportError, RuntimeError, TypeError):
             logger.warning(
                 "Metrics registry not available - embedding monitoring disabled"
             )
@@ -189,11 +189,13 @@ class FastEmbedProvider(EmbeddingProvider):
             logger.debug(
                 f"Generated {len(embeddings)} embeddings locally"
             )  # TODO: Convert f-string to logging format
-            return embeddings
 
         except Exception as e:
             msg = f"Failed to generate embeddings: {e}"
             raise EmbeddingServiceError(msg) from e
+
+        else:
+            return embeddings
 
     async def generate_sparse_embeddings(
         self, texts: list[str]
@@ -232,10 +234,12 @@ class FastEmbedProvider(EmbeddingProvider):
                 }
                 sparse_embeddings.append(sparse_data)
 
-            return sparse_embeddings
         except Exception as e:
             msg = f"Sparse embedding generation failed: {e}"
             raise EmbeddingServiceError(msg) from e
+
+        else:
+            return sparse_embeddings
 
     @property
     def cost_per_token(self) -> float:

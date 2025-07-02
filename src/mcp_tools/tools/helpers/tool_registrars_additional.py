@@ -1,6 +1,5 @@
 """Additional tool registration functions for query processing MCP tools."""
 
-import asyncio
 import logging
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -50,8 +49,6 @@ def register_pipeline_health_tool(mcp, factory: QueryProcessingPipelineFactory):
                 f"status={'healthy' if health_status.get('pipeline_healthy') else 'unhealthy'}"
             )
 
-            return health_status
-
         except Exception as e:
             await ctx.error("Pipeline health check {request_id} failed")
             logger.exception("Pipeline health check failed")
@@ -60,6 +57,8 @@ def register_pipeline_health_tool(mcp, factory: QueryProcessingPipelineFactory):
                 "error": str(e),
                 "components": {"health_check": "failed"},
             }
+        else:
+            return health_status
 
 
 def register_pipeline_metrics_tool(mcp, factory: QueryProcessingPipelineFactory):
@@ -84,12 +83,12 @@ def register_pipeline_metrics_tool(mcp, factory: QueryProcessingPipelineFactory)
 
             await ctx.info(f"Pipeline metrics collection {request_id} completed")
 
-            return metrics
-
         except Exception as e:
             await ctx.error("Pipeline metrics collection {request_id} failed")
             logger.exception("Pipeline metrics collection failed")
             return {"error": str(e), "metrics_available": False}
+        else:
+            return metrics
 
 
 def register_pipeline_warmup_tool(mcp, factory: QueryProcessingPipelineFactory):
@@ -114,12 +113,12 @@ def register_pipeline_warmup_tool(mcp, factory: QueryProcessingPipelineFactory):
 
             await ctx.info(f"Pipeline warm-up {request_id} completed successfully")
 
-            return {"status": "success", "message": "Pipeline warmed up successfully"}
-
-        except (ConnectionError, TimeoutError, ValueError) as e:
+        except (ConnectionError, TimeoutError, ValueError):
             await ctx.warning("Pipeline warm-up {request_id} had issues")
             logger.warning("Pipeline warm-up failed")
             return {
                 "status": "partial_success",
                 "message": "Pipeline warm-up completed with issues",
             }
+        else:
+            return {"status": "success", "message": "Pipeline warmed up successfully"}

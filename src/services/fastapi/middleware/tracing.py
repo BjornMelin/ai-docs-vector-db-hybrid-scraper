@@ -143,8 +143,6 @@ class TracingMiddleware(BaseHTTPMiddleware):
             if self.enable_response_logging:
                 await self._log_response(request, response, correlation_id, duration)
 
-            return response
-
         except Exception as e:
             # Calculate processing time for error case
             end_time = time.perf_counter()
@@ -165,6 +163,9 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
             # Re-raise the exception
             raise
+
+        else:
+            return response
 
     async def _log_request(self, request: Request, correlation_id: str) -> None:
         """Log incoming request details.
@@ -269,11 +270,12 @@ class TracingMiddleware(BaseHTTPMiddleware):
                 body_str = body.decode("utf-8")
                 if truncated:
                     body_str += f"... (truncated at {self.max_body_size} bytes)"
-                return body_str
             except UnicodeDecodeError:
                 return f"<binary data: {len(body)} bytes>"
 
-        except (RuntimeError, TypeError, UnicodeDecodeError, ValueError) as e:
+            else:
+                return body_str
+        except (RuntimeError, TypeError, UnicodeDecodeError, ValueError):
             return None
 
     def _get_response_body(self, response: Response) -> str | None:
@@ -306,11 +308,12 @@ class TracingMiddleware(BaseHTTPMiddleware):
                 body_str = body.decode("utf-8")
                 if truncated:
                     body_str += f"... (truncated at {self.max_body_size} bytes)"
-                return body_str
             except UnicodeDecodeError:
                 return f"<binary data: {len(body)} bytes>"
 
-        except (ConnectionError, OSError, RuntimeError, TimeoutError) as e:
+            else:
+                return body_str
+        except (ConnectionError, OSError, RuntimeError, TimeoutError):
             return None
 
     def _get_client_ip(self, request: Request) -> str:
@@ -419,13 +422,14 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
                 else:
                     span.set_status(self.Status(self.StatusCode.OK))
 
-                return response
-
             except Exception as e:
                 # Record exception in span
                 span.record_exception(e)
                 span.set_status(self.Status(self.StatusCode.ERROR, str(e)))
                 raise
+
+            else:
+                return response
 
     def _get_client_ip(self, request: Request) -> str | None:
         """Get client IP address from request."""

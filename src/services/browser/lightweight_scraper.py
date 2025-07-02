@@ -309,13 +309,14 @@ class LightweightScraper(BaseService):
 
             analysis["can_handle"] = analysis["confidence"] > 0.5
 
-            return analysis
-
         except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.debug(
                 f"HEAD request failed for {url}: {e}"
             )  # TODO: Convert f-string to logging format
             return None
+
+        else:
+            return analysis
 
     async def scrape(self, url: str) -> ScrapedContent | None:
         """Scrape content using lightweight HTTP + BeautifulSoup approach.
@@ -373,7 +374,7 @@ class LightweightScraper(BaseService):
                 )  # TODO: Convert f-string to logging format
                 return None
             raise
-        except (httpx.HTTPError, httpx.TimeoutException, ConnectionError) as e:
+        except (httpx.HTTPError, ConnectionError) as e:
             logger.warning(
                 f"Error scraping {url}: {e}"
             )  # TODO: Convert f-string to logging format

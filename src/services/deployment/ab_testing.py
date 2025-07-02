@@ -162,7 +162,7 @@ class ABTestingManager:
             self._initialized = True
             logger.info("A/B testing manager initialized successfully")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize A/B testing manager: %s")
             self._initialized = False
             raise
@@ -467,11 +467,12 @@ class ABTestingManager:
             # (e.g., two-proportion z-test, chi-square test)
             is_significant = has_sufficient_sample and abs(uplift) > 5.0  # 5% threshold
 
-            return uplift, is_significant
-
-        except Exception as e:
+        except Exception:
             logger.exception("Error calculating statistical significance: %s")
             return None, False
+
+        else:
+            return uplift, is_significant
 
     async def _monitoring_loop(self) -> None:
         """Background task for monitoring A/B tests."""
@@ -485,7 +486,7 @@ class ABTestingManager:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception:
                 logger.exception("Error in A/B testing monitoring loop: %s")
                 await asyncio.sleep(60)
 
@@ -511,8 +512,8 @@ class ABTestingManager:
                     await self.stop_test(test_id, "Early winner detected")
                     return
 
-        except Exception as e:
-            logger.exception("Error checking test completion for %s: %s", test_id)
+        except Exception:
+            logger.exception("Error checking test completion for %s", test_id)
 
     async def _load_active_tests(self) -> None:
         """Load active tests from storage."""

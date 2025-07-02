@@ -191,12 +191,14 @@ def register_tools(mcp, client_manager: ClientManager):
             await ctx.info(
                 f"Multi-stage search {request_id} completed: {len(search_results)} results"
             )
-            return search_results
 
-        except (ConnectionError, OSError, PermissionError) as e:
+        except (ConnectionError, OSError, PermissionError):
             await ctx.error("Multi-stage search {request_id} failed")
             logger.exception("Multi-stage search failed")
             raise
+
+        else:
+            return search_results
 
     @mcp.tool()
     async def hyde_search(
@@ -224,7 +226,7 @@ def register_tools(mcp, client_manager: ClientManager):
             # Get services
             try:
                 hyde_engine = await client_manager.get_hyde_engine()
-            except (ConnectionError, OSError, TimeoutError, ValueError) as e:
+            except (ConnectionError, OSError, TimeoutError, ValueError):
                 await ctx.warning(
                     "HyDE engine not available, falling back to regular search"
                 )
@@ -239,6 +241,8 @@ def register_tools(mcp, client_manager: ClientManager):
                     search_accuracy=request.search_accuracy,
                 )
                 return await _search_documents_direct(fallback_request, ctx)
+            else:
+                return search_results
 
             # Use HyDE engine for enhanced search
             await ctx.debug(
@@ -324,7 +328,6 @@ def register_tools(mcp, client_manager: ClientManager):
             await ctx.info(
                 f"HyDE search {request_id} completed: {len(search_results)} results found"
             )
-            return search_results
 
         except Exception as e:
             await ctx.error("HyDE search {request_id} failed")
@@ -415,7 +418,7 @@ def register_tools(mcp, client_manager: ClientManager):
                         query, collection, limit, domain, use_cache, client_manager, ctx
                     )
                     result_dict["ab_test_results"] = ab_test_results
-                except (ConnectionError, OSError, PermissionError) as e:
+                except (ConnectionError, OSError, PermissionError):
                     if ctx:
                         await ctx.warning("A/B testing failed")
                     # Fallback to regular HyDE search
@@ -510,7 +513,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return HyDEAdvancedResponse(**result_dict)
 
-        except (ConnectionError, OSError, PermissionError) as e:
+        except (ConnectionError, OSError, PermissionError):
             if ctx:
                 await ctx.error("Advanced HyDE search {request_id} failed")
             logger.exception("Advanced HyDE search failed")
@@ -574,9 +577,10 @@ def register_tools(mcp, client_manager: ClientManager):
             await ctx.info(
                 f"Filtered search {request_id} completed: {len(search_results)} results"
             )
-            return search_results
 
-        except (ConnectionError, OSError, PermissionError) as e:
+        except (ConnectionError, OSError, PermissionError):
             await ctx.error("Filtered search {request_id} failed")
             logger.exception("Filtered search failed")
             raise
+        else:
+            return search_results

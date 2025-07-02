@@ -21,6 +21,8 @@ from typing import TYPE_CHECKING, Any
 from src.architecture.service_factory import BaseService
 from src.config.modern import Config
 from src.services.deployment.feature_flags import FeatureFlagManager
+from src.services.enterprise.cache import EnterpriseCacheService
+from src.services.enterprise.search import EnterpriseSearchService
 from src.services.observability.performance import PerformanceMonitor
 from src.services.security.integration import SecurityManager
 
@@ -409,7 +411,7 @@ class EnterpriseServiceRegistry:
 
             logger.info("Enterprise service orchestration completed successfully")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Service orchestration failed")
             await self.coordinate_shutdown()
             raise
@@ -509,7 +511,7 @@ class EnterpriseServiceRegistry:
                 descriptor.status = ServiceStatus.UNHEALTHY
                 _raise_service_health_check_failed(service_name, health_result)
 
-        except Exception as e:
+        except Exception:
             descriptor.status = ServiceStatus.FAILED
             descriptor.error_count += 1
             logger.exception("Failed to start service {service_name}")
@@ -530,7 +532,7 @@ class EnterpriseServiceRegistry:
             descriptor.status = ServiceStatus.STOPPED
             logger.info("Service %s stopped successfully", service_name)
 
-        except Exception as e:
+        except Exception:
             descriptor.status = ServiceStatus.FAILED
             descriptor.error_count += 1
             logger.exception("Failed to stop service {service_name}")
@@ -543,14 +545,14 @@ class EnterpriseServiceRegistry:
                 for service_name in self.services:
                     try:
                         await self.health_monitors[service_name].check_health()
-                    except Exception as e:
+                    except Exception:
                         logger.exception("Health check failed for {service_name}")
 
                 await asyncio.sleep(self.health_check_interval)
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except Exception:
                 logger.exception("Error in health check loop")
                 await asyncio.sleep(self.health_check_interval)
 
@@ -606,7 +608,7 @@ class EnterpriseIntegrationManager:
                 f"Enterprise integration completed in {integration_time:.2f} seconds"
             )
 
-        except Exception as e:
+        except Exception:
             self.integration_phase = IntegrationPhase.FAILED
             logger.exception("Enterprise integration failed")
             await self.cleanup_enterprise_features()
@@ -628,7 +630,7 @@ class EnterpriseIntegrationManager:
 
             logger.info("Enterprise feature cleanup completed")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error during enterprise cleanup")
 
     async def get_integration_status(self) -> dict[str, Any]:
@@ -669,7 +671,6 @@ class EnterpriseIntegrationManager:
     async def _register_enterprise_services(self) -> None:
         """Register all enterprise services with the registry."""
         # Register enterprise cache service
-        from src.services.enterprise.cache import EnterpriseCacheService
 
         cache_service = EnterpriseCacheService()
         await self.service_registry.register_service(
@@ -677,7 +678,6 @@ class EnterpriseIntegrationManager:
         )
 
         # Register enterprise search service
-        from src.services.enterprise.search import EnterpriseSearchService
 
         search_service = EnterpriseSearchService()
         await self.service_registry.register_service(
@@ -707,22 +707,33 @@ class EnterpriseIntegrationManager:
         logger.info("Enterprise integration validation passed")
 
 
-# Global integration manager instance
-_integration_manager: EnterpriseIntegrationManager | None = None
+class _IntegrationManagerSingleton:
+    """Singleton holder for enterprise integration manager instance."""
+
+    _instance: EnterpriseIntegrationManager | None = None
+
+    @classmethod
+    async def get_instance(cls, config: Config = None) -> EnterpriseIntegrationManager:
+        """Get the singleton enterprise integration manager instance."""
+        if cls._instance is None:
+            if config is None:
+                config = Config()
+            cls._instance = EnterpriseIntegrationManager(config)
+        return cls._instance
+
+    @classmethod
+    async def cleanup_instance(cls) -> None:
+        """Cleanup the singleton instance."""
+        if cls._instance:
+            await cls._instance.cleanup_enterprise_features()
+            cls._instance = None
 
 
 async def get_integration_manager(
     config: Config = None,
 ) -> EnterpriseIntegrationManager:
     """Get or create the global enterprise integration manager."""
-    global _integration_manager
-
-    if _integration_manager is None:
-        if config is None:
-            config = Config()
-        _integration_manager = EnterpriseIntegrationManager(config)
-
-    return _integration_manager
+    return await _IntegrationManagerSingleton.get_instance(config)
 
 
 async def initialize_enterprise_platform(
@@ -736,8 +747,4 @@ async def initialize_enterprise_platform(
 
 async def cleanup_enterprise_platform() -> None:
     """Cleanup the enterprise platform."""
-    global _integration_manager
-
-    if _integration_manager:
-        await _integration_manager.cleanup_enterprise_features()
-        _integration_manager = None
+    await _IntegrationManagerSingleton.cleanup_instance()

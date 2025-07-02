@@ -45,7 +45,8 @@ class SPLADEProvider:
             logger.info("SPLADE provider initialized successfully")
         except (ImportError, ValueError, AttributeError, RuntimeError) as e:
             logger.warning(
-                "Failed to load SPLADE model: %s. Using fallback sparse generation.", str(e)
+                "Failed to load SPLADE model: %s. Using fallback sparse generation.",
+                str(e),
             )
             self._model = None
             self._tokenizer = None
@@ -64,7 +65,7 @@ class SPLADEProvider:
             # For now, use fallback implementation
             logger.info("Using fallback SPLADE implementation")
 
-        except (OSError, AttributeError, ModuleNotFoundError) as e:
+        except (OSError, AttributeError, ModuleNotFoundError):
             logger.exception("Failed to load SPLADE model")
             raise
         except ImportError:
@@ -108,12 +109,12 @@ class SPLADEProvider:
             if self.splade_config.cache_embeddings:
                 self._cache[cache_key] = sparse_vector
 
-            return sparse_vector
-
-        except (OSError, AttributeError, ConnectionError, ImportError) as e:
+        except (OSError, AttributeError, ConnectionError, ImportError):
             logger.exception("Sparse vector generation failed")
             # Return empty sparse vector as fallback
             return {}
+        else:
+            return sparse_vector
 
     async def _generate_with_splade_model(self, text: str) -> dict[int, float]:
         """Generate sparse vector using actual SPLADE model."""

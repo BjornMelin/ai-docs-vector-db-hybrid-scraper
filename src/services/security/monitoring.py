@@ -239,7 +239,7 @@ class SecurityMonitor:
             # Check for automated response triggers
             self._check_automated_responses(security_event)
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to log security event")
 
     def _determine_severity(self, event_type: SecurityEventType) -> SecuritySeverity:
@@ -452,20 +452,19 @@ class SecurityMonitor:
             event: Security event to evaluate
         """
         # Auto-block IPs with critical threats
-        if event.severity == SecuritySeverity.CRITICAL:
-            if event.event_type in (
-                SecurityEventType.AI_THREAT_DETECTED,
-                SecurityEventType.SUSPICIOUS_ACTIVITY,
-            ):
-                logger.critical(
-                    f"Critical event - consider blocking IP: {event.client_ip}",
-                    extra={
-                        "event_type": event.event_type.value,
-                        "client_ip": event.client_ip,
-                        "endpoint": event.endpoint,
-                        "event_data": event.event_data,
-                    },
-                )
+        if event.severity == SecuritySeverity.CRITICAL and event.event_type in (
+            SecurityEventType.AI_THREAT_DETECTED,
+            SecurityEventType.SUSPICIOUS_ACTIVITY,
+        ):
+            logger.critical(
+                f"Critical event - consider blocking IP: {event.client_ip}",
+                extra={
+                    "event_type": event.event_type.value,
+                    "client_ip": event.client_ip,
+                    "endpoint": event.endpoint,
+                    "event_data": event.event_data,
+                },
+            )
 
         # Alert on repeated threats from same IP
         recent_ip_events = [
@@ -666,11 +665,13 @@ class SecurityMonitor:
         if file_format.lower() == "csv":
             # Simple CSV export
             lines = ["timestamp,event_type,severity,client_ip,endpoint,method"]
-            for event in relevant_events:
-                lines.append(
+            lines.extend(
+                [
                     f"{event.timestamp.isoformat()},{event.event_type.value},"
                     f"{event.severity.value},{event.client_ip},{event.endpoint},{event.method}"
-                )
+                    for event in relevant_events
+                ]
+            )
             return "\n".join(lines)
         msg = f"Unsupported export format: {file_format}"
         raise ValueError(msg)

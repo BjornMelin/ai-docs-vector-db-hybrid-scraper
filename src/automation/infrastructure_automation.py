@@ -96,7 +96,7 @@ class AdaptiveCircuitBreaker:
                 else func(*args, **kwargs)
             )
 
-        except (TimeoutError, OSError, PermissionError) as e:
+        except (TimeoutError, OSError, PermissionError):
             # Record failure
             self._record_failure(time.time() - start_time)
             raise
@@ -224,10 +224,14 @@ class SelfHealingDatabaseManager:
             self.engine = await self._create_engine_with_retry()
             logger.info("Database connection initialized successfully")
 
-        except (OSError, AttributeError, ConnectionError, ImportError) as e:
+        except (OSError, AttributeError, ConnectionError, ImportError):
             logger.exception("Failed to initialize database")
             # Start background recovery
-            asyncio.create_task(self._background_recovery())
+            recovery_task = asyncio.create_task(self._background_recovery())
+            # Store reference to prevent task garbage collection
+            recovery_task.add_done_callback(
+                lambda _: logger.debug("Background recovery task completed")
+            )
 
     async def _create_engine_with_retry(self) -> AsyncEngine:
         """Create database engine with exponential backoff retry."""
@@ -274,7 +278,7 @@ class SelfHealingDatabaseManager:
 
             yield session
 
-        except (ConnectionError, OSError, PermissionError) as e:
+        except (ConnectionError, OSError, PermissionError):
             self.error_count += 1
             logger.exception("Database session error")
 
@@ -316,10 +320,14 @@ class SelfHealingDatabaseManager:
             self.engine = await self._create_engine_with_retry()
             logger.info("Database recovery successful")
 
-        except (ConnectionError, OSError, PermissionError) as e:
+        except (ConnectionError, OSError, PermissionError):
             logger.exception("Database recovery failed")
             # Schedule retry
-            asyncio.create_task(self._delayed_recovery())
+            retry_task = asyncio.create_task(self._delayed_recovery())
+            # Store reference to prevent task garbage collection
+            retry_task.add_done_callback(
+                lambda _: logger.debug("Delayed recovery task completed")
+            )
 
     async def _delayed_recovery(self):
         """Attempt recovery after a delay."""
@@ -343,7 +351,7 @@ class SelfHealingDatabaseManager:
             async with self.engine.begin() as conn:
                 await conn.execute("SELECT 1")
 
-        except (AttributeError, RuntimeError, ValueError) as e:
+        except (AttributeError, RuntimeError, ValueError):
             return HealthStatus.UNHEALTHY
         else:
             failure_rate = self.circuit_breaker.state.failure_rate
@@ -387,7 +395,7 @@ class AutoScalingManager:
 
                 await asyncio.sleep(check_interval)
 
-            except (TimeoutError, OSError, PermissionError) as e:
+            except (TimeoutError, OSError, PermissionError):
                 logger.exception("Auto-scaling monitoring error")
                 await asyncio.sleep(30)  # Shorter interval on error
 
@@ -508,7 +516,11 @@ class SelfHealingManager:
 
         # Initialize auto-scaling
         self.scaling_manager = AutoScalingManager()
-        asyncio.create_task(self.scaling_manager.start_monitoring())
+        scaling_task = asyncio.create_task(self.scaling_manager.start_monitoring())
+        # Store reference to prevent task garbage collection
+        scaling_task.add_done_callback(
+            lambda _: logger.debug("Auto-scaling monitoring task completed")
+        )
 
         logger.info("Self-healing infrastructure initialized")
 
@@ -547,14 +559,19 @@ class DatabaseNotAvailableError(Exception):
 
 
 # Global instance
-_self_healing_manager: SelfHealingManager | None = None
+class _SelfHealingManagerSingleton:
+    """Singleton holder for self-healing manager instance."""
+
+    _instance: SelfHealingManager | None = None
+
+    @classmethod
+    async def get_instance(cls) -> SelfHealingManager:
+        """Get the singleton self-healing manager instance."""
+        if cls._instance is None:
+            cls._instance = SelfHealingManager()
+        return cls._instance
 
 
 async def get_self_healing_manager() -> SelfHealingManager:
     """Get the global self-healing manager instance."""
-    global _self_healing_manager
-
-    if _self_healing_manager is None:
-        _self_healing_manager = SelfHealingManager()
-
-    return _self_healing_manager
+    return await _SelfHealingManagerSingleton.get_instance()

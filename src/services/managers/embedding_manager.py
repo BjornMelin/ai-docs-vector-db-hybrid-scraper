@@ -16,8 +16,11 @@ if TYPE_CHECKING:
 
 # Imports to avoid circular dependencies
 try:
-    from src.services.embeddings.manager import EmbeddingManager as CoreManager
-    from src.services.embeddings.manager import QualityTier, TextAnalysis
+    from src.services.embeddings.manager import (
+        EmbeddingManager as CoreManager,
+        QualityTier,
+        TextAnalysis,
+    )
 except ImportError:
     CoreManager = None
     QualityTier = None
@@ -28,12 +31,14 @@ logger = logging.getLogger(__name__)
 
 def _raise_core_manager_not_available() -> None:
     """Raise ImportError for CoreManager not available."""
-    raise ImportError("CoreManager not available")
+    msg = "CoreManager not available"
+    raise ImportError(msg)
 
 
 def _raise_quality_tier_not_available() -> None:
     """Raise ImportError for QualityTier not available."""
-    raise ImportError("QualityTier not available")
+    msg = "QualityTier not available"
+    raise ImportError(msg)
 
 
 class EmbeddingManager:
@@ -174,7 +179,7 @@ class EmbeddingManager:
 
         try:
             return await self._core_manager.rerank_results(query, results)
-        except Exception as e:
+        except Exception:
             logger.exception(
                 "Result reranking failed: "
             )  # TODO: Convert f-string to logging format
@@ -302,7 +307,8 @@ class EmbeddingManager:
 
         # Convert dict back to TextAnalysis for core manager
         if QualityTier is None or TextAnalysis is None:
-            raise ImportError("Required classes not available")
+            msg = "Required classes not available"
+            raise ImportError(msg)
 
         analysis = TextAnalysis(
             total_length=text_analysis["total_length"],

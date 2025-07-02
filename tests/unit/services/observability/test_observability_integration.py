@@ -11,6 +11,7 @@ from src.services.observability.ai_tracking import (
 from src.services.observability.correlation import (
     correlated_operation,
     get_correlation_manager,
+    record_error,
     set_request_context,
 )
 from src.services.observability.instrumentation import instrument_function
@@ -232,9 +233,6 @@ class TestObservabilitySystemIntegration:
 
             except ConnectionError as e:
                 # Test error recording with correlation
-                from src.services.observability.correlation import (
-                    record_error,
-                )
 
                 error_id = record_error(
                     error=e,
@@ -520,13 +518,13 @@ class TestObservabilityRealWorldScenarios:
                 user_id=f"user{request_num}", session_id=f"session{request_num}"
             )
 
-            with correlation_manager.correlated_operation(f"request_{request_num}"):
-                with monitor_operation(
-                    f"operation_{request_num}", track_resources=False
-                ):
-                    # Simulate work
-                    time.sleep(0.001)
-                    return f"result_{request_num}"
+            with (
+                correlation_manager.correlated_operation(f"request_{request_num}"),
+                monitor_operation(f"operation_{request_num}", track_resources=False),
+            ):
+                # Simulate work
+                time.sleep(0.001)
+                return f"result_{request_num}"
 
         # Process multiple requests
         results = []

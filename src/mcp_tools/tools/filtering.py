@@ -141,8 +141,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Filter optimization completed: {len(enhanced_filters.get('optimized_filters', {}))} filters optimized"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform intelligent filter optimization")
             if ctx:
@@ -153,6 +151,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "query": query,
                 "optimization_target": optimization_target,
             }
+
+        else:
+            return final_results
 
     @mcp.tool()
     async def adaptive_filter_composition(
@@ -253,8 +254,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Filter composition completed: strategy={optimal_strategy['strategy']}, quality={quality_validation.get('quality_score', 0.0):.2f}"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform adaptive filter composition")
             if ctx:
@@ -265,6 +264,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "filters_count": len(filters),
                 "composition_strategy": composition_strategy,
             }
+
+        else:
+            return final_results
 
     @mcp.tool()
     async def dynamic_filter_learning(
@@ -368,8 +370,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     f"Filter learning completed: {len(learned_rules)} rules learned with {validation_metrics.get('accuracy', 0.0):.2f} accuracy"
                 )
 
-            return final_results
-
         except Exception as e:
             logger.exception("Failed to perform dynamic filter learning")
             if ctx:
@@ -380,6 +380,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 "query_patterns_count": len(query_patterns),
                 "learning_mode": learning_mode,
             }
+
+        else:
+            return final_results
 
     @mcp.tool()
     async def get_filtering_capabilities() -> dict[str, Any]:
@@ -1259,10 +1262,14 @@ async def _validate_learning_inputs(
 
     # Check feedback structure
     required_fields = ["relevance_score", "quality_score"]
-    for i, feedback in enumerate(result_feedback):
-        for field in required_fields:
-            if field not in feedback:
-                validation_issues.append(f"Missing {field} in feedback {i}")
+    validation_issues.extend(
+        [
+            f"Missing {field} in feedback {i}"
+            for i, feedback in enumerate(result_feedback)
+            for field in required_fields
+            if field not in feedback
+        ]
+    )
 
     return {
         "valid": len(validation_issues) == 0,

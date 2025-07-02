@@ -3,6 +3,7 @@
 import logging
 from typing import TYPE_CHECKING, Any, Optional
 
+import redis
 from dependency_injector.wiring import Provide, inject
 
 from src.config import CacheType
@@ -11,7 +12,6 @@ from src.services.errors import APIError
 
 
 if TYPE_CHECKING:
-    import redis
     from qdrant_client.async_qdrant_client import AsyncQdrantClient
 
     from src.services.cache.manager import CacheManager
@@ -32,7 +32,8 @@ logger = logging.getLogger(__name__)
 
 def _raise_required_services_not_available() -> None:
     """Raise ImportError for required services not available."""
-    raise ImportError("Required services not available")
+    msg = "Required services not available"
+    raise ImportError(msg)
 
 
 class DatabaseManager:
@@ -72,7 +73,8 @@ class DatabaseManager:
 
         # Initialize cache manager
         if CacheManager is None:
-            raise ImportError("CacheManager not available")
+            msg = "CacheManager not available"
+            raise ImportError(msg)
 
         self._cache_manager = CacheManager(
             enable_local_cache=True,
@@ -127,7 +129,7 @@ class DatabaseManager:
             collections = await self._qdrant_client.get_collections()
             return [col.name for col in collections.collections]
         except Exception as e:
-            logger.exception("Failed to get collections: %s", e)
+            logger.exception("Failed to get collections")
             msg = f"Failed to get collections: {e}"
             raise APIError(msg) from e
 
@@ -152,11 +154,13 @@ class DatabaseManager:
 
         try:
             await self._qdrant_service.upsert_points(collection_name, points)
-            return True
         except Exception as e:
-            logger.exception("Failed to store embeddings: %s", e)
+            logger.exception("Failed to store embeddings")
             msg = f"Failed to store embeddings: {e}"
             raise APIError(msg) from e
+
+        else:
+            return True
 
     async def search_similar(
         self,
@@ -191,7 +195,7 @@ class DatabaseManager:
                 filter_conditions=filter_conditions,
             )
         except Exception as e:
-            logger.exception("Failed to search vectors: %s", e)
+            logger.exception("Failed to search vectors")
             msg = f"Failed to search vectors: {e}"
             raise APIError(msg) from e
 
@@ -278,12 +282,14 @@ class DatabaseManager:
 
         try:
             await self._redis_client.ping()
-            return True
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
                 f"Redis ping failed: {e}"
             )  # TODO: Convert f-string to logging format
             return False
+
+        else:
+            return True
 
     async def redis_set(self, key: str, value: str, ex: int | None = None) -> bool:
         """Set value in Redis.
@@ -301,12 +307,14 @@ class DatabaseManager:
 
         try:
             await self._redis_client.set(key, value, ex=ex)
-            return True
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
                 f"Redis set failed for {key}: {e}"
             )  # TODO: Convert f-string to logging format
             return False
+
+        else:
+            return True
 
     async def redis_get(self, key: str) -> str | None:
         """Get value from Redis.
@@ -355,7 +363,7 @@ class DatabaseManager:
             try:
                 collections = await self.get_collections()
                 status["qdrant"]["collections"] = collections
-            except (ConnectionError, OSError, PermissionError) as e:
+            except (ConnectionError, OSError, PermissionError):
                 status["qdrant"]["available"] = False
 
         # Check Redis status
@@ -367,7 +375,7 @@ class DatabaseManager:
             try:
                 cache_stats = await self._cache_manager.get_stats()
                 status["cache"]["stats"] = cache_stats
-            except (ConnectionError, OSError, PermissionError) as e:
+            except (ConnectionError, OSError, PermissionError):
                 status["cache"]["available"] = False
 
         return status

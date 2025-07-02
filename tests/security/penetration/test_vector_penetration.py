@@ -137,11 +137,12 @@ class TestVectorPenetrationAttacks:
                     stage_name=f"attack-{attack_id}",
                     query_vector=SecureVectorModel(values=vector),
                 )
-                return (attack_id, "success", True)
             except (ValueError, DimensionError) as e:
                 return (attack_id, str(e), "security:" in str(e))
-            except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
+            except (ConnectionError, TimeoutError, RuntimeError) as e:
                 return (attack_id, str(e), False)
+            else:
+                return (attack_id, "success", True)
 
         # Launch concurrent attacks
         with ThreadPoolExecutor(max_workers=20) as executor:
@@ -302,7 +303,7 @@ class TestVectorFuzzingAttacks:
             error_msg = str(e)
             assert len(error_msg) > 0
             # Should not crash or raise unexpected exceptions
-        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
+        except (ConnectionError, TimeoutError, RuntimeError) as e:
             # Unexpected exceptions indicate a problem
             pytest.fail(f"Unexpected exception with input {fuzz_vector[:5]}...: {e}")
 
@@ -460,7 +461,6 @@ class TestVectorResourceExhaustion:
 
     def test_memory_leak_resistance(self) -> None:
         """Test that repeated validation doesn't leak memory."""
-        import gc
 
         # Force garbage collection
         gc.collect()

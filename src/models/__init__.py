@@ -49,7 +49,7 @@ from .api_contracts import (
     MCPResponse,
     MetricData,
     SearchRequest,
-    SearchResponse,
+    SearchResponse as ApiSearchResponse,
     SearchResultItem,
     ValidationRequest,
     ValidationResponse,
@@ -194,6 +194,7 @@ __all__ = [
     # API Contracts
     "SearchRequest",
     "SearchResponse",
+    "ApiSearchResponse",
     "SearchResultItem",
     # Vector Search - Stage models
     "SearchStage",

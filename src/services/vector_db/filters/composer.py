@@ -340,7 +340,7 @@ class FilterComposer(BaseFilter):
                     try:
                         result = await task
                         results[name] = result
-                    except (TimeoutError, OSError, PermissionError) as e:
+                    except (TimeoutError, OSError, PermissionError):
                         self._logger.exception("Filter {name} failed")
                         if criteria.fail_fast:
                             raise
@@ -379,7 +379,7 @@ class FilterComposer(BaseFilter):
                     msg = f"Required filter {filter_ref.filter_instance.name} failed"
                     raise FilterError(msg)
 
-            except (OSError, PermissionError) as e:
+            except (OSError, PermissionError):
                 self._logger.exception(
                     "Filter {filter_ref.filter_instance.name} failed"
                 )
@@ -613,10 +613,11 @@ class FilterComposer(BaseFilter):
         """Validate filter composition criteria."""
         try:
             FilterCompositionCriteria.model_validate(filter_criteria)
-            return True
-        except (ImportError, OSError, PermissionError) as e:
+        except (ImportError, OSError, PermissionError):
             self._logger.warning("Invalid composition criteria")
             return False
+        else:
+            return True
 
     def get_supported_operators(self) -> list[str]:
         """Get supported composition operators."""

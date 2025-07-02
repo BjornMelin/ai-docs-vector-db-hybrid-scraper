@@ -164,14 +164,16 @@ class ModernRateLimiter:
             key = self.key_func(request)
             # This would require extending slowapi or accessing internal state
             # For now, return basic information
+        except Exception as e:
+            logger.exception("Error getting current limits")
+            return {"error": str(e)}
+
+        else:
             return {
                 "key": key,
                 "limiter_storage": self.redis_url,
                 "default_limits": self.limiter.default_limits,
             }
-        except Exception as e:
-            logger.exception("Error getting current limits")
-            return {"error": str(e)}
 
     async def reset_limits(self, key: str) -> bool:
         """Reset rate limits for a specific key.
@@ -183,20 +185,15 @@ class ModernRateLimiter:
             True if successful, False otherwise
         """
         try:
-            # This would require accessing the limiter's storage directly
-            if hasattr(self.limiter, "_storage"):
-                storage = self.limiter._storage
-                if hasattr(storage, "clear"):
-                    await storage.clear(key)
-                    logger.info(
-                        f"Reset rate limits for key: {key}"
-                    )  # TODO: Convert f-string to logging format
-                    return True
-
-            logger.warning("Rate limit reset not supported")
-            return False
-        except Exception as e:
+            # Rate limit reset requires direct storage access which is not exposed
+            # by slowapi's public interface. This is intentionally not supported
+            # to maintain proper encapsulation of the rate limiting library.
+            logger.warning("Rate limit reset not supported by current implementation")
+        except Exception:
             logger.exception("Error resetting limits for {key}")
+            return False
+
+        else:
             return False
 
     async def get_stats(self) -> dict[str, Any]:

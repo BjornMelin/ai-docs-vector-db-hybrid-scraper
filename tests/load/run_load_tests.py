@@ -14,10 +14,12 @@ import re
 import subprocess
 import sys
 import time
+
+# Add the project root to Python path
+import traceback
 from pathlib import Path
 
 
-# Add the project root to Python path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
@@ -1011,8 +1013,6 @@ def main():
     except Exception:
         logger.exception("Test execution failed")
         if args.verbose:
-            import traceback
-
             traceback.print_exc()
         sys.exit(1)
 

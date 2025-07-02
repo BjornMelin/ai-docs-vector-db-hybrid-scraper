@@ -119,8 +119,6 @@ def register_advanced_query_processing_tool(
                 f"{mcp_response.total_results} results, confidence: {mcp_response.confidence_score:.2f}"
             )
 
-            return mcp_response
-
         except Exception as e:
             await ctx.error(f"Advanced query processing {request_id} failed: {e}")
             logger.exception(
@@ -131,6 +129,9 @@ def register_advanced_query_processing_tool(
             return AdvancedQueryProcessingResponse(
                 success=False, results=[], total_results=0, error=str(e)
             )
+
+        else:
+            return mcp_response
 
 
 def register_query_analysis_tool(
@@ -211,11 +212,11 @@ def register_query_analysis_tool(
                 f"complexity={intent_result.complexity_level if intent_result else 'N/A'}"
             )
 
-            return response
-
         except Exception as e:
             await ctx.error(f"Query analysis {request_id} failed: {e}")
             logger.exception(
                 "Query analysis failed: "
             )  # TODO: Convert f-string to logging format
             raise
+        else:
+            return response

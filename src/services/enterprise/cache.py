@@ -9,6 +9,7 @@ import time
 from typing import Any
 
 from src.architecture.service_factory import BaseService
+from src.services.cache.dragonfly_cache import DragonflyCacheAdapter
 
 
 logger = logging.getLogger(__name__)
@@ -71,7 +72,7 @@ class EnterpriseCacheService(BaseService):
             self._mark_initialized()
             logger.info("Enterprise cache service initialized successfully")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to initialize enterprise cache service")
             raise
 
@@ -81,7 +82,7 @@ class EnterpriseCacheService(BaseService):
         if self.distributed_cache:
             try:
                 await self.distributed_cache.close()
-            except Exception as e:
+            except Exception:
                 logger.exception("Error closing distributed cache")
 
         # Clear local cache
@@ -134,10 +135,12 @@ class EnterpriseCacheService(BaseService):
             # Cache miss
             self._cache_misses += 1
             self._record_operation_time("get", time.time() - start_time)
+
+        except Exception:
+            logger.exception("Cache get failed for key {key}")
             return None
 
-        except Exception as e:
-            logger.exception("Cache get failed for key {key}")
+        else:
             return None
 
     async def set(
@@ -174,7 +177,7 @@ class EnterpriseCacheService(BaseService):
 
             logger.debug("Cached value for key: %s in %s tier(s)", key, tier)
 
-        except Exception as e:
+        except Exception:
             logger.exception("Cache set failed for key {key}")
 
     async def delete(self, key: str) -> bool:
@@ -208,11 +211,12 @@ class EnterpriseCacheService(BaseService):
             self._cache_deletes += 1
             self._record_operation_time("delete", time.time() - start_time)
 
-            return deleted
-
-        except Exception as e:
+        except Exception:
             logger.exception("Cache delete failed for key {key}")
             return False
+
+        else:
+            return deleted
 
     async def clear(self, tier: str = "both") -> None:
         """Clear cache entries from specified tiers.
@@ -233,7 +237,7 @@ class EnterpriseCacheService(BaseService):
             self._access_patterns.clear()
             self._hot_keys.clear()
 
-        except Exception as e:
+        except Exception:
             logger.exception("Cache clear failed")
 
     async def exists(self, key: str) -> bool:
@@ -272,7 +276,7 @@ class EnterpriseCacheService(BaseService):
                 value = await self._get_distributed(key)
                 if value is not None:
                     await self._set_local(key, value, ttl=self.default_ttl)
-            except Exception as e:
+            except Exception:
                 logger.exception("Cache warming failed for key {key}")
 
         logger.info("Cache warming completed")
@@ -295,7 +299,6 @@ class EnterpriseCacheService(BaseService):
         """Initialize distributed cache connection."""
         try:
             # Initialize Redis/Dragonfly connection
-            from src.services.cache.dragonfly_cache import DragonflyCacheAdapter
 
             self.distributed_cache = DragonflyCacheAdapter()
             await self.distributed_cache.initialize()
@@ -303,7 +306,7 @@ class EnterpriseCacheService(BaseService):
         except ImportError:
             logger.warning("Distributed cache not available, using local cache only")
             self.enable_distributed = False
-        except Exception as e:
+        except Exception:
             logger.exception("Distributed cache initialization failed")
             self.enable_distributed = False
 
@@ -360,7 +363,7 @@ class EnterpriseCacheService(BaseService):
 
         try:
             return await self.distributed_cache.get(key)
-        except Exception as e:
+        except Exception:
             logger.exception("Distributed cache get failed")
             return None
 
@@ -371,7 +374,7 @@ class EnterpriseCacheService(BaseService):
 
         try:
             await self.distributed_cache.set(key, value, ttl)
-        except Exception as e:
+        except Exception:
             logger.exception("Distributed cache set failed")
 
     async def _delete_distributed(self, key: str) -> bool:
@@ -381,7 +384,7 @@ class EnterpriseCacheService(BaseService):
 
         try:
             return await self.distributed_cache.delete(key)
-        except Exception as e:
+        except Exception:
             logger.exception("Distributed cache delete failed")
             return False
 
@@ -392,7 +395,7 @@ class EnterpriseCacheService(BaseService):
 
         try:
             return await self.distributed_cache.exists(key)
-        except Exception as e:
+        except Exception:
             logger.exception("Distributed cache exists check failed")
             return False
 
@@ -403,7 +406,7 @@ class EnterpriseCacheService(BaseService):
 
         try:
             await self.distributed_cache.clear()
-        except Exception as e:
+        except Exception:
             logger.exception("Distributed cache clear failed")
 
     async def _compress_value(self, value: Any) -> Any:

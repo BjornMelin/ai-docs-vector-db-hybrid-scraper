@@ -462,8 +462,7 @@ class TestLifespanContextManager:
         try:
             async with unified_mcp_server.lifespan():
                 # Simulate an exception during operation
-                msg = "Operation failed"
-                raise RuntimeError(msg)
+                self._raise_operation_failed()
         except RuntimeError:
             pass
 
@@ -524,6 +523,11 @@ class TestLifespanContextManager:
 
         # Should not attempt to cleanup non-existent client manager
         # (No assertion needed as exception would be raised if cleanup was called incorrectly)
+
+    def _raise_operation_failed(self) -> None:
+        """Raise an operation failed error."""
+        msg = "Operation failed"
+        raise RuntimeError(msg)
 
 
 class TestMainExecutionLogic:

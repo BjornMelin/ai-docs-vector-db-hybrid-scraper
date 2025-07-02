@@ -2,10 +2,13 @@
 
 import os
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
+from hypothesis import strategies as st
 from pydantic import ValidationError
 
 from src.config import (
@@ -508,7 +511,7 @@ class TestCrawlProviderConfiguration:
 
     def test_crawl_provider_in_main_config(self, crawl_provider, config_class):
         """Test crawl provider integration in main config."""
-        provider_config = config_class()
+        # provider_config = config_class()
         main_config = Config(crawl_provider=crawl_provider)
         assert main_config.crawl_provider == crawl_provider
 
@@ -550,12 +553,6 @@ Consolidated configuration test fixtures and utilities.
 
 This content should be moved to conftest.py for shared fixtures.
 """
-
-from collections.abc import Generator
-from typing import Any
-
-import pytest
-from hypothesis import strategies as st
 
 
 # Hypothesis strategies for property-based testing
@@ -712,9 +709,10 @@ def get_config_validation_errors(config_class: type, **invalid_params) -> list[s
     """Get validation errors for invalid configuration parameters."""
     try:
         config_class(**invalid_params)
-        return []
     except (ValueError, KeyError, TypeError, AttributeError) as e:
         return [str(e)]
+    else:
+        return []
 
 
 # ==============================================================================

@@ -8,10 +8,20 @@ import pytest
 
 from src.config.settings import (
     ApplicationMode,
+    ChunkingConfig,
     CrawlProvider,
     EmbeddingProvider,
     Environment,
     Settings,
+    get_cache_config,
+    get_embedding_config,
+    get_openai_config,
+    get_performance_config,
+    get_qdrant_config,
+    get_security_config,
+    get_settings,
+    reset_settings,
+    set_settings,
 )
 
 
@@ -163,7 +173,6 @@ class TestConfigurationSections:
         assert validated.chunk_size == 1000
 
         # Invalid: overlap >= chunk_size should fail
-        from src.config.settings import ChunkingConfig
 
         with pytest.raises(
             ValueError, match="chunk_overlap must be less than chunk_size"
@@ -176,7 +185,6 @@ class TestGlobalConfiguration:
 
     def test_get_settings_singleton(self):
         """Test that get_settings returns the same instance."""
-        from src.config.settings import get_settings, reset_settings
 
         # Reset to ensure clean state
         reset_settings()
@@ -189,7 +197,6 @@ class TestGlobalConfiguration:
 
     def test_set_and_reset_settings(self):
         """Test setting and resetting global settings."""
-        from src.config.settings import get_settings, reset_settings, set_settings
 
         # Create custom settings
         custom_settings = Settings(debug=True, app_name="Test App")
@@ -207,15 +214,6 @@ class TestGlobalConfiguration:
 
     def test_convenience_config_functions(self):
         """Test convenience functions for accessing config sections."""
-        from src.config.settings import (
-            get_cache_config,
-            get_embedding_config,
-            get_openai_config,
-            get_performance_config,
-            get_qdrant_config,
-            get_security_config,
-            reset_settings,
-        )
 
         # Reset to ensure clean state
         reset_settings()

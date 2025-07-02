@@ -302,7 +302,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     )
                     result = await add_document(doc_request, ctx)
                     successes.append(result)
-                except (ConnectionError, OSError, PermissionError) as e:
+                except (ConnectionError, OSError, PermissionError):
                     failures.append(url)
 
         # Process all URLs concurrently

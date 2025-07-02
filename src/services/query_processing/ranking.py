@@ -416,8 +416,6 @@ class PersonalizedRankingService:
                 f"(personalized: {personalization_applied})"
             )
 
-            return result
-
         except Exception as e:
             processing_time_ms = (time.time() - start_time) * 1000
             self._logger.exception(
@@ -437,6 +435,9 @@ class PersonalizedRankingService:
                 coverage_score=0.0,
                 ranking_metadata={"error": str(e)},
             )
+
+        else:
+            return result
 
     async def record_interaction(self, interaction: InteractionEvent) -> None:
         """Record user interaction for learning.
@@ -474,7 +475,7 @@ class PersonalizedRankingService:
                 f"for user {user_id} on result {interaction.result_id}"
             )
 
-        except Exception as e:
+        except Exception:
             self._logger.exception(
                 "Failed to record interaction: "
             )  # TODO: Convert f-string to logging format
@@ -1002,8 +1003,10 @@ class PersonalizedRankingService:
                 return 0.05
             if age_days <= 90:
                 return 0.02
-            return 0.0
         except (ValueError, TypeError):
+            return 0.0
+
+        else:
             return 0.0
 
     def _find_similar_users(self, user_id: str) -> list[str]:

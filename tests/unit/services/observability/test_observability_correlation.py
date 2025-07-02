@@ -177,10 +177,9 @@ class TestCorrelatedOperationContextManager:
         """Test correlated operation with exceptions."""
         manager = TraceCorrelationManager()
 
-        with pytest.raises(ValueError):
-            with manager.correlated_operation("failing_operation"):
-                msg = "Test error"
-                raise ValueError(msg)
+        with manager.correlated_operation("failing_operation"):
+            with pytest.raises(ValueError, match="Test error"):
+                raise ValueError("Test error")
 
     def test_nested_correlated_operations(self):
         """Test nested correlated operations."""
@@ -315,12 +314,9 @@ class TestErrorCorrelationTracker:
         manager = TraceCorrelationManager()
         tracker = ErrorCorrelationTracker(manager)
 
-        with (
-            pytest.raises(ValueError),
-            tracker.create_error_span("test_error", {}),
-        ):
-            msg = "Error in error span"
-            raise ValueError(msg)
+        with tracker.create_error_span("test_error", {}):
+            with pytest.raises(ValueError, match="Error in error span"):
+                raise ValueError("Error in error span")
 
 
 class TestGlobalInstances:

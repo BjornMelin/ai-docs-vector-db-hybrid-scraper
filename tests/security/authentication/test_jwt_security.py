@@ -515,7 +515,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1234567890abcdef...
         result = jwt_service.verify_token(refresh_token)
 
         assert result["valid"] is True
-        assert result["payload"]["token_type"] == "refresh"
+        assert result["payload"]["token_type"] == "refresh"  # noqa: S105
         assert result["payload"]["user_id"] == "test_user"
 
         # Simulate refresh token rotation
