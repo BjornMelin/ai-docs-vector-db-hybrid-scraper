@@ -1,7 +1,7 @@
 """Helper functions for telemetry initialization."""
 
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
@@ -73,8 +73,8 @@ def _create_resource(config: "ObservabilityConfig") -> object | None:
             return None
 
         return Resource.create(get_resource_attributes(config))
-    except Exception as e:
-        logger.error(f"Failed to create resource: {e}")
+    except (ImportError, ValueError, TypeError):
+        logger.exception("Failed to create resource")
         return None
 
 
@@ -118,8 +118,8 @@ def _initialize_tracing(config: "ObservabilityConfig", resource: object) -> bool
         trace.set_tracer_provider(tracer_provider)
 
         return True
-    except Exception as e:
-        logger.error(f"Failed to initialize tracing: {e}")
+    except (ImportError, ValueError, TypeError, ConnectionError):
+        logger.exception("Failed to initialize tracing")
         return False
 
 
@@ -153,8 +153,8 @@ def _initialize_metrics(config: "ObservabilityConfig", resource: object) -> bool
         metrics.set_meter_provider(meter_provider)
 
         return True
-    except Exception as e:
-        logger.error(f"Failed to initialize metrics: {e}")
+    except (ImportError, ValueError, TypeError, ConnectionError):
+        logger.exception("Failed to initialize metrics")
         return False
 
 

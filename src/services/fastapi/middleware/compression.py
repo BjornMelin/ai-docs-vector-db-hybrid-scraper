@@ -160,7 +160,8 @@ class CompressionMiddleware(BaseHTTPMiddleware):
         try:
             return response.body
         except (AttributeError, UnicodeDecodeError) as e:
-            raise ValueError(f"Cannot get response body: {e}") from e
+            error_msg = f"Cannot get response body: {e}"
+            raise ValueError(error_msg) from e
 
     def _create_compressed_response(
         self,
@@ -366,7 +367,8 @@ class BrotliCompressionMiddleware(BaseHTTPMiddleware):
         try:
             return response.body
         except (AttributeError, UnicodeDecodeError) as e:
-            raise ValueError(f"Cannot get response body: {e}") from e
+            error_msg = f"Cannot get response body: {e}"
+            raise ValueError(error_msg) from e
 
     def _create_compressed_response(
         self,

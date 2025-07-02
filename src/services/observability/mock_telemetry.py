@@ -1,7 +1,7 @@
 """Mock telemetry classes for when OpenTelemetry is not available."""
 
 import logging
-from typing import Any, Tuple
+from typing import Any
 
 
 logger = logging.getLogger(__name__)

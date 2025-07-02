@@ -363,10 +363,7 @@ class CanaryDeployment:
         """Execute canary promotion to next stage."""
         self._deployment_status[deployment_id] = CanaryStatus.PROMOTING
 
-        try:
-            await self._update_traffic_split(deployment_id, next_percentage)
-        except (TimeoutError, OSError, PermissionError):
-            raise
+        await self._update_traffic_split(deployment_id, next_percentage)
 
         # Update metrics
         self._update_promotion_metrics(metrics, next_percentage, config)
@@ -434,18 +431,12 @@ class CanaryDeployment:
         """Execute canary rollback operations."""
         self._deployment_status[deployment_id] = CanaryStatus.ROLLING_BACK
 
-        try:
-            await self._update_traffic_split(deployment_id, 0.0)
-        except (TimeoutError, OSError, PermissionError):
-            raise
+        await self._update_traffic_split(deployment_id, 0.0)
 
         # Update metrics
         self._update_rollback_metrics(deployment_id)
 
-        try:
-            await self._complete_canary_deployment(deployment_id, success=False)
-        except (ConnectionError, OSError, PermissionError):
-            raise
+        await self._complete_canary_deployment(deployment_id, success=False)
 
         logger.info(
             "Rolled back canary deployment %s. Reason: %s", deployment_id, reason
@@ -528,10 +519,7 @@ class CanaryDeployment:
             ):
                 break
 
-            try:
-                await self._process_monitoring_cycle(deployment_id, config)
-            except (TimeoutError, OSError, PermissionError):
-                raise
+            await self._process_monitoring_cycle(deployment_id, config)
 
             await asyncio.sleep(config.health_check_interval_seconds)
 
@@ -540,28 +528,19 @@ class CanaryDeployment:
     ) -> None:
         """Process a single monitoring cycle."""
         # Update metrics
-        try:
-            await self._update_deployment_metrics(deployment_id)
-        except (ConnectionError, OSError, PermissionError):
-            raise
+        await self._update_deployment_metrics(deployment_id)
 
         # Evaluate deployment health
-        try:
-            metrics = self._deployment_metrics[deployment_id]
-            success_criteria_met = await self._evaluate_success_criteria(deployment_id)
-            metrics.success_criteria_met = success_criteria_met
-        except (OSError, PermissionError):
-            raise
+        metrics = self._deployment_metrics[deployment_id]
+        success_criteria_met = await self._evaluate_success_criteria(deployment_id)
+        metrics.success_criteria_met = success_criteria_met
 
         # Check for rollback conditions
-        try:
-            if await self._should_rollback(deployment_id):
-                await self.rollback_canary(
-                    deployment_id, "Automatic rollback triggered"
-                )
-                return
-        except (OSError, PermissionError, TimeoutError):
-            raise
+        if await self._should_rollback(deployment_id):
+            await self.rollback_canary(
+                deployment_id, "Automatic rollback triggered"
+            )
+            return
 
         # Handle automatic promotion
         await self._handle_auto_promotion(deployment_id, config, metrics)
@@ -582,16 +561,10 @@ class CanaryDeployment:
 
         if metrics.canary_traffic_percentage >= 100.0:
             # Complete deployment
-            try:
-                await self._complete_canary_deployment(deployment_id)
-            except (ConnectionError, OSError, PermissionError):
-                raise
+            await self._complete_canary_deployment(deployment_id)
         else:
             # Promote to next stage
-            try:
-                await self.promote_canary(deployment_id)
-            except (TimeoutError, OSError, PermissionError):
-                raise
+            await self.promote_canary(deployment_id)
 
     async def _update_deployment_metrics(self, deployment_id: str) -> None:
         """Update metrics for a canary deployment."""

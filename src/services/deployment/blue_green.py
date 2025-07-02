@@ -271,19 +271,13 @@ class BlueGreenDeployment:
         """Execute the environment switch process."""
         self._deployment_status = BlueGreenStatus.SWITCHING
 
-        try:
-            await self._switch_traffic(source_env.name, target_env.name)
-        except (TimeoutError, OSError, PermissionError):
-            raise
+        await self._switch_traffic(source_env.name, target_env.name)
 
         # Update environment states
         source_env.active = False
         target_env.active = True
 
-        try:
-            await self._persist_environment_state()
-        except (TimeoutError, OSError, PermissionError):
-            raise
+        await self._persist_environment_state()
 
         self._deployment_status = BlueGreenStatus.COMPLETED
         logger.info(
@@ -372,24 +366,18 @@ class BlueGreenDeployment:
     ) -> None:
         """Run all deployment phases sequentially."""
         # Phase 1: Deploy to inactive environment
-        try:
-            self._deployment_status = BlueGreenStatus.DEPLOYING
-            await self._deploy_to_environment(target_env, config)
-        except (TimeoutError, OSError, PermissionError):
-            raise
+        self._deployment_status = BlueGreenStatus.DEPLOYING
+        await self._deploy_to_environment(target_env, config)
 
         # Phase 2: Health check new deployment
-        try:
-            self._deployment_status = BlueGreenStatus.HEALTH_CHECK
-            if not await self._perform_health_checks(target_env, config):
-                logger.error(
-                    "Health checks failed for %s environment",
-                    target_env.name,
-                )
-                self._deployment_status = BlueGreenStatus.FAILED
-                return
-        except (ValueError, TypeError, AttributeError):
-            raise
+        self._deployment_status = BlueGreenStatus.HEALTH_CHECK
+        if not await self._perform_health_checks(target_env, config):
+            logger.error(
+                "Health checks failed for %s environment",
+                target_env.name,
+            )
+            self._deployment_status = BlueGreenStatus.FAILED
+            return
 
         # Phase 3: Ready to switch
         self._deployment_status = BlueGreenStatus.READY_TO_SWITCH

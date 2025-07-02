@@ -133,7 +133,6 @@ class EnterpriseCacheService(BaseService):
                 self._track_access(key)
                 self._record_operation_time("get", time.time() - start_time)
                 return value
-
             # Cache miss
             self._cache_misses += 1
             self._record_operation_time("get", time.time() - start_time)

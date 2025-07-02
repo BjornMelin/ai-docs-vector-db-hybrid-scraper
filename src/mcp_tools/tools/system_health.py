@@ -354,7 +354,7 @@ async def _get_performance_analysis_if_enabled(
 
     try:
         return await _perform_performance_analysis(deep_analysis, ctx)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.warning(f"Performance analysis failed: {e}")
         return {}
 
@@ -368,7 +368,7 @@ async def _get_security_assessment_if_enabled(
 
     try:
         return await _perform_security_assessment(ctx)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.warning(f"Security assessment failed: {e}")
         return {}
 
@@ -388,7 +388,7 @@ async def _get_ml_diagnostics_if_enabled(
         return await _perform_ml_diagnostics(
             core_health, service_health, infrastructure_health, ctx
         )
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.warning(f"ML diagnostics failed: {e}")
         return {}
 
@@ -569,7 +569,7 @@ async def _get_anomaly_results_if_enabled(
 
     try:
         return await _perform_anomaly_detection(metrics_baseline, ctx)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.warning(f"Anomaly detection failed: {e}")
         return {}
 
@@ -583,7 +583,7 @@ async def _get_trend_results_if_enabled(
 
     try:
         return await _perform_trend_analysis(metrics_baseline, prediction_horizon, ctx)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.warning(f"Trend analysis failed: {e}")
         return {}
 

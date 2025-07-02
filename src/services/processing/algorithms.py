@@ -10,7 +10,6 @@ import re
 import time
 from collections import Counter
 from dataclasses import dataclass
-from functools import lru_cache
 from typing import Any
 
 
@@ -169,7 +168,6 @@ class OptimizedTextAnalyzer:
             ],
         }
 
-    @lru_cache(maxsize=1000)
     def analyze_text_optimized(self, text: str) -> TextAnalysisResult:
         """Optimized O(n) text analysis replacing O(n²) implementation.
 
@@ -382,7 +380,6 @@ class OptimizedTextAnalyzer:
 
         return min(1.0, english_indicators / total_words)
 
-    @lru_cache(maxsize=500)
     def calculate_document_similarity_optimized(
         self,
         text_a: str,

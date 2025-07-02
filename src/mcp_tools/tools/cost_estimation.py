@@ -444,7 +444,7 @@ async def _get_scenario_analysis_if_enabled(
 
     try:
         return await _generate_scenario_analysis(base_predictions, historical_data, ctx)
-    except Exception as e:
+    except (ValueError, KeyError, TypeError) as e:
         logger.warning(f"Scenario analysis failed: {e}")
         return {}
 
@@ -460,7 +460,7 @@ async def _get_confidence_analysis_if_enabled(
         return await _calculate_confidence_intervals(
             base_predictions, historical_data, ctx
         )
-    except Exception as e:
+    except (ValueError, KeyError, TypeError) as e:
         logger.warning(f"Confidence analysis failed: {e}")
         return {}
 
