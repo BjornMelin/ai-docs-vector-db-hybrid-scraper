@@ -1,10 +1,13 @@
 import typing
+
+
 """Specialized cache for embedding vectors with DragonflyDB optimizations."""
 
 import hashlib
-import logging  # noqa: PLC0415
+import logging
 
 from .dragonfly_cache import DragonflyCache
+
 
 logger = logging.getLogger(__name__)
 
@@ -377,6 +380,10 @@ class EmbeddingCache:
             logger.error(f"Error getting cache stats: {e}")
             return {"error": str(e)}
 
+    async def get_stats(self) -> dict:
+        """Alias for get_cache_stats for compatibility."""
+        return await self.get_cache_stats()
+
     def _get_key(
         self,
         text: str,
@@ -404,5 +411,4 @@ class EmbeddingCache:
         # Include dimensions in key if provided
         if dimensions is not None:
             return f"emb:{provider}:{model}:{dimensions}:{text_hash}"
-        else:
-            return f"emb:{provider}:{model}:{text_hash}"
+        return f"emb:{provider}:{model}:{text_hash}"

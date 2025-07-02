@@ -24,6 +24,13 @@ from src.config import AutoDetectionConfig, DetectedService
 from src.services.errors import circuit_breaker
 
 
+# Optional asyncpg import
+try:
+    import asyncpg
+except ImportError:
+    asyncpg = None
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -297,7 +304,7 @@ class ConnectionPoolManager:
 
             yield connection
 
-        except (OSError, PermissionError, asyncio.TimeoutError):
+        except (TimeoutError, OSError, PermissionError):
             self.logger.exception("PostgreSQL connection error")
             raise
         finally:
@@ -316,7 +323,7 @@ class ConnectionPoolManager:
 
             # Update health status and library stats using library features
             await self._update_pool_health(pool_name, metrics)
-        except (OSError, PermissionError, asyncio.TimeoutError):
+        except (TimeoutError, OSError, PermissionError):
             self.logger.exception(f"Failed to get health for {pool_name}")
             if pool_name in self._health_metrics:
                 self._health_metrics[pool_name].is_healthy = False
@@ -422,7 +429,7 @@ class ConnectionPoolManager:
             metrics.is_healthy = True
             metrics.library_stats = {"status": "configured_but_not_implemented"}
 
-        except (asyncpg.PostgresError, ConnectionError, TimeoutError) as e:
+        except (ConnectionError, TimeoutError) as e:
             self.logger.debug(
                 f"PostgreSQL health check failed: {e}"
             )  # TODO: Convert f-string to logging format
@@ -484,7 +491,7 @@ class ConnectionPoolManager:
             elif pool_name == "postgresql":
                 # Would implement actual health check in real code
                 return True
-        except (asyncpg.PostgresError, ConnectionError, TimeoutError) as e:
+        except (ConnectionError, TimeoutError) as e:
             self.logger.debug(
                 f"Immediate health check failed for {pool_name}: {e}"
             )  # TODO: Convert f-string to logging format

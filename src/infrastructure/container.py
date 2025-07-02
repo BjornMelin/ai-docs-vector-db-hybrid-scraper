@@ -1,5 +1,6 @@
 """Dependency injection container for the application."""
 
+import asyncio
 import logging
 from collections.abc import AsyncGenerator
 from functools import lru_cache
@@ -110,18 +111,16 @@ def _create_firecrawl_client(config: Any) -> AsyncFirecrawlApp:
         return AsyncFirecrawlApp(api_key="")
 
 
-async def _create_http_client(timeout: float = 30.0) -> AsyncGenerator[Any]:
+async def _create_http_client() -> AsyncGenerator[Any]:
     """Create HTTP client with proper lifecycle management.
-
-    Args:
-        timeout: Request timeout in seconds
 
     Yields:
         HTTP client session
     """
-    timeout_config = aiohttp.ClientTimeout(total=timeout)
-    async with aiohttp.ClientSession(timeout=timeout_config) as session:
-        yield session
+    async with asyncio.timeout(30.0):
+        timeout_config = aiohttp.ClientTimeout(total=30.0)
+        async with aiohttp.ClientSession(timeout=timeout_config) as session:
+            yield session
 
 
 def _create_parallel_processing_system(embedding_manager: Any) -> Any:
@@ -190,7 +189,6 @@ class ApplicationContainer(containers.DeclarativeContainer):
     # HTTP client with session management
     http_client = providers.Resource(
         _create_http_client,
-        timeout=30.0,  # Default timeout
     )
 
     # Client provider layer

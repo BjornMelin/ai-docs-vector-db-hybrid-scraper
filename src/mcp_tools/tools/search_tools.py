@@ -241,8 +241,6 @@ def register_tools(mcp, client_manager: ClientManager):
                     search_accuracy=request.search_accuracy,
                 )
                 return await _search_documents_direct(fallback_request, ctx)
-            else:
-                return search_results
 
             # Use HyDE engine for enhanced search
             await ctx.debug(

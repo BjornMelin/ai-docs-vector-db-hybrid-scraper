@@ -213,15 +213,14 @@ class TestWatchdogIntegration:
         mock_observer = MagicMock()
         mock_observer.is_alive.return_value = True
 
-        async def shutdown_watcher(observer, timeout=5.0):
+        async def shutdown_watcher(observer):
             """Gracefully shutdown file watcher."""
             observer.stop()
 
-            # Wait for observer to stop using asyncio.wait_for
+            # Wait for observer to stop using asyncio.timeout
             try:
-                await asyncio.wait_for(
-                    _wait_for_observer_shutdown(observer), timeout=timeout
-                )
+                async with asyncio.timeout(5.0):
+                    await _wait_for_observer_shutdown(observer)
             except TimeoutError:
                 # Force stop if graceful shutdown failed
                 observer.stop()

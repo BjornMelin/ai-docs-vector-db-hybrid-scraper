@@ -23,7 +23,7 @@ else:
 
 
 from src.infrastructure.client_manager import ClientManager
-from src.security import MLSecurityValidator as SecurityValidator
+from src.security.ml_security import MLSecurityValidator as SecurityValidator
 
 
 logger = logging.getLogger(__name__)
@@ -315,8 +315,6 @@ def register_tools(mcp, client_manager: ClientManager):
                         await ctx.warning(
                             f"Failed to search collection {collection}: {e}"
                         )
-                else:
-                    return final_results
 
             if not collection_results:
                 return {
@@ -339,7 +337,12 @@ def register_tools(mcp, client_manager: ClientManager):
                 "fusion_effectiveness": fused_results["effectiveness_score"],
             }
 
-            final_results = {
+            if ctx:
+                await ctx.info(
+                    f"Multi-collection search completed: {len(fused_results['results'])} final results"
+                )
+
+            return {
                 "success": True,
                 "query": query,
                 "collections": collections,
@@ -354,11 +357,6 @@ def register_tools(mcp, client_manager: ClientManager):
                 "cross_collection_metrics": cross_collection_metrics,
                 "fusion_metadata": fused_results["metadata"],
             }
-
-            if ctx:
-                await ctx.info(
-                    f"Multi-collection search completed: {len(fused_results['results'])} final results"
-                )
 
         except Exception as e:
             logger.exception("Failed to perform multi-collection hybrid search")
@@ -555,7 +553,7 @@ def _apply_dbsf_fusion(
             }
 
     # Calculate DBSF scores
-    for doc_id, doc_data in combined.items():
+    for doc_data in combined.values():
         dbsf_score = (
             vector_weight * doc_data["vector_score"]
             + text_weight * doc_data["text_score"]

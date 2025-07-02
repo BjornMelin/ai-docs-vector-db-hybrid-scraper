@@ -286,34 +286,31 @@ class TestNetworkPartitionTolerance:
 
         async def perform_cache_operation_with_timeout(
             operation: str,
-            timeout: float = 1.0,
         ):
             """Perform cache operation with timeout."""
             try:
-                if operation == "get":
-                    result = await asyncio.wait_for(
-                        setup["cache_service"].get("test_key"), timeout=timeout
-                    )
-                elif operation == "set":
-                    result = await asyncio.wait_for(
-                        setup["cache_service"].set("test_key", "test_value"),
-                        timeout=timeout,
-                    )
+                async with asyncio.timeout(1.0):
+                    if operation == "get":
+                        result = await setup["cache_service"].get("test_key")
+                    elif operation == "set":
+                        result = await setup["cache_service"].set(
+                            "test_key", "test_value"
+                        )
 
-                cache_operations.append(
-                    {
-                        "operation": operation,
-                        "status": "success",
-                        "latency_ms": result["latency_ms"],
-                    }
-                )
+                    cache_operations.append(
+                        {
+                            "operation": operation,
+                            "status": "success",
+                            "latency_ms": result["latency_ms"],
+                        }
+                    )
 
             except TimeoutError:
                 cache_operations.append(
                     {
                         "operation": operation,
                         "status": "timeout",
-                        "timeout_ms": timeout * 1000,
+                        "timeout_ms": 1000,
                     }
                 )
                 raise

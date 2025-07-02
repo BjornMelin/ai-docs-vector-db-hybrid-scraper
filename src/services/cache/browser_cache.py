@@ -311,24 +311,14 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
             try:
                 result = await self.local_cache.delete(key)
                 results.append(result)
-            except (
-                ConnectionError,
-                RuntimeError,
-                TimeoutError,
-                asyncio.TimeoutError,
-            ) as e:
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
                 logger.warning(f"Error deleting from local cache: {e}")
 
         if self.distributed_cache:
             try:
                 result = await self.distributed_cache.delete(key)
                 results.append(result)
-            except (
-                ConnectionError,
-                RuntimeError,
-                TimeoutError,
-                asyncio.TimeoutError,
-            ) as e:
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
                 logger.warning(f"Error deleting from distributed cache: {e}")
 
         return any(results) if results else False
@@ -425,7 +415,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
             return entry, False
 
-        except (ConnectionError, RuntimeError, TimeoutError, asyncio.TimeoutError) as e:
+        except (ConnectionError, RuntimeError, TimeoutError) as e:
             logger.error(f"Error fetching content for {url}: {e}")
             raise
 
@@ -443,24 +433,14 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
             try:
                 if await self.local_cache.exists(key):
                     return True
-            except (
-                ConnectionError,
-                RuntimeError,
-                TimeoutError,
-                asyncio.TimeoutError,
-            ) as e:
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
                 pass
 
         # Check distributed cache
         if self.distributed_cache:
             try:
                 return await self.distributed_cache.exists(key)
-            except (
-                ConnectionError,
-                RuntimeError,
-                TimeoutError,
-                asyncio.TimeoutError,
-            ) as e:
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
                 pass
 
         return False
@@ -476,24 +456,14 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         if self.local_cache:
             try:
                 count += await self.local_cache.clear()
-            except (
-                ConnectionError,
-                RuntimeError,
-                TimeoutError,
-                asyncio.TimeoutError,
-            ) as e:
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
                 logger.warning(f"Error clearing local cache: {e}")
 
         if self.distributed_cache:
             try:
                 # Don't double count if same entries in both
                 await self.distributed_cache.clear()
-            except (
-                ConnectionError,
-                RuntimeError,
-                TimeoutError,
-                asyncio.TimeoutError,
-            ) as e:
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
                 logger.warning(f"Error clearing distributed cache: {e}")
 
         # Reset stats
@@ -516,23 +486,13 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         if self.distributed_cache:
             try:
                 return await self.distributed_cache.size()
-            except (
-                ConnectionError,
-                RuntimeError,
-                TimeoutError,
-                asyncio.TimeoutError,
-            ) as e:
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
                 pass
 
         if self.local_cache:
             try:
                 return await self.local_cache.size()
-            except (
-                ConnectionError,
-                RuntimeError,
-                TimeoutError,
-                asyncio.TimeoutError,
-            ) as e:
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
                 pass
 
         return 0
@@ -548,10 +508,5 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         if self.distributed_cache:
             try:
                 await self.distributed_cache.close()
-            except (
-                ConnectionError,
-                RuntimeError,
-                TimeoutError,
-                asyncio.TimeoutError,
-            ) as e:
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
                 logger.warning(f"Error closing distributed cache: {e}")

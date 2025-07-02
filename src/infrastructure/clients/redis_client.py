@@ -8,9 +8,13 @@ try:
     import redis.asyncio as redis
 except ImportError:
     # Create a placeholder if redis is not available
-    class redis:
+    class RedisModule:
+        """Placeholder Redis module when redis is not available."""
+
         class Redis:
-            pass
+            """Placeholder Redis client class."""
+
+    redis = RedisModule()
 
 
 logger = logging.getLogger(__name__)

@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 
 import redis.asyncio as redis
 
+
 # Imports to avoid circular dependencies
 try:
     from src.config import Config
@@ -60,12 +61,12 @@ class PerformanceCache:
             max_l1_size: Maximum number of items in L1 cache
 
         """
-        self.l1_cache: Dict[str, Any] = {}  # In-memory LRU
-        self.l2_redis: Optional[redis.Redis] = None
+        self.l1_cache: dict[str, Any] = {}  # In-memory LRU
+        self.l2_redis: redis.Redis | None = None
         self.redis_url = redis_url
         self.metrics = CacheMetrics()
         self.max_l1_size = max_l1_size
-        self.l1_access_times: Dict[str, float] = {}
+        self.l1_access_times: dict[str, float] = {}
         self._initialized = False
 
     async def initialize(self) -> None:
@@ -84,7 +85,7 @@ class PerformanceCache:
             self.l2_redis = None
             self._initialized = True
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """Multi-tier cache retrieval with performance tracking.
 
         Args:
@@ -148,7 +149,9 @@ class PerformanceCache:
 
         # Serialize value for consistency
         try:
-            serialized_value = json.dumps(value) if not isinstance(value, str) else value
+            serialized_value = (
+                json.dumps(value) if not isinstance(value, str) else value
+            )
         except (TypeError, ValueError):
             logger.warning(f"Failed to serialize value for key '{key}', skipping cache")
             return
@@ -207,7 +210,7 @@ class PerformanceCache:
                 self.metrics.avg_retrieval_time * (total_requests - 1) + retrieval_time
             ) / total_requests
 
-    async def warm_cache(self, popular_queries: List[str]) -> None:
+    async def warm_cache(self, popular_queries: list[str]) -> None:
         """Proactively warm cache with popular queries.
 
         Args:
@@ -245,7 +248,7 @@ class PerformanceCache:
         except Exception as e:
             logger.error(f"Cache warming failed: {e}")
 
-    async def get_cache_stats(self) -> Dict[str, Any]:
+    async def get_cache_stats(self) -> dict[str, Any]:
         """Get comprehensive cache statistics.
 
         Returns:
@@ -279,7 +282,7 @@ class PerformanceCache:
             },
         }
 
-    async def clear_cache(self, pattern: Optional[str] = None) -> None:
+    async def clear_cache(self, pattern: str | None = None) -> None:
         """Clear cache entries matching pattern.
 
         Args:

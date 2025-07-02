@@ -255,25 +255,34 @@ class TestErrorTracking:
         request_id = correlation_manager.set_request_context(user_id="user123")
 
         # Test embedding generation error
-        with ai_tracker.track_embedding_generation(
-            provider="openai",
-            model="text-embedding-ada-002",
-            input_texts=["test text"],
+        error_msg = "OpenAI API unavailable"
+        with (
+            ai_tracker.track_embedding_generation(
+                provider="openai",
+                model="text-embedding-ada-002",
+                input_texts=["test text"],
+            ),
+            pytest.raises(ConnectionError, match="OpenAI API unavailable"),
         ):
-            with pytest.raises(ConnectionError, match="OpenAI API unavailable"):
-                raise ConnectionError("OpenAI API unavailable")
+            raise ConnectionError(error_msg)
 
         # Test vector search error
-        with ai_tracker.track_vector_search(
-            collection_name="documents", query_type="semantic"
+        error_msg = "Vector database timeout"
+        with (
+            ai_tracker.track_vector_search(
+                collection_name="documents", query_type="semantic"
+            ),
+            pytest.raises(TimeoutError, match="Vector database timeout"),
         ):
-            with pytest.raises(TimeoutError, match="Vector database timeout"):
-                raise TimeoutError("Vector database timeout")
+            raise TimeoutError(error_msg)
 
         # Test LLM call error
-        with ai_tracker.track_llm_call(provider="openai", model="gpt-4"):
-            with pytest.raises(ValueError, match="Invalid API response"):
-                raise ValueError("Invalid API response")
+        error_msg = "Invalid API response"
+        with (
+            ai_tracker.track_llm_call(provider="openai", model="gpt-4"),
+            pytest.raises(ValueError, match="Invalid API response"),
+        ):
+            raise ValueError(error_msg)
 
         assert request_id is not None
 

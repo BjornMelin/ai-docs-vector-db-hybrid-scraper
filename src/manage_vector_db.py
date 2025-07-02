@@ -458,7 +458,8 @@ async def search(ctx, collection_name, query, limit):
         await manager.initialize()
 
         # Create query embedding
-        query_vector = await create_embeddings(query, manager.embedding_manager)
+        embedding_manager = await manager.get_embedding_manager()
+        query_vector = await create_embeddings(query, embedding_manager)
         if not query_vector:
             console.print("Failed to create query embedding", style="red")
             return
@@ -486,7 +487,7 @@ async def search(ctx, collection_name, query, limit):
 
 def main():
     """Main entry point."""
-    cli()
+    cli()  # pylint: disable=no-value-for-parameter
 
 
 if __name__ == "__main__":

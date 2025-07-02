@@ -1046,17 +1046,17 @@ class Settings(BaseSettings):
         """Configure settings based on application mode."""
         if self.mode == ApplicationMode.SIMPLE:
             # Optimize for solo developer use
-            self.performance.max_concurrent_crawls = min(
-                self.performance.max_concurrent_crawls, 10
-            )
-            self.cache.local_max_memory_mb = min(self.cache.local_max_memory_mb, 200)
+            current_crawls = self.performance.max_concurrent_crawls  # pylint: disable=no-member
+            self.performance.max_concurrent_crawls = min(current_crawls, 10)  # pylint: disable=no-member
+
+            current_memory = self.cache.local_max_memory_mb  # pylint: disable=no-member
+            self.cache.local_max_memory_mb = min(current_memory, 200)  # pylint: disable=no-member
             self.reranking.enabled = False  # Disable compute-intensive features
             self.observability.enabled = False  # Simplify observability
         elif self.mode == ApplicationMode.ENTERPRISE:
             # Enable all features for demonstrations
-            self.performance.max_concurrent_crawls = min(
-                self.performance.max_concurrent_crawls, 50
-            )
+            current_crawls = self.performance.max_concurrent_crawls  # pylint: disable=no-member
+            self.performance.max_concurrent_crawls = min(current_crawls, 50)  # pylint: disable=no-member
             # Enterprise mode allows all features
         return self
 
@@ -1087,7 +1087,7 @@ class Settings(BaseSettings):
         """Get the effective chunking strategy based on mode."""
         if self.mode == ApplicationMode.SIMPLE:
             return ChunkingStrategy.BASIC
-        return self.chunking.strategy
+        return self.chunking.strategy  # pylint: disable=no-member
 
     def get_effective_search_strategy(self) -> SearchStrategy:
         """Get the effective search strategy based on mode."""

@@ -148,7 +148,7 @@ class TaskQueueManager(BaseService):
             if self.metrics_registry:
                 self.metrics_registry.record_task_execution(task_name, 0.0, False)
 
-        except (OSError, PermissionError, asyncio.TimeoutError):
+        except (TimeoutError, OSError, PermissionError):
             logger.exception("Error enqueueing task {task_name}")
             return None
 
@@ -214,7 +214,7 @@ class TaskQueueManager(BaseService):
                 )  # TODO: Convert f-string to logging format
                 return True
 
-        except (OSError, PermissionError, asyncio.TimeoutError):
+        except (TimeoutError, OSError, PermissionError):
             logger.exception("Error cancelling job")
             return False
 

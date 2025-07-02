@@ -1,5 +1,6 @@
 """Qdrant alias manager for zero-downtime collection updates."""
 
+import asyncio
 import logging
 import re
 from collections.abc import Callable

@@ -172,14 +172,18 @@ class ModernRateLimiter:
             return {
                 "key": key,
                 "limiter_storage": self.redis_url,
-                "default_limits": self.limiter.default_limits,
+                "default_limits": getattr(
+                    self.limiter,
+                    "default_limits",
+                    getattr(self.limiter, "_default_limits", None),
+                ),
             }
 
-    async def reset_limits(self, key: str) -> bool:
+    async def reset_limits(self, _key: str) -> bool:
         """Reset rate limits for a specific key.
 
         Args:
-            key: Rate limit key to reset
+            _key: Rate limit key to reset
 
         Returns:
             True if successful, False otherwise
@@ -206,7 +210,11 @@ class ModernRateLimiter:
             return {
                 "limiter": {
                     "redis_url": self.redis_url,
-                    "default_limits": self.limiter.default_limits,
+                    "default_limits": getattr(
+                        self.limiter,
+                        "default_limits",
+                        getattr(self.limiter, "_default_limits", None),
+                    ),
                     "key_function": self.key_func.__name__,
                 },
                 "middleware": {

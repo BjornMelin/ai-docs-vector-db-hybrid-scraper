@@ -1011,9 +1011,8 @@ def _calculate_adaptation_metrics(
     # Calculate weight changes if original weights provided
     weight_changes = {}
     if original_weights:
-        for factor in optimal_weights:
+        for factor, optimal in optimal_weights.items():
             original = original_weights.get(factor, 0.0)
-            optimal = optimal_weights[factor]
             weight_changes[factor] = optimal - original
 
     # Calculate ranking confidence based on score distribution
@@ -1045,7 +1044,7 @@ async def _generate_multi_criteria_insights(
     """Generate insights for multi-criteria optimization."""
     insights = {
         "weight_analysis": {
-            "dominant_criteria": max(optimal_weights.items(), key=lambda x: x[1])[0],
+            "dominant_criteria": max(optimal_weights, key=optimal_weights.get),
             "weight_distribution": "balanced"
             if max(optimal_weights.values()) < 0.4
             else "focused",
@@ -1086,7 +1085,7 @@ def _analyze_top_criteria_consistency(results: list[dict]) -> float:
             "criteria_breakdown", {}
         )
         if criteria_scores:
-            top_criterion = max(criteria_scores.items(), key=lambda x: x[1])[0]
+            top_criterion = max(criteria_scores, key=criteria_scores.get)
             top_criteria.append(top_criterion)
 
     # Calculate consistency
@@ -1111,7 +1110,8 @@ async def _apply_contextual_assessment(
     for result in results:
         # Start with existing quality assessment or create basic one
         if "quality_assessment" not in result:
-            result = (await _apply_quality_assessment([result], query, ctx))[0]
+            enhanced_data = (await _apply_quality_assessment([result], query, ctx))[0]
+            result.update(enhanced_data)
 
         # Add contextual relevance if context provided
         context_relevance = 0.5  # Default neutral relevance

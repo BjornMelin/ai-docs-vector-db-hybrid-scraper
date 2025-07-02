@@ -4,9 +4,13 @@ This module contains full-featured service implementations with advanced capabil
 for enterprise deployments and portfolio demonstrations.
 """
 
+from .cache import EnterpriseCacheService
+from .integration import EnterpriseIntegrationManager
+from .search import EnterpriseSearchService
+
+
 __all__ = [
-    "EnterpriseAnalyticsService",
     "EnterpriseCacheService",
-    "EnterpriseDeploymentService",
+    "EnterpriseIntegrationManager",
     "EnterpriseSearchService",
 ]

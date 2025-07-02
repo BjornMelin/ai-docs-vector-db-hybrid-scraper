@@ -41,7 +41,7 @@ def complete_collection_name(
             return []
 
         # Create client manager and get collections
-        client_manager = ClientManager(config)
+        client_manager = ClientManager()
         db_manager = VectorDBManager(client_manager)
 
         # Get collection names (synchronously for completion)
@@ -189,7 +189,6 @@ def index_documents(
     Documents can be file paths, URLs, or directory paths.
     Supports parallel processing for improved performance.
     """
-    config = ctx.obj["config"]
     rich_cli = ctx.obj["rich_cli"]
 
     # Convert documents to list and validate
@@ -205,7 +204,7 @@ def index_documents(
         return
 
     try:
-        client_manager = ClientManager(config)
+        client_manager = ClientManager()
         VectorDBManager(client_manager)
 
         with Progress(
@@ -303,7 +302,6 @@ def create_collections(
     ctx: click.Context, collections: tuple, dimension: int, distance: str, _force: bool
 ):
     """Create multiple collections in batch."""
-    config = ctx.obj["config"]
     rich_cli = ctx.obj["rich_cli"]
 
     collection_list = list(collections)
@@ -326,7 +324,7 @@ def create_collections(
 
     # Create operation queue
     queue = OperationQueue()
-    client_manager = ClientManager(config)
+    client_manager = ClientManager()
     db_manager = VectorDBManager(client_manager)
 
     for collection_name in collection_list:
@@ -366,7 +364,6 @@ def create_collections(
 @click.pass_context
 def delete_collections(ctx: click.Context, collections: tuple, yes: bool):
     """Delete multiple collections in batch."""
-    config = ctx.obj["config"]
     rich_cli = ctx.obj["rich_cli"]
 
     collection_list = list(collections)
@@ -400,7 +397,7 @@ def delete_collections(ctx: click.Context, collections: tuple, yes: bool):
 
     # Create operation queue
     queue = OperationQueue()
-    client_manager = ClientManager(config)
+    client_manager = ClientManager()
     db_manager = VectorDBManager(client_manager)
 
     for collection_name in collection_list:
@@ -443,12 +440,11 @@ def backup_collections(
     ctx: click.Context, collections: tuple, output_dir: Path, backup_format: str
 ):
     """Backup collections to files."""
-    config = ctx.obj["config"]
     rich_cli = ctx.obj["rich_cli"]
 
     # If no collections specified, backup all
     if not collections:
-        client_manager = ClientManager(config)
+        client_manager = ClientManager()
         db_manager = VectorDBManager(client_manager)
         collection_names = asyncio.run(db_manager.list_collections())
         asyncio.run(db_manager.cleanup())

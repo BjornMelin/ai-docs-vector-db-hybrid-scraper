@@ -109,17 +109,19 @@ async def get_embedding_client(
 # Vector database client dependency
 async def get_vector_db_client(
     config: Annotated[Config, Depends(get_config)],
+    client_manager: Annotated[ClientManager, Depends(get_client_manager)],
 ) -> AsyncGenerator[object]:
     """Get vector database client with lifecycle management.
 
     Args:
         config: Application configuration
+        client_manager: Client manager for dependency injection
 
     Yields:
         QdrantService: Initialized vector database client
 
     """
-    qdrant_manager = QdrantService(config)
+    qdrant_manager = QdrantService(config, client_manager)
 
     try:
         await qdrant_manager.initialize()

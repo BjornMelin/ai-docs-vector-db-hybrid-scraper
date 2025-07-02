@@ -14,6 +14,7 @@ Attack scenarios tested:
 - Adversarial vector generation
 """
 
+import contextlib
 import gc
 import math
 import resource
@@ -177,13 +178,11 @@ class TestVectorPenetrationAttacks:
             times = []
             for _ in range(100):  # Multiple runs for statistical significance
                 start = time.perf_counter()
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     SearchStage(
                         stage_name=f"timing-test-{case_name}",
                         query_vector=SecureVectorModel(values=vector),
                     )
-                except (ValueError, TypeError):
-                    pass  # Expected for invalid cases
                 end = time.perf_counter()
                 times.append((end - start) * 1000)  # Convert to ms
 

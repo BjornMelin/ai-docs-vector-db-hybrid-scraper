@@ -9,6 +9,7 @@ Provides comprehensive health monitoring for:
 
 import asyncio
 import contextlib
+import json
 import logging
 import time
 from typing import Any
@@ -23,6 +24,11 @@ try:
     import redis.asyncio as redis
 except ImportError:
     redis = None
+
+try:
+    import asyncpg
+except ImportError:
+    asyncpg = None
 
 from pydantic import BaseModel
 
@@ -192,7 +198,14 @@ class HealthChecker:
                 return await self._check_postgresql_health(service, start_time)
             return await self._check_generic_health(service, start_time)
 
-        except (asyncpg.PostgresError, ConnectionError, TimeoutError) as e:
+        except Exception as e:
+            # Check if this is a handled exception type
+            is_handled_exception = isinstance(e, ConnectionError | TimeoutError) or (
+                asyncpg and isinstance(e, asyncpg.PostgresError)
+            )
+
+            if not is_handled_exception:
+                raise
             response_time_ms = (time.time() - start_time) * 1000
 
             self.logger.warning("Health check failed for {service.service_name}")

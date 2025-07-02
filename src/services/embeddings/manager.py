@@ -569,8 +569,6 @@ class EmbeddingManager:
                         logger.info("Cached embedding for future use")
                 except (AttributeError, RuntimeError, ConnectionError) as e:
                     logger.warning(f"Failed to cache embedding: {e}")
-                else:
-                    return result
 
             # Build comprehensive result with all metadata
             result = {

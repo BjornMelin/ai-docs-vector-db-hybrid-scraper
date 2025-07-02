@@ -11,6 +11,7 @@ import statistics
 import time
 from typing import Any
 
+import httpx
 from pydantic import BaseModel, Field
 
 from src.config import Config

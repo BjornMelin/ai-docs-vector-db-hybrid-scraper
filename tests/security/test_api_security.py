@@ -613,7 +613,7 @@ class TestSecurityIntegration:
 
 
 # Custom security exception for testing
-class SecurityException(Exception):
+class SecurityError(Exception):
     """Custom exception for security violations."""
 
 
@@ -636,7 +636,7 @@ async def mock_security_validator():
         for pattern in dangerous_patterns:
             if pattern.lower() in value.lower():
                 msg = f"Dangerous pattern detected: {pattern}"
-                raise SecurityException(msg)
+                raise SecurityError(msg)
 
         return True
 

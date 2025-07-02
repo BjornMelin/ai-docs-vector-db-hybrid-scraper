@@ -46,11 +46,11 @@ def register_tools(mcp, client_manager: ClientManager):
         msg = f"Project {project_id} not found"
         raise ValueError(msg)
 
-    async def _raise_unsupported_format(format: str, ctx: Context = None) -> None:
+    async def _raise_unsupported_format(format_type: str, ctx: Context = None) -> None:
         """Raise ValueError for unsupported format."""
         if ctx:
-            await ctx.error(f"Unsupported format: {format}")
-        msg = f"Unsupported format: {format}. Use 'json' or 'yaml'"
+            await ctx.error(f"Unsupported format: {format_type}")
+        msg = f"Unsupported format: {format_type}. Use 'json' or 'yaml'"
         raise ValueError(msg)
 
     @mcp.tool()
@@ -415,25 +415,25 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def export_project(
-        project_id: str, format: str = "json", ctx: Context = None
+        project_id: str, format_type: str = "json", ctx: Context = None
     ) -> dict:
         """Export project data in the specified format.
 
         Args:
             project_id: Project ID to export
-            format: Export format ('json' or 'yaml')
+            format_type: Export format ('json' or 'yaml')
 
         Returns:
             Dictionary containing status, format, and exported data
 
         """
         if ctx:
-            await ctx.info(f"Exporting project {project_id} in {format} format")
+            await ctx.info(f"Exporting project {project_id} in {format_type} format")
 
         try:
             # Validate format
-            if format not in ["json", "yaml"]:
-                await _raise_unsupported_format(format, ctx)
+            if format_type not in ["json", "yaml"]:
+                await _raise_unsupported_format(format_type, ctx)
 
             # Get project data
             project_storage = await client_manager.get_project_storage()
@@ -454,7 +454,7 @@ def register_tools(mcp, client_manager: ClientManager):
             }
 
             # Format the data
-            if format == "json":
+            if format_type == "json":
                 formatted_data = json.dumps(export_data, indent=2)
                 if ctx:
                     await ctx.debug("Exported project data as JSON")
@@ -474,7 +474,7 @@ def register_tools(mcp, client_manager: ClientManager):
         else:
             return {
                 "status": "exported",
-                "format": format,
+                "format": format_type,
                 "data": formatted_data,
             }
 

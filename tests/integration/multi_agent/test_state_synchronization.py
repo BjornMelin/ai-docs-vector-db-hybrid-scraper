@@ -239,27 +239,25 @@ class DistributedStateManager:
         finally:
             self.update_history.append(update)
 
-    async def acquire_lock(
-        self, state_id: str, agent_id: str, timeout: float = 5.0
-    ) -> bool:
+    async def acquire_lock(self, state_id: str, agent_id: str) -> bool:
         """Acquire exclusive lock on shared state."""
         if state_id not in self.shared_states:
             return False
 
-        start_time = time.time()
+        try:
+            async with asyncio.timeout(5.0):
+                while True:
+                    if state_id not in self.state_locks:
+                        self.state_locks[state_id] = agent_id
+                        state = self.shared_states[state_id]
+                        state.lock_owner = agent_id
+                        state.lock_timestamp = datetime.now(tz=UTC)
+                        return True
 
-        while time.time() - start_time < timeout:
-            if state_id not in self.state_locks:
-                self.state_locks[state_id] = agent_id
-                state = self.shared_states[state_id]
-                state.lock_owner = agent_id
-                state.lock_timestamp = datetime.now(tz=UTC)
-                return True
-
-            # Wait briefly before retrying
-            await asyncio.sleep(0.1)
-
-        return False  # Timeout
+                    # Wait briefly before retrying
+                    await asyncio.sleep(0.1)
+        except TimeoutError:
+            return False  # Timeout
 
     async def release_lock(self, state_id: str, agent_id: str) -> bool:
         """Release exclusive lock on shared state."""

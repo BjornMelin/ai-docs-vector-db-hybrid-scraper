@@ -228,13 +228,11 @@ class TestNetworkPartitions:
             async def elect_leader(self, candidate_node: str) -> dict[str, Any]:
                 """Elect leader using majority consensus."""
                 candidate_votes = 0
-                _total_nodes = 0
                 reachable_nodes = self.network.get_reachable_nodes(candidate_node)
                 reachable_nodes.add(candidate_node)
 
                 # Count votes from reachable nodes
-                for node_id in reachable_nodes:
-                    _total_nodes += 1
+                for _total_nodes, node_id in enumerate(reachable_nodes, 1):
                     try:
                         # Simulate vote request
                         await self.network.send_message(
@@ -608,9 +606,7 @@ class TestNetworkPartitions:
                             all_operations[op_id] = op_data
 
                 # Resolve conflicts using vector clocks
-                resolved_operations = {
-                    op_id: op_data for op_id, op_data in all_operations.items()
-                }
+                resolved_operations = all_operations.copy()
 
                 # Merge vector clocks
                 merged_vector_clock = {}

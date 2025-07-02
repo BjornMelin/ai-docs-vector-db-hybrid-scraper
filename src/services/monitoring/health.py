@@ -13,6 +13,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import aiohttp
+import httpx
 import redis.asyncio as redis
 from pydantic import BaseModel, Field
 from qdrant_client import AsyncQdrantClient

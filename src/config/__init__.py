@@ -261,6 +261,55 @@ class SafeConfigLoader:
 class ConfigManager:
     """Mock config manager for backward compatibility."""
 
+    def __init__(self):
+        """Initialize mock config manager."""
+        self.config_source = "mock"
+        self.backup_count = 0
+        self._file_watching_enabled = False
+
+    async def reload_config(self, _force: bool = False) -> "ReloadOperation":
+        """Mock reload config operation."""
+        return ReloadOperation()
+
+    async def rollback_config(
+        self, _target_hash: str | None = None
+    ) -> "ReloadOperation":
+        """Mock rollback config operation."""
+        return ReloadOperation()
+
+    def get_reload_history(self, _limit: int = 50) -> list["ReloadOperation"]:
+        """Mock get reload history."""
+        return []
+
+    def get_reload_stats(self) -> dict[str, Any]:
+        """Mock get reload stats."""
+        return {
+            "total_reloads": 0,
+            "successful_reloads": 0,
+            "failed_reloads": 0,
+            "last_reload_time": None,
+            "file_watching_enabled": self._file_watching_enabled,
+        }
+
+    def is_file_watch_enabled(self) -> bool:
+        """Check if file watching is enabled."""
+        return self._file_watching_enabled
+
+    async def enable_signal_handler(self) -> None:
+        """Enable signal handler for config reloading."""
+
+    async def enable_file_watching(self, _poll_interval: float = 1.0) -> None:
+        """Enable file watching for config changes."""
+        self._file_watching_enabled = True
+
+    async def disable_file_watching(self) -> None:
+        """Disable file watching for config changes."""
+        self._file_watching_enabled = False
+
+    def get_config_backups(self) -> list[dict[str, Any]]:
+        """Get list of config backups."""
+        return []
+
 
 class ConfigMigrator:
     """Mock config migrator for backward compatibility."""
@@ -285,6 +334,22 @@ class DetectedService(BaseModel):
 class EnvironmentDetector:
     """Mock environment detector for backward compatibility."""
 
+    def __init__(self, config=None):
+        """Initialize with optional config."""
+        self.config = config
+
+    async def detect(self) -> DetectedEnvironment:
+        """Detect the current environment.
+
+        Returns:
+            Mock detected environment
+        """
+        return DetectedEnvironment(
+            environment=Environment.DEVELOPMENT,
+            cloud_provider=None,
+            container_platform=None,
+        )
+
 
 # AutoDetectionConfig is imported from settings.py
 
@@ -295,6 +360,11 @@ class ReloadOperation:
 
 class ReloadTrigger:
     """Mock reload trigger for backward compatibility."""
+
+    API = "api"
+    FILE_CHANGE = "file_change"
+    SIGNAL = "signal"
+    SCHEDULED = "scheduled"
 
 
 class ConfigReloader:

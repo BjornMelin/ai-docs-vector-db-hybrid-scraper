@@ -423,7 +423,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 
 
 @asynccontextmanager
-async def optimized_lifespan(app):
+async def optimized_lifespan(_app):
     """Optimized application lifespan with uvloop and service warming.
 
     This lifespan context manager implements performance optimizations:

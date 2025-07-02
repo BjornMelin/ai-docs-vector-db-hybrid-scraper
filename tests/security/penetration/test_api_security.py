@@ -736,17 +736,19 @@ class TestSubprocessSecurity:
                 self,
                 command: str | list[str],
                 env_vars: dict | None = None,
-                timeout: int = 30,
             ) -> dict[str, Any]:
                 """Mock command execution for testing."""
-                self.executed_commands.append(
-                    {
-                        "command": command,
-                        "env_vars": env_vars,
-                        "timeout": timeout,
-                        "timestamp": time.time(),
-                    }
-                )
+                async with asyncio.timeout(30):
+                    # Add async checkpoint for proper timeout handling
+                    await asyncio.sleep(0)
+                    self.executed_commands.append(
+                        {
+                            "command": command,
+                            "env_vars": env_vars,
+                            "timeout": 30,
+                            "timestamp": time.time(),
+                        }
+                    )
 
                 # Simulate secure command validation
                 if isinstance(command, str):

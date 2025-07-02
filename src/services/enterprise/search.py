@@ -10,7 +10,8 @@ import time
 from typing import Any
 
 from src.architecture.service_factory import BaseService
-from src.models.vector_search import SearchRequest, SearchResponse
+from src.models.requests import SearchRequest
+from src.models.vector_search import SearchResponse
 
 
 # Optional imports for enterprise features
@@ -341,7 +342,8 @@ class EnterpriseSearchService(BaseService):
             raise ImportError(msg)
 
         embedding_manager = EmbeddingManager()
-        query_embedding = await embedding_manager.generate_embedding(query)
+        embedding_result = await embedding_manager.generate_embeddings([query])
+        query_embedding = embedding_result["embeddings"][0]
 
         return await self.vector_db.search(
             query_vector=query_embedding,

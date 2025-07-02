@@ -17,6 +17,10 @@ import pytest
 from src.mcp_services.document_service import DocumentService
 
 
+class ToolRegistrationError(Exception):
+    """Custom exception for tool registration failures."""
+
+
 class TestDocumentService:
     """Test DocumentService initialization and core functionality."""
 
@@ -461,9 +465,11 @@ class TestDocumentServiceErrorHandling:
         with patch(
             "src.mcp_services.document_service.document_management"
         ) as mock_tool:
-            mock_tool.register_tools.side_effect = Exception("Registration failed")
+            mock_tool.register_tools.side_effect = ToolRegistrationError(
+                "Registration failed"
+            )
 
-            with pytest.raises(Exception):
+            with pytest.raises(ToolRegistrationError):
                 await service._register_document_tools()
 
         # Second attempt should work

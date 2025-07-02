@@ -74,7 +74,7 @@ dependencies = [
     "purgatory-circuitbreaker>=0.7.2,<0.8.0", # Distributed circuit breaker
     "aiocache>=0.12.0,<0.13.0", # Modern async caching
     # CLI & user interface
-    "click>=8.2.1,<9.0.0",
+    "click>=8.2.1",
     "rich>=14.0.0,<15.0.0",
     "colorlog>=6.9.0,<7.0.0",
     "tqdm>=4.67.1,<5.0.0",
@@ -783,8 +783,8 @@ known-third-party = [
 overgeneral-exceptions = ["builtins.BaseException"]
 
 [tool.pylint.logging]
-# Use new-style formatting
-logging-format-style = "new"
+# Use old-style formatting (matches current codebase)
+logging-format-style = "old"
 
 [tool.pylint.miscellaneous]
 # Don't check for FIXMEs in production

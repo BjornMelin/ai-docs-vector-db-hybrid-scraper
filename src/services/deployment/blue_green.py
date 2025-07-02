@@ -234,7 +234,7 @@ class BlueGreenDeployment:
 
         # Health check target environment (unless forced)
         if not force and (
-            not target_env.health or target_env.health.status != "healthy"
+            not target_env.health or target_env.health.status != "healthy"  # pylint: disable=no-member
         ):
             logger.warning(
                 "Target environment %s is not healthy, aborting switch",
@@ -316,15 +316,15 @@ class BlueGreenDeployment:
                     deployment_id=env.deployment_id,
                     environment=DeploymentEnvironment.PRODUCTION,
                     status=DeploymentStatus.SUCCESS
-                    if env.health and env.health.status == "healthy"
+                    if env.health and env.health.status == "healthy"  # pylint: disable=no-member
                     else DeploymentStatus.FAILED,
                     total_requests=0,  # Would be populated from real metrics
                     successful_requests=0,
                     failed_requests=0,
-                    avg_response_time_ms=env.health.response_time_ms
+                    avg_response_time_ms=env.health.response_time_ms  # pylint: disable=no-member
                     if env.health
                     else 0.0,
-                    error_rate=env.health.error_rate if env.health else 0.0,
+                    error_rate=env.health.error_rate if env.health else 0.0,  # pylint: disable=no-member
                     created_at=env.last_deployment or datetime.now(tz=UTC),
                 )
 

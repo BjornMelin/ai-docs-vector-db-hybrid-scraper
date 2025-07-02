@@ -4,6 +4,7 @@ This module provides the primary benchmarking interface for comprehensive
 performance testing of the hybrid search implementation.
 """
 
+import asyncio
 import json
 import logging
 import time

@@ -227,6 +227,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 "budget_limit": budget_limit,
                 "optimization_strategy": optimization_strategy,
             }
+        else:
+            return final_results
 
     @mcp.tool()
     async def predictive_cost_modeling(

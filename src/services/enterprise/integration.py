@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 # BaseModel and Field imports removed (unused)
 from src.architecture.service_factory import BaseService
 from src.config.modern import Config
-from src.services.deployment.feature_flags import FeatureFlagManager
+from src.services.deployment.feature_flags import FeatureFlagConfig, FeatureFlagManager
 from src.services.enterprise.cache import EnterpriseCacheService
 from src.services.enterprise.search import EnterpriseSearchService
 from src.services.observability.performance import PerformanceMonitor
@@ -664,7 +664,8 @@ class EnterpriseIntegrationManager:
         await self.performance_monitor.initialize()
 
         # Initialize feature flag manager
-        self.feature_flag_manager = FeatureFlagManager()
+        feature_flag_config = FeatureFlagConfig()
+        self.feature_flag_manager = FeatureFlagManager(feature_flag_config)
 
         logger.info("Core infrastructure initialized")
 

@@ -75,6 +75,17 @@ class PerformanceMonitor:
         self._cpu_history = deque(maxlen=60)  # Last 60 readings
         self._memory_history = deque(maxlen=60)
 
+    async def initialize(self) -> None:
+        """Initialize the performance monitor."""
+        logger.info("Performance monitor initialized")
+
+    async def cleanup(self) -> None:
+        """Clean up performance monitor resources."""
+        self.operation_stats.clear()
+        self._cpu_history.clear()
+        self._memory_history.clear()
+        logger.info("Performance monitor cleaned up")
+
     def _get_system_metrics(self) -> dict[str, float]:
         """Get current system performance metrics.
 

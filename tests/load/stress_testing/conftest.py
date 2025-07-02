@@ -299,22 +299,20 @@ class FailureInjector:
             while not stop_io_work.is_set():
                 try:
                     # Create temporary file
-                    temp_file = tempfile.NamedTemporaryFile(delete=False)
-                    temp_files.append(temp_file.name)
+                    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                        temp_files.append(temp_file.name)
 
-                    # Write data
-                    data = b"x" * int(
-                        1024 * 1024 * io_intensity
-                    )  # Variable size based on intensity
-                    temp_file.write(data)
-                    temp_file.flush()
-                    os.fsync(temp_file.fileno())  # Force write to disk
+                        # Write data
+                        data = b"x" * int(
+                            1024 * 1024 * io_intensity
+                        )  # Variable size based on intensity
+                        temp_file.write(data)
+                        temp_file.flush()
+                        os.fsync(temp_file.fileno())  # Force write to disk
 
-                    # Read data back
-                    temp_file.seek(0)
-                    _ = temp_file.read()
-
-                    temp_file.close()
+                        # Read data back
+                        temp_file.seek(0)
+                        _ = temp_file.read()
 
                     # Brief pause
                     time.sleep(0.1)

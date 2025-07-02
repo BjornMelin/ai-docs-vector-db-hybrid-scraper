@@ -201,6 +201,38 @@ class QueryExpansionService:
             "strategy_usage": {},
         }
 
+    async def initialize(self) -> None:
+        """Initialize the query expansion service."""
+        self._logger.info("Query expansion service initialized")
+
+    async def cleanup(self) -> None:
+        """Clean up resources used by the query expansion service."""
+        self.expansion_cache.clear()
+        self.expansion_history.clear()
+        self.success_feedback.clear()
+        self._logger.info("Query expansion service cleaned up")
+
+    async def expand(self, query: str, **kwargs) -> str:
+        """Simple query expansion interface that returns expanded query string.
+
+        Args:
+            query: Original query string
+            **kwargs: Additional expansion parameters
+
+        Returns:
+            Expanded query string
+        """
+        # Create a request with default parameters
+        request = QueryExpansionRequest(
+            original_query=query,
+            strategy=kwargs.get("strategy", ExpansionStrategy.HYBRID),
+            max_expansions=kwargs.get("max_expansions", 10),
+            confidence_threshold=kwargs.get("confidence_threshold", 0.5),
+        )
+
+        result = await self.expand_query(request)
+        return result.expanded_query
+
     async def expand_query(
         self, request: QueryExpansionRequest
     ) -> QueryExpansionResult:

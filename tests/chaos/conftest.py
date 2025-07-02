@@ -34,6 +34,8 @@ class FailureType(Enum):
     AUTHENTICATION_FAILURE = "auth_failure"
     RATE_LIMIT_EXCEEDED = "rate_limit_exceeded"
     PARTIAL_FAILURE = "partial_failure"
+    RESOURCE_EXHAUSTION = "resource_exhaustion"
+    SLOW_RESPONSE = "slow_response"
 
 
 @dataclass

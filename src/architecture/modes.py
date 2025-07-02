@@ -237,10 +237,12 @@ def is_service_enabled(service_name: str) -> bool:
 def get_feature_setting(feature_name: str, default: Any = False) -> Any:
     """Get a feature setting value for the current mode."""
     config = get_mode_config()
-    return config.max_complexity_features.get(feature_name, default)
+    features: dict[str, Any] = config.max_complexity_features
+    return features.get(feature_name, default)
 
 
 def get_resource_limit(resource_name: str, default: int = 0) -> int:
     """Get a resource limit for the current mode."""
     config = get_mode_config()
-    return config.resource_limits.get(resource_name, default)
+    limits: dict[str, int] = config.resource_limits
+    return limits.get(resource_name, default)

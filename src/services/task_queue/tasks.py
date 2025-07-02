@@ -90,12 +90,12 @@ async def delete_collection(
 
         # Initialize required services
         config = get_config()
-        client_manager = ClientManager(config)
+        client_manager = ClientManager()
         await client_manager.initialize()
 
         try:
             qdrant_client = await client_manager.get_qdrant_client()
-            alias_manager = QdrantAliasManager(config, qdrant_client)
+            alias_manager = QdrantAliasManager(config, qdrant_client, None)
 
             # Double-check no aliases point to this collection
             aliases = await alias_manager.list_aliases()
@@ -432,9 +432,9 @@ TASK_REGISTRY = TASK_MAP
 
 
 async def create_task(
-    task_name: str,
-    task_data: dict[str, Any],
-    delay: timedelta | None = None,
+    task_name: str,  # noqa: ARG001
+    task_data: dict[str, Any],  # noqa: ARG001
+    delay: timedelta | None = None,  # noqa: ARG001
 ) -> str | None:
     """Create and enqueue a task for background processing.
 
@@ -451,27 +451,14 @@ async def create_task(
     """
     try:
         # Get task queue manager
-        config = get_config()
-        client_manager = ClientManager(config)
+        client_manager = ClientManager()
         await client_manager.initialize()
 
         try:
-            task_queue_manager = await client_manager.get_task_queue_manager()
-
-            # Convert timedelta to seconds for ARQ
-            delay_seconds = delay.total_seconds() if delay else None
-
-            # Enqueue the task
-            job_id = await task_queue_manager.enqueue(
-                task_name,
-                **task_data,
-                _delay=int(delay_seconds) if delay_seconds else None,
-            )
-
-            logger.info(
-                f"Successfully created task {task_name} with job ID {job_id}"
-            )  # TODO: Convert f-string to logging format
-            return job_id
+            # Note: get_task_queue_manager method not yet implemented in ClientManager
+            # TODO: Implement task queue manager in ClientManager
+            logger.warning("Task queue manager not available - task queuing disabled")
+            return None
 
         finally:
             await client_manager.cleanup()

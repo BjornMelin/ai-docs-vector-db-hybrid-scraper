@@ -20,6 +20,7 @@ from src.models.vector_search import (
     RetrievalMetrics,
     SearchResult,
 )
+from src.services.errors import ServiceError
 from src.services.query_processing import (
     AdvancedSearchOrchestrator,
     AdvancedSearchRequest,
@@ -221,7 +222,7 @@ class HybridSearchService:
                 return await self._perform_fallback_search(request, start_time, str(e))
             # Re-raise if no fallback
             msg = f"Hybrid search failed: {e}"
-            raise HybridSearchError(msg) from e
+            raise ServiceError(msg) from e
         else:
             return response
 

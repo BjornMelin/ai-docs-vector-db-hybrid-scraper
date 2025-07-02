@@ -143,7 +143,7 @@ async def lifespan():
         logger.info("Initializing AI Documentation Vector DB MCP Server...")
 
         config = get_config()
-        lifespan.client_manager = ClientManager(config)
+        lifespan.client_manager = ClientManager()
         await lifespan.client_manager.initialize()
 
         # Initialize monitoring system
@@ -189,11 +189,11 @@ async def lifespan():
                     or config.cache.enable_dragonfly_cache
                 ):
                     # Initialize cache manager first to ensure it's available for monitoring
-                    await lifespan.client_manager.get_cache_manager()
+                    cache_manager = await lifespan.client_manager.get_cache_manager()
                     cache_metrics_task = asyncio.create_task(
                         update_cache_metrics_periodically(
                             lifespan.metrics_registry,
-                            lifespan.client_manager._cache_manager,
+                            cache_manager,
                             interval_seconds=30.0,
                         )
                     )

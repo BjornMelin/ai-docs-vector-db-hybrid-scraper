@@ -1,5 +1,6 @@
 """Tests for enhanced configuration error handling."""
 
+import contextlib
 import json
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -126,11 +127,9 @@ class TestValidationErrorHandling:
 
     def test_handle_validation_error_masks_sensitive_data(self):
         """Test that sensitive data is masked in validation errors."""
-        try:
+        with contextlib.suppress(ValidationError):
             # Create error with sensitive field
             TestConfig(api_key="", port=8080)
-        except ValidationError:
-            pass  # This won't actually fail, so simulate
 
         # Simulate validation error with sensitive data
         mock_error = Mock(spec=ValidationError)

@@ -38,7 +38,7 @@ class ModernCircuitBreakerManager:
         self.config = config
 
         # Create Redis unit of work for distributed state
-        self.redis_storage = AsyncRedisUnitOfWork.from_url(redis_url)
+        self.redis_storage = AsyncRedisUnitOfWork(redis_url)
 
         # Get circuit breaker settings from config or use defaults
         if config and hasattr(config, "performance"):

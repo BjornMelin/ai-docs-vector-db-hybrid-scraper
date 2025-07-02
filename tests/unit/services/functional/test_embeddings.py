@@ -1,5 +1,6 @@
 """Tests for function-based embedding service."""
 
+import contextlib
 from unittest.mock import AsyncMock
 
 import pytest
@@ -282,13 +283,11 @@ class TestCircuitBreakerIntegration:
 
         # Multiple attempts should trigger circuit breaker
         for _i in range(5):
-            try:
+            with contextlib.suppress(HTTPException):
                 await generate_embeddings(
                     texts=["test"],
                     embedding_client=mock_client,
                 )
-            except HTTPException:
-                pass  # Expected
 
         # Circuit breaker should be triggered by now
         # Note: In real implementation, we'd need access to the circuit breaker instance

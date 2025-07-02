@@ -35,7 +35,7 @@ except ImportError:
 
     class Resource:
         @staticmethod
-        def create(*args, **kwargs):
+        def create(*_args, **_kwargs):
             return None
 
     class TracerProvider:

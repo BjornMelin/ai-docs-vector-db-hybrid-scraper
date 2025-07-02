@@ -9,7 +9,7 @@ import time
 from typing import Any
 
 from src.architecture.service_factory import BaseService
-from src.services.cache.dragonfly_cache import DragonflyCacheAdapter
+from src.services.cache.dragonfly_cache import DragonflyCache
 
 
 logger = logging.getLogger(__name__)
@@ -300,7 +300,7 @@ class EnterpriseCacheService(BaseService):
         try:
             # Initialize Redis/Dragonfly connection
 
-            self.distributed_cache = DragonflyCacheAdapter()
+            self.distributed_cache = DragonflyCache()
             await self.distributed_cache.initialize()
             logger.info("Distributed cache initialized")
         except ImportError:

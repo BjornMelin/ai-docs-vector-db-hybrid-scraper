@@ -8,7 +8,6 @@ for vulnerability assessment and compliance validation.
 import argparse
 import json
 import logging
-import os
 import re
 import subprocess
 import sys
@@ -172,7 +171,7 @@ class SecurityTestRunner:
 
         try:
             # Validate Python executable for security
-            if not sys.executable or not os.path.isfile(sys.executable):
+            if not sys.executable or not Path(sys.executable).is_file():
                 self.logger.warning(
                     "Python executable not found or invalid, skipping Bandit"
                 )
@@ -246,7 +245,7 @@ class SecurityTestRunner:
 
         try:
             # Validate Python executable for security
-            if not sys.executable or not os.path.isfile(sys.executable):
+            if not sys.executable or not Path(sys.executable).is_file():
                 self.logger.warning(
                     "Python executable not found or invalid, skipping Safety"
                 )
@@ -352,7 +351,7 @@ class SecurityTestRunner:
         cmd.extend(existing_files)
 
         # Validate Python executable for security
-        if not sys.executable or not os.path.isfile(sys.executable):
+        if not sys.executable or not Path(sys.executable).is_file():
             self.logger.warning(
                 "Python executable not found or invalid, skipping pytest"
             )

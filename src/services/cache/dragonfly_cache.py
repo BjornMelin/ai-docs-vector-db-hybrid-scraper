@@ -1,19 +1,20 @@
 import typing
+
+
 """DragonflyDB cache implementation with advanced performance optimizations."""
 
-import json  # noqa: PLC0415
-import logging  # noqa: PLC0415
+import json
+import logging
 import zlib
 from typing import Any
 
 import redis.asyncio as redis
 from redis.asyncio.retry import Retry
 from redis.backoff import ExponentialBackoff
-from redis.exceptions import ConnectionError
-from redis.exceptions import RedisError
-from redis.exceptions import TimeoutError
+from redis.exceptions import ConnectionError, RedisError, TimeoutError
 
 from .base import CacheInterface
+
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +94,7 @@ class DragonflyCache(CacheInterface[Any]):
             try:
                 self.metrics_registry = get_metrics_registry()
                 logger.debug("DragonflyDB cache monitoring enabled")
-            except (ConnectionError, IOError, OSError, PermissionError) as e:
+            except (ConnectionError, OSError, PermissionError) as e:
                 logger.debug(f"DragonflyDB cache monitoring disabled: {e}")
 
     @property
@@ -149,8 +150,7 @@ class DragonflyCache(CacheInterface[Any]):
                 return await self._execute_get(key)
 
             return await decorator(_monitored_get)()
-        else:
-            return await self._execute_get(key)
+        return await self._execute_get(key)
 
     async def _execute_get(self, key: str) -> Any | None:
         """Execute the actual get operation."""
@@ -187,8 +187,7 @@ class DragonflyCache(CacheInterface[Any]):
                 return await self._execute_set(key, value, ttl, nx, xx)
 
             return await decorator(_monitored_set)()
-        else:
-            return await self._execute_set(key, value, ttl, nx, xx)
+        return await self._execute_set(key, value, ttl, nx, xx)
 
     async def _execute_set(
         self,
@@ -262,10 +261,9 @@ class DragonflyCache(CacheInterface[Any]):
                     count += 1
 
                 return count
-            else:
-                # Flush entire database (use with caution!)
-                await client.flushdb()
-                return -1  # Unknown count
+            # Flush entire database (use with caution!)
+            await client.flushdb()
+            return -1  # Unknown count
 
         except RedisError as e:
             logger.error(f"DragonflyDB clear error: {e}")
@@ -285,18 +283,28 @@ class DragonflyCache(CacheInterface[Any]):
                     count += 1
 
                 return count
-            else:
-                # Get total database size
-                info = await client.info("keyspace")
-                # Parse db0 keys count
-                db_info = info.get("db0", {})
-                if isinstance(db_info, dict):
-                    return db_info.get("keys", 0)
-                return 0
+            # Get total database size
+            info = await client.info("keyspace")
+            # Parse db0 keys count
+            db_info = info.get("db0", {})
+            if isinstance(db_info, dict):
+                return db_info.get("keys", 0)
+            return 0
 
         except RedisError as e:
             logger.error(f"DragonflyDB size error: {e}")
             return 0
+
+    async def initialize(self) -> None:
+        """Initialize DragonflyDB connection and verify connectivity."""
+        try:
+            client = await self.client
+            # Test connection
+            await client.ping()
+            logger.info("DragonflyDB cache initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize DragonflyDB cache: {e}")
+            raise
 
     async def close(self) -> None:
         """Close DragonflyDB connections."""

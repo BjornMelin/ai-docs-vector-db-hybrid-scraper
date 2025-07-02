@@ -24,6 +24,14 @@ from src.services.agents.dynamic_tool_discovery import (
 )
 
 
+class SimulatedAgentFailureError(Exception):
+    """Custom exception for simulated agent failures in tests."""
+
+
+class CriticalSystemFailureError(Exception):
+    """Custom exception for simulated critical system failures in tests."""
+
+
 class WorkflowState(str, Enum):
     """Workflow execution states."""
 
@@ -548,7 +556,7 @@ class TestDistributedWorkflowExecution:
         async def failing_orchestrate(task, constraints, deps):
             if "fail_task" in task:
                 msg = "Simulated agent failure"
-                raise Exception(msg)
+                raise SimulatedAgentFailureError(msg)
             return await original_orchestrate(task, constraints, deps)
 
         unreliable_agent.orchestrate = failing_orchestrate
@@ -892,7 +900,7 @@ class TestAutonomousCapabilities:
             call_count += 1
             if call_count > 1:  # Fail after first successful call
                 msg = "Primary agent failure - triggering self-healing"
-                raise Exception(msg)
+                raise SimulatedAgentFailureError(msg)
             return await original_orchestrate(task, constraints, deps)
 
         primary_agent.orchestrate = failing_primary_orchestrate
@@ -1218,7 +1226,7 @@ class TestAutonomousCapabilities:
                 if node.constraints.get("will_fail"):
                     # Simulate failure
                     msg = "Simulated critical failure"
-                    raise Exception(msg)
+                    raise CriticalSystemFailureError(msg)
 
                 return await original_execute_node(node, workflow, deps)
 

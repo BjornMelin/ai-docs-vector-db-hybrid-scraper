@@ -275,7 +275,6 @@ def journey_executor():
             action: str,
             params: dict[str, Any],
             context: dict[str, Any],
-            timeout: float,
         ) -> dict[str, Any]:
             """Perform the specified action."""
             # Replace context variables in params
@@ -306,11 +305,10 @@ def journey_executor():
 
             # Execute with timeout
             try:
-                return await asyncio.wait_for(
-                    handler(resolved_params, context), timeout=timeout
-                )
+                async with asyncio.timeout(30.0):
+                    return await handler(resolved_params, context)
             except TimeoutError as e:
-                msg = f"Action '{action}' timed out after {timeout}s"
+                msg = f"Action '{action}' timed out after 30.0s"
                 raise TimeoutError(msg) from e
 
         async def _action_crawl_url(

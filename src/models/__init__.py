@@ -134,7 +134,7 @@ from .vector_search import (
 
 
 # Commonly used exports
-__all__ = [
+__all__ = [  # noqa: RUF022 - organized by category for readability
     # Vector Search - Request models
     "AdvancedFilteredSearchRequest",
     "AdvancedHybridSearchRequest",

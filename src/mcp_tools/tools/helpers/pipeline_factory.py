@@ -52,8 +52,6 @@ class QueryProcessingPipelineFactory:
                     await ctx.debug(
                         "Cache manager not available, proceeding without caching"
                     )
-            else:
-                return pipeline
 
             # Create orchestrator
             orchestrator = SearchOrchestrator(

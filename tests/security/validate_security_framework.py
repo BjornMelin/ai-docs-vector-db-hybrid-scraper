@@ -218,7 +218,7 @@ class SecurityFrameworkValidator:
         # Test secure pytest execution
         try:
             result = subprocess.run(
-                [
+                [  # noqa: S607
                     "python",
                     str(project_root / "tests/load/run_load_tests.py"),
                     "--mode",

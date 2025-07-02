@@ -315,7 +315,7 @@ async def example_usage_patterns():
 
     # Declarative caching with decorator
     @cache_manager.cache_embeddings(ttl=3600)
-    async def cached_function(text: str) -> list[float]:
+    async def cached_function(_text: str) -> list[float]:
         # Expensive operation
         await asyncio.sleep(1)
         return [0.1] * 1536

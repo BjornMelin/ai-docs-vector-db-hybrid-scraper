@@ -33,6 +33,10 @@ from src.services.agents.agentic_orchestrator import (
 from src.services.agents.core import AgentState, BaseAgentDependencies
 
 
+class ToolExecutionError(Exception):
+    """Custom exception for tool execution failures in tests."""
+
+
 class TestToolRequest:
     """Test ToolRequest model validation and behavior."""
 
@@ -492,7 +496,7 @@ class TestAutonomousOrchestration:
         async def mock_execute_tool(tool_name, context, deps):
             if tool_name == "failing_tool":
                 msg = "Tool execution failed"
-                raise Exception(msg)
+                raise ToolExecutionError(msg)
             return {
                 "tool": tool_name,
                 "result": f"{tool_name} result",

@@ -237,4 +237,4 @@ def status(ctx: click.Context):
 
 
 if __name__ == "__main__":
-    main()
+    main()  # pylint: disable=no-value-for-parameter

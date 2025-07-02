@@ -399,8 +399,12 @@ def setup_application_security(
     # Add API key dependency for protected endpoints
     security_scheme = HTTPBearer(auto_error=False)
 
+    # Module-level singleton for dependency
+    _security_dependency = Depends(security_scheme)
+
+    # Create the dependency function
     async def validate_api_key_dependency(
-        credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
+        credentials: HTTPAuthorizationCredentials | None = _security_dependency,
     ) -> bool:
         """Dependency for API key validation."""
         return await security_manager.validate_api_key(credentials)

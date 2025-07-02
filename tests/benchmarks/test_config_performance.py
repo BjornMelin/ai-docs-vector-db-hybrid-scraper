@@ -330,7 +330,7 @@ class TestConfigurationPerformance:
 
             try:
                 # Initial load
-                with open(config_file) as f:
+                with Path(config_file).open() as f:
                     config_data = json.load(f)
 
                 initial_settings = Settings(**config_data)
@@ -343,7 +343,7 @@ class TestConfigurationPerformance:
                     config_data["app_name"] = f"reloaded-app-{i}"
 
                     # Save changes
-                    with open(config_file, "w") as f:
+                    with Path(config_file).open("w") as f:
                         json.dump(config_data, f)
 
                     # Reload configuration
@@ -355,7 +355,7 @@ class TestConfigurationPerformance:
             finally:
                 # Clean up
 
-                os.unlink(config_file)
+                Path(config_file).unlink()
 
             return results
 

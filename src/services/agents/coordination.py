@@ -481,8 +481,13 @@ class ParallelAgentCoordinator:
             # Start task execution
             execution_task = asyncio.create_task(self._execute_task(task, assignment))
             # Store reference to prevent task garbage collection
+            task_id = (
+                task.task_id
+            )  # Capture task_id to avoid closure over loop variable
             execution_task.add_done_callback(
-                lambda _: logger.debug(f"Task execution completed for {task.task_id}")
+                lambda _, tid=task_id: logger.debug(
+                    f"Task execution completed for {tid}"
+                )
             )
 
             # Respect parallel execution limit

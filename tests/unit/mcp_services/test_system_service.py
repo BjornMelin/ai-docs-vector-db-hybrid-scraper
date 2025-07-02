@@ -18,6 +18,10 @@ import pytest
 from src.mcp_services.system_service import SystemService
 
 
+class ToolRegistrationError(Exception):
+    """Custom exception for tool registration failures."""
+
+
 class TestSystemService:
     """Test SystemService initialization and core functionality."""
 
@@ -502,9 +506,11 @@ class TestSystemServiceErrorHandling:
 
         # First attempt fails
         with patch("src.mcp_services.system_service.system_health") as mock_tool:
-            mock_tool.register_tools.side_effect = Exception("Registration failed")
+            mock_tool.register_tools.side_effect = ToolRegistrationError(
+                "Registration failed"
+            )
 
-            with pytest.raises(Exception):
+            with pytest.raises(ToolRegistrationError):
                 await service._register_system_tools()
 
         # Second attempt should work

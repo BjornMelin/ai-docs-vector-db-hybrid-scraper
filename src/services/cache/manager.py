@@ -1,13 +1,12 @@
 import typing
+
+
 """Simplified cache manager using DragonflyDB with specialized cache layers."""
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import hashlib
-import logging  # noqa: PLC0415
+import logging
 from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass  # Used only for external library compatibility
 
 from src.config import CacheType
 
@@ -16,6 +15,7 @@ from .embedding_cache import EmbeddingCache
 from .local_cache import LocalCache
 from .metrics import CacheMetrics
 from .search_cache import SearchResultCache
+
 
 logger = logging.getLogger(__name__)
 
@@ -194,10 +194,9 @@ class CacheManager:
                 return await self._execute_cache_get(key, cache_type, default)
 
             return await decorator(_monitored_get)()
-        else:
-            return await self._execute_cache_get(key, cache_type, default)
+        return await self._execute_cache_get(key, cache_type, default)
 
-    async def _execute_cache_get(  # noqa: PLR0912
+    async def _execute_cache_get(
         self,
         key: str,
         cache_type: CacheType,
@@ -243,7 +242,7 @@ class CacheManager:
                             "distributed", cache_type.value
                         )
                     return value
-        except (ConnectionError, IOError, OSError, PermissionError) as e:
+        except (ConnectionError, OSError, PermissionError) as e:
             logger.error(f"Cache get error for key {cache_key}: {e}")
             if self._metrics:
                 latency = (asyncio.get_event_loop().time() - start_time) * 1000
@@ -295,8 +294,7 @@ class CacheManager:
                 return await self._execute_cache_set(key, value, cache_type, ttl)
 
             return await decorator(_monitored_set)()
-        else:
-            return await self._execute_cache_set(key, value, cache_type, ttl)
+        return await self._execute_cache_set(key, value, cache_type, ttl)
 
     async def _execute_cache_set(
         self,
@@ -323,7 +321,7 @@ class CacheManager:
                 success = await self._distributed_cache.set(
                     cache_key, value, ttl=effective_ttl
                 )
-        except (ConnectionError, IOError, OSError, PermissionError) as e:
+        except (ConnectionError, OSError, PermissionError) as e:
             logger.error(f"Cache set error for key {cache_key}: {e}")
             if self._metrics:
                 latency = (asyncio.get_event_loop().time() - start_time) * 1000
@@ -357,7 +355,7 @@ class CacheManager:
             # Delete from L2 cache
             if self._distributed_cache:
                 success = await self._distributed_cache.delete(cache_key)
-        except (ConnectionError, RuntimeError, TimeoutError, asyncio.TimeoutError) as e:
+        except (ConnectionError, RuntimeError, TimeoutError) as e:
             logger.error(f"Cache delete error for key {cache_key}: {e}")
             return False
         else:
@@ -390,7 +388,7 @@ class CacheManager:
                     await self._local_cache.clear()
                 if self._distributed_cache:
                     await self._distributed_cache.clear()
-        except (ConnectionError, RuntimeError, TimeoutError, asyncio.TimeoutError) as e:
+        except (ConnectionError, RuntimeError, TimeoutError) as e:
             logger.error(f"Cache clear error: {e}")
             return False
         else:

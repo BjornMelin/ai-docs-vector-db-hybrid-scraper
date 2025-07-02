@@ -18,6 +18,10 @@ import pytest
 from src.mcp_services.search_service import SearchService
 
 
+class ToolRegistrationError(Exception):
+    """Custom exception for tool registration failures."""
+
+
 class TestSearchService:
     """Test SearchService initialization and core functionality."""
 
@@ -390,9 +394,11 @@ class TestSearchServiceErrorHandling:
 
         # First attempt fails
         with patch("src.mcp_services.search_service.hybrid_search") as mock_tool:
-            mock_tool.register_tools.side_effect = Exception("Registration failed")
+            mock_tool.register_tools.side_effect = ToolRegistrationError(
+                "Registration failed"
+            )
 
-            with pytest.raises(Exception):
+            with pytest.raises(ToolRegistrationError):
                 await service._register_search_tools()
 
         # Second attempt should work

@@ -659,7 +659,7 @@ async def _fuse_hyde_results(
 
     # Calculate fused scores
     fused_results = []
-    for doc_id, doc_data in document_scores.items():
+    for doc_data in document_scores.values():
         # Use max score fusion (can be enhanced with other strategies)
         fused_score = max(doc_data["scores"])
 

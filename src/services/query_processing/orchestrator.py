@@ -349,7 +349,7 @@ class SearchOrchestrator(BaseService):
                         )
 
                         # Initialize RAG generator if needed
-                        if not self._rag_generator._initialized:
+                        if not self._rag_generator.llm_client_available:
                             await self.rag_generator.initialize()
 
                         rag_result = await self.rag_generator.generate_answer(
@@ -607,7 +607,7 @@ class SearchOrchestrator(BaseService):
         self.clear_cache()
 
         # Cleanup RAG generator if initialized
-        if self._rag_generator and self._rag_generator._initialized:
+        if self._rag_generator and self._rag_generator.llm_client_available:
             await self._rag_generator.cleanup()
 
         self._logger.info("SearchOrchestrator cleaned up")

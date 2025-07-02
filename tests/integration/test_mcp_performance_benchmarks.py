@@ -14,6 +14,7 @@ import os
 import time
 import tracemalloc
 from dataclasses import dataclass
+from pathlib import Path
 from statistics import mean, median, stdev
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -44,7 +45,7 @@ def _get_performance_thresholds():
         [
             "pytest" in os.getenv("_", ""),  # Running under pytest
             os.getenv("PYTEST_CURRENT_TEST") is not None,  # Pytest environment
-            "test" in os.getcwd().lower(),  # Working directory contains "test"
+            "test" in str(Path.cwd()).lower(),  # Working directory contains "test"
         ]
     )
 

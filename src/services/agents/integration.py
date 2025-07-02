@@ -180,13 +180,14 @@ class UnifiedAgenticSystem:
 
         # Initialize subsystems
         self.coordinator = ParallelAgentCoordinator(
-            client_manager=client_manager,
-            max_concurrent_agents=self.config.get("max_concurrent_agents", 10),
+            max_parallel_agents=self.config.get("max_concurrent_agents", 10),
         )
 
-        self.vector_manager = AgenticVectorManager(
-            client_manager=client_manager, config=self.config.get("vector_config", {})
-        )
+        # Import QdrantService here to avoid circular imports
+        from src.services.vector_db.service import QdrantService  # noqa: PLC0415
+
+        qdrant_service = QdrantService(self.config, client_manager)
+        self.vector_manager = AgenticVectorManager(qdrant_service)
 
         self.orchestrator = AdvancedToolOrchestrator(
             client_manager=client_manager,
@@ -213,7 +214,7 @@ class UnifiedAgenticSystem:
 
         try:
             # Initialize subsystems
-            await self.coordinator.initialize()
+            await self.coordinator.start_coordination()
             await self.vector_manager.initialize()
 
             # Register default tools with orchestrator
@@ -449,8 +450,8 @@ class UnifiedAgenticSystem:
                 logger.warning(f"Cancelling active request {request_id}")
 
             # Cleanup subsystems
-            await self.coordinator.cleanup()
-            await self.vector_manager.cleanup()
+            await self.coordinator.stop_coordination()
+            await self.vector_manager.stop_monitoring()
 
             self._initialized = False
             logger.info("UnifiedAgenticSystem cleaned up")
@@ -557,9 +558,10 @@ class UnifiedAgenticSystem:
                     task_id=node.node_id,
                     description=f"Execute tool {node.tool_id}",
                     priority=1.0,  # Will be adjusted based on tool priority
-                    estimated_duration_seconds=30.0,  # Default estimation
+                    estimated_duration_ms=30000.0,  # Default estimation (30 seconds in ms)
                     dependencies=node.depends_on,
-                    context=task_context,
+                    required_capabilities=[],  # Default empty capabilities
+                    input_data=task_context,  # Use task_context as input_data
                 )
 
                 tasks.append(task)
