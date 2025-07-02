@@ -84,28 +84,41 @@ class QdrantService(BaseService):
             return
 
         try:
-            # Get the Qdrant client from ClientManager
             client = await self._client_manager.get_qdrant_client()
-
-            # Initialize all focused modules with the shared client
-            self._collections = QdrantCollections(self.config, client)
-            self._search = QdrantSearch(client, self.config)
-            self._indexing = QdrantIndexing(client, self.config)
-            self._documents = QdrantDocuments(client, self.config)
-
-            # Initialize each module
-            await self._collections.initialize()
-
-            # Initialize deployment infrastructure if enabled
-            await self._initialize_deployment_services()
-
-            self._initialized = True
-            logger.info("QdrantService initialized with modular architecture")
-
         except Exception as e:
             self._initialized = False
-            msg = f"Failed to initialize QdrantService: {e}"
+            msg = f"Failed to get Qdrant client: {e}"
             raise QdrantServiceError(msg) from e
+
+        try:
+            self._initialize_qdrant_modules(client)
+        except Exception as e:
+            self._initialized = False
+            msg = f"Failed to initialize Qdrant modules: {e}"
+            raise QdrantServiceError(msg) from e
+
+        try:
+            await self._collections.initialize()
+        except Exception as e:
+            self._initialized = False
+            msg = f"Failed to initialize collections: {e}"
+            raise QdrantServiceError(msg) from e
+
+        try:
+            await self._initialize_deployment_services()
+        except (AttributeError, ConnectionError, ValueError, RuntimeError) as e:
+            logger.warning("Failed to initialize deployment services: %s", e)
+            # Don't fail initialization for optional deployment services
+
+        self._initialized = True
+        logger.info("QdrantService initialized with modular architecture")
+
+    def _initialize_qdrant_modules(self, client) -> None:
+        """Initialize all Qdrant modules with the shared client."""
+        self._collections = QdrantCollections(self.config, client)
+        self._search = QdrantSearch(client, self.config)
+        self._indexing = QdrantIndexing(client, self.config)
+        self._documents = QdrantDocuments(client, self.config)
 
     async def _initialize_deployment_services(self) -> None:
         """Initialize deployment services based on configuration and feature flags.
@@ -119,44 +132,57 @@ class QdrantService(BaseService):
         Services are only initialized if enabled in configuration.
         """
         try:
-            # Initialize feature flag manager if deployment services are enabled
-            if self.config.deployment.enable_feature_flags:
-                self._feature_flag_manager = (
-                    await self._client_manager.get_feature_flag_manager()
-                )
-                logger.info("Initialized FeatureFlagManager for QdrantService")
-
-            # Initialize A/B testing manager if enabled
-            if self.config.deployment.enable_ab_testing:
-                self._ab_testing_manager = (
-                    await self._client_manager.get_ab_testing_manager()
-                )
-                if self._ab_testing_manager:
-                    logger.info("Initialized ABTestingManager for QdrantService")
-
-            # Store deployment services for search routing
-            if (
-                self.config.deployment.enable_blue_green
-                or self.config.deployment.enable_canary
-                or self.config.deployment.enable_ab_testing
-            ):
-                # Get deployment services and store references
-                blue_green = await self._client_manager.get_blue_green_deployment()
-                canary = await self._client_manager.get_canary_deployment()
-
-                # Store deployment services for routing decisions
-                self._blue_green_deployment = blue_green
-                self._canary_deployment = canary
-
-                logger.info("Initialized deployment services for QdrantService routing")
-
+            await self._initialize_feature_flag_manager()
         except (AttributeError, ConnectionError, ValueError, RuntimeError) as e:
-            logger.warning(
-                "Failed to initialize deployment services: %s. "
-                "Continuing with standard mode.",
-                e,
-            )
-            # Don't raise exception - deployment services are optional
+            logger.warning("Failed to initialize feature flag manager: %s", e)
+
+        try:
+            await self._initialize_ab_testing_manager()
+        except (AttributeError, ConnectionError, ValueError, RuntimeError) as e:
+            logger.warning("Failed to initialize A/B testing manager: %s", e)
+
+        try:
+            await self._initialize_deployment_routing()
+        except (AttributeError, ConnectionError, ValueError, RuntimeError) as e:
+            logger.warning("Failed to initialize deployment routing: %s", e)
+
+    async def _initialize_feature_flag_manager(self) -> None:
+        """Initialize feature flag manager if enabled."""
+        if not self.config.deployment.enable_feature_flags:
+            return
+
+        self._feature_flag_manager = (
+            await self._client_manager.get_feature_flag_manager()
+        )
+        logger.info("Initialized FeatureFlagManager for QdrantService")
+
+    async def _initialize_ab_testing_manager(self) -> None:
+        """Initialize A/B testing manager if enabled."""
+        if not self.config.deployment.enable_ab_testing:
+            return
+
+        self._ab_testing_manager = await self._client_manager.get_ab_testing_manager()
+        if self._ab_testing_manager:
+            logger.info("Initialized ABTestingManager for QdrantService")
+
+    async def _initialize_deployment_routing(self) -> None:
+        """Initialize deployment routing services if any are enabled."""
+        if not (
+            self.config.deployment.enable_blue_green
+            or self.config.deployment.enable_canary
+            or self.config.deployment.enable_ab_testing
+        ):
+            return
+
+        # Get deployment services and store references
+        blue_green = await self._client_manager.get_blue_green_deployment()
+        canary = await self._client_manager.get_canary_deployment()
+
+        # Store deployment services for routing decisions
+        self._blue_green_deployment = blue_green
+        self._canary_deployment = canary
+
+        logger.info("Initialized deployment services for QdrantService routing")
 
     async def cleanup(self) -> None:
         """Cleanup all Qdrant modules (delegated to ClientManager)."""

@@ -170,45 +170,9 @@ class EnhancedAutomationRouter(AutomationRouter):
 
         # Execute scraping with rate limiting
         try:
-            # Acquire rate limit permission
-            async with RateLimitContext(
-                self.rate_limiter, selected_tier, timeout=5.0
-            ) as allowed:
-                if not allowed:
-                    # Rate limited, try fallback
-                    logger.warning(
-                        f"Rate limit exceeded for {selected_tier}, attempting fallback"
-                    )
-                    return await self._intelligent_fallback(
-                        url,
-                        domain,
-                        selected_tier,
-                        custom_actions,
-                        timeout,
-                        "Rate limit exceeded",
-                    )
-
-                result = await self._execute_tier_scraping(
-                    selected_tier, url, custom_actions, timeout
-                )
-
-            # Record success
-            elapsed = time.time() - start_time
-            await self._record_performance(
-                url,
-                domain,
-                selected_tier,
-                True,
-                elapsed * 1000,
-                len(result.get("content", "")),
+            result = await self._execute_scraping_with_rate_limiting(
+                selected_tier, url, domain, custom_actions, timeout, start_time, breaker
             )
-
-            if breaker:
-                breaker.record_success()
-
-            result["tier_used"] = selected_tier
-            result["provider"] = selected_tier
-            result["automation_time_ms"] = elapsed * 1000
 
         except Exception as e:
             elapsed = time.time() - start_time
@@ -411,40 +375,20 @@ class EnhancedAutomationRouter(AutomationRouter):
             # Check circuit breaker
             breaker = self.circuit_breakers.get(fallback_tier)
             if breaker and not breaker.can_attempt():
-                logger.debug(
-                    f"Skipping {fallback_tier} due to open circuit breaker"
-                )  # TODO: Convert f-string to logging format
+                logger.debug("Skipping %s due to open circuit breaker", fallback_tier)
                 continue
 
             try:
-                logger.info(
-                    f"Intelligent fallback to {fallback_tier} for {url}"
-                )  # TODO: Convert f-string to logging format
-                start_time = time.time()
-
-                result = await self._execute_tier_scraping(
-                    fallback_tier, url, custom_actions, timeout
-                )
-
-                # Record success
-                elapsed = time.time() - start_time
-                await self._record_performance(
+                result = await self._execute_fallback_attempt(
+                    fallback_tier,
                     url,
                     domain,
-                    fallback_tier,
-                    True,
-                    elapsed * 1000,
-                    len(result.get("content", "")),
+                    custom_actions,
+                    timeout,
+                    failed_tier,
+                    failed_tiers,
+                    breaker,
                 )
-
-                if breaker:
-                    breaker.record_success()
-
-                result["tier_used"] = fallback_tier
-                result["provider"] = fallback_tier
-                result["fallback_from"] = failed_tier
-                result["failed_tiers"] = failed_tiers
-                result["automation_time_ms"] = elapsed * 1000
 
             except Exception as e:
                 elapsed = time.time() - start_time
@@ -727,3 +671,96 @@ class EnhancedAutomationRouter(AutomationRouter):
                     "cost_optimization_enabled": self.routing_config.enable_cost_optimization,
                 },
             }
+
+    async def _execute_scraping_with_rate_limiting(
+        self,
+        selected_tier: str,
+        url: str,
+        domain: str,
+        custom_actions: list[dict] | None,
+        timeout: int,
+        start_time: float,
+        breaker: TierCircuitBreaker | None,
+    ) -> dict[str, Any]:
+        """Execute scraping with rate limiting and circuit breaker tracking."""
+        async with RateLimitContext(
+            self.rate_limiter, selected_tier, timeout=5.0
+        ) as allowed:
+            if not allowed:
+                # Rate limited, try fallback
+                logger.warning(
+                    "Rate limit exceeded for %s, attempting fallback", selected_tier
+                )
+                return await self._intelligent_fallback(
+                    url,
+                    domain,
+                    selected_tier,
+                    custom_actions,
+                    timeout,
+                    "Rate limit exceeded",
+                )
+
+            result = await self._execute_tier_scraping(
+                selected_tier, url, custom_actions, timeout
+            )
+
+        # Record success
+        elapsed = time.time() - start_time
+        await self._record_performance(
+            url,
+            domain,
+            selected_tier,
+            True,
+            elapsed * 1000,
+            len(result.get("content", "")),
+        )
+
+        if breaker:
+            breaker.record_success()
+
+        result["tier_used"] = selected_tier
+        result["provider"] = selected_tier
+        result["automation_time_ms"] = elapsed * 1000
+
+        return result
+
+    async def _execute_fallback_attempt(
+        self,
+        fallback_tier: str,
+        url: str,
+        domain: str,
+        custom_actions: list[dict] | None,
+        timeout: int,
+        failed_tier: str,
+        failed_tiers: list[str],
+        breaker: TierCircuitBreaker | None,
+    ) -> dict[str, Any]:
+        """Execute fallback attempt with proper tracking."""
+        logger.info("Intelligent fallback to %s for %s", fallback_tier, url)
+        start_time = time.time()
+
+        result = await self._execute_tier_scraping(
+            fallback_tier, url, custom_actions, timeout
+        )
+
+        # Record success
+        elapsed = time.time() - start_time
+        await self._record_performance(
+            url,
+            domain,
+            fallback_tier,
+            True,
+            elapsed * 1000,
+            len(result.get("content", "")),
+        )
+
+        if breaker:
+            breaker.record_success()
+
+        result["tier_used"] = fallback_tier
+        result["provider"] = fallback_tier
+        result["fallback_from"] = failed_tier
+        result["failed_tiers"] = failed_tiers
+        result["automation_time_ms"] = elapsed * 1000
+
+        return result

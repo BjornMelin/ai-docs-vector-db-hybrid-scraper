@@ -280,16 +280,16 @@ class BaseAgent(ABC):
                     "error_type": type(e).__name__,
                 },
             }
-        else:
-            return {
-                "success": True,
-                "result": result.data,
-                "metadata": {
-                    "agent": self.name,
-                    "execution_time": execution_time,
-                    "model": self.model,
-                },
-            }
+
+        return {
+            "success": True,
+            "result": result.data,
+            "metadata": {
+                "agent": self.name,
+                "execution_time": execution_time,
+                "model": self.model,
+            },
+        }
 
     async def _fallback_execute(
         self,

@@ -134,7 +134,9 @@ class DatabaseManager:
             raise APIError(msg) from e
 
     async def store_embeddings(
-        self, collection_name: str, points: list[dict[str, Any]]
+        self,
+        collection_name: str,
+        points: list[dict[str, Any]],
     ) -> bool:
         """Store embeddings in Qdrant collection.
 
@@ -201,7 +203,10 @@ class DatabaseManager:
 
     # Cache Operations
     async def cache_get(
-        self, key: str, cache_type: CacheType = CacheType.LOCAL, default: Any = None
+        self,
+        key: str,
+        cache_type: CacheType = CacheType.LOCAL,
+        default: Any = None,
     ) -> Any:
         """Get value from cache.
 
@@ -250,7 +255,9 @@ class DatabaseManager:
             return False
 
     async def cache_delete(
-        self, key: str, cache_type: CacheType = CacheType.LOCAL
+        self,
+        key: str,
+        cache_type: CacheType = CacheType.LOCAL,
     ) -> bool:
         """Delete value from cache.
 
@@ -284,7 +291,7 @@ class DatabaseManager:
             await self._redis_client.ping()
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
-                f"Redis ping failed: {e}"
+                f"Redis ping failed: {e}",
             )  # TODO: Convert f-string to logging format
             return False
 
@@ -309,7 +316,7 @@ class DatabaseManager:
             await self._redis_client.set(key, value, ex=ex)
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
-                f"Redis set failed for {key}: {e}"
+                f"Redis set failed for {key}: {e}",
             )  # TODO: Convert f-string to logging format
             return False
 
@@ -332,7 +339,7 @@ class DatabaseManager:
             return await self._redis_client.get(key)
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
-                f"Redis get failed for {key}: {e}"
+                f"Redis get failed for {key}: {e}",
             )  # TODO: Convert f-string to logging format
             return None
 

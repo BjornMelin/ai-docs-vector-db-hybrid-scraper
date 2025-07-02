@@ -847,8 +847,7 @@ class VectorVisualizationEngine(BaseService):
             self._logger.exception("Failed to generate visualization insights")
             return []
 
-        else:
-            return insights
+        return insights
 
     async def _calculate_distance_metrics(
         self, embeddings_array: np.ndarray
@@ -1092,8 +1091,7 @@ class VectorVisualizationEngine(BaseService):
             self._logger.exception("Failed to generate space recommendations")
             return []
 
-        else:
-            return recommendations
+        return recommendations
 
     async def _generate_query_recommendations(
         self, query_qualities: list[dict[str, Any]], overall_stats: dict[str, Any]
@@ -1154,8 +1152,7 @@ class VectorVisualizationEngine(BaseService):
             self._logger.exception("Failed to generate query recommendations")
             return []
 
-        else:
-            return recommendations
+        return recommendations
 
     async def cleanup(self) -> None:
         """Cleanup visualization engine resources."""

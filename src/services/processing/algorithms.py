@@ -10,6 +10,7 @@ import re
 import time
 from collections import Counter
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Any
 
 
@@ -100,7 +101,7 @@ class OptimizedTextAnalyzer:
                 "that",
                 "these",
                 "those",
-            }
+            },
         )
 
         # Content type indicators
@@ -383,7 +384,9 @@ class OptimizedTextAnalyzer:
 
     @lru_cache(maxsize=500)
     def calculate_document_similarity_optimized(
-        self, text_a: str, text_b: str
+        self,
+        text_a: str,
+        text_b: str,
     ) -> DocumentSimilarity:
         """Calculate document similarity with O(n+m) algorithm.
 
@@ -489,7 +492,7 @@ class OptimizedTextAnalyzer:
                     "words_per_second": result.word_count
                     / max(processing_time / 1000, 0.001),
                     "cache_hit": processing_time < 1.0,  # Very fast indicates cache hit
-                }
+                },
             )
 
         return results

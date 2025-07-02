@@ -95,7 +95,7 @@ class DragonflyCache(CacheInterface[Any]):
                 self.metrics_registry = get_metrics_registry()
                 logger.debug("DragonflyDB cache monitoring enabled")
             except (ConnectionError, OSError, PermissionError) as e:
-                logger.debug(f"DragonflyDB cache monitoring disabled: {e}")
+                logger.debug("DragonflyDB cache monitoring disabled: %s", e)
 
     @property
     async def client(self) -> redis.Redis:
@@ -165,7 +165,7 @@ class DragonflyCache(CacheInterface[Any]):
             return self._deserialize(data)
 
         except RedisError as e:
-            logger.error(f"DragonflyDB get error for key {key}: {e}")
+            logger.error("DragonflyDB get error for key %s: %s", key, e)
             return None
 
     async def set(
@@ -219,7 +219,7 @@ class DragonflyCache(CacheInterface[Any]):
             return bool(result)
 
         except RedisError as e:
-            logger.error(f"DragonflyDB set error for key {key}: {e}")
+            logger.error("DragonflyDB set error for key %s: %s", key, e)
             return False
 
     async def delete(self, key: str) -> bool:
@@ -231,7 +231,7 @@ class DragonflyCache(CacheInterface[Any]):
             return bool(result)
 
         except RedisError as e:
-            logger.error(f"DragonflyDB delete error for key {key}: {e}")
+            logger.error("DragonflyDB delete error for key %s: %s", key, e)
             return False
 
     async def exists(self, key: str) -> bool:
@@ -243,7 +243,7 @@ class DragonflyCache(CacheInterface[Any]):
             return bool(result)
 
         except RedisError as e:
-            logger.error(f"DragonflyDB exists error for key {key}: {e}")
+            logger.error("DragonflyDB exists error for key %s: %s", key, e)
             return False
 
     async def clear(self) -> int:
@@ -266,7 +266,7 @@ class DragonflyCache(CacheInterface[Any]):
             return -1  # Unknown count
 
         except RedisError as e:
-            logger.error(f"DragonflyDB clear error: {e}")
+            logger.error("DragonflyDB clear error: %s", e)
             return 0
 
     async def size(self) -> int:
@@ -292,7 +292,7 @@ class DragonflyCache(CacheInterface[Any]):
             return 0
 
         except RedisError as e:
-            logger.error(f"DragonflyDB size error: {e}")
+            logger.error("DragonflyDB size error: %s", e)
             return 0
 
     async def initialize(self) -> None:
@@ -303,7 +303,7 @@ class DragonflyCache(CacheInterface[Any]):
             await client.ping()
             logger.info("DragonflyDB cache initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize DragonflyDB cache: {e}")
+            logger.error("Failed to initialize DragonflyDB cache: %s", e)
             raise
 
     async def close(self) -> None:
@@ -340,7 +340,7 @@ class DragonflyCache(CacheInterface[Any]):
             return results
 
         except RedisError as e:
-            logger.error(f"DragonflyDB get_many error: {e}")
+            logger.error("DragonflyDB get_many error: %s", e)
             # Return None for all keys on error
             return dict.fromkeys(keys)
 
@@ -379,7 +379,7 @@ class DragonflyCache(CacheInterface[Any]):
             return results
 
         except RedisError as e:
-            logger.error(f"DragonflyDB set_many error: {e}")
+            logger.error("DragonflyDB set_many error: %s", e)
             # Return False for all keys on error
             return dict.fromkeys(items, False)
 
@@ -413,7 +413,7 @@ class DragonflyCache(CacheInterface[Any]):
             return results
 
         except RedisError as e:
-            logger.error(f"DragonflyDB delete_many error: {e}")
+            logger.error("DragonflyDB delete_many error: %s", e)
             # Return False for all keys on error
             return dict.fromkeys(keys, False)
 
@@ -437,7 +437,7 @@ class DragonflyCache(CacheInterface[Any]):
             return results
 
         except RedisError as e:
-            logger.error(f"DragonflyDB mget error: {e}")
+            logger.error("DragonflyDB mget error: %s", e)
             return [None] * len(keys)
 
     async def mset(self, mapping: dict[str, Any], ttl: int | None = None) -> bool:
@@ -465,7 +465,7 @@ class DragonflyCache(CacheInterface[Any]):
             return True
 
         except RedisError as e:
-            logger.error(f"DragonflyDB mset error: {e}")
+            logger.error("DragonflyDB mset error: %s", e)
             return False
 
     async def ttl(self, key: str) -> int:
@@ -477,7 +477,7 @@ class DragonflyCache(CacheInterface[Any]):
             return max(0, ttl)  # -1 means no TTL, -2 means key doesn't exist
 
         except RedisError as e:
-            logger.error(f"DragonflyDB ttl error for key {key}: {e}")
+            logger.error("DragonflyDB ttl error for key %s: %s", key, e)
             return 0
 
     async def expire(self, key: str, ttl: int) -> bool:
@@ -489,7 +489,7 @@ class DragonflyCache(CacheInterface[Any]):
             return bool(result)
 
         except RedisError as e:
-            logger.error(f"DragonflyDB expire error for key {key}: {e}")
+            logger.error("DragonflyDB expire error for key %s: %s", key, e)
             return False
 
     async def scan_keys(self, pattern: str, count: int = 100) -> list[str]:
@@ -513,7 +513,7 @@ class DragonflyCache(CacheInterface[Any]):
             return keys
 
         except RedisError as e:
-            logger.error(f"DragonflyDB scan_keys error: {e}")
+            logger.error("DragonflyDB scan_keys error: %s", e)
             return []
 
     async def get_memory_usage(self, key: str) -> int:
@@ -526,5 +526,5 @@ class DragonflyCache(CacheInterface[Any]):
             return usage or 0
 
         except (RedisError, AttributeError) as e:
-            logger.debug(f"DragonflyDB memory_usage error for key {key}: {e}")
+            logger.debug("DragonflyDB memory_usage error for key %s: %s", key, e)
             return 0

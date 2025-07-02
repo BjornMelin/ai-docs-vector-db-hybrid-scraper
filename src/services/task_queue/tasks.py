@@ -85,10 +85,8 @@ async def delete_collection(
     )
 
     try:
-        # Wait for grace period
         await asyncio.sleep(grace_period_minutes * 60)
 
-        # Initialize required services
         config = get_config()
         client_manager = ClientManager()
         await client_manager.initialize()
@@ -97,7 +95,6 @@ async def delete_collection(
             qdrant_client = await client_manager.get_qdrant_client()
             alias_manager = QdrantAliasManager(config, qdrant_client, None)
 
-            # Double-check no aliases point to this collection
             aliases = await alias_manager.list_aliases()
             if collection_name in aliases.values():
                 logger.warning(
@@ -110,7 +107,6 @@ async def delete_collection(
                     "duration": time.time() - start_time,
                 }
 
-            # Delete the collection
             await qdrant_client.delete_collection(collection_name)
             logger.info(
                 f"Successfully deleted collection {collection_name}"
@@ -121,7 +117,6 @@ async def delete_collection(
                 "collection": collection_name,
                 "duration": time.time() - start_time,
             }
-
         finally:
             await client_manager.cleanup()
 
@@ -174,11 +169,9 @@ async def persist_cache(
     )  # TODO: Convert f-string to logging format
 
     try:
-        # Wait for delay
         await asyncio.sleep(delay)
 
-        # Import and call the persist function dynamically with security validation
-        # Validate inputs against security whitelist to prevent arbitrary code execution
+        # Validate dynamic import for security
         try:
             _validate_dynamic_import(persist_func_module, persist_func_name)
         except ValueError as ve:
@@ -190,10 +183,10 @@ async def persist_cache(
                 "duration": time.time() - start_time,
             }
 
+        # Import and call persist function
         module = importlib.import_module(persist_func_module)
         persist_func = getattr(module, persist_func_name)
 
-        # Call the persist function
         if asyncio.iscoroutinefunction(persist_func):
             await persist_func(key, value)
         else:

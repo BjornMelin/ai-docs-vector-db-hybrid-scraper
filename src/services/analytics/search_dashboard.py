@@ -400,8 +400,7 @@ class SearchAnalyticsDashboard(BaseService):
             self._logger.exception("Failed to generate optimization recommendations")
             return []
 
-        else:
-            return recommendations
+        return recommendations
 
     async def _update_realtime_stats(self) -> None:
         """Update real-time statistics."""
@@ -591,8 +590,7 @@ class SearchAnalyticsDashboard(BaseService):
             self._logger.exception("Failed to generate behavior insights")
             return []
 
-        else:
-            return insights
+        return insights
 
     async def _calculate_performance_trends(self) -> dict[str, Any]:
         """Calculate performance trends over time."""
@@ -659,8 +657,7 @@ class SearchAnalyticsDashboard(BaseService):
             self._logger.exception("Failed to calculate performance trends")
             return {}
 
-        else:
-            return trends
+        return trends
 
     async def _calculate_feature_utilization(self) -> dict[str, float]:
         """Calculate feature utilization rates."""
@@ -684,8 +681,7 @@ class SearchAnalyticsDashboard(BaseService):
             self._logger.exception("Failed to calculate feature utilization")
             return {}
 
-        else:
-            return utilization
+        return utilization
 
     def _calculate_distribution(self, values: list[float]) -> dict[str, float]:
         """Calculate distribution statistics for a list of values."""
@@ -731,8 +727,7 @@ class SearchAnalyticsDashboard(BaseService):
             self._logger.exception("Failed to get query volume timeline")
             return []
 
-        else:
-            return timeline
+        return timeline
 
     async def _get_top_performing_queries(self) -> list[dict[str, Any]]:
         """Get top performing queries by success rate and speed."""
@@ -850,8 +845,7 @@ class SearchAnalyticsDashboard(BaseService):
             self._logger.exception("Failed to identify optimization opportunities")
             return []
 
-        else:
-            return opportunities
+        return opportunities
 
     async def _pattern_detection_loop(self) -> None:
         """Background loop for pattern detection."""

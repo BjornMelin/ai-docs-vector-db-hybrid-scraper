@@ -74,7 +74,7 @@ class LocalCache(CacheInterface[Any]):
                 self.metrics_registry = get_metrics_registry()
                 logger.debug("Local cache monitoring enabled")
             except (ConnectionError, RuntimeError, TimeoutError) as e:
-                logger.debug(f"Local cache monitoring disabled: {e}")
+                logger.debug("Local cache monitoring disabled: %s", e)
 
     async def get(self, key: str) -> Any | None:
         """Get value from cache with LRU update."""

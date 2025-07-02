@@ -32,8 +32,7 @@ def _validate_formats(formats: list[str] | None) -> list[str]:
         formats = ["markdown"]
 
     valid_formats = {"markdown", "html", "text"}
-    invalid_formats = set(formats) - valid_formats
-    if invalid_formats:
+    if invalid_formats := set(formats) - valid_formats:
         msg = f"Invalid formats: {invalid_formats}. Valid options: {valid_formats}"
         raise ValueError(msg)
     return formats

@@ -723,22 +723,25 @@ async def _generate_filter_recommendations(
     recommendations = []
 
     # Temporal filtering recommendations
-    if query_analysis["temporal_indicators"]["has_temporal"]:
-        temporal_type = query_analysis["temporal_indicators"]["temporal_type"]
-        if temporal_type == "recent":
-            recommendations.append(
-                {
-                    "filter_type": "temporal",
-                    "filter_config": {
-                        "field": "timestamp",
-                        "operator": "after",
-                        "value": "30_days_ago",
-                    },
-                    "reasoning": "Query indicates preference for recent content",
-                    "confidence": 0.9,
-                    "impact": "high",
-                }
-            )
+    if (
+        query_analysis["temporal_indicators"]["has_temporal"]
+        and (temporal_type := query_analysis["temporal_indicators"]["temporal_type"])
+        == "recent"
+    ):
+        logger.debug(f"Applying temporal filtering for type: {temporal_type}")
+        recommendations.append(
+            {
+                "filter_type": "temporal",
+                "filter_config": {
+                    "field": "timestamp",
+                    "operator": "after",
+                    "value": "30_days_ago",
+                },
+                "reasoning": "Query indicates preference for recent content",
+                "confidence": 0.9,
+                "impact": "high",
+            }
+        )
 
     # Domain-based filtering recommendations
     if query_analysis["domain_indicators"]:
@@ -878,9 +881,9 @@ async def _predict_filter_performance(
     }
 
     # Adjust predictions based on filter types
-    filter_count = len(filters)
-    if filter_count > 3:
+    if (filter_count := len(filters)) > 3:
         performance_factors["execution_time_ms"] *= 1.2  # More filters = more time
+        logger.debug(f"Filter count {filter_count} impacts performance")
 
     if "quality_score" in str(filters):
         performance_factors["selectivity_score"] *= 1.1  # Quality filters are selective

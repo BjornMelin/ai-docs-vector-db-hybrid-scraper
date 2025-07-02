@@ -14,8 +14,6 @@ from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
-
-# AsyncQdrantClient import removed (unused)
 from qdrant_client.models import (
     Distance,
     HnswConfigDiff,

@@ -28,6 +28,7 @@ class PrometheusMiddleware:
         self,
         app: FastAPI,
         metrics_registry: MetricsRegistry,
+        *,
         health_manager: HealthCheckManager | None = None,
         metrics_path: str = "/metrics",
         health_path: str = "/health",
@@ -286,6 +287,7 @@ class CustomMetricsMiddleware(BaseHTTPMiddleware):
 def setup_monitoring(
     app: FastAPI,
     metrics_registry: MetricsRegistry,
+    *,
     health_manager: HealthCheckManager | None = None,
     enable_default_metrics: bool = True,
     enable_custom_metrics: bool = True,

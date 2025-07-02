@@ -122,52 +122,103 @@ class CompressionMiddleware(BaseHTTPMiddleware):
 
         """
         try:
-            # Get response body
-            body = response.body
-
-            # Skip if body is too small
-            if len(body) < self.minimum_size:
-                return response
-
-            # Compress the body
-            compressed_body = gzip.compress(body, compresslevel=self.compression_level)
-
-            # Create new response with compressed body
-            compressed_response = Response(
-                content=compressed_body,
-                status_code=response.status_code,
-                headers=dict(response.headers),
-                media_type=response.media_type,
-            )
-
-            # Update headers
-            compressed_response.headers["content-encoding"] = "gzip"
-            compressed_response.headers["content-length"] = str(len(compressed_body))
-
-            # Add Vary header to indicate compression varies by encoding
-            vary_header = response.headers.get("vary", "")
-            if "accept-encoding" not in vary_header.lower():
-                if vary_header:
-                    vary_header += ", Accept-Encoding"
-                else:
-                    vary_header = "Accept-Encoding"
-                compressed_response.headers["vary"] = vary_header
-
-            # Calculate compression ratio for logging
-            compression_ratio = len(body) / len(compressed_body)
-            logger.debug(
-                f"Compressed response: {len(body)} -> {len(compressed_body)} bytes "
-                f"(ratio: {compression_ratio:.2f}x)"
-            )
-
-        except (ValueError, TypeError, UnicodeDecodeError) as e:
-            logger.warning(
-                f"Failed to compress response: {e}"
-            )  # TODO: Convert f-string to logging format
+            body = self._get_response_body(response)
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Failed to get response body: {e}")
             return response
 
-        else:
-            return compressed_response
+        # Skip if body is too small
+        if len(body) < self.minimum_size:
+            return response
+
+        try:
+            compressed_body = gzip.compress(body, compresslevel=self.compression_level)
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Failed to compress response body: {e}")
+            return response
+
+        try:
+            return self._create_compressed_response(
+                response, body, compressed_body, "gzip"
+            )
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Failed to create compressed response: {e}")
+            return response
+
+    def _get_response_body(self, response: Response) -> bytes:
+        """Get response body safely.
+
+        Args:
+            response: HTTP response
+
+        Returns:
+            Response body as bytes
+
+        Raises:
+            ValueError: If body cannot be retrieved
+        """
+        try:
+            return response.body
+        except (AttributeError, UnicodeDecodeError) as e:
+            raise ValueError(f"Cannot get response body: {e}") from e
+
+    def _create_compressed_response(
+        self,
+        response: Response,
+        original_body: bytes,
+        compressed_body: bytes,
+        encoding: str,
+    ) -> Response:
+        """Create compressed response with proper headers.
+
+        Args:
+            response: Original response
+            original_body: Original response body
+            compressed_body: Compressed response body
+            encoding: Compression encoding (gzip or br)
+
+        Returns:
+            Compressed response
+        """
+        compressed_response = Response(
+            content=compressed_body,
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.media_type,
+        )
+
+        # Update compression headers
+        compressed_response.headers["content-encoding"] = encoding
+        compressed_response.headers["content-length"] = str(len(compressed_body))
+
+        # Add Vary header to indicate compression varies by encoding
+        self._add_vary_header(compressed_response, response)
+
+        # Log compression ratio
+        compression_ratio = len(original_body) / len(compressed_body)
+        logger.debug(
+            f"Compressed response: {len(original_body)} -> {len(compressed_body)} bytes "
+            f"(ratio: {compression_ratio:.2f}x)"
+        )
+
+        return compressed_response
+
+    def _add_vary_header(
+        self, compressed_response: Response, original_response: Response
+    ) -> None:
+        """Add Vary header to compressed response.
+
+        Args:
+            compressed_response: Compressed response to modify
+            original_response: Original response for header reference
+        """
+        vary_header = original_response.headers.get("vary", "")
+        if "accept-encoding" not in vary_header.lower():
+            if vary_header:
+                vary_header += ", Accept-Encoding"
+            else:
+                vary_header = "Accept-Encoding"
+            compressed_response.headers["vary"] = vary_header
 
 
 class BrotliCompressionMiddleware(BaseHTTPMiddleware):
@@ -277,52 +328,103 @@ class BrotliCompressionMiddleware(BaseHTTPMiddleware):
     async def _compress_response(self, response: Response) -> Response:
         """Compress response body with Brotli."""
         try:
-            # Get response body
-            body = response.body
-
-            # Skip if body is too small
-            if len(body) < self.minimum_size:
-                return response
-
-            # Compress the body
-            compressed_body = self.brotli.compress(body, quality=self.quality)
-
-            # Create new response with compressed body
-            compressed_response = Response(
-                content=compressed_body,
-                status_code=response.status_code,
-                headers=dict(response.headers),
-                media_type=response.media_type,
-            )
-
-            # Update headers
-            compressed_response.headers["content-encoding"] = "br"
-            compressed_response.headers["content-length"] = str(len(compressed_body))
-
-            # Add Vary header
-            vary_header = response.headers.get("vary", "")
-            if "accept-encoding" not in vary_header.lower():
-                if vary_header:
-                    vary_header += ", Accept-Encoding"
-                else:
-                    vary_header = "Accept-Encoding"
-                compressed_response.headers["vary"] = vary_header
-
-            # Calculate compression ratio for logging
-            compression_ratio = len(body) / len(compressed_body)
-            logger.debug(
-                f"Brotli compressed response: {len(body)} -> {len(compressed_body)} bytes "
-                f"(ratio: {compression_ratio:.2f}x)"
-            )
-
-        except (ValueError, TypeError, UnicodeDecodeError) as e:
-            logger.warning(
-                f"Failed to compress response with Brotli: {e}"
-            )  # TODO: Convert f-string to logging format
+            body = self._get_response_body(response)
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Failed to get response body: {e}")
             return response
 
-        else:
-            return compressed_response
+        # Skip if body is too small
+        if len(body) < self.minimum_size:
+            return response
+
+        try:
+            compressed_body = self.brotli.compress(body, quality=self.quality)
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Failed to compress response body with Brotli: {e}")
+            return response
+
+        try:
+            return self._create_compressed_response(
+                response, body, compressed_body, "br"
+            )
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Failed to create Brotli compressed response: {e}")
+            return response
+
+    def _get_response_body(self, response: Response) -> bytes:
+        """Get response body safely.
+
+        Args:
+            response: HTTP response
+
+        Returns:
+            Response body as bytes
+
+        Raises:
+            ValueError: If body cannot be retrieved
+        """
+        try:
+            return response.body
+        except (AttributeError, UnicodeDecodeError) as e:
+            raise ValueError(f"Cannot get response body: {e}") from e
+
+    def _create_compressed_response(
+        self,
+        response: Response,
+        original_body: bytes,
+        compressed_body: bytes,
+        encoding: str,
+    ) -> Response:
+        """Create compressed response with proper headers.
+
+        Args:
+            response: Original response
+            original_body: Original response body
+            compressed_body: Compressed response body
+            encoding: Compression encoding (gzip or br)
+
+        Returns:
+            Compressed response
+        """
+        compressed_response = Response(
+            content=compressed_body,
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.media_type,
+        )
+
+        # Update compression headers
+        compressed_response.headers["content-encoding"] = encoding
+        compressed_response.headers["content-length"] = str(len(compressed_body))
+
+        # Add Vary header
+        self._add_vary_header(compressed_response, response)
+
+        # Log compression ratio
+        compression_ratio = len(original_body) / len(compressed_body)
+        logger.debug(
+            f"Brotli compressed response: {len(original_body)} -> {len(compressed_body)} bytes "
+            f"(ratio: {compression_ratio:.2f}x)"
+        )
+
+        return compressed_response
+
+    def _add_vary_header(
+        self, compressed_response: Response, original_response: Response
+    ) -> None:
+        """Add Vary header to compressed response.
+
+        Args:
+            compressed_response: Compressed response to modify
+            original_response: Original response for header reference
+        """
+        vary_header = original_response.headers.get("vary", "")
+        if "accept-encoding" not in vary_header.lower():
+            if vary_header:
+                vary_header += ", Accept-Encoding"
+            else:
+                vary_header = "Accept-Encoding"
+            compressed_response.headers["vary"] = vary_header
 
 
 # Export middleware classes

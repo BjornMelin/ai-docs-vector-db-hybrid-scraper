@@ -92,7 +92,10 @@ class MonitoringManager:
 
     # Health Check Operations
     def register_health_check(
-        self, service_name: str, check_function: callable, check_interval: int = 30
+        self,
+        service_name: str,
+        check_function: callable,
+        check_interval: int = 30,
     ) -> None:
         """Register a health check for a service.
 
@@ -108,7 +111,7 @@ class MonitoringManager:
             check_interval=check_interval,
         )
         logger.info(
-            f"Registered health check for {service_name}"
+            f"Registered health check for {service_name}",
         )  # TODO: Convert f-string to logging format
 
     def unregister_health_check(self, service_name: str) -> None:
@@ -120,7 +123,7 @@ class MonitoringManager:
         if service_name in self._health_checks:
             del self._health_checks[service_name]
             logger.info(
-                f"Unregistered health check for {service_name}"
+                f"Unregistered health check for {service_name}",
             )  # TODO: Convert f-string to logging format
 
     async def check_service_health(self, service_name: str) -> bool:
@@ -134,7 +137,7 @@ class MonitoringManager:
         """
         if service_name not in self._health_checks:
             logger.warning(
-                f"No health check registered for {service_name}"
+                f"No health check registered for {service_name}",
             )  # TODO: Convert f-string to logging format
             return False
 
@@ -161,7 +164,7 @@ class MonitoringManager:
                 return is_healthy
         except Exception as e:
             logger.exception(
-                "Health check failed for : {e}"
+                "Health check failed for : {e}",
             )  # TODO: Convert f-string to logging format
             health.last_check = time.time()
             health.last_error = str(e)
@@ -219,7 +222,10 @@ class MonitoringManager:
 
     # Metrics Operations
     def record_metric(
-        self, metric_name: str, value: float, labels: dict[str, str] | None = None
+        self,
+        metric_name: str,
+        value: float,
+        labels: dict[str, str] | None = None,
     ) -> None:
         """Record a metric value.
 
@@ -236,11 +242,13 @@ class MonitoringManager:
                 self._metrics_registry.record_metric(metric_name, value, labels or {})
         except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
-                f"Failed to record metric {metric_name}: {e}"
+                f"Failed to record metric {metric_name}: {e}",
             )  # TODO: Convert f-string to logging format
 
     def increment_counter(
-        self, counter_name: str, labels: dict[str, str] | None = None
+        self,
+        counter_name: str,
+        labels: dict[str, str] | None = None,
     ) -> None:
         """Increment a counter metric.
 
@@ -256,11 +264,14 @@ class MonitoringManager:
                 self._metrics_registry.increment_counter(counter_name, labels or {})
         except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
-                f"Failed to increment counter {counter_name}: {e}"
+                f"Failed to increment counter {counter_name}: {e}",
             )  # TODO: Convert f-string to logging format
 
     def record_histogram(
-        self, histogram_name: str, value: float, labels: dict[str, str] | None = None
+        self,
+        histogram_name: str,
+        value: float,
+        labels: dict[str, str] | None = None,
     ) -> None:
         """Record a histogram value.
 
@@ -275,16 +286,22 @@ class MonitoringManager:
         try:
             if hasattr(self._metrics_registry, "record_histogram"):
                 self._metrics_registry.record_histogram(
-                    histogram_name, value, labels or {}
+                    histogram_name,
+                    value,
+                    labels or {},
                 )
         except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
-                f"Failed to record histogram {histogram_name}: {e}"
+                f"Failed to record histogram {histogram_name}: {e}",
             )  # TODO: Convert f-string to logging format
 
     # Performance Monitoring
     async def track_performance(
-        self, operation_name: str, operation_func: callable, *args, **kwargs
+        self,
+        operation_name: str,
+        operation_func: callable,
+        *args,
+        **kwargs,
     ) -> Any:
         """Track performance of an operation.
 
@@ -315,7 +332,7 @@ class MonitoringManager:
             self.increment_counter(f"{operation_name}_errors")
 
             logger.exception(
-                "Operation  failed: {e}"
+                "Operation  failed: {e}",
             )  # TODO: Convert f-string to logging format
             raise
 
@@ -336,14 +353,17 @@ class MonitoringManager:
                 return self._performance_monitor.get_metrics()
         except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
-                f"Failed to get performance metrics: {e}"
+                f"Failed to get performance metrics: {e}",
             )  # TODO: Convert f-string to logging format
 
         return {}
 
     # Observability Operations
     async def log_operation(
-        self, operation: str, details: dict[str, Any], level: str = "info"
+        self,
+        operation: str,
+        details: dict[str, Any],
+        level: str = "info",
     ) -> None:
         """Log an operation with structured details.
 
@@ -356,19 +376,23 @@ class MonitoringManager:
 
         if level == "debug":
             logger.debug(
-                f"Operation: {operation}", extra=log_data
+                f"Operation: {operation}",
+                extra=log_data,
             )  # TODO: Convert f-string to logging format
         elif level == "info":
             logger.info(
-                f"Operation: {operation}", extra=log_data
+                f"Operation: {operation}",
+                extra=log_data,
             )  # TODO: Convert f-string to logging format
         elif level == "warning":
             logger.warning(
-                f"Operation: {operation}", extra=log_data
+                f"Operation: {operation}",
+                extra=log_data,
             )  # TODO: Convert f-string to logging format
         elif level == "error":
             logger.error(
-                f"Operation: {operation}", extra=log_data
+                f"Operation: {operation}",
+                extra=log_data,
             )  # TODO: Convert f-string to logging format
 
     def create_span(self, span_name: str) -> Any:
@@ -389,19 +413,19 @@ class MonitoringManager:
 
             def __enter__(self):
                 logger.debug(
-                    f"Starting span: {self.name}"
+                    f"Starting span: {self.name}",
                 )  # TODO: Convert f-string to logging format
                 return self
 
             def __exit__(self, exc_type, exc_val, exc_tb):
                 duration_ms = (time.time() - self.start_time) * 1000
                 logger.debug(
-                    f"Completed span: {self.name} in {duration_ms:.2f}ms"
+                    f"Completed span: {self.name} in {duration_ms:.2f}ms",
                 )  # TODO: Convert f-string to logging format
 
                 if exc_type:
                     logger.error(
-                        f"Span {self.name} failed: {exc_val}"
+                        f"Span {self.name} failed: {exc_val}",
                     )  # TODO: Convert f-string to logging format
 
         return BasicSpan(span_name)
@@ -437,7 +461,7 @@ class MonitoringManager:
             status["overall_health"] = await self.get_overall_health()
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             logger.warning(
-                f"Failed to get overall health: {e}"
+                f"Failed to get overall health: {e}",
             )  # TODO: Convert f-string to logging format
             status["overall_health"] = {"error": str(e)}
 
@@ -446,7 +470,7 @@ class MonitoringManager:
             status["performance_metrics"] = self.get_performance_metrics()
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             logger.warning(
-                f"Failed to get performance metrics: {e}"
+                f"Failed to get performance metrics: {e}",
             )  # TODO: Convert f-string to logging format
             status["performance_metrics"] = {"error": str(e)}
 
@@ -461,7 +485,9 @@ class MonitoringManager:
                 interval = 30
                 if self._config and hasattr(self._config, "performance"):
                     interval = getattr(
-                        self._config.performance, "health_check_interval", 30
+                        self._config.performance,
+                        "health_check_interval",
+                        30,
                     )
 
                 await asyncio.sleep(interval)

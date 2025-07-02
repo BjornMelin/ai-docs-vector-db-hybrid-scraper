@@ -55,7 +55,7 @@ class CrawlingManager:
 
         except Exception as e:
             logger.exception(
-                "Failed to initialize CrawlingManager: "
+                "Failed to initialize CrawlingManager: ",
             )  # TODO: Convert f-string to logging format
             msg = f"Failed to initialize crawling manager: {e}"
             raise CrawlServiceError(msg) from e
@@ -101,7 +101,7 @@ class CrawlingManager:
             return await self._core_manager.scrape_url(url, preferred_provider)
         except Exception as e:
             logger.exception(
-                "URL scraping failed for : {e}"
+                "URL scraping failed for : {e}",
             )  # TODO: Convert f-string to logging format
             return {
                 "success": False,
@@ -140,11 +140,13 @@ class CrawlingManager:
 
         try:
             return await self._core_manager.crawl_site(
-                url, max_pages, preferred_provider
+                url,
+                max_pages,
+                preferred_provider,
             )
         except Exception as e:
             logger.exception(
-                "Site crawling failed for : {e}"
+                "Site crawling failed for : {e}",
             )  # TODO: Convert f-string to logging format
             return {
                 "success": False,
@@ -174,12 +176,14 @@ class CrawlingManager:
             return await self._core_manager.get_recommended_tool(url)
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             logger.warning(
-                f"Tool recommendation failed for {url}: {e}"
+                f"Tool recommendation failed for {url}: {e}",
             )  # TODO: Convert f-string to logging format
             return "crawl4ai"  # Default fallback
 
     async def map_url(
-        self, url: str, include_subdomains: bool = False
+        self,
+        url: str,
+        include_subdomains: bool = False,
     ) -> dict[str, Any]:
         """Map a website to get list of URLs.
 
@@ -203,7 +207,7 @@ class CrawlingManager:
             return await self._core_manager.map_url(url, include_subdomains)
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             logger.warning(
-                f"URL mapping failed for {url}: {e}"
+                f"URL mapping failed for {url}: {e}",
             )  # TODO: Convert f-string to logging format
             return {
                 "success": False,
@@ -228,7 +232,7 @@ class CrawlingManager:
             return self._core_manager.get_metrics()
         except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
-                f"Failed to get crawling metrics: {e}"
+                f"Failed to get crawling metrics: {e}",
             )  # TODO: Convert f-string to logging format
             return {}
 
@@ -248,7 +252,7 @@ class CrawlingManager:
             return self._core_manager.get_provider_info()
         except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
-                f"Failed to get provider info: {e}"
+                f"Failed to get provider info: {e}",
             )  # TODO: Convert f-string to logging format
             return {}
 
@@ -268,7 +272,7 @@ class CrawlingManager:
             return self._core_manager.get_tier_metrics()
         except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
-                f"Failed to get tier metrics: {e}"
+                f"Failed to get tier metrics: {e}",
             )  # TODO: Convert f-string to logging format
             return {}
 
@@ -292,7 +296,7 @@ class CrawlingManager:
                 status["tier_metrics"] = self.get_tier_metrics()
             except (ValueError, TypeError, UnicodeDecodeError) as e:
                 logger.warning(
-                    f"Failed to get crawling status: {e}"
+                    f"Failed to get crawling status: {e}",
                 )  # TODO: Convert f-string to logging format
                 status["error"] = str(e)
 
@@ -361,7 +365,7 @@ class CrawlingManager:
 
         except Exception as e:
             logger.exception(
-                "Content extraction failed for : {e}"
+                "Content extraction failed for : {e}",
             )  # TODO: Convert f-string to logging format
             return {
                 "success": False,
@@ -415,14 +419,14 @@ class CrawlingManager:
                             "url": urls[i],
                             "content": "",
                             "metadata": {},
-                        }
+                        },
                     )
                 else:
                     processed_results.append(result)
 
         except Exception as e:
             logger.exception(
-                "Bulk scraping failed: "
+                "Bulk scraping failed: ",
             )  # TODO: Convert f-string to logging format
             # Return error results for all URLs
             return [

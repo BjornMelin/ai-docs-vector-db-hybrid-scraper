@@ -202,8 +202,8 @@ maintaining high performance and reliability. Always explain your reasoning."""
                 latency_ms=0.0,
                 confidence=0.0,
             )
-        else:
-            return response
+
+        return response
 
     async def _orchestrate_autonomous(
         self, request: ToolRequest, deps: BaseAgentDependencies

@@ -934,8 +934,7 @@ class AdvancedToolOrchestrator:
 
             return {"error": str(e)}
 
-        else:
-            return result.result or {"error": result.error}
+        return result.result or {"error": result.error}
 
     async def _execute_fallback_tool(
         self,

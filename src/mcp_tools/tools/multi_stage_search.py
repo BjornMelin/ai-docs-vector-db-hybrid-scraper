@@ -733,9 +733,7 @@ async def _contextual_query_refinement(query: str, results: list[dict], ctx) -> 
 
     for result in results:
         payload = result.get("payload", {})
-        title = payload.get("title", "")
-
-        if title:
+        if title := payload.get("title", ""):
             title_words = title.lower().split()
             contextual_terms.extend(
                 [word for word in title_words if len(word) > 4 and word.isalpha()]
@@ -764,8 +762,7 @@ async def _fuse_multi_stage_results(
     unique_results = []
 
     for result in cumulative_results:
-        doc_id = result.get("id")
-        if doc_id not in seen_ids:
+        if (doc_id := result.get("id")) not in seen_ids:
             seen_ids.add(doc_id)
             unique_results.append(result)
 

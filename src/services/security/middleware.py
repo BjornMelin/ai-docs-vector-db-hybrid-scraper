@@ -50,6 +50,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         self,
         app,
         rate_limiter: DistributedRateLimiter,
+        *,
         security_config: SecurityConfig | None = None,
         ai_validator: AISecurityValidator | None = None,
         security_monitor: SecurityMonitor | None = None,

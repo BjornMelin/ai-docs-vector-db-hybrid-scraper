@@ -125,7 +125,9 @@ class BrowserUseAdapter(BaseService):
             self._browser = Browser(config=browser_config)
             self._initialized = True
             self.logger.info(
-                f"BrowserUse adapter initialized with {self.config.llm_provider}/{self.config.model}"
+                "BrowserUse adapter initialized with %s/%s",
+                self.config.llm_provider,
+                self.config.model,
             )
         except Exception as e:
             msg = "Failed to initialize browser-use"
@@ -188,9 +190,7 @@ class BrowserUseAdapter(BaseService):
 
         while retry_count < self.config.max_retries:
             try:
-                self.logger.info(
-                    f"Executing browser-use task: {task[:100]}..."
-                )  # TODO: Convert f-string to logging format
+                self.logger.info("Executing browser-use task: %s...", task[:100])
 
                 # Create enhanced task with context
                 full_task = f"""
@@ -231,9 +231,7 @@ class BrowserUseAdapter(BaseService):
             except TimeoutError:
                 retry_count += 1
                 error_msg = f"browser-use timeout after {timeout}ms"
-                self.logger.warning(
-                    f"{error_msg} (attempt {retry_count})"
-                )  # TODO: Convert f-string to logging format
+                self.logger.warning("%s (attempt %d)", error_msg, retry_count)
 
                 if retry_count >= self.config.max_retries:
                     return self._build_error_result(url, start_time, error_msg, task)
@@ -244,9 +242,7 @@ class BrowserUseAdapter(BaseService):
             except (OSError, PermissionError):
                 retry_count += 1
                 error_msg = "browser-use execution error"
-                self.logger.warning(
-                    f"{error_msg} (attempt {retry_count})"
-                )  # TODO: Convert f-string to logging format
+                self.logger.warning("%s (attempt %d)", error_msg, retry_count)
 
                 if retry_count >= self.config.max_retries:
                     return self._build_error_result(url, start_time, error_msg, task)

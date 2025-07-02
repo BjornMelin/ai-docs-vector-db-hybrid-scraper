@@ -143,29 +143,42 @@ class ABTestingManager:
             return
 
         try:
-            # Check if A/B testing is enabled via feature flags
-            if self.feature_flag_manager:
-                ab_testing_enabled = await self.feature_flag_manager.is_feature_enabled(
-                    "ab_testing"
-                )
-                if not ab_testing_enabled:
-                    logger.info("A/B testing disabled via feature flags")
-                    self._initialized = True
-                    return
-
-            # Load existing tests from storage
-            await self._load_active_tests()
-
-            # Start monitoring task
-            self._monitoring_task = asyncio.create_task(self._monitoring_loop())
-
-            self._initialized = True
-            logger.info("A/B testing manager initialized successfully")
-
+            await self._check_ab_testing_feature_flags()
         except Exception:
-            logger.exception("Failed to initialize A/B testing manager: %s")
+            logger.exception("Failed to check feature flags")
             self._initialized = False
             raise
+
+        try:
+            await self._initialize_ab_testing_resources()
+        except Exception:
+            logger.exception("Failed to initialize A/B testing resources")
+            self._initialized = False
+            raise
+
+        self._initialized = True
+        logger.info("A/B testing manager initialized successfully")
+
+    async def _check_ab_testing_feature_flags(self) -> None:
+        """Check if A/B testing is enabled via feature flags."""
+        if not self.feature_flag_manager:
+            return
+
+        ab_testing_enabled = await self.feature_flag_manager.is_feature_enabled(
+            "ab_testing"
+        )
+        if not ab_testing_enabled:
+            logger.info("A/B testing disabled via feature flags")
+            self._initialized = True
+            return
+
+    async def _initialize_ab_testing_resources(self) -> None:
+        """Initialize A/B testing resources and monitoring."""
+        # Load existing tests from storage
+        await self._load_active_tests()
+
+        # Start monitoring task
+        self._monitoring_task = asyncio.create_task(self._monitoring_loop())
 
     async def create_test(self, config: ABTestConfig) -> str:
         """Create a new A/B test.
@@ -300,8 +313,7 @@ class ABTestingManager:
         if test_id not in self._active_tests or test_id not in self._user_assignments:
             return False
 
-        variant_name = self._user_assignments[test_id].get(user_id)
-        if not variant_name:
+        if not (variant_name := self._user_assignments[test_id].get(user_id)):
             return False
 
         # Update metrics
@@ -347,8 +359,7 @@ class ABTestingManager:
         results = []
 
         for variant in test_config.variants:
-            metrics = self._test_metrics[test_id].get(variant.name)
-            if not metrics:
+            if not (metrics := self._test_metrics[test_id].get(variant.name)):
                 continue
 
             # Calculate statistical significance
@@ -444,76 +455,116 @@ class ABTestingManager:
 
         """
         try:
-            control_metrics = self._test_metrics[test_id][control_variant]
-            test_metrics = self._test_metrics[test_id][test_variant]
-
-            # Simple uplift calculation (in production, use proper statistical tests)
-            control_rate = control_metrics.conversion_rate
-            test_rate = test_metrics.conversion_rate
-
-            if control_rate == 0:
-                return None, False
-
-            uplift = ((test_rate - control_rate) / control_rate) * 100.0
-
-            # Simple significance check (minimum sample size)
-            min_sample_size = self._active_tests[test_id].min_sample_size
-            has_sufficient_sample = (
-                control_metrics.total_requests >= min_sample_size
-                and test_metrics.total_requests >= min_sample_size
+            return self._calculate_uplift_and_significance(
+                test_id, control_variant, test_variant
             )
-
-            # In production, implement proper statistical significance testing
-            # (e.g., two-proportion z-test, chi-square test)
-            is_significant = has_sufficient_sample and abs(uplift) > 5.0  # 5% threshold
-
         except Exception:
             logger.exception("Error calculating statistical significance: %s")
             return None, False
 
-        else:
-            return uplift, is_significant
+    def _calculate_uplift_and_significance(
+        self, test_id: str, control_variant: str, test_variant: str
+    ) -> tuple[float | None, bool]:
+        """Calculate uplift percentage and statistical significance."""
+        control_metrics = self._test_metrics[test_id][control_variant]
+        test_metrics = self._test_metrics[test_id][test_variant]
+
+        # Simple uplift calculation (in production, use proper statistical tests)
+        control_rate = control_metrics.conversion_rate
+        test_rate = test_metrics.conversion_rate
+
+        if control_rate == 0:
+            return None, False
+
+        uplift = ((test_rate - control_rate) / control_rate) * 100.0
+        is_significant = self._check_statistical_significance(
+            test_id, control_metrics, test_metrics, uplift
+        )
+
+        return uplift, is_significant
+
+    def _check_statistical_significance(
+        self,
+        test_id: str,
+        control_metrics: Any,
+        test_metrics: Any,
+        uplift: float,
+    ) -> bool:
+        """Check if results are statistically significant."""
+        # Simple significance check (minimum sample size)
+        min_sample_size = self._active_tests[test_id].min_sample_size
+        has_sufficient_sample = (
+            control_metrics.total_requests >= min_sample_size
+            and test_metrics.total_requests >= min_sample_size
+        )
+
+        # In production, implement proper statistical significance testing
+        # (e.g., two-proportion z-test, chi-square test)
+        return has_sufficient_sample and abs(uplift) > 5.0  # 5% threshold
 
     async def _monitoring_loop(self) -> None:
         """Background task for monitoring A/B tests."""
         while True:
             try:
-                await asyncio.sleep(60)  # Check every minute
-
-                # Monitor active tests
-                for test_id, config in list(self._active_tests.items()):
-                    await self._check_test_completion(test_id, config)
-
+                await self._run_monitoring_cycle()
             except asyncio.CancelledError:
                 break
             except Exception:
                 logger.exception("Error in A/B testing monitoring loop: %s")
                 await asyncio.sleep(60)
 
+    async def _run_monitoring_cycle(self) -> None:
+        """Run a single monitoring cycle for A/B tests."""
+        await asyncio.sleep(60)  # Check every minute
+
+        # Monitor active tests
+        for test_id, config in list(self._active_tests.items()):
+            try:
+                await self._check_test_completion(test_id, config)
+            except Exception:
+                logger.exception("Error checking test completion for %s", test_id)
+
     async def _check_test_completion(self, test_id: str, config: ABTestConfig) -> None:
         """Check if an A/B test should be completed."""
         try:
-            # Check duration
-            test_start = min(
-                metrics.created_at for metrics in self._test_metrics[test_id].values()
-            )
-            if datetime.now(tz=UTC) - test_start > timedelta(days=config.duration_days):
-                await self.stop_test(test_id, "Duration completed")
-                return
-
-            # Check for early winner (if enabled)
-            results = await self.get_test_results(test_id)
-            for result in results:
-                if (
-                    result.is_significant
-                    and result.uplift_percentage
-                    and abs(result.uplift_percentage) > 20.0
-                ):  # 20% uplift threshold
-                    await self.stop_test(test_id, "Early winner detected")
-                    return
-
+            await self._evaluate_test_completion_criteria(test_id, config)
         except Exception:
             logger.exception("Error checking test completion for %s", test_id)
+
+    async def _evaluate_test_completion_criteria(
+        self, test_id: str, config: ABTestConfig
+    ) -> None:
+        """Evaluate completion criteria for A/B test."""
+        # Check duration
+        if await self._check_duration_completion(test_id, config):
+            await self.stop_test(test_id, "Duration completed")
+            return
+
+        # Check for early winner (if enabled)
+        if await self._check_early_winner(test_id):
+            await self.stop_test(test_id, "Early winner detected")
+            return
+
+    async def _check_duration_completion(
+        self, test_id: str, config: ABTestConfig
+    ) -> bool:
+        """Check if test duration has been completed."""
+        test_start = min(
+            metrics.created_at for metrics in self._test_metrics[test_id].values()
+        )
+        return datetime.now(tz=UTC) - test_start > timedelta(days=config.duration_days)
+
+    async def _check_early_winner(self, test_id: str) -> bool:
+        """Check if there's an early winner with significant uplift."""
+        results = await self.get_test_results(test_id)
+        for result in results:
+            if (
+                result.is_significant
+                and result.uplift_percentage
+                and abs(result.uplift_percentage) > 20.0
+            ):  # 20% uplift threshold
+                return True
+        return False
 
     async def _load_active_tests(self) -> None:
         """Load active tests from storage."""

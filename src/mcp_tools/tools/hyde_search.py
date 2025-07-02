@@ -646,8 +646,7 @@ async def _fuse_hyde_results(
     document_scores = {}
 
     for result in all_results:
-        doc_id = result.get("id")
-        if doc_id not in document_scores:
+        if (doc_id := result.get("id")) not in document_scores:
             document_scores[doc_id] = {
                 "document": result,
                 "scores": [],

@@ -19,13 +19,19 @@ from .search_cache import SearchResultCache
 
 logger = logging.getLogger(__name__)
 
-# Import monitoring registry for Prometheus integration
-try:
-    from ..monitoring.metrics import get_metrics_registry
 
-    MONITORING_AVAILABLE = True
-except ImportError:
-    MONITORING_AVAILABLE = False
+def _import_monitoring_registry():
+    """Import monitoring registry with safe fallback."""
+    try:
+        from ..monitoring.metrics import get_metrics_registry
+
+        return get_metrics_registry, True
+    except ImportError:
+        return None, False
+
+
+# Import monitoring registry for Prometheus integration
+get_metrics_registry, MONITORING_AVAILABLE = _import_monitoring_registry()
 
 
 class CacheManager:
@@ -107,17 +113,25 @@ class CacheManager:
         self._metrics = CacheMetrics() if enable_metrics else None
 
         # Initialize Prometheus monitoring registry
-        self.metrics_registry = None
-        if enable_metrics and MONITORING_AVAILABLE:
-            try:
-                self.metrics_registry = get_metrics_registry()
-                logger.info("Cache monitoring enabled with Prometheus integration")
-            except (ImportError, AttributeError, RuntimeError) as e:
-                logger.warning(f"Failed to initialize cache monitoring: {e}")
+        self.metrics_registry = self._initialize_metrics_registry(enable_metrics)
+
+    def _initialize_metrics_registry(self, enable_metrics: bool):
+        """Initialize metrics registry with error handling."""
+        if not (enable_metrics and MONITORING_AVAILABLE):
+            return None
+        try:
+            registry = get_metrics_registry()
+            logger.info("Cache monitoring enabled with Prometheus integration")
+            return registry
+        except (ImportError, AttributeError, RuntimeError) as e:
+            logger.warning("Failed to initialize cache monitoring: %s", e)
+            return None
 
         logger.info(
-            f"CacheManager initialized with DragonflyDB: {dragonfly_url}, "
-            f"local={enable_local_cache}, specialized={enable_specialized_caches}"
+            "CacheManager initialized with DragonflyDB: %s, local=%s, specialized=%s",
+            dragonfly_url,
+            enable_local_cache,
+            enable_specialized_caches,
         )
 
     @property
@@ -206,62 +220,88 @@ class CacheManager:
         start_time = asyncio.get_event_loop().time()
         cache_key = self._get_cache_key(key, cache_type)
 
+        # Try L1 cache first
+        l1_result = await self._try_local_cache_get(cache_key, cache_type, start_time)
+        if l1_result is not None:
+            return l1_result
+
+        # Try L2 cache (DragonflyDB)
+        l2_result = await self._try_distributed_cache_get(
+            cache_key, cache_type, start_time
+        )
+        if l2_result is not None:
+            return l2_result
+
+        # Cache miss - record metrics and return default
+        self._record_cache_miss(cache_type, start_time)
+        return default
+
+    async def _try_local_cache_get(
+        self, cache_key: str, cache_type: CacheType, start_time: float
+    ) -> object | None:
+        """Try to get value from local cache."""
+        if not self._local_cache:
+            return None
+
         try:
-            # Try L1 cache first
-            if self._local_cache:
-                value = await self._local_cache.get(cache_key)
-                if value is not None:
-                    if self._metrics:
-                        latency = (asyncio.get_event_loop().time() - start_time) * 1000
-                        self._metrics.record_hit(cache_type.value, "local", latency)
-
-                    # Record hit in Prometheus metrics
-                    if self.metrics_registry:
-                        self.metrics_registry.record_cache_hit(
-                            "local", cache_type.value
-                        )
-                    return value
-
-            # Try L2 cache (DragonflyDB)
-            if self._distributed_cache:
-                value = await self._distributed_cache.get(cache_key)
-                if value is not None:
-                    # Populate L1 cache for future hits
-                    if self._local_cache:
-                        await self._local_cache.set(cache_key, value)
-
-                    if self._metrics:
-                        latency = (asyncio.get_event_loop().time() - start_time) * 1000
-                        self._metrics.record_hit(
-                            cache_type.value, "distributed", latency
-                        )
-
-                    # Record hit in Prometheus metrics
-                    if self.metrics_registry:
-                        self.metrics_registry.record_cache_hit(
-                            "distributed", cache_type.value
-                        )
-                    return value
+            value = await self._local_cache.get(cache_key)
         except (ConnectionError, OSError, PermissionError) as e:
-            logger.error(f"Cache get error for key {cache_key}: {e}")
-            if self._metrics:
-                latency = (asyncio.get_event_loop().time() - start_time) * 1000
-                self._metrics.record_miss(cache_type.value, latency)
+            logger.error("Local cache get error for key %s: %s", cache_key, e)
+            return None
 
-            # Record miss in Prometheus metrics
-            if self.metrics_registry:
-                self.metrics_registry.record_cache_miss(cache_type.value)
-            return default
-        else:
-            # Cache miss
-            if self._metrics:
-                latency = (asyncio.get_event_loop().time() - start_time) * 1000
-                self._metrics.record_miss(cache_type.value, latency)
+        if value is not None:
+            self._record_cache_hit(cache_type, "local", start_time)
+        return value
 
-            # Record miss in Prometheus metrics
-            if self.metrics_registry:
-                self.metrics_registry.record_cache_miss(cache_type.value)
-            return default
+    async def _try_distributed_cache_get(
+        self, cache_key: str, cache_type: CacheType, start_time: float
+    ) -> object | None:
+        """Try to get value from distributed cache and populate L1 if found."""
+        if not self._distributed_cache:
+            return None
+
+        try:
+            value = await self._distributed_cache.get(cache_key)
+        except (ConnectionError, OSError, PermissionError) as e:
+            logger.error("Distributed cache get error for key %s: %s", cache_key, e)
+            return None
+
+        if value is not None:
+            # Populate L1 cache for future hits
+            await self._populate_local_cache(cache_key, value)
+            self._record_cache_hit(cache_type, "distributed", start_time)
+        return value
+
+    async def _populate_local_cache(self, cache_key: str, value: object) -> None:
+        """Populate local cache with distributed cache hit."""
+        if not self._local_cache:
+            return
+        try:
+            await self._local_cache.set(cache_key, value)
+        except (ConnectionError, OSError, PermissionError) as e:
+            logger.warning(
+                "Failed to populate local cache for key %s: %s", cache_key, e
+            )
+
+    def _record_cache_hit(
+        self, cache_type: CacheType, layer: str, start_time: float
+    ) -> None:
+        """Record cache hit metrics."""
+        if self._metrics:
+            latency = (asyncio.get_event_loop().time() - start_time) * 1000
+            self._metrics.record_hit(cache_type.value, layer, latency)
+
+        if self.metrics_registry:
+            self.metrics_registry.record_cache_hit(layer, cache_type.value)
+
+    def _record_cache_miss(self, cache_type: CacheType, start_time: float) -> None:
+        """Record cache miss metrics."""
+        if self._metrics:
+            latency = (asyncio.get_event_loop().time() - start_time) * 1000
+            self._metrics.record_miss(cache_type.value, latency)
+
+        if self.metrics_registry:
+            self.metrics_registry.record_cache_miss(cache_type.value)
 
     async def set(
         self,
@@ -308,31 +348,48 @@ class CacheManager:
         cache_key = self._get_cache_key(key, cache_type)
         effective_ttl = ttl or self.distributed_ttl_seconds.get(cache_type, 3600)
 
-        success = True
+        # Set in L1 cache
+        await self._set_local_cache(cache_key, value, effective_ttl)
+
+        # Set in L2 cache (DragonflyDB)
+        success = await self._set_distributed_cache(cache_key, value, effective_ttl)
+
+        # Record metrics
+        self._record_cache_set(cache_type, start_time, success)
+        return success
+
+    async def _set_local_cache(
+        self, cache_key: str, value: object, effective_ttl: int
+    ) -> None:
+        """Set value in local cache with error handling."""
+        if not self._local_cache:
+            return
         try:
-            # Set in L1 cache
-            if self._local_cache:
-                await self._local_cache.set(
-                    cache_key, value, ttl=min(effective_ttl, 300)
-                )
-
-            # Set in L2 cache (DragonflyDB)
-            if self._distributed_cache:
-                success = await self._distributed_cache.set(
-                    cache_key, value, ttl=effective_ttl
-                )
+            await self._local_cache.set(cache_key, value, ttl=min(effective_ttl, 300))
         except (ConnectionError, OSError, PermissionError) as e:
-            logger.error(f"Cache set error for key {cache_key}: {e}")
-            if self._metrics:
-                latency = (asyncio.get_event_loop().time() - start_time) * 1000
-                self._metrics.record_set(cache_type.value, latency, False)
-            return False
-        else:
-            if self._metrics:
-                latency = (asyncio.get_event_loop().time() - start_time) * 1000
-                self._metrics.record_set(cache_type.value, latency, success)
+            logger.warning("Local cache set error for key %s: %s", cache_key, e)
 
-            return success
+    async def _set_distributed_cache(
+        self, cache_key: str, value: object, effective_ttl: int
+    ) -> bool:
+        """Set value in distributed cache with error handling."""
+        if not self._distributed_cache:
+            return True
+        try:
+            return await self._distributed_cache.set(
+                cache_key, value, ttl=effective_ttl
+            )
+        except (ConnectionError, OSError, PermissionError) as e:
+            logger.error("Distributed cache set error for key %s: %s", cache_key, e)
+            return False
+
+    def _record_cache_set(
+        self, cache_type: CacheType, start_time: float, success: bool
+    ) -> None:
+        """Record cache set operation metrics."""
+        if self._metrics:
+            latency = (asyncio.get_event_loop().time() - start_time) * 1000
+            self._metrics.record_set(cache_type.value, latency, success)
 
     async def delete(self, key: str, cache_type: CacheType = CacheType.LOCAL) -> bool:
         """Delete value from both cache layers.
@@ -345,21 +402,31 @@ class CacheManager:
             True if successful
         """
         cache_key = self._get_cache_key(key, cache_type)
-        success = True
 
+        # Delete from L1 cache
+        await self._delete_from_local_cache(cache_key)
+
+        # Delete from L2 cache
+        return await self._delete_from_distributed_cache(cache_key)
+
+    async def _delete_from_local_cache(self, cache_key: str) -> None:
+        """Delete from local cache with error handling."""
+        if not self._local_cache:
+            return
         try:
-            # Delete from L1 cache
-            if self._local_cache:
-                await self._local_cache.delete(cache_key)
-
-            # Delete from L2 cache
-            if self._distributed_cache:
-                success = await self._distributed_cache.delete(cache_key)
+            await self._local_cache.delete(cache_key)
         except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Cache delete error for key {cache_key}: {e}")
+            logger.warning("Local cache delete error for key %s: %s", cache_key, e)
+
+    async def _delete_from_distributed_cache(self, cache_key: str) -> bool:
+        """Delete from distributed cache with error handling."""
+        if not self._distributed_cache:
+            return True
+        try:
+            return await self._distributed_cache.delete(cache_key)
+        except (ConnectionError, RuntimeError, TimeoutError) as e:
+            logger.error("Distributed cache delete error for key %s: %s", cache_key, e)
             return False
-        else:
-            return success
 
     async def clear(self, cache_type: CacheType | None = None) -> bool:
         """Clear cache layers.
@@ -370,29 +437,80 @@ class CacheManager:
         Returns:
             True if successful
         """
-        try:
-            if cache_type:
-                # Clear specific cache type by pattern
-                pattern = f"{self.key_prefix}{cache_type.value}:*"
-                if self._distributed_cache:
-                    keys = await self._distributed_cache.scan_keys(pattern)
-                    for key in keys:
-                        await self._distributed_cache.delete(key)
-                        if self._local_cache:
-                            await self._local_cache.delete(
-                                self._get_cache_key(key, cache_type)
-                            )
-            else:
-                # Clear all caches
-                if self._local_cache:
-                    await self._local_cache.clear()
-                if self._distributed_cache:
-                    await self._distributed_cache.clear()
-        except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Cache clear error: {e}")
-            return False
-        else:
+        if cache_type:
+            return await self._clear_specific_cache_type(cache_type)
+        return await self._clear_all_caches()
+
+    async def _clear_specific_cache_type(self, cache_type: CacheType) -> bool:
+        """Clear specific cache type by pattern."""
+        pattern = f"{self.key_prefix}{cache_type.value}:*"
+
+        if not self._distributed_cache:
             return True
+
+        try:
+            keys = await self._distributed_cache.scan_keys(pattern)
+        except (ConnectionError, RuntimeError, TimeoutError) as e:
+            logger.error("Cache scan error for pattern %s: %s", pattern, e)
+            return False
+
+        return await self._clear_keys_from_both_caches(keys, cache_type)
+
+    async def _clear_keys_from_both_caches(
+        self, keys: list[str], cache_type: CacheType
+    ) -> bool:
+        """Clear specific keys from both cache layers."""
+        for key in keys:
+            if not await self._clear_single_key_from_both_caches(key, cache_type):
+                return False
+        return True
+
+    async def _clear_single_key_from_both_caches(
+        self, key: str, cache_type: CacheType
+    ) -> bool:
+        """Clear a single key from both cache layers."""
+        # Clear from distributed cache
+        try:
+            await self._distributed_cache.delete(key)
+        except (ConnectionError, RuntimeError, TimeoutError) as e:
+            logger.error("Distributed cache delete error for key %s: %s", key, e)
+            return False
+
+        # Clear from local cache
+        if self._local_cache:
+            try:
+                await self._local_cache.delete(self._get_cache_key(key, cache_type))
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
+                logger.warning("Local cache delete error for key %s: %s", key, e)
+        return True
+
+    async def _clear_all_caches(self) -> bool:
+        """Clear all cache layers."""
+        local_success = await self._clear_local_cache()
+        distributed_success = await self._clear_distributed_cache()
+        return local_success and distributed_success
+
+    async def _clear_local_cache(self) -> bool:
+        """Clear local cache with error handling."""
+        if not self._local_cache:
+            return True
+        try:
+            await self._local_cache.clear()
+            return True
+        except (ConnectionError, RuntimeError, TimeoutError) as e:
+            logger.error("Local cache clear error: %s", e)
+            return False
+
+    async def _clear_distributed_cache(self) -> bool:
+        """Clear distributed cache with error handling."""
+        if not self._distributed_cache:
+            return True
+        try:
+            await self._distributed_cache.clear()
+            return True
+        except (ConnectionError, RuntimeError, TimeoutError) as e:
+            logger.error("Distributed cache clear error: %s", e)
+            return False
 
     async def get_stats(self) -> dict[str, object]:
         """Get comprehensive cache statistics.
@@ -449,12 +567,17 @@ class CacheManager:
         Raises:
             Exception: Logged but not raised - cleanup continues on error
         """
+        await self._close_distributed_cache()
+        logger.info("Cache manager closed successfully")
+
+    async def _close_distributed_cache(self) -> None:
+        """Close distributed cache connection with error handling."""
+        if not self._distributed_cache:
+            return
         try:
-            if self._distributed_cache:
-                await self._distributed_cache.close()
-            logger.info("Cache manager closed successfully")
+            await self._distributed_cache.close()
         except (AttributeError, ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error closing cache manager: {e}")
+            logger.error("Error closing distributed cache: %s", e)
 
     def _get_cache_key(self, key: str, cache_type: CacheType) -> str:
         """Generate cache key with type prefix.

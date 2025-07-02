@@ -185,26 +185,34 @@ class CanaryDeployment:
             return
 
         try:
-            # Check if canary deployment is enabled
-            if self.feature_flag_manager:
-                enabled = await self.feature_flag_manager.is_feature_enabled(
-                    "canary_deployment"
-                )
-                if not enabled:
-                    logger.info("Canary deployment disabled via feature flags")
-                    self._initialized = True
-                    return
-
-            # Load active deployments from storage
-            await self._load_active_deployments()
-
-            self._initialized = True
-            logger.info("Canary deployment manager initialized successfully")
-
+            await self._check_feature_flags()
         except (AttributeError, ImportError, OSError):
             logger.exception("Failed to initialize canary deployment manager")
             self._initialized = False
             raise
+
+        try:
+            await self._load_active_deployments()
+        except (AttributeError, ImportError, OSError):
+            logger.exception("Failed to load active deployments")
+            self._initialized = False
+            raise
+
+        self._initialized = True
+        logger.info("Canary deployment manager initialized successfully")
+
+    async def _check_feature_flags(self) -> None:
+        """Check if canary deployment is enabled via feature flags."""
+        if not self.feature_flag_manager:
+            return
+
+        enabled = await self.feature_flag_manager.is_feature_enabled(
+            "canary_deployment"
+        )
+        if not enabled:
+            logger.info("Canary deployment disabled via feature flags")
+            self._initialized = True
+            return
 
     async def start_canary(self, config: CanaryConfig) -> str:
         """Start a new canary deployment.
@@ -306,9 +314,7 @@ class CanaryDeployment:
             return False
 
         config = self._active_deployments[deployment_id]
-        metrics = self._deployment_metrics.get(deployment_id)
-
-        if not metrics:
+        if not (metrics := self._deployment_metrics.get(deployment_id)):
             return False
 
         # Check success criteria (unless forced)
@@ -337,47 +343,69 @@ class CanaryDeployment:
 
         # Promote to next stage
         try:
-            self._deployment_status[deployment_id] = CanaryStatus.PROMOTING
-
-            # Update traffic split
-            await self._update_traffic_split(deployment_id, next_percentage)
-
-            # Update metrics
-            metrics.canary_traffic_percentage = next_percentage
-            metrics.stage_start_time = datetime.now(tz=UTC)
-            metrics.next_stage_time = datetime.now(tz=UTC) + timedelta(
-                minutes=config.stage_duration_minutes
+            await self._execute_promotion(
+                deployment_id, next_percentage, config, metrics
             )
-            metrics.success_criteria_met = False  # Reset for new stage
-
-            # Update stage
-            if next_percentage >= 100.0:
-                metrics.stage = CanaryStage.FULL_ROLLOUT
-            elif next_percentage >= 75.0:
-                metrics.stage = CanaryStage.STAGE_4
-            elif next_percentage >= 50.0:
-                metrics.stage = CanaryStage.STAGE_3
-            elif next_percentage >= 25.0:
-                metrics.stage = CanaryStage.STAGE_2
-            else:
-                metrics.stage = CanaryStage.STAGE_1
-
-            self._deployment_status[deployment_id] = CanaryStatus.MONITORING
-
-            logger.info(
-                "Promoted canary %s to %.1f%% traffic (stage: %s)",
-                deployment_id,
-                next_percentage,
-                metrics.stage.value,
-            )
-
         except (TimeoutError, OSError, PermissionError):
             logger.exception("Failed to promote canary %s", deployment_id)
             self._deployment_status[deployment_id] = CanaryStatus.FAILED
             return False
-
         else:
             return True
+
+    async def _execute_promotion(
+        self,
+        deployment_id: str,
+        next_percentage: float,
+        config: CanaryConfig,
+        metrics: CanaryMetrics,
+    ) -> None:
+        """Execute canary promotion to next stage."""
+        self._deployment_status[deployment_id] = CanaryStatus.PROMOTING
+
+        try:
+            await self._update_traffic_split(deployment_id, next_percentage)
+        except (TimeoutError, OSError, PermissionError):
+            raise
+
+        # Update metrics
+        self._update_promotion_metrics(metrics, next_percentage, config)
+        self._update_canary_stage(metrics, next_percentage)
+
+        self._deployment_status[deployment_id] = CanaryStatus.MONITORING
+
+        logger.info(
+            "Promoted canary %s to %.1f%% traffic (stage: %s)",
+            deployment_id,
+            next_percentage,
+            metrics.stage.value,
+        )
+
+    def _update_promotion_metrics(
+        self, metrics: CanaryMetrics, next_percentage: float, config: CanaryConfig
+    ) -> None:
+        """Update metrics during canary promotion."""
+        metrics.canary_traffic_percentage = next_percentage
+        metrics.stage_start_time = datetime.now(tz=UTC)
+        metrics.next_stage_time = datetime.now(tz=UTC) + timedelta(
+            minutes=config.stage_duration_minutes
+        )
+        metrics.success_criteria_met = False  # Reset for new stage
+
+    def _update_canary_stage(
+        self, metrics: CanaryMetrics, next_percentage: float
+    ) -> None:
+        """Update canary stage based on traffic percentage."""
+        if next_percentage >= 100.0:
+            metrics.stage = CanaryStage.FULL_ROLLOUT
+        elif next_percentage >= 75.0:
+            metrics.stage = CanaryStage.STAGE_4
+        elif next_percentage >= 50.0:
+            metrics.stage = CanaryStage.STAGE_3
+        elif next_percentage >= 25.0:
+            metrics.stage = CanaryStage.STAGE_2
+        else:
+            metrics.stage = CanaryStage.STAGE_1
 
     async def rollback_canary(self, deployment_id: str, reason: str = "") -> bool:
         """Rollback a canary deployment.
@@ -394,31 +422,40 @@ class CanaryDeployment:
             return False
 
         try:
-            self._deployment_status[deployment_id] = CanaryStatus.ROLLING_BACK
-
-            # Set traffic back to 0% for canary
-            await self._update_traffic_split(deployment_id, 0.0)
-
-            # Update metrics
-            metrics = self._deployment_metrics.get(deployment_id)
-            if metrics:
-                metrics.canary_traffic_percentage = 0.0
-                metrics.success_criteria_met = False
-
-            # Complete rollback
-            await self._complete_canary_deployment(deployment_id, success=False)
-
-            logger.info(
-                "Rolled back canary deployment %s. Reason: %s", deployment_id, reason
-            )
-
+            await self._execute_rollback(deployment_id, reason)
         except (TimeoutError, OSError, PermissionError):
             logger.exception("Failed to rollback canary %s", deployment_id)
             self._deployment_status[deployment_id] = CanaryStatus.FAILED
             return False
-
         else:
             return True
+
+    async def _execute_rollback(self, deployment_id: str, reason: str) -> None:
+        """Execute canary rollback operations."""
+        self._deployment_status[deployment_id] = CanaryStatus.ROLLING_BACK
+
+        try:
+            await self._update_traffic_split(deployment_id, 0.0)
+        except (TimeoutError, OSError, PermissionError):
+            raise
+
+        # Update metrics
+        self._update_rollback_metrics(deployment_id)
+
+        try:
+            await self._complete_canary_deployment(deployment_id, success=False)
+        except (ConnectionError, OSError, PermissionError):
+            raise
+
+        logger.info(
+            "Rolled back canary deployment %s. Reason: %s", deployment_id, reason
+        )
+
+    def _update_rollback_metrics(self, deployment_id: str) -> None:
+        """Update metrics during rollback."""
+        if metrics := self._deployment_metrics.get(deployment_id):
+            metrics.canary_traffic_percentage = 0.0
+            metrics.success_criteria_met = False
 
     async def pause_canary(self, deployment_id: str) -> bool:
         """Pause a canary deployment.
@@ -470,99 +507,143 @@ class CanaryDeployment:
     async def _monitor_canary_deployment(self, deployment_id: str) -> None:
         """Monitor a canary deployment and handle automatic promotion/rollback."""
         try:
-            config = self._active_deployments[deployment_id]
-
-            while deployment_id in self._active_deployments:
-                current_status = self._deployment_status.get(deployment_id)
-
-                if current_status in (
-                    CanaryStatus.COMPLETED,
-                    CanaryStatus.FAILED,
-                    CanaryStatus.PAUSED,
-                ):
-                    break
-
-                # Update metrics
-                await self._update_deployment_metrics(deployment_id)
-
-                # Check success criteria
-                metrics = self._deployment_metrics[deployment_id]
-                success_criteria_met = await self._evaluate_success_criteria(
-                    deployment_id
-                )
-                metrics.success_criteria_met = success_criteria_met
-
-                # Check for rollback conditions
-                if await self._should_rollback(deployment_id):
-                    await self.rollback_canary(
-                        deployment_id, "Automatic rollback triggered"
-                    )
-                    break
-
-                # Check for automatic promotion
-                if config.auto_promote and success_criteria_met:
-                    stage_duration_ok = (
-                        metrics.stage_duration_minutes >= config.stage_duration_minutes
-                    )
-
-                    if stage_duration_ok:
-                        if metrics.canary_traffic_percentage >= 100.0:
-                            # Complete deployment
-                            await self._complete_canary_deployment(deployment_id)
-                            break
-                        # Promote to next stage
-                        await self.promote_canary(deployment_id)
-
-                # Wait before next check
-                await asyncio.sleep(config.health_check_interval_seconds)
-
+            await self._run_monitoring_loop(deployment_id)
         except asyncio.CancelledError:
             logger.info("Monitoring cancelled for canary deployment: %s", deployment_id)
         except (TimeoutError, OSError, PermissionError):
             logger.exception("Error monitoring canary deployment %s", deployment_id)
             self._deployment_status[deployment_id] = CanaryStatus.FAILED
 
+    async def _run_monitoring_loop(self, deployment_id: str) -> None:
+        """Run the main monitoring loop for canary deployment."""
+        config = self._active_deployments[deployment_id]
+
+        while deployment_id in self._active_deployments:
+            current_status = self._deployment_status.get(deployment_id)
+
+            if current_status in (
+                CanaryStatus.COMPLETED,
+                CanaryStatus.FAILED,
+                CanaryStatus.PAUSED,
+            ):
+                break
+
+            try:
+                await self._process_monitoring_cycle(deployment_id, config)
+            except (TimeoutError, OSError, PermissionError):
+                raise
+
+            await asyncio.sleep(config.health_check_interval_seconds)
+
+    async def _process_monitoring_cycle(
+        self, deployment_id: str, config: CanaryConfig
+    ) -> None:
+        """Process a single monitoring cycle."""
+        # Update metrics
+        try:
+            await self._update_deployment_metrics(deployment_id)
+        except (ConnectionError, OSError, PermissionError):
+            raise
+
+        # Evaluate deployment health
+        try:
+            metrics = self._deployment_metrics[deployment_id]
+            success_criteria_met = await self._evaluate_success_criteria(deployment_id)
+            metrics.success_criteria_met = success_criteria_met
+        except (OSError, PermissionError):
+            raise
+
+        # Check for rollback conditions
+        try:
+            if await self._should_rollback(deployment_id):
+                await self.rollback_canary(
+                    deployment_id, "Automatic rollback triggered"
+                )
+                return
+        except (OSError, PermissionError, TimeoutError):
+            raise
+
+        # Handle automatic promotion
+        await self._handle_auto_promotion(deployment_id, config, metrics)
+
+    async def _handle_auto_promotion(
+        self, deployment_id: str, config: CanaryConfig, metrics: CanaryMetrics
+    ) -> None:
+        """Handle automatic promotion logic."""
+        if not (config.auto_promote and metrics.success_criteria_met):
+            return
+
+        stage_duration_ok = (
+            metrics.stage_duration_minutes >= config.stage_duration_minutes
+        )
+
+        if not stage_duration_ok:
+            return
+
+        if metrics.canary_traffic_percentage >= 100.0:
+            # Complete deployment
+            try:
+                await self._complete_canary_deployment(deployment_id)
+            except (ConnectionError, OSError, PermissionError):
+                raise
+        else:
+            # Promote to next stage
+            try:
+                await self.promote_canary(deployment_id)
+            except (TimeoutError, OSError, PermissionError):
+                raise
+
     async def _update_deployment_metrics(self, deployment_id: str) -> None:
         """Update metrics for a canary deployment."""
         try:
             metrics = self._deployment_metrics[deployment_id]
-
-            # In production, fetch real metrics from monitoring system
-            # For now, simulate metrics
-
-            # Simulate canary performance (slightly better than stable)
-            canary_response_time = 45.0 + (hash(deployment_id) % 20)  # 45-65ms
-            stable_response_time = 55.0 + (hash(deployment_id) % 15)  # 55-70ms
-            canary_error_rate = max(
-                0.0, 2.0 + (hash(deployment_id) % 10) / 10.0
-            )  # 2.0-3.0%
-            stable_error_rate = max(
-                0.0, 3.0 + (hash(deployment_id) % 15) / 10.0
-            )  # 3.0-4.5%
-
-            # Update metrics
-            metrics.canary_response_time_ms = canary_response_time
-            metrics.stable_response_time_ms = stable_response_time
-            metrics.canary_error_rate = canary_error_rate
-            metrics.stable_error_rate = stable_error_rate
-
-            # Calculate health score (0-100)
-            response_time_score = max(
-                0, 100 - (canary_response_time / 10)
-            )  # Penalty for high latency
-            error_rate_score = max(
-                0, 100 - (canary_error_rate * 10)
-            )  # Penalty for errors
-            metrics.health_score = (response_time_score + error_rate_score) / 2
-
-            # Update request counts (simulate traffic)
-            traffic_percentage = metrics.canary_traffic_percentage / 100.0
-            total_requests = 1000  # Simulate 1000 requests per monitoring interval
-            metrics.canary_requests += int(total_requests * traffic_percentage)
-            metrics.stable_requests += int(total_requests * (1 - traffic_percentage))
-
+            self._simulate_performance_metrics(deployment_id, metrics)
+            self._calculate_health_score(metrics)
+            self._update_request_counts(metrics)
         except (ConnectionError, OSError, PermissionError):
             logger.exception("Error updating metrics for canary %s", deployment_id)
+
+    def _simulate_performance_metrics(
+        self, deployment_id: str, metrics: CanaryMetrics
+    ) -> None:
+        """Simulate performance metrics for canary deployment."""
+        # In production, fetch real metrics from monitoring system
+        # For now, simulate metrics
+
+        # Simulate canary performance (slightly better than stable)
+        canary_response_time = 45.0 + (hash(deployment_id) % 20)  # 45-65ms
+        stable_response_time = 55.0 + (hash(deployment_id) % 15)  # 55-70ms
+        canary_error_rate = max(
+            0.0, 2.0 + (hash(deployment_id) % 10) / 10.0
+        )  # 2.0-3.0%
+        stable_error_rate = max(
+            0.0, 3.0 + (hash(deployment_id) % 15) / 10.0
+        )  # 3.0-4.5%
+
+        # Update metrics
+        metrics.canary_response_time_ms = canary_response_time
+        metrics.stable_response_time_ms = stable_response_time
+        metrics.canary_error_rate = canary_error_rate
+        metrics.stable_error_rate = stable_error_rate
+
+    def _calculate_health_score(self, metrics: CanaryMetrics) -> None:
+        """Calculate overall health score for canary deployment."""
+        # Calculate health score (0-100)
+        response_time_score = max(
+            0, 100 - (metrics.canary_response_time_ms / 10)
+        )  # Penalty for high latency
+        error_rate_score = max(
+            0, 100 - (metrics.canary_error_rate * 10)
+        )  # Penalty for errors
+        metrics.health_score = (response_time_score + error_rate_score) / 2
+
+    def _update_request_counts(self, metrics: CanaryMetrics) -> None:
+        """Update request counts for canary and stable versions."""
+        # Update request counts (simulate traffic)
+        traffic_percentage = metrics.canary_traffic_percentage / 100.0
+        total_requests = 1000  # Simulate 1000 requests per monitoring interval
+        metrics.canary_requests += int(total_requests * traffic_percentage)
+        metrics.stable_requests += int(total_requests * (1 - traffic_percentage))
 
     async def _evaluate_success_criteria(self, deployment_id: str) -> bool:
         """Evaluate if canary deployment meets success criteria."""
@@ -570,34 +651,40 @@ class CanaryDeployment:
             config = self._active_deployments[deployment_id]
             metrics = self._deployment_metrics[deployment_id]
 
-            # Check error rate
-            if metrics.canary_error_rate > config.max_error_rate:
-                return False
-
-            # Check response time
-            if metrics.canary_response_time_ms > config.max_response_time_ms:
-                return False
-
-            # Check success rate
-            total_requests = metrics.canary_requests
-            if total_requests > 0:
-                error_requests = int(total_requests * metrics.canary_error_rate / 100.0)
-                success_rate = (
-                    (total_requests - error_requests) / total_requests
-                ) * 100.0
-                if success_rate < config.min_success_rate:
-                    return False
-
-            # Check minimum monitoring duration
-
+            return self._check_all_success_criteria(config, metrics)
         except (OSError, PermissionError):
             logger.exception(
                 "Error evaluating success criteria for canary %s", deployment_id
             )
             return False
 
-        else:
-            return metrics.stage_duration_minutes >= config.monitoring_window_minutes
+    def _check_all_success_criteria(
+        self, config: CanaryConfig, metrics: CanaryMetrics
+    ) -> bool:
+        """Check all success criteria for canary deployment."""
+        # Check error rate
+        if metrics.canary_error_rate > config.max_error_rate:
+            return False
+
+        # Check response time
+        if metrics.canary_response_time_ms > config.max_response_time_ms:
+            return False
+
+        # Check success rate
+        if not self._check_success_rate(config, metrics):
+            return False
+
+        # Check minimum monitoring duration
+        return metrics.stage_duration_minutes >= config.monitoring_window_minutes
+
+    def _check_success_rate(self, config: CanaryConfig, metrics: CanaryMetrics) -> bool:
+        """Check if success rate meets criteria."""
+        if (total_requests := metrics.canary_requests) <= 0:
+            return True
+
+        error_requests = int(total_requests * metrics.canary_error_rate / 100.0)
+        success_rate = ((total_requests - error_requests) / total_requests) * 100.0
+        return success_rate >= config.min_success_rate
 
     async def _should_rollback(self, deployment_id: str) -> bool:
         """Check if canary deployment should be automatically rolled back."""
@@ -605,116 +692,153 @@ class CanaryDeployment:
             config = self._active_deployments[deployment_id]
             metrics = self._deployment_metrics[deployment_id]
 
-            # Check if rollback is enabled
-            if not config.rollback_on_failure:
-                return False
-
-            # Critical error rate threshold
-            if metrics.canary_error_rate > config.max_error_rate * 2:  # 2x threshold
-                logger.warning(
-                    "Canary %s exceeded critical error rate: %.2f%%",
-                    deployment_id,
-                    metrics.canary_error_rate,
-                )
-                return True
-
-            # Critical response time threshold
-            if (
-                metrics.canary_response_time_ms > config.max_response_time_ms * 2
-            ):  # 2x threshold
-                logger.warning(
-                    "Canary %s exceeded critical response time: %.2fms",
-                    deployment_id,
-                    metrics.canary_response_time_ms,
-                )
-                return True
-
-            # Health score too low
-            if metrics.health_score < 30.0:  # Critical health threshold
-                logger.warning(
-                    "Canary %s health score too low: %.1f",
-                    deployment_id,
-                    metrics.health_score,
-                )
-                return True
-
+            return self._evaluate_rollback_conditions(deployment_id, config, metrics)
         except (OSError, PermissionError):
             logger.exception(
                 "Error checking rollback conditions for canary %s", deployment_id
             )
             return False
 
-        else:
+    def _evaluate_rollback_conditions(
+        self, deployment_id: str, config: CanaryConfig, metrics: CanaryMetrics
+    ) -> bool:
+        """Evaluate if rollback conditions are met."""
+        # Check if rollback is enabled
+        if not config.rollback_on_failure:
             return False
+
+        # Check critical error rate threshold
+        if self._check_critical_error_rate(deployment_id, config, metrics):
+            return True
+
+        # Check critical response time threshold
+        if self._check_critical_response_time(deployment_id, config, metrics):
+            return True
+
+        # Check health score threshold
+        return self._check_critical_health_score(deployment_id, metrics)
+
+    def _check_critical_error_rate(
+        self, deployment_id: str, config: CanaryConfig, metrics: CanaryMetrics
+    ) -> bool:
+        """Check if error rate exceeds critical threshold."""
+        if metrics.canary_error_rate > config.max_error_rate * 2:  # 2x threshold
+            logger.warning(
+                "Canary %s exceeded critical error rate: %.2f%%",
+                deployment_id,
+                metrics.canary_error_rate,
+            )
+            return True
+        return False
+
+    def _check_critical_response_time(
+        self, deployment_id: str, config: CanaryConfig, metrics: CanaryMetrics
+    ) -> bool:
+        """Check if response time exceeds critical threshold."""
+        if (
+            metrics.canary_response_time_ms > config.max_response_time_ms * 2
+        ):  # 2x threshold
+            logger.warning(
+                "Canary %s exceeded critical response time: %.2fms",
+                deployment_id,
+                metrics.canary_response_time_ms,
+            )
+            return True
+        return False
+
+    def _check_critical_health_score(
+        self, deployment_id: str, metrics: CanaryMetrics
+    ) -> bool:
+        """Check if health score is below critical threshold."""
+        if metrics.health_score < 30.0:  # Critical health threshold
+            logger.warning(
+                "Canary %s health score too low: %.1f",
+                deployment_id,
+                metrics.health_score,
+            )
+            return True
+        return False
 
     async def _update_traffic_split(
         self, deployment_id: str, canary_percentage: float
     ) -> None:
         """Update traffic split for canary deployment."""
         try:
-            # In production, this would update:
-            # 1. Load balancer configuration
-            # 2. Service mesh rules
-            # 3. Feature flag percentages
-            # 4. DNS weighted routing
-
-            stable_percentage = 100.0 - canary_percentage
-
-            logger.info(
-                "Updated traffic split for %s: %.1f%% canary, %.1f%% stable",
-                deployment_id,
-                canary_percentage,
-                stable_percentage,
-            )
-
+            self._apply_traffic_configuration(deployment_id, canary_percentage)
         except (TimeoutError, OSError, PermissionError):
             logger.exception("Failed to update traffic split for %s", deployment_id)
             raise
+
+    def _apply_traffic_configuration(
+        self, deployment_id: str, canary_percentage: float
+    ) -> None:
+        """Apply traffic configuration for canary deployment."""
+        # In production, this would update:
+        # 1. Load balancer configuration
+        # 2. Service mesh rules
+        # 3. Feature flag percentages
+        # 4. DNS weighted routing
+
+        stable_percentage = 100.0 - canary_percentage
+
+        logger.info(
+            "Updated traffic split for %s: %.1f%% canary, %.1f%% stable",
+            deployment_id,
+            canary_percentage,
+            stable_percentage,
+        )
 
     async def _complete_canary_deployment(
         self, deployment_id: str, success: bool = True
     ) -> None:
         """Complete a canary deployment."""
         try:
-            if success:
-                self._deployment_status[deployment_id] = CanaryStatus.COMPLETED
-                logger.info(
-                    "Canary deployment %s completed successfully", deployment_id
-                )
-            else:
-                self._deployment_status[deployment_id] = CanaryStatus.FAILED
-                logger.info("Canary deployment %s failed", deployment_id)
+            self._set_completion_status(deployment_id, success)
+            self._cleanup_monitoring_task(deployment_id)
 
-            # Cancel monitoring task
-            if deployment_id in self._monitoring_tasks:
-                self._monitoring_tasks[deployment_id].cancel()
-                del self._monitoring_tasks[deployment_id]
-
-            # Persist final state
             await self._persist_deployment_state(deployment_id)
 
-            # Clean up after delay (keep for analysis)
-            self._monitoring_tasks[f"{deployment_id}_cleanup"] = asyncio.create_task(
-                self._cleanup_deployment(deployment_id, delay_seconds=3600)
-            )  # 1 hour
-
+            self._schedule_cleanup_task(deployment_id)
         except (ConnectionError, OSError, PermissionError):
             logger.exception("Error completing canary deployment %s", deployment_id)
+
+    def _set_completion_status(self, deployment_id: str, success: bool) -> None:
+        """Set the completion status for canary deployment."""
+        if success:
+            self._deployment_status[deployment_id] = CanaryStatus.COMPLETED
+            logger.info("Canary deployment %s completed successfully", deployment_id)
+        else:
+            self._deployment_status[deployment_id] = CanaryStatus.FAILED
+            logger.info("Canary deployment %s failed", deployment_id)
+
+    def _cleanup_monitoring_task(self, deployment_id: str) -> None:
+        """Clean up monitoring task for deployment."""
+        if deployment_id in self._monitoring_tasks:
+            self._monitoring_tasks[deployment_id].cancel()
+            del self._monitoring_tasks[deployment_id]
+
+    def _schedule_cleanup_task(self, deployment_id: str) -> None:
+        """Schedule cleanup task for deployment."""
+        # Clean up after delay (keep for analysis)
+        self._monitoring_tasks[f"{deployment_id}_cleanup"] = asyncio.create_task(
+            self._cleanup_deployment(deployment_id, delay_seconds=3600)
+        )  # 1 hour
 
     async def _cleanup_deployment(self, deployment_id: str, delay_seconds: int) -> None:
         """Clean up completed deployment after delay."""
         try:
             await asyncio.sleep(delay_seconds)
-
-            # Remove from active deployments
-            self._active_deployments.pop(deployment_id, None)
-            self._deployment_metrics.pop(deployment_id, None)
-            self._deployment_status.pop(deployment_id, None)
-
+            self._remove_deployment_data(deployment_id)
             logger.info("Cleaned up canary deployment: %s", deployment_id)
-
         except (ConnectionError, OSError, PermissionError):
             logger.exception("Error cleaning up canary deployment %s", deployment_id)
+
+    def _remove_deployment_data(self, deployment_id: str) -> None:
+        """Remove deployment data from memory."""
+        # Remove from active deployments
+        self._active_deployments.pop(deployment_id, None)
+        self._deployment_metrics.pop(deployment_id, None)
+        self._deployment_status.pop(deployment_id, None)
 
     async def _load_active_deployments(self) -> None:
         """Load active canary deployments from storage."""

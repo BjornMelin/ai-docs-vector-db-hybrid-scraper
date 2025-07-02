@@ -32,7 +32,6 @@ try:
     )
     from sklearn.mixture import GaussianMixture
     from sklearn.neighbors import NearestNeighbors
-    from sklearn.preprocessing import StandardScaler
 except ImportError:
     DBSCAN = None
     KMeans = None
@@ -42,7 +41,6 @@ except ImportError:
     silhouette_score = None
     calinski_harabasz_score = None
     davies_bouldin_score = None
-    StandardScaler = None
     NearestNeighbors = None
     sklearn = None
 

@@ -76,39 +76,7 @@ class PlaywrightAdapter(BaseService):
             return
 
         try:
-            self._playwright = await async_playwright().start()
-
-            # Get browser launcher
-            browser_launcher = getattr(self._playwright, self.config.browser)
-
-            # Determine browser arguments
-            if self.anti_detection:
-                # Use enhanced anti-detection args
-                stealth_config = self.anti_detection.get_stealth_config()
-                browser_args = stealth_config.extra_args
-                self.logger.info("Using enhanced anti-detection browser configuration")
-            else:
-                # Use basic args
-                browser_args = [
-                    "--disable-blink-features=AutomationControlled",
-                    "--disable-web-security",
-                    "--disable-features=VizDisplayCompositor",
-                    "--no-sandbox",
-                    "--disable-dev-shm-usage",
-                ]
-
-            # Launch browser with optimized settings
-            self._browser = await browser_launcher.launch(
-                headless=self.config.headless,
-                args=browser_args,
-            )
-
-            self._initialized = True
-            anti_detection_status = "enabled" if self.anti_detection else "disabled"
-            self.logger.info(
-                f"Playwright adapter initialized with {self.config.browser} "
-                f"(anti-detection: {anti_detection_status})"
-            )
+            await self._initialize_playwright_browser()
 
         except Exception as e:
             msg = "Failed to initialize Playwright"
@@ -130,6 +98,46 @@ class PlaywrightAdapter(BaseService):
 
         except (AttributeError, ImportError, OSError):
             self.logger.exception("Error cleaning up Playwright")
+
+    async def _initialize_playwright_browser(self) -> None:
+        """Initialize Playwright and launch browser."""
+        self._playwright = await async_playwright().start()
+
+        # Get browser launcher
+        browser_launcher = getattr(self._playwright, self.config.browser)
+
+        # Determine browser arguments
+        browser_args = await self._get_browser_arguments()
+
+        # Launch browser with optimized settings
+        self._browser = await browser_launcher.launch(
+            headless=self.config.headless,
+            args=browser_args,
+        )
+
+        self._initialized = True
+        anti_detection_status = "enabled" if self.anti_detection else "disabled"
+        self.logger.info(
+            "Playwright adapter initialized with %s (anti-detection: %s)",
+            self.config.browser,
+            anti_detection_status,
+        )
+
+    async def _get_browser_arguments(self) -> list[str]:
+        """Get browser arguments based on anti-detection configuration."""
+        if self.anti_detection:
+            # Use enhanced anti-detection args
+            stealth_config = self.anti_detection.get_stealth_config()
+            self.logger.info("Using enhanced anti-detection browser configuration")
+            return stealth_config.extra_args
+        # Use basic args
+        return [
+            "--disable-blink-features=AutomationControlled",
+            "--disable-web-security",
+            "--disable-features=VizDisplayCompositor",
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+        ]
 
     async def scrape(
         self,
@@ -285,9 +293,7 @@ class PlaywrightAdapter(BaseService):
                 result = await self._execute_action(page, action, i)
                 action_results.append(result)
             except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-                self.logger.warning(
-                    f"Action {i} failed"
-                )  # TODO: Convert f-string to logging format
+                self.logger.warning("Action %s failed", i)
                 action_results.append(
                     {
                         "action_index": i,
@@ -359,7 +365,7 @@ class PlaywrightAdapter(BaseService):
     ) -> dict[str, Any]:
         """Build error result for failed scraping."""
         processing_time = (time.time() - start_time) * 1000
-        self.logger.error("Playwright error for {url}")
+        self.logger.error("Playwright error for %s", url)
 
         # Record failed attempt for anti-detection monitoring
         if self.anti_detection:
@@ -404,101 +410,115 @@ class PlaywrightAdapter(BaseService):
 
         """
         try:
-            # Basic stealth script to hide automation indicators
-            stealth_script = """
-            // Remove webdriver property
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => undefined,
-            });
-
-            // Override the chrome property to mimic a regular Chrome browser
-            window.chrome = {
-                runtime: {},
-                loadTimes: function() {},
-                csi: function() {},
-                app: {}
-            };
-
-            // Override the permissions property
-            const originalQuery = window.navigator.permissions.query;
-            window.navigator.permissions.query = (parameters) => (
-                parameters.name === 'notifications' ?
-                    Promise.resolve({ state: Notification.permission }) :
-                    originalQuery(parameters)
-            );
-
-            // Override the plugins property to mimic a real browser
-            Object.defineProperty(navigator, 'plugins', {
-                get: () => [1, 2, 3, 4, 5],
-            });
-
-            // Override the languages property
-            Object.defineProperty(navigator, 'languages', {
-                get: () => ['en-US', 'en'],
-            });
-
-            // Add realistic screen properties
-            Object.defineProperty(screen, 'availWidth', {
-                get: () => screen.width,
-            });
-            Object.defineProperty(screen, 'availHeight', {
-                get: () => screen.height - 40, // Account for taskbar
-            });
-            """
-
-            # Advanced canvas fingerprinting protection
-            if (
-                hasattr(stealth_config, "canvas_fingerprint_protection")
-                and stealth_config.canvas_fingerprint_protection
-            ):
-                canvas_protection_script = """
-                // Canvas fingerprinting protection
-                const getContext = HTMLCanvasElement.prototype.getContext;
-                HTMLCanvasElement.prototype.getContext = function(contextType, contextAttributes) {
-                    const context = getContext.call(this, contextType, contextAttributes);
-                    if (contextType === '2d') {
-                        const getImageData = context.getImageData;
-                        context.getImageData = function(sx, sy, sw, sh) {
-                            const imageData = getImageData.call(this, sx, sy, sw, sh);
-                            for (let i = 0; i < imageData.data.length; i += 4) {
-                                imageData.data[i] += Math.floor(Math.random() * 3) - 1;
-                                imageData.data[i + 1] += Math.floor(Math.random() * 3) - 1;
-                                imageData.data[i + 2] += Math.floor(Math.random() * 3) - 1;
-                            }
-                            return imageData;
-                        };
-                    }
-                    return context;
-                };
-                """
-                stealth_script += canvas_protection_script
-
-            # WebGL fingerprinting protection
-            if (
-                hasattr(stealth_config, "webgl_fingerprint_protection")
-                and stealth_config.webgl_fingerprint_protection
-            ):
-                webgl_protection_script = """
-                // WebGL fingerprinting protection
-                const getParameter = WebGLRenderingContext.prototype.getParameter;
-                WebGLRenderingContext.prototype.getParameter = function(parameter) {
-                    if (parameter === 37445) {
-                        return 'Intel Inc.';
-                    }
-                    if (parameter === 37446) {
-                        return 'Intel(R) Iris(TM) Graphics 6100';
-                    }
-                    return getParameter.call(this, parameter);
-                };
-                """
-                stealth_script += webgl_protection_script
-
-            # Inject the stealth script
+            stealth_script = await self._build_stealth_script(stealth_config)
             await page.add_init_script(stealth_script)
             self.logger.debug("Stealth JavaScript patterns injected successfully")
 
         except (OSError, PermissionError, RuntimeError):
             self.logger.warning("Failed to inject stealth scripts")
+
+    async def _build_stealth_script(self, stealth_config: Any) -> str:
+        """Build complete stealth script with all protection mechanisms."""
+        # Basic stealth script to hide automation indicators
+        stealth_script = """
+        // Remove webdriver property
+        Object.defineProperty(navigator, 'webdriver', {
+            get: () => undefined,
+        });
+
+        // Override the chrome property to mimic a regular Chrome browser
+        window.chrome = {
+            runtime: {},
+            loadTimes: function() {},
+            csi: function() {},
+            app: {}
+        };
+
+        // Override the permissions property
+        const originalQuery = window.navigator.permissions.query;
+        window.navigator.permissions.query = (parameters) => (
+            parameters.name === 'notifications' ?
+                Promise.resolve({ state: Notification.permission }) :
+                originalQuery(parameters)
+        );
+
+        // Override the plugins property to mimic a real browser
+        Object.defineProperty(navigator, 'plugins', {
+            get: () => [1, 2, 3, 4, 5],
+        });
+
+        // Override the languages property
+        Object.defineProperty(navigator, 'languages', {
+            get: () => ['en-US', 'en'],
+        });
+
+        // Add realistic screen properties
+        Object.defineProperty(screen, 'availWidth', {
+            get: () => screen.width,
+        });
+        Object.defineProperty(screen, 'availHeight', {
+            get: () => screen.height - 40, // Account for taskbar
+        });
+        """
+
+        # Add canvas fingerprinting protection if enabled
+        stealth_script += self._get_canvas_protection_script(stealth_config)
+
+        # Add WebGL fingerprinting protection if enabled
+        stealth_script += self._get_webgl_protection_script(stealth_config)
+
+        return stealth_script
+
+    def _get_canvas_protection_script(self, stealth_config: Any) -> str:
+        """Get canvas fingerprinting protection script."""
+        if not (
+            hasattr(stealth_config, "canvas_fingerprint_protection")
+            and stealth_config.canvas_fingerprint_protection
+        ):
+            return ""
+
+        return """
+        // Canvas fingerprinting protection
+        const getContext = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.getContext = function(contextType, contextAttributes) {
+            const context = getContext.call(this, contextType, contextAttributes);
+            if (contextType === '2d') {
+                const getImageData = context.getImageData;
+                context.getImageData = function(sx, sy, sw, sh) {
+                    const imageData = getImageData.call(this, sx, sy, sw, sh);
+                    for (let i = 0; i < imageData.data.length; i += 4) {
+                        imageData.data[i] += Math.floor(Math.random() * 3) - 1;
+                        imageData.data[i + 1] += Math.floor(Math.random() * 3) - 1;
+                        imageData.data[i + 2] += Math.floor(Math.random() * 3) - 1;
+                    }
+                    return imageData;
+                };
+            }
+            return context;
+        };
+        """
+
+    def _get_webgl_protection_script(self, stealth_config: Any) -> str:
+        """Get WebGL fingerprinting protection script."""
+        if not (
+            hasattr(stealth_config, "webgl_fingerprint_protection")
+            and stealth_config.webgl_fingerprint_protection
+        ):
+            return ""
+
+        return """
+        // WebGL fingerprinting protection
+        const getParameter = WebGLRenderingContext.prototype.getParameter;
+        WebGLRenderingContext.prototype.getParameter = function(parameter) {
+            if (parameter === 37445) {
+                return 'Intel Inc.';
+            }
+            if (parameter === 37446) {
+                return 'Intel(R) Iris(TM) Graphics 6100';
+            }
+            return getParameter.call(this, parameter);
+        };
+        """
 
     async def _execute_action(
         self, page: Any, action: Any, index: int

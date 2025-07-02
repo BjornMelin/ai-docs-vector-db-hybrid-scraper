@@ -55,68 +55,13 @@ def register_tools(mcp, client_manager: ClientManager):
             Comprehensive cost analysis with optimization recommendations
         """
         try:
-            if ctx:
-                await ctx.info(
-                    f"Starting intelligent cost analysis for {analysis_scope} over {time_period}"
-                )
-
-            # Collect current cost data
-            current_costs = await _collect_current_cost_data(
-                analysis_scope, time_period, ctx
+            return await _execute_intelligent_cost_analysis(
+                analysis_scope,
+                time_period,
+                optimization_target,
+                include_predictions,
+                ctx,
             )
-
-            # Analyze cost patterns and trends
-            cost_patterns = await _analyze_cost_patterns(
-                current_costs, time_period, ctx
-            )
-
-            # Generate optimization opportunities
-            optimization_opportunities = await _identify_optimization_opportunities(
-                current_costs, optimization_target, ctx
-            )
-
-            # Generate cost predictions if enabled
-            cost_predictions = {}
-            if include_predictions:
-                cost_predictions = await _generate_cost_predictions(
-                    current_costs, cost_patterns, time_period, ctx
-                )
-
-            # Calculate potential savings
-            potential_savings = await _calculate_potential_savings(
-                current_costs, optimization_opportunities, ctx
-            )
-
-            # Generate autonomous insights
-            autonomous_insights = await _generate_cost_insights(
-                current_costs, cost_patterns, optimization_opportunities, ctx
-            )
-
-            final_results = {
-                "success": True,
-                "analysis_scope": analysis_scope,
-                "time_period": time_period,
-                "current_costs": current_costs,
-                "cost_patterns": cost_patterns,
-                "optimization_opportunities": optimization_opportunities,
-                "potential_savings": potential_savings,
-                "autonomous_insights": autonomous_insights,
-                "analysis_metadata": {
-                    "analysis_timestamp": _get_timestamp(),
-                    "optimization_target": optimization_target,
-                    "predictions_included": include_predictions,
-                    "confidence_score": 0.87,
-                },
-            }
-
-            if include_predictions:
-                final_results["cost_predictions"] = cost_predictions
-
-            if ctx:
-                await ctx.info(
-                    f"Cost analysis completed: ${current_costs['total_cost']:.2f} current, ${potential_savings['total_savings']:.2f} potential savings"
-                )
-
         except Exception as e:
             logger.exception("Failed to perform intelligent cost analysis")
             if ctx:
@@ -127,8 +72,6 @@ def register_tools(mcp, client_manager: ClientManager):
                 "analysis_scope": analysis_scope,
                 "time_period": time_period,
             }
-        else:
-            return final_results
 
     @mcp.tool()
     async def autonomous_budget_optimization(
@@ -154,69 +97,9 @@ def register_tools(mcp, client_manager: ClientManager):
             Budget optimization results with autonomous allocation recommendations
         """
         try:
-            if ctx:
-                await ctx.info(
-                    f"Starting autonomous budget optimization: ${budget_limit:.2f} limit with {optimization_strategy} strategy"
-                )
-
-            # Analyze current resource allocation
-            current_allocation = await _analyze_current_allocation(ctx)
-
-            # Calculate budget requirements
-            budget_requirements = await _calculate_budget_requirements(
-                current_allocation, budget_limit, safety_margin, ctx
+            return await _execute_autonomous_budget_optimization(
+                budget_limit, optimization_strategy, auto_apply, safety_margin, ctx
             )
-
-            # Generate optimization strategy
-            optimization_plan = await _generate_optimization_strategy(
-                budget_requirements, optimization_strategy, budget_limit, ctx
-            )
-
-            # Apply autonomous optimization if enabled
-            optimization_results = {}
-            if auto_apply and optimization_plan["feasible"]:
-                optimization_results = await _apply_autonomous_optimization(
-                    optimization_plan, safety_margin, ctx
-                )
-            else:
-                optimization_results = {
-                    "applied": False,
-                    "reason": "Auto-apply disabled or plan not feasible",
-                    "plan_feasibility": optimization_plan["feasible"],
-                }
-
-            # Calculate cost-performance trade-offs
-            tradeoff_analysis = await _analyze_cost_performance_tradeoffs(
-                optimization_plan, current_allocation, ctx
-            )
-
-            # Generate autonomous recommendations
-            autonomous_recommendations = await _generate_budget_recommendations(
-                budget_limit, optimization_plan, tradeoff_analysis, ctx
-            )
-
-            final_results = {
-                "success": True,
-                "budget_limit": budget_limit,
-                "optimization_strategy": optimization_strategy,
-                "current_allocation": current_allocation,
-                "budget_requirements": budget_requirements,
-                "optimization_plan": optimization_plan,
-                "optimization_results": optimization_results,
-                "tradeoff_analysis": tradeoff_analysis,
-                "autonomous_recommendations": autonomous_recommendations,
-                "budget_metadata": {
-                    "safety_margin": safety_margin,
-                    "auto_apply_enabled": auto_apply,
-                    "optimization_confidence": 0.84,
-                },
-            }
-
-            if ctx:
-                await ctx.info(
-                    f"Budget optimization completed: {optimization_plan['estimated_savings']:.1f}% potential savings"
-                )
-
         except Exception as e:
             logger.exception("Failed to perform autonomous budget optimization")
             if ctx:
@@ -227,8 +110,6 @@ def register_tools(mcp, client_manager: ClientManager):
                 "budget_limit": budget_limit,
                 "optimization_strategy": optimization_strategy,
             }
-        else:
-            return final_results
 
     @mcp.tool()
     async def predictive_cost_modeling(
@@ -254,71 +135,13 @@ def register_tools(mcp, client_manager: ClientManager):
             Predictive cost models with scenario analysis and confidence metrics
         """
         try:
-            if ctx:
-                await ctx.info(
-                    f"Generating predictive cost models for {prediction_horizon} horizon"
-                )
-
-            # Collect historical cost data
-            historical_data = await _collect_historical_cost_data(
-                prediction_horizon, ctx
+            return await _execute_predictive_cost_modeling(
+                prediction_horizon,
+                scenario_analysis,
+                confidence_intervals,
+                growth_assumptions,
+                ctx,
             )
-
-            # Generate base prediction model
-            base_predictions = await _generate_base_cost_predictions(
-                historical_data, prediction_horizon, growth_assumptions, ctx
-            )
-
-            # Generate scenario analysis if enabled
-            scenario_predictions = {}
-            if scenario_analysis:
-                scenario_predictions = await _generate_scenario_analysis(
-                    base_predictions, historical_data, ctx
-                )
-
-            # Calculate confidence intervals if enabled
-            confidence_analysis = {}
-            if confidence_intervals:
-                confidence_analysis = await _calculate_confidence_intervals(
-                    base_predictions, historical_data, ctx
-                )
-
-            # Generate cost optimization timeline
-            optimization_timeline = await _generate_optimization_timeline(
-                base_predictions, prediction_horizon, ctx
-            )
-
-            # Generate predictive insights
-            predictive_insights = await _generate_predictive_insights(
-                base_predictions, scenario_predictions, confidence_analysis, ctx
-            )
-
-            final_results = {
-                "success": True,
-                "prediction_horizon": prediction_horizon,
-                "historical_data": historical_data,
-                "base_predictions": base_predictions,
-                "optimization_timeline": optimization_timeline,
-                "predictive_insights": predictive_insights,
-                "modeling_metadata": {
-                    "model_accuracy": 0.89,
-                    "data_quality_score": 0.92,
-                    "prediction_confidence": 0.85,
-                    "growth_assumptions": growth_assumptions or {},
-                },
-            }
-
-            if scenario_analysis:
-                final_results["scenario_predictions"] = scenario_predictions
-
-            if confidence_intervals:
-                final_results["confidence_analysis"] = confidence_analysis
-
-            if ctx:
-                await ctx.info(
-                    f"Predictive modeling completed: {base_predictions['total_predicted_cost']:.2f} predicted cost"
-                )
-
         except Exception as e:
             logger.exception("Failed to generate predictive cost models")
             if ctx:
@@ -328,8 +151,6 @@ def register_tools(mcp, client_manager: ClientManager):
                 "error": str(e),
                 "prediction_horizon": prediction_horizon,
             }
-        else:
-            return final_results
 
     @mcp.tool()
     async def get_cost_estimation_capabilities() -> dict[str, Any]:
@@ -394,6 +215,279 @@ def register_tools(mcp, client_manager: ClientManager):
 
 
 # Helper functions
+
+
+async def _execute_intelligent_cost_analysis(
+    analysis_scope: str,
+    time_period: str,
+    optimization_target: float,
+    include_predictions: bool,
+    ctx,
+) -> dict[str, Any]:
+    """Execute intelligent cost analysis with organized error handling."""
+    if ctx:
+        await ctx.info(
+            f"Starting intelligent cost analysis for {analysis_scope} over {time_period}"
+        )
+
+    # Collect current cost data
+    current_costs = await _collect_current_cost_data(analysis_scope, time_period, ctx)
+
+    # Analyze cost patterns and trends
+    cost_patterns = await _analyze_cost_patterns(current_costs, time_period, ctx)
+
+    # Generate optimization opportunities
+    optimization_opportunities = await _identify_optimization_opportunities(
+        current_costs, optimization_target, ctx
+    )
+
+    # Generate cost predictions if enabled
+    cost_predictions = {}
+    if include_predictions:
+        cost_predictions = await _generate_cost_predictions(
+            current_costs, cost_patterns, time_period, ctx
+        )
+
+    # Calculate potential savings
+    potential_savings = await _calculate_potential_savings(
+        current_costs, optimization_opportunities, ctx
+    )
+
+    # Generate autonomous insights
+    autonomous_insights = await _generate_cost_insights(
+        current_costs, cost_patterns, optimization_opportunities, ctx
+    )
+
+    final_results = {
+        "success": True,
+        "analysis_scope": analysis_scope,
+        "time_period": time_period,
+        "current_costs": current_costs,
+        "cost_patterns": cost_patterns,
+        "optimization_opportunities": optimization_opportunities,
+        "potential_savings": potential_savings,
+        "autonomous_insights": autonomous_insights,
+        "analysis_metadata": {
+            "analysis_timestamp": _get_timestamp(),
+            "optimization_target": optimization_target,
+            "predictions_included": include_predictions,
+            "confidence_score": 0.87,
+        },
+    }
+
+    if include_predictions:
+        final_results["cost_predictions"] = cost_predictions
+
+    if ctx:
+        await ctx.info(
+            f"Cost analysis completed: ${current_costs['total_cost']:.2f} current, ${potential_savings['total_savings']:.2f} potential savings"
+        )
+
+    return final_results
+
+
+async def _execute_autonomous_budget_optimization(
+    budget_limit: float,
+    optimization_strategy: str,
+    auto_apply: bool,
+    safety_margin: float,
+    ctx,
+) -> dict[str, Any]:
+    """Execute autonomous budget optimization with organized error handling."""
+    if ctx:
+        await ctx.info(
+            f"Starting autonomous budget optimization: ${budget_limit:.2f} limit with {optimization_strategy} strategy"
+        )
+
+    # Analyze current resource allocation
+    current_allocation = await _analyze_current_allocation(ctx)
+
+    # Calculate budget requirements
+    budget_requirements = await _calculate_budget_requirements(
+        current_allocation, budget_limit, safety_margin, ctx
+    )
+
+    # Generate optimization strategy
+    optimization_plan = await _generate_optimization_strategy(
+        budget_requirements, optimization_strategy, budget_limit, ctx
+    )
+
+    # Apply autonomous optimization if enabled
+    optimization_results = await _apply_optimization_if_enabled(
+        auto_apply, optimization_plan, safety_margin, ctx
+    )
+
+    # Calculate cost-performance trade-offs
+    tradeoff_analysis = await _analyze_cost_performance_tradeoffs(
+        optimization_plan, current_allocation, ctx
+    )
+
+    # Generate autonomous recommendations
+    autonomous_recommendations = await _generate_budget_recommendations(
+        budget_limit, optimization_plan, tradeoff_analysis, ctx
+    )
+
+    final_results = {
+        "success": True,
+        "budget_limit": budget_limit,
+        "optimization_strategy": optimization_strategy,
+        "current_allocation": current_allocation,
+        "budget_requirements": budget_requirements,
+        "optimization_plan": optimization_plan,
+        "optimization_results": optimization_results,
+        "tradeoff_analysis": tradeoff_analysis,
+        "autonomous_recommendations": autonomous_recommendations,
+        "budget_metadata": {
+            "safety_margin": safety_margin,
+            "auto_apply_enabled": auto_apply,
+            "optimization_confidence": 0.84,
+        },
+    }
+
+    if ctx:
+        await ctx.info(
+            f"Budget optimization completed: {optimization_plan['estimated_savings']:.1f}% potential savings"
+        )
+
+    return final_results
+
+
+async def _execute_predictive_cost_modeling(
+    prediction_horizon: str,
+    scenario_analysis: bool,
+    confidence_intervals: bool,
+    growth_assumptions: dict,
+    ctx,
+) -> dict[str, Any]:
+    """Execute predictive cost modeling with organized error handling."""
+    if ctx:
+        await ctx.info(
+            f"Generating predictive cost models for {prediction_horizon} horizon"
+        )
+
+    # Collect historical cost data
+    historical_data = await _collect_historical_cost_data(prediction_horizon, ctx)
+
+    # Generate base prediction model
+    base_predictions = await _generate_base_cost_predictions(
+        historical_data, prediction_horizon, growth_assumptions, ctx
+    )
+
+    # Generate optional analysis components
+    scenario_predictions = await _get_scenario_analysis_if_enabled(
+        scenario_analysis, base_predictions, historical_data, ctx
+    )
+    confidence_analysis = await _get_confidence_analysis_if_enabled(
+        confidence_intervals, base_predictions, historical_data, ctx
+    )
+
+    # Generate cost optimization timeline
+    optimization_timeline = await _generate_optimization_timeline(
+        base_predictions, prediction_horizon, ctx
+    )
+
+    # Generate predictive insights
+    predictive_insights = await _generate_predictive_insights(
+        base_predictions, scenario_predictions, confidence_analysis, ctx
+    )
+
+    final_results = {
+        "success": True,
+        "prediction_horizon": prediction_horizon,
+        "historical_data": historical_data,
+        "base_predictions": base_predictions,
+        "optimization_timeline": optimization_timeline,
+        "predictive_insights": predictive_insights,
+        "modeling_metadata": {
+            "model_accuracy": 0.89,
+            "data_quality_score": 0.92,
+            "prediction_confidence": 0.85,
+            "growth_assumptions": growth_assumptions or {},
+        },
+    }
+
+    if scenario_analysis and scenario_predictions:
+        final_results["scenario_predictions"] = scenario_predictions
+
+    if confidence_intervals and confidence_analysis:
+        final_results["confidence_analysis"] = confidence_analysis
+
+    if ctx:
+        await ctx.info(
+            f"Predictive modeling completed: {base_predictions['total_predicted_cost']:.2f} predicted cost"
+        )
+
+    return final_results
+
+
+async def _apply_optimization_if_enabled(
+    auto_apply: bool, optimization_plan: dict, safety_margin: float, ctx
+) -> dict[str, Any]:
+    """Apply optimization if enabled with separate error handling."""
+    if auto_apply and optimization_plan["feasible"]:
+        return await _apply_autonomous_optimization(
+            optimization_plan, safety_margin, ctx
+        )
+    return {
+        "applied": False,
+        "reason": "Auto-apply disabled or plan not feasible",
+        "plan_feasibility": optimization_plan["feasible"],
+    }
+
+
+async def _get_scenario_analysis_if_enabled(
+    scenario_analysis: bool, base_predictions: dict, historical_data: dict, ctx
+) -> dict[str, Any]:
+    """Get scenario analysis if enabled with separate error handling."""
+    if not scenario_analysis:
+        return {}
+
+    try:
+        return await _generate_scenario_analysis(base_predictions, historical_data, ctx)
+    except Exception as e:
+        logger.warning(f"Scenario analysis failed: {e}")
+        return {}
+
+
+async def _get_confidence_analysis_if_enabled(
+    confidence_intervals: bool, base_predictions: dict, historical_data: dict, ctx
+) -> dict[str, Any]:
+    """Get confidence analysis if enabled with separate error handling."""
+    if not confidence_intervals:
+        return {}
+
+    try:
+        return await _calculate_confidence_intervals(
+            base_predictions, historical_data, ctx
+        )
+    except Exception as e:
+        logger.warning(f"Confidence analysis failed: {e}")
+        return {}
+
+
+def _process_optimization_action(
+    action: dict, applied_actions: list, failed_actions: list
+) -> None:
+    """Process a single optimization action with safety checks."""
+    # Apply action with safety checks
+    if action["risk_level"] <= 0.6:  # Only apply low to medium risk actions
+        # Mock action application
+        applied_actions.append(
+            {
+                "action": action["action"],
+                "cost_impact": action["cost_impact"],
+                "applied_at": _get_timestamp(),
+                "status": "success",
+            }
+        )
+    else:
+        failed_actions.append(
+            {
+                "action": action["action"],
+                "reason": "Risk level too high for autonomous application",
+                "risk_level": action["risk_level"],
+            }
+        )
 
 
 async def _collect_current_cost_data(
@@ -727,25 +821,7 @@ async def _apply_autonomous_optimization(
 
     for action in optimization_plan["optimization_actions"]:
         try:
-            # Apply action with safety checks
-            if action["risk_level"] <= 0.6:  # Only apply low to medium risk actions
-                # Mock action application
-                applied_actions.append(
-                    {
-                        "action": action["action"],
-                        "cost_impact": action["cost_impact"],
-                        "applied_at": _get_timestamp(),
-                        "status": "success",
-                    }
-                )
-            else:
-                failed_actions.append(
-                    {
-                        "action": action["action"],
-                        "reason": "Risk level too high for autonomous application",
-                        "risk_level": action["risk_level"],
-                    }
-                )
+            _process_optimization_action(action, applied_actions, failed_actions)
         except (RuntimeError, ValueError, TypeError) as e:
             failed_actions.append(
                 {

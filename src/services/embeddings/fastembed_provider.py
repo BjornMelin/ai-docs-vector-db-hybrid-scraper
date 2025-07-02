@@ -5,17 +5,17 @@ from typing import Any, ClassVar
 
 import numpy as np
 
+from src.services.errors import EmbeddingServiceError
+from src.services.monitoring.metrics import get_metrics_registry
+
+from .base import EmbeddingProvider
+
 
 try:
     from fastembed import SparseTextEmbedding, TextEmbedding
 except ImportError:
     TextEmbedding = None
     SparseTextEmbedding = None
-
-from src.services.errors import EmbeddingServiceError
-from src.services.monitoring.metrics import get_metrics_registry
-
-from .base import EmbeddingProvider
 
 
 logger = logging.getLogger(__name__)

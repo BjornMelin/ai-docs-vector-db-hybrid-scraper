@@ -69,7 +69,7 @@ class ModernRateLimiter:
 
         logger.info(
             f"ModernRateLimiter initialized with Redis: {redis_url}, "
-            f"default_limits: {default_limits}"
+            f"default_limits: {default_limits}",
         )
 
     def limit(self, rate: str, per_method: bool = False):
@@ -114,7 +114,9 @@ class ModernRateLimiter:
         return False
 
     async def _rate_limit_handler(
-        self, request: Request, exc: RateLimitExceeded
+        self,
+        request: Request,
+        exc: RateLimitExceeded,
     ) -> Response:
         """Handle rate limit exceeded exceptions.
 
@@ -146,7 +148,7 @@ class ModernRateLimiter:
         # Log rate limit exceeded for monitoring
         client_ip = get_remote_address(request)
         logger.warning(
-            f"Rate limit exceeded for {client_ip} on {request.url.path}: {exc.detail}"
+            f"Rate limit exceeded for {client_ip} on {request.url.path}: {exc.detail}",
         )
 
         return response
@@ -243,7 +245,7 @@ def create_api_key_limiter(redis_url: str) -> Limiter:
     def get_api_key(request: Request) -> str:
         """Extract API key from request headers."""
         api_key = request.headers.get("X-API-Key") or request.headers.get(
-            "Authorization"
+            "Authorization",
         )
         if api_key and api_key.startswith("Bearer "):
             api_key = api_key[7:]  # Remove "Bearer " prefix

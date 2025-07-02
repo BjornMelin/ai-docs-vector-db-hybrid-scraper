@@ -5,7 +5,7 @@ configuration management, and other production services.
 """
 
 import logging
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Any
@@ -54,43 +54,62 @@ class DependencyContainer:
             return
 
         try:
-            # Load configurations
-            if config is None:
-                config = get_config()
-
-            self._config = config
-
-            # Initialize core services using function-based approach
-            self._client_manager = ClientManager.from_unified_config()
-            self._vector_service = QdrantService(config, self._client_manager)
-            await self._vector_service.initialize()
-
-            # Use function-based managers through client manager
-            self._embedding_manager = await get_embedding_manager(self._client_manager)
-            self._cache_manager = await get_cache_manager(self._client_manager)
-
-            self._initialized = True
-            logger.info("Dependency container initialized successfully")
-
+            await self._perform_initialization(config)
         except (OSError, AttributeError, ConnectionError, ImportError):
             logger.exception("Failed to initialize dependency container")
             raise
 
+    async def _perform_initialization(self, config: Config | None) -> None:
+        """Perform dependency initialization steps.
+
+        Args:
+            config: Application configuration
+        """
+        # Load configurations
+        if config is None:
+            config = get_config()
+        self._config = config
+
+        # Initialize services sequentially
+        await self._initialize_core_services(config)
+        await self._initialize_managers()
+
+        self._initialized = True
+        logger.info("Dependency container initialized successfully")
+
+    async def _initialize_core_services(self, config: Config) -> None:
+        """Initialize core client manager and vector service.
+
+        Args:
+            config: Application configuration
+        """
+        self._client_manager = ClientManager.from_unified_config()
+        self._vector_service = QdrantService(config, self._client_manager)
+        await self._vector_service.initialize()
+
+    async def _initialize_managers(self) -> None:
+        """Initialize embedding and cache managers."""
+        self._embedding_manager = await get_embedding_manager(self._client_manager)
+        self._cache_manager = await get_cache_manager(self._client_manager)
+
     async def cleanup(self) -> None:
         """Clean up all dependencies."""
         try:
-            # Function-based managers are cleaned up through client manager
-            if self._vector_service:
-                await self._vector_service.cleanup()
-
-            if self._client_manager:
-                await self._client_manager.cleanup()
-
-            self._initialized = False
-            logger.info("Dependency container cleaned up")
-
+            await self._perform_cleanup()
         except (OSError, AttributeError, ConnectionError, ImportError):
             logger.exception("Error during dependency cleanup")
+
+    async def _perform_cleanup(self) -> None:
+        """Perform dependency cleanup steps."""
+        # Function-based managers are cleaned up through client manager
+        if self._vector_service:
+            await self._vector_service.cleanup()
+
+        if self._client_manager:
+            await self._client_manager.cleanup()
+
+        self._initialized = False
+        logger.info("Dependency container cleaned up")
 
     @property
     def is_initialized(self) -> bool:
@@ -236,11 +255,9 @@ async def get_vector_service() -> QdrantService:
 
     """
     try:
-        container = get_container()
-        if not container.is_initialized:
-            _raise_vector_service_unavailable()
-        else:
-            return container.vector_service
+        return _get_service_from_container(
+            "vector_service", _raise_vector_service_unavailable
+        )
     except (OSError, AttributeError, ConnectionError, ImportError):
         logger.exception("Failed to get vector service")
         raise HTTPException(
@@ -268,11 +285,9 @@ async def get_embedding_manager_legacy() -> Any:
 
     """
     try:
-        container = get_container()
-        if not container.is_initialized:
-            _raise_embedding_service_unavailable()
-        else:
-            return container.embedding_manager
+        return _get_service_from_container(
+            "embedding_manager", _raise_embedding_service_unavailable
+        )
     except (OSError, AttributeError, ConnectionError, ImportError):
         logger.exception("Failed to get embedding manager")
         raise HTTPException(
@@ -300,11 +315,9 @@ async def get_cache_manager_legacy() -> Any:
 
     """
     try:
-        container = get_container()
-        if not container.is_initialized:
-            _raise_cache_service_unavailable()
-        else:
-            return container.cache_manager
+        return _get_service_from_container(
+            "cache_manager", _raise_cache_service_unavailable
+        )
     except (OSError, AttributeError, ConnectionError, ImportError):
         logger.exception("Failed to get cache manager")
         raise HTTPException(
@@ -332,17 +345,36 @@ def get_client_manager() -> ClientManager:
 
     """
     try:
-        container = get_container()
-        if not container.is_initialized:
-            _raise_client_manager_unavailable()
-        else:
-            return container.client_manager
+        return _get_service_from_container(
+            "client_manager", _raise_client_manager_unavailable
+        )
     except (OSError, AttributeError, ConnectionError, ImportError):
         logger.exception("Failed to get client manager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Client manager not available",
         ) from None
+
+
+def _get_service_from_container(
+    service_name: str, unavailable_handler: Callable
+) -> Any:
+    """Get service from container with availability check.
+
+    Args:
+        service_name: Name of the service attribute
+        unavailable_handler: Function to call if service unavailable
+
+    Returns:
+        Service instance
+
+    Raises:
+        HTTPException: If service is not available
+    """
+    container = get_container()
+    if not container.is_initialized:
+        unavailable_handler()
+    return getattr(container, service_name)
 
 
 def get_correlation_id_dependency(request: Request) -> str:

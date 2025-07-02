@@ -69,7 +69,9 @@ class EmbeddingServiceWithProtection:
         self.cache_manager = cache_manager
 
     async def generate_embedding(
-        self, text: str, model: str = "default"
+        self,
+        text: str,
+        model: str = "default",
     ) -> list[float]:
         """Generate embedding with caching and circuit breaker protection.
 
@@ -102,7 +104,9 @@ class EmbeddingServiceWithProtection:
         return [0.1] * 1536
 
     async def generate_batch_embeddings(
-        self, texts: list[str], model: str = "default"
+        self,
+        texts: list[str],
+        model: str = "default",
     ) -> list[list[float]]:
         """Generate embeddings for multiple texts with protection."""
         embeddings = []

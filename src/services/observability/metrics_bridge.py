@@ -137,6 +137,7 @@ class OpenTelemetryMetricsBridge:
         provider: str,
         model: str,
         duration_ms: float,
+        *,
         tokens_used: int | None = None,
         cost_usd: float | None = None,
         success: bool = True,
@@ -184,6 +185,7 @@ class OpenTelemetryMetricsBridge:
         query_type: str,
         duration_ms: float,
         results_count: int,
+        *,
         top_score: float | None = None,
         success: bool = True,
     ) -> None:
@@ -243,6 +245,7 @@ class OpenTelemetryMetricsBridge:
         operation: str,
         duration_ms: float,
         hit: bool,
+        *,
         cache_name: str = "default",
     ) -> None:
         """Record cache operation metrics.
@@ -279,6 +282,7 @@ class OpenTelemetryMetricsBridge:
         endpoint: str,
         status_code: int,
         duration_ms: float,
+        *,
         request_size_bytes: int | None = None,
         response_size_bytes: int | None = None,
     ) -> None:

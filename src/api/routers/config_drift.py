@@ -92,16 +92,20 @@ class DriftEventResponse(BaseModel):
 async def get_drift_status():
     """Get current status of the configuration drift detection service."""
     try:
-        with monitor_operation("api_config_drift_status", category="api"):
-            status = await get_drift_service_status()
-            return DriftServiceStatusResponse(**status)
-
+        return await _get_drift_status()
     except Exception as e:
         logger.exception("Failed to get drift service status")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve drift service status: {e!s}",
         ) from e
+
+
+async def _get_drift_status() -> DriftServiceStatusResponse:
+    """Get drift service status with monitoring."""
+    with monitor_operation("api_config_drift_status", category="api"):
+        status = await get_drift_service_status()
+        return DriftServiceStatusResponse(**status)
 
 
 @router.post(
@@ -117,26 +121,30 @@ async def run_drift_detection(
     if _request is None:
         _request = DriftDetectionRequest()
     try:
-        with monitor_operation("api_config_drift_detect", category="api"):
-            logger.info("Starting manual configuration drift detection via API")
-
-            # Run manual detection
-            results = await run_manual_drift_detection()
-
-            logger.info(
-                "Manual drift detection completed - snapshots: %s, drift events: %s",
-                results["snapshot_results"]["snapshots_taken"],
-                len(results["comparison_results"]["drift_events"]),
-            )
-
-            return DriftDetectionResponse(**results)
-
+        return await _run_drift_detection()
     except Exception as e:
         logger.exception("Manual drift detection failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to run drift detection: {e!s}",
         ) from e
+
+
+async def _run_drift_detection() -> DriftDetectionResponse:
+    """Run drift detection with monitoring and logging."""
+    with monitor_operation("api_config_drift_detect", category="api"):
+        logger.info("Starting manual configuration drift detection via API")
+
+        # Run manual detection
+        results = await run_manual_drift_detection()
+
+        logger.info(
+            "Manual drift detection completed - snapshots: %s, drift events: %s",
+            results["snapshot_results"]["snapshots_taken"],
+            len(results["comparison_results"]["drift_events"]),
+        )
+
+        return DriftDetectionResponse(**results)
 
 
 @router.get(

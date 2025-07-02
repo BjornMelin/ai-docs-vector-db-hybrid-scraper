@@ -56,60 +56,84 @@ class QdrantDocuments:
             # Process in batches
             for i in range(0, len(points), batch_size):
                 batch = points[i : i + batch_size]
+                batch_number = i // batch_size + 1
 
-                # Convert to PointStruct
-                point_structs = []
-                for point in batch:
-                    vectors = point.get("vector", {})
-                    if isinstance(vectors, list):
-                        vectors = {"dense": vectors}
-
-                    point_struct = models.PointStruct(
-                        id=point["id"],
-                        vector=vectors,
-                        payload=point.get("payload", {}),
-                    )
-                    point_structs.append(point_struct)
-
-                # Upsert batch
-                await self.client.upsert(
-                    collection_name=collection_name,
-                    points=point_structs,
-                    wait=True,
-                )
-
-                logger.info(
-                    "Upserted batch %d (%d points)",
-                    i // batch_size + 1,
-                    len(point_structs),
+                await self._upsert_single_batch(
+                    collection_name, batch, batch_number, batch_size
                 )
 
         except Exception as e:
             logger.exception("Operation failed")
-
-            error_msg = str(e).lower()
-            if "collection not found" in error_msg:
-                msg = (
-                    f"Collection '{collection_name}' not found. "
-                    "Create it before upserting."
-                )
-                raise QdrantServiceError(msg) from e
-            if "wrong vector size" in error_msg:
-                msg = (
-                    "Vector dimension mismatch. Check that vectors match "
-                    "collection configuration."
-                )
-                raise QdrantServiceError(msg) from e
-            if "payload too large" in error_msg:
-                msg = (
-                    f"Payload too large. Try reducing batch size "
-                    f"(current: {batch_size})."
-                )
-                raise QdrantServiceError(msg) from e
-            msg = f"Failed to upsert points: {e}"
-            raise QdrantServiceError(msg) from e
+            self._handle_upsert_error(e, collection_name, batch_size)
         else:
             return True
+
+    async def _upsert_single_batch(
+        self,
+        collection_name: str,
+        batch: list[dict[str, Any]],
+        batch_number: int,
+        batch_size: int,  # noqa: ARG002
+    ) -> None:
+        """Upsert a single batch of points."""
+        try:
+            point_structs = self._convert_to_point_structs(batch)
+        except Exception as e:
+            msg = f"Failed to convert batch {batch_number} to point structs: {e}"
+            raise QdrantServiceError(msg) from e
+
+        await self.client.upsert(
+            collection_name=collection_name,
+            points=point_structs,
+            wait=True,
+        )
+
+        logger.info(
+            "Upserted batch %d (%d points)",
+            batch_number,
+            len(point_structs),
+        )
+
+    def _convert_to_point_structs(
+        self, batch: list[dict[str, Any]]
+    ) -> list[models.PointStruct]:
+        """Convert batch points to PointStruct objects."""
+        point_structs = []
+        for point in batch:
+            vectors = point.get("vector", {})
+            if isinstance(vectors, list):
+                vectors = {"dense": vectors}
+
+            point_struct = models.PointStruct(
+                id=point["id"],
+                vector=vectors,
+                payload=point.get("payload", {}),
+            )
+            point_structs.append(point_struct)
+
+        return point_structs
+
+    def _handle_upsert_error(
+        self, e: Exception, collection_name: str, batch_size: int
+    ) -> None:
+        """Handle and re-raise upsert errors with appropriate messages."""
+        error_msg = str(e).lower()
+        if "collection not found" in error_msg:
+            msg = (
+                f"Collection '{collection_name}' not found. Create it before upserting."
+            )
+            raise QdrantServiceError(msg) from e
+        if "wrong vector size" in error_msg:
+            msg = (
+                "Vector dimension mismatch. Check that vectors match "
+                "collection configuration."
+            )
+            raise QdrantServiceError(msg) from e
+        if "payload too large" in error_msg:
+            msg = f"Payload too large. Try reducing batch size (current: {batch_size})."
+            raise QdrantServiceError(msg) from e
+        msg = f"Failed to upsert points: {e}"
+        raise QdrantServiceError(msg) from e
 
     async def get_points(
         self,

@@ -63,26 +63,29 @@ class HyDECache(BaseService):
             return
 
         try:
-            # Test cache connection
-            if hasattr(self.cache_manager, "initialize"):
-                await self.cache_manager.initialize()
-
-            # Verify cache is working
-            test_key = f"{self.config.cache_prefix}:test"
-            await self.cache_manager.set(test_key, "test_value", ttl=60)
-            test_value = await self.cache_manager.get(test_key)
-
-            if test_value != "test_value":
-                _raise_cache_test_failed()
-
-            await self.cache_manager.delete(test_key)
-
+            await self._initialize_cache_manager()
+            await self._test_cache_functionality()
             self._initialized = True
             logger.info("HyDE cache initialized")
-
         except Exception as e:
             msg = f"Failed to initialize HyDE cache: {e}"
             raise EmbeddingServiceError(msg) from e
+
+    async def _initialize_cache_manager(self) -> None:
+        """Initialize the cache manager."""
+        if hasattr(self.cache_manager, "initialize"):
+            await self.cache_manager.initialize()
+
+    async def _test_cache_functionality(self) -> None:
+        """Test cache functionality with a test key."""
+        test_key = f"{self.config.cache_prefix}:test"
+        await self.cache_manager.set(test_key, "test_value", ttl=60)
+        test_value = await self.cache_manager.get(test_key)
+
+        if test_value != "test_value":
+            _raise_cache_test_failed()
+
+        await self.cache_manager.delete(test_key)
 
     async def cleanup(self) -> None:
         """Cleanup cache resources."""
@@ -106,47 +109,59 @@ class HyDECache(BaseService):
         """
         self._validate_initialized()
 
-        try:
-            cache_key = self._get_embedding_cache_key(query, domain)
-            cached_data = await self.cache_manager.get(cache_key)
+        cache_key = self._get_embedding_cache_key(query, domain)
 
-            if cached_data is not None:
-                self.cache_hits += 1
+        # Try to get cached data
+        cached_data = await self._get_cached_embedding_data(cache_key)
+        if cached_data is None:
+            self.cache_misses += 1
+            return None
 
-                # Handle different cache formats
-                if isinstance(cached_data, dict) and "embedding" in cached_data:
-                    # Binary format
-                    if isinstance(cached_data["embedding"], bytes):
-                        embedding = np.frombuffer(
-                            cached_data["embedding"], dtype=np.float32
-                        ).tolist()
-                    else:
-                        embedding = cached_data["embedding"]
-                elif isinstance(cached_data, list):
-                    # Direct embedding format
-                    embedding = cached_data
-                else:
-                    logger.warning(
-                        f"Unexpected cache format for key {cache_key}"
-                    )  # TODO: Convert f-string to logging format
-                    self.cache_misses += 1
-                    return None
-
-                logger.debug(
-                    f"Cache hit for HyDE embedding: {query}"
-                )  # TODO: Convert f-string to logging format
-                return embedding
+        # Process cached data
+        embedding = await self._process_cached_embedding_data(
+            cached_data, cache_key, query
+        )
+        if embedding is not None:
+            self.cache_hits += 1
+        else:
             self.cache_misses += 1
 
+        return embedding
+
+    async def _get_cached_embedding_data(self, cache_key: str) -> Any | None:
+        """Get cached embedding data with error handling."""
+        try:
+            return await self.cache_manager.get(cache_key)
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
-            logger.warning(
-                f"Cache get error for HyDE embedding: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Cache get error for HyDE embedding: %s", e)
             return None
 
-        else:
+    async def _process_cached_embedding_data(
+        self, cached_data: Any, cache_key: str, query: str
+    ) -> list[float] | None:
+        """Process cached embedding data into embedding format."""
+        if cached_data is None:
             return None
+
+        # Handle different cache formats
+        if isinstance(cached_data, dict) and "embedding" in cached_data:
+            # Binary format
+            if isinstance(cached_data["embedding"], bytes):
+                embedding = np.frombuffer(
+                    cached_data["embedding"], dtype=np.float32
+                ).tolist()
+            else:
+                embedding = cached_data["embedding"]
+        elif isinstance(cached_data, list):
+            # Direct embedding format
+            embedding = cached_data
+        else:
+            logger.warning("Unexpected cache format for key %s", cache_key)
+            return None
+
+        logger.debug("Cache hit for HyDE embedding: %s", query)
+        return embedding
 
     async def set_hyde_embedding(
         self,
@@ -171,47 +186,63 @@ class HyDECache(BaseService):
         """
         self._validate_initialized()
 
+        cache_key = self._get_embedding_cache_key(query, domain)
+
+        # Prepare cache data
+        cache_data = await self._prepare_cache_data(
+            query, embedding, hypothetical_docs, generation_metadata, domain
+        )
+
+        # Store in cache
+        success = await self._store_hyde_embedding(cache_key, cache_data, query)
+        return success
+
+    async def _prepare_cache_data(
+        self,
+        query: str,
+        embedding: list[float],
+        hypothetical_docs: list[str],
+        generation_metadata: dict[str, Any] | None,
+        domain: str | None,
+    ) -> dict[str, Any]:
+        """Prepare cache data with binary encoding for embeddings."""
+        cache_data = {
+            "embedding": embedding,
+            "query": query,
+            "domain": domain,
+            "timestamp": time.time(),
+            "hypothetical_docs": hypothetical_docs
+            if self.config.cache_hypothetical_docs
+            else [],
+            "metadata": generation_metadata or {},
+        }
+
+        # Use binary format for embeddings to save space
+        if isinstance(embedding, list):
+            embedding_array = np.array(embedding, dtype=np.float32)
+            cache_data["embedding"] = embedding_array.tobytes()
+            cache_data["embedding_shape"] = embedding_array.shape
+            cache_data["embedding_dtype"] = str(embedding_array.dtype)
+
+        return cache_data
+
+    async def _store_hyde_embedding(
+        self, cache_key: str, cache_data: dict[str, Any], query: str
+    ) -> bool:
+        """Store HyDE embedding in cache with error handling."""
         try:
-            cache_key = self._get_embedding_cache_key(query, domain)
-
-            # Prepare cache data
-            cache_data = {
-                "embedding": embedding,
-                "query": query,
-                "domain": domain,
-                "timestamp": time.time(),
-                "hypothetical_docs": hypothetical_docs
-                if self.config.cache_hypothetical_docs
-                else [],
-                "metadata": generation_metadata or {},
-            }
-
-            # Use binary format for embeddings to save space
-            if isinstance(embedding, list):
-                embedding_array = np.array(embedding, dtype=np.float32)
-                cache_data["embedding"] = embedding_array.tobytes()
-                cache_data["embedding_shape"] = embedding_array.shape
-                cache_data["embedding_dtype"] = str(embedding_array.dtype)
-
             success = await self.cache_manager.set(
                 cache_key, cache_data, ttl=self.config.cache_ttl_seconds
             )
 
             if success:
                 self.cache_sets += 1
-                logger.debug(
-                    f"Cached HyDE embedding for query: {query}"
-                )  # TODO: Convert f-string to logging format
-
+                logger.debug("Cached HyDE embedding for query: %s", query)
+            return success
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
-            logger.warning(
-                f"Cache set error for HyDE embedding: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Cache set error for HyDE embedding: %s", e)
             return False
-
-        else:
-            return success
 
     async def get_hypothetical_documents(
         self, query: str, domain: str | None = None
@@ -231,26 +262,28 @@ class HyDECache(BaseService):
 
         self._validate_initialized()
 
+        cache_key = self._get_documents_cache_key(query, domain)
+        cached_docs = await self._get_cached_documents(cache_key, query)
+
+        if cached_docs is not None:
+            self.cache_hits += 1
+            return cached_docs
+
+        self.cache_misses += 1
+        return None
+
+    async def _get_cached_documents(
+        self, cache_key: str, query: str
+    ) -> list[str] | None:
+        """Get cached documents with error handling."""
         try:
-            cache_key = self._get_documents_cache_key(query, domain)
             cached_docs = await self.cache_manager.get(cache_key)
-
             if cached_docs is not None:
-                self.cache_hits += 1
-                logger.debug(
-                    f"Cache hit for hypothetical documents: {query}"
-                )  # TODO: Convert f-string to logging format
-                return cached_docs
-            self.cache_misses += 1
-
+                logger.debug("Cache hit for hypothetical documents: %s", query)
+            return cached_docs
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
-            logger.warning(
-                f"Cache get error for hypothetical documents: {e}"
-            )  # TODO: Convert f-string to logging format
-            return None
-
-        else:
+            logger.warning("Cache get error for hypothetical documents: %s", e)
             return None
 
     async def set_hypothetical_documents(
@@ -277,38 +310,38 @@ class HyDECache(BaseService):
 
         self._validate_initialized()
 
+        cache_key = self._get_documents_cache_key(query, domain)
+
+        cache_data = {
+            "documents": documents,
+            "query": query,
+            "domain": domain,
+            "timestamp": time.time(),
+            "generation_time": generation_result.generation_time,
+            "tokens_used": generation_result.tokens_used,
+            "diversity_score": generation_result.diversity_score,
+        }
+
+        success = await self._store_hypothetical_documents(cache_key, cache_data, query)
+        return success
+
+    async def _store_hypothetical_documents(
+        self, cache_key: str, cache_data: dict[str, Any], query: str
+    ) -> bool:
+        """Store hypothetical documents in cache with error handling."""
         try:
-            cache_key = self._get_documents_cache_key(query, domain)
-
-            cache_data = {
-                "documents": documents,
-                "query": query,
-                "domain": domain,
-                "timestamp": time.time(),
-                "generation_time": generation_result.generation_time,
-                "tokens_used": generation_result.tokens_used,
-                "diversity_score": generation_result.diversity_score,
-            }
-
             success = await self.cache_manager.set(
                 cache_key, cache_data, ttl=self.config.cache_ttl_seconds
             )
 
             if success:
                 self.cache_sets += 1
-                logger.debug(
-                    f"Cached hypothetical documents for query: {query}"
-                )  # TODO: Convert f-string to logging format
-
+                logger.debug("Cached hypothetical documents for query: %s", query)
+            return success
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
-            logger.warning(
-                f"Cache set error for hypothetical documents: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Cache set error for hypothetical documents: %s", e)
             return False
-
-        else:
-            return success
 
     async def get_search_results(
         self, query: str, collection_name: str, search_params: dict[str, Any]
@@ -326,28 +359,28 @@ class HyDECache(BaseService):
         """
         self._validate_initialized()
 
+        cache_key = self._get_results_cache_key(query, collection_name, search_params)
+        cached_results = await self._get_cached_search_results(cache_key, query)
+
+        if cached_results is not None:
+            self.cache_hits += 1
+            return cached_results
+
+        self.cache_misses += 1
+        return None
+
+    async def _get_cached_search_results(
+        self, cache_key: str, query: str
+    ) -> list[dict[str, Any]] | None:
+        """Get cached search results with error handling."""
         try:
-            cache_key = self._get_results_cache_key(
-                query, collection_name, search_params
-            )
             cached_results = await self.cache_manager.get(cache_key)
-
             if cached_results is not None:
-                self.cache_hits += 1
-                logger.debug(
-                    f"Cache hit for search results: {query}"
-                )  # TODO: Convert f-string to logging format
-                return cached_results
-            self.cache_misses += 1
-
+                logger.debug("Cache hit for search results: %s", query)
+            return cached_results
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
-            logger.warning(
-                f"Cache get error for search results: {e}"
-            )  # TODO: Convert f-string to logging format
-            return None
-
-        else:
+            logger.warning("Cache get error for search results: %s", e)
             return None
 
     async def set_search_results(
@@ -373,40 +406,38 @@ class HyDECache(BaseService):
         """
         self._validate_initialized()
 
+        cache_key = self._get_results_cache_key(query, collection_name, search_params)
+
+        cache_data = {
+            "results": results,
+            "query": query,
+            "collection_name": collection_name,
+            "search_params": search_params,
+            "timestamp": time.time(),
+            "metadata": search_metadata or {},
+        }
+
+        # Use shorter TTL for search results
+        ttl = min(self.config.cache_ttl_seconds // 2, 1800)  # Max 30 minutes
+
+        success = await self._store_search_results(cache_key, cache_data, ttl, query)
+        return success
+
+    async def _store_search_results(
+        self, cache_key: str, cache_data: dict[str, Any], ttl: int, query: str
+    ) -> bool:
+        """Store search results in cache with error handling."""
         try:
-            cache_key = self._get_results_cache_key(
-                query, collection_name, search_params
-            )
-
-            cache_data = {
-                "results": results,
-                "query": query,
-                "collection_name": collection_name,
-                "search_params": search_params,
-                "timestamp": time.time(),
-                "metadata": search_metadata or {},
-            }
-
-            # Use shorter TTL for search results
-            ttl = min(self.config.cache_ttl_seconds // 2, 1800)  # Max 30 minutes
-
             success = await self.cache_manager.set(cache_key, cache_data, ttl=ttl)
 
             if success:
                 self.cache_sets += 1
-                logger.debug(
-                    f"Cached search results for query: {query}"
-                )  # TODO: Convert f-string to logging format
-
+                logger.debug("Cached search results for query: %s", query)
+            return success
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.cache_errors += 1
-            logger.warning(
-                f"Cache set error for search results: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Cache set error for search results: %s", e)
             return False
-
-        else:
-            return success
 
     async def warm_cache(
         self, common_queries: list[str], domain: str | None = None

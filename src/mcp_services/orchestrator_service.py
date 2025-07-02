@@ -113,18 +113,28 @@ class OrchestratorService:
         # Wait for all services to initialize
         for service_name, service, task in tasks:
             try:
-                await task
-                if service_name == "search":
-                    self.search_service = service
-                elif service_name == "document":
-                    self.document_service = service
-                elif service_name == "analytics":
-                    self.analytics_service = service
-                elif service_name == "system":
-                    self.system_service = service
-                logger.info("Initialized %s service", service_name)
+                await self._initialize_single_service(service_name, service, task)
             except (ImportError, ValueError, RuntimeError, AttributeError):
                 logger.exception("Failed to initialize {service_name} service")
+
+    async def _initialize_single_service(
+        self, service_name: str, service, task
+    ) -> None:
+        """Initialize a single service and assign it to the appropriate attribute."""
+        await task
+        if service_name == "search":
+            self.search_service = service
+        elif service_name == "document":
+            self.document_service = service
+        elif service_name == "analytics":
+            self.analytics_service = service
+        elif service_name == "system":
+            self.system_service = service
+        logger.info("Initialized %s service", service_name)
+
+    async def _get_service_info_safely(self, service) -> dict:
+        """Get service info safely with error handling."""
+        return await service.get_service_info()
 
     async def _initialize_agentic_orchestration(self) -> None:
         """Initialize agentic orchestration components."""
@@ -210,8 +220,9 @@ class OrchestratorService:
             for service_name, service in services:
                 if service:
                     try:
-                        service_info = await service.get_service_info()
-                        capabilities["services"][service_name] = service_info
+                        capabilities["services"][
+                            service_name
+                        ] = await self._get_service_info_safely(service)
                     except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                         capabilities["services"][service_name] = {
                             "status": "error",

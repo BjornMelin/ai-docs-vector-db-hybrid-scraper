@@ -66,24 +66,21 @@ class TierRateLimiter:
 
         """
         if tier not in self.tier_configs:
-            logger.warning(
-                f"Unknown tier {tier}, allowing request"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Unknown tier %s, allowing request", tier)
             return True
 
         config = self.tier_configs[tier]
         if not config.enabled:
-            logger.warning(
-                f"Tier {tier} is disabled"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Tier %s is disabled", tier)
             return False
 
         # Check rate limit
         if not await self._check_rate_limit(tier):
             self.rate_limit_hits[tier] += 1
             logger.warning(
-                f"Rate limit exceeded for {tier} "
-                f"(total hits: {self.rate_limit_hits[tier]})"
+                "Rate limit exceeded for %s (total hits: %d)",
+                tier,
+                self.rate_limit_hits[tier],
             )
             return False
 
@@ -106,8 +103,9 @@ class TierRateLimiter:
                     return True
             except TimeoutError:
                 logger.warning(
-                    f"Timeout waiting for {tier} rate limiter "
-                    f"(concurrent: {self.concurrent_requests[tier]})"
+                    "Timeout waiting for %s rate limiter (concurrent: %d)",
+                    tier,
+                    self.concurrent_requests[tier],
                 )
                 return False
 
@@ -251,9 +249,7 @@ class TierRateLimiter:
         """
         wait_time = self.get_wait_time(tier)
         if wait_time > 0:
-            logger.info(
-                f"Rate limit reached for {tier}, waiting {wait_time:.1f}s"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Rate limit reached for %s, waiting %.1fs", tier, wait_time)
             await asyncio.sleep(wait_time)
 
     def reset_tier(self, tier: str) -> None:
@@ -266,9 +262,7 @@ class TierRateLimiter:
         self.request_history[tier].clear()
         self.concurrent_requests[tier] = 0
         self.rate_limit_hits[tier] = 0
-        logger.info(
-            f"Reset rate limiter for tier {tier}"
-        )  # TODO: Convert f-string to logging format
+        logger.info("Reset rate limiter for tier %s", tier)
 
     def reset_all(self) -> None:
         """Reset all rate limit tracking."""

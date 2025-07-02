@@ -47,30 +47,34 @@ async def search_documents(request: SimpleSearchRequest) -> SimpleSearchResponse
     like reranking, query expansion, or hybrid search.
     """
     try:
-        # Get search service
-        search_service = await get_service("search_service")
-
-        # Convert to internal search request
-        internal_request = SearchRequest(
-            query=request.query,
-            limit=request.limit,
-            collection_name=request.collection_name,
-        )
-
-        # Perform search
-        response = await search_service.search(internal_request)
-
-        # Convert to simple response
-        return SimpleSearchResponse(
-            query=response.query,
-            results=response.results,
-            total_count=response.total_count,
-            processing_time_ms=response.processing_time_ms,
-        )
-
+        return await _perform_search(request)
     except Exception as e:
         logger.exception("Search failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+async def _perform_search(request: SimpleSearchRequest) -> SimpleSearchResponse:
+    """Perform search with service lookup and response conversion."""
+    # Get search service
+    search_service = await get_service("search_service")
+
+    # Convert to internal search request
+    internal_request = SearchRequest(
+        query=request.query,
+        limit=request.limit,
+        collection_name=request.collection_name,
+    )
+
+    # Perform search
+    response = await search_service.search(internal_request)
+
+    # Convert to simple response
+    return SimpleSearchResponse(
+        query=response.query,
+        results=response.results,
+        total_count=response.total_count,
+        processing_time_ms=response.processing_time_ms,
+    )
 
 
 @router.get("/search")
@@ -92,17 +96,22 @@ async def search_documents_get(
 async def search_health() -> dict[str, Any]:
     """Get search service health status."""
     try:
-        search_service = await get_service("search_service")
-        stats = search_service.get_search_stats()
+        stats = await _get_search_stats()
     except Exception as e:
         logger.exception("Search health check failed")
         return {
             "status": "unhealthy",
             "error": str(e),
         }
-    else:
-        return {
-            "status": "healthy",
-            "service_type": "simple",
-            "stats": stats,
-        }
+
+    return {
+        "status": "healthy",
+        "service_type": "simple",
+        "stats": stats,
+    }
+
+
+async def _get_search_stats() -> dict[str, Any]:
+    """Get search service statistics."""
+    search_service = await get_service("search_service")
+    return search_service.get_search_stats()

@@ -634,8 +634,7 @@ def _apply_linear_fusion(
 
     # Process text results
     for point in text_points:
-        doc_id = point.get("id")
-        if doc_id in combined:
+        if (doc_id := point.get("id")) in combined:
             combined[doc_id]["text_score"] = point.get("text_score", 0.0)
         else:
             combined[doc_id] = {
@@ -680,8 +679,7 @@ def _calculate_fusion_confidence(results: list[dict]) -> float:
     if not results:
         return 0.0
 
-    scores = [r.get("fused_score", 0.0) for r in results]
-    if not scores:
+    if not (scores := [r.get("fused_score", 0.0) for r in results]):
         return 0.0
 
     # Simple confidence based on score distribution

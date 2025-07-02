@@ -1,12 +1,25 @@
 """Embedding manager service coordinator."""
 
 import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Optional
 
 from dependency_injector.wiring import Provide, inject
 
 from src.infrastructure.container import ApplicationContainer
 from src.services.errors import EmbeddingServiceError
+
+
+@dataclass
+class EmbeddingOptions:
+    """Configuration options for embedding generation."""
+
+    quality_tier: str | None = None
+    provider_name: str | None = None
+    max_cost: float | None = None
+    speed_priority: bool = False
+    auto_select: bool = True
+    generate_sparse: bool = False
 
 
 if TYPE_CHECKING:
@@ -83,7 +96,7 @@ class EmbeddingManager:
 
         except Exception as e:
             logger.exception(
-                "Failed to initialize EmbeddingManager: "
+                "Failed to initialize EmbeddingManager: ",
             )  # TODO: Convert f-string to logging format
             msg = f"Failed to initialize embedding manager: {e}"
             raise EmbeddingServiceError(msg) from e
@@ -100,23 +113,13 @@ class EmbeddingManager:
     async def generate_embeddings(
         self,
         texts: list[str],
-        quality_tier: str | None = None,
-        provider_name: str | None = None,
-        max_cost: float | None = None,
-        speed_priority: bool = False,
-        auto_select: bool = True,
-        generate_sparse: bool = False,
+        options: EmbeddingOptions | None = None,
     ) -> dict[str, Any]:
         """Generate embeddings with smart provider selection.
 
         Args:
             texts: Text strings to embed
-            quality_tier: Quality tier (FAST, BALANCED, BEST)
-            provider_name: Explicit provider (openai or fastembed)
-            max_cost: Optional maximum cost constraint
-            speed_priority: Whether to prioritize speed over quality
-            auto_select: Use smart selection or legacy logic
-            generate_sparse: Whether to generate sparse embeddings
+            options: Configuration options for embedding generation
 
         Returns:
             Dictionary containing embeddings and metadata
@@ -128,10 +131,14 @@ class EmbeddingManager:
             msg = "Embedding manager not initialized"
             raise EmbeddingServiceError(msg)
 
+        # Use default options if none provided
+        if options is None:
+            options = EmbeddingOptions()
+
         try:
             # Convert quality tier string to enum if provided
             tier = None
-            if quality_tier:
+            if options.quality_tier:
                 if QualityTier is None:
                     _raise_quality_tier_not_available()
 
@@ -140,26 +147,28 @@ class EmbeddingManager:
                     "BALANCED": QualityTier.BALANCED,
                     "BEST": QualityTier.BEST,
                 }
-                tier = tier_map.get(quality_tier.upper())
+                tier = tier_map.get(options.quality_tier.upper())
 
             return await self._core_manager.generate_embeddings(
                 texts=texts,
                 quality_tier=tier,
-                provider_name=provider_name,
-                max_cost=max_cost,
-                speed_priority=speed_priority,
-                auto_select=auto_select,
-                generate_sparse=generate_sparse,
+                provider_name=options.provider_name,
+                max_cost=options.max_cost,
+                speed_priority=options.speed_priority,
+                auto_select=options.auto_select,
+                generate_sparse=options.generate_sparse,
             )
         except Exception as e:
             logger.exception(
-                "Embedding generation failed: "
+                "Embedding generation failed: ",
             )  # TODO: Convert f-string to logging format
             msg = f"Embedding generation failed: {e}"
             raise EmbeddingServiceError(msg) from e
 
     async def rerank_results(
-        self, query: str, results: list[dict[str, Any]]
+        self,
+        query: str,
+        results: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
         """Rerank search results using BGE reranker.
 
@@ -181,7 +190,7 @@ class EmbeddingManager:
             return await self._core_manager.rerank_results(query, results)
         except Exception:
             logger.exception(
-                "Result reranking failed: "
+                "Result reranking failed: ",
             )  # TODO: Convert f-string to logging format
             # Return original results on failure
             return results
@@ -249,7 +258,9 @@ class EmbeddingManager:
             raise EmbeddingServiceError(msg)
 
         return await self._core_manager.get_optimal_provider(
-            text_length, quality_required, budget_limit
+            text_length,
+            quality_required,
+            budget_limit,
         )
 
     def analyze_text_characteristics(self, texts: list[str]) -> dict[str, Any]:
@@ -329,7 +340,10 @@ class EmbeddingManager:
             tier = tier_map.get(quality_tier.upper())
 
         return self._core_manager.get_smart_provider_recommendation(
-            analysis, tier, max_cost, speed_priority
+            analysis,
+            tier,
+            max_cost,
+            speed_priority,
         )
 
     def get_usage_report(self) -> dict[str, Any]:
@@ -365,7 +379,7 @@ class EmbeddingManager:
                 status["usage"] = self.get_usage_report()
             except (ValueError, TypeError, UnicodeDecodeError) as e:
                 logger.warning(
-                    f"Failed to get embedding status: {e}"
+                    f"Failed to get embedding status: {e}",
                 )  # TODO: Convert f-string to logging format
                 status["error"] = str(e)
 

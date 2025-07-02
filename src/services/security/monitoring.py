@@ -165,6 +165,7 @@ class SecurityMonitor:
     def log_security_event(
         self,
         event_type: str,
+        *,
         request: Request | None = None,
         event_data: dict[str, Any] | None = None,
         severity: str | None = None,
@@ -493,8 +494,8 @@ class SecurityMonitor:
         """
         self.log_security_event(
             SecurityEventType.RATE_LIMIT_EXCEEDED.value,
-            request,
-            {
+            request=request,
+            event_data={
                 "rate_limit": limit,
                 "endpoint": request.url.path,
                 "method": request.method,
@@ -529,8 +530,8 @@ class SecurityMonitor:
         if hash(request.url.path) % 100 == 0:  # Log 1% of successful requests
             self.log_security_event(
                 SecurityEventType.REQUEST_SUCCESS.value,
-                request,
-                {
+                request=request,
+                event_data={
                     "processing_time": processing_time,
                     "endpoint": request.url.path,
                     "method": request.method,

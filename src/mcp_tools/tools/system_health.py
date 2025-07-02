@@ -55,85 +55,14 @@ def register_tools(mcp, client_manager: ClientManager):
             Comprehensive health assessment with autonomous diagnostics
         """
         try:
-            if ctx:
-                await ctx.info(
-                    f"Starting comprehensive health assessment: scope={assessment_scope}"
-                )
-
-            # Core system health check
-            core_health = await _assess_core_system_health(client_manager, ctx)
-
-            # Service-specific health checks
-            service_health = await _assess_service_health(assessment_scope, ctx)
-
-            # Infrastructure health monitoring
-            infrastructure_health = await _assess_infrastructure_health(ctx)
-
-            # Performance analysis if enabled
-            performance_analysis = {}
-            if include_performance:
-                performance_analysis = await _perform_performance_analysis(
-                    deep_analysis, ctx
-                )
-
-            # Security assessment if enabled
-            security_assessment = {}
-            if include_security:
-                security_assessment = await _perform_security_assessment(ctx)
-
-            # ML-powered diagnostics if deep analysis enabled
-            ml_diagnostics = {}
-            if deep_analysis:
-                ml_diagnostics = await _perform_ml_diagnostics(
-                    core_health, service_health, infrastructure_health, ctx
-                )
-
-            # Calculate overall health score
-            health_score = await _calculate_overall_health_score(
-                core_health,
-                service_health,
-                infrastructure_health,
-                performance_analysis,
-                security_assessment,
+            return await _execute_comprehensive_health_assessment(
+                assessment_scope,
+                include_performance,
+                include_security,
+                deep_analysis,
                 ctx,
+                client_manager,
             )
-
-            # Generate autonomous recommendations
-            recommendations = await _generate_health_recommendations(
-                core_health, service_health, infrastructure_health, health_score, ctx
-            )
-
-            final_results = {
-                "success": True,
-                "assessment_scope": assessment_scope,
-                "overall_health_score": health_score,
-                "core_health": core_health,
-                "service_health": service_health,
-                "infrastructure_health": infrastructure_health,
-                "autonomous_recommendations": recommendations,
-                "assessment_metadata": {
-                    "assessment_timestamp": _get_timestamp(),
-                    "deep_analysis_enabled": deep_analysis,
-                    "performance_included": include_performance,
-                    "security_included": include_security,
-                    "diagnostic_confidence": 0.91,
-                },
-            }
-
-            if include_performance:
-                final_results["performance_analysis"] = performance_analysis
-
-            if include_security:
-                final_results["security_assessment"] = security_assessment
-
-            if deep_analysis:
-                final_results["ml_diagnostics"] = ml_diagnostics
-
-            if ctx:
-                await ctx.info(
-                    f"Health assessment completed: overall score {health_score['score']:.2f}/1.0"
-                )
-
         except Exception as e:
             logger.exception("Failed to perform comprehensive health assessment")
             if ctx:
@@ -143,9 +72,6 @@ def register_tools(mcp, client_manager: ClientManager):
                 "error": str(e),
                 "assessment_scope": assessment_scope,
             }
-
-        else:
-            return final_results
 
     @mcp.tool()
     async def autonomous_self_healing(
@@ -171,83 +97,13 @@ def register_tools(mcp, client_manager: ClientManager):
             Self-healing results with applied remediation actions
         """
         try:
-            if ctx:
-                await ctx.info(
-                    f"Starting autonomous self-healing: scope={healing_scope}, safety_mode={safety_mode}"
-                )
-
-            # Detect issues requiring healing
-            issue_detection = await _detect_issues_for_healing(healing_scope, ctx)
-
-            if not issue_detection["issues_detected"]:
-                return {
-                    "success": True,
-                    "healing_scope": healing_scope,
-                    "issues_detected": False,
-                    "message": "No issues detected requiring self-healing",
-                    "system_status": "healthy",
-                }
-
-            # Analyze root causes
-            root_cause_analysis = await _perform_root_cause_analysis(
-                issue_detection["detected_issues"], ctx
-            )
-
-            # Generate healing plan
-            healing_plan = await _generate_healing_plan(
-                root_cause_analysis, safety_mode, max_healing_actions, ctx
-            )
-
-            # Apply healing actions if approved
-            healing_results = {}
-            if not require_confirmation or healing_plan["auto_approved"]:
-                healing_results = await _apply_healing_actions(
-                    healing_plan, safety_mode, ctx
-                )
-            else:
-                healing_results = {
-                    "applied": False,
-                    "reason": "User confirmation required",
-                    "pending_actions": len(healing_plan["planned_actions"]),
-                }
-
-            # Validate healing effectiveness
-            validation_results = await _validate_healing_effectiveness(
-                issue_detection["detected_issues"], healing_results, ctx
-            )
-
-            # Generate healing insights
-            healing_insights = await _generate_healing_insights(
-                issue_detection,
-                root_cause_analysis,
-                healing_results,
-                validation_results,
+            return await _execute_autonomous_self_healing(
+                healing_scope,
+                safety_mode,
+                max_healing_actions,
+                require_confirmation,
                 ctx,
             )
-
-            final_results = {
-                "success": True,
-                "healing_scope": healing_scope,
-                "issues_detected": True,
-                "issue_detection": issue_detection,
-                "root_cause_analysis": root_cause_analysis,
-                "healing_plan": healing_plan,
-                "healing_results": healing_results,
-                "validation_results": validation_results,
-                "healing_insights": healing_insights,
-                "healing_metadata": {
-                    "safety_mode_enabled": safety_mode,
-                    "max_actions_limit": max_healing_actions,
-                    "confirmation_required": require_confirmation,
-                    "healing_confidence": 0.88,
-                },
-            }
-
-            if ctx:
-                await ctx.info(
-                    f"Self-healing completed: {len(healing_results.get('applied_actions', []))} actions applied"
-                )
-
         except Exception as e:
             logger.exception("Failed to perform autonomous self-healing")
             if ctx:
@@ -257,9 +113,6 @@ def register_tools(mcp, client_manager: ClientManager):
                 "error": str(e),
                 "healing_scope": healing_scope,
             }
-
-        else:
-            return final_results
 
     @mcp.tool()
     async def predictive_health_monitoring(
@@ -285,79 +138,14 @@ def register_tools(mcp, client_manager: ClientManager):
             Predictive monitoring results with forecasts and anomaly detection
         """
         try:
-            if ctx:
-                await ctx.info(
-                    f"Starting predictive health monitoring: horizon={prediction_horizon}"
-                )
-
-            # Collect current metrics baseline
-            metrics_baseline = await _collect_metrics_baseline(client_manager, ctx)
-
-            # Perform anomaly detection if enabled
-            anomaly_results = {}
-            if anomaly_detection:
-                anomaly_results = await _perform_anomaly_detection(
-                    metrics_baseline, ctx
-                )
-
-            # Generate trend analysis if enabled
-            trend_results = {}
-            if trend_analysis:
-                trend_results = await _perform_trend_analysis(
-                    metrics_baseline, prediction_horizon, ctx
-                )
-
-            # Generate health predictions
-            health_predictions = await _generate_health_predictions(
-                metrics_baseline, prediction_horizon, alert_thresholds, ctx
-            )
-
-            # Calculate risk assessment
-            risk_assessment = await _calculate_health_risk_assessment(
-                metrics_baseline,
-                anomaly_results,
-                trend_results,
-                health_predictions,
+            return await _execute_predictive_health_monitoring(
+                prediction_horizon,
+                anomaly_detection,
+                trend_analysis,
+                alert_thresholds,
                 ctx,
+                client_manager,
             )
-
-            # Generate predictive alerts
-            predictive_alerts = await _generate_predictive_alerts(
-                health_predictions, risk_assessment, alert_thresholds, ctx
-            )
-
-            # Generate monitoring insights
-            monitoring_insights = await _generate_monitoring_insights(
-                metrics_baseline, anomaly_results, trend_results, risk_assessment, ctx
-            )
-
-            final_results = {
-                "success": True,
-                "prediction_horizon": prediction_horizon,
-                "metrics_baseline": metrics_baseline,
-                "health_predictions": health_predictions,
-                "risk_assessment": risk_assessment,
-                "predictive_alerts": predictive_alerts,
-                "monitoring_insights": monitoring_insights,
-                "monitoring_metadata": {
-                    "anomaly_detection_enabled": anomaly_detection,
-                    "trend_analysis_enabled": trend_analysis,
-                    "custom_thresholds": bool(alert_thresholds),
-                    "prediction_confidence": 0.86,
-                },
-            }
-
-            if anomaly_detection:
-                final_results["anomaly_results"] = anomaly_results
-
-            if trend_analysis:
-                final_results["trend_results"] = trend_results
-
-            if ctx:
-                await ctx.info(
-                    f"Predictive monitoring completed: {len(predictive_alerts.get('alerts', []))} alerts generated"
-                )
-
         except Exception as e:
             logger.exception("Failed to perform predictive health monitoring")
             if ctx:
@@ -367,9 +155,6 @@ def register_tools(mcp, client_manager: ClientManager):
                 "error": str(e),
                 "prediction_horizon": prediction_horizon,
             }
-
-        else:
-            return final_results
 
     @mcp.tool()
     async def get_system_health_capabilities() -> dict[str, Any]:
@@ -434,6 +219,486 @@ def register_tools(mcp, client_manager: ClientManager):
 
 
 # Helper functions
+
+
+async def _execute_comprehensive_health_assessment(
+    assessment_scope: str,
+    include_performance: bool,
+    include_security: bool,
+    deep_analysis: bool,
+    ctx,
+    client_manager,
+) -> dict[str, Any]:
+    """Execute comprehensive health assessment with organized error handling."""
+    if ctx:
+        await ctx.info(
+            f"Starting comprehensive health assessment: scope={assessment_scope}"
+        )
+
+    # Core system health check
+    core_health = await _assess_core_system_health(client_manager, ctx)
+
+    # Service-specific health checks
+    service_health = await _assess_service_health(assessment_scope, ctx)
+
+    # Infrastructure health monitoring
+    infrastructure_health = await _assess_infrastructure_health(ctx)
+
+    # Optional components with separate error handling
+    performance_analysis = await _get_performance_analysis_if_enabled(
+        include_performance, deep_analysis, ctx
+    )
+    security_assessment = await _get_security_assessment_if_enabled(
+        include_security, ctx
+    )
+    ml_diagnostics = await _get_ml_diagnostics_if_enabled(
+        deep_analysis, core_health, service_health, infrastructure_health, ctx
+    )
+
+    # Generate final results
+    return await _build_health_assessment_results(
+        assessment_scope,
+        core_health,
+        service_health,
+        infrastructure_health,
+        performance_analysis,
+        security_assessment,
+        ml_diagnostics,
+        include_performance,
+        include_security,
+        deep_analysis,
+        ctx,
+    )
+
+
+async def _execute_autonomous_self_healing(
+    healing_scope: str,
+    safety_mode: bool,
+    max_healing_actions: int,
+    require_confirmation: bool,
+    ctx,
+) -> dict[str, Any]:
+    """Execute autonomous self-healing with organized error handling."""
+    if ctx:
+        await ctx.info(
+            f"Starting autonomous self-healing: scope={healing_scope}, safety_mode={safety_mode}"
+        )
+
+    # Detect issues requiring healing
+    issue_detection = await _detect_issues_for_healing(healing_scope, ctx)
+
+    if not issue_detection["issues_detected"]:
+        return {
+            "success": True,
+            "healing_scope": healing_scope,
+            "issues_detected": False,
+            "message": "No issues detected requiring self-healing",
+            "system_status": "healthy",
+        }
+
+    # Process healing workflow
+    return await _process_healing_workflow(
+        issue_detection,
+        healing_scope,
+        safety_mode,
+        max_healing_actions,
+        require_confirmation,
+        ctx,
+    )
+
+
+async def _execute_predictive_health_monitoring(
+    prediction_horizon: str,
+    anomaly_detection: bool,
+    trend_analysis: bool,
+    alert_thresholds: dict[str, float] | None,
+    ctx,
+    client_manager,
+) -> dict[str, Any]:
+    """Execute predictive health monitoring with organized error handling."""
+    if ctx:
+        await ctx.info(
+            f"Starting predictive health monitoring: horizon={prediction_horizon}"
+        )
+
+    # Collect current metrics baseline
+    metrics_baseline = await _collect_metrics_baseline(client_manager, ctx)
+
+    # Perform optional analysis components
+    anomaly_results = await _get_anomaly_results_if_enabled(
+        anomaly_detection, metrics_baseline, ctx
+    )
+    trend_results = await _get_trend_results_if_enabled(
+        trend_analysis, metrics_baseline, prediction_horizon, ctx
+    )
+
+    # Generate predictions and assessments
+    return await _build_predictive_monitoring_results(
+        prediction_horizon,
+        metrics_baseline,
+        anomaly_detection,
+        trend_analysis,
+        anomaly_results,
+        trend_results,
+        alert_thresholds,
+        ctx,
+    )
+
+
+async def _get_performance_analysis_if_enabled(
+    include_performance: bool, deep_analysis: bool, ctx
+) -> dict[str, Any]:
+    """Get performance analysis if enabled with separate error handling."""
+    if not include_performance:
+        return {}
+
+    try:
+        return await _perform_performance_analysis(deep_analysis, ctx)
+    except Exception as e:
+        logger.warning(f"Performance analysis failed: {e}")
+        return {}
+
+
+async def _get_security_assessment_if_enabled(
+    include_security: bool, ctx
+) -> dict[str, Any]:
+    """Get security assessment if enabled with separate error handling."""
+    if not include_security:
+        return {}
+
+    try:
+        return await _perform_security_assessment(ctx)
+    except Exception as e:
+        logger.warning(f"Security assessment failed: {e}")
+        return {}
+
+
+async def _get_ml_diagnostics_if_enabled(
+    deep_analysis: bool,
+    core_health: dict,
+    service_health: dict,
+    infrastructure_health: dict,
+    ctx,
+) -> dict[str, Any]:
+    """Get ML diagnostics if enabled with separate error handling."""
+    if not deep_analysis:
+        return {}
+
+    try:
+        return await _perform_ml_diagnostics(
+            core_health, service_health, infrastructure_health, ctx
+        )
+    except Exception as e:
+        logger.warning(f"ML diagnostics failed: {e}")
+        return {}
+
+
+async def _build_health_assessment_results(
+    assessment_scope: str,
+    core_health: dict,
+    service_health: dict,
+    infrastructure_health: dict,
+    performance_analysis: dict,
+    security_assessment: dict,
+    ml_diagnostics: dict,
+    include_performance: bool,
+    include_security: bool,
+    deep_analysis: bool,
+    ctx,
+) -> dict[str, Any]:
+    """Build final health assessment results."""
+    # Calculate overall health score
+    health_score = await _calculate_overall_health_score(
+        core_health,
+        service_health,
+        infrastructure_health,
+        performance_analysis,
+        security_assessment,
+        ctx,
+    )
+
+    # Generate autonomous recommendations
+    recommendations = await _generate_health_recommendations(
+        core_health, service_health, infrastructure_health, health_score, ctx
+    )
+
+    final_results = {
+        "success": True,
+        "assessment_scope": assessment_scope,
+        "overall_health_score": health_score,
+        "core_health": core_health,
+        "service_health": service_health,
+        "infrastructure_health": infrastructure_health,
+        "autonomous_recommendations": recommendations,
+        "assessment_metadata": {
+            "assessment_timestamp": _get_timestamp(),
+            "deep_analysis_enabled": deep_analysis,
+            "performance_included": include_performance,
+            "security_included": include_security,
+            "diagnostic_confidence": 0.91,
+        },
+    }
+
+    if include_performance and performance_analysis:
+        final_results["performance_analysis"] = performance_analysis
+
+    if include_security and security_assessment:
+        final_results["security_assessment"] = security_assessment
+
+    if deep_analysis and ml_diagnostics:
+        final_results["ml_diagnostics"] = ml_diagnostics
+
+    if ctx:
+        await ctx.info(
+            f"Health assessment completed: overall score {health_score['score']:.2f}/1.0"
+        )
+
+    return final_results
+
+
+async def _process_healing_workflow(
+    issue_detection: dict,
+    healing_scope: str,
+    safety_mode: bool,
+    max_healing_actions: int,
+    require_confirmation: bool,
+    ctx,
+) -> dict[str, Any]:
+    """Process healing workflow with organized steps."""
+    # Analyze root causes
+    root_cause_analysis = await _perform_root_cause_analysis(
+        issue_detection["detected_issues"], ctx
+    )
+
+    # Generate healing plan
+    healing_plan = await _generate_healing_plan(
+        root_cause_analysis, safety_mode, max_healing_actions, ctx
+    )
+
+    # Apply healing actions if approved
+    healing_results = await _apply_healing_actions_if_approved(
+        healing_plan, require_confirmation, safety_mode, ctx
+    )
+
+    # Validate and generate insights
+    return await _build_healing_results(
+        healing_scope,
+        issue_detection,
+        root_cause_analysis,
+        healing_plan,
+        healing_results,
+        safety_mode,
+        max_healing_actions,
+        require_confirmation,
+        ctx,
+    )
+
+
+async def _apply_healing_actions_if_approved(
+    healing_plan: dict, require_confirmation: bool, safety_mode: bool, ctx
+) -> dict[str, Any]:
+    """Apply healing actions if approved with separate error handling."""
+    if require_confirmation and not healing_plan["auto_approved"]:
+        return {
+            "applied": False,
+            "reason": "User confirmation required",
+            "pending_actions": len(healing_plan["planned_actions"]),
+        }
+
+    return await _apply_healing_actions(healing_plan, safety_mode, ctx)
+
+
+async def _build_healing_results(
+    healing_scope: str,
+    issue_detection: dict,
+    root_cause_analysis: dict,
+    healing_plan: dict,
+    healing_results: dict,
+    safety_mode: bool,
+    max_healing_actions: int,
+    require_confirmation: bool,
+    ctx,
+) -> dict[str, Any]:
+    """Build final healing results with validation and insights."""
+    # Validate healing effectiveness
+    validation_results = await _validate_healing_effectiveness(
+        issue_detection["detected_issues"], healing_results, ctx
+    )
+
+    # Generate healing insights
+    healing_insights = await _generate_healing_insights(
+        issue_detection,
+        root_cause_analysis,
+        healing_results,
+        validation_results,
+        ctx,
+    )
+
+    final_results = {
+        "success": True,
+        "healing_scope": healing_scope,
+        "issues_detected": True,
+        "issue_detection": issue_detection,
+        "root_cause_analysis": root_cause_analysis,
+        "healing_plan": healing_plan,
+        "healing_results": healing_results,
+        "validation_results": validation_results,
+        "healing_insights": healing_insights,
+        "healing_metadata": {
+            "safety_mode_enabled": safety_mode,
+            "max_actions_limit": max_healing_actions,
+            "confirmation_required": require_confirmation,
+            "healing_confidence": 0.88,
+        },
+    }
+
+    if ctx:
+        await ctx.info(
+            f"Self-healing completed: {len(healing_results.get('applied_actions', []))} actions applied"
+        )
+
+    return final_results
+
+
+async def _get_anomaly_results_if_enabled(
+    anomaly_detection: bool, metrics_baseline: dict, ctx
+) -> dict[str, Any]:
+    """Get anomaly results if enabled with separate error handling."""
+    if not anomaly_detection:
+        return {}
+
+    try:
+        return await _perform_anomaly_detection(metrics_baseline, ctx)
+    except Exception as e:
+        logger.warning(f"Anomaly detection failed: {e}")
+        return {}
+
+
+async def _get_trend_results_if_enabled(
+    trend_analysis: bool, metrics_baseline: dict, prediction_horizon: str, ctx
+) -> dict[str, Any]:
+    """Get trend results if enabled with separate error handling."""
+    if not trend_analysis:
+        return {}
+
+    try:
+        return await _perform_trend_analysis(metrics_baseline, prediction_horizon, ctx)
+    except Exception as e:
+        logger.warning(f"Trend analysis failed: {e}")
+        return {}
+
+
+async def _build_predictive_monitoring_results(
+    prediction_horizon: str,
+    metrics_baseline: dict,
+    anomaly_detection: bool,
+    trend_analysis: bool,
+    anomaly_results: dict,
+    trend_results: dict,
+    alert_thresholds: dict[str, float] | None,
+    ctx,
+) -> dict[str, Any]:
+    """Build predictive monitoring results with organized components."""
+    # Generate health predictions
+    health_predictions = await _generate_health_predictions(
+        metrics_baseline, prediction_horizon, alert_thresholds, ctx
+    )
+
+    # Calculate risk assessment
+    risk_assessment = await _calculate_health_risk_assessment(
+        metrics_baseline,
+        anomaly_results,
+        trend_results,
+        health_predictions,
+        ctx,
+    )
+
+    # Generate predictive alerts
+    predictive_alerts = await _generate_predictive_alerts(
+        health_predictions, risk_assessment, alert_thresholds, ctx
+    )
+
+    # Generate monitoring insights
+    monitoring_insights = await _generate_monitoring_insights(
+        metrics_baseline, anomaly_results, trend_results, risk_assessment, ctx
+    )
+
+    final_results = {
+        "success": True,
+        "prediction_horizon": prediction_horizon,
+        "metrics_baseline": metrics_baseline,
+        "health_predictions": health_predictions,
+        "risk_assessment": risk_assessment,
+        "predictive_alerts": predictive_alerts,
+        "monitoring_insights": monitoring_insights,
+        "monitoring_metadata": {
+            "anomaly_detection_enabled": anomaly_detection,
+            "trend_analysis_enabled": trend_analysis,
+            "custom_thresholds": bool(alert_thresholds),
+            "prediction_confidence": 0.86,
+        },
+    }
+
+    if anomaly_detection and anomaly_results:
+        final_results["anomaly_results"] = anomaly_results
+
+    if trend_analysis and trend_results:
+        final_results["trend_results"] = trend_results
+
+    if ctx:
+        await ctx.info(
+            f"Predictive monitoring completed: {len(predictive_alerts.get('alerts', []))} alerts generated"
+        )
+
+    return final_results
+
+
+async def _handle_single_healing_action(
+    action: dict, safety_mode: bool, ctx, applied_actions: list, failed_actions: list
+) -> None:
+    """Handle a single healing action and update result lists."""
+    action_result = await _process_single_healing_action(action, safety_mode, ctx)
+    if action_result["success"]:
+        applied_actions.append(action_result["result"])
+    else:
+        failed_actions.append(action_result["error"])
+
+
+async def _process_single_healing_action(
+    action: dict, safety_mode: bool, ctx
+) -> dict[str, Any]:
+    """Process a single healing action with safety checks."""
+    # Mock action application with safety checks
+    if safety_mode and action["risk_level"] in ["high", "critical"]:
+        return {
+            "success": False,
+            "error": {
+                "action_id": action["action_id"],
+                "reason": "Risk level too high for safety mode",
+                "risk_level": action["risk_level"],
+            },
+        }
+
+    # Apply the action (mock implementation)
+    action_result = await _apply_single_healing_action(action, ctx)
+
+    if action_result["success"]:
+        return {
+            "success": True,
+            "result": {
+                "action_id": action["action_id"],
+                "action_type": action["action_type"],
+                "result": action_result,
+                "applied_at": _get_timestamp(),
+            },
+        }
+    return {
+        "success": False,
+        "error": {
+            "action_id": action["action_id"],
+            "reason": action_result["error"],
+        },
+    }
 
 
 async def _assess_core_system_health(
@@ -949,37 +1214,9 @@ async def _apply_healing_actions(
 
     for action in healing_plan["planned_actions"]:
         try:
-            # Mock action application with safety checks
-            if safety_mode and action["risk_level"] in ["high", "critical"]:
-                failed_actions.append(
-                    {
-                        "action_id": action["action_id"],
-                        "reason": "Risk level too high for safety mode",
-                        "risk_level": action["risk_level"],
-                    }
-                )
-                continue
-
-            # Apply the action (mock implementation)
-            action_result = await _apply_single_healing_action(action, ctx)
-
-            if action_result["success"]:
-                applied_actions.append(
-                    {
-                        "action_id": action["action_id"],
-                        "action_type": action["action_type"],
-                        "result": action_result,
-                        "applied_at": _get_timestamp(),
-                    }
-                )
-            else:
-                failed_actions.append(
-                    {
-                        "action_id": action["action_id"],
-                        "reason": action_result["error"],
-                    }
-                )
-
+            await _handle_single_healing_action(
+                action, safety_mode, ctx, applied_actions, failed_actions
+            )
         except (RuntimeError, ValueError, TypeError) as e:
             failed_actions.append(
                 {

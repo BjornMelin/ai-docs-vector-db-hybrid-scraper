@@ -314,8 +314,7 @@ class ServiceDependencyGraph:
         missing_deps = {}
 
         for service, deps in self.graph.items():
-            missing = [dep for dep in deps if dep not in available_services]
-            if missing:
+            if missing := [dep for dep in deps if dep not in available_services]:
                 missing_deps[service] = missing
 
         return missing_deps
@@ -392,8 +391,7 @@ class EnterpriseServiceRegistry:
                 _raise_missing_service_dependencies(missing_deps)
 
             # Detect circular dependencies
-            cycles = self.dependency_graph.detect_circular_dependencies()
-            if cycles:
+            if cycles := self.dependency_graph.detect_circular_dependencies():
                 _raise_circular_dependencies_detected(cycles)
 
             # Resolve startup order

@@ -174,14 +174,15 @@ class LightweightScraper(BaseService):
                 analysis.size_estimate = head_analysis.get("size_estimate")
 
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-            logger.warning(
-                f"Error analyzing URL {url}: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Error analyzing URL %s: %s", url, e)
             analysis.reasons.append(f"Analysis error: {e!s}")
 
         elapsed_ms = (time.time() - start_time) * 1000
         logger.debug(
-            f"Content analysis for {url} completed in {elapsed_ms:.1f}ms: {analysis.can_handle}"
+            "Content analysis for %s completed in %.1fms: %s",
+            url,
+            elapsed_ms,
+            analysis.can_handle,
         )
 
         return analysis
@@ -310,9 +311,7 @@ class LightweightScraper(BaseService):
             analysis["can_handle"] = analysis["confidence"] > 0.5
 
         except (ValueError, TypeError, UnicodeDecodeError) as e:
-            logger.debug(
-                f"HEAD request failed for {url}: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.debug("HEAD request failed for %s: %s", url, e)
             return None
 
         else:
@@ -344,7 +343,8 @@ class LightweightScraper(BaseService):
             # Validate content quality
             if not self._is_sufficient_content(content):
                 logger.debug(
-                    f"Insufficient content quality for {url}, escalating to higher tier"
+                    "Insufficient content quality for %s, escalating to higher tier",
+                    url,
                 )
                 return None
 
@@ -363,21 +363,15 @@ class LightweightScraper(BaseService):
             )
 
         except httpx.TimeoutException:
-            logger.debug(
-                f"Timeout for {url}, may need browser automation"
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Timeout for %s, may need browser automation", url)
             return None
         except httpx.HTTPStatusError as e:
             if e.response.status_code in [403, 429, 503]:
-                logger.debug(
-                    f"Anti-bot protection detected for {url}, escalating"
-                )  # TODO: Convert f-string to logging format
+                logger.debug("Anti-bot protection detected for %s, escalating", url)
                 return None
             raise
         except (httpx.HTTPError, ConnectionError) as e:
-            logger.warning(
-                f"Error scraping {url}: {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Error scraping %s: %s", url, e)
             return None
 
     def _extract_content(self, html: str, url: str) -> dict[str, Any]:
@@ -601,7 +595,7 @@ class LightweightScraper(BaseService):
         # Minimum content length check
         if text_length < self._content_threshold:
             logger.debug(
-                f"Content too short: {text_length} < {self._content_threshold}"
+                "Content too short: %d < %d", text_length, self._content_threshold
             )
             return False
 

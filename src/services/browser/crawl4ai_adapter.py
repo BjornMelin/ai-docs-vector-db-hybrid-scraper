@@ -85,7 +85,6 @@ class Crawl4AIAdapter(BaseService):
         start_time = time.time()
 
         try:
-            # Use Crawl4AI's enhanced scraping capabilities
             result = await self._provider.scrape_url(
                 url=url,
                 formats=["markdown"],  # Standard format
@@ -93,38 +92,12 @@ class Crawl4AIAdapter(BaseService):
                 wait_for=wait_for_selector,
                 js_code=js_code,
             )
-
-            # Standardize the response format for automation router
-            if result.get("success", False):
-                return {
-                    "success": True,
-                    "url": url,
-                    "content": result.get("content", ""),
-                    "html": result.get("html", ""),
-                    "title": result.get("title", ""),
-                    "metadata": {
-                        **result.get("metadata", {}),
-                        "extraction_method": "crawl4ai",
-                        "js_executed": bool(js_code),
-                        "wait_selector": wait_for_selector,
-                        "processing_time_ms": (time.time() - start_time) * 1000,
-                    },
-                    "links": result.get("links", []),
-                    "structured_data": result.get("structured_data", {}),
-                }
-            return {
-                "success": False,
-                "url": url,
-                "error": result.get("error", "Unknown Crawl4AI error"),
-                "content": "",
-                "metadata": {
-                    "extraction_method": "crawl4ai",
-                    "processing_time_ms": (time.time() - start_time) * 1000,
-                },
-            }
+            return self._build_scrape_response(
+                result, url, js_code, wait_for_selector, start_time
+            )
 
         except Exception as e:
-            self.logger.exception("Crawl4AI adapter error for {url}")
+            self.logger.exception("Crawl4AI adapter error for %s", url)
             return {
                 "success": False,
                 "url": url,
@@ -189,6 +162,45 @@ class Crawl4AIAdapter(BaseService):
                 )
 
         return standardized_results
+
+    def _build_scrape_response(
+        self,
+        result: dict[str, Any],
+        url: str,
+        js_code: str | None,
+        wait_for_selector: str | None,
+        start_time: float,
+    ) -> dict[str, Any]:
+        """Build standardized scrape response from provider result."""
+        processing_time_ms = (time.time() - start_time) * 1000
+
+        if result.get("success", False):
+            return {
+                "success": True,
+                "url": url,
+                "content": result.get("content", ""),
+                "html": result.get("html", ""),
+                "title": result.get("title", ""),
+                "metadata": {
+                    **result.get("metadata", {}),
+                    "extraction_method": "crawl4ai",
+                    "js_executed": bool(js_code),
+                    "wait_selector": wait_for_selector,
+                    "processing_time_ms": processing_time_ms,
+                },
+                "links": result.get("links", []),
+                "structured_data": result.get("structured_data", {}),
+            }
+        return {
+            "success": False,
+            "url": url,
+            "error": result.get("error", "Unknown Crawl4AI error"),
+            "content": "",
+            "metadata": {
+                "extraction_method": "crawl4ai",
+                "processing_time_ms": processing_time_ms,
+            },
+        }
 
     def get_capabilities(self) -> dict[str, Any]:
         """Get adapter capabilities and limitations.

@@ -58,8 +58,9 @@ class EmbeddingCache:
                 # Validate dimensions if provided
                 if dimensions is not None and len(cached) != dimensions:
                     logger.warning(
-                        f"Cached embedding dimensions mismatch: "
-                        f"expected {dimensions}, got {len(cached)}"
+                        "Cached embedding dimensions mismatch: "
+                        "expected %d, got %d",
+                        dimensions, len(cached)
                     )
                     return None
 

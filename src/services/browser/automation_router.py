@@ -100,9 +100,7 @@ class AutomationRouter(BaseService):
                 with config_file.open() as f:
                     config = json.load(f)
                     routing_rules = config.get("routing_rules", {})
-                    logger.info(
-                        f"Loaded routing rules from {config_file}"
-                    )  # TODO: Convert f-string to logging format
+                    logger.info("Loaded routing rules from %s", config_file)
                     return routing_rules
             else:
                 logger.warning("Routing rules file not found")
@@ -203,7 +201,7 @@ class AutomationRouter(BaseService):
 
         self._initialized = True
         self.logger.info(
-            f"5-tier automation router initialized with {len(self._adapters)} adapters"
+            "5-tier automation router initialized with %d adapters", len(self._adapters)
         )
 
     async def cleanup(self) -> None:
@@ -211,11 +209,9 @@ class AutomationRouter(BaseService):
         for name, adapter in self._adapters.items():
             try:
                 await adapter.cleanup()
-                self.logger.info(
-                    f"Cleaned up {name} adapter"
-                )  # TODO: Convert f-string to logging format
+                self.logger.info("Cleaned up %s adapter", name)
             except (OSError, AttributeError, ConnectionError, ImportError):
-                self.logger.exception(f"Error cleaning up {name} adapter")
+                self.logger.exception("Error cleaning up %s adapter", name)
 
         self._adapters.clear()
         self._initialized = False
@@ -269,9 +265,7 @@ class AutomationRouter(BaseService):
         else:
             tool = await self._select_tool(url, interaction_required, custom_actions)
 
-        self.logger.info(
-            f"Using {tool} for {url}"
-        )  # TODO: Convert f-string to logging format
+        self.logger.info("Using %s for %s", tool, url)
 
         # Execute with selected tool
         start_time = time.time()
@@ -298,7 +292,7 @@ class AutomationRouter(BaseService):
             result["automation_time_ms"] = elapsed * 1000
 
         except (OSError, PermissionError):
-            self.logger.exception(f"{tool} failed for {url}")
+            self.logger.exception("%s failed for %s", tool, url)
             elapsed = time.time() - start_time
             self._update_metrics(tool, False, elapsed)
 
@@ -536,9 +530,7 @@ class AutomationRouter(BaseService):
 
         for fallback_tool in fallback_tools:
             try:
-                self.logger.info(
-                    f"Falling back to {fallback_tool} for {url}"
-                )  # TODO: Convert f-string to logging format
+                self.logger.info("Falling back to %s for %s", fallback_tool, url)
 
                 start_time = time.time()
 
@@ -558,7 +550,7 @@ class AutomationRouter(BaseService):
                 result["automation_time_ms"] = elapsed * 1000
 
             except (OSError, PermissionError):
-                self.logger.exception(f"Fallback {fallback_tool} also failed")
+                self.logger.exception("Fallback %s also failed", fallback_tool)
                 elapsed = time.time() - start_time
                 self._update_metrics(fallback_tool, False, elapsed)
                 continue

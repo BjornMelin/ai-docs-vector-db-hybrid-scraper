@@ -110,125 +110,162 @@ class HybridSearchService:
         query_id = str(uuid.uuid4())
 
         try:
-            # Map old request to new AdvancedSearchRequest
-            advanced_request = AdvancedSearchRequest(
-                query=request.query,
-                collection_name=request.collection_name,
-                limit=request.limit,
-                score_threshold=request.score_threshold,
-                user_id=request.user_id,
-                session_id=request.session_id,
-                # Select appropriate search mode based on enabled features
-                search_mode=self._determine_search_mode(request),
-                # Select appropriate pipeline based on optimization strategy
-                pipeline=self._determine_pipeline(request),
-                # Enable features based on request
-                enable_expansion=request.enable_adaptive_fusion,
-                enable_clustering=False,  # Not enabled in old API
-                enable_personalization=request.enable_adaptive_fusion,
-                enable_federation=False,  # Not enabled in old API
-                enable_caching=True,
-                # Pass through existing configurations
-                max_processing_time_ms=self.fallback_timeout_ms,
-                quality_threshold=0.7,
-            )
-
-            # Handle query classification if enabled
-            if request.enable_query_classification:
-                query_classification = await self._classify_query_with_timeout(
-                    request.query,
-                    {"user_id": request.user_id, "session_id": request.session_id},
-                )
-                if query_classification:
-                    # Store classification in context for later use
-                    advanced_request.context["query_classification"] = (
-                        query_classification
-                    )
-
-            # Handle model selection if enabled
-            if (
-                request.enable_model_selection
-                and "query_classification" in advanced_request.context
-            ):
-                model_selection = await self._select_model_with_timeout(
-                    advanced_request.context["query_classification"], request
-                )
-                if model_selection:
-                    # Pass model selection to orchestrator via context
-                    advanced_request.context["model_selection"] = model_selection
-
-            # Handle SPLADE if enabled
-            if request.enable_splade:
-                sparse_vector = await self._generate_sparse_vector_with_timeout(
-                    request.query, request.splade_config
-                )
-                if sparse_vector:
-                    # Pass sparse vector configuration via context
-                    advanced_request.context["splade_config"] = {
-                        "enabled": True,
-                        "vector": sparse_vector,
-                        "config": request.splade_config,
-                    }
-
-            # Execute search through new orchestrator
-            orchestrator_result = await self.orchestrator.search(advanced_request)
-
-            # Map orchestrator result to old response format
-            response = HybridSearchResponse(
-                results=self._format_search_results(orchestrator_result.results),
-                retrieval_metrics=RetrievalMetrics(
-                    query_vector_time_ms=orchestrator_result.search_metadata.get(
-                        "vector_generation_time_ms", 50.0
-                    ),
-                    search_time_ms=orchestrator_result.total_processing_time_ms - 50.0,
-                    total_time_ms=orchestrator_result.total_processing_time_ms,
-                    results_count=len(orchestrator_result.results),
-                    filtered_count=len(orchestrator_result.results),
-                    cache_hit=orchestrator_result.search_metadata.get(
-                        "cache_hit", False
-                    ),
-                    hnsw_ef_used=request.search_params.hnsw_ef,
-                ),
-                query_classification=advanced_request.context.get(
-                    "query_classification", None
-                ),
-                model_selection=advanced_request.context.get("model_selection", None),
-                optimization_applied=orchestrator_result.optimizations_applied != [],
-                # A/B test handling
-                ab_test_variant=self._assign_ab_test_variant(request)
-                if request.ab_test_config
-                else None,
-            )
-
-            # Handle adaptive fusion if enabled
-            if (
-                request.enable_adaptive_fusion
-                and "query_classification" in advanced_request.context
-            ):
-                # Get fusion weights from orchestrator metadata
-                fusion_metadata = orchestrator_result.search_metadata.get(
-                    "fusion_weights"
-                )
-                if fusion_metadata:
-                    response.fusion_weights = fusion_metadata
-                    response.effectiveness_score = (
-                        orchestrator_result.search_metadata.get("effectiveness_score")
-                    )
-
-            # Store for learning
-            await self._store_search_for_learning(query_id, request, response)
-
+            advanced_request = self._build_advanced_search_request(request)
         except Exception as e:
-            logger.exception("Advanced hybrid search failed: %s")
-
-            # Fallback to basic search
+            logger.exception("Failed to build advanced search request: %s")
             if self.enable_fallback:
                 return await self._perform_fallback_search(request, start_time, str(e))
-            # Re-raise if no fallback
-            msg = f"Hybrid search failed: {e}"
+            msg = f"Request preparation failed: {e}"
             raise ServiceError(msg) from e
-        else:
-            return response
+
+        try:
+            await self._prepare_search_context(request, advanced_request)
+        except Exception as e:
+            logger.exception("Failed to prepare search context: %s")
+            if self.enable_fallback:
+                return await self._perform_fallback_search(request, start_time, str(e))
+            msg = f"Context preparation failed: {e}"
+            raise ServiceError(msg) from e
+
+        try:
+            orchestrator_result = await self.orchestrator.search(advanced_request)
+        except Exception as e:
+            logger.exception("Orchestrator search failed: %s")
+            if self.enable_fallback:
+                return await self._perform_fallback_search(request, start_time, str(e))
+            msg = f"Search execution failed: {e}"
+            raise ServiceError(msg) from e
+
+        try:
+            response = self._build_hybrid_search_response(
+                request, advanced_request, orchestrator_result
+            )
+        except Exception as e:
+            logger.exception("Failed to build search response: %s")
+            if self.enable_fallback:
+                return await self._perform_fallback_search(request, start_time, str(e))
+            msg = f"Response construction failed: {e}"
+            raise ServiceError(msg) from e
+
+        try:
+            await self._store_search_for_learning(query_id, request, response)
+        except (OSError, AttributeError, ConnectionError) as e:
+            logger.warning("Failed to store search for learning: %s", e)
+            # Don't fail the request for learning storage issues
+
+        return response
+
+    def _build_advanced_search_request(
+        self, request: HybridSearchRequest
+    ) -> AdvancedSearchRequest:
+        """Build advanced search request from hybrid search request."""
+        return AdvancedSearchRequest(
+            query=request.query,
+            collection_name=request.collection_name,
+            limit=request.limit,
+            score_threshold=request.score_threshold,
+            user_id=request.user_id,
+            session_id=request.session_id,
+            # Select appropriate search mode based on enabled features
+            search_mode=self._determine_search_mode(request),
+            # Select appropriate pipeline based on optimization strategy
+            pipeline=self._determine_pipeline(request),
+            # Enable features based on request
+            enable_expansion=request.enable_adaptive_fusion,
+            enable_clustering=False,  # Not enabled in old API
+            enable_personalization=request.enable_adaptive_fusion,
+            enable_federation=False,  # Not enabled in old API
+            enable_caching=True,
+            # Pass through existing configurations
+            max_processing_time_ms=self.fallback_timeout_ms,
+            quality_threshold=0.7,
+        )
+
+    async def _prepare_search_context(
+        self, request: HybridSearchRequest, advanced_request: AdvancedSearchRequest
+    ) -> None:
+        """Prepare search context with classification, model selection, and SPLADE."""
+        # Handle query classification if enabled
+        if request.enable_query_classification:
+            query_classification = await self._classify_query_with_timeout(
+                request.query,
+                {"user_id": request.user_id, "session_id": request.session_id},
+            )
+            if query_classification:
+                # Store classification in context for later use
+                advanced_request.context["query_classification"] = query_classification
+
+        # Handle model selection if enabled
+        if (
+            request.enable_model_selection
+            and "query_classification" in advanced_request.context
+        ):
+            model_selection = await self._select_model_with_timeout(
+                advanced_request.context["query_classification"], request
+            )
+            if model_selection:
+                # Pass model selection to orchestrator via context
+                advanced_request.context["model_selection"] = model_selection
+
+        # Handle SPLADE if enabled
+        if request.enable_splade:
+            sparse_vector = await self._generate_sparse_vector_with_timeout(
+                request.query, request.splade_config
+            )
+            if sparse_vector:
+                # Pass sparse vector configuration via context
+                advanced_request.context["splade_config"] = {
+                    "enabled": True,
+                    "vector": sparse_vector,
+                    "config": request.splade_config,
+                }
+
+    def _build_hybrid_search_response(
+        self,
+        request: HybridSearchRequest,
+        advanced_request: AdvancedSearchRequest,
+        orchestrator_result,
+    ) -> HybridSearchResponse:
+        """Build hybrid search response from orchestrator result."""
+        # Map orchestrator result to old response format
+        response = HybridSearchResponse(
+            results=self._format_search_results(orchestrator_result.results),
+            retrieval_metrics=RetrievalMetrics(
+                query_vector_time_ms=orchestrator_result.search_metadata.get(
+                    "vector_generation_time_ms", 50.0
+                ),
+                search_time_ms=orchestrator_result.total_processing_time_ms - 50.0,
+                total_time_ms=orchestrator_result.total_processing_time_ms,
+                results_count=len(orchestrator_result.results),
+                filtered_count=len(orchestrator_result.results),
+                cache_hit=orchestrator_result.search_metadata.get("cache_hit", False),
+                hnsw_ef_used=request.search_params.hnsw_ef,
+            ),
+            query_classification=advanced_request.context.get(
+                "query_classification", None
+            ),
+            model_selection=advanced_request.context.get("model_selection", None),
+            optimization_applied=orchestrator_result.optimizations_applied != [],
+            # A/B test handling
+            ab_test_variant=self._assign_ab_test_variant(request)
+            if request.ab_test_config
+            else None,
+        )
+
+        # Handle adaptive fusion if enabled
+        if (
+            request.enable_adaptive_fusion
+            and "query_classification" in advanced_request.context
+        ):
+            # Get fusion weights from orchestrator metadata
+            fusion_metadata = orchestrator_result.search_metadata.get("fusion_weights")
+            if fusion_metadata:
+                response.fusion_weights = fusion_metadata
+                response.effectiveness_score = orchestrator_result.search_metadata.get(
+                    "effectiveness_score"
+                )
+
+        return response
 
     def _determine_search_mode(self, request: HybridSearchRequest) -> SearchMode:
         """Determine the appropriate search mode based on request features."""

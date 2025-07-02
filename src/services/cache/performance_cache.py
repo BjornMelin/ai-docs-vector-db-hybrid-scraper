@@ -74,16 +74,19 @@ class PerformanceCache:
         if self._initialized:
             return
 
+        await self._initialize_redis_connection()
+        self._initialized = True
+
+    async def _initialize_redis_connection(self) -> None:
+        """Initialize Redis connection with error handling."""
         try:
             self.l2_redis = redis.from_url(self.redis_url, decode_responses=True)
             await self.l2_redis.ping()
-            self._initialized = True
             logger.info("PerformanceCache initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize Redis cache: {e}")
+            logger.error("Failed to initialize Redis cache: %s", e)
             # Continue without Redis for graceful degradation
             self.l2_redis = None
-            self._initialized = True
 
     async def get(self, key: str) -> Any | None:
         """Multi-tier cache retrieval with performance tracking.
@@ -110,23 +113,40 @@ class PerformanceCache:
             return self.l1_cache[key]
 
         # L2 Cache (Redis) - distributed
-        if self.l2_redis:
-            try:
-                value = await self.l2_redis.get(key)
-                if value:
-                    self.metrics.hits += 1
-                    # Promote to L1 cache
-                    deserialized_value = json.loads(value)
-                    await self._set_l1(key, deserialized_value)
-                    retrieval_time = (time.time() - start_time) * 1000
-                    self._update_avg_retrieval_time(retrieval_time)
-                    return deserialized_value
-            except Exception as e:
-                logger.warning(f"L2 cache retrieval failed for key '{key}': {e}")
+        l2_result = await self._try_l2_cache_get(key, start_time)
+        if l2_result is not None:
+            return l2_result
 
         # Cache miss
         self.metrics.misses += 1
         return None
+
+    async def _try_l2_cache_get(self, key: str, start_time: float) -> Any | None:
+        """Try to get value from L2 cache with promotion to L1."""
+        if not self.l2_redis:
+            return None
+
+        try:
+            value = await self.l2_redis.get(key)
+        except Exception as e:
+            logger.warning("L2 cache retrieval failed for key '%s': %s", key, e)
+            return None
+
+        if value:
+            return await self._process_l2_cache_hit(key, value, start_time)
+        return None
+
+    async def _process_l2_cache_hit(
+        self, key: str, value: str, start_time: float
+    ) -> Any:
+        """Process L2 cache hit by promoting to L1 and updating metrics."""
+        self.metrics.hits += 1
+        # Promote to L1 cache
+        deserialized_value = json.loads(value)
+        await self._set_l1(key, deserialized_value)
+        retrieval_time = (time.time() - start_time) * 1000
+        self._update_avg_retrieval_time(retrieval_time)
+        return deserialized_value
 
     async def set(
         self,
@@ -153,7 +173,9 @@ class PerformanceCache:
                 json.dumps(value) if not isinstance(value, str) else value
             )
         except (TypeError, ValueError):
-            logger.warning(f"Failed to serialize value for key '{key}', skipping cache")
+            logger.warning(
+                "Failed to serialize value for key '%s', skipping cache", key
+            )
             return
 
         # L1 Cache
@@ -165,7 +187,7 @@ class PerformanceCache:
             try:
                 await self.l2_redis.setex(key, ttl, serialized_value)
             except Exception as e:
-                logger.warning(f"L2 cache set failed for key '{key}': {e}")
+                logger.warning("L2 cache set failed for key '%s': %s", key, e)
 
     async def _set_l1(self, key: str, value: Any) -> None:
         """Set value in L1 cache with LRU eviction.
@@ -224,29 +246,52 @@ class PerformanceCache:
             logger.warning("Required imports not available for cache warming")
             return
 
+        # Initialize services for cache warming
+        config, search_service = await self._initialize_warming_services()
+        if not config or not search_service:
+            return
+
+        # Warm cache for each query
+        warmed_count = await self._warm_queries(popular_queries, search_service)
+        logger.info("Cache warming completed for %d queries", warmed_count)
+
+    async def _initialize_warming_services(self) -> tuple[Any, Any]:
+        """Initialize services needed for cache warming."""
         try:
             config = Config()
             # Note: This would need proper client injection in production
             search_service = QdrantSearch(None, config)
-
-            for query in popular_queries:
-                cache_key = f"search:{hashlib.sha256(query.encode()).hexdigest()}"
-
-                # Check if already cached
-                if await self.get(cache_key) is None:
-                    try:
-                        # This is a placeholder - actual implementation would
-                        # need proper search service initialization
-                        logger.info(f"Would warm cache for query: {query}")
-                        # result = await search_service.search(query)
-                        # await self.set(cache_key, result, ttl=7200)
-                    except Exception as e:
-                        logger.warning(f"Failed to warm cache for query '{query}': {e}")
-
-            logger.info(f"Cache warming completed for {len(popular_queries)} queries")
-
+            return config, search_service
         except Exception as e:
-            logger.error(f"Cache warming failed: {e}")
+            logger.error("Cache warming initialization failed: %s", e)
+            return None, None
+
+    async def _warm_queries(self, queries: list[str], search_service: Any) -> int:
+        """Warm cache for list of queries."""
+        warmed_count = 0
+        for query in queries:
+            if await self._warm_single_query(query, search_service):
+                warmed_count += 1
+        return warmed_count
+
+    async def _warm_single_query(self, query: str, search_service: Any) -> bool:
+        """Warm cache for a single query."""
+        cache_key = f"search:{hashlib.sha256(query.encode()).hexdigest()}"
+
+        # Check if already cached
+        if await self.get(cache_key) is not None:
+            return False
+
+        try:
+            # This is a placeholder - actual implementation would
+            # need proper search service initialization
+            logger.info("Would warm cache for query: %s", query)
+            # result = await search_service.search(query)
+            # await self.set(cache_key, result, ttl=7200)
+            return True
+        except Exception as e:
+            logger.warning("Failed to warm cache for query '%s': %s", query, e)
+            return False
 
     async def get_cache_stats(self) -> dict[str, Any]:
         """Get comprehensive cache statistics.
@@ -260,7 +305,7 @@ class PerformanceCache:
             try:
                 l2_info = await self.l2_redis.info("memory")
             except Exception as e:
-                logger.warning(f"Failed to get L2 cache stats: {e}")
+                logger.warning("Failed to get L2 cache stats: %s", e)
 
         return {
             "l1_cache": {
@@ -303,7 +348,9 @@ class PerformanceCache:
                     async for key in self.l2_redis.scan_iter(match=f"*{pattern}*"):
                         await self.l2_redis.delete(key)
                 except Exception as e:
-                    logger.warning(f"Failed to clear L2 cache pattern '{pattern}': {e}")
+                    logger.warning(
+                        "Failed to clear L2 cache pattern '%s': %s", pattern, e
+                    )
         else:
             # Clear all caches
             self.l1_cache.clear()
@@ -313,9 +360,9 @@ class PerformanceCache:
                 try:
                     await self.l2_redis.flushdb()
                 except Exception as e:
-                    logger.warning(f"Failed to clear L2 cache: {e}")
+                    logger.warning("Failed to clear L2 cache: %s", e)
 
-        logger.info(f"Cache cleared with pattern: {pattern or 'all'}")
+        logger.info("Cache cleared with pattern: %s", pattern or "all")
 
     async def cleanup(self) -> None:
         """Cleanup cache resources."""
@@ -323,7 +370,7 @@ class PerformanceCache:
             try:
                 await self.l2_redis.close()
             except Exception as e:
-                logger.warning(f"Error closing Redis connection: {e}")
+                logger.warning("Error closing Redis connection: %s", e)
 
         self.l1_cache.clear()
         self.l1_access_times.clear()

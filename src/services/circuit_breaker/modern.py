@@ -156,19 +156,25 @@ class ModernCircuitBreakerManager:
 
         # Get status information from the circuit breaker
         try:
-            return {
-                "service_name": service_name,
-                "state": str(breaker.state),
-                "failure_count": getattr(breaker, "failure_count", 0),
-                "last_failure_time": getattr(breaker, "last_failure_time", None),
-                "is_open": getattr(breaker, "is_open", False),
-                "is_half_open": getattr(breaker, "is_half_open", False),
-            }
+            return self._extract_breaker_status(service_name, breaker)
         except (OSError, PermissionError, ValueError) as e:
             logger.warning(
                 f"Failed to get status for circuit breaker {service_name}: {e}"
             )
             return {"status": "error", "error": str(e)}
+
+    def _extract_breaker_status(
+        self, service_name: str, breaker: Any
+    ) -> dict[str, Any]:
+        """Extract status information from circuit breaker."""
+        return {
+            "service_name": service_name,
+            "state": str(breaker.state),
+            "failure_count": getattr(breaker, "failure_count", 0),
+            "last_failure_time": getattr(breaker, "last_failure_time", None),
+            "is_open": getattr(breaker, "is_open", False),
+            "is_half_open": getattr(breaker, "is_half_open", False),
+        }
 
     async def reset_breaker(self, service_name: str) -> bool:
         """Reset a circuit breaker to closed state.
@@ -180,22 +186,25 @@ class ModernCircuitBreakerManager:
             True if reset was successful, False otherwise
         """
         try:
-            breaker = await self.get_breaker(service_name)
-            if hasattr(breaker, "reset"):
-                await breaker.reset()
-                logger.info(
-                    f"Reset circuit breaker for service: {service_name}"
-                )  # TODO: Convert f-string to logging format
-                return True
-            logger.warning(
-                "Circuit breaker for %s does not support reset", service_name
-            )
+            return await self._attempt_breaker_reset(service_name)
         except Exception:
             logger.exception("Failed to reset circuit breaker for {service_name}")
             return False
 
-        else:
+    async def _attempt_breaker_reset(self, service_name: str) -> bool:
+        """Attempt to reset circuit breaker for service."""
+        breaker = await self.get_breaker(service_name)
+        if not hasattr(breaker, "reset"):
+            logger.warning(
+                "Circuit breaker for %s does not support reset", service_name
+            )
             return False
+
+        await breaker.reset()
+        logger.info(
+            f"Reset circuit breaker for service: {service_name}"
+        )  # TODO: Convert f-string to logging format
+        return True
 
     async def get_all_statuses(self) -> dict[str, dict[str, Any]]:
         """Get status of all circuit breakers.
@@ -214,12 +223,16 @@ class ModernCircuitBreakerManager:
         Closes the Redis storage connection and clears cached breakers.
         """
         try:
-            if hasattr(self.redis_storage, "close"):
-                await self.redis_storage.close()
-            self._breakers.clear()
-            logger.info("ModernCircuitBreakerManager closed successfully")
+            await self._cleanup_resources()
         except Exception:
             logger.exception("Error closing ModernCircuitBreakerManager")
+
+    async def _cleanup_resources(self) -> None:
+        """Clean up circuit breaker manager resources."""
+        if hasattr(self.redis_storage, "close"):
+            await self.redis_storage.close()
+        self._breakers.clear()
+        logger.info("ModernCircuitBreakerManager closed successfully")
 
 
 # Convenience function for creating circuit breaker manager

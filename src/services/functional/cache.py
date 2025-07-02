@@ -51,11 +51,11 @@ async def cache_get(
 
         if result != default:
             logger.debug(
-                f"Cache hit for key: {key}"
+                f"Cache hit for key: {key}",
             )  # TODO: Convert f-string to logging format
         else:
             logger.debug(
-                f"Cache miss for key: {key}"
+                f"Cache miss for key: {key}",
             )  # TODO: Convert f-string to logging format
 
     except (AttributeError, ConnectionError, OSError):
@@ -101,11 +101,11 @@ async def cache_set(
 
         if success:
             logger.debug(
-                f"Cache set successful for key: {key}"
+                f"Cache set successful for key: {key}",
             )  # TODO: Convert f-string to logging format
         else:
             logger.warning(
-                f"Cache set failed for key: {key}"
+                f"Cache set failed for key: {key}",
             )  # TODO: Convert f-string to logging format
 
     except (ConnectionError, OSError, PermissionError):
@@ -147,11 +147,11 @@ async def cache_delete(
 
         if success:
             logger.debug(
-                f"Cache delete successful for key: {key}"
+                f"Cache delete successful for key: {key}",
             )  # TODO: Convert f-string to logging format
         else:
             logger.warning(
-                f"Cache delete failed for key: {key}"
+                f"Cache delete failed for key: {key}",
             )  # TODO: Convert f-string to logging format
 
     except (ConnectionError, OSError, PermissionError):
@@ -191,11 +191,11 @@ async def cache_clear(
         if success:
             scope = cache_type.value if cache_type else "all"
             logger.info(
-                f"Cache clear successful for scope: {scope}"
+                f"Cache clear successful for scope: {scope}",
             )  # TODO: Convert f-string to logging format
         else:
             logger.warning(
-                f"Cache clear failed for cache_type: {cache_type}"
+                f"Cache clear failed for cache_type: {cache_type}",
             )  # TODO: Convert f-string to logging format
 
     except (ConnectionError, OSError, PermissionError):
@@ -300,11 +300,13 @@ async def cache_embedding(
 
         if cache_client.embedding_cache:
             success = await cache_client.embedding_cache.set_embedding(
-                content_hash, model, embedding
+                content_hash,
+                model,
+                embedding,
             )
             if success:
                 logger.debug(
-                    f"Cached embedding for model {model}"
+                    f"Cached embedding for model {model}",
                 )  # TODO: Convert f-string to logging format
 
     except (OSError, AttributeError, ConnectionError, ImportError):
@@ -340,11 +342,12 @@ async def get_cached_embedding(
 
         if cache_client.embedding_cache:
             embedding = await cache_client.embedding_cache.get_embedding(
-                content_hash, model
+                content_hash,
+                model,
             )
             if embedding:
                 logger.debug(
-                    f"Retrieved cached embedding for model {model}"
+                    f"Retrieved cached embedding for model {model}",
                 )  # TODO: Convert f-string to logging format
 
     except (OSError, AttributeError, ConnectionError, ImportError):
@@ -384,11 +387,14 @@ async def cache_search_results(
 
         if cache_client.search_cache:
             success = await cache_client.search_cache.set_search_results(
-                query_hash, collection, results, ttl
+                query_hash,
+                collection,
+                results,
+                ttl,
             )
             if success:
                 logger.debug(
-                    f"Cached search results for collection {collection}"
+                    f"Cached search results for collection {collection}",
                 )  # TODO: Convert f-string to logging format
 
     except (ConnectionError, OSError, PermissionError):
@@ -424,11 +430,12 @@ async def get_cached_search_results(
 
         if cache_client.search_cache:
             results = await cache_client.search_cache.get_search_results(
-                query_hash, collection
+                query_hash,
+                collection,
             )
             if results:
                 logger.debug(
-                    f"Retrieved cached search results for collection {collection}"
+                    f"Retrieved cached search results for collection {collection}",
                 )
 
     except (ConnectionError, OSError, PermissionError):
@@ -438,6 +445,69 @@ async def get_cached_search_results(
         if cache_client.search_cache:
             return results
         return None
+
+
+async def _execute_cache_operation(op: dict[str, Any], cache_client: object) -> bool:
+    """Execute a single cache operation.
+
+    Args:
+        op: Operation dictionary with 'op', 'key', 'value', etc.
+        cache_client: Cache client instance
+
+    Returns:
+        True if operation succeeded, False otherwise
+    """
+    op_type = op.get("op")
+    key = op.get("key")
+
+    if op_type == "get":
+        await cache_get(
+            key,
+            op.get("cache_type", CacheType.CRAWL),
+            op.get("default"),
+            cache_client,
+        )
+        return True
+
+    if op_type == "set":
+        return await cache_set(
+            key,
+            op.get("value"),
+            op.get("cache_type", CacheType.CRAWL),
+            op.get("ttl"),
+            cache_client,
+        )
+
+    if op_type == "delete":
+        return await cache_delete(
+            key,
+            op.get("cache_type", CacheType.CRAWL),
+            cache_client,
+        )
+
+    # Unknown operation type
+    return False
+
+
+def _create_error_result(
+    operations: list[dict[str, Any]],
+    error_msg: str,
+) -> dict[str, Any]:
+    """Create error result for bulk operations.
+
+    Args:
+        operations: List of operations that failed
+        error_msg: Error message
+
+    Returns:
+        Error result dictionary
+    """
+    return {
+        "total": len(operations),
+        "successful": 0,
+        "failed": len(operations),
+        "errors": [error_msg],
+    }
 
 
 # Bulk operations function (new functionality)
@@ -459,53 +529,18 @@ async def bulk_cache_operations(
     """
     try:
         if not cache_client:
-            return {
-                "total": len(operations),
-                "successful": 0,
-                "failed": len(operations),
-                "errors": ["Cache client not available"],
-            }
+            return _create_error_result(operations, "Cache client not available")
 
         results = {"total": len(operations), "successful": 0, "failed": 0, "errors": []}
 
         for i, op in enumerate(operations):
             try:
-                op_type = op.get("op")
-                key = op.get("key")
-
-                if op_type == "get":
-                    await cache_get(
-                        key,
-                        op.get("cache_type", CacheType.CRAWL),
-                        op.get("default"),
-                        cache_client,
-                    )
+                success = await _execute_cache_operation(op, cache_client)
+                if success:
                     results["successful"] += 1
-
-                elif op_type == "set":
-                    success = await cache_set(
-                        key,
-                        op.get("value"),
-                        op.get("cache_type", CacheType.CRAWL),
-                        op.get("ttl"),
-                        cache_client,
-                    )
-                    if success:
-                        results["successful"] += 1
-                    else:
-                        results["failed"] += 1
-
-                elif op_type == "delete":
-                    success = await cache_delete(
-                        key, op.get("cache_type", CacheType.CRAWL), cache_client
-                    )
-                    if success:
-                        results["successful"] += 1
-                    else:
-                        results["failed"] += 1
-
                 else:
                     results["failed"] += 1
+                    op_type = op.get("op", "unknown")
                     results["errors"].append(f"Unknown operation: {op_type}")
 
             except (OSError, PermissionError, ValueError) as e:
@@ -514,16 +549,11 @@ async def bulk_cache_operations(
 
         logger.info(
             f"Bulk cache operations completed: "
-            f"{results['successful']}/{results['total']} successful"
+            f"{results['successful']}/{results['total']} successful",
         )
 
     except Exception as e:
         logger.exception("Bulk cache operations failed")
-        return {
-            "total": len(operations),
-            "successful": 0,
-            "failed": len(operations),
-            "errors": [f"Bulk operation failed: {e!s}"],
-        }
+        return _create_error_result(operations, f"Bulk operation failed: {e!s}")
     else:
         return results

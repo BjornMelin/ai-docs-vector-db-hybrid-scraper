@@ -243,6 +243,7 @@ def instrument_function(
 def record_ai_operation(
     operation_type: str,
     provider: str,
+    *,
     model: str | None = None,
     input_tokens: int | None = None,
     output_tokens: int | None = None,

@@ -157,50 +157,74 @@ class QdrantHealthCheck(HealthCheck):
             Health check result
 
         """
+        return await self._execute_with_timeout(self._perform_qdrant_check())
 
-        async def _check():
-            try:
-                # Try to get cluster info to verify connectivity
-                cluster_info = await self.client.get_cluster_info()
+    async def _perform_qdrant_check(self) -> HealthCheckResult:
+        """Perform the actual Qdrant health check.
 
-                # Check if cluster is operational
-                if cluster_info and hasattr(cluster_info, "status"):
-                    return HealthCheckResult(
-                        name=self.name,
-                        status=HealthStatus.HEALTHY,
-                        message="Qdrant cluster is operational",
-                        duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                        metadata={
-                            "cluster_status": str(cluster_info.status),
-                            "peer_count": len(cluster_info.peers)
-                            if hasattr(cluster_info, "peers")
-                            else 0,
-                        },
-                    )
-                return HealthCheckResult(
-                    name=self.name,
-                    status=HealthStatus.DEGRADED,
-                    message="Qdrant responding but cluster info unavailable",
-                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                )
+        Returns:
+            Health check result
+        """
+        try:
+            cluster_info = await self._get_cluster_info()
+            return self._evaluate_cluster_health(cluster_info)
+        except UnexpectedResponse as e:
+            return self._create_error_result(f"Qdrant API error: {e!s}")
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
+            return self._create_error_result(f"Qdrant connection failed: {e!s}")
 
-            except UnexpectedResponse as e:
-                return HealthCheckResult(
-                    name=self.name,
-                    status=HealthStatus.UNHEALTHY,
-                    message=f"Qdrant API error: {e!s}",
-                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                )
+    async def _get_cluster_info(self):
+        """Get cluster info from Qdrant.
 
-            except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
-                return HealthCheckResult(
-                    name=self.name,
-                    status=HealthStatus.UNHEALTHY,
-                    message=f"Qdrant connection failed: {e!s}",
-                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                )
+        Returns:
+            Cluster info object
+        """
+        return await self.client.get_cluster_info()
 
-        return await self._execute_with_timeout(_check())
+    def _evaluate_cluster_health(self, cluster_info) -> HealthCheckResult:
+        """Evaluate cluster health based on cluster info.
+
+        Args:
+            cluster_info: Cluster information from Qdrant
+
+        Returns:
+            Health check result
+        """
+        if cluster_info and hasattr(cluster_info, "status"):
+            return HealthCheckResult(
+                name=self.name,
+                status=HealthStatus.HEALTHY,
+                message="Qdrant cluster is operational",
+                duration_ms=0.0,
+                metadata={
+                    "cluster_status": str(cluster_info.status),
+                    "peer_count": len(cluster_info.peers)
+                    if hasattr(cluster_info, "peers")
+                    else 0,
+                },
+            )
+        return HealthCheckResult(
+            name=self.name,
+            status=HealthStatus.DEGRADED,
+            message="Qdrant responding but cluster info unavailable",
+            duration_ms=0.0,
+        )
+
+    def _create_error_result(self, message: str) -> HealthCheckResult:
+        """Create an error health check result.
+
+        Args:
+            message: Error message
+
+        Returns:
+            Unhealthy health check result
+        """
+        return HealthCheckResult(
+            name=self.name,
+            status=HealthStatus.UNHEALTHY,
+            message=message,
+            duration_ms=0.0,
+        )
 
 
 class RedisHealthCheck(HealthCheck):
@@ -227,59 +251,83 @@ class RedisHealthCheck(HealthCheck):
             Health check result
 
         """
+        return await self._execute_with_timeout(self._perform_redis_check())
 
-        async def _check():
-            redis_client = None
-            try:
-                redis_client = redis.from_url(self.redis_url)
+    async def _perform_redis_check(self) -> HealthCheckResult:
+        """Perform the actual Redis health check.
 
-                # Ping Redis to verify connectivity
-                pong = await redis_client.ping()
-                if pong:
-                    # Get server info for additional metadata
-                    info = await redis_client.info()
+        Returns:
+            Health check result
+        """
+        redis_client = None
+        try:
+            redis_client = await self._create_redis_client()
+            return await self._check_redis_connectivity(redis_client)
+        except redis.ConnectionError as e:
+            return self._create_redis_error_result(f"Redis connection failed: {e!s}")
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
+            return self._create_redis_error_result(f"Redis health check error: {e!s}")
+        finally:
+            await self._cleanup_redis_client(redis_client)
 
-                    return HealthCheckResult(
-                        name=self.name,
-                        status=HealthStatus.HEALTHY,
-                        message="Redis server is responding",
-                        duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                        metadata={
-                            "redis_version": info.get("redis_version", "unknown"),
-                            "connected_clients": info.get("connected_clients", 0),
-                            "used_memory_human": info.get(
-                                "used_memory_human", "unknown"
-                            ),
-                        },
-                    )
-                return HealthCheckResult(
-                    name=self.name,
-                    status=HealthStatus.UNHEALTHY,
-                    message="Redis ping failed",
-                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                )
+    async def _create_redis_client(self):
+        """Create Redis client.
 
-            except redis.ConnectionError as e:
-                return HealthCheckResult(
-                    name=self.name,
-                    status=HealthStatus.UNHEALTHY,
-                    message=f"Redis connection failed: {e!s}",
-                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                )
+        Returns:
+            Redis client instance
+        """
+        return redis.from_url(self.redis_url)
 
-            except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-                return HealthCheckResult(
-                    name=self.name,
-                    status=HealthStatus.UNHEALTHY,
-                    message=f"Redis health check error: {e!s}",
-                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                )
+    async def _check_redis_connectivity(self, redis_client) -> HealthCheckResult:
+        """Check Redis connectivity and gather info.
 
-            finally:
-                if redis_client:
-                    await redis_client.aclose()
+        Args:
+            redis_client: Redis client instance
 
-        return await self._execute_with_timeout(_check())
+        Returns:
+            Health check result
+        """
+        pong = await redis_client.ping()
+        if not pong:
+            return self._create_redis_error_result("Redis ping failed")
+
+        info = await redis_client.info()
+        return HealthCheckResult(
+            name=self.name,
+            status=HealthStatus.HEALTHY,
+            message="Redis server is responding",
+            duration_ms=0.0,
+            metadata={
+                "redis_version": info.get("redis_version", "unknown"),
+                "connected_clients": info.get("connected_clients", 0),
+                "used_memory_human": info.get("used_memory_human", "unknown"),
+            },
+        )
+
+    def _create_redis_error_result(self, message: str) -> HealthCheckResult:
+        """Create Redis error result.
+
+        Args:
+            message: Error message
+
+        Returns:
+            Unhealthy health check result
+        """
+        return HealthCheckResult(
+            name=self.name,
+            status=HealthStatus.UNHEALTHY,
+            message=message,
+            duration_ms=0.0,
+        )
+
+    async def _cleanup_redis_client(self, redis_client) -> None:
+        """Clean up Redis client.
+
+        Args:
+            redis_client: Redis client to clean up
+        """
+        if redis_client:
+            await redis_client.aclose()
 
 
 class HTTPHealthCheck(HealthCheck):
@@ -288,6 +336,7 @@ class HTTPHealthCheck(HealthCheck):
     def __init__(
         self,
         url: str,
+        *,
         expected_status: int = 200,
         name: str | None = None,
         timeout_seconds: float = 5.0,
@@ -319,52 +368,77 @@ class HTTPHealthCheck(HealthCheck):
             Health check result
 
         """
+        return await self._execute_with_timeout(self._perform_http_check())
 
-        async def _check():
-            try:
-                timeout = aiohttp.ClientTimeout(total=self.timeout_seconds)
-                async with (
-                    aiohttp.ClientSession(timeout=timeout) as session,
-                    session.get(self.url, headers=self.headers) as response,
-                ):
-                    if response.status == self.expected_status:
-                        return HealthCheckResult(
-                            name=self.name,
-                            status=HealthStatus.HEALTHY,
-                            message=f"HTTP endpoint responding with status {response.status}",
-                            duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                            metadata={
-                                "status_code": response.status,
-                                "content_type": response.headers.get(
-                                    "content-type", "unknown"
-                                ),
-                            },
-                        )
-                    return HealthCheckResult(
-                        name=self.name,
-                        status=HealthStatus.UNHEALTHY,
-                        message=f"HTTP endpoint returned status {response.status}, expected {self.expected_status}",
-                        duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                        metadata={"status_code": response.status},
-                    )
+    async def _perform_http_check(self) -> HealthCheckResult:
+        """Perform the actual HTTP health check.
 
-            except aiohttp.ClientError as e:
-                return HealthCheckResult(
-                    name=self.name,
-                    status=HealthStatus.UNHEALTHY,
-                    message=f"HTTP request failed: {e!s}",
-                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                )
+        Returns:
+            Health check result
+        """
+        try:
+            return await self._make_http_request()
+        except aiohttp.ClientError as e:
+            return self._create_http_error_result(f"HTTP request failed: {e!s}")
+        except (httpx.HTTPError, httpx.TimeoutException, ConnectionError) as e:
+            return self._create_http_error_result(f"HTTP health check error: {e!s}")
 
-            except (httpx.HTTPError, httpx.TimeoutException, ConnectionError) as e:
-                return HealthCheckResult(
-                    name=self.name,
-                    status=HealthStatus.UNHEALTHY,
-                    message=f"HTTP health check error: {e!s}",
-                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                )
+    async def _make_http_request(self) -> HealthCheckResult:
+        """Make HTTP request and evaluate response.
 
-        return await self._execute_with_timeout(_check())
+        Returns:
+            Health check result
+        """
+        timeout = aiohttp.ClientTimeout(total=self.timeout_seconds)
+        async with (
+            aiohttp.ClientSession(timeout=timeout) as session,
+            session.get(self.url, headers=self.headers) as response,
+        ):
+            return self._evaluate_http_response(response)
+
+    def _evaluate_http_response(self, response) -> HealthCheckResult:
+        """Evaluate HTTP response status.
+
+        Args:
+            response: HTTP response object
+
+        Returns:
+            Health check result
+        """
+        if response.status == self.expected_status:
+            return HealthCheckResult(
+                name=self.name,
+                status=HealthStatus.HEALTHY,
+                message=f"HTTP endpoint responding with status {response.status}",
+                duration_ms=0.0,
+                metadata={
+                    "status_code": response.status,
+                    "content_type": response.headers.get("content-type", "unknown"),
+                },
+            )
+        return HealthCheckResult(
+            name=self.name,
+            status=HealthStatus.UNHEALTHY,
+            message=f"HTTP endpoint returned status {response.status}, expected {self.expected_status}",
+            duration_ms=0.0,
+            metadata={"status_code": response.status},
+        )
+
+    def _create_http_error_result(self, message: str) -> HealthCheckResult:
+        """Create HTTP error result.
+
+        Args:
+            message: Error message
+
+        Returns:
+            Unhealthy health check result
+        """
+        return HealthCheckResult(
+            name=self.name,
+            status=HealthStatus.UNHEALTHY,
+            message=message,
+            duration_ms=0.0,
+        )
 
 
 class SystemResourceHealthCheck(HealthCheck):
@@ -372,6 +446,7 @@ class SystemResourceHealthCheck(HealthCheck):
 
     def __init__(
         self,
+        *,
         name: str = "system_resources",
         cpu_threshold: float = 90.0,
         memory_threshold: float = 90.0,
@@ -400,74 +475,117 @@ class SystemResourceHealthCheck(HealthCheck):
             Health check result
 
         """
+        return await self._execute_with_timeout(self._perform_system_check())
 
-        async def _check():
-            try:
-                if psutil is None:
-                    return HealthCheckResult(
-                        name=self.name,
-                        status=HealthStatus.DEGRADED,
-                        response_time_ms=0,
-                        details={"error": "psutil not available"},
-                    )
+    async def _perform_system_check(self) -> HealthCheckResult:
+        """Perform the actual system resource check.
 
-                # Check CPU usage
-                cpu_percent = psutil.cpu_percent(interval=1)
+        Returns:
+            Health check result
+        """
+        if psutil is None:
+            return self._create_psutil_unavailable_result()
 
-                # Check memory usage
-                memory = psutil.virtual_memory()
-                memory_percent = memory.percent
+        try:
+            resource_metrics = await self._gather_resource_metrics()
+            return self._evaluate_system_health(resource_metrics)
+        except (ValueError, TypeError, AttributeError) as e:
+            return self._create_system_error_result(
+                f"System resource check failed: {e!s}"
+            )
 
-                # Check disk usage for root
-                disk = psutil.disk_usage("/")
-                disk_percent = (disk.used / disk.total) * 100
+    def _create_psutil_unavailable_result(self) -> HealthCheckResult:
+        """Create result when psutil is not available.
 
-                # Determine overall status
-                issues = []
-                status = HealthStatus.HEALTHY
+        Returns:
+            Degraded health check result
+        """
+        return HealthCheckResult(
+            name=self.name,
+            status=HealthStatus.DEGRADED,
+            message="psutil not available",
+            duration_ms=0.0,
+            metadata={"error": "psutil not available"},
+        )
 
-                if cpu_percent > self.cpu_threshold:
-                    issues.append(f"High CPU usage: {cpu_percent:.1f}%")
-                    status = HealthStatus.DEGRADED
+    async def _gather_resource_metrics(self) -> dict:
+        """Gather system resource metrics.
 
-                if memory_percent > self.memory_threshold:
-                    issues.append(f"High memory usage: {memory_percent:.1f}%")
-                    status = HealthStatus.DEGRADED
+        Returns:
+            Dictionary of resource metrics
+        """
+        cpu_percent = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        disk = psutil.disk_usage("/")
 
-                if disk_percent > self.disk_threshold:
-                    issues.append(f"High disk usage: {disk_percent:.1f}%")
-                    status = HealthStatus.DEGRADED
+        return {
+            "cpu_percent": cpu_percent,
+            "memory_percent": memory.percent,
+            "disk_percent": (disk.used / disk.total) * 100,
+            "memory": memory,
+            "disk": disk,
+        }
 
-                if len(issues) >= 2:
-                    status = HealthStatus.UNHEALTHY
+    def _evaluate_system_health(self, metrics: dict) -> HealthCheckResult:
+        """Evaluate system health based on metrics.
 
-                message = (
-                    "System resources healthy" if not issues else "; ".join(issues)
-                )
+        Args:
+            metrics: System resource metrics
 
-                return HealthCheckResult(
-                    name=self.name,
-                    status=status,
-                    message=message,
-                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                    metadata={
-                        "cpu_percent": cpu_percent,
-                        "memory_percent": memory_percent,
-                        "disk_percent": disk_percent,
-                        "memory_available_gb": memory.available / (1024**3),
-                        "disk_free_gb": disk.free / (1024**3),
-                    },
-                )
+        Returns:
+            Health check result
+        """
+        issues = []
+        status = HealthStatus.HEALTHY
 
-            except (ValueError, TypeError, AttributeError) as e:
-                return HealthCheckResult(
-                    name=self.name,
-                    status=HealthStatus.UNHEALTHY,
-                    message=f"System resource check failed: {e!s}",
-                    duration_ms=0.0,  # Will be updated by _execute_with_timeout
-                )
+        # Check each resource threshold
+        if metrics["cpu_percent"] > self.cpu_threshold:
+            issues.append(f"High CPU usage: {metrics['cpu_percent']:.1f}%")
+            status = HealthStatus.DEGRADED
 
-        return await self._execute_with_timeout(_check())
+        if metrics["memory_percent"] > self.memory_threshold:
+            issues.append(f"High memory usage: {metrics['memory_percent']:.1f}%")
+            status = HealthStatus.DEGRADED
+
+        if metrics["disk_percent"] > self.disk_threshold:
+            issues.append(f"High disk usage: {metrics['disk_percent']:.1f}%")
+            status = HealthStatus.DEGRADED
+
+        # Multiple issues indicate unhealthy system
+        if len(issues) >= 2:
+            status = HealthStatus.UNHEALTHY
+
+        message = "System resources healthy" if not issues else "; ".join(issues)
+
+        return HealthCheckResult(
+            name=self.name,
+            status=status,
+            message=message,
+            duration_ms=0.0,
+            metadata={
+                "cpu_percent": metrics["cpu_percent"],
+                "memory_percent": metrics["memory_percent"],
+                "disk_percent": metrics["disk_percent"],
+                "memory_available_gb": metrics["memory"].available / (1024**3),
+                "disk_free_gb": metrics["disk"].free / (1024**3),
+            },
+        )
+
+    def _create_system_error_result(self, message: str) -> HealthCheckResult:
+        """Create system error result.
+
+        Args:
+            message: Error message
+
+        Returns:
+            Unhealthy health check result
+        """
+        return HealthCheckResult(
+            name=self.name,
+            status=HealthStatus.UNHEALTHY,
+            message=message,
+            duration_ms=0.0,
+        )
 
 
 class HealthCheckManager:
@@ -552,7 +670,12 @@ class HealthCheckManager:
 
         """
         self.add_health_check(
-            HTTPHealthCheck(url, expected_status, name, timeout_seconds)
+            HTTPHealthCheck(
+                url,
+                expected_status=expected_status,
+                name=name,
+                timeout_seconds=timeout_seconds,
+            )
         )
 
     def add_system_resource_check(

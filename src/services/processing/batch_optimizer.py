@@ -82,7 +82,7 @@ class BatchProcessor:
             delayed_task = asyncio.create_task(self._delayed_batch_processing())
             # Store reference to prevent task garbage collection
             delayed_task.add_done_callback(
-                lambda _: logger.debug("Delayed batch processing completed")
+                lambda _: logger.debug("Delayed batch processing completed"),
             )
 
         return await future
@@ -131,7 +131,9 @@ class BatchProcessor:
                 results = await self.process_func(items)
             else:
                 results = await asyncio.get_event_loop().run_in_executor(
-                    None, self.process_func, items
+                    None,
+                    self.process_func,
+                    items,
                 )
 
             # Calculate processing time
@@ -146,7 +148,7 @@ class BatchProcessor:
                     future.set_result(result)
 
             logger.debug(
-                f"Processed batch of {batch_size} items in {processing_time:.1f}ms"
+                f"Processed batch of {batch_size} items in {processing_time:.1f}ms",
             )
 
         except Exception as e:
@@ -157,7 +159,9 @@ class BatchProcessor:
                     future.set_exception(e)
 
     def _update_performance_metrics(
-        self, batch_size: int, processing_time: float
+        self,
+        batch_size: int,
+        processing_time: float,
     ) -> None:
         """Update performance metrics and adjust optimal batch size.
 
@@ -206,7 +210,8 @@ class BatchProcessor:
 
         # Update optimal batch size within bounds
         self.optimal_batch_size = max(
-            self.config.min_batch_size, min(best_size, self.config.max_batch_size)
+            self.config.min_batch_size,
+            min(best_size, self.config.max_batch_size),
         )
 
         logger.debug("Updated optimal batch size to %s", self.optimal_batch_size)

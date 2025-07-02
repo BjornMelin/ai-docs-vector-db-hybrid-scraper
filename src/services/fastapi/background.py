@@ -255,20 +255,19 @@ class BackgroundTaskManager:
         # Add to queue
         try:
             await self._task_queue.put(task_id)
-            logger.debug(
-                f"Task {task_id} submitted successfully"
-            )  # TODO: Convert f-string to logging format
         except asyncio.QueueFull as e:
-            # Remove from storage if queue is full
-            with self._task_lock:
-                del self._tasks[task_id]
-                del self._results[task_id]
-                self._total_tasks -= 1
+            self._cleanup_failed_task_submission(task_id)
             msg = "Task queue is full"
             raise ValueError(msg) from e
-
         else:
-            return task_id
+            logger.debug(f"Task {task_id} submitted successfully")
+
+    def _cleanup_failed_task_submission(self, task_id: str) -> None:
+        """Clean up task storage when submission fails."""
+        with self._task_lock:
+            del self._tasks[task_id]
+            del self._results[task_id]
+            self._total_tasks -= 1
 
     async def get_task_result(self, task_id: str) -> TaskResult | None:
         """Get result of a specific task.

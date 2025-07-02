@@ -664,6 +664,7 @@ class EnterpriseObservabilityPlatform:
         self,
         name: str,
         value: float,
+        *,
         metric_type: MetricType = MetricType.GAUGE,
         tags: dict[str, str] | None = None,
         service_name: str = "unknown",
@@ -722,9 +723,9 @@ class EnterpriseObservabilityPlatform:
             self.record_metric(
                 "span.duration",
                 span.duration_ms,
-                MetricType.TIMER,
-                {"operation": span.operation_name},
-                span.service_name,
+                metric_type=MetricType.TIMER,
+                tags={"operation": span.operation_name},
+                service_name=span.service_name,
             )
 
         # Check if trace is complete

@@ -138,8 +138,7 @@ class EnterpriseSearchService(BaseService):
         try:
             # Check cache first
             cache_key = self._generate_cache_key(request)
-            cached_result = await self._get_cached_result(cache_key)
-            if cached_result:
+            if cached_result := await self._get_cached_result(cache_key):
                 logger.debug("Cache hit for query: %s...", request.query[:50])
                 return cached_result
 
@@ -371,8 +370,7 @@ class EnterpriseSearchService(BaseService):
         seen_ids = set()
         fused = []
         for result in combined:
-            result_id = result.get("id", "")
-            if result_id not in seen_ids:
+            if (result_id := result.get("id", "")) not in seen_ids:
                 seen_ids.add(result_id)
                 fused.append(result)
 

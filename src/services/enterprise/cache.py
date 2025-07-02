@@ -58,23 +58,25 @@ class EnterpriseCacheService(BaseService):
         logger.info("Initializing enterprise cache service")
 
         try:
-            # Initialize distributed cache if enabled
-            if self.enable_distributed:
-                await self._initialize_distributed_cache()
-
-            # Initialize cache warming
-            await self._initialize_cache_warming()
-
-            # Initialize analytics
-            if self.enable_analytics:
-                await self._initialize_analytics()
-
+            await self._perform_initialization_steps()
             self._mark_initialized()
             logger.info("Enterprise cache service initialized successfully")
-
         except Exception:
             logger.exception("Failed to initialize enterprise cache service")
             raise
+
+    async def _perform_initialization_steps(self) -> None:
+        """Perform all initialization steps."""
+        # Initialize distributed cache if enabled
+        if self.enable_distributed:
+            await self._initialize_distributed_cache()
+
+        # Initialize cache warming
+        await self._initialize_cache_warming()
+
+        # Initialize analytics
+        if self.enable_analytics:
+            await self._initialize_analytics()
 
     async def cleanup(self) -> None:
         """Clean up cache service resources."""
@@ -114,33 +116,31 @@ class EnterpriseCacheService(BaseService):
 
         try:
             # Check local cache first (L1)
-            value = await self._get_local(key)
-            if value is not None:
+            if (value := await self._get_local(key)) is not None:
                 self._cache_hits += 1
                 self._track_access(key)
                 self._record_operation_time("get", time.time() - start_time)
                 return value
 
             # Check distributed cache (L2)
-            if self.distributed_cache:
-                value = await self._get_distributed(key)
-                if value is not None:
-                    # Populate local cache
-                    await self._set_local(key, value, ttl=self.default_ttl)
-                    self._cache_hits += 1
-                    self._track_access(key)
-                    self._record_operation_time("get", time.time() - start_time)
-                    return value
+            if (
+                self.distributed_cache
+                and (value := await self._get_distributed(key)) is not None
+            ):
+                # Populate local cache
+                await self._set_local(key, value, ttl=self.default_ttl)
+                self._cache_hits += 1
+                self._track_access(key)
+                self._record_operation_time("get", time.time() - start_time)
+                return value
 
             # Cache miss
             self._cache_misses += 1
             self._record_operation_time("get", time.time() - start_time)
-
-        except Exception:
-            logger.exception("Cache get failed for key {key}")
             return None
 
-        else:
+        except Exception:
+            logger.exception("Cache get failed for key: %s", key)
             return None
 
     async def set(
@@ -156,29 +156,40 @@ class EnterpriseCacheService(BaseService):
         """
         start_time = time.time()
 
+        if ttl is None:
+            ttl = self.default_ttl
+
+        # Compress value if enabled
+        processed_value = await self._prepare_value_for_caching(value)
+
+        # Set in appropriate tiers
+        success = await self._store_in_tiers(key, processed_value, ttl, tier)
+
+        if success:
+            self._cache_sets += 1
+            self._track_access(key)
+            self._record_operation_time("set", time.time() - start_time)
+            logger.debug("Cached value for key: %s in %s tier(s)", key, tier)
+
+    async def _prepare_value_for_caching(self, value: Any) -> Any:
+        """Prepare value for caching (compression, etc.)."""
+        if self.enable_compression:
+            return await self._compress_value(value)
+        return value
+
+    async def _store_in_tiers(self, key: str, value: Any, ttl: int, tier: str) -> bool:
+        """Store value in appropriate cache tiers."""
         try:
-            if ttl is None:
-                ttl = self.default_ttl
-
-            # Compress value if enabled
-            if self.enable_compression:
-                value = await self._compress_value(value)
-
-            # set in appropriate tiers
             if tier in ("local", "both"):
                 await self._set_local(key, value, ttl)
 
             if tier in ("distributed", "both") and self.distributed_cache:
                 await self._set_distributed(key, value, ttl)
 
-            self._cache_sets += 1
-            self._track_access(key)
-            self._record_operation_time("set", time.time() - start_time)
-
-            logger.debug("Cached value for key: %s in %s tier(s)", key, tier)
-
+            return True
         except Exception:
-            logger.exception("Cache set failed for key {key}")
+            logger.exception("Cache set failed for key: %s", key)
+            return False
 
     async def delete(self, key: str) -> bool:
         """Delete value from all cache tiers.
@@ -192,31 +203,47 @@ class EnterpriseCacheService(BaseService):
         start_time = time.time()
         deleted = False
 
-        try:
-            # Delete from local cache
-            if key in self.local_cache:
-                del self.local_cache[key]
-                deleted = True
+        # Delete from local cache
+        local_deleted = await self._delete_from_local(key)
 
-            # Delete from distributed cache
-            if self.distributed_cache:
-                dist_deleted = await self._delete_distributed(key)
-                deleted = deleted or dist_deleted
+        # Delete from distributed cache
+        dist_deleted = await self._delete_from_distributed(key)
 
+        deleted = local_deleted or dist_deleted
+
+        if deleted:
             # Clean up tracking
-            if key in self._access_patterns:
-                del self._access_patterns[key]
-            self._hot_keys.discard(key)
-
+            self._cleanup_key_tracking(key)
             self._cache_deletes += 1
             self._record_operation_time("delete", time.time() - start_time)
 
+        return deleted
+
+    async def _delete_from_local(self, key: str) -> bool:
+        """Delete key from local cache."""
+        try:
+            if key in self.local_cache:
+                del self.local_cache[key]
+                return True
         except Exception:
-            logger.exception("Cache delete failed for key {key}")
+            logger.exception("Local cache delete failed for key: %s", key)
+        return False
+
+    async def _delete_from_distributed(self, key: str) -> bool:
+        """Delete key from distributed cache."""
+        if not self.distributed_cache:
+            return False
+        try:
+            return await self._delete_distributed(key)
+        except Exception:
+            logger.exception("Distributed cache delete failed for key: %s", key)
             return False
 
-        else:
-            return deleted
+    def _cleanup_key_tracking(self, key: str) -> None:
+        """Clean up tracking data for a key."""
+        if key in self._access_patterns:
+            del self._access_patterns[key]
+        self._hot_keys.discard(key)
 
     async def clear(self, tier: str = "both") -> None:
         """Clear cache entries from specified tiers.
@@ -224,21 +251,32 @@ class EnterpriseCacheService(BaseService):
         Args:
             tier: Cache tier to clear ("local", "distributed", or "both")
         """
+        # Clear appropriate tiers
+        if tier in ("local", "both"):
+            await self._clear_local_cache()
+
+        if tier in ("distributed", "both") and self.distributed_cache:
+            await self._clear_distributed_cache()
+
+        # Reset analytics
+        self._access_patterns.clear()
+        self._hot_keys.clear()
+
+    async def _clear_local_cache(self) -> None:
+        """Clear local cache with error handling."""
         try:
-            if tier in ("local", "both"):
-                self.local_cache.clear()
-                logger.info("Local cache cleared")
-
-            if tier in ("distributed", "both") and self.distributed_cache:
-                await self._clear_distributed()
-                logger.info("Distributed cache cleared")
-
-            # Reset analytics
-            self._access_patterns.clear()
-            self._hot_keys.clear()
-
+            self.local_cache.clear()
+            logger.info("Local cache cleared")
         except Exception:
-            logger.exception("Cache clear failed")
+            logger.exception("Local cache clear failed")
+
+    async def _clear_distributed_cache(self) -> None:
+        """Clear distributed cache with error handling."""
+        try:
+            await self._clear_distributed()
+            logger.info("Distributed cache cleared")
+        except Exception:
+            logger.exception("Distributed cache clear failed")
 
     async def exists(self, key: str) -> bool:
         """Check if key exists in any cache tier.
@@ -273,8 +311,7 @@ class EnterpriseCacheService(BaseService):
         # Batch load from distributed cache to local cache
         for key in keys:
             try:
-                value = await self._get_distributed(key)
-                if value is not None:
+                if (value := await self._get_distributed(key)) is not None:
                     await self._set_local(key, value, ttl=self.default_ttl)
             except Exception:
                 logger.exception("Cache warming failed for key {key}")

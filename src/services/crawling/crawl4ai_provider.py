@@ -84,7 +84,8 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             self.dispatcher = None
             self.use_memory_dispatcher = False
             self.logger.info(
-                f"Using semaphore-based concurrency control (max: {self.max_concurrent})"
+                "Using semaphore-based concurrency control (max: %s)",
+                self.max_concurrent,
             )
 
         # Initialize helpers
@@ -133,54 +134,8 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             return
 
         try:
-            # Initialize Memory-Adaptive Dispatcher if enabled
-            if self.use_memory_dispatcher and self.dispatcher:
-                # Check if dispatcher has initialize method
-                if hasattr(self.dispatcher, "initialize"):
-                    await self.dispatcher.initialize()
-                    self.logger.info(
-                        "MemoryAdaptiveDispatcher initialized successfully"
-                    )
-                else:
-                    self.logger.info(
-                        "MemoryAdaptiveDispatcher ready (no initialize method)"
-                    )
-
-            # Create crawler with enhanced configuration
-            crawler_config = self.browser_config
-
-            # Add LXMLWebScrapingStrategy for performance improvement if available
-            if MEMORY_ADAPTIVE_AVAILABLE:
-                try:
-                    crawler_config.web_scraping_strategy = LXMLWebScrapingStrategy()
-                    self.logger.info(
-                        "Using LXMLWebScrapingStrategy for enhanced performance"
-                    )
-                except (
-                    AttributeError,
-                    ConnectionError,
-                    ImportError,
-                    RuntimeError,
-                ):
-                    self.logger.warning("Could not set LXMLWebScrapingStrategy")
-
-            self._crawler = AsyncWebCrawler(config=crawler_config)
-            await self._crawler.start()
-            self._initialized = True
-
-            strategy_info = (
-                "with LXMLWebScrapingStrategy"
-                if MEMORY_ADAPTIVE_AVAILABLE
-                else "with default strategy"
-            )
-            dispatcher_info = (
-                "MemoryAdaptiveDispatcher"
-                if self.use_memory_dispatcher
-                else "semaphore"
-            )
-            self.logger.info(
-                f"Crawl4AI crawler initialized {strategy_info} and {dispatcher_info}"
-            )
+            await self._initialize_memory_dispatcher()
+            await self._initialize_crawler_with_config()
 
         except Exception as e:
             msg = "Failed to initialize Crawl4AI"
@@ -421,37 +376,13 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
     ) -> dict[str, object]:
         """Scrape URL using Memory-Adaptive Dispatcher."""
         try:
-            # Get site-specific JavaScript if not provided
-            if not js_code:
-                js_code = self.js_executor.get_js_for_site(url)
-
-            # Create extraction strategy and run configuration
-            extraction_strategy = self._create_extraction_strategy(extraction_type)
-            run_config = self._create_run_config(wait_for, js_code, extraction_strategy)
-
-            # Enable streaming in run config if requested
-            if enable_streaming:
-                run_config.stream = True
-
-            # Crawl the URL (MemoryAdaptiveDispatcher handles concurrency internally)
-            if enable_streaming:
-                # Stream processing for real-time results
-                return await self._process_streaming_crawl(
-                    url, run_config, extraction_type, None
-                )
-            # Standard crawl
-            result = await self._crawler.arun(url=url, config=run_config)
-
-            if result.success:
-                success_result = self._build_success_result(
-                    url, result, extraction_type
-                )
-                success_result["metadata"]["dispatcher_stats"] = (
-                    self._get_dispatcher_stats()
-                )
-                return success_result
-            error_msg = getattr(result, "error_message", "Crawl failed")
-            return self._build_error_result(url, error_msg, extraction_type)
+            js_code = await self._prepare_javascript_code(url, js_code)
+            run_config = await self._prepare_run_config(
+                extraction_type, wait_for, js_code, enable_streaming
+            )
+            return await self._execute_crawl_with_dispatcher(
+                url, run_config, extraction_type, enable_streaming
+            )
 
         except (RuntimeError, TypeError) as e:
             error_result = self._build_error_result(url, e, extraction_type)
@@ -471,23 +402,13 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 await self.rate_limiter.acquire()
 
             try:
-                # Get site-specific JavaScript if not provided
-                if not js_code:
-                    js_code = self.js_executor.get_js_for_site(url)
-
-                # Create extraction strategy and run configuration
-                extraction_strategy = self._create_extraction_strategy(extraction_type)
-                run_config = self._create_run_config(
-                    wait_for, js_code, extraction_strategy
+                js_code = await self._prepare_javascript_code(url, js_code)
+                run_config = await self._prepare_run_config(
+                    extraction_type, wait_for, js_code, False
                 )
-
-                # Crawl the URL
-                result = await self._crawler.arun(url=url, config=run_config)
-
-                if result.success:
-                    return self._build_success_result(url, result, extraction_type)
-                error_msg = getattr(result, "error_message", "Crawl failed")
-                return self._build_error_result(url, error_msg, extraction_type)
+                return await self._execute_standard_crawl(
+                    url, run_config, extraction_type
+                )
 
             except (subprocess.SubprocessError, OSError, TimeoutError) as e:
                 return self._build_error_result(url, e, extraction_type)
@@ -747,7 +668,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 "max_pages_target": max_pages,
             }
 
-            self.logger.exception("Failed to crawl site {url}: {e} | Context")
+            self.logger.exception("Failed to crawl site %s | Context", url)
             return {
                 "success": False,
                 "error": str(e),
@@ -756,6 +677,120 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                 "total": len(pages),
                 "provider": "crawl4ai",
             }
+
+    async def _prepare_javascript_code(
+        self, url: str, js_code: str | None
+    ) -> str | None:
+        """Prepare JavaScript code for crawling."""
+        if not js_code:
+            return self.js_executor.get_js_for_site(url)
+        return js_code
+
+    async def _prepare_run_config(
+        self,
+        extraction_type: str,
+        wait_for: str | None,
+        js_code: str | None,
+        enable_streaming: bool,
+    ) -> CrawlerRunConfig:
+        """Prepare crawler run configuration."""
+        extraction_strategy = self._create_extraction_strategy(extraction_type)
+        run_config = self._create_run_config(wait_for, js_code, extraction_strategy)
+
+        if enable_streaming:
+            run_config.stream = True
+
+        return run_config
+
+    async def _execute_crawl_with_dispatcher(
+        self,
+        url: str,
+        run_config: CrawlerRunConfig,
+        extraction_type: str,
+        enable_streaming: bool,
+    ) -> dict[str, object]:
+        """Execute crawl using memory-adaptive dispatcher."""
+        if enable_streaming:
+            return await self._process_streaming_crawl(
+                url, run_config, extraction_type, None
+            )
+
+        result = await self._crawler.arun(url=url, config=run_config)
+
+        if result.success:
+            success_result = self._build_success_result(url, result, extraction_type)
+            success_result["metadata"]["dispatcher_stats"] = (
+                self._get_dispatcher_stats()
+            )
+            return success_result
+
+        error_msg = getattr(result, "error_message", "Crawl failed")
+        return self._build_error_result(url, error_msg, extraction_type)
+
+    async def _execute_standard_crawl(
+        self,
+        url: str,
+        run_config: CrawlerRunConfig,
+        extraction_type: str,
+    ) -> dict[str, object]:
+        """Execute standard crawl operation."""
+        result = await self._crawler.arun(url=url, config=run_config)
+
+        if result.success:
+            return self._build_success_result(url, result, extraction_type)
+
+        error_msg = getattr(result, "error_message", "Crawl failed")
+        return self._build_error_result(url, error_msg, extraction_type)
+
+    async def _initialize_memory_dispatcher(self) -> None:
+        """Initialize Memory-Adaptive Dispatcher if enabled."""
+        if not (self.use_memory_dispatcher and self.dispatcher):
+            return
+
+        if hasattr(self.dispatcher, "initialize"):
+            await self.dispatcher.initialize()
+            self.logger.info("MemoryAdaptiveDispatcher initialized successfully")
+        else:
+            self.logger.info("MemoryAdaptiveDispatcher ready (no initialize method)")
+
+    async def _initialize_crawler_with_config(self) -> None:
+        """Initialize crawler with enhanced configuration."""
+        crawler_config = self.browser_config
+
+        # Add LXMLWebScrapingStrategy for performance improvement if available
+        await self._setup_web_scraping_strategy(crawler_config)
+
+        self._crawler = AsyncWebCrawler(config=crawler_config)
+        await self._crawler.start()
+        self._initialized = True
+
+        strategy_info = (
+            "with LXMLWebScrapingStrategy"
+            if MEMORY_ADAPTIVE_AVAILABLE
+            else "with default strategy"
+        )
+        dispatcher_info = (
+            "MemoryAdaptiveDispatcher" if self.use_memory_dispatcher else "semaphore"
+        )
+        self.logger.info(
+            "Crawl4AI crawler initialized %s and %s", strategy_info, dispatcher_info
+        )
+
+    async def _setup_web_scraping_strategy(self, crawler_config) -> None:
+        """Setup web scraping strategy if available."""
+        if not MEMORY_ADAPTIVE_AVAILABLE:
+            return
+
+        try:
+            crawler_config.web_scraping_strategy = LXMLWebScrapingStrategy()
+            self.logger.info("Using LXMLWebScrapingStrategy for enhanced performance")
+        except (
+            AttributeError,
+            ConnectionError,
+            ImportError,
+            RuntimeError,
+        ):
+            self.logger.warning("Could not set LXMLWebScrapingStrategy")
 
 
 # NOTE: CrawlCache and CrawlBenchmark classes have been removed as they are redundant:

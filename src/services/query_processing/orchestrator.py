@@ -224,6 +224,58 @@ class SearchOrchestrator(BaseService):
             self._rag_generator = RAGGenerator(config.rag)
         return self._rag_generator
 
+    async def _check_cache_for_request(self, request: SearchRequest) -> SearchResult | None:
+        """Check cache for existing search results."""
+        if not request.enable_caching:
+            return None
+
+        cache_key = self._get_cache_key(request)
+        if cache_key in self.cache:
+            self.stats["cache_hits"] += 1
+            self.stats["total_searches"] += 1
+            cached_result = self.cache[cache_key]
+            cached_result.cache_hit = True
+            return cached_result
+
+        self.stats["cache_misses"] += 1
+        return None
+
+    async def _execute_search_pipeline(
+        self, request: SearchRequest, features_used: list[str]
+    ) -> tuple[list, str | None]:
+        """Execute the core search pipeline with query processing."""
+        config = self._apply_pipeline_config(request)
+        processed_query = request.query
+        expanded_query = None
+
+        # Query expansion
+        if config.get("enable_expansion", False) and request.mode != SearchMode.BASIC:
+            expanded_query = await self._try_query_expansion(request, features_used)
+            if expanded_query:
+                processed_query = expanded_query
+
+        # Execute search
+        search_results = await self._execute_search(processed_query, request, config)
+        return search_results, expanded_query
+
+    async def _try_query_expansion(self, request: SearchRequest, features_used: list[str]) -> str | None:
+        """Attempt query expansion with error handling."""
+        try:
+            expansion_request = QueryExpansionRequest(
+                original_query=request.query,
+                max_expanded_terms=5,
+                min_confidence=0.7,
+            )
+            expansion_result = await self.query_expansion_service.expand_query(
+                expansion_request
+            )
+            if expansion_result.expanded_query:
+                features_used.append("query_expansion")
+                return expansion_result.expanded_query
+        except (ConnectionError, OSError, PermissionError):
+            self._logger.warning("Query expansion failed")
+        return None
+
     async def search(self, request: SearchRequest) -> SearchResult:
         """Execute search with optimized pipeline.
 
@@ -239,47 +291,13 @@ class SearchOrchestrator(BaseService):
 
         try:
             # Check cache first
-            if request.enable_caching:
-                cache_key = self._get_cache_key(request)
-                if cache_key in self.cache:
-                    self.stats["cache_hits"] += 1
-                    self.stats["total_searches"] += 1  # Count cache hits too
-                    cached_result = self.cache[cache_key]
-                    cached_result.cache_hit = True
-                    return cached_result
-                self.stats["cache_misses"] += 1
+            cached_result = await self._check_cache_for_request(request)
+            if cached_result:
+                return cached_result
 
-            # Apply pipeline configuration
-            config = self._apply_pipeline_config(request)
-
-            # Process query
-            processed_query = request.query
-            expanded_query = None
-
-            # Step 1: Query expansion (if enabled)
-            if (
-                config.get("enable_expansion", False)
-                and request.mode != SearchMode.BASIC
-            ):
-                try:
-                    expansion_request = QueryExpansionRequest(
-                        original_query=request.query,
-                        max_expanded_terms=5,  # Keep it simple
-                        min_confidence=0.7,
-                    )
-                    expansion_result = await self.query_expansion_service.expand_query(
-                        expansion_request
-                    )
-                    if expansion_result.expanded_query:
-                        expanded_query = expansion_result.expanded_query
-                        processed_query = expanded_query
-                        features_used.append("query_expansion")
-                except (ConnectionError, OSError, PermissionError):
-                    self._logger.warning("Query expansion failed")
-
-            # Step 2: Execute search (would call actual search service)
-            search_results = await self._execute_search(
-                processed_query, request, config
+            # Execute search pipeline
+            search_results, expanded_query = await self._execute_search_pipeline(
+                request, features_used
             )
 
             # Step 3: Post-processing (clustering, ranking, etc.)

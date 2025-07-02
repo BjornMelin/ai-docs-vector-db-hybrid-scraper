@@ -532,66 +532,117 @@ class EmbeddingManager:
         )  # TODO: Convert f-string to logging format
 
         try:
-            # Generate dense embeddings
-            embeddings = await provider.generate_embeddings(
-                texts,
-                batch_size=32,  # Default batch size for optimal performance
+            embeddings = await self._generate_dense_embeddings(provider, texts)
+        except (ValueError, RuntimeError, ConnectionError, TimeoutError) as e:
+            logger.exception("Dense embedding generation failed: ")
+            msg = f"Failed to generate dense embeddings: {e}"
+            raise EmbeddingServiceError(msg) from e
+
+        try:
+            sparse_embeddings = await self._generate_sparse_embeddings_if_needed(
+                provider, texts, generate_sparse
             )
-
-            # Generate sparse embeddings if requested and supported
+        except (AttributeError, RuntimeError, ValueError) as e:
+            logger.warning(f"Failed to generate sparse embeddings: {e}")
             sparse_embeddings = None
-            if generate_sparse and hasattr(provider, "generate_sparse_embeddings"):
-                try:
-                    sparse_embeddings = await provider.generate_sparse_embeddings(texts)
-                    logger.info(
-                        f"Generated {len(sparse_embeddings)} sparse embeddings"
-                    )  # TODO: Convert f-string to logging format
-                except (AttributeError, RuntimeError, ValueError) as e:
-                    logger.warning(f"Failed to generate sparse embeddings: {e}")
-                    # Continue with dense embeddings only
 
-            # Calculate comprehensive metrics and update usage statistics
+        try:
             metrics = self._calculate_metrics_and_update_stats(
                 provider, provider_name, selected_model, texts, quality_tier, start_time
             )
-
-            # Cache the embedding for future use (single text only for V1)
-            if self.cache_manager and len(texts) == 1 and len(embeddings) == 1:
-                try:
-                    if hasattr(self.cache_manager, "set_embedding"):
-                        await self.cache_manager.set_embedding(
-                            text=texts[0],
-                            model=selected_model,
-                            embedding=embeddings[0],
-                            provider=metrics["provider_key"],
-                            dimensions=len(embeddings[0]),
-                        )
-                        logger.info("Cached embedding for future use")
-                except (AttributeError, RuntimeError, ConnectionError) as e:
-                    logger.warning(f"Failed to cache embedding: {e}")
-
-            # Build comprehensive result with all metadata
-            result = {
-                "embeddings": embeddings,
-                "provider": metrics["provider_key"],
-                "model": selected_model,
-                "cost": metrics["cost"],
-                "latency_ms": metrics["latency_ms"],
-                "tokens": metrics["tokens"],
-                "reasoning": reasoning,
-                "quality_tier": metrics["tier_name"],
-                "usage_stats": self.get_usage_report(),
-                "cache_hit": False,
-            }
-
-            # Include sparse embeddings if generated
-            if sparse_embeddings is not None:
-                result["sparse_embeddings"] = sparse_embeddings
-
-        except (ValueError, RuntimeError, ConnectionError, TimeoutError) as e:
-            logger.exception("Embedding generation failed: ")
-            msg = f"Failed to generate embeddings: {e}"
+        except (ValueError, RuntimeError) as e:
+            logger.exception("Failed to calculate metrics: ")
+            msg = f"Failed to calculate embedding metrics: {e}"
             raise EmbeddingServiceError(msg) from e
+
+        try:
+            await self._cache_embedding_if_applicable(
+                texts, embeddings, selected_model, metrics
+            )
+        except (AttributeError, RuntimeError, ConnectionError) as e:
+            logger.warning(f"Failed to cache embedding: {e}")
+
+        try:
+            result = self._build_embedding_result(
+                embeddings, sparse_embeddings, metrics, selected_model, reasoning
+            )
+        except (ValueError, RuntimeError) as e:
+            logger.exception("Failed to build result: ")
+            msg = f"Failed to build embedding result: {e}"
+            raise EmbeddingServiceError(msg) from e
+
+        return result
+
+    async def _generate_dense_embeddings(
+        self, provider, texts: list[str]
+    ) -> list[list[float]]:
+        """Generate dense embeddings using the provider."""
+        return await provider.generate_embeddings(
+            texts,
+            batch_size=32,  # Default batch size for optimal performance
+        )
+
+    async def _generate_sparse_embeddings_if_needed(
+        self, provider, texts: list[str], generate_sparse: bool
+    ) -> list[dict] | None:
+        """Generate sparse embeddings if requested and supported."""
+        if not generate_sparse or not hasattr(provider, "generate_sparse_embeddings"):
+            return None
+
+        sparse_embeddings = await provider.generate_sparse_embeddings(texts)
+        logger.info(
+            f"Generated {len(sparse_embeddings)} sparse embeddings"
+        )  # TODO: Convert f-string to logging format
+        return sparse_embeddings
+
+    async def _cache_embedding_if_applicable(
+        self,
+        texts: list[str],
+        embeddings: list[list[float]],
+        selected_model: str,
+        metrics: dict[str, object],
+    ) -> None:
+        """Cache embedding if conditions are met."""
+        if not (self.cache_manager and len(texts) == 1 and len(embeddings) == 1):
+            return
+
+        if hasattr(self.cache_manager, "set_embedding"):
+            await self.cache_manager.set_embedding(
+                text=texts[0],
+                model=selected_model,
+                embedding=embeddings[0],
+                provider=metrics["provider_key"],
+                dimensions=len(embeddings[0]),
+            )
+            logger.info("Cached embedding for future use")
+
+    def _build_embedding_result(
+        self,
+        embeddings: list[list[float]],
+        sparse_embeddings: list[dict] | None,
+        metrics: dict[str, object],
+        selected_model: str,
+        reasoning: str,
+    ) -> dict[str, object]:
+        """Build comprehensive embedding result with all metadata."""
+        result = {
+            "embeddings": embeddings,
+            "provider": metrics["provider_key"],
+            "model": selected_model,
+            "cost": metrics["cost"],
+            "latency_ms": metrics["latency_ms"],
+            "tokens": metrics["tokens"],
+            "reasoning": reasoning,
+            "quality_tier": metrics["tier_name"],
+            "usage_stats": self.get_usage_report(),
+            "cache_hit": False,
+        }
+
+        # Include sparse embeddings if generated
+        if sparse_embeddings is not None:
+            result["sparse_embeddings"] = sparse_embeddings
+
+        return result
 
     async def rerank_results(
         self, query: str, results: list[dict[str, object]]

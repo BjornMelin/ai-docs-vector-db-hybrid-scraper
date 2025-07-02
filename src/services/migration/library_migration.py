@@ -94,7 +94,7 @@ class LibraryMigrationManager:
         self._legacy_services: dict[str, Any] = {}
 
         logger.info(
-            f"LibraryMigrationManager initialized with mode: {self.migration_config.mode.value}"
+            f"LibraryMigrationManager initialized with mode: {self.migration_config.mode.value}",
         )
 
     async def initialize(self) -> None:
@@ -140,7 +140,7 @@ class LibraryMigrationManager:
                     "half_open_requests": 1,
                 }
                 self._legacy_services["circuit_breaker"] = CircuitBreaker(
-                    **legacy_config
+                    **legacy_config,
                 )
                 logger.info("Initialized legacy circuit breaker")
 
@@ -156,7 +156,7 @@ class LibraryMigrationManager:
 
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
-                f"Failed to initialize legacy services: {e}"
+                f"Failed to initialize legacy services: {e}",
             )  # TODO: Convert f-string to logging format
             # Continue without legacy services if they fail
 
@@ -167,7 +167,7 @@ class LibraryMigrationManager:
             monitoring_task = asyncio.create_task(self._monitoring_loop())
             # Store reference to prevent task garbage collection
             monitoring_task.add_done_callback(
-                lambda _: logger.debug("Migration monitoring loop completed")
+                lambda _: logger.debug("Migration monitoring loop completed"),
             )
             logger.info("Performance monitoring enabled")
 
@@ -266,7 +266,7 @@ class LibraryMigrationManager:
         modern_error_rate = modern_metrics.get("error_rate", 0)
         if modern_error_rate > self.migration_config.rollback_threshold:
             logger.warning(
-                f"High error rate for modern {service}: {modern_error_rate}"
+                f"High error rate for modern {service}: {modern_error_rate}",
             )  # TODO: Convert f-string to logging format
             return False
 
@@ -325,7 +325,7 @@ class LibraryMigrationManager:
 
             if error_rate > self.migration_config.rollback_threshold:
                 logger.warning(
-                    f"Triggering rollback for {service} due to high error rate"
+                    f"Triggering rollback for {service} due to high error rate",
                 )
                 self.migration_state[f"{service}_migrated"] = False
 
@@ -361,11 +361,11 @@ class LibraryMigrationManager:
             if service in self.migration_state:
                 self.migration_state[f"{service}_migrated"] = to_modern
                 logger.info(
-                    f"Forced migration of {service} to {'modern' if to_modern else 'legacy'}"
+                    f"Forced migration of {service} to {'modern' if to_modern else 'legacy'}",
                 )
                 return True
             logger.error(
-                f"Unknown service for migration: {service}"
+                f"Unknown service for migration: {service}",
             )  # TODO: Convert f-string to logging format
         except Exception:
             logger.exception("Error forcing migration of {service}")

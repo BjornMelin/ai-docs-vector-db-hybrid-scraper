@@ -359,8 +359,7 @@ class ServiceDiscovery:
         except (ConnectionError, OSError, PermissionError):
             return False
 
-        else:
-            return True
+        return True
 
     async def _test_redis_connection(
         self, host: str, port: int
@@ -454,8 +453,7 @@ class ServiceDiscovery:
         except (TimeoutError, OSError, PermissionError):
             return False
 
-        else:
-            return True
+        return True
 
     async def _test_postgresql_connection(
         self, host: str, port: int

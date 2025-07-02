@@ -233,6 +233,53 @@ class QueryExpansionService:
         result = await self.expand_query(request)
         return result.expanded_query
 
+    async def _process_expansion_pipeline(
+        self, request: QueryExpansionRequest, start_time: float
+    ) -> QueryExpansionResult:
+        """Process the complete expansion pipeline."""
+        # Preprocess query
+        preprocessed_query = self._preprocess_query(request.original_query)
+
+        # Extract key terms
+        key_terms = self._extract_key_terms(
+            preprocessed_query, request.query_context
+        )
+
+        # Generate and filter expansions
+        expanded_terms = await self._generate_expansions(key_terms, request)
+        filtered_terms = self._filter_and_rank_terms(expanded_terms, request)
+
+        # Build expanded query
+        expanded_query = self._build_expanded_query(
+            preprocessed_query, filtered_terms, request
+        )
+
+        # Calculate metrics
+        confidence_score = self._calculate_expansion_confidence(
+            filtered_terms, request
+        )
+        processing_time_ms = (time.time() - start_time) * 1000
+
+        # Build result
+        return QueryExpansionResult(
+            original_query=request.original_query,
+            expanded_terms=filtered_terms,
+            expanded_query=expanded_query,
+            expansion_strategy=request.strategy,
+            expansion_scope=request.scope,
+            confidence_score=confidence_score,
+            processing_time_ms=processing_time_ms,
+            cache_hit=False,
+            term_statistics=self._generate_term_statistics(filtered_terms),
+            expansion_metadata={
+                "key_terms_count": len(key_terms),
+                "expansion_sources": list({term.source for term in filtered_terms}),
+                "relation_types": list(
+                    {term.relation_type for term in filtered_terms}
+                ),
+            },
+        )
+
     async def expand_query(
         self, request: QueryExpansionRequest
     ) -> QueryExpansionResult:

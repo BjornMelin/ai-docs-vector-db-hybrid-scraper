@@ -401,61 +401,36 @@ class MetricsRegistry:
             @functools.wraps(func)
             async def async_wrapper(*args, **kwargs):
                 start_time = time.time()
-
                 try:
                     result = await func(*args, **kwargs)
-                    self._metrics["embedding_requests"].labels(
-                        provider=provider, model=model, status="success"
-                    ).inc()
-
-                    # Track batch size if available
-                    if hasattr(result, "__len__"):
-                        self._metrics["embedding_batch_size"].labels(
-                            provider=provider
-                        ).observe(len(result))
-
+                    self._record_embedding_success(provider, model, result)
+                    return result
                 except (
                     AttributeError,
                     ConnectionError,
                     ImportError,
                     RuntimeError,
                 ):
-                    self._metrics["embedding_requests"].labels(
-                        provider=provider, model=model, status="error"
-                    ).inc()
+                    self._record_embedding_error(provider, model)
                     raise
-                else:
-                    return result
-
                 finally:
-                    duration = time.time() - start_time
-                    self._metrics["embedding_duration"].labels(
-                        provider=provider, model=model
-                    ).observe(duration)
+                    self._record_embedding_duration(provider, model, start_time)
 
             @functools.wraps(func)
             def sync_wrapper(*args, **kwargs):
                 start_time = time.time()
-
                 try:
                     result = func(*args, **kwargs)
-                    self._metrics["embedding_requests"].labels(
-                        provider=provider, model=model, status="success"
-                    ).inc()
-
+                    self._record_embedding_success(provider, model, result)
+                    return result
                 except (
                     AttributeError,
                     ConnectionError,
                     ImportError,
                     RuntimeError,
                 ):
-                    self._metrics["embedding_requests"].labels(
-                        provider=provider, model=model, status="error"
-                    ).inc()
+                    self._record_embedding_error(provider, model)
                     raise
-                else:
-                    return result
-
                 finally:
                     duration = time.time() - start_time
                     self._metrics["embedding_duration"].labels(
@@ -485,43 +460,21 @@ class MetricsRegistry:
             async def async_wrapper(*args, **kwargs):
                 try:
                     result = await func(*args, **kwargs)
-                    if result is not None:
-                        self._metrics["cache_hits"].labels(
-                            cache_type=cache_type, cache_name=cache_name
-                        ).inc()
-                    else:
-                        self._metrics["cache_misses"].labels(
-                            cache_type=cache_type, cache_name=cache_name
-                        ).inc()
-                except (ConnectionError, RuntimeError, TimeoutError):
-                    self._metrics["cache_misses"].labels(
-                        cache_type=cache_type, cache_name=cache_name
-                    ).inc()
-                    raise
-
-                else:
+                    self._record_cache_result(cache_type, cache_name, result)
                     return result
+                except (ConnectionError, RuntimeError, TimeoutError):
+                    self._record_cache_miss(cache_type, cache_name)
+                    raise
 
             @functools.wraps(func)
             def sync_wrapper(*args, **kwargs):
                 try:
                     result = func(*args, **kwargs)
-                    if result is not None:
-                        self._metrics["cache_hits"].labels(
-                            cache_type=cache_type, cache_name=cache_name
-                        ).inc()
-                    else:
-                        self._metrics["cache_misses"].labels(
-                            cache_type=cache_type, cache_name=cache_name
-                        ).inc()
-                except (ConnectionError, RuntimeError, TimeoutError):
-                    self._metrics["cache_misses"].labels(
-                        cache_type=cache_type, cache_name=cache_name
-                    ).inc()
-                    raise
-
-                else:
+                    self._record_cache_result(cache_type, cache_name, result)
                     return result
+                except (ConnectionError, RuntimeError, TimeoutError):
+                    self._record_cache_miss(cache_type, cache_name)
+                    raise
 
             return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
 
@@ -545,50 +498,32 @@ class MetricsRegistry:
             @functools.wraps(func)
             async def async_wrapper(*args, **kwargs):
                 start_time = time.time()
-
                 try:
                     result = await func(*args, **kwargs)
-                    self._metrics["cache_operations"].labels(
-                        cache_type=cache_type, operation=operation, result="success"
-                    ).inc()
-
-                except (ConnectionError, OSError, PermissionError):
-                    self._metrics["cache_operations"].labels(
-                        cache_type=cache_type, operation=operation, result="error"
-                    ).inc()
-                    raise
-
-                else:
+                    self._record_cache_operation_success(cache_type, operation)
                     return result
+                except (ConnectionError, OSError, PermissionError):
+                    self._record_cache_operation_error(cache_type, operation)
+                    raise
                 finally:
-                    duration = time.time() - start_time
-                    self._metrics["cache_duration"].labels(
-                        cache_type=cache_type, operation=operation
-                    ).observe(duration)
+                    self._record_cache_operation_duration(
+                        cache_type, operation, start_time
+                    )
 
             @functools.wraps(func)
             def sync_wrapper(*args, **kwargs):
                 start_time = time.time()
-
                 try:
                     result = func(*args, **kwargs)
-                    self._metrics["cache_operations"].labels(
-                        cache_type=cache_type, operation=operation, result="success"
-                    ).inc()
-
-                except (ConnectionError, OSError, PermissionError):
-                    self._metrics["cache_operations"].labels(
-                        cache_type=cache_type, operation=operation, result="error"
-                    ).inc()
-                    raise
-
-                else:
+                    self._record_cache_operation_success(cache_type, operation)
                     return result
+                except (ConnectionError, OSError, PermissionError):
+                    self._record_cache_operation_error(cache_type, operation)
+                    raise
                 finally:
-                    duration = time.time() - start_time
-                    self._metrics["cache_duration"].labels(
-                        cache_type=cache_type, operation=operation
-                    ).observe(duration)
+                    self._record_cache_operation_duration(
+                        cache_type, operation, start_time
+                    )
 
             return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
 
@@ -615,6 +550,141 @@ class MetricsRegistry:
         """
         self._metrics["cache_misses"].labels(cache_type=cache_type).inc()
 
+    def _record_embedding_success(self, provider: str, model: str, result) -> None:
+        """Record successful embedding request.
+
+        Args:
+            provider: Embedding provider name
+            model: Model name
+            result: Embedding result
+        """
+        self._metrics["embedding_requests"].labels(
+            provider=provider, model=model, status="success"
+        ).inc()
+
+        # Track batch size if available
+        if hasattr(result, "__len__"):
+            self._metrics["embedding_batch_size"].labels(provider=provider).observe(
+                len(result)
+            )
+
+    def _record_embedding_error(self, provider: str, model: str) -> None:
+        """Record embedding request error.
+
+        Args:
+            provider: Embedding provider name
+            model: Model name
+        """
+        self._metrics["embedding_requests"].labels(
+            provider=provider, model=model, status="error"
+        ).inc()
+
+    def _record_embedding_duration(
+        self, provider: str, model: str, start_time: float
+    ) -> None:
+        """Record embedding request duration.
+
+        Args:
+            provider: Embedding provider name
+            model: Model name
+            start_time: Request start time
+        """
+        duration = time.time() - start_time
+        self._metrics["embedding_duration"].labels(
+            provider=provider, model=model
+        ).observe(duration)
+
+    def _record_cache_result(self, cache_type: str, cache_name: str, result) -> None:
+        """Record cache hit or miss based on result.
+
+        Args:
+            cache_type: Type of cache
+            cache_name: Name of cache
+            result: Cache operation result
+        """
+        if result is not None:
+            self._metrics["cache_hits"].labels(
+                cache_type=cache_type, cache_name=cache_name
+            ).inc()
+        else:
+            self._metrics["cache_misses"].labels(
+                cache_type=cache_type, cache_name=cache_name
+            ).inc()
+
+    def _record_cache_miss(self, cache_type: str, cache_name: str) -> None:
+        """Record cache miss.
+
+        Args:
+            cache_type: Type of cache
+            cache_name: Name of cache
+        """
+        self._metrics["cache_misses"].labels(
+            cache_type=cache_type, cache_name=cache_name
+        ).inc()
+
+    def _record_cache_operation_success(self, cache_type: str, operation: str) -> None:
+        """Record successful cache operation.
+
+        Args:
+            cache_type: Type of cache
+            operation: Cache operation
+        """
+        self._metrics["cache_operations"].labels(
+            cache_type=cache_type, operation=operation, result="success"
+        ).inc()
+
+    def _record_cache_operation_error(self, cache_type: str, operation: str) -> None:
+        """Record cache operation error.
+
+        Args:
+            cache_type: Type of cache
+            operation: Cache operation
+        """
+        self._metrics["cache_operations"].labels(
+            cache_type=cache_type, operation=operation, result="error"
+        ).inc()
+
+    def _record_cache_operation_duration(
+        self, cache_type: str, operation: str, start_time: float
+    ) -> None:
+        """Record cache operation duration.
+
+        Args:
+            cache_type: Type of cache
+            operation: Cache operation
+            start_time: Operation start time
+        """
+        duration = time.time() - start_time
+        self._metrics["cache_duration"].labels(
+            cache_type=cache_type, operation=operation
+        ).observe(duration)
+
+    def _update_local_cache_stats(self, cache_manager) -> None:
+        """Update local cache statistics.
+
+        Args:
+            cache_manager: Cache manager instance
+        """
+        if hasattr(cache_manager, "local_cache") and cache_manager.local_cache:
+            local_stats = cache_manager.local_cache.get_stats()
+            self.update_cache_memory_usage(
+                "local", "main", int(local_stats.get("memory_bytes", 0))
+            )
+
+    def _update_distributed_cache_stats(self, cache_manager) -> None:
+        """Update distributed cache statistics.
+
+        Args:
+            cache_manager: Cache manager instance
+        """
+        if (
+            hasattr(cache_manager, "distributed_cache")
+            and cache_manager.distributed_cache
+        ):
+            # Memory stats for distributed cache would need to be collected differently
+            # This is a placeholder for future implementation
+            pass
+
     def update_cache_memory_usage(
         self, cache_type: str, cache_name: str, memory_bytes: int
     ) -> None:
@@ -638,26 +708,10 @@ class MetricsRegistry:
 
         """
         try:
-            if hasattr(cache_manager, "local_cache") and cache_manager.local_cache:
-                local_stats = cache_manager.local_cache.get_stats()
-                self.update_cache_memory_usage(
-                    "local", "main", int(local_stats.get("memory_bytes", 0))
-                )
-
-            if (
-                hasattr(cache_manager, "distributed_cache")
-                and cache_manager.distributed_cache
-            ):
-                # Memory stats for distributed cache would need to be collected differently
-                # This is a placeholder for future implementation
-                pass
-
+            self._update_local_cache_stats(cache_manager)
+            self._update_distributed_cache_stats(cache_manager)
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            # Log error but don't raise to avoid breaking monitoring
-
-            logging.getLogger(__name__).warning(
-                f"Failed to update cache stats: {e}"
-            )  # TODO: Convert f-string to logging format
+            logging.getLogger(__name__).warning(f"Failed to update cache stats: {e}")
 
     def record_embedding_cost(self, provider: str, model: str, cost: float) -> None:
         """Record embedding generation cost.

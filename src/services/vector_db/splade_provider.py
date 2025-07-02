@@ -94,27 +94,41 @@ class SPLADEProvider:
             return self._cache[cache_key]
 
         try:
-            if self._model is not None and self._tokenizer is not None:
-                sparse_vector = await self._generate_with_splade_model(text)
-            else:
-                sparse_vector = await self._generate_with_fallback(text)
-
-            if normalize:
-                sparse_vector = self._normalize_sparse_vector(sparse_vector)
-
-            # Apply top-k filtering
-            sparse_vector = self._apply_top_k_filtering(sparse_vector)
-
-            # Cache result
-            if self.splade_config.cache_embeddings:
-                self._cache[cache_key] = sparse_vector
-
+            sparse_vector = await self._generate_raw_sparse_vector(text)
         except (OSError, AttributeError, ConnectionError, ImportError):
             logger.exception("Sparse vector generation failed")
             # Return empty sparse vector as fallback
             return {}
-        else:
-            return sparse_vector
+
+        try:
+            sparse_vector = self._process_sparse_vector(sparse_vector, normalize)
+        except (OSError, AttributeError):
+            logger.exception("Sparse vector processing failed")
+            # Return unprocessed vector as fallback
+
+        try:
+            if self.splade_config.cache_embeddings:
+                self._cache[cache_key] = sparse_vector
+        except (OSError, KeyError):
+            logger.warning("Failed to cache sparse vector")
+
+        return sparse_vector
+
+    async def _generate_raw_sparse_vector(self, text: str) -> dict[int, float]:
+        """Generate raw sparse vector using available model or fallback."""
+        if self._model is not None and self._tokenizer is not None:
+            return await self._generate_with_splade_model(text)
+        return await self._generate_with_fallback(text)
+
+    def _process_sparse_vector(
+        self, sparse_vector: dict[int, float], normalize: bool
+    ) -> dict[int, float]:
+        """Process sparse vector with normalization and filtering."""
+        if normalize:
+            sparse_vector = self._normalize_sparse_vector(sparse_vector)
+
+        # Apply top-k filtering
+        return self._apply_top_k_filtering(sparse_vector)
 
     async def _generate_with_splade_model(self, text: str) -> dict[int, float]:
         """Generate sparse vector using actual SPLADE model."""

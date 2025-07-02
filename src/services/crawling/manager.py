@@ -220,62 +220,7 @@ class CrawlManager:
         )  # TODO: Convert f-string to logging format
 
         try:
-            # Simple site crawling implementation using AutomationRouter
-            # Start with the initial URL
-            pages = []
-            crawled_urls = set()
-            urls_to_crawl = [url]
-
-            tool_used = None
-
-            while urls_to_crawl and len(pages) < max_pages:
-                current_url = urls_to_crawl.pop(0)
-
-                if current_url in crawled_urls:
-                    continue
-
-                crawled_urls.add(current_url)
-
-                # Scrape the current page
-                result = await self.scrape_url(current_url, preferred_provider)
-
-                if result.get("success"):
-                    pages.append(
-                        {
-                            "url": current_url,
-                            "content": result.get("content", ""),
-                            "metadata": result.get("metadata", {}),
-                            "tier_used": result.get("tier_used", "unknown"),
-                        }
-                    )
-
-                    if not tool_used:
-                        tool_used = result.get("tier_used", "unknown")
-
-                    # Extract links for further crawling (simple implementation)
-                    # This is a basic approach - more sophisticated crawling would
-                    # require dedicated crawling logic
-                    links = result.get("metadata", {}).get("links", [])
-                    if isinstance(links, list):
-                        for link in links:
-                            if isinstance(link, dict) and "url" in link:
-                                link_url = link["url"]
-                                if (
-                                    link_url.startswith(url)
-                                    and link_url not in crawled_urls
-                                    and link_url not in urls_to_crawl
-                                ):
-                                    urls_to_crawl.append(link_url)
-                else:
-                    logger.warning("Failed to scrape {current_url}")
-
-            return {
-                "success": len(pages) > 0,
-                "pages": pages,
-                "total_pages": len(pages),
-                "provider": tool_used or "none",
-                "error": None if pages else "No pages could be crawled",
-            }
+            return await self._execute_site_crawl(url, max_pages, preferred_provider)
 
         except (OSError, PermissionError):
             logger.exception("Site crawl failed for {url}")
@@ -386,3 +331,71 @@ class CrawlManager:
             "urls": [],
             "total": 0,
         }
+
+    async def _execute_site_crawl(
+        self, url: str, max_pages: int, preferred_provider: str | None
+    ) -> dict[str, object]:
+        """Execute site crawling with link discovery."""
+        pages = []
+        crawled_urls = set()
+        urls_to_crawl = [url]
+        tool_used = None
+
+        while urls_to_crawl and len(pages) < max_pages:
+            current_url = urls_to_crawl.pop(0)
+
+            if current_url in crawled_urls:
+                continue
+
+            crawled_urls.add(current_url)
+            result = await self.scrape_url(current_url, preferred_provider)
+
+            if result.get("success"):
+                pages.append(
+                    {
+                        "url": current_url,
+                        "content": result.get("content", ""),
+                        "metadata": result.get("metadata", {}),
+                        "tier_used": result.get("tier_used", "unknown"),
+                    }
+                )
+
+                if not tool_used:
+                    tool_used = result.get("tier_used", "unknown")
+
+                # Extract and queue new URLs for crawling
+                self._extract_and_queue_links(result, url, crawled_urls, urls_to_crawl)
+            else:
+                logger.warning("Failed to scrape %s", current_url)
+
+        return {
+            "success": len(pages) > 0,
+            "pages": pages,
+            "total_pages": len(pages),
+            "provider": tool_used or "none",
+            "error": None if pages else "No pages could be crawled",
+        }
+
+    def _extract_and_queue_links(
+        self,
+        result: dict,
+        base_url: str,
+        crawled_urls: set,
+        urls_to_crawl: list,
+    ) -> None:
+        """Extract links from result and queue them for crawling."""
+        links = result.get("metadata", {}).get("links", [])
+        if not isinstance(links, list):
+            return
+
+        for link in links:
+            if not isinstance(link, dict) or "url" not in link:
+                continue
+
+            link_url = link["url"]
+            if (
+                link_url.startswith(base_url)
+                and link_url not in crawled_urls
+                and link_url not in urls_to_crawl
+            ):
+                urls_to_crawl.append(link_url)
