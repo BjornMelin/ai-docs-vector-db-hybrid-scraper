@@ -699,16 +699,31 @@ class MetadataFilter(BaseFilter):
 
         # Explain shorthand conditions
         if criteria.exact_matches:
-            explanations.append("Exact matches")
+            matches = [f"{k}={v}" for k, v in criteria.exact_matches.items()]
+            explanations.append(f"Exact matches: {', '.join(matches)}")
 
         if criteria.exclude_matches:
-            explanations.append("Exclude matches")
+            excludes = [f"{k}!={v}" for k, v in criteria.exclude_matches.items()]
+            explanations.append(f"Exclude matches: {', '.join(excludes)}")
 
         if criteria.range_filters:
-            explanations.append("Range filters")
+            ranges = []
+            for field, conditions in criteria.range_filters.items():
+                range_parts = []
+                if "gte" in conditions:
+                    range_parts.append(f">= {conditions['gte']}")
+                if "lte" in conditions:
+                    range_parts.append(f"<= {conditions['lte']}")
+                if "gt" in conditions:
+                    range_parts.append(f"> {conditions['gt']}")
+                if "lt" in conditions:
+                    range_parts.append(f"< {conditions['lt']}")
+                ranges.append(f"{field}: {', '.join(range_parts)}")
+            explanations.append(f"Range filters: {', '.join(ranges)}")
 
         if criteria.text_searches:
-            explanations.append("Text searches")
+            searches = [f"{k}~'{v}'" for k, v in criteria.text_searches.items()]
+            explanations.append(f"Text searches: {', '.join(searches)}")
 
         # Explain field conditions
         if criteria.field_conditions:
@@ -722,7 +737,10 @@ class MetadataFilter(BaseFilter):
         if criteria.expression:
             explanations.append("Boolean expression")
 
-        return "Metadata filter"
+        if not explanations:
+            return "Metadata filter (no criteria)"
+
+        return f"Metadata filter: {', '.join(explanations)}"
 
     def _explain_expression(self, expression: BooleanExpressionModel) -> str:
         """Generate explanation for boolean expression."""

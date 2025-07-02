@@ -1,10 +1,11 @@
 # syntax=docker/dockerfile:1
-# Multi-stage Dockerfile for AI Docs Vector DB Hybrid Scraper - 2025 UV Edition
+# Improved Multi-stage Dockerfile for AI Docs Vector DB Hybrid Scraper - UV Edition
+# Addresses common UV Docker issues identified in research
 
 # =========================================
 # Stage 1: Build Environment
 # =========================================
-FROM python:3.12 AS builder
+FROM python:3.12-slim AS builder
 
 # Prevent Python from writing pyc files and buffer stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -80,10 +81,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsqlite3-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the virtual environment from builder stage
+# Copy the virtual environment from builder stage with proper paths
 COPY --from=builder /opt/venv /opt/venv
 # Copy the UV Python installation to ensure interpreter compatibility
 COPY --from=builder /opt/uv/python /opt/uv/python
+
+# Set environment variables for virtual environment
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 ENV UV_PYTHON_INSTALL_DIR=/opt/uv/python
@@ -95,14 +98,12 @@ COPY config/ ./config/
 # Set Python path
 ENV PYTHONPATH=/app/src
 
-# Create non-root user for security
+# Create non-root user for security with proper permissions
 ARG UID=1000
-RUN useradd --system --no-create-home --uid ${UID} --shell /bin/false appuser \
+RUN useradd --system --create-home --uid ${UID} --shell /bin/bash appuser \
     && chown -R appuser:appuser /app \
     && chown -R appuser:appuser /opt/venv \
-    && mkdir -p /home/appuser/.local/share/uv \
-    && chown -R appuser:appuser /home/appuser/.local \
-    && chown -R appuser:appuser /root/.local/share/uv
+    && chown -R appuser:appuser /opt/uv
 
 # Switch to non-root user
 USER appuser
@@ -114,8 +115,9 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:8000/api/v1/config/status || exit 1
 
-# Debug environment setup before starting the app
-RUN python -c "import sys; print(f'Python version: {sys.version}'); print(f'Python path: {sys.path}')"
+# Debug environment setup before starting the app (can be removed in production)
+RUN python -c "import sys; print(f'Python version: {sys.version}'); print(f'Python executable: {sys.executable}')"
+RUN python -c "import os; print(f'VIRTUAL_ENV: {os.environ.get(\"VIRTUAL_ENV\")}'); print(f'PATH: {os.environ.get(\"PATH\")}')"
 RUN python -c "import src.api.main; print('FastAPI app import successful')"
 
 # Run the FastAPI application

@@ -135,37 +135,22 @@ class TestConfigurationPerformance:
     def real_config_data(self):
         """Generate realistic configuration data for testing."""
         return {
-            # Application settings
+            # Core application settings
             "app_name": "benchmark-test-app",
+            "version": "1.0.0",
+            "mode": "simple",
             "environment": "testing",
             "debug": True,
             "log_level": "INFO",
-            # Database configuration
-            "qdrant_url": "http://localhost:6333",
-            "qdrant_api_key": "test-key",
-            "qdrant_timeout": 30,
-            # Embedding configuration
             "embedding_provider": "fastembed",
-            "embedding_model": "BAAI/bge-small-en-v1.5",
-            "embedding_batch_size": 32,
-            # Cache configuration
-            "cache_type": "dragonfly",
-            "cache_url": "redis://localhost:6379",
-            "cache_ttl": 3600,
-            "cache_max_size": 1000,
-            # Performance settings
-            "max_concurrent_requests": 100,
-            "request_timeout": 30,
-            "circuit_breaker_threshold": 5,
-            # Security settings
-            "api_key_required": True,
-            "rate_limit_per_minute": 1000,
-            "cors_origins": ["http://localhost:3000", "https://app.example.com"],
-            # Feature flags
-            "enable_hybrid_search": True,
-            "enable_reranking": True,
-            "enable_cache_compression": True,
-            "enable_observability": True,
+            "crawl_provider": "crawl4ai",
+            # Simple mode URLs
+            "qdrant_url": "http://localhost:6333",
+            "redis_url": "redis://localhost:6379",
+            # API keys
+            "openai_api_key": "test-key",
+            "qdrant_api_key": "test-key",
+            "firecrawl_api_key": "test-key",
         }
 
     @pytest.fixture
@@ -219,19 +204,20 @@ class TestConfigurationPerformance:
 
         # Validate settings creation
         assert settings.app_name == "benchmark-test-app"
-        assert hasattr(settings, "qdrant_url")
-        assert hasattr(settings, "embedding_provider")
+        assert settings.qdrant_url == "http://localhost:6333"
+        assert settings.embedding_provider == "fastembed"
 
     def test_real_settings_from_environment(self, benchmark):
         """Benchmark Settings creation from environment variables."""
 
-        # Set test environment variables
+        # Set test environment variables with AI_DOCS_ prefix
         test_env = {
-            "APP_NAME": "env-test-app",
-            "ENVIRONMENT": "testing",
-            "QDRANT_URL": "http://test:6333",
-            "EMBEDDING_PROVIDER": "openai",
-            "LOG_LEVEL": "DEBUG",
+            "AI_DOCS_APP_NAME": "env-test-app",
+            "AI_DOCS_ENVIRONMENT": "testing",
+            "AI_DOCS_QDRANT_URL": "http://test:6333",
+            "AI_DOCS_EMBEDDING_PROVIDER": "openai",
+            "AI_DOCS_OPENAI_API_KEY": "test-openai-key",
+            "AI_DOCS_LOG_LEVEL": "DEBUG",
         }
 
         # Temporarily set environment variables
@@ -287,29 +273,23 @@ class TestConfigurationPerformance:
         assert len(results) == 10
         assert all(name == "benchmark-test-app" for name in results)
 
-    def test_real_config_validation_performance(self, benchmark, complex_config_data):
-        """Benchmark configuration validation with complex data."""
+    def test_real_config_validation_performance(self, benchmark, real_config_data):
+        """Benchmark configuration validation with real data."""
 
-        def validate_complex_config():
-            """Validate complex configuration data."""
-            # Add required base fields to complex config
-            config_with_base = {
-                "app_name": "complex-app",
-                "environment": "testing",
-                **complex_config_data,
-            }
-
+        def validate_config():
+            """Validate configuration data with proper validation."""
             try:
-                settings = Settings(**config_with_base)
+                settings = Settings(**real_config_data)
+                return {"success": True, "settings": settings}
             except ValidationError as e:
                 return {"success": False, "errors": len(e.errors())}
-            else:
-                return {"success": True, "settings": settings}
 
         # Run benchmark
-        result = benchmark(validate_complex_config)
+        result = benchmark(validate_config)
 
-        # Validate that complex config processing works
+        # Validate that config processing works
+        assert result["success"] is True
+        assert "settings" in result
         assert isinstance(result, dict)
         assert "success" in result
 
@@ -376,7 +356,7 @@ class TestConfigurationPerformance:
             settings = Settings(**real_config_data)
 
             # Serialize to dict
-            settings_dict = settings.model_dump()
+            settings_dict = settings.model_dump(mode="json")
 
             # Serialize to JSON
             json_str = json.dumps(settings_dict)
@@ -402,7 +382,7 @@ class TestConfigurationPerformance:
         assert result["json_length"] > 0
         assert result["dict_keys"] > 0
 
-    def test_real_config_memory_optimization(self, benchmark, complex_config_data):
+    def test_real_config_memory_optimization(self, benchmark, real_config_data):
         """Benchmark memory usage of configuration objects."""
 
         def config_memory_usage():
@@ -412,9 +392,9 @@ class TestConfigurationPerformance:
             # Create multiple configuration instances
             for i in range(20):
                 config_data = {
+                    **real_config_data,
                     "app_name": f"memory-test-{i}",
                     "environment": "testing",
-                    **complex_config_data,
                 }
 
                 settings = Settings(**config_data)

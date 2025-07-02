@@ -288,7 +288,7 @@ class ContentTypeFilter(BaseFilter):
         try:
             conditions, metadata = self._build_all_filter_conditions(criteria, context)
         except Exception as e:
-            error_msg = f"Failed to build filter conditions: {e}"
+            error_msg = f"Failed to apply content type filter: {e}"
             self._logger.exception(error_msg)
             raise FilterError(
                 error_msg,
@@ -300,7 +300,7 @@ class ContentTypeFilter(BaseFilter):
         try:
             return self._create_filter_result(conditions, metadata, criteria)
         except Exception as e:
-            error_msg = f"Failed to create filter result: {e}"
+            error_msg = f"Failed to apply content type filter: {e}"
             self._logger.exception(error_msg)
             raise FilterError(
                 error_msg,
@@ -670,7 +670,7 @@ class ContentTypeFilter(BaseFilter):
         """Validate content type filter criteria."""
         try:
             ContentTypeCriteria.model_validate(filter_criteria)
-        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
+        except Exception as e:
             self._logger.warning(
                 f"Invalid content type criteria: {e}"
             )  # TODO: Convert f-string to logging format
