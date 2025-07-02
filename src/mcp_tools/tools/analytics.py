@@ -77,10 +77,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     await ctx.debug(f"Collected analytics for collection {collection}")
                 except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
                     await ctx.warning(f"Failed to get analytics for {collection}: {e}")
-                    logger.warning(
-                        "Failed to get analytics for %s: %s",
-                        collection, e
-                    )
+                    logger.warning("Failed to get analytics for %s: %s", collection, e)
 
             # Get cache metrics
             if request.include_performance:

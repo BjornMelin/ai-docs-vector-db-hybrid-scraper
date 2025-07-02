@@ -224,7 +224,9 @@ class SearchOrchestrator(BaseService):
             self._rag_generator = RAGGenerator(config.rag)
         return self._rag_generator
 
-    async def _check_cache_for_request(self, request: SearchRequest) -> SearchResult | None:
+    async def _check_cache_for_request(
+        self, request: SearchRequest
+    ) -> SearchResult | None:
         """Check cache for existing search results."""
         if not request.enable_caching:
             return None
@@ -258,7 +260,9 @@ class SearchOrchestrator(BaseService):
         search_results = await self._execute_search(processed_query, request, config)
         return search_results, expanded_query
 
-    async def _try_query_expansion(self, request: SearchRequest, features_used: list[str]) -> str | None:
+    async def _try_query_expansion(
+        self, request: SearchRequest, features_used: list[str]
+    ) -> str | None:
         """Attempt query expansion with error handling."""
         try:
             expansion_request = QueryExpansionRequest(

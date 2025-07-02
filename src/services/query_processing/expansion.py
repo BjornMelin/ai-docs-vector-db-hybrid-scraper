@@ -241,9 +241,7 @@ class QueryExpansionService:
         preprocessed_query = self._preprocess_query(request.original_query)
 
         # Extract key terms
-        key_terms = self._extract_key_terms(
-            preprocessed_query, request.query_context
-        )
+        key_terms = self._extract_key_terms(preprocessed_query, request.query_context)
 
         # Generate and filter expansions
         expanded_terms = await self._generate_expansions(key_terms, request)
@@ -255,9 +253,7 @@ class QueryExpansionService:
         )
 
         # Calculate metrics
-        confidence_score = self._calculate_expansion_confidence(
-            filtered_terms, request
-        )
+        confidence_score = self._calculate_expansion_confidence(filtered_terms, request)
         processing_time_ms = (time.time() - start_time) * 1000
 
         # Build result
@@ -274,9 +270,7 @@ class QueryExpansionService:
             expansion_metadata={
                 "key_terms_count": len(key_terms),
                 "expansion_sources": list({term.source for term in filtered_terms}),
-                "relation_types": list(
-                    {term.relation_type for term in filtered_terms}
-                ),
+                "relation_types": list({term.relation_type for term in filtered_terms}),
             },
         )
 

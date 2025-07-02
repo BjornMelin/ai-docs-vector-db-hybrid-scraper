@@ -537,9 +537,7 @@ class CanaryDeployment:
 
         # Check for rollback conditions
         if await self._should_rollback(deployment_id):
-            await self.rollback_canary(
-                deployment_id, "Automatic rollback triggered"
-            )
+            await self.rollback_canary(deployment_id, "Automatic rollback triggered")
             return
 
         # Handle automatic promotion

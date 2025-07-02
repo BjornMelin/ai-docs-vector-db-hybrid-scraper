@@ -340,7 +340,9 @@ class UnifiedAgenticSystem:
         orchestrator_status = await self.orchestrator.get_orchestration_status()
         return coordinator_status, vector_status, orchestrator_status
 
-    def _calculate_system_health(self, coordinator_status: dict, vector_status: dict, orchestrator_status: dict) -> tuple[float, str]:
+    def _calculate_system_health(
+        self, coordinator_status: dict, vector_status: dict, orchestrator_status: dict
+    ) -> tuple[float, str]:
         """Calculate overall system health score and status."""
         health_scores = []
         if coordinator_status.get("health_score"):
@@ -411,13 +413,19 @@ class UnifiedAgenticSystem:
             Current system status and metrics
         """
         try:
-            coordinator_status, vector_status, orchestrator_status = await self._get_subsystem_statuses()
+            (
+                coordinator_status,
+                vector_status,
+                orchestrator_status,
+            ) = await self._get_subsystem_statuses()
             overall_health_score, overall_health = self._calculate_system_health(
                 coordinator_status, vector_status, orchestrator_status
             )
 
             recent_requests = self._get_recent_requests()
-            success_rate_24h, avg_response_time = self._calculate_24h_metrics(recent_requests)
+            success_rate_24h, avg_response_time = self._calculate_24h_metrics(
+                recent_requests
+            )
             top_capabilities = self._get_top_capabilities(recent_requests)
 
             return AgenticSystemStatus(
