@@ -10,7 +10,6 @@ from typing import Any
 from arq import func
 
 from src.config import get_config
-from src.infrastructure.client_manager import ClientManager
 from src.services.core.qdrant_alias_manager import QdrantAliasManager
 
 
@@ -88,6 +87,8 @@ async def delete_collection(
         await asyncio.sleep(grace_period_minutes * 60)
 
         config = get_config()
+        from src.infrastructure.client_manager import ClientManager  # noqa: PLC0415
+
         client_manager = ClientManager()
         await client_manager.initialize()
 
@@ -444,6 +445,8 @@ async def create_task(
     """
     try:
         # Get task queue manager
+        from src.infrastructure.client_manager import ClientManager  # noqa: PLC0415
+
         client_manager = ClientManager()
         await client_manager.initialize()
 

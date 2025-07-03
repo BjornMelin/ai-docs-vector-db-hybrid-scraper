@@ -215,13 +215,13 @@ class FilterError(Exception):
         parts = [super().__str__()]
 
         if self.filter_name:
-            parts.append("Filter")
+            parts.append(f"Filter: {self.filter_name}")
 
         if self.filter_criteria:
-            parts.append("Criteria")
+            parts.append(f"Criteria: {self.filter_criteria}")
 
         if self.underlying_error:
-            parts.append("Underlying error")
+            parts.append(f"Underlying error: {self.underlying_error}")
 
         return " | ".join(parts)
 
@@ -294,8 +294,8 @@ class FilterRegistry:
         if filter_class:
             try:
                 return filter_class(**kwargs)
-            except (OSError, PermissionError, RuntimeError):
-                self._logger.exception("Failed to create filter {filter_name}")
+            except Exception:
+                self._logger.exception("Failed to create filter %s", filter_name)
                 return None
 
         self._logger.warning("Unknown filter type")

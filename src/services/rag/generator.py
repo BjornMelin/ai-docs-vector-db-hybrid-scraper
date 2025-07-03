@@ -8,13 +8,20 @@ import asyncio
 import hashlib
 import logging
 import time
-from typing import Any
+from typing import Any, Protocol
 
-from src.infrastructure.client_manager import ClientManager
 from src.services.base import BaseService
 from src.services.errors import EmbeddingServiceError
 
 from .models import AnswerMetrics, RAGConfig, RAGRequest, RAGResult, SourceAttribution
+
+
+class OpenAIClientProtocol(Protocol):
+    """Protocol for OpenAI client."""
+
+    async def chat_completions_create(self, **kwargs) -> Any:
+        """Create chat completion."""
+        ...
 
 
 logger = logging.getLogger(__name__)
@@ -40,19 +47,18 @@ class RAGGenerator(BaseService):
     def __init__(
         self,
         config: RAGConfig,
-        client_manager: ClientManager | None = None,
+        openai_client: OpenAIClientProtocol | None = None,
     ):
         """Initialize RAG generator.
 
         Args:
             config: RAG configuration
-            client_manager: Optional client manager (will create one if not provided)
+            openai_client: Optional OpenAI client for LLM operations
 
         """
         super().__init__(config)
         self.config = config
-        self.client_manager = client_manager or ClientManager.from_unified_config()
-        self._llm_client = None
+        self._llm_client = openai_client
 
         # Performance tracking
         self.generation_count = 0
@@ -79,10 +85,6 @@ class RAGGenerator(BaseService):
             return
 
         try:
-            # Initialize client manager and get OpenAI client
-            await self.client_manager.initialize()
-            self._llm_client = await self.client_manager.get_openai_client()
-
             if not self._llm_client:
                 _raise_openai_client_unavailable()
 

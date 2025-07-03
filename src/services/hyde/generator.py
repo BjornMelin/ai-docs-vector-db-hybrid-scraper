@@ -4,14 +4,22 @@ import asyncio
 import hashlib
 import logging
 import time
+from typing import Any, Protocol
 
 from pydantic import BaseModel
 
-from src.infrastructure.client_manager import ClientManager
 from src.services.base import BaseService
 from src.services.errors import EmbeddingServiceError
 
 from .config import HyDEConfig, HyDEPromptConfig
+
+
+class OpenAIClientProtocol(Protocol):
+    """Protocol for OpenAI client."""
+
+    async def chat_completions_create(self, **kwargs) -> Any:
+        """Create chat completion."""
+        ...
 
 
 logger = logging.getLogger(__name__)
@@ -41,21 +49,20 @@ class HypotheticalDocumentGenerator(BaseService):
         self,
         config: HyDEConfig,
         prompt_config: HyDEPromptConfig,
-        client_manager: ClientManager | None = None,
+        openai_client: OpenAIClientProtocol | None = None,
     ):
         """Initialize generator.
 
         Args:
             config: HyDE configuration
             prompt_config: Prompt configuration
-            client_manager: Optional client manager (will create one if not provided)
+            openai_client: Optional OpenAI client for LLM operations
 
         """
         super().__init__(config)
         self.config = config
         self.prompt_config = prompt_config
-        self.client_manager = client_manager or ClientManager.from_unified_config()
-        self._llm_client = None
+        self._llm_client = openai_client
 
         # Metrics tracking
         self.generation_count = 0
@@ -73,20 +80,16 @@ class HypotheticalDocumentGenerator(BaseService):
     async def initialize(self) -> None:
         """Initialize the generator.
 
-        Sets up LLM client connection and validates availability.
+        Validates that OpenAI client is available.
 
         Raises:
-            EmbeddingServiceError: If initialization fails or OpenAI client unavailable
+            EmbeddingServiceError: If OpenAI client unavailable
 
         """
         if self._initialized:
             return
 
         try:
-            # Initialize client manager and get OpenAI client
-            await self.client_manager.initialize()
-            self._llm_client = await self.client_manager.get_openai_client()
-
             if not self._llm_client:
                 _raise_openai_client_not_available()
 
@@ -103,11 +106,9 @@ class HypotheticalDocumentGenerator(BaseService):
     async def cleanup(self) -> None:
         """Cleanup generator resources.
 
-        Releases LLM client and client manager resources.
+        Releases LLM client reference.
         Safe to call multiple times.
         """
-        if self.client_manager:
-            await self.client_manager.cleanup()
         self._llm_client = None
         self._initialized = False
         logger.info("HyDE document generator cleaned up")

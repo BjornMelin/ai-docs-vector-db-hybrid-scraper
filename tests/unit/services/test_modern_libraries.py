@@ -50,30 +50,34 @@ class TestModernCircuitBreakerManager:
     async def test_initialization(self, redis_url, config):
         """Test circuit breaker manager initialization."""
         with (
-            patch("src.services.circuit_breaker.modern.RedisStorage") as mock_storage,
+            patch(
+                "src.services.circuit_breaker.modern.AsyncRedisUnitOfWork"
+            ) as mock_storage,
             patch(
                 "src.services.circuit_breaker.modern.AsyncCircuitBreakerFactory"
             ) as mock_factory,
         ):
-            mock_storage.from_url.return_value = Mock()
+            mock_storage.return_value = Mock()
             mock_factory.return_value = Mock()
 
             manager = ModernCircuitBreakerManager(redis_url, config)
 
             assert manager.redis_url == redis_url
             assert manager.config == config
-            mock_storage.from_url.assert_called_once_with(redis_url)
+            mock_storage.assert_called_once_with(redis_url)
 
     @pytest.mark.asyncio
     async def test_get_breaker(self, redis_url, config):
         """Test getting circuit breaker instances."""
         with (
-            patch("src.services.circuit_breaker.modern.RedisStorage") as mock_storage,
+            patch(
+                "src.services.circuit_breaker.modern.AsyncRedisUnitOfWork"
+            ) as mock_storage,
             patch(
                 "src.services.circuit_breaker.modern.AsyncCircuitBreakerFactory"
             ) as mock_factory,
         ):
-            mock_storage.from_url.return_value = Mock()
+            mock_storage.return_value = Mock()
             mock_breaker = AsyncMock()
             mock_factory_instance = AsyncMock()
             mock_factory_instance.get_breaker.return_value = mock_breaker
@@ -95,12 +99,14 @@ class TestModernCircuitBreakerManager:
     async def test_protected_call_success(self, redis_url, config):
         """Test successful protected function call."""
         with (
-            patch("src.services.circuit_breaker.modern.RedisStorage") as mock_storage,
+            patch(
+                "src.services.circuit_breaker.modern.AsyncRedisUnitOfWork"
+            ) as mock_storage,
             patch(
                 "src.services.circuit_breaker.modern.AsyncCircuitBreakerFactory"
             ) as mock_factory,
         ):
-            mock_storage.from_url.return_value = Mock()
+            mock_storage.return_value = Mock()
             mock_breaker = AsyncMock()
             mock_breaker.__aenter__ = AsyncMock(return_value=mock_breaker)
             mock_breaker.__aexit__ = AsyncMock(return_value=False)
@@ -128,12 +134,14 @@ class TestModernCircuitBreakerManager:
     async def test_decorator(self, redis_url, config):
         """Test circuit breaker decorator functionality."""
         with (
-            patch("src.services.circuit_breaker.modern.RedisStorage") as mock_storage,
+            patch(
+                "src.services.circuit_breaker.modern.AsyncRedisUnitOfWork"
+            ) as mock_storage,
             patch(
                 "src.services.circuit_breaker.modern.AsyncCircuitBreakerFactory"
             ) as mock_factory,
         ):
-            mock_storage.from_url.return_value = Mock()
+            mock_storage.return_value = Mock()
             mock_factory.return_value = Mock()
 
             manager = ModernCircuitBreakerManager(redis_url, config)
@@ -150,12 +158,14 @@ class TestModernCircuitBreakerManager:
     async def test_get_breaker_status(self, redis_url, config):
         """Test getting circuit breaker status."""
         with (
-            patch("src.services.circuit_breaker.modern.RedisStorage") as mock_storage,
+            patch(
+                "src.services.circuit_breaker.modern.AsyncRedisUnitOfWork"
+            ) as mock_storage,
             patch(
                 "src.services.circuit_breaker.modern.AsyncCircuitBreakerFactory"
             ) as mock_factory,
         ):
-            mock_storage.from_url.return_value = Mock()
+            mock_storage.return_value = Mock()
             mock_factory.return_value = Mock()
 
             manager = ModernCircuitBreakerManager(redis_url, config)
@@ -456,14 +466,16 @@ class TestIntegrationScenarios:
         redis_url = "redis://localhost:6379"
 
         with (
-            patch("src.services.circuit_breaker.modern.RedisStorage") as mock_storage,
+            patch(
+                "src.services.circuit_breaker.modern.AsyncRedisUnitOfWork"
+            ) as mock_storage,
             patch(
                 "src.services.circuit_breaker.modern.AsyncCircuitBreakerFactory"
             ) as mock_factory,
             patch("src.services.cache.modern.Cache"),
         ):
             # Setup mocks
-            mock_storage.from_url.return_value = Mock()
+            mock_storage.return_value = Mock()
             mock_factory.return_value = Mock()
 
             # Create managers

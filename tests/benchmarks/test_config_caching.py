@@ -18,7 +18,6 @@ import contextlib
 import gc
 import json
 import tempfile
-import time
 from pathlib import Path
 from typing import ClassVar
 
@@ -219,8 +218,7 @@ def temp_config_files():
 class TestCacheHitPerformance:
     """Test cache hit performance and efficiency."""
 
-    @pytest.mark.usefixtures("_benchmark")
-    def test_lru_cache_hit_performance(self):
+    def test_lru_cache_hit_performance(self, benchmark):
         """Benchmark LRU cache hit performance."""
         pytest.skip("FastConfig not available - optimized module deprecated")
 
@@ -268,36 +266,35 @@ class TestCacheMissPerformance:
         """Benchmark cache miss with full validation."""
 
         def cache_miss_with_validation():
-            timestamp = time.time_ns()
             return PerformanceConfig(
-                app_name=f"validation-test-{timestamp}",
-                enable_caching=True,
-                cache_ttl_seconds=3600,
-                max_memory_mb=512,
+                max_concurrent_requests=10,
+                max_concurrent_crawls=5,
+                max_memory_usage_mb=512.0,
+                batch_embedding_size=100,
             )
 
         result = benchmark(cache_miss_with_validation)
-        assert result.enable_caching is True
+        assert result.max_concurrent_requests == 10
 
     def test_large_config_cache_miss(self, benchmark):
         """Benchmark cache miss with large configuration."""
 
         def large_config_creation():
-            timestamp = time.time_ns()
             large_data = {
-                "app_name": f"large-test-{timestamp}",
-                "debug": True,
-                "performance": {
-                    "max_memory_mb": 1024,
-                    "max_concurrent_operations": 200,
-                },
-                # Add many fields to test serialization performance
-                "features": {f"feature_{i}": i % 2 == 0 for i in range(100)},
+                "max_concurrent_requests": 20,
+                "max_concurrent_crawls": 15,
+                "max_concurrent_embeddings": 64,
+                "request_timeout": 45.0,
+                "max_retries": 5,
+                "retry_base_delay": 2.0,
+                "max_memory_usage_mb": 2048.0,
+                "batch_embedding_size": 200,
+                "batch_crawl_size": 100,
             }
             return PerformanceConfig(**large_data)
 
         result = benchmark(large_config_creation)
-        assert result.app_name.startswith("large-test-")
+        assert result.max_memory_usage_mb == 2048.0
 
 
 class TestConcurrentCacheAccess:
@@ -336,7 +333,10 @@ class TestMemoryEfficiency:
         def cache_eviction_test():
             # Fill cache beyond capacity to trigger eviction
             for i in range(15):
-                config_data = {"app_name": f"eviction-test-{i}", "debug": True}
+                config_data = {
+                    "max_concurrent_requests": 10 + i,
+                    "max_memory_usage_mb": 512.0 + (i * 100),
+                }
                 config = PerformanceConfig(**config_data)
                 cache.set(PerformanceConfig, config_data, config)
 
@@ -388,7 +388,10 @@ class TestHotReloadPerformance:
         def cache_invalidation():
             # Populate cache
             for i in range(20):
-                config_data = {"app_name": f"invalidation-test-{i}"}
+                config_data = {
+                    "max_concurrent_requests": 10 + i,
+                    "max_memory_usage_mb": 1000.0,
+                }
                 config = PerformanceConfig(**config_data)
                 cache.set(PerformanceConfig, config_data, config)
 

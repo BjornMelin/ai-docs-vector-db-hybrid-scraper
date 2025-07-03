@@ -6,16 +6,15 @@ Uses yield dependencies for proper cleanup and circuit breaker patterns.
 
 import logging
 from collections.abc import AsyncGenerator
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 from fastapi import Depends
 
 from src.config import Config
-from src.infrastructure.client_manager import ClientManager
-from src.services.cache.manager import CacheManager
-from src.services.crawling.manager import CrawlManager
-from src.services.embeddings.manager import EmbeddingManager
-from src.services.vector_db.service import QdrantService
+
+
+if TYPE_CHECKING:
+    from src.infrastructure.client_manager import ClientManager
 
 
 logger = logging.getLogger(__name__)
@@ -33,13 +32,15 @@ async def get_config() -> Config:
 
 
 # Client manager dependency with resource lifecycle
-async def get_client_manager() -> AsyncGenerator[ClientManager]:
+async def get_client_manager() -> AsyncGenerator["ClientManager"]:
     """Get ClientManager instance with proper lifecycle management.
 
     Yields:
         ClientManager: Initialized client manager
 
     """
+    from src.infrastructure.client_manager import ClientManager  # noqa: PLC0415
+
     client_manager = ClientManager()
     try:
         await client_manager.initialize()
@@ -61,6 +62,8 @@ async def get_cache_client(
         CacheManager: Initialized cache manager
 
     """
+    from src.services.cache.manager import CacheManager  # noqa: PLC0415
+
     cache_manager = CacheManager(
         dragonfly_url=config.cache.dragonfly_url,
         enable_local_cache=config.cache.enable_local_cache,
@@ -80,7 +83,7 @@ async def get_cache_client(
 # Embedding client dependency
 async def get_embedding_client(
     config: Annotated[Config, Depends(get_config)],
-    client_manager: Annotated[ClientManager, Depends(get_client_manager)],
+    client_manager: Annotated["ClientManager", Depends(get_client_manager)],
 ) -> AsyncGenerator[object]:
     """Get embedding client with lifecycle management.
 
@@ -92,6 +95,8 @@ async def get_embedding_client(
         EmbeddingManager: Initialized embedding manager
 
     """
+    from src.services.embeddings.manager import EmbeddingManager  # noqa: PLC0415
+
     embedding_manager = EmbeddingManager(
         config=config,
         client_manager=client_manager,
@@ -109,7 +114,7 @@ async def get_embedding_client(
 # Vector database client dependency
 async def get_vector_db_client(
     config: Annotated[Config, Depends(get_config)],
-    client_manager: Annotated[ClientManager, Depends(get_client_manager)],
+    client_manager: Annotated["ClientManager", Depends(get_client_manager)],
 ) -> AsyncGenerator[object]:
     """Get vector database client with lifecycle management.
 
@@ -121,6 +126,8 @@ async def get_vector_db_client(
         QdrantService: Initialized vector database client
 
     """
+    from src.services.vector_db.service import QdrantService  # noqa: PLC0415
+
     qdrant_manager = QdrantService(config, client_manager)
 
     try:
@@ -163,6 +170,8 @@ async def get_crawling_client(
         CrawlManager: Initialized crawl manager
 
     """
+    from src.services.crawling.manager import CrawlManager  # noqa: PLC0415
+
     crawl_manager = CrawlManager(
         config=config,
         rate_limiter=rate_limiter,

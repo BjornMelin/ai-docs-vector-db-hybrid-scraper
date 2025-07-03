@@ -12,7 +12,7 @@ from enum import Enum
 from typing import Any
 
 from cachetools import LRUCache
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 from qdrant_client import models
 
 from .base import BaseFilter, FilterError, FilterResult
@@ -340,8 +340,19 @@ class FilterComposer(BaseFilter):
                     try:
                         result = await task
                         results[name] = result
+                    except FilterError as e:
+                        self._logger.exception("Filter %s failed", name)
+                        if criteria.fail_fast:
+                            raise
+                        # Create empty result for failed filter when not failing fast
+                        results[name] = FilterResult(
+                            filter_conditions=None,
+                            metadata={"error": str(e), "failed": True},
+                            confidence_score=0.0,
+                            performance_impact="high",
+                        )
                     except (TimeoutError, OSError, PermissionError):
-                        self._logger.exception("Filter {name} failed")
+                        self._logger.exception("Filter %s failed", name)
                         if criteria.fail_fast:
                             raise
                 else:
@@ -355,6 +366,17 @@ class FilterComposer(BaseFilter):
             raise FilterError(msg) from e
 
         return results
+
+    def _check_required_filter_failure(
+        self,
+        filter_ref: "FilterReference",
+        result: FilterResult,
+        criteria: FilterCompositionCriteria,
+    ) -> None:
+        """Check if a required filter failed and raise error if needed."""
+        if filter_ref.required and not result.filter_conditions and criteria.fail_fast:
+            msg = f"Required filter {filter_ref.filter_instance.name} failed"
+            raise FilterError(msg)
 
     async def _execute_sequential(
         self,
@@ -370,21 +392,28 @@ class FilterComposer(BaseFilter):
                 result = await self._execute_single_filter(filter_ref, context)
                 results[filter_ref.filter_instance.name] = result
 
-                # Check if this is a required filter that failed
-                if (
-                    filter_ref.required
-                    and not result.filter_conditions
-                    and criteria.fail_fast
-                ):
-                    msg = f"Required filter {filter_ref.filter_instance.name} failed"
-                    raise FilterError(msg)
-
-            except (OSError, PermissionError):
+            except FilterError as e:
                 self._logger.exception(
-                    "Filter {filter_ref.filter_instance.name} failed"
+                    "Filter %s failed", filter_ref.filter_instance.name
                 )
                 if criteria.fail_fast and filter_ref.required:
                     raise
+                # Create empty result for failed filter when not failing fast
+                results[filter_ref.filter_instance.name] = FilterResult(
+                    filter_conditions=None,
+                    metadata={"error": str(e), "failed": True},
+                    confidence_score=0.0,
+                    performance_impact="high",
+                )
+            except (OSError, PermissionError):
+                self._logger.exception(
+                    "Filter %s failed", filter_ref.filter_instance.name
+                )
+                if criteria.fail_fast and filter_ref.required:
+                    raise
+            else:
+                # Check if this is a required filter that failed
+                self._check_required_filter_failure(filter_ref, result, criteria)
 
         return results
 
@@ -613,8 +642,8 @@ class FilterComposer(BaseFilter):
         """Validate filter composition criteria."""
         try:
             FilterCompositionCriteria.model_validate(filter_criteria)
-        except (ImportError, OSError, PermissionError):
-            self._logger.warning("Invalid composition criteria")
+        except ValidationError as e:
+            self._logger.warning(f"Invalid composition criteria: {e}")
             return False
         else:
             return True

@@ -5,8 +5,7 @@ from typing import Any, ClassVar
 
 from arq.connections import RedisSettings
 
-from src.config import get_config
-from src.config.task_queue import TaskQueueConfig
+from src.config import TaskQueueConfig, get_config
 
 from .tasks import TASK_REGISTRY
 

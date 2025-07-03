@@ -5,13 +5,12 @@ document type classification, semantic category filtering, intent-based filterin
 and content quality assessment.
 """
 
-import asyncio
 import logging
 import re
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator
 from qdrant_client import models
 
 from .base import BaseFilter, FilterError, FilterResult
@@ -670,7 +669,7 @@ class ContentTypeFilter(BaseFilter):
         """Validate content type filter criteria."""
         try:
             ContentTypeCriteria.model_validate(filter_criteria)
-        except Exception as e:
+        except ValidationError as e:
             self._logger.warning(
                 f"Invalid content type criteria: {e}"
             )  # TODO: Convert f-string to logging format

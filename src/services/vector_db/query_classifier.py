@@ -9,10 +9,7 @@ import re
 from typing import Any
 
 from src.config import Config, QueryComplexity, QueryType
-
-
-# TODO: Fix imports - QueryClassification and QueryFeatures don't exist
-# from src.models.vector_search import QueryClassification, QueryFeatures
+from src.models.vector_search import QueryClassification, QueryFeatures
 
 
 logger = logging.getLogger(__name__)
@@ -161,7 +158,7 @@ class QueryClassifier:
 
     async def classify_query(
         self, query: str, _context: dict[str, Any] | None = None
-    ) -> Any:  # TODO: Replace with proper QueryClassification type
+    ) -> QueryClassification:
         """Classify a query to determine optimal search strategy.
 
         Args:
@@ -169,8 +166,7 @@ class QueryClassifier:
             context: Optional context information (user history, session data)
 
         Returns:
-            Any  # TODO: Replace with proper QueryClassification type with type,
-            # complexity, and features
+            QueryClassification: Classification result with type, complexity, and features
 
         """
         try:
@@ -195,35 +191,33 @@ class QueryClassifier:
             # Check for multimodal indicators
             is_multimodal = self._detect_multimodal(query, features)
 
-        except Exception:
-            # TODO: Convert f-string to logging format
-            logger.exception("Query classification failed: %s")
-            # Return default classification
-            # TODO: Replace with proper QueryClassification type
-            return {
-                "query_type": QueryType.CONCEPTUAL,
-                "complexity_level": QueryComplexity.MODERATE,
-                "domain": "general",
-                "programming_language": None,
-                "is_multimodal": False,
-                "confidence": 0.5,
-                "features": {},
-            }
-        else:
-            # TODO: Replace with proper QueryClassification type
-            return {
-                "query_type": query_type,
-                "complexity_level": complexity,
-                "domain": domain,
-                "programming_language": programming_language,
-                "is_multimodal": is_multimodal,
-                "confidence": confidence,
-                "features": features,
-            }
+            # Create and return proper QueryClassification object
+            return QueryClassification(
+                query_type=query_type.value,
+                complexity_level=complexity.value,
+                domain=domain,
+                programming_language=programming_language,
+                is_multimodal=is_multimodal,
+                confidence=confidence,
+                features=features.model_dump()
+                if hasattr(features, "model_dump")
+                else features.__dict__,
+            )
 
-    def _extract_features(
-        self, query: str
-    ) -> Any:  # TODO: Replace with proper QueryFeatures type
+        except Exception:
+            logger.exception("Query classification failed")
+            # Return default classification as QueryClassification object
+            return QueryClassification(
+                query_type=QueryType.CONCEPTUAL.value,
+                complexity_level=QueryComplexity.MODERATE.value,
+                domain="general",
+                programming_language=None,
+                is_multimodal=False,
+                confidence=0.5,
+                features={},
+            )
+
+    def _extract_features(self, query: str) -> QueryFeatures:
         """Extract features from query for classification."""
         query_lower = query.lower()
         tokens = query_lower.split()
@@ -261,21 +255,12 @@ class QueryClassifier:
         # Keyword density
         keyword_density = self._calculate_keyword_density(query_lower, tokens)
 
-        # TODO: Replace with proper QueryFeatures type
-        class QueryFeatures:
-            def __init__(self, **kwargs):
-                for k, v in kwargs.items():
-                    setattr(self, k, v)
-
-            def model_dump(self):
-                return self.__dict__
-
         return QueryFeatures(
             query_length=query_length,
             has_code_keywords=has_code_keywords,
             has_function_names=has_function_names,
             has_programming_syntax=has_programming_syntax,
-            question_type=question_type,
+            question_type=question_type or "",
             technical_depth=technical_depth,
             entity_mentions=entity_mentions,
             programming_language_indicators=programming_language_indicators,
@@ -283,9 +268,7 @@ class QueryClassifier:
             keyword_density=keyword_density,
         )
 
-    def _classify_query_type(
-        self, query: str, features: Any
-    ) -> QueryType:  # TODO: Replace with proper QueryFeatures type
+    def _classify_query_type(self, query: str, features: QueryFeatures) -> QueryType:
         """Classify the primary query type."""
         query_lower = query.lower()
 
@@ -345,7 +328,7 @@ class QueryClassifier:
     def _assess_complexity(
         self,
         query: str,
-        features: Any,  # TODO: Replace with proper QueryFeatures type
+        features: QueryFeatures,
     ) -> QueryComplexity:
         """Assess query complexity level."""
         complexity_score = 0
@@ -387,9 +370,7 @@ class QueryClassifier:
             return QueryComplexity.MODERATE
         return QueryComplexity.COMPLEX
 
-    def _detect_domain(
-        self, query: str, features: Any
-    ) -> str:  # TODO: Replace with proper QueryFeatures type
+    def _detect_domain(self, query: str, features: QueryFeatures) -> str:
         """Detect the technical domain of the query."""
         query_lower = query.lower()
 
@@ -447,7 +428,7 @@ class QueryClassifier:
     def _detect_programming_language(
         self,
         _query: str,
-        features: Any,  # TODO: Replace with proper QueryFeatures type
+        features: QueryFeatures,
     ) -> str | None:
         """Detect the primary programming language mentioned in the query."""
         if features.programming_language_indicators:
@@ -458,7 +439,7 @@ class QueryClassifier:
     def _calculate_confidence(
         self,
         _query: str,
-        features: Any,  # TODO: Replace with proper QueryFeatures type
+        features: QueryFeatures,
         _query_type: QueryType,
         _complexity: QueryComplexity,
     ) -> float:

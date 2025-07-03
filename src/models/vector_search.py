@@ -826,6 +826,35 @@ class SPLADEConfig(SecureBaseModel):
 # =============================================================================
 
 
+class QueryFeatures(SecureBaseModel):
+    """Query features extracted for classification."""
+
+    query_length: int = Field(..., ge=0, description="Number of words in query")
+    has_code_keywords: bool = Field(..., description="Contains programming keywords")
+    has_function_names: bool = Field(
+        ..., description="Contains function names with parentheses"
+    )
+    has_programming_syntax: bool = Field(
+        ..., description="Contains programming syntax patterns"
+    )
+    question_type: str = Field(
+        ..., description="Type of question (how, what, why, etc.)"
+    )
+    technical_depth: str = Field(..., description="Technical depth assessment")
+    entity_mentions: list[str] = Field(
+        default_factory=list, description="Entity mentions found"
+    )
+    programming_language_indicators: list[str] = Field(
+        default_factory=list, description="Programming language indicators"
+    )
+    semantic_complexity: float = Field(
+        ..., ge=0.0, description="Semantic complexity score"
+    )
+    keyword_density: float = Field(
+        ..., ge=0.0, le=1.0, description="Technical keyword density"
+    )
+
+
 class QueryClassification(SecureBaseModel):
     """Query classification result."""
 
@@ -990,6 +1019,7 @@ __all__ = [
     "MultiStageSearchRequest",
     "PrefetchConfig",
     "QueryClassification",
+    "QueryFeatures",
     "RetrievalMetrics",
     "SPLADEConfig",
     "SearchAccuracy",
