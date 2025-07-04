@@ -6,10 +6,18 @@ caching, and rate limiting implementations in your application code.
 
 import asyncio
 import logging
-from typing import Any, from src.config import Config
+from typing import Any
+
+from fastapi import FastAPI, HTTPException, Request
+
+from src.config import Config
 from src.services.cache.modern import ModernCacheManager
 from src.services.circuit_breaker.modern import ModernCircuitBreakerManager
 from src.services.middleware.rate_limiting import setup_rate_limiting
+from src.services.migration.library_migration import (
+    MigrationMode,
+    create_migration_manager,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -60,9 +68,10 @@ class EmbeddingServiceWithProtection:
         self.circuit_breaker_manager = circuit_breaker_manager
         self.cache_manager = cache_manager
 
-    @cache_manager.cache_embeddings(ttl=86400)  # Cache for 24 hours
     async def generate_embedding(
-        self, text: str, model: str = "default"
+        self,
+        text: str,
+        model: str = "default",
     ) -> list[float]:
         """Generate embedding with caching and circuit breaker protection.
 
@@ -81,20 +90,23 @@ class EmbeddingServiceWithProtection:
             model=model,
         )
 
-    async def _generate_embedding_impl(self, text: str, model: str) -> list[float]:
+    async def _generate_embedding_impl(self, text: str, _model: str) -> list[float]:
         """Internal implementation of embedding generation."""
         # Simulate external API call
         await asyncio.sleep(0.1)
 
         # Simulate potential failure
         if len(text) > 1000:
-            raise ValueError("Text too long for embedding")
+            msg = "Text too long for embedding"
+            raise ValueError(msg)
 
         # Return mock embedding
         return [0.1] * 1536
 
     async def generate_batch_embeddings(
-        self, texts: list[str], model: str = "default"
+        self,
+        texts: list[str],
+        model: str = "default",
     ) -> list[list[float]]:
         """Generate embeddings for multiple texts with protection."""
         embeddings = []
@@ -103,8 +115,8 @@ class EmbeddingServiceWithProtection:
             try:
                 embedding = await self.generate_embedding(text, model)
                 embeddings.append(embedding)
-            except Exception as e:
-                logger.exception(f"Failed to generate embedding for text: {e}")
+            except Exception:
+                logger.exception("Failed to generate embedding for text")
                 # Use fallback embedding or skip
                 embeddings.append([0.0] * 1536)
 
@@ -118,7 +130,6 @@ class SearchServiceWithCaching:
         """Initialize search service with caching."""
         self.cache_manager = cache_manager
 
-    @cache_manager.cache_search_results(ttl=3600)  # Cache for 1 hour
     async def search_documents(
         self,
         query: str,
@@ -161,11 +172,13 @@ class SearchServiceWithCaching:
         """Invalidate search cache entries matching pattern."""
         try:
             count = await self.cache_manager.invalidate_pattern(pattern)
-            logger.info(f"Invalidated {count} search cache entries")
-            return True
-        except Exception as e:
-            logger.exception(f"Failed to invalidate search cache: {e}")
+            logger.info("Invalidated %s search cache entries", count)
+        except Exception:
+            logger.exception("Failed to invalidate search cache")
             return False
+
+        else:
+            return True
 
 
 def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
@@ -219,10 +232,12 @@ def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
         service = request.app.state.modern_service
         try:
             embedding = await service.embedding_service.generate_embedding(text, model)
-            return {"embedding": embedding, "model": model}
         except Exception as e:
-            logger.exception(f"Embedding generation failed: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+            logger.exception("Embedding generation failed")
+            raise HTTPException(status_code=500, detail=str(e)) from e
+
+        else:
+            return {"embedding": embedding, "model": model}
 
     @app.get("/search")
     @rate_limiter.limit("50/minute")
@@ -235,10 +250,11 @@ def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
         service = request.app.state.modern_service
         try:
             results = await service.search_service.search_documents(query, limit=limit)
-            return results
         except Exception as e:
-            logger.exception(f"Search failed: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+            logger.exception("Search failed")
+            raise HTTPException(status_code=500, detail=str(e)) from e
+        else:
+            return results
 
     @app.get("/health/modern")
     async def modern_health_check(request: Request):
@@ -268,10 +284,12 @@ def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
         service = request.app.state.modern_service
         try:
             success = await service.cache_manager.clear()
-            return {"success": success, "message": "Cache cleared"}
         except Exception as e:
-            logger.exception(f"Cache clear failed: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+            logger.exception("Cache clear failed")
+            raise HTTPException(status_code=500, detail=str(e)) from e
+
+        else:
+            return {"success": success, "message": "Cache cleared"}
 
     @app.post("/admin/circuit-breaker/{service_name}/reset")
     @rate_limiter.limit("5/minute")
@@ -283,10 +301,12 @@ def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
         service = request.app.state.modern_service
         try:
             success = await service.circuit_breaker_manager.reset_breaker(service_name)
-            return {"success": success, "service": service_name}
         except Exception as e:
-            logger.exception(f"Circuit breaker reset failed: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+            logger.exception("Circuit breaker reset failed")
+            raise HTTPException(status_code=500, detail=str(e)) from e
+
+        else:
+            return {"success": success, "service": service_name}
 
     return app
 
@@ -299,7 +319,7 @@ async def example_usage_patterns():
 
     # Declarative caching with decorator
     @cache_manager.cache_embeddings(ttl=3600)
-    async def cached_function(text: str) -> list[float]:
+    async def cached_function(_text: str) -> list[float]:
         # Expensive operation
         await asyncio.sleep(1)
         return [0.1] * 1536
@@ -321,10 +341,6 @@ async def example_usage_patterns():
         return {"result": f"Success with {param1}"}
 
     # Example 3: Migration manager usage
-    from src.services.migration.library_migration import (
-        MigrationMode,
-        create_migration_manager,
-    )
 
     config = Config()  # Your config instance
     migration_manager = create_migration_manager(
@@ -336,8 +352,8 @@ async def example_usage_patterns():
     await migration_manager.initialize()
 
     # Get services through migration manager
-    modern_cache = await migration_manager.get_cache_manager()
-    modern_cb = await migration_manager.get_circuit_breaker("my_service")
+    # modern_cache = await migration_manager.get_cache_manager()
+    # modern_cb = await migration_manager.get_circuit_breaker("my_service")
 
     # Check migration status
     status = await migration_manager.get_migration_status()

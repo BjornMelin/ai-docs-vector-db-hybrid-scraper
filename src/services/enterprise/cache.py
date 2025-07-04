@@ -6,9 +6,10 @@ for enterprise deployments.
 
 import logging
 import time
-from typing import Any, Optional, 
+from typing import Any
 
 from src.architecture.service_factory import BaseService
+from src.services.cache.dragonfly_cache import DragonflyCache
 
 
 logger = logging.getLogger(__name__)
@@ -57,23 +58,25 @@ class EnterpriseCacheService(BaseService):
         logger.info("Initializing enterprise cache service")
 
         try:
-            # Initialize distributed cache if enabled
-            if self.enable_distributed:
-                await self._initialize_distributed_cache()
-
-            # Initialize cache warming
-            await self._initialize_cache_warming()
-
-            # Initialize analytics
-            if self.enable_analytics:
-                await self._initialize_analytics()
-
+            await self._perform_initialization_steps()
             self._mark_initialized()
             logger.info("Enterprise cache service initialized successfully")
-
-        except Exception as e:
-            logger.exception(f"Failed to initialize enterprise cache service: {e}")
+        except Exception:
+            logger.exception("Failed to initialize enterprise cache service")
             raise
+
+    async def _perform_initialization_steps(self) -> None:
+        """Perform all initialization steps."""
+        # Initialize distributed cache if enabled
+        if self.enable_distributed:
+            await self._initialize_distributed_cache()
+
+        # Initialize cache warming
+        await self._initialize_cache_warming()
+
+        # Initialize analytics
+        if self.enable_analytics:
+            await self._initialize_analytics()
 
     async def cleanup(self) -> None:
         """Clean up cache service resources."""
@@ -81,8 +84,8 @@ class EnterpriseCacheService(BaseService):
         if self.distributed_cache:
             try:
                 await self.distributed_cache.close()
-            except Exception as e:
-                logger.exception(f"Error closing distributed cache: {e}")
+            except Exception:
+                logger.exception("Error closing distributed cache")
 
         # Clear local cache
         self.local_cache.clear()
@@ -113,31 +116,30 @@ class EnterpriseCacheService(BaseService):
 
         try:
             # Check local cache first (L1)
-            value = await self._get_local(key)
-            if value is not None:
+            if (value := await self._get_local(key)) is not None:
                 self._cache_hits += 1
                 self._track_access(key)
                 self._record_operation_time("get", time.time() - start_time)
                 return value
 
             # Check distributed cache (L2)
-            if self.distributed_cache:
-                value = await self._get_distributed(key)
-                if value is not None:
-                    # Populate local cache
-                    await self._set_local(key, value, ttl=self.default_ttl)
-                    self._cache_hits += 1
-                    self._track_access(key)
-                    self._record_operation_time("get", time.time() - start_time)
-                    return value
-
+            if (
+                self.distributed_cache
+                and (value := await self._get_distributed(key)) is not None
+            ):
+                # Populate local cache
+                await self._set_local(key, value, ttl=self.default_ttl)
+                self._cache_hits += 1
+                self._track_access(key)
+                self._record_operation_time("get", time.time() - start_time)
+                return value
+        except Exception:
+            logger.exception("Cache get failed for key: %s", key)
+            return None
+        else:
             # Cache miss
             self._cache_misses += 1
             self._record_operation_time("get", time.time() - start_time)
-            return None
-
-        except Exception as e:
-            logger.exception(f"Cache get failed for key {key}: {e}")
             return None
 
     async def set(
@@ -153,29 +155,40 @@ class EnterpriseCacheService(BaseService):
         """
         start_time = time.time()
 
+        if ttl is None:
+            ttl = self.default_ttl
+
+        # Compress value if enabled
+        processed_value = await self._prepare_value_for_caching(value)
+
+        # Set in appropriate tiers
+        success = await self._store_in_tiers(key, processed_value, ttl, tier)
+
+        if success:
+            self._cache_sets += 1
+            self._track_access(key)
+            self._record_operation_time("set", time.time() - start_time)
+            logger.debug("Cached value for key: %s in %s tier(s)", key, tier)
+
+    async def _prepare_value_for_caching(self, value: Any) -> Any:
+        """Prepare value for caching (compression, etc.)."""
+        if self.enable_compression:
+            return await self._compress_value(value)
+        return value
+
+    async def _store_in_tiers(self, key: str, value: Any, ttl: int, tier: str) -> bool:
+        """Store value in appropriate cache tiers."""
         try:
-            if ttl is None:
-                ttl = self.default_ttl
-
-            # Compress value if enabled
-            if self.enable_compression:
-                value = await self._compress_value(value)
-
-            # set in appropriate tiers
             if tier in ("local", "both"):
                 await self._set_local(key, value, ttl)
 
             if tier in ("distributed", "both") and self.distributed_cache:
                 await self._set_distributed(key, value, ttl)
-
-            self._cache_sets += 1
-            self._track_access(key)
-            self._record_operation_time("set", time.time() - start_time)
-
-            logger.debug(f"Cached value for key: {key} in {tier} tier(s)")
-
-        except Exception as e:
-            logger.exception(f"Cache set failed for key {key}: {e}")
+        except Exception:
+            logger.exception("Cache set failed for key: %s", key)
+            return False
+        else:
+            return True
 
     async def delete(self, key: str) -> bool:
         """Delete value from all cache tiers.
@@ -189,30 +202,47 @@ class EnterpriseCacheService(BaseService):
         start_time = time.time()
         deleted = False
 
-        try:
-            # Delete from local cache
-            if key in self.local_cache:
-                del self.local_cache[key]
-                deleted = True
+        # Delete from local cache
+        local_deleted = await self._delete_from_local(key)
 
-            # Delete from distributed cache
-            if self.distributed_cache:
-                dist_deleted = await self._delete_distributed(key)
-                deleted = deleted or dist_deleted
+        # Delete from distributed cache
+        dist_deleted = await self._delete_from_distributed(key)
 
+        deleted = local_deleted or dist_deleted
+
+        if deleted:
             # Clean up tracking
-            if key in self._access_patterns:
-                del self._access_patterns[key]
-            self._hot_keys.discard(key)
-
+            self._cleanup_key_tracking(key)
             self._cache_deletes += 1
             self._record_operation_time("delete", time.time() - start_time)
 
-            return deleted
+        return deleted
 
-        except Exception as e:
-            logger.exception(f"Cache delete failed for key {key}: {e}")
+    async def _delete_from_local(self, key: str) -> bool:
+        """Delete key from local cache."""
+        try:
+            if key in self.local_cache:
+                del self.local_cache[key]
+                return True
+        except Exception:
+            logger.exception("Local cache delete failed for key: %s", key)
+        return False
+
+    async def _delete_from_distributed(self, key: str) -> bool:
+        """Delete key from distributed cache."""
+        if not self.distributed_cache:
             return False
+        try:
+            return await self._delete_distributed(key)
+        except Exception:
+            logger.exception("Distributed cache delete failed for key: %s", key)
+            return False
+
+    def _cleanup_key_tracking(self, key: str) -> None:
+        """Clean up tracking data for a key."""
+        if key in self._access_patterns:
+            del self._access_patterns[key]
+        self._hot_keys.discard(key)
 
     async def clear(self, tier: str = "both") -> None:
         """Clear cache entries from specified tiers.
@@ -220,21 +250,32 @@ class EnterpriseCacheService(BaseService):
         Args:
             tier: Cache tier to clear ("local", "distributed", or "both")
         """
+        # Clear appropriate tiers
+        if tier in ("local", "both"):
+            await self._clear_local_cache()
+
+        if tier in ("distributed", "both") and self.distributed_cache:
+            await self._clear_distributed_cache()
+
+        # Reset analytics
+        self._access_patterns.clear()
+        self._hot_keys.clear()
+
+    async def _clear_local_cache(self) -> None:
+        """Clear local cache with error handling."""
         try:
-            if tier in ("local", "both"):
-                self.local_cache.clear()
-                logger.info("Local cache cleared")
+            self.local_cache.clear()
+            logger.info("Local cache cleared")
+        except Exception:
+            logger.exception("Local cache clear failed")
 
-            if tier in ("distributed", "both") and self.distributed_cache:
-                await self._clear_distributed()
-                logger.info("Distributed cache cleared")
-
-            # Reset analytics
-            self._access_patterns.clear()
-            self._hot_keys.clear()
-
-        except Exception as e:
-            logger.exception(f"Cache clear failed: {e}")
+    async def _clear_distributed_cache(self) -> None:
+        """Clear distributed cache with error handling."""
+        try:
+            await self._clear_distributed()
+            logger.info("Distributed cache cleared")
+        except Exception:
+            logger.exception("Distributed cache clear failed")
 
     async def exists(self, key: str) -> bool:
         """Check if key exists in any cache tier.
@@ -264,16 +305,15 @@ class EnterpriseCacheService(BaseService):
         if not self.distributed_cache:
             return
 
-        logger.info(f"Warming cache with {len(keys)} keys")
+        logger.info("Warming cache with %s keys", len(keys))
 
         # Batch load from distributed cache to local cache
         for key in keys:
             try:
-                value = await self._get_distributed(key)
-                if value is not None:
+                if (value := await self._get_distributed(key)) is not None:
                     await self._set_local(key, value, ttl=self.default_ttl)
-            except Exception as e:
-                logger.exception(f"Cache warming failed for key {key}: {e}")
+            except Exception:
+                logger.exception("Cache warming failed for key {key}")
 
         logger.info("Cache warming completed")
 
@@ -295,16 +335,15 @@ class EnterpriseCacheService(BaseService):
         """Initialize distributed cache connection."""
         try:
             # Initialize Redis/Dragonfly connection
-            from src.services.cache.dragonfly_cache import DragonflyCacheAdapter
 
-            self.distributed_cache = DragonflyCacheAdapter()
+            self.distributed_cache = DragonflyCache()
             await self.distributed_cache.initialize()
             logger.info("Distributed cache initialized")
         except ImportError:
             logger.warning("Distributed cache not available, using local cache only")
             self.enable_distributed = False
-        except Exception as e:
-            logger.exception(f"Distributed cache initialization failed: {e}")
+        except Exception:
+            logger.exception("Distributed cache initialization failed")
             self.enable_distributed = False
 
     async def _initialize_cache_warming(self) -> None:
@@ -360,8 +399,8 @@ class EnterpriseCacheService(BaseService):
 
         try:
             return await self.distributed_cache.get(key)
-        except Exception as e:
-            logger.exception(f"Distributed cache get failed: {e}")
+        except Exception:
+            logger.exception("Distributed cache get failed")
             return None
 
     async def _set_distributed(self, key: str, value: Any, ttl: int) -> None:
@@ -371,8 +410,8 @@ class EnterpriseCacheService(BaseService):
 
         try:
             await self.distributed_cache.set(key, value, ttl)
-        except Exception as e:
-            logger.exception(f"Distributed cache set failed: {e}")
+        except Exception:
+            logger.exception("Distributed cache set failed")
 
     async def _delete_distributed(self, key: str) -> bool:
         """Delete value from distributed cache."""
@@ -381,8 +420,8 @@ class EnterpriseCacheService(BaseService):
 
         try:
             return await self.distributed_cache.delete(key)
-        except Exception as e:
-            logger.exception(f"Distributed cache delete failed: {e}")
+        except Exception:
+            logger.exception("Distributed cache delete failed")
             return False
 
     async def _exists_distributed(self, key: str) -> bool:
@@ -392,8 +431,8 @@ class EnterpriseCacheService(BaseService):
 
         try:
             return await self.distributed_cache.exists(key)
-        except Exception as e:
-            logger.exception(f"Distributed cache exists check failed: {e}")
+        except Exception:
+            logger.exception("Distributed cache exists check failed")
             return False
 
     async def _clear_distributed(self) -> None:
@@ -403,8 +442,8 @@ class EnterpriseCacheService(BaseService):
 
         try:
             await self.distributed_cache.clear()
-        except Exception as e:
-            logger.exception(f"Distributed cache clear failed: {e}")
+        except Exception:
+            logger.exception("Distributed cache clear failed")
 
     async def _compress_value(self, value: Any) -> Any:
         """Compress value if compression is enabled."""

@@ -47,8 +47,7 @@ def mock_automation_router():
 @pytest.fixture
 async def unified_manager(mock_config):
     """Create UnifiedBrowserManager instance for testing."""
-    manager = UnifiedBrowserManager(mock_config)
-    return manager
+    return UnifiedBrowserManager(mock_config)
 
 
 class TestUnifiedBrowserManagerInitialization:
@@ -58,8 +57,8 @@ class TestUnifiedBrowserManagerInitialization:
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
         """Test successful initialization."""
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -74,8 +73,8 @@ class TestUnifiedBrowserManagerInitialization:
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
         """Test that initialization is idempotent."""
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -87,8 +86,8 @@ class TestUnifiedBrowserManagerInitialization:
 
     async def test_initialization_failure(self, unified_manager, mock_client_manager):
         """Test initialization failure handling."""
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.initialize.side_effect = Exception("Init failed")
 
             with pytest.raises(CrawlServiceError) as exc_info:
@@ -101,8 +100,8 @@ class TestUnifiedBrowserManagerInitialization:
     ):
         """Test cleanup process."""
         # Initialize first
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -124,8 +123,8 @@ class TestUnifiedScrapingAPI:
     ):
         """Test scraping with UnifiedScrapingRequest object."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -182,8 +181,8 @@ class TestUnifiedScrapingAPI:
     ):
         """Test scraping with simple URL parameter."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -209,8 +208,8 @@ class TestUnifiedScrapingAPI:
     ):
         """Test scraping with forced tier selection."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -237,8 +236,8 @@ class TestUnifiedScrapingAPI:
     ):
         """Test scraping with tier fallback."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -267,8 +266,8 @@ class TestUnifiedScrapingAPI:
     ):
         """Test error handling during scraping."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -299,8 +298,8 @@ class TestUnifiedScrapingAPI:
     ):
         """Test scraping with neither request object nor URL."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -340,8 +339,8 @@ class TestMetricsTracking:
     ):
         """Test metrics update on successful scraping."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -370,8 +369,8 @@ class TestMetricsTracking:
     ):
         """Test metrics update on failed scraping."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -395,8 +394,8 @@ class TestMetricsTracking:
     ):
         """Test getting tier metrics."""
         # Initialize and run some scrapes
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -443,8 +442,8 @@ class TestMetricsTracking:
     ):
         """Test rolling average response time calculation."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -477,8 +476,8 @@ class TestURLAnalysis:
     ):
         """Test successful URL analysis."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -503,8 +502,8 @@ class TestURLAnalysis:
     ):
         """Test URL analysis error handling."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -546,8 +545,8 @@ class TestSystemStatus:
     ):
         """Test system status when healthy."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -573,8 +572,8 @@ class TestSystemStatus:
     ):
         """Test system status when degraded."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -622,8 +621,8 @@ class TestCustomActions:
     ):
         """Test scraping with custom actions."""
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -674,8 +673,8 @@ class TestUnifiedBrowserManagerMonitoring:
         unified_manager._monitor = mock_monitor
 
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -721,8 +720,8 @@ class TestUnifiedBrowserManagerMonitoring:
         unified_manager._monitor = mock_monitor
 
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )
@@ -790,8 +789,8 @@ class TestUnifiedBrowserManagerMonitoring:
         unified_manager._monitor = mock_monitor
 
         # Initialize manager
-        with patch("src.infrastructure.client_manager.ClientManager") as MockCM:
-            MockCM.return_value = mock_client_manager
+        with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
+            mock_cm.return_value = mock_client_manager
             mock_client_manager.get_browser_automation_router = AsyncMock(
                 return_value=mock_automation_router
             )

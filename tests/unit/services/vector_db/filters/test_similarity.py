@@ -278,7 +278,7 @@ class TestSimilarityThresholdManager:
         assert result.confidence_score == 0.85
 
     @pytest.mark.asyncio
-    async def test_apply_adaptive_strategy(self, manager, _sample_context):
+    async def test_apply_adaptive_strategy(self, manager, sample_context):
         """Test applying filter with adaptive strategy."""
         # Add multiple historical data points for adaptation to work
         historical_data = [

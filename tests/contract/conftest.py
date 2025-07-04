@@ -5,6 +5,7 @@ API contract validation, schema validation, consumer-driven contract testing,
 OpenAPI specification testing, and Pact integration.
 """
 
+import math
 from typing import Any
 from unittest.mock import AsyncMock
 
@@ -31,7 +32,6 @@ class JSONSchemaValidator:
         schema = self.schemas[schema_name]
         try:
             jsonschema.validate(data, schema)
-            return {"valid": True, "errors": []}
         except jsonschema.ValidationError as e:
             return {
                 "valid": False,
@@ -44,6 +44,8 @@ class JSONSchemaValidator:
                 "valid": False,
                 "errors": [f"Invalid schema: {e!s}"],
             }
+        else:
+            return {"valid": True, "errors": []}
 
     def validate_against_schema(
         self, data: Any, schema: dict[str, Any]
@@ -51,7 +53,6 @@ class JSONSchemaValidator:
         """Validate data against a provided schema."""
         try:
             jsonschema.validate(data, schema)
-            return {"valid": True, "errors": []}
         except jsonschema.ValidationError as e:
             return {
                 "valid": False,
@@ -65,6 +66,8 @@ class JSONSchemaValidator:
                 "valid": False,
                 "errors": [f"Invalid schema: {e!s}"],
             }
+        else:
+            return {"valid": True, "errors": []}
 
     def generate_test_data(self, schema: dict[str, Any]) -> list[dict[str, Any]]:
         """Generate test data based on schema."""
@@ -427,9 +430,13 @@ def openapi_contract_manager():
 
             # Check required fields
             required_fields = ["openapi", "info", "paths"]
-            for field in required_fields:
-                if field not in spec:
-                    errors.append(f"Required field '{field}' is missing")
+            errors.extend(
+                [
+                    f"Required field '{field}' is missing"
+                    for field in required_fields
+                    if field not in spec
+                ]
+            )
 
             # Validate OpenAPI version
             if "openapi" in spec:
@@ -589,8 +596,8 @@ def openapi_contract_manager():
             ]
 
             if required_params:
-                for param in required_params:
-                    negative_cases.append(
+                negative_cases.extend(
+                    [
                         {
                             "type": "negative",
                             "endpoint": endpoint["path"],
@@ -599,21 +606,25 @@ def openapi_contract_manager():
                             "test_data": {"params": {}},  # Empty params
                             "expected_status": 400,
                         }
-                    )
+                        for param in required_params
+                    ]
+                )
 
             # Invalid parameter types
-            for param in endpoint.get("parameters", []):
-                if param.get("type") == "integer":
-                    negative_cases.append(
-                        {
-                            "type": "negative",
-                            "endpoint": endpoint["path"],
-                            "method": endpoint["method"],
-                            "description": f"Test invalid type for parameter: {param['name']}",
-                            "test_data": {"params": {param["name"]: "not_an_integer"}},
-                            "expected_status": 400,
-                        }
-                    )
+            negative_cases.extend(
+                [
+                    {
+                        "type": "negative",
+                        "endpoint": endpoint["path"],
+                        "method": endpoint["method"],
+                        "description": f"Test invalid type for parameter: {param['name']}",
+                        "test_data": {"params": {param["name"]: "not_an_integer"}},
+                        "expected_status": 400,
+                    }
+                    for param in endpoint.get("parameters", [])
+                    if param.get("type") == "integer"
+                ]
+            )
 
             return negative_cases
 
@@ -638,7 +649,7 @@ def openapi_contract_manager():
             if schema_type == "integer":
                 return 42
             if schema_type == "number":
-                return 3.14
+                return math.pi
             if schema_type == "boolean":
                 return True
             return "default_value"

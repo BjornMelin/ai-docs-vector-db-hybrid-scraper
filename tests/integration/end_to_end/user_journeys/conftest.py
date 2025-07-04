@@ -7,14 +7,19 @@ across the entire AI Documentation Vector DB Hybrid Scraper system.
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import shutil
 import tempfile
 import time
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 import pytest
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @dataclass
@@ -119,6 +124,16 @@ def journey_executor():
             self.journey_history = []
             self.artifacts = {}
 
+        def _raise_validation_error(self, step_name: str) -> None:
+            """Raise a validation error for the given step."""
+            msg = f"Step validation failed: {step_name}"
+            raise ValueError(msg)
+
+        def _raise_expected_result_error(self, step_name: str) -> None:
+            """Raise an expected result error for the given step."""
+            msg = f"Result doesn't match expected: {step_name}"
+            raise ValueError(msg)
+
         async def execute_journey(
             self, journey: UserJourney, context: dict[str, Any] | None = None
         ) -> JourneyResult:
@@ -160,7 +175,7 @@ def journey_executor():
                         if isinstance(step_result, dict):
                             context.update(step_result.get("context_updates", {}))
 
-                    except Exception as e:
+                    except (ImportError, AttributeError, RuntimeError) as e:
                         error_msg = f"Step '{step.name}' failed: {e!s}"
                         errors.append(error_msg)
                         step_results.append(
@@ -230,24 +245,13 @@ def journey_executor():
                     if step.validation_func:
                         validation_result = await step.validation_func(result, context)
                         if not validation_result:
-
-                            def _raise_validation_error():
-                                msg = f"Step validation failed: {step.name}"
-                                raise ValueError(msg)
-
-                            _raise_validation_error()
+                            self._raise_validation_error(step.name)
 
                     # Check against expected result
-                    if step.expected_result:
-                        if not self._validate_expected_result(
-                            result, step.expected_result
-                        ):
-
-                            def _raise_expected_result_error():
-                                msg = f"Result doesn't match expected: {step.name}"
-                                raise ValueError(msg)
-
-                            _raise_expected_result_error()
+                    if step.expected_result and not self._validate_expected_result(
+                        result, step.expected_result
+                    ):
+                        self._raise_expected_result_error(step.name)
 
                     end_time = time.perf_counter()
                     duration_ms = (end_time - start_time) * 1000
@@ -265,13 +269,14 @@ def journey_executor():
                         await asyncio.sleep(1.0 * (attempt + 1))  # Exponential backoff
                         continue
                     raise
+            return None
 
         async def _perform_action(
             self,
             action: str,
             params: dict[str, Any],
             context: dict[str, Any],
-            timeout: float,  # noqa: ASYNC109
+            timeout_seconds: float = 30.0,
         ) -> dict[str, Any]:
             """Perform the specified action."""
             # Replace context variables in params
@@ -293,6 +298,7 @@ def journey_executor():
                 "browser_navigate": self._action_browser_navigate,
                 "browser_interact": self._action_browser_interact,
                 "validate_search_results": self._action_validate_search_results,
+                "unknown_action": self._action_unknown,  # For error testing
             }
 
             handler = action_handlers.get(action)
@@ -302,11 +308,10 @@ def journey_executor():
 
             # Execute with timeout
             try:
-                return await asyncio.wait_for(
-                    handler(resolved_params, context), timeout=timeout
-                )
+                async with asyncio.timeout(timeout_seconds):
+                    return await handler(resolved_params, context)
             except TimeoutError as e:
-                msg = f"Action '{action}' timed out after {timeout}s"
+                msg = f"Action '{action}' timed out after {timeout_seconds}s"
                 raise TimeoutError(msg) from e
 
         async def _action_crawl_url(
@@ -315,8 +320,11 @@ def journey_executor():
             """Mock URL crawling action."""
             url = params["url"]
             await asyncio.sleep(0.1)  # Simulate processing time
+            # Generate a unique document ID for this crawled URL
+            doc_id = f"doc_{hashlib.sha256(url.encode()).hexdigest()[:8]}"
             return {
                 "url": url,
+                "document_id": doc_id,  # Add document_id for context
                 "title": f"Test Page for {url}",
                 "content": f"Content from {url}",
                 "metadata": {"word_count": 150, "language": "en"},
@@ -486,6 +494,14 @@ def journey_executor():
                 "validation_passed": len(valid_results) > 0,
                 "min_score_threshold": min_score,
             }
+
+        async def _action_unknown(
+            self, _params: dict[str, Any], _context: dict[str, Any]
+        ) -> dict[str, Any]:
+            """Mock action that always fails for error testing."""
+            await asyncio.sleep(0.01)  # Simulate some processing
+            msg = "Simulated failure for error recovery testing"
+            raise RuntimeError(msg)
 
         def _resolve_context_variables(
             self, params: dict[str, Any], context: dict[str, Any]
@@ -885,16 +901,14 @@ def journey_data_manager():
                         await cleanup_func()
                     else:
                         cleanup_func()
-                except Exception as e:
+                except (RuntimeError, ValueError, OSError) as e:
                     print(f"Cleanup error: {e}")
 
             # Remove temp directories
-            import shutil
-
             for temp_dir in self.temp_dirs:
                 try:
                     shutil.rmtree(temp_dir)
-                except Exception as e:
+                except OSError as e:
                     print(f"Failed to remove temp dir {temp_dir}: {e}")
 
             # Clear artifacts

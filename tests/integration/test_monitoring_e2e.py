@@ -40,15 +40,15 @@ class TestMonitoringE2E:
     def test_monitoring_config_validation(self):
         """Test MonitoringConfig field validation."""
         # Test invalid port
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="port"):
             MonitoringConfig(metrics_port=0)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="port"):
             MonitoringConfig(metrics_port=70000)
 
         # Test invalid interval
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="interval"):
             MonitoringConfig(system_metrics_interval=0)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="timeout"):
             MonitoringConfig(health_check_timeout=0)

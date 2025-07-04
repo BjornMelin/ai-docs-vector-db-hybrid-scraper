@@ -1,16 +1,12 @@
 """Tests for search analytics dashboard functionality."""
 
 import asyncio
-from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from src.services.analytics.search_dashboard import (
-    PerformanceMetric,
-    QueryPattern,
     SearchAnalyticsDashboard,
-    UserBehaviorInsight,
 )
 
 
@@ -33,8 +29,7 @@ def analytics_dashboard(mock_config):
     with patch(
         "src.services.analytics.search_dashboard.get_config", return_value=mock_config
     ):
-        dashboard = SearchAnalyticsDashboard()
-        return dashboard
+        return SearchAnalyticsDashboard()
 
 
 @pytest.fixture

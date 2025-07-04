@@ -24,7 +24,7 @@ else:
 
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.responses import GenericDictResponse
-from src.security import MLSecurityValidator as SecurityValidator
+from src.security import MLSecurityValidator
 
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             # Validate collection name
-            security_validator = SecurityValidator.from_unified_config()
+            security_validator = MLSecurityValidator.from_unified_config()
             collection_name = security_validator.validate_collection_name(
                 collection_name
             )
@@ -82,7 +82,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 request_id=request_id,
             )
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError):
             await ctx.error("Failed to create payload indexes for {collection_name}")
             logger.exception("Failed to create payload indexes")
             raise
@@ -99,7 +99,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             # Validate collection name
-            security_validator = SecurityValidator.from_unified_config()
+            security_validator = MLSecurityValidator.from_unified_config()
             collection_name = security_validator.validate_collection_name(
                 collection_name
             )
@@ -115,7 +115,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return GenericDictResponse(**stats)
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError):
             await ctx.error("Failed to list payload indexes for {collection_name}")
             logger.exception("Failed to list payload indexes")
             raise
@@ -137,7 +137,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             # Validate collection name
-            security_validator = SecurityValidator.from_unified_config()
+            security_validator = MLSecurityValidator.from_unified_config()
             collection_name = security_validator.validate_collection_name(
                 collection_name
             )
@@ -170,7 +170,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 },
             )
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError):
             await ctx.error("Failed to reindex collection {collection_name}")
             logger.exception("Failed to reindex collection")
             raise
@@ -192,7 +192,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             # Validate collection name and filters
-            security_validator = SecurityValidator.from_unified_config()
+            security_validator = MLSecurityValidator.from_unified_config()
             collection_name = security_validator.validate_collection_name(
                 collection_name
             )
@@ -249,7 +249,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 benchmark_timestamp=datetime.now(UTC).isoformat(),
             )
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError):
             if ctx:
                 await ctx.error("Failed to benchmark filtered search")
             logger.exception("Failed to benchmark filtered search")

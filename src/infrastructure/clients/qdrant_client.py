@@ -1,7 +1,6 @@
 """Qdrant client provider."""
 
 import logging
-from typing import List
 
 
 try:
@@ -44,14 +43,13 @@ class QdrantClientProvider:
 
             # Simple API call to check connectivity
             await self._client.get_collections()
-            self._healthy = True
-            return True
-        except Exception as e:
-            logger.warning(
-                f"Qdrant health check failed: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (AttributeError, ValueError, ConnectionError, TimeoutError) as e:
+            logger.warning("Qdrant health check failed: %s", e)
             self._healthy = False
             return False
+        else:
+            self._healthy = True
+            return True
 
     async def get_collections(self) -> list[CollectionInfo]:
         """Get all collections.
@@ -63,7 +61,8 @@ class QdrantClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("Qdrant client is not available or unhealthy")
+            msg = "Qdrant client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         response = await self.client.get_collections()
         return response.collections
@@ -81,13 +80,15 @@ class QdrantClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("Qdrant client is not available or unhealthy")
+            msg = "Qdrant client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         try:
             await self.client.get_collection(collection_name)
-            return True
-        except Exception:
+        except (ValueError, ConnectionError, TimeoutError):
             return False
+        else:
+            return True
 
     async def search(
         self, collection_name: str, query_vector: list[float], limit: int = 10, **kwargs
@@ -107,7 +108,8 @@ class QdrantClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("Qdrant client is not available or unhealthy")
+            msg = "Qdrant client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.search(
             collection_name=collection_name,

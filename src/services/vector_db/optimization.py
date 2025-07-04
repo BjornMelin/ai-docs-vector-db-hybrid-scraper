@@ -6,7 +6,7 @@ including HNSW parameter tuning, quantization configuration, and real-time bench
 
 import logging
 import time
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 from qdrant_client import QdrantClient
@@ -17,6 +17,10 @@ from qdrant_client.models import (
     ScalarQuantization,
     VectorParams,
 )
+
+
+# Initialize numpy random generator
+rng = np.random.default_rng()
 
 
 logger = logging.getLogger(__name__)
@@ -119,11 +123,12 @@ class QdrantOptimizer:
                 f"Created optimized collection '{collection_name}' "
                 f"with vector size {vector_size} and quantization enabled"
             )
-            return True
 
-        except Exception as e:
-            logger.exception(f"Failed to create optimized collection: {e}")
+        except Exception:
+            logger.exception("Failed to create optimized collection")
             return False
+        else:
+            return True
 
     async def benchmark_search_performance(
         self,
@@ -162,8 +167,8 @@ class QdrantOptimizer:
                     latency = (time.time() - start_time) * 1000  # Convert to ms
                     latencies.append(latency)
 
-                except Exception as e:
-                    logger.warning(f"Search failed for ef={ef}: {e}")
+                except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
+                    logger.warning("Search failed for ef=%s: %s", ef, e)
                     continue
 
             if latencies:
@@ -176,7 +181,7 @@ class QdrantOptimizer:
                     "max_latency": float(np.max(latencies)),
                 }
 
-        logger.info(f"Benchmark completed for collection '{collection_name}'")
+        logger.info("Benchmark completed for collection '%s'", collection_name)
         return results
 
     async def optimize_existing_collection(
@@ -198,7 +203,7 @@ class QdrantOptimizer:
 
             # Generate test vectors for benchmarking
             vector_size = collection_info.config.params.vectors.size
-            test_vectors = [np.random.random(vector_size).tolist() for _ in range(50)]
+            test_vectors = [rng.random(vector_size).tolist() for _ in range(50)]
 
             # Benchmark current performance
             current_performance = await self.benchmark_search_performance(
@@ -213,7 +218,7 @@ class QdrantOptimizer:
                 collection_info.config.params.vectors.quantization_config is not None
             )
 
-            recommendations = {
+            return {
                 "current_performance": current_performance,
                 "optimal_ef": optimal_ef,
                 "quantization_enabled": has_quantization,
@@ -222,10 +227,8 @@ class QdrantOptimizer:
                 ),
             }
 
-            return recommendations
-
         except Exception as e:
-            logger.exception(f"Failed to optimize collection '{collection_name}': {e}")
+            logger.exception("Failed to optimize collection '{collection_name}'")
             return {"error": str(e)}
 
     def _find_optimal_ef(
@@ -331,12 +334,13 @@ class QdrantOptimizer:
                 quantization_config=quantization_config,
             )
 
-            logger.info(f"Enabled quantization for collection '{collection_name}'")
-            return {"status": "success", "quantization_enabled": True}
+            logger.info("Enabled quantization for collection '%s'", collection_name)
 
         except Exception as e:
-            logger.exception(f"Failed to enable quantization: {e}")
+            logger.exception("Failed to enable quantization")
             return {"status": "error", "error": str(e)}
+        else:
+            return {"status": "success", "quantization_enabled": True}
 
     async def get_optimization_metrics(self, collection_name: str) -> dict[str, Any]:
         """Get current optimization metrics for a collection.
@@ -352,7 +356,11 @@ class QdrantOptimizer:
             collection_info = await self.client.get_collection(collection_name)
             config = collection_info.config
 
-            metrics = {
+        except Exception as e:
+            logger.exception("Failed to get optimization metrics")
+            return {"error": str(e)}
+        else:
+            return {
                 "collection_name": collection_name,
                 "vector_count": collection_info.vectors_count,
                 "indexed_vectors": collection_info.indexed_vectors_count,
@@ -369,9 +377,3 @@ class QdrantOptimizer:
                 is not None,
                 "distance_metric": config.params.vectors.distance.value,
             }
-
-            return metrics
-
-        except Exception as e:
-            logger.exception(f"Failed to get optimization metrics: {e}")
-            return {"error": str(e)}

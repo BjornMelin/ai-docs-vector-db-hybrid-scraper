@@ -59,7 +59,7 @@ class ServiceHealthChecker:
                 result["error"] = "Authentication failed - check API key"
             else:
                 result["error"] = f"HTTP {e.status_code}: {e.reason_phrase}"
-        except Exception as e:
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             result["error"] = str(e)
 
         return result
@@ -94,7 +94,7 @@ class ServiceHealthChecker:
 
         except redis.ConnectionError:
             result["error"] = "Connection refused - is DragonflyDB running?"
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             result["error"] = str(e)
 
         return result
@@ -154,7 +154,7 @@ class ServiceHealthChecker:
             result["details"]["dimensions"] = config.openai.dimensions
             result["details"]["available_models_count"] = len(models)
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, RuntimeError) as e:
             result["error"] = str(e)
 
         return result
@@ -200,7 +200,7 @@ class ServiceHealthChecker:
             else:
                 result["error"] = f"API returned status {response.status_code}"
 
-        except Exception as e:
+        except (httpx.HTTPError, httpx.ResponseNotRead, ValueError) as e:
             result["error"] = str(e)
 
         return result

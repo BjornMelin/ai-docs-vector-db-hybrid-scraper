@@ -1,4 +1,5 @@
-"""Service discovery with connection pooling optimization for Redis 8.2, Qdrant, and PostgreSQL.
+"""Service discovery with connection pooling optimization for Redis 8.2, Qdrant, and
+PostgreSQL.
 
 Implements modern async service discovery patterns with:
 - Circuit breaker resilience patterns
@@ -33,11 +34,29 @@ try:
 except ImportError:
     AsyncQdrantClient = None
 
-from src.config.auto_detect import AutoDetectionConfig, DetectedService
+from src.config import AutoDetectionConfig, DetectedService
 from src.services.errors import circuit_breaker
 
 
 logger = logging.getLogger(__name__)
+
+
+def _raise_redis_unavailable() -> None:
+    """Raise ImportError for unavailable redis package."""
+    msg = "redis not available"
+    raise ImportError(msg)
+
+
+def _raise_qdrant_client_unavailable() -> None:
+    """Raise ImportError for unavailable qdrant_client package."""
+    msg = "qdrant_client not available"
+    raise ImportError(msg)
+
+
+def _raise_asyncpg_unavailable() -> None:
+    """Raise ImportError for unavailable asyncpg package."""
+    msg = "asyncpg not available"
+    raise ImportError(msg)
 
 
 class ServiceDiscoveryResult(BaseModel):
@@ -87,7 +106,7 @@ class ServiceDiscovery:
                         self.logger.info(
                             f"Discovered {service_type}: {result.host}:{result.port}"
                         )
-                except Exception as e:
+                except (TimeoutError, OSError, ConnectionError) as e:
                     error_msg = f"Failed to discover {service_type}: {e}"
                     errors.append(error_msg)
                     self.logger.warning(error_msg)
@@ -174,9 +193,15 @@ class ServiceDiscovery:
                     self._cache_service("redis", service)
                     return service
 
-            except Exception as e:
+            except (TimeoutError, OSError, ConnectionError) as e:
                 self.logger.debug(
                     f"Redis discovery failed for {host}:{port}: {e}"
+                )  # TODO: Convert f-string to logging format
+                continue
+            except (redis.RedisError, ValueError) as e:
+                # Catch any unexpected errors during Redis discovery
+                self.logger.debug(
+                    f"Unexpected Redis discovery error for {host}:{port}: {e}"
                 )  # TODO: Convert f-string to logging format
                 continue
 
@@ -242,9 +267,15 @@ class ServiceDiscovery:
                     self._cache_service("qdrant", service)
                     return service
 
-            except Exception as e:
+            except (TimeoutError, OSError, ConnectionError, httpx.HTTPError) as e:
                 self.logger.debug(
                     f"Qdrant discovery failed for {host}:{port}: {e}"
+                )  # TODO: Convert f-string to logging format
+                continue
+            except httpx.TimeoutException as e:
+                # Catch any unexpected errors during Qdrant discovery
+                self.logger.debug(
+                    f"Unexpected Qdrant discovery error for {host}:{port}: {e}"
                 )  # TODO: Convert f-string to logging format
                 continue
 
@@ -275,7 +306,8 @@ class ServiceDiscovery:
 
         for host, port in pg_candidates:
             try:
-                # Use asyncpg for direct connection testing (eliminates TCP + protocol redundancy)
+                # Use asyncpg for direct connection testing
+                # (eliminates TCP + protocol redundancy)
                 pg_info = await self._test_postgresql_connection(host, port)
                 if pg_info:
                     detection_time_ms = (time.time() - start_time) * 1000
@@ -299,7 +331,7 @@ class ServiceDiscovery:
                     self._cache_service("postgresql", service)
                     return service
 
-            except Exception as e:
+            except (asyncpg.PostgresError, ConnectionError, TimeoutError) as e:
                 self.logger.debug(
                     f"PostgreSQL discovery failed for {host}:{port}: {e}"
                 )  # TODO: Convert f-string to logging format
@@ -324,9 +356,10 @@ class ServiceDiscovery:
             )
             writer.close()
             await writer.wait_closed()
-            return True
-        except Exception:
+        except (ConnectionError, OSError, PermissionError):
             return False
+
+        return True
 
     async def _test_redis_connection(
         self, host: str, port: int
@@ -334,8 +367,7 @@ class ServiceDiscovery:
         """Test Redis connection and get server info using redis-py."""
         try:
             if redis is None:
-                msg = "redis not available"
-                raise ImportError(msg)
+                _raise_redis_unavailable()
 
             # Use redis-py for reliable connection testing
             client = redis.Redis(
@@ -364,7 +396,7 @@ class ServiceDiscovery:
         except ImportError:
             self.logger.warning("redis package not available for connection testing")
             return None
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.logger.debug(
                 f"Redis connection test failed: {e}"
             )  # TODO: Convert f-string to logging format
@@ -376,8 +408,7 @@ class ServiceDiscovery:
         """Test Qdrant connection using AsyncQdrantClient directly."""
         try:
             if AsyncQdrantClient is None:
-                msg = "qdrant_client not available"
-                raise ImportError(msg)
+                _raise_qdrant_client_unavailable()
 
             # Use AsyncQdrantClient for native connection testing
             client = AsyncQdrantClient(url=f"http://{host}:{port}", timeout=3.0)
@@ -404,7 +435,7 @@ class ServiceDiscovery:
                 "qdrant-client package not available for connection testing"
             )
             return None
-        except Exception as e:
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             self.logger.debug(
                 f"Qdrant connection test failed: {e}"
             )  # TODO: Convert f-string to logging format
@@ -419,9 +450,10 @@ class ServiceDiscovery:
             )
             writer.close()
             await writer.wait_closed()
-            return True
-        except Exception:
+        except (TimeoutError, OSError, PermissionError):
             return False
+
+        return True
 
     async def _test_postgresql_connection(
         self, host: str, port: int
@@ -429,8 +461,7 @@ class ServiceDiscovery:
         """Test PostgreSQL connection using asyncpg directly."""
         try:
             if asyncpg is None:
-                msg = "asyncpg not available"
-                raise ImportError(msg)
+                _raise_asyncpg_unavailable()
 
             # Use asyncpg for native connection testing with common credentials
             connection_params = [
@@ -450,7 +481,8 @@ class ServiceDiscovery:
                     # Get server version
                     version = await conn.fetchval("SELECT version()")
                     server_info = await conn.fetch(
-                        "SELECT name, setting FROM pg_settings WHERE name IN ('server_version', 'max_connections')"
+                        "SELECT name, setting FROM pg_settings "
+                        "WHERE name IN ('server_version', 'max_connections')"
                     )
 
                     await conn.close()
@@ -484,7 +516,7 @@ class ServiceDiscovery:
                 "asyncpg package not available for PostgreSQL connection testing"
             )
             return None
-        except Exception as e:
+        except (asyncpg.PostgresError, ConnectionError, TimeoutError) as e:
             self.logger.debug(
                 f"PostgreSQL connection test failed: {e}"
             )  # TODO: Convert f-string to logging format
@@ -503,7 +535,7 @@ class ServiceDiscovery:
                 parsed = urlparse(redis_url)
                 if parsed.hostname and parsed.port:
                     candidates.append((parsed.hostname, parsed.port))
-            except Exception as e:
+            except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
                 logger.debug(
                     f"Failed to parse Redis URL '{redis_url}': {e}"
                 )  # TODO: Convert f-string to logging format
@@ -531,7 +563,7 @@ class ServiceDiscovery:
         self, qdrant_info: dict[str, Any], grpc_available: bool
     ) -> dict[str, Any]:
         """Get optimized Qdrant connection pool configuration."""
-        config = {
+        return {
             "timeout": 10.0,
             "prefer_grpc": grpc_available,
             "max_retries": 3,
@@ -545,8 +577,6 @@ class ServiceDiscovery:
             else None,
             "version_info": qdrant_info,
         }
-
-        return config
 
     def _get_postgresql_pool_config(self, pg_info: dict[str, Any]) -> dict[str, Any]:
         """Get optimized PostgreSQL connection pool configuration."""

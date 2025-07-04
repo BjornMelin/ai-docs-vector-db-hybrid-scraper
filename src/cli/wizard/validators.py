@@ -14,7 +14,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from src.config.core import Config
+from src.config.settings import Settings
 
 
 console = Console()
@@ -153,7 +153,7 @@ class WizardValidator:
                 check_path.mkdir(parents=True, exist_ok=True)
         except PermissionError:
             return False, f"No write permission for path: {path}"
-        except Exception as e:
+        except (OSError, ValueError) as e:
             return False, f"Invalid path: {e}"
 
         return True, None
@@ -173,7 +173,7 @@ class WizardValidator:
         errors = []
 
         try:
-            # Try to create Config object with minimal required fields
+            # Try to create Settings object with minimal required fields
             # Add defaults for missing required fields for validation
             validation_data = {
                 "environment": "development",
@@ -182,7 +182,7 @@ class WizardValidator:
                 **config_data,
             }
 
-            Config(**validation_data)
+            Settings(**validation_data)
 
         except ValidationError as e:
             for error in e.errors():
@@ -190,7 +190,7 @@ class WizardValidator:
                 error_msg = error["msg"]
                 errors.append(f"{field_path}: {error_msg}")
 
-        except Exception as e:
+        except (TypeError, ValueError) as e:
             errors.append(f"Validation error: {e!s}")
         else:
             return True, []
@@ -201,7 +201,7 @@ class WizardValidator:
         """Validate configuration and show user-friendly error messages.
 
         Args:
-            config_data: Configuration data to validate
+            config_data: Settingsuration data to validate
 
         Returns:
             True if valid, False otherwise
@@ -220,7 +220,7 @@ class WizardValidator:
             return
 
         error_text = Text()
-        error_text.append("Configuration validation failed:\n\n", style="bold red")
+        error_text.append("Settingsuration validation failed:\n\n", style="bold red")
 
         for i, error in enumerate(errors, 1):
             error_text.append(f"{i}. ", style="red")
@@ -325,9 +325,10 @@ class WizardValidator:
 
         try:
             parsed = json.loads(json_str)
-            return True, None, parsed
         except json.JSONDecodeError as e:
             return False, f"Invalid JSON: {e}", None
+        else:
+            return True, None, parsed
 
     def show_validation_summary(self, config) -> None:
         """Show validation summary for successful configuration.
@@ -337,9 +338,9 @@ class WizardValidator:
 
         """
         summary_text = Text()
-        summary_text.append("✅ Configuration is valid!\n\n", style="bold green")
+        summary_text.append("✅ Settingsuration is valid!\n\n", style="bold green")
 
-        summary_text.append("Configuration Summary:\n", style="bold")
+        summary_text.append("Settingsuration Summary:\n", style="bold")
 
         # Show key configuration points
         if hasattr(config, "qdrant"):
@@ -367,7 +368,7 @@ class WizardValidator:
 
         panel = Panel(
             summary_text,
-            title="✅ Configuration Valid",
+            title="✅ Settingsuration Valid",
             title_align="left",
             border_style="green",
             padding=(1, 2),

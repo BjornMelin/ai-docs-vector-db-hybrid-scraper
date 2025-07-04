@@ -513,7 +513,7 @@ class ContentClassifier:
                         + semantic_scores[content_type] * blend_ratio
                     )
             reasoning_parts.append("semantic analysis applied")
-        except Exception:
+        except (OSError, PermissionError):
             logger.warning("Semantic analysis failed")
 
         return type_scores
@@ -648,11 +648,12 @@ class ContentClassifier:
                 )
                 scores[content_type] = max(0.0, similarity)  # Ensure non-negative
 
-            return scores
-
-        except Exception:
+        except (OSError, PermissionError):
             logger.exception("Semantic classification failed")
             return {}
+
+        else:
+            return scores
 
     def _cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:
         """Calculate cosine similarity between two vectors.
@@ -678,7 +679,7 @@ class ContentClassifier:
                 return 0.0
 
             return dot_product / (magnitude1 * magnitude2)
-        except Exception:
+        except (OSError, PermissionError):
             return 0.0
 
     def _detect_code_blocks(self, content: str) -> bool:

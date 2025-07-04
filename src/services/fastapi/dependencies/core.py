@@ -5,10 +5,16 @@ configuration management, and other production services.
 """
 
 import logging
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Any
+
+
+try:
+    import redis
+except ImportError:
+    redis = None
 
 from fastapi import HTTPException, Request
 from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
@@ -48,43 +54,62 @@ class DependencyContainer:
             return
 
         try:
-            # Load configurations
-            if config is None:
-                config = get_config()
-
-            self._config = config
-
-            # Initialize core services using function-based approach
-            self._client_manager = ClientManager.from_unified_config()
-            self._vector_service = QdrantService(config, self._client_manager)
-            await self._vector_service.initialize()
-
-            # Use function-based managers through client manager
-            self._embedding_manager = await get_embedding_manager(self._client_manager)
-            self._cache_manager = await get_cache_manager(self._client_manager)
-
-            self._initialized = True
-            logger.info("Dependency container initialized successfully")
-
-        except Exception:
+            await self._perform_initialization(config)
+        except (OSError, AttributeError, ConnectionError, ImportError):
             logger.exception("Failed to initialize dependency container")
             raise
+
+    async def _perform_initialization(self, config: Config | None) -> None:
+        """Perform dependency initialization steps.
+
+        Args:
+            config: Application configuration
+        """
+        # Load configurations
+        if config is None:
+            config = get_config()
+        self._config = config
+
+        # Initialize services sequentially
+        await self._initialize_core_services(config)
+        await self._initialize_managers()
+
+        self._initialized = True
+        logger.info("Dependency container initialized successfully")
+
+    async def _initialize_core_services(self, config: Config) -> None:
+        """Initialize core client manager and vector service.
+
+        Args:
+            config: Application configuration
+        """
+        self._client_manager = ClientManager.from_unified_config()
+        self._vector_service = QdrantService(config, self._client_manager)
+        await self._vector_service.initialize()
+
+    async def _initialize_managers(self) -> None:
+        """Initialize embedding and cache managers."""
+        self._embedding_manager = await get_embedding_manager(self._client_manager)
+        self._cache_manager = await get_cache_manager(self._client_manager)
 
     async def cleanup(self) -> None:
         """Clean up all dependencies."""
         try:
-            # Function-based managers are cleaned up through client manager
-            if self._vector_service:
-                await self._vector_service.cleanup()
-
-            if self._client_manager:
-                await self._client_manager.cleanup()
-
-            self._initialized = False
-            logger.info("Dependency container cleaned up")
-
-        except Exception:
+            await self._perform_cleanup()
+        except (OSError, AttributeError, ConnectionError, ImportError):
             logger.exception("Error during dependency cleanup")
+
+    async def _perform_cleanup(self) -> None:
+        """Perform dependency cleanup steps."""
+        # Function-based managers are cleaned up through client manager
+        if self._vector_service:
+            await self._vector_service.cleanup()
+
+        if self._client_manager:
+            await self._client_manager.cleanup()
+
+        self._initialized = False
+        logger.info("Dependency container cleaned up")
 
     @property
     def is_initialized(self) -> bool:
@@ -132,8 +157,32 @@ class DependencyContainer:
         return self._client_manager
 
 
-# Global dependency container instance
-_container: DependencyContainer | None = None
+class _DependencyContainerSingleton:
+    """Singleton holder for dependency container instance."""
+
+    _instance: DependencyContainer | None = None
+
+    @classmethod
+    def get_instance(cls) -> DependencyContainer:
+        """Get the singleton dependency container instance."""
+        if cls._instance is None:
+            msg = "Dependency container not initialized. Call initialize_dependencies() first."
+            raise RuntimeError(msg)
+        return cls._instance
+
+    @classmethod
+    async def initialize_instance(cls, config: Config | None = None) -> None:
+        """Initialize the singleton with configuration."""
+        if cls._instance is None:
+            cls._instance = DependencyContainer()
+        await cls._instance.initialize(config)
+
+    @classmethod
+    async def cleanup_instance(cls) -> None:
+        """Cleanup the singleton instance."""
+        if cls._instance:
+            await cls._instance.cleanup()
+            cls._instance = None
 
 
 def get_container() -> DependencyContainer:
@@ -146,10 +195,7 @@ def get_container() -> DependencyContainer:
         RuntimeError: If container is not initialized
 
     """
-    if _container is None:
-        msg = "Dependency container not initialized. Call initialize_dependencies() first."
-        raise RuntimeError(msg)
-    return _container
+    return _DependencyContainerSingleton.get_instance()
 
 
 async def initialize_dependencies(config: Config | None = None) -> None:
@@ -159,18 +205,12 @@ async def initialize_dependencies(config: Config | None = None) -> None:
         config: Application configuration
 
     """
-    global _container
-    if _container is None:
-        _container = DependencyContainer()
-    await _container.initialize(config)
+    await _DependencyContainerSingleton.initialize_instance(config)
 
 
 async def cleanup_dependencies() -> None:
     """Clean up the global dependency container."""
-    global _container
-    if _container:
-        await _container.cleanup()
-        _container = None
+    await _DependencyContainerSingleton.cleanup_instance()
 
 
 # FastAPI dependency functions
@@ -215,12 +255,10 @@ async def get_vector_service() -> QdrantService:
 
     """
     try:
-        container = get_container()
-        if not container.is_initialized:
-            _raise_vector_service_unavailable()
-        else:
-            return container.vector_service
-    except Exception:
+        return _get_service_from_container(
+            "vector_service", _raise_vector_service_unavailable
+        )
+    except (OSError, AttributeError, ConnectionError, ImportError):
         logger.exception("Failed to get vector service")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
@@ -247,12 +285,10 @@ async def get_embedding_manager_legacy() -> Any:
 
     """
     try:
-        container = get_container()
-        if not container.is_initialized:
-            _raise_embedding_service_unavailable()
-        else:
-            return container.embedding_manager
-    except Exception:
+        return _get_service_from_container(
+            "embedding_manager", _raise_embedding_service_unavailable
+        )
+    except (OSError, AttributeError, ConnectionError, ImportError):
         logger.exception("Failed to get embedding manager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
@@ -279,12 +315,10 @@ async def get_cache_manager_legacy() -> Any:
 
     """
     try:
-        container = get_container()
-        if not container.is_initialized:
-            _raise_cache_service_unavailable()
-        else:
-            return container.cache_manager
-    except Exception:
+        return _get_service_from_container(
+            "cache_manager", _raise_cache_service_unavailable
+        )
+    except (OSError, AttributeError, ConnectionError, ImportError):
         logger.exception("Failed to get cache manager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
@@ -311,17 +345,36 @@ def get_client_manager() -> ClientManager:
 
     """
     try:
-        container = get_container()
-        if not container.is_initialized:
-            _raise_client_manager_unavailable()
-        else:
-            return container.client_manager
-    except Exception:
+        return _get_service_from_container(
+            "client_manager", _raise_client_manager_unavailable
+        )
+    except (OSError, AttributeError, ConnectionError, ImportError):
         logger.exception("Failed to get client manager")
         raise HTTPException(
             status_code=HTTP_503_SERVICE_UNAVAILABLE,
             detail="Client manager not available",
         ) from None
+
+
+def _get_service_from_container(
+    service_name: str, unavailable_handler: Callable
+) -> Any:
+    """Get service from container with availability check.
+
+    Args:
+        service_name: Name of the service attribute
+        unavailable_handler: Function to call if service unavailable
+
+    Returns:
+        Service instance
+
+    Raises:
+        HTTPException: If service is not available
+    """
+    container = get_container()
+    if not container.is_initialized:
+        unavailable_handler()
+    return getattr(container, service_name)
 
 
 def get_correlation_id_dependency(request: Request) -> str:
@@ -407,7 +460,7 @@ class ServiceHealthChecker:
             # Attempt a simple health check operation
             await self.container.vector_service.list_collections()
             health["services"]["vector_db"] = {"status": "healthy"}
-        except Exception as e:
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             health["status"] = "degraded"
             health["services"]["vector_db"] = {"status": "unhealthy", "error": str(e)}
 
@@ -415,7 +468,7 @@ class ServiceHealthChecker:
         try:
             # Check if embedding manager is responsive
             health["services"]["embeddings"] = {"status": "healthy"}
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             health["status"] = "degraded"
             health["services"]["embeddings"] = {"status": "unhealthy", "error": str(e)}
 
@@ -423,7 +476,7 @@ class ServiceHealthChecker:
         try:
             # Check cache manager health
             health["services"]["cache"] = {"status": "healthy"}
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             health["status"] = "degraded"
             health["services"]["cache"] = {"status": "unhealthy", "error": str(e)}
 

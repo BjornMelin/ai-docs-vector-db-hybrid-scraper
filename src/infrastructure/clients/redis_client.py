@@ -8,9 +8,13 @@ try:
     import redis.asyncio as redis
 except ImportError:
     # Create a placeholder if redis is not available
-    class redis:
+    class RedisModule:
+        """Placeholder Redis module when redis is not available."""
+
         class Redis:
-            pass
+            """Placeholder Redis client class."""
+
+    redis = RedisModule()
 
 
 logger = logging.getLogger(__name__)
@@ -41,14 +45,13 @@ class RedisClientProvider:
 
             # Simple ping to check connectivity
             await self._client.ping()
-            self._healthy = True
-            return True
-        except Exception as e:
-            logger.warning(
-                f"Redis health check failed: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (AttributeError, ValueError, ConnectionError, TimeoutError) as e:
+            logger.warning("Redis health check failed: %s", e)
             self._healthy = False
             return False
+        else:
+            self._healthy = True
+            return True
 
     async def get(self, key: str) -> Any | None:
         """Get value by key.
@@ -63,7 +66,8 @@ class RedisClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("Redis client is not available or unhealthy")
+            msg = "Redis client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.get(key)
 
@@ -82,7 +86,8 @@ class RedisClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("Redis client is not available or unhealthy")
+            msg = "Redis client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.set(key, value, ex=ex)
 
@@ -99,7 +104,8 @@ class RedisClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("Redis client is not available or unhealthy")
+            msg = "Redis client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.delete(*keys)
 
@@ -116,6 +122,7 @@ class RedisClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("Redis client is not available or unhealthy")
+            msg = "Redis client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.exists(*keys)

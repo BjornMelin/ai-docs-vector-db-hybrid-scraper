@@ -721,7 +721,7 @@ class TestFilterComposer:
         assert result.filter_conditions is not None
 
     @pytest.mark.asyncio
-    async def test_empty_filter_list(self, _composer):
+    async def test_empty_filter_list(self, composer):
         """Test composition with empty filter list."""
         # Create a rule with no filters (should be invalid)
         with pytest.raises(ValueError):
@@ -842,7 +842,8 @@ class TestFilterComposer:
             "parallel"  # Use parallel to trigger timeout logic
         )
 
-        # Should handle timeout - the actual behavior may be to return a result with warnings
+        # Should handle timeout - the actual behavior may be to return
+        # a result with warnings
         # rather than raising an exception, so let's test for that
         result = await composer.apply(criteria)
 

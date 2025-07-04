@@ -31,36 +31,41 @@ def config():
 
 @config.command()
 @click.option(
-    "--format", "-f", type=click.Choice(["table", "json", "yaml"]), default="table"
+    "--format",
+    "output_format",
+    type=click.Choice(["table", "json", "yaml"]),
+    default="table",
 )
 @click.pass_context
-def show(ctx: click.Context, format: str):
+def show(ctx: click.Context, output_format: str):
     """Show current configuration."""
     config_obj = ctx.obj["config"]
 
-    if format == "table":
+    if output_format == "table":
         _show_config_table(config_obj)
-    elif format == "json":
+    elif output_format == "json":
         _show_config_json(config_obj)
-    elif format == "yaml":
+    elif output_format == "yaml":
         _show_config_yaml(config_obj)
 
 
 @config.command()
 @click.option("--output", "-o", type=click.Path(), help="Output file path")
-@click.option("--format", "-f", type=click.Choice(["json", "yaml"]), default="json")
+@click.option(
+    "--format", "export_format", type=click.Choice(["json", "yaml"]), default="json"
+)
 @click.pass_context
-def export(ctx: click.Context, output: str, format: str):
+def export(ctx: click.Context, output: str, export_format: str):
     """Export configuration to file."""
     config_obj = ctx.obj["config"]
 
-    output_path = Path(output) if output else Path(f"config.{format}")
+    output_path = Path(output) if output else Path(f"config.{export_format}")
 
     try:
-        if format == "json":
+        if export_format == "json":
             with output_path.open("w") as f:
                 json.dump(config_obj.model_dump(), f, indent=2)
-        elif format == "yaml":
+        elif export_format == "yaml":
             if yaml is None:
                 console.print(
                     "❌ YAML support not available. Please install PyYAML", style="red"
@@ -70,7 +75,7 @@ def export(ctx: click.Context, output: str, format: str):
                 yaml.dump(config_obj.model_dump(), f, default_flow_style=False)
 
         console.print(f"✅ Configuration exported to {output_path}", style="green")
-    except Exception as e:
+    except (OSError, ValueError) as e:
         console.print(f"❌ Export failed: {e}", style="red")
 
 
@@ -89,7 +94,7 @@ def load(config_file: str, validate_only: bool):
             console.print(f"✅ Configuration loaded from {config_path}", style="green")
             _show_config_table(config_obj)
 
-    except Exception as e:
+    except (OSError, ValueError) as e:
         console.print(f"❌ Failed to load configuration: {e}", style="red")
 
 
@@ -116,7 +121,7 @@ def validate(ctx: click.Context):
 
         console.print(table)
 
-    except Exception as e:
+    except (ValueError, AttributeError) as e:
         console.print(f"❌ Configuration validation failed: {e}", style="red")
 
 

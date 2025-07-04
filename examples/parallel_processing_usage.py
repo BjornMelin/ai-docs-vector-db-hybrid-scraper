@@ -19,11 +19,7 @@ from typing import Any
 
 from src.config.settings import load_settings
 from src.infrastructure.client_manager import ClientManager
-from src.infrastructure.container import (
-    DependencyContext,
-    initialize_container,
-    shutdown_container,
-)
+from src.infrastructure.container import DependencyContext
 
 
 # Configure logging
@@ -269,7 +265,7 @@ async def demonstrate_auto_optimization(parallel_system: Any):
         for opt in optimizations:
             logger.info(f"   • {opt}")  # TODO: Convert f-string to logging format
     else:
-        logger.info("ℹ️  No optimizations needed - system is already optimal")
+        logger.info("ℹ️  No optimizations needed - system is already optimal")  # noqa: RUF001
 
     logger.info(
         f"🕒 Optimization timestamp: {optimization_result.get('timestamp', 'Unknown')}"
@@ -356,8 +352,8 @@ async def main():
         logger.info("✅ Comprehensive performance monitoring")
 
     except Exception as e:
-        logger.error(
-            f"❌ Demonstration failed: {e}"
+        logger.exception(
+            "❌ Demonstration failed"
         )  # TODO: Convert f-string to logging format
         raise
 

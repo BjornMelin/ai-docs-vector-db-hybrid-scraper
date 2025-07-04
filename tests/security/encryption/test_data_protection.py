@@ -97,9 +97,10 @@ class TestDataProtection:
                 )
                 try:
                     kdf.verify(password.encode(), stored_hash)
-                    return True
-                except Exception:
+                except (ValueError, RuntimeError, ImportError):
                     return False
+                else:
+                    return True
 
             def generate_secure_token(self, length: int = 32) -> str:
                 """Generate cryptographically secure token."""

@@ -1,16 +1,19 @@
 import typing
+
+
 """Request models for MCP server tools."""
 
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
-from src.config import ChunkingStrategy
-from src.config import FusionAlgorithm
-from src.config import SearchAccuracy
-from src.config import SearchStrategy
-from src.config import VectorType
+from src.config import (
+    ChunkingStrategy,
+    FusionAlgorithm,
+    SearchAccuracy,
+    SearchStrategy,
+    VectorType,
+)
 
 
 class SearchRequest(BaseModel):

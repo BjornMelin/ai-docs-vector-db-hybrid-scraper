@@ -5,7 +5,7 @@ from typing import Any, ClassVar
 
 from arq.connections import RedisSettings
 
-from src.config import get_config
+from src.config import TaskQueueConfig, get_config
 
 from .tasks import TASK_REGISTRY
 
@@ -47,7 +47,6 @@ class WorkerSettings:
             tq_config = config.task_queue
         else:
             # Fallback to default TaskQueueConfig if not available
-            from src.config.core import TaskQueueConfig
 
             tq_config = TaskQueueConfig()
 

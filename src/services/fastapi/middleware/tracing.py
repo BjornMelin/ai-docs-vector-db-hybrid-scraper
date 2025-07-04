@@ -4,11 +4,18 @@ This middleware provides request correlation IDs, distributed tracing support,
 and comprehensive request/response logging for production monitoring.
 """
 
+import asyncio
 import html
 import logging
 import time
 import uuid
 from collections.abc import Callable
+
+
+try:
+    import httpx
+except ImportError:
+    httpx = None
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -25,6 +32,12 @@ except ImportError:
 
 
 logger = logging.getLogger(__name__)
+
+
+def _raise_opentelemetry_not_available() -> None:
+    """Raise ImportError for opentelemetry not available."""
+    msg = "opentelemetry not available"
+    raise ImportError(msg)
 
 
 def _safe_escape_for_logging(value: str | None) -> str | None:
@@ -84,6 +97,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app: Callable,
+        *,
         enable_request_logging: bool = True,
         enable_response_logging: bool = True,
         log_request_body: bool = False,
@@ -122,43 +136,72 @@ class TracingMiddleware(BaseHTTPMiddleware):
             await self._log_request(request, correlation_id)
 
         try:
-            # Process the request
             response = await call_next(request)
-
-            # Calculate processing time
-            end_time = time.perf_counter()
-            duration = end_time - start_time
-
-            # Add correlation ID to response headers
-            response.headers["x-correlation-id"] = correlation_id
-            response.headers["x-request-duration"] = f"{duration:.4f}"
-
-            # Log response
-            if self.enable_response_logging:
-                await self._log_response(request, response, correlation_id, duration)
-
-            return response
-
         except Exception as e:
-            # Calculate processing time for error case
-            end_time = time.perf_counter()
-            duration = end_time - start_time
-
-            # Log error
-            logger.exception(
-                "Request failed",
-                extra={
-                    "correlation_id": correlation_id,
-                    "method": request.method,
-                    "path": request.url.path,
-                    "duration": duration,
-                    "error": str(e),
-                    "error_type": type(e).__name__,
-                },
+            self._log_request_error(e, correlation_id, request, start_time)
+            raise
+        else:
+            return self._finalize_response(
+                response, correlation_id, request, start_time
             )
 
-            # Re-raise the exception
-            raise
+    def _log_request_error(
+        self, error: Exception, correlation_id: str, request: Request, start_time: float
+    ) -> None:
+        """Log request processing error.
+
+        Args:
+            error: Exception that occurred
+            correlation_id: Request correlation ID
+            request: HTTP request
+            start_time: Request start time
+        """
+        end_time = time.perf_counter()
+        duration = end_time - start_time
+
+        logger.exception(
+            "Request failed",
+            extra={
+                "correlation_id": correlation_id,
+                "method": request.method,
+                "path": request.url.path,
+                "duration": duration,
+                "error": str(error),
+                "error_type": type(error).__name__,
+            },
+        )
+
+    async def _finalize_response(
+        self,
+        response: Response,
+        correlation_id: str,
+        request: Request,
+        start_time: float,
+    ) -> Response:
+        """Finalize response with headers and logging.
+
+        Args:
+            response: HTTP response
+            correlation_id: Request correlation ID
+            request: HTTP request
+            start_time: Request start time
+
+        Returns:
+            Response with correlation headers
+        """
+        # Calculate processing time
+        end_time = time.perf_counter()
+        duration = end_time - start_time
+
+        # Add correlation ID to response headers
+        response.headers["x-correlation-id"] = correlation_id
+        response.headers["x-request-duration"] = f"{duration:.4f}"
+
+        # Log response
+        if self.enable_response_logging:
+            await self._log_response(request, response, correlation_id, duration)
+
+        return response
 
     async def _log_request(self, request: Request, correlation_id: str) -> None:
         """Log incoming request details.
@@ -185,10 +228,11 @@ class TracingMiddleware(BaseHTTPMiddleware):
         if self.log_request_body and request.method in ("POST", "PUT", "PATCH"):
             try:
                 body = await self._get_request_body(request)
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
+                log_data["request_body_error"] = _safe_escape_for_logging(str(e))
+            else:
                 if body:
                     log_data["request_body"] = _safe_escape_for_logging(body)
-            except Exception as e:
-                log_data["request_body_error"] = _safe_escape_for_logging(str(e))
 
         logger.info("Incoming request", extra=log_data)
 
@@ -222,10 +266,11 @@ class TracingMiddleware(BaseHTTPMiddleware):
         if self.log_response_body:
             try:
                 body = self._get_response_body(response)
+            except (httpx.HTTPError, httpx.ResponseNotRead, ValueError) as e:
+                log_data["response_body_error"] = _safe_escape_for_logging(str(e))
+            else:
                 if body:
                     log_data["response_body"] = _safe_escape_for_logging(body)
-            except Exception as e:
-                log_data["response_body_error"] = _safe_escape_for_logging(str(e))
 
         # Choose log level based on status code
         if 200 <= response.status_code < 400:
@@ -263,11 +308,12 @@ class TracingMiddleware(BaseHTTPMiddleware):
                 body_str = body.decode("utf-8")
                 if truncated:
                     body_str += f"... (truncated at {self.max_body_size} bytes)"
-                return body_str
             except UnicodeDecodeError:
                 return f"<binary data: {len(body)} bytes>"
 
-        except Exception:
+            else:
+                return body_str
+        except (RuntimeError, TypeError, UnicodeDecodeError, ValueError):
             return None
 
     def _get_response_body(self, response: Response) -> str | None:
@@ -281,31 +327,54 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
         """
         try:
-            if not hasattr(response, "body"):
-                return None
-
-            body = response.body
-            if not body:
-                return None
-
-            # Limit body size for logging
-            if len(body) > self.max_body_size:
-                body = body[: self.max_body_size]
-                truncated = True
-            else:
-                truncated = False
-
-            # Decode body
-            try:
-                body_str = body.decode("utf-8")
-                if truncated:
-                    body_str += f"... (truncated at {self.max_body_size} bytes)"
-                return body_str
-            except UnicodeDecodeError:
-                return f"<binary data: {len(body)} bytes>"
-
-        except Exception:
+            body = self._extract_response_body(response)
+        except (ConnectionError, OSError, RuntimeError, TimeoutError):
             return None
+
+        if not body:
+            return None
+
+        return self._format_body_for_logging(body)
+
+    def _extract_response_body(self, response: Response) -> bytes | None:
+        """Extract response body safely.
+
+        Args:
+            response: HTTP response
+
+        Returns:
+            Response body as bytes or None
+        """
+        if not hasattr(response, "body"):
+            return None
+
+        return response.body
+
+    def _format_body_for_logging(self, body: bytes) -> str:
+        """Format response body for logging.
+
+        Args:
+            body: Response body as bytes
+
+        Returns:
+            Formatted body string
+        """
+        # Limit body size for logging
+        if len(body) > self.max_body_size:
+            body = body[: self.max_body_size]
+            truncated = True
+        else:
+            truncated = False
+
+        # Decode body
+        try:
+            body_str = body.decode("utf-8")
+            if truncated:
+                body_str += f"... (truncated at {self.max_body_size} bytes)"
+        except UnicodeDecodeError:
+            return f"<binary data: {len(body)} bytes>"
+        else:
+            return body_str
 
     def _get_client_ip(self, request: Request) -> str:
         """Get client IP address from request.
@@ -354,17 +423,24 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
 
         # Try to import OpenTelemetry
         try:
-            if trace is None:
-                msg = "opentelemetry not available"
-                raise ImportError(msg)
-
-            self.tracer = trace.get_tracer(__name__)
-            self.Status = Status
-            self.StatusCode = StatusCode
-            self.otel_available = True
+            self._initialize_tracing()
         except ImportError:
             logger.warning("OpenTelemetry not available, distributed tracing disabled")
             self.otel_available = False
+
+    def _initialize_tracing(self) -> None:
+        """Initialize OpenTelemetry tracing components.
+
+        Raises:
+            ImportError: If OpenTelemetry is not available
+        """
+        if trace is None:
+            _raise_opentelemetry_not_available()
+
+        self.tracer = trace.get_tracer(__name__)
+        self.Status = Status
+        self.StatusCode = StatusCode
+        self.otel_available = True
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with distributed tracing."""
@@ -397,30 +473,43 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
                 span.set_attribute("http.user_agent", user_agent)
 
             try:
-                # Process the request
                 response = await call_next(request)
-
-                # Set response attributes
-                span.set_attribute("http.status_code", response.status_code)
-
-                # Set span status based on response
-                if 400 <= response.status_code < 600:
-                    span.set_status(
-                        self.Status(
-                            self.StatusCode.ERROR,
-                            f"HTTP {response.status_code}",
-                        )
-                    )
-                else:
-                    span.set_status(self.Status(self.StatusCode.OK))
-
+            except Exception as e:
+                self._handle_request_exception(span, e)
+                raise
+            else:
+                self._set_response_attributes(span, response)
                 return response
 
-            except Exception as e:
-                # Record exception in span
-                span.record_exception(e)
-                span.set_status(self.Status(self.StatusCode.ERROR, str(e)))
-                raise
+    def _handle_request_exception(self, span, exception: Exception) -> None:
+        """Handle request exception in tracing span.
+
+        Args:
+            span: OpenTelemetry span
+            exception: Exception that occurred
+        """
+        span.record_exception(exception)
+        span.set_status(self.Status(self.StatusCode.ERROR, str(exception)))
+
+    def _set_response_attributes(self, span, response: Response) -> None:
+        """Set response attributes on tracing span.
+
+        Args:
+            span: OpenTelemetry span
+            response: HTTP response
+        """
+        span.set_attribute("http.status_code", response.status_code)
+
+        # Set span status based on response
+        if 400 <= response.status_code < 600:
+            span.set_status(
+                self.Status(
+                    self.StatusCode.ERROR,
+                    f"HTTP {response.status_code}",
+                )
+            )
+        else:
+            span.set_status(self.Status(self.StatusCode.OK))
 
     def _get_client_ip(self, request: Request) -> str | None:
         """Get client IP address from request."""

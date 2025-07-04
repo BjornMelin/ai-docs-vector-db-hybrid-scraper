@@ -8,8 +8,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.config import Config
-from src.config.enums import (
+from src.config import (
+    Config,
     EmbeddingModel,
     ModelType,
     OptimizationStrategy,

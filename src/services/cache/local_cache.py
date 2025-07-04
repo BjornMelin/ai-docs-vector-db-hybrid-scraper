@@ -1,15 +1,18 @@
 import typing
+
+
 """Local in-memory LRU cache implementation with TTL support."""
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
+import asyncio
+import logging
 import sys
-import time  # noqa: PLC0415
+import time
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any
 
 from .base import CacheInterface
+
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +57,10 @@ class LocalCache(CacheInterface[Any]):
         """
         self.max_size = max_size
         self.default_ttl = default_ttl
+        self.max_memory_mb = max_memory_mb
         self.max_memory_bytes = int(max_memory_mb * 1024 * 1024)
 
-        self._cache: Ordereddict[str, CacheEntry] = OrderedDict()
+        self._cache: OrderedDict[str, CacheEntry] = OrderedDict()
         self._lock = asyncio.Lock()
         self._hits = 0
         self._misses = 0
@@ -69,8 +73,8 @@ class LocalCache(CacheInterface[Any]):
             try:
                 self.metrics_registry = get_metrics_registry()
                 logger.debug("Local cache monitoring enabled")
-            except Exception:
-                logger.debug(f"Local cache monitoring disabled: {e}")
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
+                logger.debug("Local cache monitoring disabled: %s", e)
 
     async def get(self, key: str) -> Any | None:
         """Get value from cache with LRU update."""
@@ -236,18 +240,17 @@ class LocalCache(CacheInterface[Any]):
         # Simple estimation - can be improved
         if isinstance(value, str | bytes):
             return len(value)
-        elif isinstance(value, list | tuple):
+        if isinstance(value, list | tuple):
             return sum(self._estimate_size(item) for item in value) + sys.getsizeof(
                 value
             )
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             size = sys.getsizeof(value)
             for k, v in value.items():
                 size += self._estimate_size(k) + self._estimate_size(v)
             return size
-        else:
-            # Default size estimate
-            return sys.getsizeof(value)
+        # Default size estimate
+        return sys.getsizeof(value)
 
     def _update_memory_usage(self, key: str, value: Any, remove: bool) -> None:
         """Update current memory usage tracking."""

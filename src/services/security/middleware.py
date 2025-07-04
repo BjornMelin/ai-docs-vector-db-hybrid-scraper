@@ -15,15 +15,18 @@ applications with comprehensive protection against various attack vectors:
 import hashlib
 import json
 import logging
+import re
 import time
 from collections.abc import Callable
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import HTTPException, Request, Response
+from fastapi.security import HTTPBearer
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from src.config.security import SecurityConfig
+from src.services.security.ai_security import AISecurityValidator
 from src.services.security.monitoring import SecurityMonitor
 from src.services.security.rate_limiter import DistributedRateLimiter
 
@@ -47,6 +50,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         self,
         app,
         rate_limiter: DistributedRateLimiter,
+        *,
         security_config: SecurityConfig | None = None,
         ai_validator: AISecurityValidator | None = None,
         security_monitor: SecurityMonitor | None = None,
@@ -120,12 +124,6 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             # 5. Post-processing security
             self._add_security_headers(response)
 
-            # 6. Log successful request
-            processing_time = time.time() - start_time
-            self.security_monitor.log_request_success(request, processing_time)
-
-            return response
-
         except HTTPException as e:
             # Handle security-related HTTP exceptions
             response = self._create_security_error_response(e, request)
@@ -147,7 +145,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         except Exception as e:
             # Handle unexpected errors securely
-            logger.exception(f"Unexpected error in security middleware: {e}")
+            logger.exception("Unexpected error in security middleware")
 
             response = JSONResponse(
                 status_code=500, content={"error": "Internal server error"}
@@ -159,6 +157,11 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 "middleware_error", request, {"error": str(e)}
             )
 
+            return response
+        else:
+            # 6. Log successful request
+            processing_time = time.time() - start_time
+            self.security_monitor.log_request_success(request, processing_time)
             return response
 
     async def _validate_request_security(self, request: Request) -> None:
@@ -193,10 +196,10 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                     raise HTTPException(
                         status_code=413, detail="Request payload too large"
                     )
-            except ValueError:
+            except ValueError as e:
                 raise HTTPException(
                     status_code=400, detail="Invalid content-length header"
-                )
+                ) from e
 
         # Validate HTTP method
         allowed_methods = {"GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"}
@@ -348,8 +351,6 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         # Check for SQL injection patterns
         query_lower = query_string.lower()
         for pattern in self.suspicious_patterns:
-            import re
-
             if re.search(pattern, query_lower, re.IGNORECASE):
                 self.security_monitor.log_suspicious_activity(
                     "sql_injection_attempt", {"query": query_string, "pattern": pattern}
@@ -372,7 +373,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             HTTPException: If headers contain threats
         """
         # Check for header injection
-        for _name, value in headers.items():
+        for value in headers.values():
             if not isinstance(value, str):
                 continue
 
@@ -402,8 +403,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         if not host or len(host) > 253:
             return False
 
-        # Check for suspicious patterns
-        suspicious_hosts = ["localhost", "127.0.0.1", "0.0.0.0"]
+        # Check for suspicious patterns - 0.0.0.0 intentionally flagged for security
+        suspicious_hosts = ["localhost", "127.0.0.1", "0.0.0.0"]  # noqa: S104
         return host.lower() not in suspicious_hosts
 
     async def _validate_request_body(self, request: Request) -> None:
@@ -427,16 +428,20 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                         # Parse and validate JSON
                         data = json.loads(body.decode("utf-8"))
                         self._validate_json_data(data)
-                except json.JSONDecodeError:
-                    raise HTTPException(status_code=400, detail="Invalid JSON format")
+                except json.JSONDecodeError as e:
+                    raise HTTPException(
+                        status_code=400, detail="Invalid JSON format"
+                    ) from e
 
             # Handle form data
             elif "application/x-www-form-urlencoded" in content_type:
                 # Basic validation for form data
                 pass  # FastAPI handles this automatically
 
-        except UnicodeDecodeError:
-            raise HTTPException(status_code=400, detail="Invalid request encoding")
+        except UnicodeDecodeError as e:
+            raise HTTPException(
+                status_code=400, detail="Invalid request encoding"
+            ) from e
 
     def _validate_json_data(self, data: Any, depth: int = 0) -> None:
         """Recursively validate JSON data for security threats.
@@ -485,11 +490,11 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             ):
                 try:
                     self.ai_validator.validate_search_query(data)
-                except HTTPException:
+                except HTTPException as e:
                     # Re-raise with more context
                     raise HTTPException(
                         status_code=400, detail="Request contains prohibited content"
-                    )
+                    ) from e
 
     def _get_client_identifier(self, request: Request) -> str:
         """Get unique client identifier for rate limiting.
@@ -566,7 +571,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             response.headers[header] = value
 
     def _create_security_error_response(
-        self, exception: HTTPException, request: Request
+        self, exception: HTTPException, _request: Request
     ) -> JSONResponse:
         """Create standardized security error response.
 

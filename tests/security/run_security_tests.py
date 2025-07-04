@@ -8,7 +8,6 @@ for vulnerability assessment and compliance validation.
 import argparse
 import json
 import logging
-import os
 import re
 import subprocess
 import sys
@@ -82,15 +81,11 @@ class SecurityTestRunner:
         }
 
         # Run selected categories or all
-        categories_to_run = (
-            test_categories if test_categories else available_categories.keys()
-        )
+        categories_to_run = test_categories or available_categories.keys()
 
         for category in categories_to_run:
             if category in available_categories:
-                self.logger.info(
-                    f"Running {category} tests..."
-                )  # TODO: Convert f-string to logging format
+                self.logger.info("Running %s tests...", category)
                 try:
                     category_results = available_categories[category]()
                     results["test_categories"][category] = category_results
@@ -117,7 +112,8 @@ class SecurityTestRunner:
         self._generate_reports(results)
 
         self.logger.info(
-            f"Security test suite completed in {results['execution_info']['duration']:.2f} seconds"
+            "Security test suite completed in %.2f seconds",
+            results["execution_info"]["duration"],
         )
         return results
 
@@ -175,7 +171,7 @@ class SecurityTestRunner:
 
         try:
             # Validate Python executable for security
-            if not sys.executable or not os.path.isfile(sys.executable):
+            if not sys.executable or not Path(sys.executable).is_file():
                 self.logger.warning(
                     "Python executable not found or invalid, skipping Bandit"
                 )
@@ -235,12 +231,13 @@ class SecurityTestRunner:
                     ),
                     "report_file": str(bandit_report_file),
                 }
-            return {"status": "failed", "error": "No report generated"}
 
         except subprocess.TimeoutExpired:
             return {"status": "timeout", "error": "Bandit analysis timed out"}
-        except Exception as e:
+        except (ValueError, RuntimeError, ImportError) as e:
             return {"status": "error", "error": str(e)}
+        else:
+            return {"status": "failed", "error": "No report generated"}
 
     def _run_dependency_scan(self) -> dict[str, Any]:
         """Run dependency vulnerability scanning with Safety."""
@@ -248,7 +245,7 @@ class SecurityTestRunner:
 
         try:
             # Validate Python executable for security
-            if not sys.executable or not os.path.isfile(sys.executable):
+            if not sys.executable or not Path(sys.executable).is_file():
                 self.logger.warning(
                     "Python executable not found or invalid, skipping Safety"
                 )
@@ -291,6 +288,12 @@ class SecurityTestRunner:
                     "vulnerabilities_found": vulnerabilities,
                     "report_file": str(safety_report_file),
                 }
+
+        except subprocess.TimeoutExpired:
+            return {"status": "timeout", "error": "Safety scan timed out"}
+        except (ValueError, RuntimeError, ImportError) as e:
+            return {"status": "error", "error": str(e)}
+        else:
             # No vulnerabilities found (Safety returns 0 exit code)
             return {
                 "status": "completed",
@@ -298,11 +301,6 @@ class SecurityTestRunner:
                 "vulnerabilities_found": 0,
                 "message": "No vulnerabilities detected",
             }
-
-        except subprocess.TimeoutExpired:
-            return {"status": "timeout", "error": "Safety scan timed out"}
-        except Exception as e:
-            return {"status": "error", "error": str(e)}
 
     def _run_pytest_category(
         self, category: str, test_files: list[str]
@@ -316,9 +314,7 @@ class SecurityTestRunner:
         Returns:
             Test execution results
         """
-        self.logger.info(
-            f"Running pytest for {category} category..."
-        )  # TODO: Convert f-string to logging format
+        self.logger.info("Running pytest for %s category...", category)
 
         # Build pytest command
         cmd = [
@@ -355,7 +351,7 @@ class SecurityTestRunner:
         cmd.extend(existing_files)
 
         # Validate Python executable for security
-        if not sys.executable or not os.path.isfile(sys.executable):
+        if not sys.executable or not Path(sys.executable).is_file():
             self.logger.warning(
                 "Python executable not found or invalid, skipping pytest"
             )
@@ -416,7 +412,7 @@ class SecurityTestRunner:
                 "tests_passed": 0,
                 "tests_failed": 1,
             }
-        except Exception as e:
+        except (ValueError, RuntimeError, ImportError) as e:
             return {
                 "status": "error",
                 "error": str(e),
@@ -520,9 +516,7 @@ class SecurityTestRunner:
         # Executive summary
         self._generate_executive_summary(results)
 
-        self.logger.info(
-            f"Reports generated in {self.output_dir}"
-        )  # TODO: Convert f-string to logging format
+        self.logger.info("Reports generated in %s", self.output_dir)
 
     def _generate_html_report(self, results: dict[str, Any]) -> None:
         """Generate HTML summary report."""

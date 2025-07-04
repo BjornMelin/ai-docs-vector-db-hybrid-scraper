@@ -11,7 +11,7 @@ import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from src.services.errors import EmbeddingServiceError
 
@@ -50,7 +50,7 @@ class ProcessingMetrics:
     speedup_factor: float = 1.0
 
 
-class ParallelProcessor(Generic[T, R]):
+class ParallelProcessor:
     """High-performance parallel processor for ML operations."""
 
     def __init__(
@@ -112,10 +112,11 @@ class ParallelProcessor(Generic[T, R]):
 
         except* Exception as eg:
             # Handle task group exceptions
-            logger.error(
-                f"Parallel processing failed: {eg}"
+            logger.exception(
+                "Parallel processing failed: "
             )  # TODO: Convert f-string to logging format
-            raise EmbeddingServiceError(f"Parallel processing failed: {eg}") from eg
+            msg = f"Parallel processing failed: {eg}"
+            raise EmbeddingServiceError(msg) from eg
 
         # Flatten results while preserving order
         results = []
@@ -182,18 +183,21 @@ class ParallelProcessor(Generic[T, R]):
                 logger.debug(
                     f"Processed batch {batch_idx} with {len(batch)} items"
                 )  # TODO: Convert f-string to logging format
-                return results
 
-            except TimeoutError:
-                logger.error(
-                    f"Batch {batch_idx} processing timeout"
+            except TimeoutError as e:
+                logger.exception(
+                    "Batch  processing timeout"
                 )  # TODO: Convert f-string to logging format
-                raise EmbeddingServiceError(f"Batch {batch_idx} processing timeout")
+                msg = f"Batch {batch_idx} processing timeout"
+                raise EmbeddingServiceError(msg) from e
             except Exception as e:
-                logger.error(
-                    f"Batch {batch_idx} processing failed: {e}"
+                logger.exception(
+                    "Batch  processing failed: {e}"
                 )  # TODO: Convert f-string to logging format
-                raise EmbeddingServiceError(f"Batch processing failed: {e}") from e
+                msg = f"Batch processing failed: {e}"
+                raise EmbeddingServiceError(msg) from e
+            else:
+                return results
 
     def _calculate_optimal_batching(self, total_items: int) -> dict[str, Any]:
         """Calculate optimal batch configuration based on system resources and history.
@@ -271,7 +275,7 @@ class ParallelProcessor(Generic[T, R]):
     def _calculate_metrics(
         self,
         items: list[T],
-        results: list[R],
+        _results: list[R],
         start_time: float,
         end_time: float,
         batch_config: dict[str, Any],
@@ -317,7 +321,7 @@ class ParallelProcessor(Generic[T, R]):
             memory_usage_mb=0.0,  # Will be updated by memory monitoring
         )
 
-    async def _check_batch_cache(self, batch: list[T]) -> list[R] | None:
+    async def _check_batch_cache(self, _batch: list[T]) -> list[R] | None:
         """Check if batch results are cached.
 
         Args:
@@ -396,7 +400,7 @@ class ParallelEmbeddingProcessor:
     async def generate_embeddings_parallel(
         self,
         texts: list[str],
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> dict[str, Any]:
         """Generate embeddings in parallel with optimal performance.
 

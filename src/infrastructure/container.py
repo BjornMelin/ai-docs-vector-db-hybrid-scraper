@@ -1,15 +1,29 @@
 """Dependency injection container for the application."""
 
+import asyncio
 import logging
 from collections.abc import AsyncGenerator
 from functools import lru_cache
 from typing import Any
 
+import aiohttp
 import redis.asyncio as redis
 from dependency_injector import containers, providers
+from dependency_injector.wiring import Provide
 from firecrawl import AsyncFirecrawlApp
 from openai import AsyncOpenAI
 from qdrant_client import AsyncQdrantClient
+
+
+# Import parallel processing components
+try:
+    from src.services.processing.parallel_integration import (
+        OptimizationConfig,
+        ParallelProcessingSystem,
+    )
+except ImportError:
+    OptimizationConfig = None
+    ParallelProcessingSystem = None
 
 
 logger = logging.getLogger(__name__)
@@ -30,10 +44,8 @@ def _create_openai_client(config: Any) -> AsyncOpenAI:
             getattr(getattr(config, "performance", None), "max_retries", None) or 3
         )
         return AsyncOpenAI(api_key=api_key, max_retries=max_retries)
-    except Exception as e:
-        logger.warning(
-            f"Failed to create OpenAI client with config: {e}"
-        )  # TODO: Convert f-string to logging format
+    except (AttributeError, TypeError, ValueError) as e:
+        logger.warning("Failed to create OpenAI client with config: %s", e)
         return AsyncOpenAI(api_key="", max_retries=3)
 
 
@@ -55,10 +67,8 @@ def _create_qdrant_client(config: Any) -> AsyncQdrantClient:
         return AsyncQdrantClient(
             url=url, api_key=api_key, timeout=timeout, prefer_grpc=prefer_grpc
         )
-    except Exception as e:
-        logger.warning(
-            f"Failed to create Qdrant client with config: {e}"
-        )  # TODO: Convert f-string to logging format
+    except (AttributeError, TypeError, ValueError) as e:
+        logger.warning("Failed to create Qdrant client with config: %s", e)
         return AsyncQdrantClient(url="http://localhost:6333")
 
 
@@ -76,10 +86,8 @@ def _create_redis_client(config: Any) -> redis.Redis:
         url = getattr(cache_config, "dragonfly_url", None) or "redis://localhost:6379"
         pool_size = getattr(cache_config, "redis_pool_size", None) or 20
         return redis.from_url(url, max_connections=pool_size, decode_responses=True)
-    except Exception as e:
-        logger.warning(
-            f"Failed to create Redis client with config: {e}"
-        )  # TODO: Convert f-string to logging format
+    except (AttributeError, TypeError, ValueError) as e:
+        logger.warning("Failed to create Redis client with config: %s", e)
         return redis.from_url(
             "redis://localhost:6379", max_connections=20, decode_responses=True
         )
@@ -98,27 +106,21 @@ def _create_firecrawl_client(config: Any) -> AsyncFirecrawlApp:
         firecrawl_config = getattr(config, "firecrawl", None)
         api_key = getattr(firecrawl_config, "api_key", None) or ""
         return AsyncFirecrawlApp(api_key=api_key)
-    except Exception as e:
-        logger.warning(
-            f"Failed to create Firecrawl client with config: {e}"
-        )  # TODO: Convert f-string to logging format
+    except (AttributeError, TypeError, ValueError) as e:
+        logger.warning("Failed to create Firecrawl client with config: %s", e)
         return AsyncFirecrawlApp(api_key="")
 
 
-async def _create_http_client(timeout: float = 30.0) -> AsyncGenerator[Any]:
+async def _create_http_client() -> AsyncGenerator[Any]:
     """Create HTTP client with proper lifecycle management.
-
-    Args:
-        timeout: Request timeout in seconds
 
     Yields:
         HTTP client session
     """
-    import aiohttp
-
-    timeout_config = aiohttp.ClientTimeout(total=timeout)
-    async with aiohttp.ClientSession(timeout=timeout_config) as session:
-        yield session
+    async with asyncio.timeout(30.0):
+        timeout_config = aiohttp.ClientTimeout(total=30.0)
+        async with aiohttp.ClientSession(timeout=timeout_config) as session:
+            yield session
 
 
 def _create_parallel_processing_system(embedding_manager: Any) -> Any:
@@ -130,12 +132,7 @@ def _create_parallel_processing_system(embedding_manager: Any) -> Any:
     Returns:
         ParallelProcessingSystem instance
     """
-    try:
-        from src.services.processing.parallel_integration import (
-            OptimizationConfig,
-            ParallelProcessingSystem,
-        )
-
+    if OptimizationConfig and ParallelProcessingSystem:
         # Create optimization configuration
         config = OptimizationConfig(
             enable_parallel_processing=True,
@@ -145,22 +142,21 @@ def _create_parallel_processing_system(embedding_manager: Any) -> Any:
             auto_optimization=True,
         )
 
-        return ParallelProcessingSystem(embedding_manager, config)
+        try:
+            return ParallelProcessingSystem(embedding_manager, config)
+        except (AttributeError, TypeError, ValueError) as e:
+            logger.warning("Failed to create parallel processing system: %s", e)
+            # Fall through to mock system
 
-    except Exception as e:
-        logger.warning(
-            f"Failed to create parallel processing system: {e}"
-        )  # TODO: Convert f-string to logging format
+    # Return a minimal mock system if creation fails or components unavailable
+    class MockParallelProcessingSystem:
+        async def get_system_status(self):
+            return {"system_health": {"status": "unavailable"}}
 
-        # Return a minimal mock system if creation fails
-        class MockParallelProcessingSystem:
-            async def get_system_status(self):
-                return {"system_health": {"status": "unavailable"}}
+        async def cleanup(self):
+            pass
 
-            async def cleanup(self):
-                pass
-
-        return MockParallelProcessingSystem()
+    return MockParallelProcessingSystem()
 
 
 class ApplicationContainer(containers.DeclarativeContainer):
@@ -193,7 +189,6 @@ class ApplicationContainer(containers.DeclarativeContainer):
     # HTTP client with session management
     http_client = providers.Resource(
         _create_http_client,
-        timeout=30.0,  # Default timeout
     )
 
     # Client provider layer
@@ -294,10 +289,8 @@ class ContainerManager:
                 for key in dir(config)
                 if not key.startswith("_") and not callable(getattr(config, key))
             }
-        except Exception as e:
-            logger.warning(
-                f"Failed to convert config to dict: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (AttributeError, TypeError, ValueError) as e:
+            logger.warning("Failed to convert config to dict: %s", e)
             return {}
 
     def _serialize_config_dict(self, data: Any) -> Any:
@@ -321,7 +314,7 @@ class ContainerManager:
             return {
                 key: self._serialize_config_dict(value) for key, value in data.items()
             }
-        if isinstance(data, (list, tuple)):
+        if isinstance(data, list | tuple):
             return [self._serialize_config_dict(item) for item in data]
         return data
 

@@ -27,6 +27,14 @@ from src.services.processing.algorithms import OptimizedTextAnalyzer
 
 logger = logging.getLogger(__name__)
 
+# Constants for performance thresholds and limits
+REQUEST_HISTORY_LIMIT = 1000
+HEALTHY_ERROR_RATE_THRESHOLD = 0.05
+LOW_CACHE_HIT_RATE_THRESHOLD = 0.3
+HIGH_RESPONSE_TIME_THRESHOLD_MS = 5000
+MAX_CONCURRENT_TASKS_LIMIT = 100
+PARALLEL_TASK_INCREMENT = 10
+
 
 @dataclass
 class SystemPerformanceMetrics:
@@ -110,6 +118,16 @@ class ParallelProcessingSystem:
         if self.config.enable_optimized_algorithms:
             self.text_analyzer = OptimizedTextAnalyzer()
 
+        # Initialize content processing components
+        # These are placeholder implementations - can be replaced with actual ML models
+        if self.config.enable_content_classification:
+            self.content_classifier = (
+                None  # Placeholder for content classification model
+            )
+
+        if self.config.enable_metadata_extraction:
+            self.metadata_extractor = None  # Placeholder for metadata extraction model
+
         # Initialize caching systems
         if self.config.enable_intelligent_caching:
             self.embedding_cache = EmbeddingCache(self.config.cache_config)
@@ -119,8 +137,75 @@ class ParallelProcessingSystem:
         # Initialize parallel embedding processor
         if self.config.enable_parallel_processing:
             self.parallel_embeddings = ParallelEmbeddingProcessor(
-                self.embedding_manager, self.config.parallel_config
+                self.embedding_manager,
+                self.config.parallel_config,
             )
+
+    async def _create_processing_tasks(
+        self,
+        texts: list[str],
+        urls: list[str],
+        enable_classification: bool,
+        enable_metadata_extraction: bool,
+        enable_embedding_generation: bool,
+    ) -> list[tuple[str, Any]]:
+        """Create parallel processing tasks based on configuration."""
+        processing_tasks = []
+
+        # 1. Text analysis (optimized algorithms)
+        if self.config.enable_optimized_algorithms:
+            analysis_task = asyncio.create_task(self._parallel_text_analysis(texts))
+            processing_tasks.append(("text_analysis", analysis_task))
+
+        # 2. Embedding generation (parallel processing)
+        if enable_embedding_generation and self.config.enable_parallel_processing:
+            embedding_task = asyncio.create_task(
+                self._parallel_embedding_generation(texts),
+            )
+            processing_tasks.append(("embeddings", embedding_task))
+
+        # 3. Content classification (parallel processing)
+        if enable_classification and hasattr(self, "content_classifier"):
+            classification_task = asyncio.create_task(
+                parallel_content_classification(
+                    texts,
+                    self.content_classifier,
+                    self.config.parallel_config,
+                ),
+            )
+            processing_tasks.append(("classification", classification_task))
+
+        # 4. Metadata extraction (parallel processing)
+        if enable_metadata_extraction and hasattr(self, "metadata_extractor"):
+            metadata_items = list(zip(texts, urls, strict=False))
+            metadata_task = asyncio.create_task(
+                parallel_metadata_extraction(
+                    metadata_items,
+                    self.metadata_extractor,
+                    self.config.parallel_config,
+                ),
+            )
+            processing_tasks.append(("metadata", metadata_task))
+
+        return processing_tasks
+
+    async def _execute_parallel_tasks(
+        self,
+        processing_tasks: list[tuple[str, Any]],
+    ) -> dict[str, Any]:
+        """Execute parallel processing tasks and collect results."""
+        task_results = {}
+        if processing_tasks:
+            async with asyncio.TaskGroup() as tg:
+                running_tasks = {}
+                for task_name, task in processing_tasks:
+                    running_tasks[task_name] = tg.create_task(task)
+
+            # Collect results
+            for task_name, task in running_tasks.items():
+                task_results[task_name] = await task
+
+        return task_results
 
     async def process_documents_parallel(
         self,
@@ -158,54 +243,15 @@ class ParallelProcessingSystem:
             texts = [doc.get("content", "") for doc in documents]
             urls = [doc.get("url", "") for doc in documents]
 
-            # Parallel processing pipeline
-            processing_tasks = []
-
-            # 1. Text analysis (optimized algorithms)
-            if self.config.enable_optimized_algorithms:
-                analysis_task = asyncio.create_task(self._parallel_text_analysis(texts))
-                processing_tasks.append(("text_analysis", analysis_task))
-
-            # 2. Embedding generation (parallel processing)
-            if enable_embedding_generation and self.config.enable_parallel_processing:
-                embedding_task = asyncio.create_task(
-                    self._parallel_embedding_generation(texts)
-                )
-                processing_tasks.append(("embeddings", embedding_task))
-
-            # 3. Content classification (parallel processing)
-            if enable_classification and hasattr(self, "content_classifier"):
-                classification_task = asyncio.create_task(
-                    parallel_content_classification(
-                        texts, self.content_classifier, self.config.parallel_config
-                    )
-                )
-                processing_tasks.append(("classification", classification_task))
-
-            # 4. Metadata extraction (parallel processing)
-            if enable_metadata_extraction and hasattr(self, "metadata_extractor"):
-                metadata_items = list(zip(texts, urls, strict=False))
-                metadata_task = asyncio.create_task(
-                    parallel_metadata_extraction(
-                        metadata_items,
-                        self.metadata_extractor,
-                        self.config.parallel_config,
-                    )
-                )
-                processing_tasks.append(("metadata", metadata_task))
-
-            # Execute all tasks in parallel
-            task_results = {}
-            if processing_tasks:
-                async with asyncio.TaskGroup() as tg:
-                    running_tasks = {}
-                    for task_name, task in processing_tasks:
-                        running_task = tg.create_task(task)
-                        running_tasks[task_name] = running_task
-
-                # Collect results
-                for task_name, task in running_tasks.items():
-                    task_results[task_name] = task.result()
+            # Create and execute parallel processing tasks
+            processing_tasks = await self._create_processing_tasks(
+                texts,
+                urls,
+                enable_classification,
+                enable_metadata_extraction,
+                enable_embedding_generation,
+            )
+            task_results = await self._execute_parallel_tasks(processing_tasks)
 
             # Combine results
             for i, document in enumerate(documents):
@@ -248,22 +294,25 @@ class ParallelProcessingSystem:
                 results[
                     "performance_metrics"
                 ] = await self._calculate_performance_metrics(
-                    task_results, processing_time_ms
+                    task_results,
+                    processing_time_ms,
                 )
 
             # Update system metrics
             await self._update_system_metrics(processing_time_ms, success=True)
 
-            return results
-
-        except Exception as e:
-            logger.error(
-                f"Parallel document processing failed: {e}"
+        except Exception:
+            logger.exception(
+                "Parallel document processing failed: ",
             )  # TODO: Convert f-string to logging format
             await self._update_system_metrics(
-                (time.time() - request_start) * 1000, success=False
+                (time.time() - request_start) * 1000,
+                success=False,
             )
             raise
+
+        else:
+            return results
 
     async def _parallel_text_analysis(self, texts: list[str]) -> list[Any]:
         """Perform parallel text analysis using optimized algorithms.
@@ -277,6 +326,73 @@ class ParallelProcessingSystem:
         # Use optimized algorithms with caching
         return self.text_analyzer.batch_analyze_texts(texts)
 
+    async def _check_embedding_cache(
+        self,
+        texts: list[str],
+    ) -> tuple[list[tuple[int, Any]], list[str], list[int]]:
+        """Check cache for existing embeddings and return cached/uncached items."""
+        cached_embeddings = []
+        uncached_texts = []
+        uncached_indices = []
+
+        for i, text in enumerate(texts):
+            cached = await self.embedding_cache.get_embedding(
+                text=text,
+                provider="default",
+                model="default",
+                dimensions=384,
+            )
+
+            if cached is not None:
+                cached_embeddings.append((i, cached))
+            else:
+                uncached_texts.append(text)
+                uncached_indices.append(i)
+
+        return cached_embeddings, uncached_texts, uncached_indices
+
+    async def _cache_new_embeddings(
+        self,
+        uncached_texts: list[str],
+        new_embeddings: dict[str, Any],
+    ) -> None:
+        """Cache newly generated embeddings."""
+        for j, text in enumerate(uncached_texts):
+            if "embeddings" in new_embeddings and j < len(new_embeddings["embeddings"]):
+                await self.embedding_cache.set_embedding(
+                    text=text,
+                    provider="default",
+                    model="default",
+                    dimensions=384,
+                    embedding=new_embeddings["embeddings"][j],
+                )
+
+    async def _combine_embeddings(
+        self,
+        texts: list[str],
+        cached_embeddings: list[tuple[int, Any]],
+        uncached_indices: list[int],
+        new_embeddings: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Combine cached and newly generated embeddings."""
+        all_embeddings = [None] * len(texts)
+
+        # Add cached embeddings
+        for i, embedding in cached_embeddings:
+            all_embeddings[i] = embedding
+
+        # Add new embeddings
+        for j, i in enumerate(uncached_indices):
+            if "embeddings" in new_embeddings and j < len(new_embeddings["embeddings"]):
+                all_embeddings[i] = new_embeddings["embeddings"][j]
+
+        # Update result
+        new_embeddings["embeddings"] = all_embeddings
+        new_embeddings["cache_hits"] = len(cached_embeddings)
+        new_embeddings["cache_misses"] = len(uncached_indices)
+
+        return new_embeddings
+
     async def _parallel_embedding_generation(self, texts: list[str]) -> dict[str, Any]:
         """Generate embeddings in parallel with caching.
 
@@ -288,20 +404,11 @@ class ParallelProcessingSystem:
         """
         # Check cache for existing embeddings
         if self.config.enable_intelligent_caching:
-            cached_embeddings = []
-            uncached_texts = []
-            uncached_indices = []
-
-            for i, text in enumerate(texts):
-                cached = await self.embedding_cache.get_embedding(
-                    text=text, provider="default", model="default", dimensions=384
-                )
-
-                if cached is not None:
-                    cached_embeddings.append((i, cached))
-                else:
-                    uncached_texts.append(text)
-                    uncached_indices.append(i)
+            (
+                cached_embeddings,
+                uncached_texts,
+                uncached_indices,
+            ) = await self._check_embedding_cache(texts)
 
             # Generate embeddings for uncached texts
             if uncached_texts:
@@ -312,38 +419,13 @@ class ParallelProcessingSystem:
                 )
 
                 # Cache new embeddings
-                for j, text in enumerate(uncached_texts):
-                    if "embeddings" in new_embeddings and j < len(
-                        new_embeddings["embeddings"]
-                    ):
-                        await self.embedding_cache.set_embedding(
-                            text=text,
-                            provider="default",
-                            model="default",
-                            dimensions=384,
-                            embedding=new_embeddings["embeddings"][j],
-                        )
+                await self._cache_new_embeddings(uncached_texts, new_embeddings)
 
                 # Combine cached and new embeddings
-                all_embeddings = [None] * len(texts)
+                return await self._combine_embeddings(
+                    texts, cached_embeddings, uncached_indices, new_embeddings
+                )
 
-                # Add cached embeddings
-                for i, embedding in cached_embeddings:
-                    all_embeddings[i] = embedding
-
-                # Add new embeddings
-                for j, i in enumerate(uncached_indices):
-                    if "embeddings" in new_embeddings and j < len(
-                        new_embeddings["embeddings"]
-                    ):
-                        all_embeddings[i] = new_embeddings["embeddings"][j]
-
-                # Update result
-                new_embeddings["embeddings"] = all_embeddings
-                new_embeddings["cache_hits"] = len(cached_embeddings)
-                new_embeddings["cache_misses"] = len(uncached_texts)
-
-                return new_embeddings
             # All embeddings were cached
             all_embeddings = [None] * len(texts)
             for i, embedding in cached_embeddings:
@@ -408,7 +490,8 @@ class ParallelProcessingSystem:
                         embed_results["cache_hits"] + embed_results["cache_misses"]
                     )
                     cache_hit_rate = embed_results["cache_hits"] / max(
-                        total_requests, 1
+                        total_requests,
+                        1,
                     )
 
                     metrics["cache_performance"]["embeddings"] = {
@@ -446,21 +529,23 @@ class ParallelProcessingSystem:
 
         # Update request times (keep last 1000)
         self._request_times.append(processing_time_ms)
-        if len(self._request_times) > 1000:
-            self._request_times = self._request_times[-1000:]
+        if len(self._request_times) > REQUEST_HISTORY_LIMIT:
+            self._request_times = self._request_times[-REQUEST_HISTORY_LIMIT:]
 
         # Calculate moving averages
         if self._request_times:
             self.metrics.avg_response_time_ms = sum(self._request_times) / len(
-                self._request_times
+                self._request_times,
             )
             self.metrics.throughput_requests_per_second = 1000 / max(
-                self.metrics.avg_response_time_ms, 1
+                self.metrics.avg_response_time_ms,
+                1,
             )
 
         # Calculate error rate
         self.metrics.error_rate = self._error_count / max(
-            self.metrics.total_requests, 1
+            self.metrics.total_requests,
+            1,
         )
 
         # Update uptime
@@ -480,7 +565,9 @@ class ParallelProcessingSystem:
         """
         status = {
             "system_health": {
-                "status": "healthy" if self.metrics.error_rate < 0.05 else "degraded",
+                "status": "healthy"
+                if self.metrics.error_rate < HEALTHY_ERROR_RATE_THRESHOLD
+                else "degraded",
                 "uptime_seconds": self.metrics.uptime_seconds,
                 "total_requests": self.metrics.total_requests,
                 "error_rate": self.metrics.error_rate,
@@ -533,7 +620,10 @@ class ParallelProcessingSystem:
         optimizations_applied = []
 
         # Clear caches if hit rate is low
-        if self.metrics.cache_hit_rate < 0.3 and self.config.enable_intelligent_caching:
+        if (
+            self.metrics.cache_hit_rate < LOW_CACHE_HIT_RATE_THRESHOLD
+            and self.config.enable_intelligent_caching
+        ):
             await self.embedding_cache.clear()
             await self.search_cache.clear()
             optimizations_applied.append("cache_cleared_low_hit_rate")
@@ -547,13 +637,14 @@ class ParallelProcessingSystem:
         # Adjust parallel processing config based on performance
         if (
             self.config.enable_parallel_processing
-            and self.metrics.avg_response_time_ms > 5000
+            and self.metrics.avg_response_time_ms > HIGH_RESPONSE_TIME_THRESHOLD_MS
         ):  # > 5 seconds
             # Increase concurrent tasks for better parallelization
             current_config = self.config.parallel_config
-            if current_config.max_concurrent_tasks < 100:
+            if current_config.max_concurrent_tasks < MAX_CONCURRENT_TASKS_LIMIT:
                 current_config.max_concurrent_tasks = min(
-                    current_config.max_concurrent_tasks + 10, 100
+                    current_config.max_concurrent_tasks + PARALLEL_TASK_INCREMENT,
+                    MAX_CONCURRENT_TASKS_LIMIT,
                 )
                 optimizations_applied.append("increased_parallelization")
 
@@ -582,9 +673,9 @@ class ParallelProcessingSystem:
 
             logger.info("ParallelProcessingSystem cleanup completed")
 
-        except Exception as e:
-            logger.error(
-                f"Error during cleanup: {e}"
+        except Exception:
+            logger.exception(
+                "Error during cleanup: ",
             )  # TODO: Convert f-string to logging format
 
 

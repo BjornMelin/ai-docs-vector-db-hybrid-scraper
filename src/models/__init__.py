@@ -1,6 +1,3 @@
-import typing
-
-
 """Centralized Pydantic v2 models for the AI Documentation Vector DB.
 
 This module provides a unified import location for all Pydantic models used throughout
@@ -9,12 +6,12 @@ the application, organized by domain and purpose.
 Usage:
     from models import Config, SearchRequest, VectorSearchConfig
     from models.configuration import QdrantConfig, CacheConfig
-    from models.vector_search import SearchParams, PrefetchConfig
+    from models.vector_search import SecureSearchParamsModel, PrefetchConfig
 """
 
 # Configuration models
 # API contract models
-from ..config import (
+from src.config import (
     CacheConfig,
     ChunkingConfig,
     Config,
@@ -33,25 +30,7 @@ from ..config import (
     set_config,
 )
 
-
-# Legacy compatibility - these were removed in consolidation
-class CollectionHNSWConfigs:
-    """Legacy compatibility - removed during config simplification."""
-    pass
-
-class HNSWConfig:
-    """Legacy compatibility - removed during config simplification."""
-    pass
-
-class ModelBenchmark:
-    """Legacy compatibility - removed during config simplification."""
-    pass
-
-class SmartSelectionConfig:
-    """Legacy compatibility - removed during config simplification."""
-    pass
 from .api_contracts import (
-    SearchRequest,
     AnalyticsRequest,
     AnalyticsResponse,
     BulkDocumentRequest,
@@ -70,6 +49,7 @@ from .api_contracts import (
     MCPResponse,
     MetricData,
     SearchRequest,
+    SearchResponse as ApiSearchResponse,
     SearchResultItem,
     ValidationRequest,
     ValidationResponse,
@@ -91,13 +71,13 @@ from .document_processing import (
 
 # Shared validators and utilities
 from .validators import (
-    CollectionName,
-    NonNegativeInt,
-    Percentage,
-    PortNumber,
-    PositiveInt,
+    collection_name_field,
     firecrawl_api_key_validator,
+    non_negative_int,
     openai_api_key_validator,
+    percentage,
+    port_number,
+    positive_int,
     url_validator,
     validate_api_key_common,
     validate_cache_ttl,
@@ -115,41 +95,57 @@ from .validators import (
 
 # Vector search models
 from .vector_search import (
-    AdaptiveSearchParams,
-    CollectionStats,
-    ContentTypeSearchCriteria,
-    FilteredSearchRequest,
-    FilteredSearchResponse,
-    FilteredSearchResult,
-    FusionConfig,
-    HybridSearchRequest,
+    # Request models
+    AdvancedFilteredSearchRequest,
+    AdvancedHybridSearchRequest,
+    # Async models
+    AsyncSearchContext,
+    BasicSearchRequest,
+    BatchSearchRequest,
+    BatchSearchResponse,
+    DimensionError,
+    FilterValidationError,
+    FusionAlgorithm,
     HyDESearchRequest,
-    IndexingRequest,
-    IntegratedSearchRequest,
-    MetadataSearchCriteria,
     MultiStageSearchRequest,
-    OptimizationRequest,
-    PrefetchConfig,
-    RetrievalMetrics,
-    SearchParams,
+    SearchAccuracy,
+    SearchConfigurationError,
     SearchResponse,
-    SearchResult,
+    # Stage models
     SearchStage,
-    SimilarityThresholdCriteria,
-    TemporalSearchCriteria,
-    VectorSearchConfig,
-    VectorSearchIntegrationConfig,
+    # Base classes and enums
+    SecureBaseModel,
+    SecureFilterGroupModel,
+    SecureFilterModel,
+    # Security models
+    SecureMetadataModel,
+    SecurePayloadModel,
+    SecureSearchParamsModel,
+    # Response models
+    SecureSearchResult,
+    SecureSparseVectorModel,
+    # Vector models
+    SecureVectorModel,
+    SecurityValidationError,
+    # Exception classes
+    VectorSearchError,
+    VectorType,
 )
 
 
 # Commonly used exports
-__all__ = [
-    # Vector Search
-    "AdaptiveSearchParams",
+__all__ = [  # noqa: RUF022 - organized by category for readability
+    # Vector Search - Request models
+    "AdvancedFilteredSearchRequest",
+    "AdvancedHybridSearchRequest",
     # API Contracts
-    "SearchRequest",
     "AnalyticsRequest",
     "AnalyticsResponse",
+    # Vector Search - Async models
+    "AsyncSearchContext",
+    "BasicSearchRequest",
+    "BatchSearchRequest",
+    "BatchSearchResponse",
     "BulkDocumentRequest",
     "BulkDocumentResponse",
     # Configuration
@@ -162,74 +158,76 @@ __all__ = [
     "ChunkingConfig",
     "CodeBlock",
     "CodeLanguage",
-    "CollectionHNSWConfigs",
     "CollectionInfo",
-    # Validators and Utilities
-    "CollectionName",
     "CollectionRequest",
     "CollectionResponse",
-    "CollectionStats",
+    "Config",
     "ContentFilter",
-    "ContentTypeSearchCriteria",
     "Crawl4AIConfig",
+    "DimensionError",
     "DocumentBatch",
     "DocumentMetadata",
     "DocumentRequest",
     "DocumentResponse",
     "DocumentationSite",
     "EmbeddingConfig",
-    "FilteredSearchRequest",
-    "FilteredSearchResponse",
-    "FilteredSearchResult",
     "ErrorResponse",
     "FastEmbedConfig",
+    "FilterValidationError",
     "FirecrawlConfig",
-    "FusionConfig",
-    "HNSWConfig",
+    "FusionAlgorithm",
     "HealthCheckResponse",
     "HyDEConfig",
     "HyDESearchRequest",
-    "HybridSearchRequest",
-    "IndexingRequest",
-    "IntegratedSearchRequest",
     "ListCollectionsResponse",
     "MCPRequest",
     "MCPResponse",
-    "MetadataSearchCriteria",
     "MetricData",
-    "ModelBenchmark",
     "MultiStageSearchRequest",
-    "NonNegativeInt",
     "OpenAIConfig",
-    "OptimizationRequest",
-    "Percentage",
     "PerformanceConfig",
-    "PortNumber",
-    "PositiveInt",
-    "PrefetchConfig",
     "ProcessedDocument",
     "QdrantConfig",
-    "RetrievalMetrics",
     "ScrapingStats",
-    "SearchParams",
+    "SearchAccuracy",
+    "SearchConfigurationError",
+    # API Contracts
     "SearchRequest",
     "SearchResponse",
-    "SearchResult",
+    "ApiSearchResponse",
     "SearchResultItem",
+    # Vector Search - Stage models
     "SearchStage",
+    # Vector Search - Base classes and enums
+    "SecureBaseModel",
+    "SecureFilterGroupModel",
+    "SecureFilterModel",
+    # Vector Search - Security models
+    "SecureMetadataModel",
+    "SecurePayloadModel",
+    "SecureSearchParamsModel",
+    # Vector Search - Response models
+    "SecureSearchResult",
+    "SecureSparseVectorModel",
+    # Vector Search - Vector models
+    "SecureVectorModel",
     "SecurityConfig",
-    "SimilarityThresholdCriteria",
-    "SmartSelectionConfig",
-    "TemporalSearchCriteria",
-    "Config",
+    "SecurityValidationError",
     "ValidationRequest",
     "ValidationResponse",
     "VectorMetrics",
-    "VectorSearchConfig",
-    "VectorSearchIntegrationConfig",
+    # Vector Search - Exception classes
+    "VectorSearchError",
+    "VectorType",
+    # Validators and Utilities
+    "collection_name_field",
     "firecrawl_api_key_validator",
     "get_config",
+    "non_negative_int",
     "openai_api_key_validator",
+    "percentage",
+    "port_number",
+    "positive_int",
     "reset_config",
     "set_config",
     "url_validator",

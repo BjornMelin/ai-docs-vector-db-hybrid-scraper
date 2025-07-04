@@ -78,7 +78,7 @@ A revolutionary documentation scraping and vector search system that combines in
 
     Deploying and managing the system?
     
-    - [Deployment Guide](operators/deployment.md) - Production deployment strategies
+    - [Operations Guide](operators/operations.md) - Production deployment and operations
     - [Configuration](operators/configuration.md) - System configuration options
     - [Monitoring](operators/monitoring.md) - Observability and alerting
     - [Security](operators/security.md) - Security best practices
@@ -164,7 +164,7 @@ Choose your path based on your role:
 
 ### 🛠️ I want to deploy and operate
 
-[Check Deployment Guide →](operators/deployment.md){ .md-button }
+[Check Operations Guide →](operators/operations.md){ .md-button }
 
 ## Community and Support
 

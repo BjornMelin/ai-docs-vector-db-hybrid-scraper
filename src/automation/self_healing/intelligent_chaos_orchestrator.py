@@ -9,19 +9,17 @@ import asyncio
 import logging
 import random
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
-
-from pydantic import BaseModel, Field
+from typing import Any
 
 from src.automation.self_healing.autonomous_health_monitor import (
     AutonomousHealthMonitor,
     SystemMetrics,
 )
 from tests.chaos.conftest import ChaosExperiment, ExperimentResult, FailureType
-from tests.chaos.test_chaos_runner import ChaosTestRunner, ExperimentStatus
+from tests.chaos.test_chaos_runner import ChaosTestRunner
 
 
 logger = logging.getLogger(__name__)
@@ -147,7 +145,7 @@ class SystemWeaknessAnalyzer:
     async def identify_weaknesses(self, metrics: SystemMetrics) -> list[SystemWeakness]:
         """Identify system weaknesses based on current metrics and patterns."""
         weaknesses = []
-        current_time = datetime.utcnow()
+        current_time = datetime.now(tz=datetime.UTC)
 
         # Analyze different types of weaknesses
         weaknesses.extend(
@@ -188,7 +186,10 @@ class SystemWeaknessAnalyzer:
                 component="cpu",
                 severity=min(1.0, metrics.cpu_percent / 100),
                 confidence=0.8,
-                description=f"High CPU utilization ({metrics.cpu_percent:.1f}%) indicating resource contention",
+                description=(
+                    f"High CPU utilization ({metrics.cpu_percent:.1f}%) "
+                    f"indicating resource contention"
+                ),
                 evidence=[f"CPU usage: {metrics.cpu_percent:.1f}%"],
                 detection_time=timestamp,
                 suggested_experiments=["cpu_stress_test", "process_termination"],
@@ -206,13 +207,19 @@ class SystemWeaknessAnalyzer:
                 component="memory",
                 severity=min(1.0, metrics.memory_percent / 100),
                 confidence=0.9,
-                description=f"High memory utilization ({metrics.memory_percent:.1f}%) indicating potential memory pressure",
+                description=(
+                    f"High memory utilization ({metrics.memory_percent:.1f}%) "
+                    f"indicating potential memory pressure"
+                ),
                 evidence=[f"Memory usage: {metrics.memory_percent:.1f}%"],
                 detection_time=timestamp,
                 suggested_experiments=["memory_exhaustion", "oom_killer_test"],
                 business_impact=0.8,
                 learning_objective="Test memory management and recovery mechanisms",
-                hypothesis="System has adequate memory management and can recover from memory pressure",
+                hypothesis=(
+                    "System has adequate memory management and can recover from "
+                    "memory pressure"
+                ),
             )
             weaknesses.append(memory_weakness)
 
@@ -224,7 +231,10 @@ class SystemWeaknessAnalyzer:
                 component="database",
                 severity=min(1.0, metrics.database_connections / 100),
                 confidence=0.8,
-                description=f"High database connection usage ({metrics.database_connections}) may indicate connection pool issues",
+                description=(
+                    f"High database connection usage ({metrics.database_connections}) "
+                    f"may indicate connection pool issues"
+                ),
                 evidence=[f"DB connections: {metrics.database_connections}"],
                 detection_time=timestamp,
                 suggested_experiments=[
@@ -233,7 +243,9 @@ class SystemWeaknessAnalyzer:
                 ],
                 business_impact=0.6,
                 learning_objective="Validate database connection handling and pooling",
-                hypothesis="Database connection pooling is properly configured and resilient",
+                hypothesis=(
+                    "Database connection pooling is properly configured and resilient"
+                ),
             )
             weaknesses.append(db_weakness)
 
@@ -255,7 +267,10 @@ class SystemWeaknessAnalyzer:
                     1.0, metrics.response_time_p95 / 10000
                 ),  # Normalize to 10s max
                 confidence=0.9,
-                description=f"High response times ({metrics.response_time_p95:.0f}ms) indicate performance issues",
+                description=(
+                    f"High response times ({metrics.response_time_p95:.0f}ms) "
+                    f"indicate performance issues"
+                ),
                 evidence=[f"P95 response time: {metrics.response_time_p95:.0f}ms"],
                 detection_time=timestamp,
                 suggested_experiments=["latency_injection", "traffic_spike"],
@@ -273,7 +288,10 @@ class SystemWeaknessAnalyzer:
                 component="cache",
                 severity=1.0 - metrics.cache_hit_ratio,
                 confidence=0.8,
-                description=f"Low cache hit ratio ({metrics.cache_hit_ratio:.2f}) affecting performance",
+                description=(
+                    f"Low cache hit ratio ({metrics.cache_hit_ratio:.2f}) "
+                    f"affecting performance"
+                ),
                 evidence=[f"Cache hit ratio: {metrics.cache_hit_ratio:.2f}"],
                 detection_time=timestamp,
                 suggested_experiments=["cache_invalidation", "cache_overload"],
@@ -299,13 +317,18 @@ class SystemWeaknessAnalyzer:
                 component="api_gateway",
                 severity=min(1.0, metrics.error_rate * 20),  # Normalize to 5% = 1.0
                 confidence=0.9,
-                description=f"High error rate ({metrics.error_rate:.3f}) indicates error handling issues",
+                description=(
+                    f"High error rate ({metrics.error_rate:.3f}) "
+                    f"indicates error handling issues"
+                ),
                 evidence=[f"Error rate: {metrics.error_rate:.3f}"],
                 detection_time=timestamp,
                 suggested_experiments=["error_injection", "dependency_failure"],
                 business_impact=0.9,
                 learning_objective="Test error handling and propagation patterns",
-                hypothesis="System has robust error handling and doesn't cascade failures",
+                hypothesis=(
+                    "System has robust error handling and doesn't cascade failures"
+                ),
             )
             weaknesses.append(error_weakness)
 
@@ -324,7 +347,10 @@ class SystemWeaknessAnalyzer:
                     1.0, len(open_breakers) / 5
                 ),  # Normalize to 5 breakers = 1.0
                 confidence=0.8,
-                description=f"Open circuit breakers ({', '.join(open_breakers)}) indicate dependency issues",
+                description=(
+                    f"Open circuit breakers ({', '.join(open_breakers)}) "
+                    f"indicate dependency issues"
+                ),
                 evidence=[f"Open breakers: {', '.join(open_breakers)}"],
                 detection_time=timestamp,
                 suggested_experiments=["service_unavailable", "network_partition"],
@@ -605,7 +631,7 @@ class AdaptiveChaosTestGenerator:
     ) -> list[ChaosExperiment]:
         """Generate targeted chaos experiments based on identified weaknesses."""
         experiments = []
-        current_time = datetime.utcnow()
+        # current_time = datetime.now(tz=datetime.UTC)
 
         for weakness in weaknesses:
             # Find suitable templates for this weakness
@@ -690,7 +716,7 @@ class AdaptiveChaosTestGenerator:
             failure_rate_base = 0.5 + (0.5 * weakness.confidence)
 
             # Generate experiment
-            experiment = ChaosExperiment(
+            return ChaosExperiment(
                 name=f"{template.name.lower().replace(' ', '_')}_{weakness.component}_{int(time.time())}",
                 description=template.description_template.format(
                     component=weakness.component
@@ -703,22 +729,11 @@ class AdaptiveChaosTestGenerator:
                 recovery_time_seconds=max(30, int(duration * 0.2)),
                 success_criteria=template.success_criteria.copy(),
                 rollback_strategy="immediate",
-                metadata={
-                    "template_id": template.template_id,
-                    "weakness_id": weakness.weakness_id,
-                    "weakness_type": weakness.weakness_type.value,
-                    "learning_objective": weakness.learning_objective,
-                    "hypothesis": weakness.hypothesis,
-                    "severity": weakness.severity,
-                    "confidence": weakness.confidence,
-                },
             )
 
-            return experiment
-
-        except Exception as e:
+        except Exception:
             logger.exception(
-                f"Failed to generate experiment from template {template.template_id}: {e}"
+                "Failed to generate experiment from template %s", template.template_id
             )
             return None
 
@@ -746,12 +761,6 @@ class AdaptiveChaosTestGenerator:
                 recovery_time_seconds=60,
                 success_criteria=template.success_criteria.copy(),
                 rollback_strategy="immediate",
-                metadata={
-                    "template_id": template.template_id,
-                    "experiment_type": "exploratory",
-                    "learning_objective": "Discover unknown system behaviors",
-                    "hypothesis": "System behaves predictably under this failure mode",
-                },
             )
 
             experiments.append(experiment)
@@ -778,7 +787,8 @@ class AdaptiveChaosTestGenerator:
             recent_learnings = [
                 learning
                 for learning in self.learning_database[learning_key]
-                if (datetime.utcnow() - learning.learning_timestamp).days < 7
+                if (datetime.now(tz=datetime.UTC) - learning.learning_timestamp).days
+                < 7
             ]
             if recent_learnings:
                 base_value *= 0.7  # Reduce value for recent tests
@@ -876,7 +886,7 @@ class RecoveryValidator:
         self,
         pre_snapshot: SystemMetrics,
         current: SystemMetrics,
-        experiment: ChaosExperiment,
+        _experiment: ChaosExperiment,
     ) -> dict[str, Any]:
         """Validate a single recovery phase."""
         # Health recovery validation
@@ -939,7 +949,7 @@ class RecoveryValidator:
         }
 
     async def _analyze_performance_impact(
-        self, pre_snapshot: SystemMetrics, validation_phases: list[dict[str, Any]]
+        self, _pre_snapshot: SystemMetrics, validation_phases: list[dict[str, Any]]
     ) -> dict[str, Any]:
         """Analyze performance impact during recovery."""
         if not validation_phases:
@@ -1092,8 +1102,8 @@ class IntelligentChaosOrchestrator:
 
         try:
             await self.continuous_chaos_loop()
-        except Exception as e:
-            logger.exception(f"Chaos orchestration failed: {e}")
+        except Exception:
+            logger.exception("Chaos orchestration failed")
             self.orchestration_active = False
             raise
 
@@ -1132,15 +1142,15 @@ class IntelligentChaosOrchestrator:
                 # 6. Generate resilience report
                 await self.generate_resilience_insights()
 
-            except Exception as e:
-                logger.exception(f"Error in chaos orchestration loop: {e}")
+            except Exception:
+                logger.exception("Error in chaos orchestration loop")
 
             # Wait for next testing cycle
             await asyncio.sleep(self.testing_interval)
 
     async def assess_system_resilience(self) -> ResilienceAssessment:
         """Assess current system resilience and identify weaknesses."""
-        current_time = datetime.utcnow()
+        current_time = datetime.now(tz=datetime.UTC)
 
         # Collect current system metrics
         current_metrics = (
@@ -1263,8 +1273,8 @@ class IntelligentChaosOrchestrator:
                 # Brief pause between experiments
                 await asyncio.sleep(30)
 
-            except Exception as e:
-                logger.exception(f"Failed to execute experiment {experiment.name}: {e}")
+            except Exception:
+                logger.exception("Failed to execute experiment {experiment.name}")
 
         return session_results
 
@@ -1348,10 +1358,8 @@ class IntelligentChaosOrchestrator:
             if len(self.experiment_history) > 500:
                 self.experiment_history = self.experiment_history[-500:]
 
-            return chaos_result
-
         except Exception as e:
-            logger.exception(f"Chaos experiment execution failed: {e}")
+            logger.exception("Chaos experiment execution failed")
             # Create failure result
             failed_result = ExperimentResult(
                 experiment_name=experiment.name,
@@ -1381,12 +1389,14 @@ class IntelligentChaosOrchestrator:
                         "Review experiment safety and system state before retry"
                     ],
                     confidence_score=0.0,
-                    learning_timestamp=datetime.utcnow(),
+                    learning_timestamp=datetime.now(tz=datetime.UTC),
                 ),
                 resilience_impact=0.0,
                 unexpected_effects=[f"Experiment execution failed: {e!s}"],
                 system_adaptations=[],
             )
+        else:
+            return chaos_result
 
     async def learn_from_experiments(self, experiment_results: list[ChaosResult]):
         """Learn from experiment results and update knowledge base."""
@@ -1421,14 +1431,11 @@ class IntelligentChaosOrchestrator:
         current_metrics = (
             await self.health_monitor.collect_comprehensive_health_metrics()
         )
-        if (
+        return not (
             current_metrics.cpu_percent > 80
             or current_metrics.memory_percent > 80
             or current_metrics.error_rate > 0.05
-        ):
-            return False
-
-        return True
+        )
 
     async def _calculate_component_resilience_scores(
         self, metrics: SystemMetrics, weaknesses: list[SystemWeakness]
@@ -1530,7 +1537,7 @@ class IntelligentChaosOrchestrator:
             weakness_types[weakness.weakness_type].append(weakness)
 
         # Generate improvement recommendations
-        for weakness_type, weakness_list in weakness_types.items():
+        for weakness_type in weakness_types:
             if weakness_type == WeaknessType.RESOURCE_CONTENTION:
                 improvement_areas.append(
                     "Resource allocation and scaling optimization needed"
@@ -1716,7 +1723,7 @@ class IntelligentChaosOrchestrator:
                 execution_result.success
                 + recovery_analysis.get("resilience_score", 0) / 2,
             ),
-            learning_timestamp=datetime.utcnow(),
+            learning_timestamp=datetime.now(tz=datetime.UTC),
         )
 
     async def _calculate_resilience_impact(
@@ -1792,7 +1799,7 @@ class IntelligentChaosOrchestrator:
         return list(set(unexpected))  # Remove duplicates
 
     async def _identify_system_adaptations(
-        self, experiment: ChaosExperiment, recovery_analysis: dict[str, Any]
+        self, _experiment: ChaosExperiment, recovery_analysis: dict[str, Any]
     ) -> list[str]:
         """Identify system adaptations observed during the experiment."""
         adaptations = []
@@ -1834,7 +1841,7 @@ class IntelligentChaosOrchestrator:
                             "recovery_time": result.recovery_analysis.get(
                                 "total_recovery_time", 0
                             ),
-                            "timestamp": datetime.utcnow(),
+                            "timestamp": datetime.now(tz=datetime.UTC),
                         }
                     )
 

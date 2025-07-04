@@ -70,16 +70,30 @@ class MiddlewareManager:
 
         return middleware_stack
 
-    def apply_middleware(self, app: Starlette) -> None:
-        """Apply middleware stack to FastAPI app."""
-        middleware_stack = self.get_middleware_stack()
+    def apply_middleware(self, app: Starlette, middleware_names: list[str]) -> None:
+        """Apply specified middleware to FastAPI app."""
+        available_middleware = {
+            "cors": Middleware(
+                CORSMiddleware,
+                allow_origins=["*"],  # Configure based on needs
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            ),
+            "security": Middleware(SecurityMiddleware, config=self.config.security),
+            "timeout": Middleware(TimeoutMiddleware, config=self.config.performance),
+            "performance": Middleware(
+                PerformanceMiddleware, config=self.config.performance
+            ),
+        }
 
-        for middleware in reversed(middleware_stack):  # Reverse for proper order
-            app.add_middleware(middleware.cls, **middleware.kwargs)
-
-        logger.info(
-            f"Applied {len(middleware_stack)} middleware components"
-        )  # TODO: Convert f-string to logging format
+        for name in middleware_names:
+            if name in available_middleware:
+                middleware = available_middleware[name]
+                app.add_middleware(middleware.cls, **middleware.kwargs)
+                logger.info("Applied middleware: %s", name)
+            else:
+                logger.warning("Unknown middleware: %s", name)
 
 
 def get_middleware_manager(config=None) -> MiddlewareManager:

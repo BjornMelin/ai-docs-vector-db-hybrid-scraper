@@ -219,3 +219,8 @@ dev-debug.log
 .github/instructions
 .trae
 .windsurf
+
+# Project specific
+!src/models/
+ruff_errors.json
+security_validation_report_*.json

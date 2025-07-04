@@ -166,7 +166,7 @@ class QueryClassifier:
             context: Optional context information (user history, session data)
 
         Returns:
-            QueryClassification with type, complexity, and features
+            QueryClassification: Classification result with type, complexity, and features
 
         """
         try:
@@ -191,24 +191,25 @@ class QueryClassifier:
             # Check for multimodal indicators
             is_multimodal = self._detect_multimodal(query, features)
 
+            # Create and return proper QueryClassification object
             return QueryClassification(
-                query_type=query_type,
-                complexity_level=complexity,
+                query_type=query_type.value,
+                complexity_level=complexity.value,
                 domain=domain,
                 programming_language=programming_language,
                 is_multimodal=is_multimodal,
                 confidence=confidence,
-                features=features.model_dump(),
+                features=features.model_dump()
+                if hasattr(features, "model_dump")
+                else features.__dict__,
             )
 
-        except Exception as e:
-            logger.error(
-                f"Query classification failed: {e}", exc_info=True
-            )  # TODO: Convert f-string to logging format
-            # Return default classification
+        except Exception:
+            logger.exception("Query classification failed")
+            # Return default classification as QueryClassification object
             return QueryClassification(
-                query_type=QueryType.CONCEPTUAL,
-                complexity_level=QueryComplexity.MODERATE,
+                query_type=QueryType.CONCEPTUAL.value,
+                complexity_level=QueryComplexity.MODERATE.value,
                 domain="general",
                 programming_language=None,
                 is_multimodal=False,
@@ -259,7 +260,7 @@ class QueryClassifier:
             has_code_keywords=has_code_keywords,
             has_function_names=has_function_names,
             has_programming_syntax=has_programming_syntax,
-            question_type=question_type,
+            question_type=question_type or "",
             technical_depth=technical_depth,
             entity_mentions=entity_mentions,
             programming_language_indicators=programming_language_indicators,
@@ -325,7 +326,9 @@ class QueryClassifier:
         return QueryType.CONCEPTUAL
 
     def _assess_complexity(
-        self, query: str, features: QueryFeatures
+        self,
+        query: str,
+        features: QueryFeatures,
     ) -> QueryComplexity:
         """Assess query complexity level."""
         complexity_score = 0
@@ -423,7 +426,9 @@ class QueryClassifier:
         return "general"
 
     def _detect_programming_language(
-        self, _query: str, features: QueryFeatures
+        self,
+        _query: str,
+        features: QueryFeatures,
     ) -> str | None:
         """Detect the primary programming language mentioned in the query."""
         if features.programming_language_indicators:
@@ -459,7 +464,9 @@ class QueryClassifier:
 
         return min(max(confidence, 0.1), 1.0)  # Clamp between 0.1 and 1.0
 
-    def _detect_multimodal(self, query: str, _features: QueryFeatures) -> bool:
+    def _detect_multimodal(
+        self, query: str, _features: Any
+    ) -> bool:  # TODO: Replace with proper QueryFeatures type
         """Detect if query involves multiple modalities."""
         query_lower = query.lower()
         multimodal_keywords = [

@@ -112,21 +112,33 @@ class BulkEmbedder:
         """Load processing state from file if exists."""
         if self.state_file.exists():
             try:
-                with Path(self.state_file).open() as f:
-                    data = json.load(f)
-                    state = ProcessingState.model_validate(data)
-                    logger.info(
-                        f"Resumed from state: {len(state.completed_urls)} completed"
-                    )
-                    return state
-            except Exception:
+                data = self._load_state_data()
+            except (ImportError, OSError, PermissionError):
                 logger.warning("Failed to load state")
+                return ProcessingState(collection_name=self.collection_name)
+
+            try:
+                return self._validate_state_data(data)
+            except (ValueError, KeyError, TypeError) as e:
+                logger.warning("Invalid state data, starting fresh: %s", e)
+                return ProcessingState(collection_name=self.collection_name)
         return ProcessingState(collection_name=self.collection_name)
+
+    def _load_state_data(self) -> dict:
+        """Load state data from file."""
+        with Path(self.state_file).open(encoding="utf-8") as f:
+            return json.load(f)
+
+    def _validate_state_data(self, data: dict) -> ProcessingState:
+        """Validate and create state from data."""
+        state = ProcessingState.model_validate(data)
+        logger.info("Resumed from state: %d completed", len(state.completed_urls))
+        return state
 
     def _save_state(self) -> None:
         """Save current processing state."""
         self.state.last_checkpoint = datetime.now(tz=UTC)
-        with Path(self.state_file).open("w") as f:
+        with Path(self.state_file).open("w", encoding="utf-8") as f:
             json.dump(self.state.model_dump(mode="json"), f, indent=2, default=str)
 
     async def initialize_services(self) -> None:
@@ -242,94 +254,186 @@ class BulkEmbedder:
         }
 
         try:
-            # Scrape the URL
+            result = await self._execute_processing_pipeline(url, result)
+
+        except Exception as e:
+            result["error"] = str(e)
+            logger.exception("Failed to process %s", url)
+
+        return result
+
+    async def _execute_processing_pipeline(
+        self, url: str, result: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Execute the complete URL processing pipeline."""
+        # Step 1: Scrape and extract content
+        scrape_result, content_to_chunk, _ = await self._scrape_and_extract(url)
+
+        # Step 2: Chunk the content
+        chunks = await self._chunk_content(content_to_chunk)
+
+        # Step 3: Generate embeddings
+        dense_embeddings, sparse_embeddings = await self._generate_embeddings(chunks)
+
+        # Step 4: Prepare and store points
+        await self._store_points(
+            url=url,
+            chunks=chunks,
+            dense_embeddings=dense_embeddings,
+            sparse_embeddings=sparse_embeddings,
+            scrape_result=scrape_result,
+        )
+
+        result["success"] = True
+        result["chunks"] = len(chunks)
+        return result
+
+    async def _scrape_and_extract(
+        self, url: str
+    ) -> tuple[dict[str, Any], str, dict[str, Any]]:
+        """Scrape URL and extract content for processing."""
+        try:
             scrape_result = await self.crawl_manager.scrape_url(url=url)
+        except (httpx.HTTPError, ValueError, ConnectionError, TimeoutError) as e:
+            error_msg = f"Scraping failed: {e}"
+            _raise_scraping_error(error_msg)
 
-            if not scrape_result.get("success"):
-                _raise_scraping_error(scrape_result.get("error", "Scraping failed"))
+        if not scrape_result.get("success"):
+            _raise_scraping_error(scrape_result.get("error", "Scraping failed"))
 
-            content = scrape_result.get("content", {})
-            markdown_content = content.get("markdown", "")
-            text_content = content.get("text", "")
-            metadata = scrape_result.get("metadata", {})
+        content = scrape_result.get("content", {})
+        markdown_content = content.get("markdown", "")
+        text_content = content.get("text", "")
+        metadata = scrape_result.get("metadata", {})
 
-            # Use markdown if available, fallback to text
-            content_to_chunk = markdown_content or text_content
+        # Use markdown if available, fallback to text
+        if not (content_to_chunk := markdown_content or text_content):
+            _raise_content_extraction_error()
 
-            if not content_to_chunk:
-                _raise_content_extraction_error()
+        return scrape_result, content_to_chunk, metadata
 
-            # Chunk the content using DocumentChunker
+    async def _chunk_content(self, content_to_chunk: str) -> list[dict[str, Any]]:
+        """Chunk content using DocumentChunker."""
+        try:
             chunker = DocumentChunker(self.config.chunking)
-            chunk_results = chunker.chunk_text(content_to_chunk)
-            chunks = chunk_results.chunks
+        except Exception as e:
+            error_msg = f"Chunker initialization failed: {e}"
+            raise ChunkGenerationError(error_msg) from e
 
-            if not chunks:
-                _raise_chunk_generation_error()
+        try:
+            chunks = chunker.chunk_content(content_to_chunk)
+        except Exception as e:
+            error_msg = f"Chunking failed: {e}"
+            raise ChunkGenerationError(error_msg) from e
 
-            # Generate embeddings for all chunks
-            texts = [chunk.content for chunk in chunks]
+        if not chunks:
+            _raise_chunk_generation_error()
+
+        return chunks
+
+    async def _generate_embeddings(
+        self, chunks: list[dict[str, Any]]
+    ) -> tuple[list[Any], list[Any]]:
+        """Generate embeddings for chunks."""
+        try:
+            texts = [chunk["content"] for chunk in chunks]
+        except (KeyError, TypeError, AttributeError) as e:
+            error_msg = f"Text extraction failed: {e}"
+            raise RuntimeError(error_msg) from e
+
+        try:
             embedding_result = await self.embedding_manager.generate_embeddings(
                 texts=texts,
                 quality_tier=QualityTier.BALANCED,
                 auto_select=True,
                 generate_sparse=self.config.fastembed.generate_sparse,
             )
+        except (ValueError, ConnectionError, RuntimeError) as e:
+            error_msg = f"Embedding generation failed: {e}"
+            raise RuntimeError(error_msg) from e
 
-            dense_embeddings = embedding_result.get("embeddings", [])
-            sparse_embeddings = embedding_result.get("sparse_embeddings", [])
+        dense_embeddings = embedding_result.get("embeddings", [])
+        sparse_embeddings = embedding_result.get("sparse_embeddings", [])
 
-            # Prepare points for Qdrant
-            points = []
-            for i, (chunk, embedding) in enumerate(
-                zip(chunks, dense_embeddings, strict=False)
-            ):
-                point_id = (
-                    f"{urlparse(url).netloc}_{datetime.now(tz=UTC).timestamp()}_{i}"
-                )
+        return dense_embeddings, sparse_embeddings
 
-                payload = {
-                    "url": url,
-                    "title": metadata.get("title", ""),
-                    "description": metadata.get("description", ""),
-                    "content": chunk.content,
-                    "chunk_index": i,
-                    "total_chunks": len(chunks),
-                    "start_char": chunk.start_pos,
-                    "end_char": chunk.end_pos,
-                    "chunk_type": chunk.chunk_type,
-                    "has_code": chunk.has_code,
-                    "scraped_at": datetime.now(tz=UTC).isoformat(),
-                    "provider": scrape_result.get("provider", "unknown"),
-                }
+    async def _store_points(
+        self,
+        *,
+        url: str,
+        chunks: list[dict[str, Any]],
+        dense_embeddings: list[Any],
+        sparse_embeddings: list[Any],
+        scrape_result: dict[str, Any],
+    ) -> None:
+        """Prepare and store points in Qdrant."""
+        try:
+            points = self._prepare_points(
+                url=url,
+                chunks=chunks,
+                dense_embeddings=dense_embeddings,
+                sparse_embeddings=sparse_embeddings,
+                scrape_result=scrape_result,
+            )
+        except (ValueError, TypeError, KeyError) as e:
+            error_msg = f"Point preparation failed: {e}"
+            raise RuntimeError(error_msg) from e
 
-                point = {
-                    "id": point_id,
-                    "vector": embedding,
-                    "payload": payload,
-                }
-
-                # Add sparse vector if available
-                if sparse_embeddings and i < len(sparse_embeddings):
-                    point["sparse_vector"] = sparse_embeddings[i]
-
-                points.append(point)
-
-            # Store in Qdrant
+        try:
             await self.qdrant_service.upsert_points(
                 collection_name=self.collection_name,
                 points=points,
                 batch_size=100,
             )
+        except (ConnectionError, ValueError, RuntimeError) as e:
+            error_msg = f"Point storage failed: {e}"
+            raise RuntimeError(error_msg) from e
 
-            result["success"] = True
-            result["chunks"] = len(chunks)
+    def _prepare_points(
+        self,
+        *,
+        url: str,
+        chunks: list[dict[str, Any]],
+        dense_embeddings: list[Any],
+        sparse_embeddings: list[Any],
+        scrape_result: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        """Prepare points for Qdrant storage."""
+        metadata = scrape_result.get("metadata", {})
+        points = []
+        for i, (chunk, embedding) in enumerate(
+            zip(chunks, dense_embeddings, strict=False)
+        ):
+            point_id = f"{urlparse(url).netloc}_{datetime.now(tz=UTC).timestamp()}_{i}"
 
-        except Exception as e:
-            result["error"] = str(e)
-            logger.exception("Failed to process {url}")
+            payload = {
+                "url": url,
+                "title": metadata.get("title", ""),
+                "description": metadata.get("description", ""),
+                "content": chunk["content"],
+                "chunk_index": i,
+                "total_chunks": len(chunks),
+                "start_char": chunk.get("start_pos", 0),
+                "end_char": chunk.get("end_pos", 0),
+                "chunk_type": chunk.get("chunk_type", "text"),
+                "has_code": chunk.get("has_code", False),
+                "scraped_at": datetime.now(tz=UTC).isoformat(),
+                "provider": scrape_result.get("provider", "unknown"),
+            }
 
-        return result
+            point = {
+                "id": point_id,
+                "vector": embedding,
+                "payload": payload,
+            }
+
+            # Add sparse vector if available
+            if sparse_embeddings and i < len(sparse_embeddings):
+                point["sparse_vector"] = sparse_embeddings[i]
+
+            points.append(point)
+
+        return points
 
     async def process_urls_batch(
         self,
@@ -353,10 +457,10 @@ class BulkEmbedder:
                     self.state.failed_urls[url] = result["error"]
 
                 # Update progress
-                if progress:
-                    task_id = getattr(process_with_semaphore, "task_id", None)
-                    if task_id:
-                        progress.update(task_id, advance=1)
+                if progress and (
+                    task_id := getattr(process_with_semaphore, "task_id", None)
+                ):
+                    progress.update(task_id, advance=1)
 
                 # Save state periodically
                 if len(self.state.completed_urls) % 10 == 0:
@@ -446,7 +550,7 @@ class BulkEmbedder:
         table.add_row("Total Embeddings", str(self.state.total_embeddings_generated))
 
         duration = datetime.now(tz=UTC) - self.state.start_time
-        table.add_row("Duration", str(duration).split(".")[0])
+        table.add_row("Duration", str(duration).split(".", maxsplit=1)[0])
 
         console.print(table)
 
@@ -513,14 +617,14 @@ class BulkEmbedder:
 )
 def main(
     urls: tuple[str, ...],
-    file: Path | None,
-    sitemap: str | None,
-    collection: str,
-    concurrent: int,
-    _config_path: Path | None,
-    state_file: Path,
-    no_resume: bool,
-    verbose: bool,
+    file: Path | None = None,
+    sitemap: str | None = None,
+    collection: str = "bulk_embeddings",
+    concurrent: int = 5,
+    _config_path: Path | None = None,
+    state_file: Path | None = None,
+    no_resume: bool = False,
+    verbose: bool = False,
 ) -> None:
     """Crawl4AI Bulk Embedder - High-performance web scraping and embedding pipeline.
 
@@ -564,25 +668,26 @@ def main(
             collection=collection,
             concurrent=concurrent,
             config=config,
-            state_file=state_file,
+            state_file=state_file or Path(".crawl4ai_state.json"),
             resume=not no_resume,
         )
     )
 
 
 async def _async_main(
+    *,
     urls: list[str],
-    file: Path | None,
-    sitemap: str | None,
-    collection: str,
-    concurrent: int,
+    file: Path | None = None,
+    sitemap: str | None = None,
+    collection: str = "bulk_embeddings",
+    concurrent: int = 5,
     config: Config,
     state_file: Path,
-    resume: bool,
+    resume: bool = True,
 ) -> None:
     """Async main function."""
     # Initialize client manager
-    client_manager = ClientManager(config)
+    client_manager = ClientManager()
 
     # Create embedder
     embedder = BulkEmbedder(
@@ -632,4 +737,4 @@ async def _async_main(
 
 
 if __name__ == "__main__":
-    main()
+    main()  # pylint: disable=no-value-for-parameter  # Click handles CLI arguments

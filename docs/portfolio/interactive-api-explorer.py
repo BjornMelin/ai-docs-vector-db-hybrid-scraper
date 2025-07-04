@@ -17,7 +17,7 @@ import time
 
 # Configuration
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -78,6 +78,11 @@ def make_api_request(
     """Make API request with error handling and timing."""
     start_time = time.time()
 
+    def _raise_unsupported_method_error(method: str) -> None:
+        """Raise error for unsupported HTTP method."""
+        msg = f"Unsupported method: {method}"
+        raise ValueError(msg)
+
     try:
         url = f"{API_BASE_URL}{endpoint}"
 
@@ -86,7 +91,7 @@ def make_api_request(
         elif method == "POST":
             response = requests.post(url, json=data, timeout=DEFAULT_TIMEOUT)
         else:
-            raise ValueError(f"Unsupported method: {method}")
+            _raise_unsupported_method_error(method)
 
         end_time = time.time()
         response_time = round((end_time - start_time) * 1000, 2)
@@ -105,7 +110,7 @@ def make_api_request(
             "error": "Request timeout",
             "response_time_ms": DEFAULT_TIMEOUT * 1000,
         }
-    except Exception as e:
+    except (requests.exceptions.RequestException, ValueError) as e:
         return {"success": False, "error": str(e), "response_time_ms": 0}
 
 
@@ -114,15 +119,15 @@ def create_performance_chart(metrics: list[dict]) -> go.Figure:
     if not metrics:
         return go.Figure()
 
-    df = pd.DataFrame(metrics)
+    metrics_data = pd.DataFrame(metrics)
 
     fig = go.Figure()
 
     # Add response time line
     fig.add_trace(
         go.Scatter(
-            x=df["timestamp"],
-            y=df["response_time_ms"],
+            x=metrics_data["timestamp"],
+            y=metrics_data["response_time_ms"],
             mode="lines+markers",
             name="Response Time (ms)",
             line={"color": "#1f77b4", "width": 2},
@@ -183,7 +188,8 @@ def main():
     with tab1:
         st.header("🔍 Hybrid Vector Search")
         st.markdown(
-            "Demonstrate advanced search capabilities with dense + sparse vectors and neural reranking"
+            "Demonstrate advanced search capabilities with dense + sparse vectors "
+            "and neural reranking"
         )
 
         col1, col2 = st.columns([2, 1])
@@ -220,7 +226,7 @@ def main():
                     if result["success"]:
                         st.session_state.performance_metrics.append(
                             {
-                                "timestamp": datetime.now(),
+                                "timestamp": datetime.now(tz=datetime.timezone.utc),
                                 "endpoint": "search",
                                 "response_time_ms": result["response_time_ms"],
                                 "success": True,
@@ -291,7 +297,8 @@ def main():
     with tab2:
         st.header("🌐 Multi-Tier Web Scraping")
         st.markdown(
-            "Showcase intelligent tier selection from lightweight HTTP to full browser automation"
+            "Showcase intelligent tier selection from lightweight HTTP "
+            "to full browser automation"
         )
 
         col1, col2 = st.columns([2, 1])
@@ -427,7 +434,10 @@ def main():
             with col3:
                 st.metric("Response Time", f"{result['response_time_ms']}ms")
             with col4:
-                st.metric("Timestamp", datetime.now().strftime("%H:%M:%S"))
+                st.metric(
+                    "Timestamp",
+                    datetime.now(tz=datetime.timezone.utc).strftime("%H:%M:%S"),
+                )
 
             # Component health
             if data.get("components"):
@@ -481,7 +491,11 @@ def main():
         with col1:
             texts = st.text_area(
                 "Texts to Embed (one per line)",
-                value="machine learning optimization\nvector database performance\nRAG system architecture",
+                value=(
+                    "machine learning optimization\n"
+                    "vector database performance\n"
+                    "RAG system architecture"
+                ),
                 height=100,
             )
 
@@ -555,7 +569,8 @@ def main():
 
         elif "result" in locals() and not result["success"]:
             st.error(
-                f"❌ Embedding generation failed: {result.get('error', 'Unknown error')}"
+                f"❌ Embedding generation failed: "
+                f"{result.get('error', 'Unknown error')}"
             )
 
     with tab5:
@@ -642,7 +657,8 @@ def main():
     with col3:
         st.markdown("**🔗 Links**")
         st.markdown(
-            "[GitHub](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper) | [Docs](docs/portfolio/)"
+            "[GitHub](https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper)"
+            " | [Docs](docs/portfolio/)"
         )
 
 

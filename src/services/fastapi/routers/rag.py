@@ -9,7 +9,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 
-from ...dependencies import (
+from src.services.dependencies import (
     ConfigDep,
     RAGGeneratorDep,
     RAGRequest,
@@ -62,8 +62,7 @@ async def generate_answer(
 
     try:
         # Use function-based dependency injection for RAG generation
-        response = await generate_rag_answer(request)
-        return response
+        return await generate_rag_answer(request)
 
     except Exception as e:
         logger.exception("RAG answer generation failed")
@@ -94,16 +93,18 @@ async def get_metrics(
     """
     try:
         metrics = await get_rag_metrics(rag_generator)
-        return {
-            "status": "success",
-            "metrics": metrics,
-        }
     except Exception as e:
         logger.exception("Failed to get RAG metrics")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get RAG metrics",
         ) from e
+
+    else:
+        return {
+            "status": "success",
+            "metrics": metrics,
+        }
 
 
 @router.post("/cache/clear")
@@ -126,8 +127,7 @@ async def clear_cache(
 
     """
     try:
-        result = await clear_rag_cache(rag_generator)
-        return result
+        return await clear_rag_cache(rag_generator)
     except Exception as e:
         logger.exception("Failed to clear RAG cache")
         raise HTTPException(
@@ -203,7 +203,7 @@ async def health_check(
         health_status["status"] = "healthy"
         health_status["connectivity_test"] = True
 
-    except Exception as e:
+    except (ValueError, TypeError, AttributeError) as e:
         health_status["status"] = "unhealthy"
         health_status["error"] = str(e)
         logger.warning("RAG health check failed")

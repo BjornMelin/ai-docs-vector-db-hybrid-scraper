@@ -113,9 +113,10 @@ class TestMCPEdgeCases:
             )
             # If it processes, verify it returns valid result
             assert isinstance(result, list)
-        except Exception as e:
+        except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
             # If it rejects, should be a meaningful error
-            assert "too long" in str(e).lower() or "size" in str(e).lower()
+            error_msg = str(e).lower()
+            assert "too long" in error_msg or "size" in error_msg
 
     async def test_special_characters_in_inputs(self, edge_case_server):
         """Test handling of special characters and Unicode."""
@@ -555,9 +556,10 @@ class TestMCPEdgeCases:
                 )
                 # If it handles gracefully, verify result is valid
                 assert isinstance(result, list)
-            except Exception as e:
+            except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
                 # If it raises, should be a meaningful error
-                assert "invalid" in str(e).lower() or "corrupt" in str(e).lower()
+                error_msg = str(e).lower()
+                assert "invalid" in error_msg or "corrupt" in error_msg
 
     async def test_partial_failure_handling(self, edge_case_server):
         """Test handling when some operations succeed and others fail."""

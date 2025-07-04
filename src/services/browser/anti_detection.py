@@ -221,7 +221,7 @@ class SessionManager:
                     return session
                 # Clean up expired session
                 session_file.unlink(missing_ok=True)
-            except Exception:
+            except (FileNotFoundError, OSError, PermissionError):
                 # Clean up corrupted session file
                 session_file.unlink(missing_ok=True)
 
@@ -233,10 +233,8 @@ class SessionManager:
         try:
             with session_file.open("w") as f:
                 json.dump(session.model_dump(), f, indent=2)
-        except Exception as e:
-            logger.debug(
-                f"Failed to save session {session.session_id}: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (json.JSONDecodeError, ValueError, TypeError) as e:
+            logger.debug("Failed to save session %s: %s", session.session_id, e)
 
     def update_session_data(
         self,
@@ -277,7 +275,7 @@ class SessionManager:
 
                 if session.is_expired():
                     session_file.unlink()
-            except Exception:
+            except (FileNotFoundError, ImportError, OSError):
                 session_file.unlink(missing_ok=True)
 
 
@@ -570,7 +568,7 @@ class EnhancedAntiDetection:
         stealth_config = self.get_stealth_config(site_profile)
 
         # Create enhanced config
-        enhanced_config = PlaywrightConfig(
+        return PlaywrightConfig(
             browser=config.browser,
             headless=config.headless,
             viewport={
@@ -580,8 +578,6 @@ class EnhancedAntiDetection:
             user_agent=stealth_config.user_agent,
             timeout=config.timeout,
         )
-
-        return enhanced_config
 
     async def get_human_like_delay(self, site_profile: str = "default") -> float:
         """Get human-like delay for interactions.

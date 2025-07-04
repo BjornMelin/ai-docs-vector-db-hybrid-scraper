@@ -1,4 +1,5 @@
-"""Connection pool management for Redis 8.2, Qdrant, and PostgreSQL with health monitoring.
+"""Connection pool management for Redis 8.2, Qdrant, and PostgreSQL with health
+monitoring.
 
 Provides optimized connection pools with:
 - Redis 8.2 RESP3 protocol and connection optimizations
@@ -19,11 +20,24 @@ import redis.asyncio as redis
 from pydantic import BaseModel
 from qdrant_client import AsyncQdrantClient
 
-from src.config.auto_detect import AutoDetectionConfig, DetectedService
+from src.config import AutoDetectionConfig, DetectedService
 from src.services.errors import circuit_breaker
 
 
+# Optional asyncpg import
+try:
+    import asyncpg
+except ImportError:
+    asyncpg = None
+
+
 logger = logging.getLogger(__name__)
+
+
+def _raise_asyncpg_unavailable() -> None:
+    """Raise ImportError for unavailable asyncpg package."""
+    msg = "asyncpg not available"
+    raise ImportError(msg)
 
 
 class PoolHealthMetrics(BaseModel):
@@ -64,7 +78,7 @@ class ConnectionPoolManager:
                 elif service.service_type == "postgresql" and service.supports_pooling:
                     await self._initialize_postgresql_pool(service)
 
-            except Exception:
+            except (OSError, AttributeError, ConnectionError, ImportError):
                 self.logger.exception(
                     f"Failed to initialize {service.service_type} pool"
                 )
@@ -79,7 +93,7 @@ class ConnectionPoolManager:
         for pool_name, pool in self._pools.items():
             try:
                 await self._cleanup_pool(pool_name, pool)
-            except Exception:
+            except (ConnectionError, OSError, PermissionError):
                 self.logger.exception(f"Error cleaning up {pool_name} pool")
 
         self._pools.clear()
@@ -130,7 +144,7 @@ class ConnectionPoolManager:
 
         except ImportError:
             self.logger.warning("redis package not available, skipping Redis pool")
-        except Exception:
+        except (OSError, AttributeError, ConnectionError):
             self.logger.exception("Failed to initialize Redis pool")
             raise
 
@@ -184,7 +198,7 @@ class ConnectionPoolManager:
             self.logger.warning(
                 "qdrant-client package not available, skipping Qdrant pool"
             )
-        except Exception:
+        except (OSError, AttributeError, ConnectionError):
             self.logger.exception("Failed to initialize Qdrant pool")
             raise
 
@@ -198,8 +212,7 @@ class ConnectionPoolManager:
         try:
             # Check if asyncpg is available without importing
             if not importlib.util.find_spec("asyncpg"):
-                msg = "asyncpg not available"
-                raise ImportError(msg)
+                _raise_asyncpg_unavailable()
 
             # Note: In real implementation, would need actual connection parameters
             # This is a placeholder showing the structure
@@ -234,7 +247,7 @@ class ConnectionPoolManager:
             self.logger.warning(
                 "asyncpg package not available, skipping PostgreSQL pool"
             )
-        except Exception:
+        except (OSError, AttributeError, ConnectionError):
             self.logger.exception("Failed to initialize PostgreSQL pool")
             raise
 
@@ -253,7 +266,7 @@ class ConnectionPoolManager:
 
             yield client
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError):
             self.logger.exception("Redis connection error")
             raise
         finally:
@@ -272,7 +285,7 @@ class ConnectionPoolManager:
 
             yield client
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError):
             self.logger.exception("Qdrant connection error")
             raise
 
@@ -291,7 +304,7 @@ class ConnectionPoolManager:
 
             yield connection
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError):
             self.logger.exception("PostgreSQL connection error")
             raise
         finally:
@@ -310,7 +323,7 @@ class ConnectionPoolManager:
 
             # Update health status and library stats using library features
             await self._update_pool_health(pool_name, metrics)
-        except Exception:
+        except (TimeoutError, OSError, PermissionError):
             self.logger.exception(f"Failed to get health for {pool_name}")
             if pool_name in self._health_metrics:
                 self._health_metrics[pool_name].is_healthy = False
@@ -344,7 +357,7 @@ class ConnectionPoolManager:
             elif pool_name == "postgresql":
                 await self._update_postgresql_health(metrics)
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError):
             self.logger.exception(f"Health update failed for {pool_name}")
             metrics.is_healthy = False
 
@@ -367,22 +380,17 @@ class ConnectionPoolManager:
                         "max_connections": pool.max_connections,
                         "connection_kwargs": pool.connection_kwargs,
                     }
-                    # Add created connections count if available
-                    if hasattr(pool, "_created_connections"):
-                        pool_info["created_connections"] = pool._created_connections
-                    if hasattr(pool, "_available_connections"):
-                        pool_info["available_connections"] = len(
-                            pool._available_connections
-                        )
-                    if hasattr(pool, "_in_use_connections"):
-                        pool_info["in_use_connections"] = len(pool._in_use_connections)
+                    # Use public methods to get pool statistics instead of private attributes
+                    # Note: Redis ConnectionPool doesn't expose connection counts publicly
+                    # so we'll only include what's available through the public API
+                    pool_info["pool_type"] = "redis_connection_pool"
 
                     metrics.library_stats = pool_info
 
             finally:
                 await client.aclose()
 
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             self.logger.debug(
                 f"Redis health check failed: {e}"
             )  # TODO: Convert f-string to logging format
@@ -407,7 +415,7 @@ class ConnectionPoolManager:
                 }
             )
 
-        except Exception as e:
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             self.logger.debug(
                 f"Qdrant health check failed: {e}"
             )  # TODO: Convert f-string to logging format
@@ -421,7 +429,7 @@ class ConnectionPoolManager:
             metrics.is_healthy = True
             metrics.library_stats = {"status": "configured_but_not_implemented"}
 
-        except Exception as e:
+        except (ConnectionError, TimeoutError) as e:
             self.logger.debug(
                 f"PostgreSQL health check failed: {e}"
             )  # TODO: Convert f-string to logging format
@@ -483,7 +491,7 @@ class ConnectionPoolManager:
             elif pool_name == "postgresql":
                 # Would implement actual health check in real code
                 return True
-        except Exception as e:
+        except (ConnectionError, TimeoutError) as e:
             self.logger.debug(
                 f"Immediate health check failed for {pool_name}: {e}"
             )  # TODO: Convert f-string to logging format

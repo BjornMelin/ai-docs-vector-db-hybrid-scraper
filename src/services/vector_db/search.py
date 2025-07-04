@@ -42,7 +42,7 @@ class QdrantSearch:
                 self.metrics_registry = get_metrics_registry()
             else:
                 self.metrics_registry = None
-        except Exception:
+        except (AttributeError, ImportError, ValueError):
             logger.warning(
                 "Metrics registry not available - search monitoring disabled"
             )
@@ -191,9 +191,9 @@ class QdrantSearch:
             ]
 
         except Exception as e:
-            logger.error(
-                f"Hybrid search failed in collection {collection_name}: {e}",
-                exc_info=True,
+            logger.exception(
+                "Hybrid search failed for collection %s",
+                collection_name,
             )
 
             error_msg = str(e).lower()
@@ -203,10 +203,16 @@ class QdrantSearch:
                 )
                 raise QdrantServiceError(msg) from e
             if "wrong vector size" in error_msg:
-                msg = f"Vector dimension mismatch. Expected size for collection '{collection_name}'."
+                msg = (
+                    f"Vector dimension mismatch. Expected size for "
+                    f"collection '{collection_name}'."
+                )
                 raise QdrantServiceError(msg) from e
             if "timeout" in error_msg:
-                msg = "Search request timed out. Try reducing the limit or simplifying the query."
+                msg = (
+                    "Search request timed out. Try reducing the limit or "
+                    "simplifying the query."
+                )
                 raise QdrantServiceError(msg) from e
             msg = f"Hybrid search failed: {e}"
             raise QdrantServiceError(msg) from e
@@ -270,12 +276,12 @@ class QdrantSearch:
 
         if not isinstance(stages, list):
             msg = "Stages must be a list"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         for i, stage in enumerate(stages):
             if not isinstance(stage, dict):
                 msg = f"Stage {i} must be a dictionary"
-                raise ValueError(msg)
+                raise TypeError(msg)
             if "query_vector" not in stage:
                 msg = f"Stage {i} must contain 'query_vector'"
                 raise ValueError(msg)
@@ -336,9 +342,9 @@ class QdrantSearch:
             ]
 
         except Exception as e:
-            logger.error(
-                f"Multi-stage search failed in collection {collection_name}: {e}",
-                exc_info=True,
+            logger.exception(
+                "Multi-stage search failed for collection %s",
+                collection_name,
             )
             msg = f"Multi-stage search failed: {e}"
             raise QdrantServiceError(msg) from e
@@ -466,9 +472,9 @@ class QdrantSearch:
             ]
 
         except Exception as e:
-            logger.error(
-                f"HyDE search failed in collection {collection_name}: {e}",
-                exc_info=True,
+            logger.exception(
+                "HyDE search failed for collection %s",
+                collection_name,
             )
             msg = f"HyDE search failed: {e}"
             raise QdrantServiceError(msg) from e
@@ -525,7 +531,7 @@ class QdrantSearch:
         # Validate input parameters
         if not isinstance(query_vector, list):
             msg = "query_vector must be a list"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         if not query_vector:
             msg = "query_vector cannot be empty"
@@ -533,12 +539,15 @@ class QdrantSearch:
 
         if not isinstance(filters, dict):
             msg = "filters must be a dictionary"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         # Validate vector dimensions (assuming 1536 for OpenAI embeddings)
         expected_dim = 1536
         if len(query_vector) != expected_dim:
-            msg = f"query_vector dimension {len(query_vector)} does not match expected {expected_dim}"
+            msg = (
+                f"query_vector dimension {len(query_vector)} does not match "
+                f"expected {expected_dim}"
+            )
             raise ValueError(msg)
 
         try:
@@ -568,9 +577,9 @@ class QdrantSearch:
             ]
 
         except Exception as e:
-            logger.error(
-                f"Filtered search failed in collection {collection_name}: {e}",
-                exc_info=True,
+            logger.exception(
+                "Filtered search failed for collection %s",
+                collection_name,
             )
             msg = f"Filtered search failed: {e}"
             raise QdrantServiceError(msg) from e

@@ -4,7 +4,7 @@ import asyncio
 import logging
 import threading
 from contextlib import asynccontextmanager
-from typing import Any, Optional
+from typing import Any
 
 from dependency_injector.wiring import Provide, inject
 
@@ -16,7 +16,19 @@ from src.infrastructure.clients import (
     RedisClientProvider,
 )
 from src.infrastructure.container import ApplicationContainer, get_container
+from src.services.browser.automation_router import AutomationRouter
 from src.services.errors import APIError
+
+
+# Import dependencies for health checks
+try:
+    from src.services.dependencies import (
+        get_health_status as deps_get_health_status,
+        get_overall_health as deps_get_overall_health,
+    )
+except ImportError:
+    deps_get_health_status = None
+    deps_get_overall_health = None
 
 
 logger = logging.getLogger(__name__)
@@ -77,6 +89,11 @@ class ClientManager:
             "http": http_provider,
         }
 
+    @property
+    def is_initialized(self) -> bool:
+        """Check if the client manager is initialized."""
+        return self._initialized
+
     async def initialize(self) -> None:
         """Initialize client manager with function-based dependencies."""
         if self._initialized:
@@ -95,19 +112,19 @@ class ClientManager:
             container = get_container()
             if container:
                 # Get the parallel processing system from the container
-                # Note: embedding manager is now accessed via function-based dependencies
+                # Note: embedding manager is now accessed via
+                # function-based dependencies
                 self._parallel_processing_system = (
                     container.parallel_processing_system()
                 )
                 logger.info("Parallel processing system initialized")
             else:
                 logger.warning(
-                    "Cannot initialize parallel processing system: container not available"
+                    "Cannot initialize parallel processing system: "
+                    "container not available"
                 )
-        except Exception as e:
-            logger.error(
-                f"Failed to initialize parallel processing system: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (ImportError, AttributeError, RuntimeError):
+            logger.exception("Failed to initialize parallel processing system")
             # Continue without parallel processing
             self._parallel_processing_system = None
 
@@ -131,13 +148,15 @@ class ClientManager:
     async def get_qdrant_client(self):
         provider = self._providers.get("qdrant")
         if not provider:
-            raise APIError("Qdrant client provider not available")
+            msg = "Qdrant client provider not available"
+            raise APIError(msg)
         return provider.client
 
     async def get_redis_client(self):
         provider = self._providers.get("redis")
         if not provider:
-            raise APIError("Redis client provider not available")
+            msg = "Redis client provider not available"
+            raise APIError(msg)
         return provider.client
 
     async def get_firecrawl_client(self):
@@ -147,78 +166,80 @@ class ClientManager:
     async def get_http_client(self):
         provider = self._providers.get("http")
         if not provider:
-            raise APIError("HTTP client provider not available")
+            msg = "HTTP client provider not available"
+            raise APIError(msg)
         return provider.client
 
     # Function-based dependency access methods (backward compatibility)
 
     async def get_database_manager(self):
-        """Backward compatibility: returns None since we use function-based dependencies."""
+        """Backward compatibility: returns None since we use function-based deps."""
         logger.warning(
-            "get_database_manager() deprecated - use function-based dependencies from src.services.dependencies"
+            "get_database_manager() deprecated - use function-based dependencies "
+            "from src.services.dependencies"
         )
 
     async def get_embedding_manager(self):
-        """Backward compatibility: returns None since we use function-based dependencies."""
+        """Backward compatibility: returns None since we use function-based deps."""
         logger.warning(
-            "get_embedding_manager() deprecated - use function-based dependencies from src.services.dependencies"
+            "get_embedding_manager() deprecated - use function-based dependencies "
+            "from src.services.dependencies"
         )
 
     async def get_crawling_manager(self):
-        """Backward compatibility: returns None since we use function-based dependencies."""
+        """Backward compatibility: returns None since we use function-based deps."""
         logger.warning(
-            "get_crawling_manager() deprecated - use function-based dependencies from src.services.dependencies"
+            "get_crawling_manager() deprecated - use function-based dependencies "
+            "from src.services.dependencies"
         )
 
     async def get_monitoring_manager(self):
-        """Backward compatibility: returns None since we use function-based dependencies."""
+        """Backward compatibility: returns None since we use function-based deps."""
         logger.warning(
-            "get_monitoring_manager() deprecated - use function-based dependencies from src.services.dependencies"
+            "get_monitoring_manager() deprecated - use function-based dependencies "
+            "from src.services.dependencies"
         )
 
     async def get_cache_manager(self):
         """Backward compatibility: use function-based dependencies."""
         logger.warning(
-            "get_cache_manager() deprecated - use get_redis_client() or function-based cache dependencies"
+            "get_cache_manager() deprecated - use get_redis_client() or "
+            "function-based cache dependencies"
         )
         return await self.get_redis_client()
 
     async def get_qdrant_service(self):
         """Backward compatibility: use function-based dependencies."""
         logger.warning(
-            "get_qdrant_service() deprecated - use get_qdrant_client() or function-based qdrant dependencies"
+            "get_qdrant_service() deprecated - use get_qdrant_client() or "
+            "function-based qdrant dependencies"
         )
         return await self.get_qdrant_client()
 
     async def get_crawl_manager(self):
-        """Backward compatibility: returns None since we use function-based dependencies."""
+        """Backward compatibility: returns None since we use function-based deps."""
         logger.warning(
             "get_crawl_manager() deprecated - use function-based crawling dependencies"
         )
 
     async def get_health_status(self) -> dict[str, dict[str, Any]]:
         """Get health status using function-based dependencies."""
-        try:
-            from src.services.dependencies import get_health_status
-
-            return await get_health_status()
-        except ImportError:
-            logger.warning(
-                "Health status monitoring not available - function-based dependency not found"
-            )
-            return {}
+        if deps_get_health_status:
+            return await deps_get_health_status()
+        logger.warning(
+            "Health status monitoring not available - function-based dependency "
+            "not found"
+        )
+        return {}
 
     async def get_overall_health(self) -> dict[str, Any]:
         """Get overall health using function-based dependencies."""
-        try:
-            from src.services.dependencies import get_overall_health
-
-            return await get_overall_health()
-        except ImportError:
-            return {
-                "overall_healthy": False,
-                "error": "Health monitoring not available",
-            }
+        if deps_get_overall_health:
+            return await deps_get_overall_health()
+        return {
+            "overall_healthy": False,
+            "error": "Health monitoring not available",
+        }
 
     async def get_service_status(self) -> dict[str, Any]:
         """Get service status using function-based dependencies."""
@@ -234,6 +255,17 @@ class ClientManager:
         """Get parallel processing system instance."""
         return self._parallel_processing_system
 
+    async def get_browser_automation_router(self):
+        """Get browser automation router for intelligent scraping.
+
+        Returns:
+            AutomationRouter instance for intelligent browser automation
+        """
+        if not hasattr(self, "_automation_router"):
+            self._automation_router = AutomationRouter(self.config)
+            await self._automation_router.initialize()
+        return self._automation_router
+
     @asynccontextmanager
     async def managed_client(self, client_type: str):
         getters = {
@@ -245,13 +277,14 @@ class ClientManager:
             "parallel_processing": self.get_parallel_processing_system,
         }
         if client_type not in getters:
-            raise ValueError(
+            msg = (
                 f"Unknown client type: {client_type}. Available: {list(getters.keys())}"
             )
+            raise ValueError(msg)
         try:
             yield await getters[client_type]()
-        except Exception:
-            logger.exception(f"Error using {client_type} client")
+        except (ConnectionError, TimeoutError, APIError, ValueError, RuntimeError):
+            logger.exception("Error using {client_type} client")
             raise
 
     async def __aenter__(self):

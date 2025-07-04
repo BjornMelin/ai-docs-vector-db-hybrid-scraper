@@ -16,7 +16,7 @@ else:
         async def error(self, msg: str) -> None: ...
 
 
-from src.security import MLSecurityValidator as SecurityValidator
+from src.security import MLSecurityValidator
 from src.services.query_processing.models import MatryoshkaDimension, SearchStrategy
 
 
@@ -25,7 +25,7 @@ class QueryValidationHelper:
 
     def __init__(self):
         """Initialize validation helper."""
-        self.security_validator = SecurityValidator.from_unified_config()
+        self.security_validator = MLSecurityValidator.from_unified_config()
 
     def validate_query_request(self, request) -> tuple[str, str]:
         """Validate collection and query from request."""
@@ -62,7 +62,7 @@ class QueryValidationHelper:
                     await ctx.warning(
                         f"Invalid force_dimension '{request.force_dimension}', ignoring"
                     )
-            except Exception:
+            except (ConnectionError, OSError, PermissionError):
                 await ctx.warning(
                     f"Invalid force_dimension '{request.force_dimension}', ignoring"
                 )

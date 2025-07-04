@@ -9,7 +9,7 @@ import time
 from typing import Any
 
 from src.config import Config
-from src.models.vector_search import QueryClassification
+from src.services.query_processing.models import QueryIntentClassification
 
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ class AdaptiveFusionTuner:
 
     async def compute_adaptive_weights(
         self,
-        query_classification: QueryClassification,
+        query_classification: QueryIntentClassification,
         historical_performance: dict[str, float] | None = None,
         _context: dict[str, Any] | None = None,
     ) -> dict[str, float]:
@@ -63,7 +63,7 @@ class AdaptiveFusionTuner:
             start_time = time.time()
 
             # Get base weights for query type
-            query_type = query_classification.query_type.lower()
+            query_type = query_classification.primary_intent.lower()
             base_weights = self.default_weights.get(
                 query_type, self.default_weights["default"]
             ).copy()
@@ -99,21 +99,18 @@ class AdaptiveFusionTuner:
 
             weights = {"dense": dense_weight, "sparse": sparse_weight}
 
-            logger.debug(
-                f"Computed adaptive weights for {query_type}: {weights}"
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Computed adaptive weights for %s: %s", query_type, weights)
 
-            return weights
-
-        except Exception as e:
-            logger.error(
-                f"Failed to compute adaptive weights: {e}", exc_info=True
-            )  # TODO: Convert f-string to logging format
+        except OSError:
+            logger.exception("Failed to compute adaptive weights")
             # Return default balanced weights on error
-            return {"dense": 0.7, "sparse": 0.3}
+            weights = {"dense": 0.7, "sparse": 0.3}
+
+        return weights
 
     def _compute_complexity_adjustment(
-        self, query_classification: QueryClassification
+        self,
+        query_classification: QueryIntentClassification,
     ) -> float:
         """Compute weight adjustment based on query complexity."""
         complexity = query_classification.complexity_level.lower()
@@ -129,7 +126,7 @@ class AdaptiveFusionTuner:
     def _compute_performance_adjustment(
         self,
         historical_performance: dict[str, float],
-        _query_classification: QueryClassification,
+        _query_classification: QueryIntentClassification,
     ) -> float:
         """Compute adjustment based on historical performance."""
         try:
@@ -140,25 +137,24 @@ class AdaptiveFusionTuner:
             score_diff = dense_score - sparse_score
 
             # Scale the adjustment (max ±0.15)
-            adjustment = max(-0.15, min(0.15, score_diff * 0.3))
+            return max(-0.15, min(0.15, score_diff * 0.3))
 
-            return adjustment
-
-        except Exception as e:
-            logger.debug(
-                f"Failed to compute performance adjustment: {e}"
-            )  # TODO: Convert f-string to logging format
+        except OSError:
+            logger.debug("Failed to compute performance adjustment")
             return 0.0
 
     def _update_performance_history(
         self,
-        query_classification: QueryClassification,
+        query_classification: QueryIntentClassification,
         weight: float,
         computation_time: float,
     ) -> None:
         """Update performance history for future optimizations."""
         try:
-            query_key = f"{query_classification.query_type}_{query_classification.complexity_level}"
+            query_key = (
+                f"{query_classification.primary_intent}_"
+                f"{query_classification.complexity_level}"
+            )
 
             if query_key not in self.performance_history:
                 self.performance_history[query_key] = {}
@@ -172,10 +168,8 @@ class AdaptiveFusionTuner:
                 self.performance_history[query_key].get("usage_count", 0) + 1
             )
 
-        except Exception as e:
-            logger.debug(
-                f"Failed to update performance history: {e}"
-            )  # TODO: Convert f-string to logging format
+        except OSError:
+            logger.debug("Failed to update performance history")
 
     def get_performance_stats(self) -> dict[str, Any]:
         """Get performance statistics for monitoring and debugging."""
@@ -202,10 +196,8 @@ class AdaptiveFusionTuner:
                 "query_types_seen": len(self.performance_history),
                 "performance_history_size": len(self.performance_history),
             }
-        except Exception as e:
-            logger.error(
-                f"Failed to get performance stats: {e}", exc_info=True
-            )  # TODO: Convert f-string to logging format
+        except OSError:
+            logger.exception("Failed to get performance stats")
             return {
                 "total_queries": self.total_queries,
                 "successful_optimizations": self.successful_optimizations,

@@ -169,8 +169,7 @@ def temp_deployment_dir() -> Generator[Path]:
 def mock_docker_registry() -> Generator[str]:
     """Mock Docker registry for testing."""
     # In real scenarios, this would point to a test registry
-    registry_url = "localhost:5000"
-    return registry_url
+    return "localhost:5000"
 
 
 @pytest.fixture
@@ -240,21 +239,22 @@ class DeploymentHealthChecker:
         ]
         self.initialized = True
 
-    async def check_health(self, endpoint: str, _timeout: int = 30) -> dict[str, Any]:
+    async def check_health(self, endpoint: str) -> dict[str, Any]:
         """Check health of a specific endpoint."""
         if not self.initialized:
             await self.initialize()
 
         try:
-            # Simulate health check
-            await asyncio.sleep(0.1)
-            return {
-                "endpoint": endpoint,
-                "status": "healthy",
-                "response_time_ms": 50.0,
-                "timestamp": datetime.now(tz=UTC).isoformat(),
-            }
-        except Exception as e:
+            # Simulate health check with timeout
+            async with asyncio.timeout(30):
+                await asyncio.sleep(0.1)
+                return {
+                    "endpoint": endpoint,
+                    "status": "healthy",
+                    "response_time_ms": 50.0,
+                    "timestamp": datetime.now(tz=UTC).isoformat(),
+                }
+        except (ImportError, AttributeError, RuntimeError) as e:
             return {
                 "endpoint": endpoint,
                 "status": "unhealthy",
@@ -262,29 +262,29 @@ class DeploymentHealthChecker:
                 "timestamp": datetime.now(tz=UTC).isoformat(),
             }
 
-    async def check_all_health(self, timeout: int = 30) -> dict[str, dict[str, Any]]:  # noqa: ASYNC109
+    async def check_all_health(self) -> dict[str, dict[str, Any]]:
         """Check health of all registered endpoints."""
         results = {}
-        for endpoint in self.health_endpoints:
-            results[endpoint] = await self.check_health(endpoint, timeout)
+        async with asyncio.timeout(30):
+            for endpoint in self.health_endpoints:
+                results[endpoint] = await self.check_health(endpoint)
         return results
 
     async def wait_for_healthy(
         self,
         endpoint: str,
-        timeout: int = 60,
         interval: int = 5,
     ) -> bool:
         """Wait for an endpoint to become healthy."""
-        start_time = asyncio.get_event_loop().time()
-
-        while (asyncio.get_event_loop().time() - start_time) < timeout:
-            health = await self.check_health(endpoint)
-            if health["status"] == "healthy":
-                return True
-            await asyncio.sleep(interval)
-
-        return False
+        try:
+            async with asyncio.timeout(60):
+                while True:
+                    health = await self.check_health(endpoint)
+                    if health["status"] == "healthy":
+                        return True
+                    await asyncio.sleep(interval)
+        except TimeoutError:
+            return False
 
     async def cleanup(self) -> None:
         """Cleanup health checker resources."""
@@ -342,7 +342,7 @@ class DeploymentRollbackManager:
             self.current_deployment = rollback_target.copy()
             self.current_deployment["rollback_info"] = rollback_info
 
-        except Exception as e:
+        except (ImportError, AttributeError, RuntimeError) as e:
             return {
                 "success": False,
                 "error": str(e),
@@ -389,7 +389,7 @@ class BlueGreenDeploymentManager:
                 "deployment_id": deployment_info["deployment_id"],
             }
 
-        except Exception as e:
+        except (ImportError, AttributeError, RuntimeError) as e:
             return {
                 "success": False,
                 "error": str(e),
@@ -431,7 +431,7 @@ class BlueGreenDeploymentManager:
                 "switch_time": datetime.now(tz=UTC).isoformat(),
             }
 
-        except Exception as e:
+        except (ImportError, AttributeError, RuntimeError) as e:
             return {
                 "success": False,
                 "error": str(e),

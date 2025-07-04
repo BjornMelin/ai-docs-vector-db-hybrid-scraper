@@ -197,8 +197,7 @@ def measure_execution_time(func: Callable | None = None, *, name: str | None = N
             async def async_wrapper(*args, **_kwargs):
                 start_time = time.perf_counter()
                 try:
-                    result = await f(*args, **_kwargs)
-                    return result
+                    return await f(*args, **_kwargs)
                 finally:
                     end_time = time.perf_counter()
                     execution_time = end_time - start_time
@@ -220,8 +219,7 @@ def measure_execution_time(func: Callable | None = None, *, name: str | None = N
         def sync_wrapper(*args, **_kwargs):
             start_time = time.perf_counter()
             try:
-                result = f(*args, **_kwargs)
-                return result
+                return f(*args, **_kwargs)
             finally:
                 end_time = time.perf_counter()
                 execution_time = end_time - start_time
@@ -264,8 +262,7 @@ def memory_profiler(func: Callable | None = None, *, detailed: bool = False):
                 gc.collect()
 
                 try:
-                    result = await f(*args, **_kwargs)
-                    return result
+                    return await f(*args, **_kwargs)
                 finally:
                     current, peak = tracemalloc.get_traced_memory()
 
@@ -299,8 +296,7 @@ def memory_profiler(func: Callable | None = None, *, detailed: bool = False):
             gc.collect()
 
             try:
-                result = f(*args, **_kwargs)
-                return result
+                return f(*args, **_kwargs)
             finally:
                 current, peak = tracemalloc.get_traced_memory()
 

@@ -295,11 +295,14 @@ class TestServiceIntegration:
         """Test service cleanup when exception occurs during usage."""
         service = ConcreteService()
 
-        with pytest.raises(ValueError, match="test exception"):
+        async def _test_service_with_exception():
             async with service.context():
                 assert service.init_called
                 msg = "test exception"
                 raise ValueError(msg)
+
+        with pytest.raises(ValueError, match="test exception"):
+            await _test_service_with_exception()
 
         # Cleanup should still occur
         assert service.cleanup_called

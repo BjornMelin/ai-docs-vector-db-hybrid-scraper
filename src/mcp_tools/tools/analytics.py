@@ -1,8 +1,15 @@
 """Analytics and monitoring tools for MCP server."""
 
+import asyncio
 import logging
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
+
+
+try:
+    import redis
+except ImportError:
+    redis = None
 
 
 if TYPE_CHECKING:
@@ -68,11 +75,9 @@ def register_tools(mcp, client_manager: ClientManager):
                         "status": info.get("status", "unknown"),
                     }
                     await ctx.debug(f"Collected analytics for collection {collection}")
-                except Exception as e:
+                except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
                     await ctx.warning(f"Failed to get analytics for {collection}: {e}")
-                    logger.warning(
-                        f"Failed to get analytics for {collection}: {e}"
-                    )  # TODO: Convert f-string to logging format
+                    logger.warning("Failed to get analytics for %s: %s", collection, e)
 
             # Get cache metrics
             if request.include_performance:
@@ -138,7 +143,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 "collections": len(collections),
             }
             await ctx.debug(f"Qdrant healthy with {len(collections)} collections")
-        except Exception as e:
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             health["services"]["qdrant"] = {
                 "status": "unhealthy",
                 "error": str(e),
@@ -158,7 +163,7 @@ def register_tools(mcp, client_manager: ClientManager):
             await ctx.debug(
                 f"Embeddings healthy with provider: {provider_info.get('name', 'unknown')}"
             )
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             health["services"]["embeddings"] = {
                 "status": "unhealthy",
                 "error": str(e),
@@ -178,7 +183,7 @@ def register_tools(mcp, client_manager: ClientManager):
             await ctx.debug(
                 f"Cache healthy with hit rate: {cache_stats.get('hit_rate', 0)}"
             )
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             health["services"]["cache"] = {
                 "status": "unhealthy",
                 "error": str(e),

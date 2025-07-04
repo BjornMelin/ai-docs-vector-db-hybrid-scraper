@@ -1,12 +1,12 @@
 import typing
+
+
 """Response models for MCP server tools."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SearchResult(BaseModel):
@@ -42,7 +42,7 @@ class CrawlResult(BaseModel):
     site_name: str = Field(default="", description="Site name")
     depth: int = Field(default=0, description="Crawl depth")
     crawl_timestamp: str = Field(
-        default_factory=lambda: datetime.now(tz=timezone.utc).isoformat(),
+        default_factory=lambda: datetime.now(tz=UTC).isoformat(),
         description="Crawl timestamp",
     )
     links: list[str] = Field(default_factory=list, description="Extracted links")

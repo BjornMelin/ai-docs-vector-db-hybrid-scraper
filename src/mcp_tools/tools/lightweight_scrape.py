@@ -32,22 +32,21 @@ def _validate_formats(formats: list[str] | None) -> list[str]:
         formats = ["markdown"]
 
     valid_formats = {"markdown", "html", "text"}
-    invalid_formats = set(formats) - valid_formats
-    if invalid_formats:
+    if invalid_formats := set(formats) - valid_formats:
         msg = f"Invalid formats: {invalid_formats}. Valid options: {valid_formats}"
         raise ValueError(msg)
     return formats
 
 
 async def _analyze_url_suitability(
-    unified_manager, url: str, ctx: Context | None
+    crawl_manager, url: str, ctx: Context | None
 ) -> bool:
     """Analyze URL to determine if lightweight tier is suitable."""
-    if not (unified_manager and hasattr(unified_manager, "analyze_url")):
+    if not (crawl_manager and hasattr(crawl_manager, "analyze_url")):
         return True  # Default to allowing the attempt
 
     try:
-        analysis = await unified_manager.analyze_url(url)
+        analysis = await crawl_manager.analyze_url(url)
         can_handle = analysis.get("recommended_tier") == "lightweight"
         if not can_handle and ctx:
             await ctx.warning(
@@ -55,9 +54,11 @@ async def _analyze_url_suitability(
                 f"Recommended tier: {analysis.get('recommended_tier', 'unknown')}. "
                 "Consider using standard search or crawl tools for complex pages."
             )
-        return can_handle
-    except Exception:
+    except (AttributeError, ConnectionError, RuntimeError, TimeoutError):
         return True  # Default to allowing the attempt
+
+    else:
+        return can_handle
 
 
 def _convert_content_formats(
@@ -185,8 +186,7 @@ def register_tools(mcp, client_manager: ClientManager):
             await ctx.debug("Using UnifiedBrowserManager with lightweight tier")
 
         # Analyze URL suitability for lightweight tier
-        unified_manager = crawl_manager._unified_browser_manager
-        can_handle = await _analyze_url_suitability(unified_manager, url, ctx)
+        can_handle = await _analyze_url_suitability(crawl_manager, url, ctx)
 
         # Perform the scrape using UnifiedBrowserManager with forced lightweight tier
         try:

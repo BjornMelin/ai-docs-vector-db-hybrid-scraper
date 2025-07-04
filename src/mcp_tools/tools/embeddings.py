@@ -106,7 +106,8 @@ def register_tools(mcp, client_manager: ClientManager):
             providers = []
 
             # OpenAI provider
-            if embedding_manager._openai_available():
+            provider_info = embedding_manager.get_provider_info()
+            if "openai" in provider_info:
                 providers.append(
                     {
                         "name": "openai",

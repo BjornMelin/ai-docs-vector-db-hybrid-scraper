@@ -1,15 +1,198 @@
 import typing
+
+
 """Advanced caching patterns for high-performance data access."""
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import hashlib
-import logging  # noqa: PLC0415
+import logging
+import time
 from collections.abc import Callable
+from enum import Enum
 from typing import Any
 
 from .dragonfly_cache import DragonflyCache
 
+
 logger = logging.getLogger(__name__)
+
+
+class CircuitState(str, Enum):
+    """Circuit breaker states."""
+
+    CLOSED = "closed"  # Normal operation
+    OPEN = "open"  # Circuit is open, rejecting requests
+    HALF_OPEN = "half_open"  # Testing if service is recovered
+
+
+class CircuitBreakerPattern:
+    """Circuit breaker pattern for fault tolerance in agentic systems.
+
+    Prevents cascading failures by monitoring service health and temporarily
+    stopping requests to failing services. Designed for agent coordination
+    where service failures can impact multi-agent workflows.
+    """
+
+    def __init__(
+        self,
+        failure_threshold: int = 5,
+        recovery_timeout: float = 60.0,
+        expected_exception: type[Exception] = Exception,
+        success_threshold: int = 3,
+    ):
+        """Initialize circuit breaker.
+
+        Args:
+            failure_threshold: Number of failures before opening circuit
+            recovery_timeout: Seconds to wait before attempting recovery
+            expected_exception: Exception type to monitor for failures
+            success_threshold: Consecutive successes needed to close circuit
+        """
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self.expected_exception = expected_exception
+        self.success_threshold = success_threshold
+
+        # Circuit state
+        self.state = CircuitState.CLOSED
+        self.failure_count = 0
+        self.success_count = 0
+        self.last_failure_time = 0.0
+
+        # Monitoring
+        self.total_requests = 0
+        self.total_failures = 0
+        self.total_successes = 0
+
+    def is_open(self) -> bool:
+        """Check if circuit is open (rejecting requests)."""
+        if self.state == CircuitState.OPEN:
+            # Check if recovery timeout has passed
+            if time.time() - self.last_failure_time >= self.recovery_timeout:
+                logger.info(
+                    "Circuit breaker entering half-open state for recovery test"
+                )
+                self.state = CircuitState.HALF_OPEN
+                self.success_count = 0
+                return False
+            return True
+        return False
+
+    async def call(self, func: Callable, *args, **kwargs) -> Any:
+        """Execute function with circuit breaker protection.
+
+        Args:
+            func: Function to execute (can be async)
+            *args: Function arguments
+            **kwargs: Function keyword arguments
+
+        Returns:
+            Function result
+
+        Raises:
+            RuntimeError: If circuit is open
+            Exception: If function fails (when circuit allows it)
+        """
+        self.total_requests += 1
+
+        # Check if circuit is open
+        if self.is_open():
+            self.total_failures += 1
+            raise RuntimeError(
+                f"Circuit breaker is OPEN. Service unavailable. "
+                f"Failure count: {self.failure_count}/{self.failure_threshold}, "
+                f"Next retry in: {self.recovery_timeout - (time.time() - self.last_failure_time):.1f}s"
+            )
+
+        try:
+            # Execute the function
+            if asyncio.iscoroutinefunction(func):
+                result = await func(*args, **kwargs)
+            else:
+                result = func(*args, **kwargs)
+
+            # Success - update circuit state
+            await self._on_success()
+            return result
+
+        except self.expected_exception as e:
+            # Expected failure - update circuit state
+            await self._on_failure()
+            raise e
+
+    async def _on_success(self) -> None:
+        """Handle successful execution."""
+        self.total_successes += 1
+
+        if self.state == CircuitState.HALF_OPEN:
+            self.success_count += 1
+            logger.debug(
+                f"Circuit breaker half-open success: {self.success_count}/{self.success_threshold}"
+            )
+
+            if self.success_count >= self.success_threshold:
+                logger.info("Circuit breaker recovered, returning to CLOSED state")
+                self.state = CircuitState.CLOSED
+                self.failure_count = 0
+                self.success_count = 0
+
+        elif self.state == CircuitState.CLOSED:
+            # Reset failure count on successful execution
+            if self.failure_count > 0:
+                self.failure_count = max(0, self.failure_count - 1)
+                logger.debug(
+                    f"Circuit breaker partial recovery: {self.failure_count}/{self.failure_threshold} failures"
+                )
+
+    async def _on_failure(self) -> None:
+        """Handle failed execution."""
+        self.total_failures += 1
+        self.failure_count += 1
+        self.last_failure_time = time.time()
+
+        logger.warning(
+            f"Circuit breaker failure: {self.failure_count}/{self.failure_threshold}"
+        )
+
+        if self.state == CircuitState.HALF_OPEN:
+            logger.warning("Circuit breaker test failed, returning to OPEN state")
+            self.state = CircuitState.OPEN
+            self.success_count = 0
+
+        elif self.failure_count >= self.failure_threshold:
+            logger.error(f"Circuit breaker OPENED due to {self.failure_count} failures")
+            self.state = CircuitState.OPEN
+
+    def get_stats(self) -> dict[str, Any]:
+        """Get circuit breaker statistics.
+
+        Returns:
+            Dictionary with circuit breaker metrics
+        """
+        return {
+            "state": self.state.value,
+            "failure_count": self.failure_count,
+            "success_count": self.success_count,
+            "total_requests": self.total_requests,
+            "total_failures": self.total_failures,
+            "total_successes": self.total_successes,
+            "failure_rate": self.total_failures / max(self.total_requests, 1),
+            "success_rate": self.total_successes / max(self.total_requests, 1),
+            "last_failure_time": self.last_failure_time,
+            "next_retry_in": max(
+                0, self.recovery_timeout - (time.time() - self.last_failure_time)
+            )
+            if self.state == CircuitState.OPEN
+            else 0,
+        }
+
+    def reset(self) -> None:
+        """Reset circuit breaker to initial state."""
+        logger.info("Circuit breaker manually reset")
+        self.state = CircuitState.CLOSED
+        self.failure_count = 0
+        self.success_count = 0
+        self.last_failure_time = 0.0
 
 
 class CachePatterns:
@@ -98,7 +281,7 @@ class CachePatterns:
 
                 return data
 
-            except Exception:
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
                 logger.error(f"Error fetching data for {key}: {e}")
                 # If we fail, try to return stale data if available
                 cached = await self.cache.get(key)
@@ -125,8 +308,7 @@ class CachePatterns:
             logger.warning(f"Timeout waiting for refresh of {key}, fetching directly")
             if asyncio.iscoroutinefunction(fetch_func):
                 return await fetch_func()
-            else:
-                return fetch_func()
+            return fetch_func()
 
     async def batch_cache(
         self,
@@ -180,7 +362,7 @@ class CachePatterns:
                     results.update(fresh_data)
                     logger.debug(f"Cached {len(fresh_data)} fresh items")
 
-            except Exception:
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
                 logger.error(f"Error fetching batch data: {e}")
                 # Continue with partial results
 
@@ -230,7 +412,7 @@ class CachePatterns:
             await self.cache.set(cache_key, result, ttl=ttl)
             return result
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError) as e:
             logger.error(f"Error in cached computation {func.__name__}: {e}")
             raise
 
@@ -271,7 +453,7 @@ class CachePatterns:
 
             return success
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError) as e:
             logger.error(f"Write-through error for {key}: {e}")
             return False
 
@@ -366,7 +548,7 @@ class CachePatterns:
                 else:
                     logger.warning(f"Cache warming batch {i // batch_size + 1} failed")
 
-            except Exception:
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
                 logger.error(f"Cache warming batch error: {e}")
 
         logger.info(

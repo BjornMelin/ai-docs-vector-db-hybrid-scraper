@@ -68,7 +68,7 @@ class MockCircuitBreaker:
 
     async def call(self, func, *args, **_kwargs):
         """Execute function with circuit breaker protection."""
-        self.metrics._total_requests += 1
+        self.metrics.total_requests += 1
 
         # Check if circuit is open
         if self.state == CircuitBreakerState.OPEN:
@@ -95,11 +95,11 @@ class MockCircuitBreaker:
             self.metrics.successful_requests += 1
 
             # Check if we should close the circuit (from half-open)
-            if self.state == CircuitBreakerState.HALF_OPEN:
-                if self.success_count >= self.config.success_threshold:
-                    self._transition_to_closed()
-
-            return result
+            if (
+                self.state == CircuitBreakerState.HALF_OPEN
+                and self.success_count >= self.config.success_threshold
+            ):
+                self._transition_to_closed()
 
         except Exception:
             # Failure - increment failure count
@@ -117,6 +117,8 @@ class MockCircuitBreaker:
                 self._transition_to_open()
 
             raise
+        else:
+            return result
 
     def _transition_to_open(self):
         """Transition circuit breaker to open state."""
@@ -198,7 +200,7 @@ class MockRateLimiter:
     async def allow_request(self) -> bool:
         """Check if request should be allowed."""
         current_time = time.time()
-        self.metrics._total_requests += 1
+        self.metrics.total_requests += 1
 
         # Clean old requests outside time window
         cutoff_time = current_time - self.config.time_window
@@ -293,7 +295,8 @@ class TestCircuitBreakers:
 
         for i, scenario in enumerate(failure_scenarios):
             logger.info(
-                f"Testing circuit breaker with {scenario['rate']:.1%} failure rate"
+                "Testing circuit breaker with %.1f%% failure rate",
+                scenario["rate"] * 100,
             )
 
             # Set failure rate
@@ -333,7 +336,7 @@ class TestCircuitBreakers:
             # Analyze results
             circuit_opened = circuit_breaker.metrics.circuit_opened_count > 0
             error_rate = (
-                result.metrics.failed_requests / max(result.metrics._total_requests, 1)
+                result.metrics.failed_requests / max(result.metrics.total_requests, 1)
             ) * 100
 
             scenario_results.append(
@@ -350,10 +353,12 @@ class TestCircuitBreakers:
             )
 
             logger.info(
-                f"Scenario {i + 1}: Failure rate {scenario['rate']:.1%}, "
-                f"Circuit opened: {circuit_opened}, "
-                f"Error rate: {error_rate:.2f}%, "
-                f"Rejections: {circuit_breaker.metrics.rejection_count}"
+                "Scenario %d: Failure rate %.1f%%, Circuit opened: %s, Error rate: %.2f%%, Rejections: %d",
+                i + 1,
+                scenario["rate"] * 100,
+                circuit_opened,
+                error_rate,
+                circuit_breaker.metrics.rejection_count,
             )
 
         # Assertions
@@ -444,7 +449,7 @@ class TestCircuitBreakers:
 
         for phase in phases:
             logger.info(
-                f"Running recovery phase: {phase['name']}"
+                "Running recovery phase: %s", phase["name"]
             )  # TODO: Convert f-string to logging format
 
             # Set service health
@@ -464,7 +469,7 @@ class TestCircuitBreakers:
             # Track circuit breaker state changes during phase
             initial_state = circuit_breaker.state
             initial_metrics = {
-                "_total_requests": circuit_breaker.metrics._total_requests,
+                "_total_requests": circuit_breaker.metrics.total_requests,
                 "rejections": circuit_breaker.metrics.rejection_count,
                 "opened_count": circuit_breaker.metrics.circuit_opened_count,
                 "closed_count": circuit_breaker.metrics.circuit_closed_count,
@@ -478,7 +483,7 @@ class TestCircuitBreakers:
 
             final_state = circuit_breaker.state
             final_metrics = {
-                "_total_requests": circuit_breaker.metrics._total_requests,
+                "_total_requests": circuit_breaker.metrics.total_requests,
                 "rejections": circuit_breaker.metrics.rejection_count,
                 "opened_count": circuit_breaker.metrics.circuit_opened_count,
                 "closed_count": circuit_breaker.metrics.circuit_closed_count,
@@ -497,7 +502,7 @@ class TestCircuitBreakers:
             }
 
             error_rate = (
-                result.metrics.failed_requests / max(result.metrics._total_requests, 1)
+                result.metrics.failed_requests / max(result.metrics.total_requests, 1)
             ) * 100
 
             phase_results.append(
@@ -513,9 +518,12 @@ class TestCircuitBreakers:
             )
 
             logger.info(
-                f"Phase {phase['name']}: {initial_state.value} -> {final_state.value}, "
-                f"Error rate: {error_rate:.2f}%, "
-                f"Rejections: {phase_metrics['rejections']}"
+                "Phase %s: %s -> %s, Error rate: %.2f%%, Rejections: %d",
+                phase["name"],
+                initial_state.value,
+                final_state.value,
+                error_rate,
+                phase_metrics["rejections"],
             )
 
         # Analyze recovery behavior
@@ -553,10 +561,10 @@ class TestCircuitBreakers:
 
         logger.info("Circuit breaker recovery completed successfully")
         logger.info(
-            f"Total state changes: {_total_state_changes}"
+            "Total state changes: %s", _total_state_changes
         )  # TODO: Convert f-string to logging format
         logger.info(
-            f"Final circuit breaker metrics: {circuit_breaker.metrics}"
+            "Final circuit breaker metrics: %s", circuit_breaker.metrics
         )  # TODO: Convert f-string to logging format
 
 
@@ -612,7 +620,7 @@ class TestRateLimiters:
 
         for pattern in load_patterns:
             logger.info(
-                f"Testing rate limiter with load pattern: {pattern['name']}"
+                "Testing rate limiter with load pattern: %s", pattern["name"]
             )  # TODO: Convert f-string to logging format
 
             # Reset rate limiter for clean test
@@ -638,7 +646,7 @@ class TestRateLimiters:
             )
 
             # Analyze rate limiting effectiveness
-            _total_attempted = rate_limiter.metrics._total_requests
+            _total_attempted = rate_limiter.metrics.total_requests
             allowed = rate_limiter.metrics.allowed_requests
             rejected = rate_limiter.metrics.rejected_requests
 
@@ -660,9 +668,11 @@ class TestRateLimiters:
             )
 
             logger.info(
-                f"Pattern {pattern['name']}: {rejection_rate:.2f}% rejected, "
-                f"Actual rate: {actual_rate:.1f} req/min, "
-                f"Peak rate: {rate_limiter.metrics.peak_rate:.1f} req/min"
+                "Pattern %s: %.2f%% rejected, Actual rate: %.1f req/min, Peak rate: %.1f req/min",
+                pattern["name"],
+                rejection_rate,
+                actual_rate,
+                rate_limiter.metrics.peak_rate,
             )
 
         # Assertions for rate limiting effectiveness
@@ -769,7 +779,7 @@ class TestRateLimiters:
         )
 
         # Analyze protection effectiveness
-        _total_attempted = rate_limiter.metrics._total_requests
+        _total_attempted = rate_limiter.metrics.total_requests
         rejected = rate_limiter.metrics.rejected_requests
 
         rejection_rate = (rejected / max(_total_attempted, 1)) * 100
@@ -797,14 +807,12 @@ class TestRateLimiters:
             )
 
         logger.info("Thundering herd protection successful:")
+        logger.info("  - %.2f%% requests rejected", rejection_rate)
         logger.info(
-            f"  - {rejection_rate:.2f}% requests rejected"
-        )  # TODO: Convert f-string to logging format
-        logger.info(
-            f"  - Max concurrent executions: {expensive_service.max_concurrent}"
+            "  - Max concurrent executions: %s", expensive_service.max_concurrent
         )
         logger.info(
-            f"  - Total expensive operations: {expensive_service._total_executions}"
+            "  - Total expensive operations: %s", expensive_service._total_executions
         )
         logger.info("  - Service remained responsive")
 

@@ -8,6 +8,7 @@ import inspect
 
 import pytest
 
+from src.mcp_tools import tool_registry
 from src.mcp_tools.models.requests import DocumentRequest, SearchRequest
 
 
@@ -109,8 +110,6 @@ class TestContextTyping:
 
     def test_tool_registry_imports_all_tools(self):
         """Verify tool registry can import all tool modules."""
-        from src.mcp_tools import tool_registry
-
         # Check that tool_registry has register_all_tools function
         assert hasattr(tool_registry, "register_all_tools"), (
             "tool_registry missing register_all_tools function"

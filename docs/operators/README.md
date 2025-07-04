@@ -13,7 +13,7 @@ configure, and maintain the AI Documentation Vector DB system in production envi
 ### Essential Guides
 
 - **[Configuration](./configuration.md)** - System configuration options and environment setup
-- **[Deployment](./deployment.md)** - Production deployment strategies and procedures
+- **[Operations](./operations.md)** - Production deployment strategies and procedures
 - **[Operations](./operations.md)** - Day-to-day operations and maintenance tasks
 
 ### Advanced Topics

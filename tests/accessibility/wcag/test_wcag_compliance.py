@@ -154,7 +154,8 @@ class TestWCAGCompliance:
             f"Keyboard navigation errors: {keyboard_errors}"
         )
 
-    def test_wcag_guideline_2_1_2_no_keyboard_trap(self, _keyboard_navigation_tester):
+    @pytest.mark.usefixtures("_keyboard_navigation_tester")
+    def test_wcag_guideline_2_1_2_no_keyboard_trap(self):
         """Test WCAG 2.1.2 - No Keyboard Trap (Level A).
 
         Keyboard focus is not trapped in any part of the content.
@@ -197,7 +198,8 @@ class TestWCAGCompliance:
         assert result["compliant"], f"Skip links validation failed: {result['issues']}"
         assert result["skip_links_found"] > 0, "Should have at least one skip link"
 
-    def test_wcag_guideline_2_4_2_page_titled(self, _wcag_validator):
+    @pytest.mark.usefixtures("_wcag_validator")
+    def test_wcag_guideline_2_4_2_page_titled(self):
         """Test WCAG 2.4.2 - Page Titled (Level A).
 
         Web pages have titles that describe topic or purpose.
@@ -385,7 +387,7 @@ class TestWCAGCompliance:
         programmatically determined.
         """
         html_with_aria = """
-        <button aria-label="Close dialog">×</button>
+        <button aria-label="Close dialog">x</button>
         <div role="button" aria-label="Custom button" tabindex="0">Click me</div>
         <input type="checkbox" id="agree" aria-describedby="agree-desc">
         <label for="agree">I agree</label>
@@ -393,7 +395,7 @@ class TestWCAGCompliance:
         """
 
         html_without_aria = """
-        <div onclick="closeDialog()">×</div>
+        <div onclick="closeDialog()">x</div>
         <div onclick="doSomething()">Click me</div>
         <input type="checkbox">
         """
@@ -539,7 +541,7 @@ class TestWCAGCompliance:
     def test_wcag_aria_attribute_validation(self, wcag_validator):
         """Test validation of ARIA attributes for correctness."""
         valid_aria_html = """
-        <button aria-label="Close">×</button>
+        <button aria-label="Close">x</button>
         <div role="alert" aria-live="polite">Status message</div>
         <input type="text" aria-describedby="help-text" aria-required="true">
         <div id="help-text">Enter your full name</div>
@@ -581,7 +583,8 @@ class TestWCAGAutomatedValidation:
         return page
 
     @pytest.mark.asyncio
-    async def test_axe_core_integration(self, _mock_axe_core, _mock_browser_page):
+    @pytest.mark.usefixtures("_mock_axe_core", "_mock_browser_page")
+    async def test_axe_core_integration(self):
         """Test integration with axe-core accessibility engine."""
         # Mock axe-core execution
         with patch("axe_core_python.run") as mock_axe_run:

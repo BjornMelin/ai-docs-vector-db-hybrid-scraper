@@ -302,7 +302,7 @@ class TestMCPProtocolE2E:
                 collection="documentation",
                 limit=10,
             )
-        except Exception as e:
+        except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
             # JSON-RPC 2.0 error response format
             error_response = {
                 "jsonrpc": "2.0",

@@ -56,53 +56,84 @@ class QdrantDocuments:
             # Process in batches
             for i in range(0, len(points), batch_size):
                 batch = points[i : i + batch_size]
+                batch_number = i // batch_size + 1
 
-                # Convert to PointStruct
-                point_structs = []
-                for point in batch:
-                    vectors = point.get("vector", {})
-                    if isinstance(vectors, list):
-                        vectors = {"dense": vectors}
-
-                    point_struct = models.PointStruct(
-                        id=point["id"],
-                        vector=vectors,
-                        payload=point.get("payload", {}),
-                    )
-                    point_structs.append(point_struct)
-
-                # Upsert batch
-                await self.client.upsert(
-                    collection_name=collection_name,
-                    points=point_structs,
-                    wait=True,
-                )
-
-                logger.info(
-                    f"Upserted batch {i // batch_size + 1} "
-                    f"({len(point_structs)} points)"
+                await self._upsert_single_batch(
+                    collection_name, batch, batch_number, batch_size
                 )
 
         except Exception as e:
-            logger.error(
-                f"Failed to upsert {len(points)} points to {collection_name}: {e}",
-                exc_info=True,
-            )
-
-            error_msg = str(e).lower()
-            if "collection not found" in error_msg:
-                msg = f"Collection '{collection_name}' not found. Create it before upserting."
-                raise QdrantServiceError(msg) from e
-            if "wrong vector size" in error_msg:
-                msg = "Vector dimension mismatch. Check that vectors match collection configuration."
-                raise QdrantServiceError(msg) from e
-            if "payload too large" in error_msg:
-                msg = f"Payload too large. Try reducing batch size (current: {batch_size})."
-                raise QdrantServiceError(msg) from e
-            msg = f"Failed to upsert points: {e}"
-            raise QdrantServiceError(msg) from e
+            logger.exception("Operation failed")
+            self._handle_upsert_error(e, collection_name, batch_size)
         else:
             return True
+
+    async def _upsert_single_batch(
+        self,
+        collection_name: str,
+        batch: list[dict[str, Any]],
+        batch_number: int,
+        batch_size: int,  # noqa: ARG002
+    ) -> None:
+        """Upsert a single batch of points."""
+        try:
+            point_structs = self._convert_to_point_structs(batch)
+        except Exception as e:
+            msg = f"Failed to convert batch {batch_number} to point structs: {e}"
+            raise QdrantServiceError(msg) from e
+
+        await self.client.upsert(
+            collection_name=collection_name,
+            points=point_structs,
+            wait=True,
+        )
+
+        logger.info(
+            "Upserted batch %d (%d points)",
+            batch_number,
+            len(point_structs),
+        )
+
+    def _convert_to_point_structs(
+        self, batch: list[dict[str, Any]]
+    ) -> list[models.PointStruct]:
+        """Convert batch points to PointStruct objects."""
+        point_structs = []
+        for point in batch:
+            vectors = point.get("vector", {})
+            if isinstance(vectors, list):
+                vectors = {"dense": vectors}
+
+            point_struct = models.PointStruct(
+                id=point["id"],
+                vector=vectors,
+                payload=point.get("payload", {}),
+            )
+            point_structs.append(point_struct)
+
+        return point_structs
+
+    def _handle_upsert_error(
+        self, e: Exception, collection_name: str, batch_size: int
+    ) -> None:
+        """Handle and re-raise upsert errors with appropriate messages."""
+        error_msg = str(e).lower()
+        if "collection not found" in error_msg:
+            msg = (
+                f"Collection '{collection_name}' not found. Create it before upserting."
+            )
+            raise QdrantServiceError(msg) from e
+        if "wrong vector size" in error_msg:
+            msg = (
+                "Vector dimension mismatch. Check that vectors match "
+                "collection configuration."
+            )
+            raise QdrantServiceError(msg) from e
+        if "payload too large" in error_msg:
+            msg = f"Payload too large. Try reducing batch size (current: {batch_size})."
+            raise QdrantServiceError(msg) from e
+        msg = f"Failed to upsert points: {e}"
+        raise QdrantServiceError(msg) from e
 
     async def get_points(
         self,
@@ -151,10 +182,7 @@ class QdrantDocuments:
                 formatted_results.append(result)
 
         except Exception as e:
-            logger.error(
-                f"Failed to retrieve points from {collection_name}: {e}",
-                exc_info=True,
-            )
+            logger.exception("Failed to retrieve points from %s", collection_name)
             msg = f"Failed to retrieve points: {e}"
             raise QdrantServiceError(msg) from e
         else:
@@ -192,9 +220,7 @@ class QdrantDocuments:
                     points_selector=models.PointIdsList(points=point_ids),
                     wait=True,
                 )
-                logger.info(
-                    f"Deleted {len(point_ids)} points by ID"
-                )  # TODO: Convert f-string to logging format
+                logger.info("Deleted %d points by ID", len(point_ids))
             else:
                 # Delete by filter
                 filter_obj = build_filter(filter_condition)
@@ -205,15 +231,12 @@ class QdrantDocuments:
                 )
                 logger.info("Deleted points by filter condition")
 
-            return True
-
         except Exception as e:
-            logger.error(
-                f"Failed to delete points from {collection_name}: {e}",
-                exc_info=True,
-            )
+            logger.exception("Failed to delete points from %s", collection_name)
             msg = f"Failed to delete points: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return True
 
     async def update_point_payload(
         self,
@@ -246,9 +269,7 @@ class QdrantDocuments:
                     payload=payload,
                     wait=True,
                 )
-                logger.info(
-                    f"Replaced payload for point {point_id}"
-                )  # TODO: Convert f-string to logging format
+                logger.info("Replaced payload for point %s", point_id)
             else:
                 # Merge with existing payload
                 await self.client.set_payload(
@@ -257,19 +278,14 @@ class QdrantDocuments:
                     payload=payload,
                     wait=True,
                 )
-                logger.info(
-                    f"Updated payload for point {point_id}"
-                )  # TODO: Convert f-string to logging format
-
-            return True
+                logger.info("Updated payload for point %s", point_id)
 
         except Exception as e:
-            logger.error(
-                f"Failed to update payload for point {point_id}: {e}",
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
             msg = f"Failed to update point payload: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return True
 
     async def count_points(
         self,
@@ -299,14 +315,15 @@ class QdrantDocuments:
                 count_filter=filter_obj,
                 exact=exact,
             )
-            return result.count
 
         except Exception as e:
-            logger.error(
-                f"Failed to count points in {collection_name}: {e}", exc_info=True
+            logger.exception(
+                "Failed to count points in collection: %s", collection_name
             )
             msg = f"Failed to count points: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return result.count
 
     async def scroll_points(
         self,
@@ -365,10 +382,7 @@ class QdrantDocuments:
             }
 
         except Exception as e:
-            logger.error(
-                f"Failed to scroll points in {collection_name}: {e}",
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
             msg = f"Failed to scroll points: {e}"
             raise QdrantServiceError(msg) from e
 
@@ -395,15 +409,11 @@ class QdrantDocuments:
                 wait=True,
             )
 
-            logger.info(
-                f"Cleared all points from collection: {collection_name}"
-            )  # TODO: Convert f-string to logging format
-            return True
+            logger.info("Cleared all points from collection: %s", collection_name)
 
         except Exception as e:
-            logger.error(
-                f"Failed to clear collection {collection_name}: {e}",
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
             msg = f"Failed to clear collection: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return True

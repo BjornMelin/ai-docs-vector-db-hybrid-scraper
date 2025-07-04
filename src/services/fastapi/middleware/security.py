@@ -5,7 +5,6 @@ against common web vulnerabilities in production deployments, including
 Redis-backed rate limiting for distributed deployment scenarios.
 """
 
-import asyncio
 import logging
 import time
 from collections import defaultdict
@@ -61,8 +60,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         # Security headers to inject
         self._security_headers = self._build_security_headers()
 
-        # Initialize Redis connection
-        asyncio.create_task(self._initialize_redis())
+        # Note: Redis initialization is done lazily or explicitly via _initialize_redis()
 
     async def _initialize_redis(self) -> None:
         """Initialize Redis connection for distributed rate limiting.
@@ -93,7 +91,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
                 "Redis connection failed, falling back to in-memory rate limiting",
                 extra={
@@ -204,6 +202,10 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             True if request is allowed, False if rate limited
 
         """
+        # Initialize Redis lazily if not already done
+        if self.redis_client is None and not self._redis_healthy:
+            await self._initialize_redis()
+
         # Use Redis rate limiting if available and healthy
         if self._redis_healthy and self.redis_client:
             return await self._check_rate_limit_redis(client_ip)
@@ -227,30 +229,20 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             # Create rate limiting key
             rate_limit_key = f"rate_limit:{client_ip}"
 
-            # Use Redis pipeline for atomic operations
+            # Check current count first
+            current_count = await self.redis_client.get(rate_limit_key)
+
+            if current_count:
+                # Increment counter atomically and check limit
+                new_count = await self.redis_client.incr(rate_limit_key)
+                return new_count <= self.config.default_rate_limit
+            # First request in window - set counter and expiry atomically
             async with self.redis_client.pipeline(transaction=True) as pipe:
-                # Get current request count
-                current_count = await pipe.get(rate_limit_key).execute()
+                pipe.incr(rate_limit_key)
+                pipe.expire(rate_limit_key, self.config.rate_limit_window)
+                await pipe.execute()
 
-                if current_count and current_count[0]:
-                    count = int(current_count[0])
-
-                    # Check if limit exceeded
-                    if count >= self.config.rate_limit_requests:
-                        return False
-
-                    # Increment counter
-                    await pipe.incr(rate_limit_key).execute()
-                else:
-                    # First request in window - set counter and expiry
-                    await pipe.multi()
-                    await pipe.incr(rate_limit_key)
-                    await pipe.expire(rate_limit_key, self.config.rate_limit_window)
-                    await pipe.execute()
-
-                return True
-
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
                 "Redis rate limiting failed, falling back to in-memory",
                 extra={
@@ -262,6 +254,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             # Mark Redis as unhealthy and fall back to memory
             self._redis_healthy = False
             return self._check_rate_limit_memory(client_ip)
+
+        else:
+            return True
 
     def _check_rate_limit_memory(self, client_ip: str) -> bool:
         """In-memory sliding window rate limiting implementation.
@@ -286,7 +281,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             client_data["window_start"] = current_time
 
         # Check if client has exceeded rate limit
-        if client_data["requests"] >= self.config.rate_limit_requests:
+        if client_data["requests"] >= self.config.default_rate_limit:
             return False
 
         # Increment request counter
@@ -307,9 +302,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             if not self._redis_healthy:
                 logger.info("Redis connection restored")
                 self._redis_healthy = True
-            return True
 
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             if self._redis_healthy:
                 logger.warning(
                     "Redis connection lost",
@@ -321,16 +315,17 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             self._redis_healthy = False
             return False
 
+        else:
+            return True
+
     async def cleanup(self) -> None:
         """Cleanup Redis connection and resources."""
         if self.redis_client:
             try:
                 await self.redis_client.aclose()
                 logger.info("Redis connection closed")
-            except Exception as e:
-                logger.warning(
-                    f"Error closing Redis connection: {e}"
-                )  # TODO: Convert f-string to logging format
+            except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
+                logger.warning("Error closing Redis connection: %s", e)
             finally:
                 self.redis_client = None
                 self._redis_healthy = False
@@ -345,19 +340,13 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             Client IP address
 
         """
-        # Check X-Forwarded-For header first
-        forwarded_for = request.headers.get("x-forwarded-for")
-        if forwarded_for:
-            return forwarded_for.split(",")[0].strip()
-
-        # Check X-Real-IP header
-        real_ip = request.headers.get("x-real-ip")
-        if real_ip:
-            return real_ip
-
-        # Fall back to direct client IP
+        # Prioritize direct client IP for security - avoids X-Forwarded-For spoofing
         if request.client:
             return request.client.host
+
+        # Only trust proxy headers from known/configured proxy IPs in production
+        # TODO: Implement trusted_proxies configuration for load balancer scenarios
+        # For now, we use direct IP to prevent spoofing attacks
 
         return "unknown"
 
@@ -378,9 +367,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             del self._rate_limit_storage[ip]
 
         if expired_ips:
-            logger.debug(
-                f"Cleaned {len(expired_ips)} expired rate limit entries"
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Cleaned %d expired rate limit entries", len(expired_ips))
 
 
 class CSRFProtectionMiddleware(BaseHTTPMiddleware):

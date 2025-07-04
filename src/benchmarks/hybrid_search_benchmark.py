@@ -4,6 +4,7 @@ This module provides the primary benchmarking interface for comprehensive
 performance testing of the hybrid search implementation.
 """
 
+import asyncio
 import json
 import logging
 import time
@@ -14,7 +15,11 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from src.config import Config
-from src.models.vector_search import FusionConfig, HybridSearchRequest, SearchParams
+from src.models.vector_search import (
+    FusionConfig,
+    HybridSearchRequest,
+    SecureSearchParamsModel,
+)
 from src.services.vector_db.hybrid_search import HybridSearchService
 
 from .benchmark_reporter import BenchmarkReporter
@@ -198,7 +203,7 @@ class HybridSearchBenchmark:
                 query=query_text,
                 collection_name="benchmark_collection",
                 limit=10,
-                search_params=SearchParams(),
+                search_params=SecureSearchParamsModel(),
                 fusion_config=FusionConfig(),
                 enable_query_classification=True,
                 enable_model_selection=True,
@@ -295,8 +300,8 @@ class HybridSearchBenchmark:
             )  # TODO: Convert f-string to logging format
 
         except Exception as e:
-            logger.error(
-                f"Benchmark failed: {e}", exc_info=True
+            logger.exception(
+                "Benchmark failed: "
             )  # TODO: Convert f-string to logging format
             results.duration_seconds = time.time() - start_time
             results.failed_targets.append(f"Benchmark execution failed: {e!s}")
@@ -388,7 +393,7 @@ class HybridSearchBenchmark:
                     correct_predictions += 1
                 total_predictions += 1
 
-            except Exception as e:
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                 logger.warning(
                     f"Classification failed for query '{query_text}': {e}"
                 )  # TODO: Convert f-string to logging format
@@ -431,7 +436,7 @@ class HybridSearchBenchmark:
                     appropriate_selections += 1
                 total_selections += 1
 
-            except Exception as e:
+            except (ValueError, TypeError, UnicodeDecodeError) as e:
                 logger.warning(
                     f"Model selection failed for query '{query_text}': {e}"
                 )  # TODO: Convert f-string to logging format
@@ -461,7 +466,7 @@ class HybridSearchBenchmark:
                     effective_fusions += 1
                 total_fusions += 1
 
-            except Exception as e:
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                 logger.warning(
                     f"Fusion tuning failed for query '{query.query}': {e}"
                 )  # TODO: Convert f-string to logging format

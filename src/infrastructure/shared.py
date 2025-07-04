@@ -134,7 +134,7 @@ class CircuitBreaker:
                 self._half_open_attempts = 0
                 self._state = ClientState.HEALTHY
 
-        except Exception:
+        except (ConnectionError, OSError, TimeoutError):
             async with self._lock:
                 self._failure_count += 1
                 self._last_failure_time = time.time()
@@ -142,7 +142,7 @@ class CircuitBreaker:
                 if self._failure_count >= self.failure_threshold:
                     self._state = ClientState.FAILED
                     logger.exception(
-                        f"Circuit breaker opened after {self._failure_count} failures"
+                        "Circuit breaker opened after %s failures", self._failure_count
                     )
 
             raise

@@ -16,7 +16,7 @@ import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional, 
+from typing import Any, ClassVar
 
 from fastapi import HTTPException
 
@@ -61,7 +61,7 @@ class AISecurityValidator:
     """
 
     # Prompt injection patterns - comprehensive list covering various attack vectors
-    PROMPT_INJECTION_PATTERNS = [
+    PROMPT_INJECTION_PATTERNS: ClassVar[list[str]] = [
         # Direct instruction override attempts
         r"ignore\s+(?:all\s+)?previous\s+instructions?",
         r"forget\s+(?:all\s+)?(?:previous\s+)?(?:instructions?|context|everything)",
@@ -134,7 +134,7 @@ class AISecurityValidator:
     ]
 
     # Dangerous content patterns
-    DANGEROUS_CONTENT_PATTERNS = [
+    DANGEROUS_CONTENT_PATTERNS: ClassVar[list[str]] = [
         # Script injection
         r"<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>",
         r"javascript\s*:",
@@ -173,7 +173,7 @@ class AISecurityValidator:
     ]
 
     # Suspicious metadata keys/values
-    SUSPICIOUS_METADATA_PATTERNS = [
+    SUSPICIOUS_METADATA_PATTERNS: ClassVar[list[str]] = [
         r"__proto__",
         r"constructor",
         r"prototype",
@@ -220,10 +220,8 @@ class AISecurityValidator:
 
         # Length validation
         if len(query) > self.max_query_length:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Search query too long (max {self.max_query_length} characters)",
-            )
+            detail_msg = f"Query too long (max {self.max_query_length} chars)"
+            raise HTTPException(status_code=400, detail=detail_msg)
 
         # Detect threats
         threats = self._detect_threats(query)
@@ -233,8 +231,9 @@ class AISecurityValidator:
         high_threats = [t for t in threats if t.level == ThreatLevel.HIGH]
 
         if critical_threats:
+            threat_types = [t.threat_type for t in critical_threats]
             logger.critical(
-                f"Critical security threat in search query: {[t.threat_type for t in critical_threats]}",
+                f"Critical security threat in search query: {threat_types}",
                 extra={
                     "query": query[:100],
                     "threats": [t.__dict__ for t in critical_threats],
@@ -245,8 +244,9 @@ class AISecurityValidator:
             )
 
         if high_threats:
+            threat_types = [t.threat_type for t in high_threats]
             logger.warning(
-                f"High-risk patterns detected in search query: {[t.threat_type for t in high_threats]}",
+                f"High-risk patterns detected in search query: {threat_types}",
                 extra={
                     "query": query[:100],
                     "threats": [t.__dict__ for t in high_threats],
@@ -274,30 +274,34 @@ class AISecurityValidator:
         text_lower = text.lower()
 
         # Check for prompt injection patterns
-        for pattern in self.PROMPT_INJECTION_PATTERNS:
-            if re.search(pattern, text_lower, re.IGNORECASE | re.MULTILINE):
-                threats.append(
-                    SecurityThreat(
-                        threat_type="prompt_injection",
-                        level=ThreatLevel.CRITICAL,
-                        description="Potential prompt injection attempt detected",
-                        pattern_matched=pattern,
-                        suggested_action="Block request and log incident",
-                    )
+        threats.extend(
+            [
+                SecurityThreat(
+                    threat_type="prompt_injection",
+                    level=ThreatLevel.CRITICAL,
+                    description="Potential prompt injection attempt detected",
+                    pattern_matched=pattern,
+                    suggested_action="Block request and log incident",
                 )
+                for pattern in self.PROMPT_INJECTION_PATTERNS
+                if re.search(pattern, text_lower, re.IGNORECASE | re.MULTILINE)
+            ]
+        )
 
         # Check for dangerous content patterns
-        for pattern in self.DANGEROUS_CONTENT_PATTERNS:
-            if re.search(pattern, text, re.IGNORECASE | re.MULTILINE):
-                threats.append(
-                    SecurityThreat(
-                        threat_type="content_injection",
-                        level=ThreatLevel.HIGH,
-                        description="Potentially dangerous content pattern detected",
-                        pattern_matched=pattern,
-                        suggested_action="Sanitize content or block request",
-                    )
+        threats.extend(
+            [
+                SecurityThreat(
+                    threat_type="content_injection",
+                    level=ThreatLevel.HIGH,
+                    description="Potentially dangerous content pattern detected",
+                    pattern_matched=pattern,
+                    suggested_action="Sanitize content or block request",
                 )
+                for pattern in self.DANGEROUS_CONTENT_PATTERNS
+                if re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+            ]
+        )
 
         # Check for excessive repetition (potential token flooding)
         if self._detect_repetition_attack(text):
@@ -305,7 +309,7 @@ class AISecurityValidator:
                 SecurityThreat(
                     threat_type="token_flooding",
                     level=ThreatLevel.MEDIUM,
-                    description="Excessive repetition detected - potential token flooding",
+                    description="Excessive repetition detected - token flooding risk",
                     pattern_matched="repetitive_content",
                     suggested_action="Truncate or reject content",
                 )
@@ -391,7 +395,7 @@ class AISecurityValidator:
                 SecurityThreat(
                     threat_type="oversized_content",
                     level=ThreatLevel.MEDIUM,
-                    description=f"Document exceeds maximum size limit ({self.max_document_size} bytes)",
+                    description=f"Document too large ({self.max_document_size} bytes)",
                     pattern_matched="size_limit",
                     suggested_action="Reject or truncate document",
                 )
@@ -412,9 +416,9 @@ class AISecurityValidator:
 
         if not is_valid:
             logger.warning(
-                f"Document content validation failed: {len(critical_threats)} critical threats",
+                f"Document validation failed: {len(critical_threats)} critical threats",
                 extra={
-                    "filename": filename,
+                    "document_name": filename,
                     "threats": [t.__dict__ for t in critical_threats],
                 },
             )
@@ -455,17 +459,19 @@ class AISecurityValidator:
             ".js",
             ".jar",
         ]
-        for ext in dangerous_extensions:
-            if filename.lower().endswith(ext):
-                threats.append(
-                    SecurityThreat(
-                        threat_type="dangerous_extension",
-                        level=ThreatLevel.HIGH,
-                        description=f"Potentially dangerous file extension: {ext}",
-                        pattern_matched=ext,
-                        suggested_action="Block file upload",
-                    )
+        threats.extend(
+            [
+                SecurityThreat(
+                    threat_type="dangerous_extension",
+                    level=ThreatLevel.HIGH,
+                    description=f"Potentially dangerous file extension: {ext}",
+                    pattern_matched=ext,
+                    suggested_action="Block file upload",
                 )
+                for ext in dangerous_extensions
+                if filename.lower().endswith(ext)
+            ]
+        )
 
         return threats
 
@@ -535,23 +541,21 @@ class AISecurityValidator:
         """
         if isinstance(value, str):
             # Limit string length and remove dangerous patterns
-            clean_value = re.sub(r'[<>"\']', "", str(value))[:500]
-            return clean_value
-        elif isinstance(value, int | float | bool):
+            return re.sub(r'[<>"\']', "", str(value))[:500]
+        if isinstance(value, int | float | bool):
             return value
-        elif isinstance(value, list | tuple):
+        if isinstance(value, list | tuple):
             # Recursively sanitize list items (limit to 10 items)
             return [self._sanitize_metadata_value(item) for item in value[:10]]
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             # Recursively sanitize nested dictionaries (limit depth)
             return {
                 k: self._sanitize_metadata_value(v)
                 for k, v in value.items()
                 if isinstance(k, str) and len(k) < 50
             }
-        else:
-            # Convert other types to string and sanitize
-            return re.sub(r'[<>"\']', "", str(value))[:500]
+        # Convert other types to string and sanitize
+        return re.sub(r'[<>"\']', "", str(value))[:500]
 
     def validate_embedding_query(self, query: str, context: str | None = None) -> str:
         """Validate query for embedding generation.
@@ -567,7 +571,7 @@ class AISecurityValidator:
             HTTPException: If query contains security threats
         """
         # Combine query and context for comprehensive validation
-        full_text = f"{query} {context or ''}"
+        # full_text = f"{query} {context or ''}"
 
         # Validate using standard query validation
         validated_query = self.validate_search_query(query)
@@ -580,8 +584,9 @@ class AISecurityValidator:
             ]
 
             if critical_context_threats:
+                threat_types = [t.threat_type for t in critical_context_threats]
                 logger.critical(
-                    f"Critical security threat in embedding context: {[t.threat_type for t in critical_context_threats]}"
+                    f"Critical security threat in embedding context: {threat_types}"
                 )
                 raise HTTPException(
                     status_code=400, detail="Context contains prohibited content"

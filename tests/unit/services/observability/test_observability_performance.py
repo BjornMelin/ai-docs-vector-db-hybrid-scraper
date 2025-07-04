@@ -185,12 +185,12 @@ class TestPerformanceMonitor:
         """Test operation monitoring with exceptions."""
         monitor = PerformanceMonitor()
 
+        error_msg = "Test error"
         with (
-            pytest.raises(ValueError),
             monitor.monitor_operation("failing_operation"),
+            pytest.raises(ValueError, match="Test error"),
         ):
-            msg = "Test error"
-            raise ValueError(msg)
+            raise ValueError(error_msg)
 
     def test_monitor_operation_without_resource_tracking(self):
         """Test operation monitoring without resource tracking."""

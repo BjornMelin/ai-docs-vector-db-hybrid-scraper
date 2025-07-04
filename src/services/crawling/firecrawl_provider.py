@@ -17,6 +17,12 @@ from .base import CrawlProvider
 logger = logging.getLogger(__name__)
 
 
+def _raise_no_crawl_id_returned() -> None:
+    """Raise CrawlServiceError for missing crawl ID."""
+    msg = "No crawl ID returned"
+    raise CrawlServiceError(msg)
+
+
 class FirecrawlProvider(BaseService, CrawlProvider):
     """Firecrawl provider for web crawling."""
 
@@ -98,7 +104,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
             }
 
         except Exception as e:
-            logger.error("Failed to scrape {url}", exc_info=True)
+            logger.exception("Failed to scrape {url}")
 
             error_msg = str(e).lower()
             if "rate limit" in error_msg:
@@ -164,8 +170,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
             # Get crawl ID
             crawl_id = crawl_result.get("id")
             if not crawl_id:
-                msg = "No crawl ID returned"
-                raise CrawlServiceError(msg)
+                _raise_no_crawl_id_returned()
 
             logger.info(
                 f"Started crawl job {crawl_id} for {url}"
@@ -207,13 +212,6 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                 await asyncio.sleep(5)
 
             # Timeout
-            return {
-                "success": False,
-                "error": "Crawl timed out",
-                "pages": [],
-                "total": 0,
-                "crawl_id": crawl_id,
-            }
 
         except Exception as e:
             logger.exception("Failed to crawl {url}")
@@ -222,6 +220,15 @@ class FirecrawlProvider(BaseService, CrawlProvider):
                 "error": str(e),
                 "pages": [],
                 "total": 0,
+            }
+
+        else:
+            return {
+                "success": False,
+                "error": "Crawl timed out",
+                "pages": [],
+                "total": 0,
+                "crawl_id": crawl_id,
             }
 
     async def cancel_crawl(self, crawl_id: str) -> bool:
@@ -241,7 +248,7 @@ class FirecrawlProvider(BaseService, CrawlProvider):
         try:
             result = self._client.cancel_crawl(crawl_id)
             return result.get("success", False)
-        except Exception:
+        except (ConnectionError, OSError, PermissionError):
             logger.exception("Failed to cancel crawl {crawl_id}")
             return False
 

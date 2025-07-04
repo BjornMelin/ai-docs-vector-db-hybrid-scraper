@@ -8,8 +8,8 @@ import sys
 import click
 from arq import run_worker
 
-from config.loader import load_config
-from services.task_queue.worker import WorkerSettings
+from src.config.settings import get_config
+from src.services.task_queue.worker import WorkerSettings
 
 
 # Configure logging
@@ -32,7 +32,7 @@ def main(workers: int, max_jobs: int, queue: str):
     logger.info("Starting ARQ task queue worker...")
 
     # Load config
-    config = load_config()
+    config = get_config()
 
     # Update worker settings
     WorkerSettings.max_jobs = max_jobs
@@ -61,10 +61,11 @@ def main(workers: int, max_jobs: int, queue: str):
 
 if __name__ == "__main__":
     try:
-        main()
+        # Use default values for CLI worker
+        main(workers=4, max_jobs=100, queue="default")
     except KeyboardInterrupt:
         logger.info("Worker stopped by user")
         sys.exit(0)
-    except Exception:
+    except (AttributeError, OSError, PermissionError):
         logger.exception("Worker failed")
         sys.exit(1)

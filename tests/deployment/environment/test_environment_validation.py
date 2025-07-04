@@ -6,6 +6,7 @@ across development, staging, and production environments.
 
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -521,13 +522,7 @@ class EnvironmentVariableValidator:
 
     def check_required_variables(self, required_vars: list[str]) -> list[str]:
         """Check which required environment variables are missing."""
-        missing_vars = []
-
-        for var in required_vars:
-            if not os.getenv(var):
-                missing_vars.append(var)
-
-        return missing_vars
+        return [var for var in required_vars if not os.getenv(var)]
 
     def validate_variable_values(
         self, var_definitions: dict[str, dict[str, Any]]
@@ -554,13 +549,12 @@ class EnvironmentVariableValidator:
                     )
 
                 # Check pattern
-                if "pattern" in requirements:
-                    import re
-
-                    if not re.match(requirements["pattern"], value):
-                        errors.append(
-                            f"Value does not match required pattern: {requirements['pattern']}"
-                        )
+                if "pattern" in requirements and not re.match(
+                    requirements["pattern"], value
+                ):
+                    errors.append(
+                        f"Value does not match required pattern: {requirements['pattern']}"
+                    )
 
                 # Check allowed values
                 if (

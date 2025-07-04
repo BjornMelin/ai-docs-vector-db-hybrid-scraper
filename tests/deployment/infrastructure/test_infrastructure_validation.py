@@ -639,10 +639,7 @@ class TerraformValidator:
         has_resources = "resource" in config
 
         # Extract resources
-        resources = []
-        if has_resources:
-            for resource_type in config["resource"]:
-                resources.append(resource_type)
+        resources = list(config["resource"]) if has_resources else []
 
         return {
             "valid": has_terraform_block and has_resources,

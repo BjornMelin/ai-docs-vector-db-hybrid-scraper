@@ -9,13 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.config import Config
-from src.config.enums import (
-    ABTestVariant,
-    ModelType,
-    OptimizationStrategy,
-    QueryType,
-)
+from src.config import ABTestVariant, Config, ModelType, OptimizationStrategy, QueryType
 from src.models.vector_search import (
     ABTestConfig,
     FusionConfig,
@@ -24,7 +18,7 @@ from src.models.vector_search import (
     ModelSelectionStrategy,
     QueryClassification,
     SearchAccuracy,
-    SearchParams,
+    SecureSearchParamsModel,
 )
 from src.services.errors import QdrantServiceError
 from src.services.query_processing.models import (
@@ -33,7 +27,6 @@ from src.services.query_processing.models import (
 from src.services.query_processing.orchestrator import (
     SearchMode,
     SearchPipeline,
-    SearchRequest as AdvancedSearchRequest,
     SearchResult as AdvancedSearchResult,
 )
 from src.services.vector_db.hybrid_search import HybridSearchService
@@ -80,7 +73,7 @@ class TestAdvancedHybridSearchService:
             query="How to implement async functions in Python?",
             collection_name="test_collection",
             limit=5,
-            search_params=SearchParams(
+            search_params=SecureSearchParamsModel(
                 accuracy_level=SearchAccuracy.BALANCED, hnsw_ef=64
             ),
             fusion_config=FusionConfig(algorithm="rrf"),
@@ -176,7 +169,8 @@ class TestAdvancedHybridSearchService:
                         "payload": {
                             "id": f"result_{i}",
                             "title": f"Search Result {i}",
-                            "content": f"Content for result {i} matching query: {sample_request.query}",
+                            "content": f"Content for result {i} matching query: "
+                            f"{sample_request.query}",
                             "score": 0.9 - i * 0.1,
                             "content_type": "documentation" if i % 2 == 0 else "code",
                             "published_date": "2024-01-01T00:00:00Z",
@@ -260,7 +254,8 @@ class TestAdvancedHybridSearchService:
 
         assert isinstance(response, HybridSearchResponse)
         assert response.fusion_weights is None
-        # Other optimizations (query classification, model selection) may still be applied
+        # Other optimizations (query classification, model selection) may still be
+        # applied
         # so optimization_applied can be True even when adaptive fusion is disabled
 
     async def test_ab_test_assignment(self, service, sample_request):

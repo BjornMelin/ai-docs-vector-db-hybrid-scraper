@@ -5,18 +5,19 @@ rollback capabilities, and comprehensive validation for autonomous system healin
 """
 
 import asyncio
+import contextlib
+import gc
 import logging
+import os
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import psutil
-from pydantic import BaseModel, Field
 
-from src.automation.infrastructure_automation import SelfHealingManager
 from src.services.circuit_breaker.modern import ModernCircuitBreakerManager
 from src.services.monitoring.health import HealthCheckManager
 
@@ -264,30 +265,18 @@ class MemoryLeakRemediationStrategy(RemediationStrategy):
         """Execute memory leak remediation action."""
         start_time = time.time()
 
-        try:
-            if action.action_type == "clear_cache":
-                return await self._execute_cache_clearing(
-                    action, checkpoint, start_time
-                )
-            if action.action_type == "force_garbage_collection":
-                return await self._execute_garbage_collection(
-                    action, checkpoint, start_time
-                )
-            if action.action_type == "restart_service":
-                return await self._execute_service_restart(
-                    action, checkpoint, start_time
-                )
-            raise ValueError(f"Unknown action type: {action.action_type}")
-
-        except Exception as e:
-            return RemediationResult(
-                action_id=action.action_id,
-                status=RemediationStatus.FAILED,
-                success=False,
-                execution_time_seconds=time.time() - start_time,
-                error_message=str(e),
-                rollback_point=checkpoint.checkpoint_id,
+        if action.action_type == "clear_cache":
+            return await self._execute_cache_clearing(action, checkpoint, start_time)
+        if action.action_type == "force_garbage_collection":
+            return await self._execute_garbage_collection(
+                action, checkpoint, start_time
             )
+        if action.action_type == "restart_service":
+            return await self._execute_service_restart(action, checkpoint, start_time)
+
+        # Unknown action type - raise error
+        msg = f"Unknown action type: {action.action_type}"
+        raise ValueError(msg)
 
     async def _execute_cache_clearing(
         self, action: RemediationAction, checkpoint: SystemCheckpoint, start_time: float
@@ -300,7 +289,7 @@ class MemoryLeakRemediationStrategy(RemediationStrategy):
 
         # Simulate cache clearing
         for cache_type in cache_types:
-            logger.info(f"Clearing {percentage}% of {cache_type}")
+            logger.info("Clearing %s%% of %s", percentage, cache_type)
             await asyncio.sleep(0.1)  # Simulate clearing time
             actions_taken.append(f"Cleared {percentage}% of {cache_type}")
 
@@ -317,7 +306,6 @@ class MemoryLeakRemediationStrategy(RemediationStrategy):
         self, action: RemediationAction, checkpoint: SystemCheckpoint, start_time: float
     ) -> RemediationResult:
         """Execute garbage collection remediation."""
-        import gc
 
         aggressive = action.parameters.get("aggressive", False)
 
@@ -350,12 +338,12 @@ class MemoryLeakRemediationStrategy(RemediationStrategy):
 
         for service in services:
             if graceful:
-                logger.info(f"Gracefully restarting {service}")
+                logger.info("Gracefully restarting %s", service)
                 # Simulate graceful restart
                 await asyncio.sleep(2)
                 actions_taken.append(f"Gracefully restarted {service}")
             else:
-                logger.info(f"Force restarting {service}")
+                logger.info("Force restarting %s", service)
                 await asyncio.sleep(1)
                 actions_taken.append(f"Force restarted {service}")
 
@@ -481,28 +469,20 @@ class CPUOverloadRemediationStrategy(RemediationStrategy):
         """Execute CPU overload remediation action."""
         start_time = time.time()
 
-        try:
-            if action.action_type == "throttle_requests":
-                return await self._execute_request_throttling(
-                    action, checkpoint, start_time
-                )
-            if action.action_type == "optimize_database_queries":
-                return await self._execute_query_optimization(
-                    action, checkpoint, start_time
-                )
-            if action.action_type == "scale_cpu_resources":
-                return await self._execute_cpu_scaling(action, checkpoint, start_time)
-            raise ValueError(f"Unknown action type: {action.action_type}")
-
-        except Exception as e:
-            return RemediationResult(
-                action_id=action.action_id,
-                status=RemediationStatus.FAILED,
-                success=False,
-                execution_time_seconds=time.time() - start_time,
-                error_message=str(e),
-                rollback_point=checkpoint.checkpoint_id,
+        if action.action_type == "throttle_requests":
+            return await self._execute_request_throttling(
+                action, checkpoint, start_time
             )
+        if action.action_type == "optimize_database_queries":
+            return await self._execute_query_optimization(
+                action, checkpoint, start_time
+            )
+        if action.action_type == "scale_cpu_resources":
+            return await self._execute_cpu_scaling(action, checkpoint, start_time)
+
+        # Unknown action type - raise error
+        msg = f"Unknown action type: {action.action_type}"
+        raise ValueError(msg)
 
     async def _execute_request_throttling(
         self, action: RemediationAction, checkpoint: SystemCheckpoint, start_time: float
@@ -512,7 +492,9 @@ class CPUOverloadRemediationStrategy(RemediationStrategy):
         duration = action.parameters.get("duration_minutes", 10)
 
         logger.info(
-            f"Enabling request throttling: {max_requests} req/min for {duration} minutes"
+            "Enabling request throttling: %s req/min for %s minutes",
+            max_requests,
+            duration,
         )
         await asyncio.sleep(0.5)  # Simulate configuration time
 
@@ -522,7 +504,8 @@ class CPUOverloadRemediationStrategy(RemediationStrategy):
             success=True,
             execution_time_seconds=time.time() - start_time,
             actions_taken=[
-                f"Enabled request throttling at {max_requests} req/min for {duration} minutes"
+                f"Enabled request throttling at {max_requests} req/min "
+                f"for {duration} minutes"
             ],
             rollback_point=checkpoint.checkpoint_id,
         )
@@ -535,7 +518,9 @@ class CPUOverloadRemediationStrategy(RemediationStrategy):
         query_timeout = action.parameters.get("query_timeout", 30)
 
         logger.info(
-            f"Optimizing database: max_connections={max_connections}, timeout={query_timeout}s"
+            "Optimizing database: max_connections=%s, timeout=%ss",
+            max_connections,
+            query_timeout,
         )
         await asyncio.sleep(1.0)  # Simulate optimization time
 
@@ -559,7 +544,7 @@ class CPUOverloadRemediationStrategy(RemediationStrategy):
         duration = action.parameters.get("duration_minutes", 30)
 
         logger.info(
-            f"Scaling CPU resources by factor {scale_factor} for {duration} minutes"
+            "Scaling CPU resources by factor %s for %s minutes", scale_factor, duration
         )
         await asyncio.sleep(2.0)  # Simulate scaling time
 
@@ -711,30 +696,20 @@ class ServiceDegradationRemediationStrategy(RemediationStrategy):
         """Execute service degradation remediation action."""
         start_time = time.time()
 
-        try:
-            if action.action_type == "enable_circuit_breaker":
-                return await self._execute_circuit_breaker_enablement(
-                    action, checkpoint, start_time
-                )
-            if action.action_type == "enable_aggressive_caching":
-                return await self._execute_aggressive_caching(
-                    action, checkpoint, start_time
-                )
-            if action.action_type == "restart_unhealthy_services":
-                return await self._execute_service_restart(
-                    action, checkpoint, start_time
-                )
-            raise ValueError(f"Unknown action type: {action.action_type}")
-
-        except Exception as e:
-            return RemediationResult(
-                action_id=action.action_id,
-                status=RemediationStatus.FAILED,
-                success=False,
-                execution_time_seconds=time.time() - start_time,
-                error_message=str(e),
-                rollback_point=checkpoint.checkpoint_id,
+        if action.action_type == "enable_circuit_breaker":
+            return await self._execute_circuit_breaker_enablement(
+                action, checkpoint, start_time
             )
+        if action.action_type == "enable_aggressive_caching":
+            return await self._execute_aggressive_caching(
+                action, checkpoint, start_time
+            )
+        if action.action_type == "restart_unhealthy_services":
+            return await self._execute_service_restart(action, checkpoint, start_time)
+
+        # Unknown action type - raise error
+        msg = f"Unknown action type: {action.action_type}"
+        raise ValueError(msg)
 
     async def _execute_circuit_breaker_enablement(
         self, action: RemediationAction, checkpoint: SystemCheckpoint, start_time: float
@@ -744,7 +719,9 @@ class ServiceDegradationRemediationStrategy(RemediationStrategy):
         timeout_seconds = action.parameters.get("timeout_seconds", 60)
 
         logger.info(
-            f"Enabling circuit breakers: threshold={failure_threshold}, timeout={timeout_seconds}s"
+            "Enabling circuit breakers: threshold=%s, timeout=%ss",
+            failure_threshold,
+            timeout_seconds,
         )
         await asyncio.sleep(0.5)  # Simulate configuration time
 
@@ -754,7 +731,8 @@ class ServiceDegradationRemediationStrategy(RemediationStrategy):
             success=True,
             execution_time_seconds=time.time() - start_time,
             actions_taken=[
-                f"Enabled circuit breakers with threshold {failure_threshold} and timeout {timeout_seconds}s"
+                f"Enabled circuit breakers with threshold {failure_threshold} "
+                f"and timeout {timeout_seconds}s"
             ],
             rollback_point=checkpoint.checkpoint_id,
         )
@@ -767,7 +745,9 @@ class ServiceDegradationRemediationStrategy(RemediationStrategy):
         cache_percentage = action.parameters.get("cache_percentage", 80)
 
         logger.info(
-            f"Enabling aggressive caching: duration={cache_duration}min, coverage={cache_percentage}%"
+            "Enabling aggressive caching: duration=%smin, coverage=%s%%",
+            cache_duration,
+            cache_percentage,
         )
         await asyncio.sleep(1.0)  # Simulate cache configuration time
 
@@ -777,7 +757,8 @@ class ServiceDegradationRemediationStrategy(RemediationStrategy):
             success=True,
             execution_time_seconds=time.time() - start_time,
             actions_taken=[
-                f"Enabled aggressive caching for {cache_duration} minutes at {cache_percentage}% coverage"
+                f"Enabled aggressive caching for {cache_duration} minutes "
+                f"at {cache_percentage}% coverage"
             ],
             rollback_point=checkpoint.checkpoint_id,
         )
@@ -793,11 +774,11 @@ class ServiceDegradationRemediationStrategy(RemediationStrategy):
 
         for service in services:
             if graceful:
-                logger.info(f"Gracefully restarting degraded service: {service}")
+                logger.info("Gracefully restarting degraded service: %s", service)
                 await asyncio.sleep(3)  # Simulate graceful restart time
                 actions_taken.append(f"Gracefully restarted {service}")
             else:
-                logger.info(f"Force restarting degraded service: {service}")
+                logger.info("Force restarting degraded service: %s", service)
                 await asyncio.sleep(1)
                 actions_taken.append(f"Force restarted {service}")
 
@@ -824,7 +805,8 @@ class ServiceDegradationRemediationStrategy(RemediationStrategy):
         # Allow time for changes to take effect
         await asyncio.sleep(10)
 
-        # Simulate health check (in real implementation, would check actual service health)
+        # Simulate health check
+        # (in real implementation, would check actual service health)
         if action.action_type == "enable_circuit_breaker":
             return True  # Circuit breakers should help with error rates
         if action.action_type == "enable_aggressive_caching":
@@ -850,7 +832,7 @@ class RollbackManager:
         # Capture current system state
         checkpoint = SystemCheckpoint(
             checkpoint_id=checkpoint_id,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(tz=datetime.UTC),
             configuration_state=await self._capture_configuration_state(),
             service_states=await self._capture_service_states(),
             resource_metrics=await self._capture_resource_metrics(),
@@ -884,18 +866,18 @@ class RollbackManager:
             await self._rollback_service_states(checkpoint.service_states)
             await self._rollback_configuration_state(checkpoint.configuration_state)
 
-            logger.info(f"Successfully rolled back to checkpoint: {checkpoint_id}")
-            return True
-
-        except Exception as e:
-            logger.exception(f"Failed to rollback to checkpoint {checkpoint_id}: {e}")
+            logger.info("Successfully rolled back to checkpoint: %s", checkpoint_id)
+        except Exception:
+            logger.exception("Failed to rollback to checkpoint %s", checkpoint_id)
             return False
+        else:
+            return True
 
     async def _capture_configuration_state(self) -> dict[str, Any]:
         """Capture current configuration state."""
         # In a real implementation, this would capture actual configuration
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(tz=datetime.UTC).isoformat(),
             "configuration_version": "1.0.0",
             "environment_variables": dict(os.environ) if hasattr(self, "os") else {},
             "application_settings": {},
@@ -926,13 +908,13 @@ class RollbackManager:
             "network_io": psutil.net_io_counters()._asdict()
             if hasattr(psutil, "net_io_counters")
             else {},
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(tz=datetime.UTC).isoformat(),
         }
 
     async def _capture_circuit_breaker_states(self) -> dict[str, Any]:
         """Capture current circuit breaker states."""
         # In a real implementation, this would capture actual circuit breaker states
-        return {"timestamp": datetime.utcnow().isoformat(), "breakers": {}}
+        return {"timestamp": datetime.now(tz=datetime.UTC).isoformat(), "breakers": {}}
 
     def _get_database_connections(self) -> int:
         """Get current database connection count."""
@@ -942,25 +924,29 @@ class RollbackManager:
     async def _capture_process_states(self) -> list[dict[str, Any]]:
         """Capture current process states."""
         processes = []
-        try:
-            for proc in psutil.process_iter(["pid", "name", "status", "cpu_percent"]):
-                processes.append(proc.info)
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            pass
+        with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+            processes.extend(
+                proc.info
+                for proc in psutil.process_iter(
+                    ["pid", "name", "status", "cpu_percent"]
+                )
+            )
 
         return processes[:100]  # Limit to first 100 processes
 
-    async def _rollback_circuit_breakers(self, circuit_breaker_states: dict[str, Any]):
+    async def _rollback_circuit_breakers(self, _circuit_breaker_states: dict[str, Any]):
         """Rollback circuit breaker states."""
         logger.info("Rolling back circuit breaker states")
         await asyncio.sleep(0.5)  # Simulate rollback time
 
-    async def _rollback_service_states(self, service_states: dict[str, dict[str, Any]]):
+    async def _rollback_service_states(
+        self, _service_states: dict[str, dict[str, Any]]
+    ):
         """Rollback service states."""
         logger.info("Rolling back service states")
         await asyncio.sleep(1.0)  # Simulate rollback time
 
-    async def _rollback_configuration_state(self, configuration_state: dict[str, Any]):
+    async def _rollback_configuration_state(self, _configuration_state: dict[str, Any]):
         """Rollback configuration state."""
         logger.info("Rolling back configuration state")
         await asyncio.sleep(0.5)  # Simulate rollback time
@@ -981,7 +967,8 @@ class RollbackManager:
 
 
 class AutoRemediationEngine:
-    """Intelligent automated remediation engine with safety constraints and rollback capabilities."""
+    """Intelligent automated remediation engine with safety constraints and rollback
+    capabilities."""
 
     def __init__(
         self,
@@ -1031,20 +1018,25 @@ class AutoRemediationEngine:
         safety_result = await strategy.assess_safety(issue)
         if not safety_result.safe:
             logger.warning(
-                f"Issue {issue.issue_id} failed safety assessment: {', '.join(safety_result.blocking_factors)}"
+                f"Issue {issue.issue_id} failed safety assessment: "
+                f"{', '.join(safety_result.blocking_factors)}"
             )
             return RemediationResult(
                 action_id=f"safety_blocked_{issue.issue_id}",
                 status=RemediationStatus.REQUIRES_MANUAL,
                 success=False,
                 execution_time_seconds=0,
-                error_message=f"Safety validation failed: {', '.join(safety_result.blocking_factors)}",
+                error_message=(
+                    f"Safety validation failed: "
+                    f"{', '.join(safety_result.blocking_factors)}"
+                ),
             )
 
         # 3. Check concurrency limits
         if len(self.active_remediations) >= self.max_concurrent_remediations:
             logger.warning(
-                f"Maximum concurrent remediations ({self.max_concurrent_remediations}) reached"
+                f"Maximum concurrent remediations "
+                f"({self.max_concurrent_remediations}) reached"
             )
             return RemediationResult(
                 action_id=f"concurrency_limit_{issue.issue_id}",
@@ -1077,7 +1069,7 @@ class AutoRemediationEngine:
         issue: DetectedIssue,
         strategy: RemediationStrategy,
         actions: list[RemediationAction],
-        safety_result: SafetyValidationResult,
+        _safety_result: SafetyValidationResult,
     ) -> RemediationResult:
         """Execute remediation actions with safety measures."""
 
@@ -1103,7 +1095,8 @@ class AutoRemediationEngine:
             # Execute actions sequentially
             for action in actions:
                 logger.info(
-                    f"Executing remediation action: {action.action_type} for {action.target_component}"
+                    f"Executing remediation action: {action.action_type} "
+                    f"for {action.target_component}"
                 )
 
                 # Execute action
@@ -1117,7 +1110,8 @@ class AutoRemediationEngine:
 
                     if validation_success:
                         logger.info(
-                            f"Remediation action {action.action_type} completed successfully"
+                            f"Remediation action {action.action_type} "
+                            f"completed successfully"
                         )
                         overall_result.actions_taken.extend(action_result.actions_taken)
                     else:
@@ -1127,7 +1121,8 @@ class AutoRemediationEngine:
                         # Don't rollback immediately, try next action
                 else:
                     logger.error(
-                        f"Remediation action {action.action_type} failed: {action_result.error_message}"
+                        f"Remediation action {action.action_type} failed: "
+                        f"{action_result.error_message}"
                     )
                     # Continue with next action
 
@@ -1140,7 +1135,7 @@ class AutoRemediationEngine:
             )
 
         except Exception as e:
-            logger.exception(f"Remediation execution failed: {e}")
+            logger.exception("Remediation execution failed")
             overall_result.error_message = str(e)
             overall_result.status = RemediationStatus.FAILED
 
@@ -1152,10 +1147,11 @@ class AutoRemediationEngine:
                 if rollback_success:
                     overall_result.status = RemediationStatus.ROLLED_BACK
                     logger.info(
-                        f"Successfully rolled back remediation for issue {issue.issue_id}"
+                        f"Successfully rolled back remediation for issue "
+                        f"{issue.issue_id}"
                     )
-            except Exception as rollback_error:
-                logger.exception(f"Rollback failed: {rollback_error}")
+            except Exception:
+                logger.exception("Rollback failed: ")
 
         finally:
             # Update timing and cleanup
@@ -1179,7 +1175,9 @@ class AutoRemediationEngine:
         recent_remediations = [
             r
             for r in self.remediation_history
-            if (datetime.utcnow() - datetime.utcnow()).total_seconds()
+            if (
+                datetime.now(tz=datetime.UTC) - datetime.now(tz=datetime.UTC)
+            ).total_seconds()
             < 3600  # Last hour
         ]
 

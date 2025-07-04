@@ -207,10 +207,8 @@ class HyDEQueryEngine(BaseService):
             if self.metrics_config.track_generation_time:
                 logger.debug("HyDE search completed in {search_time:.2f}s for query")
 
-            return results
-
         except Exception as e:
-            logger.error("HyDE search failed", exc_info=True)
+            logger.exception("HyDE search failed")
 
             # Fallback to regular search if enabled
             if self.config.enable_fallback:
@@ -221,6 +219,9 @@ class HyDEQueryEngine(BaseService):
                 )
             msg = "HyDE search failed"
             raise EmbeddingServiceError(msg) from e
+
+        else:
+            return results
 
     async def _get_or_generate_hyde_embedding(
         self, query: str, domain: str | None, use_cache: bool
@@ -298,7 +299,7 @@ class HyDEQueryEngine(BaseService):
         try:
             # Use the existing hyde_search method in QdrantService
             # but we need to call it differently since it expects hypothetical_embeddings as a list
-            results = await self.qdrant_service.hyde_search(
+            return await self.qdrant_service.hyde_search(
                 collection_name=collection_name,
                 query="HyDE search",  # This parameter isn't actually used in the implementation
                 query_embedding=query_embedding,
@@ -307,8 +308,6 @@ class HyDEQueryEngine(BaseService):
                 fusion_algorithm=self.config.fusion_algorithm,
                 search_accuracy=search_accuracy,
             )
-
-            return results
 
         except Exception as e:
             logger.exception("Query API search failed")
@@ -322,16 +321,15 @@ class HyDEQueryEngine(BaseService):
         try:
             # Use embedding manager's reranking if available
             if hasattr(self.embedding_manager, "rerank_results"):
-                reranked_results = await self.embedding_manager.rerank_results(
-                    query, results
-                )
-                return reranked_results
+                return await self.embedding_manager.rerank_results(query, results)
             # Basic reranking fallback (could implement BGE reranking here)
             logger.debug("Reranking not available, returning original results")
+
+        except (TimeoutError, AttributeError, RuntimeError, ValueError):
+            logger.warning("Reranking failed, returning original results")
             return results
 
-        except Exception:
-            logger.warning("Reranking failed, returning original results")
+        else:
             return results
 
     async def _fallback_search(
@@ -348,15 +346,13 @@ class HyDEQueryEngine(BaseService):
             query_embedding = await self._generate_query_embedding(query)
 
             # Perform regular filtered search
-            results = await self.qdrant_service.filtered_search(
+            return await self.qdrant_service.filtered_search(
                 collection_name=collection_name,
                 query_vector=query_embedding,
                 filters=filters or {},
                 limit=limit,
                 search_accuracy=search_accuracy,
             )
-
-            return results
 
         except Exception as e:
             logger.exception("Fallback search failed")

@@ -12,9 +12,9 @@ import time
 
 import pytest
 
-from ..base_load_test import create_load_test_runner
-from ..conftest import LoadTestConfig, LoadTestType
-from ..load_profiles import LoadStage, StepLoadProfile
+from tests.load.base_load_test import create_load_test_runner
+from tests.load.conftest import LoadTestConfig, LoadTestType
+from tests.load.load_profiles import LoadStage, StepLoadProfile
 
 
 logger = logging.getLogger(__name__)
@@ -58,19 +58,19 @@ class TestScalabilityLoad:
         def collect_scaling_metrics(**__kwargs):
             """Collect metrics at each scaling stage."""
             stats = env.stats
-            if stats and stats._total.num_requests > 0:
+            if stats and stats.total.num_requests > 0:
                 current_users = env.runner.user_count if env.runner else 0
 
                 scaling_metrics.append(
                     {
                         "timestamp": time.time(),
                         "users": current_users,
-                        "requests": stats._total.num_requests,
-                        "failures": stats._total.num_failures,
-                        "avg_response_time": stats._total.avg_response_time,
-                        "rps": stats._total.current_rps,
+                        "requests": stats.total.num_requests,
+                        "failures": stats.total.num_failures,
+                        "avg_response_time": stats.total.avg_response_time,
+                        "rps": stats.total.current_rps,
                         "error_rate": (
-                            stats._total.num_failures / stats._total.num_requests
+                            stats.total.num_failures / stats.total.num_requests
                         )
                         * 100,
                     }
@@ -157,7 +157,11 @@ class TestScalabilityLoad:
                 )
 
                 logger.info(
-                    f"Scaled up: CPU {old_cpu} -> {self.cpu_cores}, Memory {old_memory}GB -> {self.memory_gb}GB"
+                    "Scaled up: CPU %s -> %s, Memory %sGB -> %sGB",
+                    old_cpu,
+                    self.cpu_cores,
+                    old_memory,
+                    self.memory_gb,
                 )
 
             def get_processing_capacity(self, workload_complexity: float) -> float:
@@ -179,8 +183,7 @@ class TestScalabilityLoad:
                 )
 
                 # Return processing capacity (higher resources = faster processing)
-                capacity = (self.cpu_cores * 0.6) + (self.memory_gb * 0.4)
-                return capacity
+                return (self.cpu_cores * 0.6) + (self.memory_gb * 0.4)
 
             def get_scaling_stats(self) -> dict:
                 """Get scaling statistics."""
@@ -359,7 +362,10 @@ class TestScalabilityLoad:
                 self.scaling_decisions.append(decision)
 
                 logger.info(
-                    f"Scaled up: {old_instances} -> {self.current_instances} instances (reason: {reason})"
+                    "Scaled up: %s -> %s instances (reason: %s)",
+                    old_instances,
+                    self.current_instances,
+                    reason,
                 )
 
             def _scale_down(self, reason: str, metric_value: float):
@@ -381,7 +387,10 @@ class TestScalabilityLoad:
                 self.scaling_decisions.append(decision)
 
                 logger.info(
-                    f"Scaled down: {old_instances} -> {self.current_instances} instances (reason: {reason})"
+                    "Scaled down: %s -> %s instances (reason: %s)",
+                    old_instances,
+                    self.current_instances,
+                    reason,
                 )
 
             def get_current_capacity(self) -> float:
@@ -617,7 +626,7 @@ class TestScalabilityLoad:
                 )
 
                 logger.info(
-                    f"Added read replica: {old_replicas} -> {self.read_replicas}"
+                    "Added read replica: %s -> %s", old_replicas, self.read_replicas
                 )
 
             def _expand_connection_pool(self, pool_type: str):
@@ -636,7 +645,7 @@ class TestScalabilityLoad:
                 )
 
                 logger.info(
-                    f"Expanded {pool_type} pool: {old_size} -> {pool['size']}"
+                    "Expanded %s pool: %s -> %s", pool_type, old_size, pool["size"]
                 )  # TODO: Convert f-string to logging format
 
             def get_database_stats(self) -> dict:
@@ -1012,7 +1021,10 @@ class HorizontalScalingSimulator:
             )
 
             logger.info(
-                f"Scaled from {old_units} to {self.current_units} units (load: {current_load})"
+                "Scaled from %s to %s units (load: %s)",
+                old_units,
+                self.current_units,
+                current_load,
             )
 
         return float(self.current_units)

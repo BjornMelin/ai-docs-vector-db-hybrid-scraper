@@ -2,6 +2,8 @@
 
 from unittest.mock import Mock, patch
 
+import pytest
+
 from src.services.task_queue.worker import (
     WorkerSettings,
     cron_jobs,
@@ -14,6 +16,12 @@ from src.services.task_queue.worker import (
     on_startup,
     redis_settings,
 )
+
+
+@pytest.fixture
+def test_worker_redis_password():
+    """Test Redis password value for worker."""
+    return "test_override_pass"
 
 
 class TestWorkerSettings:
@@ -60,12 +68,12 @@ class TestWorkerSettings:
         assert settings.password is None
         assert settings.database == 1
 
-    def test_get_redis_settings_with_auth(self):
+    def test_get_redis_settings_with_auth(self, test_worker_redis_password):
         """Test Redis settings with authentication."""
         mock_config = Mock()
         mock_config.task_queue = Mock()
         mock_config.task_queue.redis_url = "redis://user:testpass@localhost:6380"
-        mock_config.task_queue.redis_password = "test_override_pass"
+        mock_config.task_queue.redis_password = test_worker_redis_password
         mock_config.task_queue.redis_database = 2
 
         with patch(
@@ -75,7 +83,7 @@ class TestWorkerSettings:
 
         assert settings.host == "localhost"
         assert settings.port == 6380
-        assert settings.password == "test_override_pass"
+        assert settings.password == test_worker_redis_password
         assert settings.database == 2
 
     def test_get_redis_settings_url_parsing(self):

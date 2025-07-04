@@ -1,10 +1,3 @@
-import time
-
-
-class TestError(Exception):
-    """Custom exception for this module."""
-
-
 """Mutation testing for service logic validation.
 
 Tests service logic robustness by introducing mutations and verifying
@@ -14,6 +7,8 @@ error handling patterns.
 """
 
 import asyncio
+import contextlib
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -28,6 +23,10 @@ from src.services.functional.dependencies import (
     get_client_manager,
     get_config,
 )
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
 
 
 class TestCircuitBreakerMutationTesting:
@@ -49,7 +48,7 @@ class TestCircuitBreakerMutationTesting:
         for _i in range(3):
             try:
                 await circuit_breaker.call(failing_service)
-            except Exception:
+            except (ConnectionError, RuntimeError, ValueError):
                 failure_count += 1
 
         assert circuit_breaker.state == CircuitBreakerState.OPEN
@@ -157,10 +156,8 @@ class TestCircuitBreakerMutationTesting:
             raise ValueError(msg)
 
         # Test normal behavior - ConnectionError should be caught
-        try:
+        with contextlib.suppress(ConnectionError):
             await circuit_breaker.call(operation_with_specific_error)
-        except ConnectionError:
-            pass  # Expected
 
         assert circuit_breaker.failure_count == 1
 
@@ -217,9 +214,9 @@ class TestDependencyInjectionMutationTesting:
         # Test normal lifecycle
         with patch(
             "src.services.functional.dependencies.CacheManager"
-        ) as MockCacheManager:
+        ) as mock_cache_manager:
             mock_instance = AsyncMock()
-            MockCacheManager.return_value = mock_instance
+            mock_cache_manager.return_value = mock_instance
 
             # Normal flow should call initialize and cleanup
             try:
@@ -267,14 +264,14 @@ class TestDependencyInjectionMutationTesting:
 
         with patch(
             "src.services.functional.dependencies.ClientManager"
-        ) as MockClientManager:
+        ) as mock_client_manager:
             # Test mutation: What if initialization error is swallowed?
             # Original: await client_manager.initialize()
             # Mutation: try: await client_manager.initialize() except: pass
 
             mock_instance = AsyncMock()
             mock_instance.initialize.side_effect = Exception("Init failed")
-            MockClientManager.return_value = mock_instance
+            mock_client_manager.return_value = mock_instance
 
             # Normal behavior should propagate the error
             with pytest.raises(Exception, match="Init failed"):
@@ -334,6 +331,7 @@ class TestServiceLogicMutationTesting:
                     if attempt == max_retries - 1:
                         raise
                     await asyncio.sleep(0.001)
+            return None
 
         result = await retry_operation()
         assert result == "success"
@@ -371,7 +369,7 @@ class TestServiceLogicMutationTesting:
         async def service_with_fallback():
             try:
                 return await primary_service()
-            except Exception:
+            except (ConnectionError, RuntimeError, ValueError):
                 return await fallback_service()
 
         result = await service_with_fallback()
@@ -398,7 +396,7 @@ class TestServiceLogicMutationTesting:
             """Example validation function."""
             if not isinstance(config_dict, dict):
                 msg = "Config must be a dictionary"
-                raise ValueError(msg)
+                raise TypeError(msg)
 
             required_fields = ["database_url", "cache_url"]
             for field in required_fields:
@@ -587,7 +585,7 @@ def run_mutation_tests():
     like mutmut or cosmic-ray to systematically introduce mutations
     and verify test detection.
     """
-    mutation_results = {
+    return {
         "_total_mutations": 0,
         "detected_mutations": 0,
         "undetected_mutations": 0,
@@ -597,8 +595,6 @@ def run_mutation_tests():
     # This would be implemented by the mutation testing framework
     # For now, we provide the structure for manual testing
 
-    return mutation_results
-
 
 def analyze_mutation_coverage():
     """Analyze mutation coverage for service logic.
@@ -606,15 +602,13 @@ def analyze_mutation_coverage():
     Identifies areas of service logic that may need additional tests
     to catch potential mutations.
     """
-    coverage_analysis = {
+    return {
         "circuit_breaker_logic": "well_covered",
         "dependency_injection": "needs_improvement",
         "error_handling": "well_covered",
         "caching_logic": "needs_improvement",
         "async_patterns": "well_covered",
     }
-
-    return coverage_analysis
 
 
 if __name__ == "__main__":

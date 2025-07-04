@@ -273,7 +273,7 @@ class SimilarityThresholdManager(BaseFilter):
 
         except Exception as e:
             error_msg = "Failed to apply similarity threshold management"
-            self._logger.error(error_msg, exc_info=True)
+            self._logger.exception(error_msg)
             raise FilterError(
                 error_msg,
                 filter_name=self.name,
@@ -612,74 +612,126 @@ class SimilarityThresholdManager(BaseFilter):
             return None
 
         try:
-            # Prepare data for clustering
-            scores_array = np.array(similarity_scores).reshape(-1, 1)
-
-            # Perform DBSCAN clustering
-            dbscan = DBSCAN(eps=criteria.clustering_eps, min_samples=3)
-            cluster_labels = dbscan.fit_predict(scores_array)
-
-            # Analyze clusters
-            unique_labels = set(cluster_labels)
-            cluster_count = len(unique_labels) - (
-                1 if -1 in unique_labels else 0
-            )  # Exclude noise
-
-            if cluster_count < 2:
-                return None
-
-            # Calculate silhouette score
-            if len(set(cluster_labels)) > 1:
-                silhouette_avg = silhouette_score(scores_array, cluster_labels)
-            else:
-                silhouette_avg = 0.0
-
-            # Calculate noise ratio
-            noise_count = sum(1 for label in cluster_labels if label == -1)
-            noise_ratio = noise_count / len(cluster_labels)
-
-            # Find optimal threshold between clusters
-            cluster_centers = []
-            for label in unique_labels:
-                if label != -1:  # Exclude noise
-                    cluster_scores = [
-                        scores_array[i][0]
-                        for i, label_val in enumerate(cluster_labels)
-                        if label_val == label
-                    ]
-                    cluster_centers.append(statistics.mean(cluster_scores))
-
-            cluster_centers.sort()
-
-            # Optimal threshold is typically between the highest and second-highest clusters
-            if len(cluster_centers) >= 2:
-                optimal_threshold = (cluster_centers[-1] + cluster_centers[-2]) / 2
-            else:
-                optimal_threshold = (
-                    cluster_centers[0] if cluster_centers else criteria.base_threshold
-                )
-
-            # Calculate separation quality
-            if len(cluster_centers) >= 2:
-                separation_quality = abs(cluster_centers[-1] - cluster_centers[-2])
-            else:
-                separation_quality = 0.0
-
-            # Calculate density ratio
-            density_ratio = 1.0 - noise_ratio
-
-            return ClusteringAnalysis(
-                optimal_threshold=optimal_threshold,
-                cluster_count=cluster_count,
-                silhouette_score=silhouette_avg,
-                density_ratio=density_ratio,
-                separation_quality=separation_quality,
-                noise_ratio=noise_ratio,
+            scores_array, cluster_labels = self._perform_clustering(
+                similarity_scores, criteria
             )
-
-        except Exception:
-            self._logger.exception("Clustering analysis failed")
+        except (OSError, PermissionError):
+            self._logger.exception("Clustering failed during DBSCAN")
             return None
+
+        try:
+            return self._analyze_cluster_results(scores_array, cluster_labels, criteria)
+        except (OSError, PermissionError):
+            self._logger.exception("Cluster analysis failed")
+            return None
+
+    def _perform_clustering(
+        self, similarity_scores: list[float], criteria: SimilarityThresholdCriteria
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Perform DBSCAN clustering on similarity scores."""
+        # Prepare data for clustering
+        scores_array = np.array(similarity_scores).reshape(-1, 1)
+
+        # Perform DBSCAN clustering
+        dbscan = DBSCAN(eps=criteria.clustering_eps, min_samples=3)
+        cluster_labels = dbscan.fit_predict(scores_array)
+
+        return scores_array, cluster_labels
+
+    def _analyze_cluster_results(
+        self,
+        scores_array: np.ndarray,
+        cluster_labels: np.ndarray,
+        criteria: SimilarityThresholdCriteria,
+    ) -> ClusteringAnalysis | None:
+        """Analyze clustering results and calculate metrics."""
+        # Analyze clusters
+        unique_labels = set(cluster_labels)
+        cluster_count = len(unique_labels) - (
+            1 if -1 in unique_labels else 0
+        )  # Exclude noise
+
+        if cluster_count < 2:
+            return None
+
+        try:
+            silhouette_avg = self._calculate_silhouette_score(
+                scores_array, cluster_labels
+            )
+        except (OSError, PermissionError):
+            self._logger.warning("Failed to calculate silhouette score")
+            silhouette_avg = 0.0
+
+        try:
+            noise_ratio = self._calculate_noise_ratio(cluster_labels)
+        except (OSError, PermissionError):
+            self._logger.warning("Failed to calculate noise ratio")
+            noise_ratio = 0.0
+
+        try:
+            optimal_threshold, separation_quality = self._find_optimal_threshold(
+                scores_array, cluster_labels, unique_labels, criteria
+            )
+        except (OSError, PermissionError):
+            self._logger.warning("Failed to find optimal threshold")
+            optimal_threshold = criteria.base_threshold
+            separation_quality = 0.0
+
+        density_ratio = 1.0 - noise_ratio
+
+        return ClusteringAnalysis(
+            optimal_threshold=optimal_threshold,
+            cluster_count=cluster_count,
+            silhouette_score=silhouette_avg,
+            density_ratio=density_ratio,
+            separation_quality=separation_quality,
+            noise_ratio=noise_ratio,
+        )
+
+    def _calculate_silhouette_score(
+        self, scores_array: np.ndarray, cluster_labels: np.ndarray
+    ) -> float:
+        """Calculate silhouette score for clustering quality."""
+        if len(set(cluster_labels)) > 1:
+            return silhouette_score(scores_array, cluster_labels)
+        return 0.0
+
+    def _calculate_noise_ratio(self, cluster_labels: np.ndarray) -> float:
+        """Calculate noise ratio in clustering results."""
+        noise_count = sum(1 for label in cluster_labels if label == -1)
+        return noise_count / len(cluster_labels)
+
+    def _find_optimal_threshold(
+        self,
+        scores_array: np.ndarray,
+        cluster_labels: np.ndarray,
+        unique_labels: set,
+        criteria: SimilarityThresholdCriteria,
+    ) -> tuple[float, float]:
+        """Find optimal threshold between clusters."""
+        cluster_centers = []
+        for label in unique_labels:
+            if label != -1:  # Exclude noise
+                cluster_scores = [
+                    scores_array[i][0]
+                    for i, label_val in enumerate(cluster_labels)
+                    if label_val == label
+                ]
+                cluster_centers.append(statistics.mean(cluster_scores))
+
+        cluster_centers.sort()
+
+        # Optimal threshold is typically between the highest and second-highest clusters
+        if len(cluster_centers) >= 2:
+            optimal_threshold = (cluster_centers[-1] + cluster_centers[-2]) / 2
+            separation_quality = abs(cluster_centers[-1] - cluster_centers[-2])
+        else:
+            optimal_threshold = (
+                cluster_centers[0] if cluster_centers else criteria.base_threshold
+            )
+            separation_quality = 0.0
+
+        return optimal_threshold, separation_quality
 
     def _get_recent_data(
         self, historical_data: list[dict[str, Any]], days: int
@@ -692,7 +744,7 @@ class SimilarityThresholdManager(BaseFilter):
             timestamp = data.get("timestamp")
             if timestamp:
                 if isinstance(timestamp, str):
-                    timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                    timestamp = datetime.fromisoformat(timestamp)
 
                 if timestamp >= cutoff_date:
                     recent_data.append(data)
@@ -766,10 +818,11 @@ class SimilarityThresholdManager(BaseFilter):
         """Validate similarity threshold criteria."""
         try:
             SimilarityThresholdCriteria.model_validate(filter_criteria)
-            return True
-        except Exception:
+        except (TimeoutError, ImportError, RuntimeError, ValueError):
             self._logger.warning("Invalid similarity threshold criteria")
             return False
+        else:
+            return True
 
     def get_supported_operators(self) -> list[str]:
         """Get supported threshold management operators."""

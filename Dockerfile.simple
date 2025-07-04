@@ -1,0 +1,87 @@
+# syntax=docker/dockerfile:1
+# Single-stage Dockerfile for AI Docs Vector DB Hybrid Scraper - UV Edition
+# Simplified approach that avoids multi-stage UV issues
+
+FROM python:3.12-slim
+
+# Prevent Python from writing pyc files and buffer stdout/stderr
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
+ENV UV_PYTHON_INSTALL_DIR=/app/.uv/python
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    pkg-config \
+    curl \
+    git \
+    libssl-dev \
+    libffi-dev \
+    libpq-dev \
+    zlib1g-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    liblcms2-dev \
+    libopenjp2-7-dev \
+    libtiff5-dev \
+    libwebp-dev \
+    tcl8.6-dev \
+    tk8.6-dev \
+    python3-tk \
+    libharfbuzz-dev \
+    libfribidi-dev \
+    libxcb1-dev \
+    netcat-traditional \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install UV - the modern Python package manager
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+# Create non-root user early
+ARG UID=1000
+RUN useradd --system --create-home --uid ${UID} --shell /bin/bash appuser
+
+# Copy dependency files first for better layer caching
+COPY --chown=appuser:appuser pyproject.toml uv.lock ./
+
+# Create virtual environment and install dependencies with UV as root
+RUN uv venv /app/.venv --python 3.12 --relocatable
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Install dependencies with UV
+RUN uv sync --frozen --no-dev
+
+# Copy application code
+COPY --chown=appuser:appuser src/ ./src/
+COPY --chown=appuser:appuser config/ ./config/
+
+# Set Python path
+ENV PYTHONPATH=/app/src
+
+# Fix ownership after all operations
+RUN chown -R appuser:appuser /app \
+    && chown -R appuser:appuser /app/.venv
+
+# Switch to non-root user
+USER appuser
+
+# Expose the FastAPI port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8000/api/v1/config/status || exit 1
+
+# Debug environment setup
+RUN python -c "import sys; print(f'Python version: {sys.version}')"
+RUN python -c "import src.api.main; print('FastAPI app import successful')"
+
+# Run the FastAPI application
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

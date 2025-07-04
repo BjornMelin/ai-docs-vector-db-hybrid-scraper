@@ -49,7 +49,7 @@ class CircuitBreakerConfig:
 
     # Exception handling
     monitored_exceptions: tuple[type[Exception], ...] = field(
-        default_factory=lambda: (Exception,)
+        default_factory=lambda: (Exception,),
     )
 
     # Metrics
@@ -135,11 +135,14 @@ class CircuitBreaker:
 
         logger.info(
             f"Circuit breaker initialized: {config.failure_threshold} threshold, "
-            f"{config.recovery_timeout}s recovery"
+            f"{config.recovery_timeout}s recovery",
         )
 
     async def call(
-        self, func: Callable[..., Awaitable[T]], *args: Any, **kwargs: Any
+        self,
+        func: Callable[..., Awaitable[T]],
+        *args: Any,
+        **kwargs: Any,
     ) -> T:
         """Execute function with circuit breaker protection.
 
@@ -167,9 +170,12 @@ class CircuitBreaker:
                     await self._transition_to_half_open()
                 else:
                     self.metrics.blocked_requests += 1
+                    retry_after_seconds = self.config.recovery_timeout - (
+                        time.time() - self.last_failure_time
+                    )
                     msg = (
                         f"Circuit breaker is OPEN. Retry after "
-                        f"{self.config.recovery_timeout - (time.time() - self.last_failure_time):.0f}s"
+                        f"{retry_after_seconds:.0f}s"
                     )
                     raise CircuitBreakerError(msg)
 
@@ -185,19 +191,29 @@ class CircuitBreaker:
         # Execute function
         start_time = time.time()
         try:
-            self.metrics.total_requests += 1
-            result = await func(*args, **kwargs)
-
-            # Success - reset failure count and close circuit if needed
-            execution_time = time.time() - start_time
-            await self._record_success(execution_time)
-
-            return result
-
+            return await self._execute_protected_function(
+                func, start_time, *args, **kwargs
+            )
         except self.config.monitored_exceptions:
             execution_time = time.time() - start_time
             await self._record_failure(execution_time)
             raise
+
+    async def _execute_protected_function(
+        self,
+        func: Callable[..., Awaitable[T]],
+        start_time: float,
+        *args: Any,
+        **kwargs: Any,
+    ) -> T:
+        """Execute function with circuit breaker protection."""
+        self.metrics.total_requests += 1
+        result = await func(*args, **kwargs)
+
+        # Success - reset failure count and close circuit if needed
+        execution_time = time.time() - start_time
+        await self._record_success(execution_time)
+        return result
 
     async def _record_success(self, execution_time: float) -> None:
         """Record successful execution."""
@@ -273,7 +289,7 @@ class CircuitBreaker:
             self.metrics.state_changes += 1
             logger.warning(
                 f"Circuit breaker OPEN: {self.failure_count} failures, "
-                f"failure_rate={self.metrics.failure_rate:.2%}"
+                f"failure_rate={self.metrics.failure_rate:.2%}",
             )
 
     async def _close_circuit(self) -> None:
@@ -284,7 +300,7 @@ class CircuitBreaker:
             self.failure_count = 0
             self.metrics.state_changes += 1
             logger.info(
-                f"Circuit breaker CLOSED: recovered from {old_state.value}"
+                f"Circuit breaker CLOSED: recovered from {old_state.value}",
             )  # TODO: Convert f-string to logging format
 
     async def _transition_to_half_open(self) -> None:
@@ -304,7 +320,7 @@ class CircuitBreaker:
         return {
             "state": self.state.value,
             "failure_count": self.failure_count,
-            "_total_requests": self.metrics.total_requests,  # Use underscore prefix for test compatibility
+            "_total_requests": self.metrics.total_requests,  # Underscore for test compatibility
             "total_requests": self.metrics.total_requests,
             "successful_requests": self.metrics.successful_requests,
             "failed_requests": self.metrics.failed_requests,
@@ -340,8 +356,12 @@ def circuit_breaker(config: CircuitBreakerConfig | None = None):
         async def wrapper(*args: Any, **kwargs: Any) -> T:
             return await breaker.call(func, *args, **kwargs)
 
-        # Attach circuit breaker for metrics access
-        wrapper._circuit_breaker = breaker  # type: ignore
+        # Add public accessor method for circuit breaker metrics
+        def get_circuit_breaker() -> CircuitBreaker:
+            """Get the circuit breaker instance for this wrapper."""
+            return breaker
+
+        wrapper.get_circuit_breaker = get_circuit_breaker  # type: ignore[misc]
         return wrapper
 
     return decorator

@@ -1,9 +1,8 @@
-import typing
 """Base cache interface for all cache implementations."""
 
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import Generic, TypeVar
+
 
 T = TypeVar("T")
 
@@ -21,7 +20,6 @@ class CacheInterface(ABC, Generic[T]):
         Returns:
             Cached value or None if not found
         """
-        pass
 
     @abstractmethod
     async def set(
@@ -40,7 +38,6 @@ class CacheInterface(ABC, Generic[T]):
         Returns:
             True if successful, False otherwise
         """
-        pass
 
     @abstractmethod
     async def delete(self, key: str) -> bool:
@@ -52,7 +49,6 @@ class CacheInterface(ABC, Generic[T]):
         Returns:
             True if deleted, False if not found
         """
-        pass
 
     @abstractmethod
     async def exists(self, key: str) -> bool:
@@ -64,7 +60,6 @@ class CacheInterface(ABC, Generic[T]):
         Returns:
             True if exists, False otherwise
         """
-        pass
 
     @abstractmethod
     async def clear(self) -> int:
@@ -73,7 +68,6 @@ class CacheInterface(ABC, Generic[T]):
         Returns:
             Number of entries cleared
         """
-        pass
 
     @abstractmethod
     async def size(self) -> int:
@@ -82,12 +76,10 @@ class CacheInterface(ABC, Generic[T]):
         Returns:
             Number of entries in cache
         """
-        pass
 
     @abstractmethod
     async def close(self) -> None:
         """Close cache connections and cleanup resources."""
-        pass
 
     async def get_many(self, keys: list[str]) -> dict[str, T | None]:
         """Get multiple values from cache.

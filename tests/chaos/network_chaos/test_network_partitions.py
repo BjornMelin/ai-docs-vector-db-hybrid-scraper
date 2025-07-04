@@ -179,7 +179,7 @@ class TestNetworkPartitions:
 
         return simulator
 
-    async def test_simple_network_partition(self, network_simulator, _fault_injector):
+    async def test_simple_network_partition(self, network_simulator, fault_injector):
         """Test basic network partition scenario."""
         # Verify initial connectivity
         assert await network_simulator.can_communicate("node_1", "node_3")
@@ -228,13 +228,11 @@ class TestNetworkPartitions:
             async def elect_leader(self, candidate_node: str) -> dict[str, Any]:
                 """Elect leader using majority consensus."""
                 candidate_votes = 0
-                _total_nodes = 0
                 reachable_nodes = self.network.get_reachable_nodes(candidate_node)
                 reachable_nodes.add(candidate_node)
 
                 # Count votes from reachable nodes
-                for node_id in reachable_nodes:
-                    _total_nodes += 1
+                for _total_nodes, node_id in enumerate(reachable_nodes, 1):
                     try:
                         # Simulate vote request
                         await self.network.send_message(
@@ -451,9 +449,7 @@ class TestNetworkPartitions:
         assert not minority_write["write_successful"]
         assert minority_write["successful_writes"] < minority_write["quorum_required"]
 
-    async def test_network_partition_detection(
-        self, network_simulator, _fault_injector
-    ):
+    async def test_network_partition_detection(self, network_simulator, fault_injector):
         """Test network partition detection mechanisms."""
 
         class PartitionDetector:
@@ -528,9 +524,10 @@ class TestNetworkPartitions:
                         suspected_node,
                         {"type": "ping", "timestamp": time.time()},
                     )
-                    return False  # Node is reachable, no partition
                 except ConnectionError:
                     return True  # Node is unreachable, partition confirmed
+                else:
+                    return False  # Node is reachable, no partition
 
         detector = PartitionDetector(network_simulator)
 
@@ -609,9 +606,7 @@ class TestNetworkPartitions:
                             all_operations[op_id] = op_data
 
                 # Resolve conflicts using vector clocks
-                resolved_operations = {}
-                for op_id, op_data in all_operations.items():
-                    resolved_operations[op_id] = op_data
+                resolved_operations = all_operations.copy()
 
                 # Merge vector clocks
                 merged_vector_clock = {}
@@ -766,7 +761,7 @@ class TestNetworkPartitions:
                             except ConnectionError:
                                 pass
 
-                except Exception as e:
+                except (TimeoutError, ConnectionError, OSError) as e:
                     write_op["error"] = str(e)
 
                 self.operations_log.append(write_op)
@@ -788,7 +783,7 @@ class TestNetworkPartitions:
                         read_op["value"] = self.network.nodes[node_id].data[key]
                         read_op["success"] = True
 
-                except Exception as e:
+                except (TimeoutError, ConnectionError, OSError) as e:
                     read_op["error"] = str(e)
 
                 self.reads_log.append(read_op)

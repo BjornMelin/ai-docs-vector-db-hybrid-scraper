@@ -1,0 +1,46 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: ai-docs-system
+  namespace: ai-docs-system
+
+resources:
+- namespace.yaml
+- configmap.yaml
+- qdrant-statefulset.yaml
+- dragonfly-deployment.yaml
+- app-deployment.yaml
+- worker-deployment.yaml
+
+# Common labels applied to all resources
+commonLabels:
+  app.kubernetes.io/name: ai-docs-vector-db
+  app.kubernetes.io/part-of: ai-docs-system
+  app.kubernetes.io/version: "1.0.0"
+  app.kubernetes.io/managed-by: kustomize
+
+# Common annotations
+commonAnnotations:
+  documentation: "https://github.com/your-org/ai-docs-vector-db-hybrid-scraper"
+  support-contact: "your-team@company.com"
+
+# Image transformations (replace with your registry)
+images:
+- name: ai-docs-app
+  newName: your-registry.com/ai-docs-app
+  newTag: "v1.0.0"
+- name: ai-docs-worker
+  newName: your-registry.com/ai-docs-worker
+  newTag: "v1.0.0"
+
+# Resource patches for different environments
+patchesStrategicMerge:
+- patches/production-resources.yaml
+
+# Config map generator for environment-specific values
+configMapGenerator:
+- name: ai-docs-env-config
+  literals:
+  - ENVIRONMENT=production
+  - DEBUG=false

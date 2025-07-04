@@ -4,6 +4,7 @@ import logging
 import time
 from typing import Any
 
+import numpy as np
 from qdrant_client import models
 
 from src.config import Config
@@ -40,7 +41,7 @@ class HNSWOptimizer(BaseService):
             return
 
         # Validate that qdrant service is initialized
-        if not self.qdrant_service._initialized:
+        if not self.qdrant_service.is_initialized:
             msg = "QdrantService must be initialized before HNSWOptimizer"
             raise QdrantServiceError(msg)
 
@@ -83,7 +84,8 @@ class HNSWOptimizer(BaseService):
 
             # Use cached ef directly
             start_time = time.time()
-            results = await self.qdrant_service._client.query_points(
+            client = await self.qdrant_service.get_client()
+            results = await client.query_points(
                 collection_name=collection_name,
                 query=query_vector,
                 using="dense",
@@ -118,7 +120,8 @@ class HNSWOptimizer(BaseService):
             start_time = time.time()
 
             try:
-                results = await self.qdrant_service._client.query_points(
+                client = await self.qdrant_service.get_client()
+                results = await client.query_points(
                     collection_name=collection_name,
                     query=query_vector,
                     using="dense",
@@ -154,7 +157,7 @@ class HNSWOptimizer(BaseService):
                     # Moderate time usage, try smaller increment
                     current_ef = min(current_ef + (step_size // 2), max_ef)
 
-            except Exception as e:
+            except (ValueError, TypeError, UnicodeDecodeError) as e:
                 self.logger.warning(
                     f"Search failed at EF {current_ef}: {e}"
                 )  # TODO: Convert f-string to logging format
@@ -295,9 +298,8 @@ class HNSWOptimizer(BaseService):
             )
 
         # Check if collection needs HNSW updates
-        collection_info = await self.qdrant_service._client.get_collection(
-            collection_name
-        )
+        client = await self.qdrant_service.get_client()
+        collection_info = await client.get_collection(collection_name)
         current_config = self._extract_current_hnsw_config(collection_info)
 
         needs_update = self._compare_hnsw_configs(current_config, recommended_config)
@@ -358,7 +360,7 @@ class HNSWOptimizer(BaseService):
                             hnsw_config, "full_scan_threshold", 10000
                         ),
                     }
-        except Exception as e:
+        except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
             self.logger.debug(
                 f"Could not extract HNSW config: {e}"
             )  # TODO: Convert f-string to logging format
@@ -466,7 +468,8 @@ class HNSWOptimizer(BaseService):
             start_time = time.time()
 
             try:
-                await self.qdrant_service._client.query_points(
+                client = await self.qdrant_service.get_client()
+                await client.query_points(
                     collection_name=collection_name,
                     query=query_vector,
                     using="dense",
@@ -479,15 +482,13 @@ class HNSWOptimizer(BaseService):
                 search_time_ms = (time.time() - start_time) * 1000
                 search_times.append(search_time_ms)
 
-            except Exception as e:
+            except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
                 self.logger.warning(
                     f"Performance test query failed: {e}"
                 )  # TODO: Convert f-string to logging format
                 continue
 
         if search_times:
-            import numpy as np
-
             return {
                 "avg_search_time_ms": float(np.mean(search_times)),
                 "p95_search_time_ms": float(np.percentile(search_times, 95)),

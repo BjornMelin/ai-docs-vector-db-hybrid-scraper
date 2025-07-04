@@ -5,9 +5,13 @@ Focuses on core vector search functionality without advanced features.
 """
 
 import logging
-from typing import Any, from src.architecture.features import conditional_feature
+from typing import Any
+
+from src.architecture.features import conditional_feature
 from src.architecture.service_factory import BaseService
-from src.models.vector_search import SearchRequest, SearchResponse
+from src.models.vector_search import BasicSearchRequest, SearchResponse
+from src.services.embeddings.manager import EmbeddingManager
+from src.services.vector_db.service import QdrantService
 
 
 logger = logging.getLogger(__name__)
@@ -23,8 +27,14 @@ class SimpleSearchService(BaseService):
     - Minimal resource usage
     """
 
-    def __init__(self):
+    def __init__(self, config=None, client_manager=None):
         super().__init__()
+        # Import here to avoid circular imports
+        from src.config import get_config  # noqa: PLC0415
+        from src.infrastructure.client_manager import ClientManager  # noqa: PLC0415
+
+        self.config = config or get_config()
+        self.client_manager = client_manager or ClientManager()
         self.max_results = 25  # Reduced from enterprise 1000
         self.enable_reranking = False
         self.enable_hybrid_search = False
@@ -39,16 +49,14 @@ class SimpleSearchService(BaseService):
 
         # Initialize basic vector search only
         try:
-            from src.services.vector_db.service import VectorDBService
-
-            self.vector_db = VectorDBService()
+            self.vector_db = QdrantService(self.config, self.client_manager)
             await self.vector_db.initialize()
 
             self._mark_initialized()
             logger.info("Simple search service initialized successfully")
 
-        except Exception as e:
-            logger.exception(f"Failed to initialize simple search service: {e}")
+        except Exception:
+            logger.exception("Failed to initialize simple search service")
             raise
 
     async def cleanup(self) -> None:
@@ -64,7 +72,7 @@ class SimpleSearchService(BaseService):
         """Get the service name."""
         return "simple_search_service"
 
-    async def search(self, request: SearchRequest) -> SearchResponse:
+    async def search(self, request: BasicSearchRequest) -> SearchResponse:
         """Perform basic vector search.
 
         Args:
@@ -76,7 +84,7 @@ class SimpleSearchService(BaseService):
         # Check cache first
         cache_key = f"search:{hash(request.query)}"
         if cache_key in self._cache:
-            logger.debug(f"Cache hit for query: {request.query[:50]}...")
+            logger.debug("Cache hit for query: %s...", request.query[:50])
             return self._cache[cache_key]
 
         # Limit results for simple mode
@@ -98,10 +106,8 @@ class SimpleSearchService(BaseService):
             # Cache result (with size limit)
             self._cache_result(cache_key, response)
 
-            return response
-
         except Exception as e:
-            logger.exception(f"Search failed: {e}")
+            logger.exception("Search failed")
             return SearchResponse(
                 query=request.query,
                 results=[],
@@ -111,24 +117,26 @@ class SimpleSearchService(BaseService):
                 error=str(e),
             )
 
+        else:
+            return response
+
     async def _perform_vector_search(
-        self, request: SearchRequest
+        self, request: BasicSearchRequest
     ) -> list[dict[str, Any]]:
         """Perform basic vector search without advanced features."""
         # Generate embedding for query
-        from src.services.embeddings.manager import EmbeddingManager
 
-        embedding_manager = EmbeddingManager()
-        query_embedding = await embedding_manager.generate_embedding(request.query)
+        embedding_manager = EmbeddingManager(self.config, self.client_manager)
+        embeddings = await embedding_manager.generate_embeddings([request.query])
+        query_embedding = embeddings[0]  # Get first (and only) embedding
 
-        # Perform vector search
-        search_results = await self.vector_db.search(
-            query_vector=query_embedding,
-            limit=request.limit,
+        # Perform vector search using filtered search with empty filters
+        return await self.vector_db.filtered_search(
             collection_name=request.collection_name,
+            query_vector=query_embedding,
+            filters={},  # No filters for simple search
+            limit=request.limit,
         )
-
-        return search_results
 
     def _cache_result(self, key: str, response: SearchResponse) -> None:
         """Cache search result with simple LRU-like behavior."""
@@ -141,7 +149,7 @@ class SimpleSearchService(BaseService):
         self._cache[key] = response
 
     @conditional_feature("enable_hybrid_search", fallback_value=[])
-    async def hybrid_search(self, request: SearchRequest) -> list[dict[str, Any]]:
+    async def hybrid_search(self, _request: BasicSearchRequest) -> list[dict[str, Any]]:
         """Hybrid search - disabled in simple mode."""
         return []
 

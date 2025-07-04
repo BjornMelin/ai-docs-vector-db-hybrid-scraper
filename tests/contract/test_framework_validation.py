@@ -170,9 +170,7 @@ class TestContractFrameworkValidation:
         # In practice, you'd use Pydantic model validation directly
 
     @pytest.mark.contract
-    def test_contract_backward_compatibility_validation(
-        self, __json_schema_validator, api_contract_validator
-    ):
+    def test_contract_backward_compatibility_validation(self, api_contract_validator):
         """Test backward compatibility validation."""
         # Original API contract (v1)
         v1_contract = {

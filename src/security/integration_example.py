@@ -3,6 +3,8 @@
 This shows how to integrate the minimal security features into existing endpoints.
 """
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import APIKeyHeader
 
@@ -107,8 +109,7 @@ async def ml_security_middleware(request: Request, call_next):
         if content_length and int(content_length) > 1_000_000:
             raise HTTPException(status_code=413, detail="Request too large")
 
-    response = await call_next(request)
-    return response
+    return await call_next(request)
 
 
 # Startup task for dependency scanning
@@ -120,9 +121,10 @@ async def startup_security_check():
         result = ml_security.check_dependencies()
         if not result.passed:
             # Log warning but don't block startup
+            details: dict[str, Any] = result.details
             ml_security.log_security_event(
                 "startup_dependency_scan",
-                {"vulnerabilities": result.details.get("count", 0)},
+                {"vulnerabilities": details.get("count", 0)},
                 severity="warning",
             )
 

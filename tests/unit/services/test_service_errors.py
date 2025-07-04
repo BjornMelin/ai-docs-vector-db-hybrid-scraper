@@ -737,7 +737,7 @@ class TestValidateInput:
         def validate_string(value):
             if not isinstance(value, str):
                 msg = "Must be string"
-                raise ValueError(msg)
+                raise TypeError(msg)
             return value.strip()
 
         @validate_input(count=validate_positive, name=validate_string)

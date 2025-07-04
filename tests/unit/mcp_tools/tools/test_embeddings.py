@@ -38,7 +38,7 @@ class TestEmbeddingsTools:
                 if generate_sparse
                 else None
             )
-            mock_result.model = model if model else "BAAI/bge-small-en-v1.5"
+            mock_result.model = model or "BAAI/bge-small-en-v1.5"
             mock_result._total_tokens = len(texts) * 10  # 10 tokens per text
             return mock_result
 

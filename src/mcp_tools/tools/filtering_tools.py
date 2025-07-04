@@ -183,14 +183,15 @@ async def temporal_filter_tool(
             f"(processing time: {result.processing_time_ms:.1f}ms)"
         )
 
-        return converted_results
-
     except Exception as e:
         await ctx.error(f"Temporal filter search failed: {e!s}")
-        logger.error(
-            f"Temporal filter error: {e}", exc_info=True
+        logger.exception(
+            "Temporal filter error: "
         )  # TODO: Convert f-string to logging format
         raise
+
+    else:
+        return converted_results
 
 
 async def content_type_filter_tool(
@@ -241,14 +242,15 @@ async def content_type_filter_tool(
             f"(processing time: {result.processing_time_ms:.1f}ms)"
         )
 
-        return converted_results
-
     except Exception as e:
         await ctx.error(f"Content type filter search failed: {e!s}")
-        logger.error(
-            f"Content type filter error: {e}", exc_info=True
+        logger.exception(
+            "Content type filter error: "
         )  # TODO: Convert f-string to logging format
         raise
+
+    else:
+        return converted_results
 
 
 async def metadata_filter_tool(
@@ -300,14 +302,15 @@ async def metadata_filter_tool(
             f"(processing time: {result.processing_time_ms:.1f}ms)"
         )
 
-        return converted_results
-
     except Exception as e:
         await ctx.error(f"Metadata filter search failed: {e!s}")
-        logger.error(
-            f"Metadata filter error: {e}", exc_info=True
+        logger.exception(
+            "Metadata filter error: "
         )  # TODO: Convert f-string to logging format
         raise
+
+    else:
+        return converted_results
 
 
 async def similarity_filter_tool(
@@ -360,14 +363,15 @@ async def similarity_filter_tool(
             f"(processing time: {result.processing_time_ms:.1f}ms)"
         )
 
-        return converted_results
-
     except Exception as e:
         await ctx.error(f"Similarity filter search failed: {e!s}")
-        logger.error(
-            f"Similarity filter error: {e}", exc_info=True
+        logger.exception(
+            "Similarity filter error: "
         )  # TODO: Convert f-string to logging format
         raise
+
+    else:
+        return converted_results
 
 
 async def composite_filter_tool(
@@ -429,14 +433,15 @@ async def composite_filter_tool(
             f"(processing time: {result.processing_time_ms:.1f}ms)"
         )
 
-        return converted_results
-
     except Exception as e:
         await ctx.error(f"Composite filter search failed: {e!s}")
-        logger.error(
-            f"Composite filter error: {e}", exc_info=True
+        logger.exception(
+            "Composite filter error: "
         )  # TODO: Convert f-string to logging format
         raise
+
+    else:
+        return converted_results
 
 
 def register_filtering_tools(mcp, _client_manager: ClientManager):

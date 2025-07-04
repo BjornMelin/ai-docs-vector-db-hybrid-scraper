@@ -215,7 +215,7 @@ def mock_completion_items():
     ]
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def event_loop():
     """Create an event loop for async testing."""
     loop = asyncio.new_event_loop()
@@ -398,7 +398,7 @@ def interactive_cli_runner():
 
     class InteractiveCLIRunner(CliRunner):
         def __init__(self):
-            super().__init__(mix_stderr=False)
+            super().__init__()
             self.input_responses = []
             self.current_response_index = 0
 

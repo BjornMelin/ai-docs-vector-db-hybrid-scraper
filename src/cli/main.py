@@ -103,11 +103,11 @@ def main(ctx: click.Context, config: Path | None, quiet: bool):
     # Load configuration
     try:
         if config:
-            # Load from specific file - with new config this would be:
-            ctx.obj["config"] = Config.load_from_file(config)
+            # Load from specific file using Pydantic BaseSettings parse_file method
+            ctx.obj["config"] = Config.parse_file(config)
         else:
             ctx.obj["config"] = get_config()
-    except Exception as e:
+    except (OSError, ValueError, RuntimeError) as e:
         rich_cli.show_error("Failed to load configuration", details=str(e))
         sys.exit(1)
 
@@ -200,7 +200,7 @@ def completion(shell: str):
     try:
         completion_script = comp.source()
         click.echo(completion_script)
-    except Exception as e:
+    except (ValueError, RuntimeError, OSError) as e:
         rich_cli.show_error("Failed to generate completion script", str(e))
         sys.exit(1)
 
@@ -237,4 +237,4 @@ def status(ctx: click.Context):
 
 
 if __name__ == "__main__":
-    main()
+    main()  # pylint: disable=no-value-for-parameter

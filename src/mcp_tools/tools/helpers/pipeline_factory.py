@@ -39,15 +39,15 @@ class QueryProcessingPipelineFactory:
         """Create and initialize query processing pipeline."""
         try:
             # Get required services
-            embedding_manager = await self.client_manager.get_embedding_manager()
-            qdrant_service = await self.client_manager.get_qdrant_service()
-            hyde_engine = await self.client_manager.get_hyde_engine()
+            # embedding_manager = await self.client_manager.get_embedding_manager()
+            # qdrant_service = await self.client_manager.get_qdrant_service()
+            # hyde_engine = await self.client_manager.get_hyde_engine()
 
             # Get cache manager if available
-            cache_manager = None
             try:
-                cache_manager = await self.client_manager.get_cache_manager()
-            except Exception:
+                # cache_manager = await self.client_manager.get_cache_manager()
+                pass  # Placeholder for the commented code
+            except (ConnectionError, OSError, RuntimeError, TimeoutError):
                 if ctx:
                     await ctx.debug(
                         "Cache manager not available, proceeding without caching"
@@ -55,19 +55,15 @@ class QueryProcessingPipelineFactory:
 
             # Create orchestrator
             orchestrator = SearchOrchestrator(
-                embedding_manager=embedding_manager,
-                qdrant_service=qdrant_service,
-                hyde_engine=hyde_engine,
-                cache_manager=cache_manager,
+                cache_size=1000,
+                enable_performance_optimization=True,
             )
 
             # Create pipeline
             pipeline = QueryProcessingPipeline(orchestrator=orchestrator)
             await pipeline.initialize()
 
-            return pipeline
-
-        except Exception:
+        except (AttributeError, ImportError, OSError):
             if ctx:
                 await ctx.error("Failed to initialize query processing pipeline")
             logger.exception("Pipeline initialization failed")

@@ -282,9 +282,12 @@ class TestContextManagers:
 
     def test_trace_operation_with_exception(self):
         """Test trace_operation context manager with exceptions."""
-        with pytest.raises(ValueError), trace_operation("failing_operation"):
-            msg = "Test error"
-            raise ValueError(msg)
+        error_msg = "Test error"
+        with (
+            trace_operation("failing_operation"),
+            pytest.raises(ValueError, match="Test error"),
+        ):
+            raise ValueError(error_msg)
 
     def test_trace_async_operation(self):
         """Test async trace_operation context manager."""
@@ -352,8 +355,7 @@ class TestPerformanceTracking:
 
         async def run_concurrent_test():
             tasks = [concurrent_task(i) for i in range(3)]
-            results = await asyncio.gather(*tasks)
-            return results
+            return await asyncio.gather(*tasks)
 
         results = asyncio.run(run_concurrent_test())
         assert len(results) == 3

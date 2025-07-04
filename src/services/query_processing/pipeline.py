@@ -6,6 +6,7 @@ processing system, orchestrating all components through a single entry point.
 
 import asyncio
 import logging
+import subprocess
 import time
 from typing import Any
 
@@ -54,7 +55,7 @@ class QueryProcessingPipeline(BaseService):
             self._initialized = True
             logger.info("QueryProcessingPipeline initialized successfully")
 
-        except Exception:
+        except (AttributeError, ImportError, OSError):
             logger.exception("Failed to initialize QueryProcessingPipeline")
             raise
 
@@ -195,7 +196,7 @@ class QueryProcessingPipeline(BaseService):
         response = await self.orchestrator.process_query(request)
 
         # Return analysis components
-        analysis = {
+        return {
             "query": query,
             "preprocessing": response.preprocessing_result,
             "intent_classification": response.intent_classification,
@@ -205,8 +206,6 @@ class QueryProcessingPipeline(BaseService):
             "strategy": response.strategy_selection,
             "processing_time_ms": response.total_processing_time_ms,
         }
-
-        return analysis
 
     async def get_metrics(self) -> dict[str, Any]:
         """Get comprehensive performance metrics.
@@ -370,7 +369,7 @@ class QueryProcessingPipeline(BaseService):
                 ],
             }
 
-        except Exception as e:
+        except (subprocess.SubprocessError, OSError, TimeoutError) as e:
             end_time = time.time()
             warmup_time_ms = (end_time - start_time) * 1000
 

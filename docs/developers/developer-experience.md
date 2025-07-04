@@ -112,7 +112,7 @@ Configuration automatically provided in `.vscode/`:
 
 ### Available VS Code Tasks
 - **Dev Simple**: Start development server (simple mode)
-- **Dev Enterprise**: Start development server (enterprise mode) 
+- **Dev Enterprise**: Start development server (enterprise mode)
 - **Test Fast**: Run fast test suite
 - **Test Unit**: Run unit tests only
 - **Quality**: Run code quality checks

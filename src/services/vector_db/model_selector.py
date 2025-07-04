@@ -15,7 +15,10 @@ from src.config import (
     QueryComplexity,
     QueryType,
 )
-from src.models.vector_search import ModelSelectionStrategy, QueryClassification
+
+
+# TODO: Fix imports - Any  # TODO: Replace with proper ModelSelectionStrategy type and Any  # TODO: Replace with proper QueryClassification type don't exist
+# from src.models.vector_search import Any  # TODO: Replace with proper ModelSelectionStrategy type, Any  # TODO: Replace with proper QueryClassification type
 
 
 logger = logging.getLogger(__name__)
@@ -125,10 +128,10 @@ class ModelSelector:
 
     async def select_optimal_model(
         self,
-        query_classification: QueryClassification,
+        query_classification: Any,  # TODO: Replace with proper QueryClassification type
         optimization_strategy: OptimizationStrategy = OptimizationStrategy.BALANCED,
         context: dict[str, Any] | None = None,
-    ) -> ModelSelectionStrategy:
+    ) -> Any:  # TODO: Replace with proper ModelSelectionStrategy type
         """Select the optimal embedding model based on query characteristics.
 
         Args:
@@ -137,7 +140,7 @@ class ModelSelector:
             context: Additional context (user preferences, system constraints)
 
         Returns:
-            ModelSelectionStrategy with selected model and rationale
+            Any  # TODO: Replace with proper ModelSelectionStrategy type with selected model and rationale
 
         """
         try:
@@ -163,25 +166,27 @@ class ModelSelector:
             # Calculate ensemble weights if using multiple models
             model_weights = self._calculate_ensemble_weights(scored_candidates)
 
-            return ModelSelectionStrategy(
-                primary_model=best_model["model_id"],
-                model_type=self.model_registry[best_model["model_id"]]["type"],
-                fallback_models=fallback_models,
-                model_weights=model_weights,
-                selection_rationale=best_model["rationale"],
-                expected_performance=best_model["quality_score"],
-                cost_efficiency=best_model["cost_efficiency"],
-                query_classification=query_classification,
-            )
+            # TODO: Replace with proper ModelSelectionStrategy instance
+            return {
+                "primary_model": best_model["model_id"],
+                "model_type": self.model_registry[best_model["model_id"]]["type"],
+                "fallback_models": fallback_models,
+                "model_weights": model_weights,
+                "selection_rationale": best_model["rationale"],
+                "expected_performance": best_model["quality_score"],
+                "cost_efficiency": best_model["cost_efficiency"],
+                "query_classification": query_classification,
+            }
 
-        except Exception as e:
-            logger.error(
-                f"Model selection failed: {e}", exc_info=True
+        except Exception:
+            logger.exception(
+                "Model selection failed: "
             )  # TODO: Convert f-string to logging format
             return self._get_fallback_strategy(query_classification)
 
     def _get_candidate_models(
-        self, query_classification: QueryClassification
+        self,
+        query_classification: Any,  # TODO: Replace with proper QueryClassification type
     ) -> list[str]:
         """Get candidate models based on query characteristics."""
         candidates = []
@@ -191,7 +196,7 @@ class ModelSelector:
             specializations = model_info["specializations"]
 
             # Map QueryTypes to the properties that make a model suitable.
-            QUERY_TYPE_REQUIREMENTS = {
+            query_type_requirements = {
                 QueryType.CODE: {
                     "specializations": {"code"},
                     "model_types": {ModelType.CODE_SPECIALIZED},
@@ -218,7 +223,7 @@ class ModelSelector:
             current_query_type = query_classification.query_type
 
             # Get the requirements for the current query type
-            requirements = QUERY_TYPE_REQUIREMENTS.get(current_query_type)
+            requirements = query_type_requirements.get(current_query_type)
 
             if requirements:
                 # A model is a candidate if its type matches OR it has a required specialization.
@@ -247,7 +252,7 @@ class ModelSelector:
     async def _score_candidates(
         self,
         candidates: list[str],
-        query_classification: QueryClassification,
+        query_classification: Any,  # TODO: Replace with proper QueryClassification type
         optimization_strategy: OptimizationStrategy,
         _context: dict[str, Any] | None,
     ) -> list[dict[str, Any]]:
@@ -315,7 +320,9 @@ class ModelSelector:
         return scored_candidates
 
     def _calculate_specialization_score(
-        self, model_info: dict[str, Any], query_classification: QueryClassification
+        self,
+        model_info: dict[str, Any],
+        query_classification: Any,  # TODO: Replace with proper QueryClassification type
     ) -> float:
         """Calculate specialization score based on model-query alignment."""
         specializations = model_info["specializations"]
@@ -358,7 +365,9 @@ class ModelSelector:
         return min(score, 1.0)
 
     def _get_historical_performance(
-        self, model_id: str, query_classification: QueryClassification
+        self,
+        model_id: str,
+        query_classification: Any,  # TODO: Replace with proper QueryClassification type
     ) -> float:
         """Get historical performance score for model on similar queries."""
         query_type_key = (
@@ -473,27 +482,29 @@ class ModelSelector:
         return ". ".join(rationale_parts)
 
     def _get_fallback_strategy(
-        self, query_classification: QueryClassification
-    ) -> ModelSelectionStrategy:
+        self,
+        query_classification: Any,  # TODO: Replace with proper QueryClassification type
+    ) -> Any:  # TODO: Replace with proper ModelSelectionStrategy type
         """Get fallback strategy when selection fails."""
         # Default to balanced general-purpose model
         fallback_model = EmbeddingModel.BGE_LARGE_EN_V15.value
 
-        return ModelSelectionStrategy(
-            primary_model=fallback_model,
-            model_type=ModelType.GENERAL_PURPOSE,
-            fallback_models=[EmbeddingModel.TEXT_EMBEDDING_3_SMALL.value],
-            model_weights={},
-            selection_rationale="Fallback to reliable general-purpose model due to selection error",
-            expected_performance=0.7,
-            cost_efficiency=0.8,
-            query_classification=query_classification,
-        )
+        # TODO: Replace with proper ModelSelectionStrategy instance
+        return {
+            "primary_model": fallback_model,
+            "model_type": ModelType.GENERAL_PURPOSE,
+            "fallback_models": [EmbeddingModel.TEXT_EMBEDDING_3_SMALL.value],
+            "model_weights": {},
+            "selection_rationale": "Fallback to reliable general-purpose model due to selection error",
+            "expected_performance": 0.7,
+            "cost_efficiency": 0.8,
+            "query_classification": query_classification,
+        }
 
     async def update_performance_history(
         self,
         model_id: str,
-        query_classification: QueryClassification,
+        query_classification: Any,  # TODO: Replace with proper QueryClassification type
         performance_score: float,
     ) -> None:
         """Update performance history for a model on a specific query type."""
@@ -514,9 +525,9 @@ class ModelSelector:
                 f"Updated performance history for {model_id} on {query_type_key}: {updated_score:.3f}"
             )
 
-        except Exception as e:
-            logger.error(
-                f"Failed to update performance history: {e}", exc_info=True
+        except Exception:
+            logger.exception(
+                "Failed to update performance history: "
             )  # TODO: Convert f-string to logging format
 
     def get_model_info(self, model_id: str) -> dict[str, Any] | None:

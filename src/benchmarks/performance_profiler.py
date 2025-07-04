@@ -177,7 +177,7 @@ class PerformanceProfiler:
                 # Small delay between queries
                 await asyncio.sleep(0.1)
 
-            except Exception as e:
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                 logger.debug(
                     f"Query execution failed during profiling: {e}"
                 )  # TODO: Convert f-string to logging format
@@ -236,7 +236,7 @@ class PerformanceProfiler:
 
                 self.resource_snapshots.append(snapshot)
 
-            except Exception as e:
+            except (ConnectionError, OSError, TimeoutError) as e:
                 logger.warning(
                     f"Error collecting resource snapshot: {e}"
                 )  # TODO: Convert f-string to logging format

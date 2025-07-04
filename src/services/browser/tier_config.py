@@ -69,6 +69,7 @@ class TierPerformanceAnalysis:
     last_success_time: float | None = None
     last_failure_time: float | None = None
     circuit_breaker_state: CircuitBreakerState = CircuitBreakerState.CLOSED
+    health_reasons: list[str] = field(default_factory=list)
 
     @property
     def failure_rate(self) -> float:
@@ -112,10 +113,18 @@ class EnhancedRoutingConfig:
     """Enhanced routing configuration."""
 
     tiers: dict[str, TierConfiguration] = field(default_factory=dict)
+    tier_configs: dict[str, TierConfiguration] = field(
+        default_factory=dict
+    )  # Alias for backward compatibility
     domain_preferences: list[DomainPreference] = field(default_factory=list)
     global_timeout_ms: int = 120000
     enable_performance_tracking: bool = True
+    enable_performance_routing: bool = True
+    enable_intelligent_fallback: bool = True
+    enable_cost_optimization: bool = True
     performance_history_size: int = 1000
+    performance_window_hours: int = 24
+    min_samples_for_analysis: int = 10
     circuit_breaker_enabled: bool = True
     fallback_strategy: str = "next_tier"  # next_tier, lowest_cost, fastest
 

@@ -1,8 +1,11 @@
 import typing
+
+
 """Cache warming functionality - V2 feature placeholder."""
 
-import logging  # noqa: PLC0415
+import logging
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +29,6 @@ class CacheWarmer:
     async def track_query(self, query: str, cache_type: str) -> None:
         """Track query frequency (V2 placeholder)."""
         # V2: Increment query count in Redis sorted set
-        pass
 
     async def warm_popular_queries(self, top_n: int = 100) -> int:
         """Warm top N popular queries (V2 placeholder)."""

@@ -4,11 +4,15 @@ import asyncio
 from collections.abc import Callable
 from functools import wraps
 from typing import Any, TypeVar
+from weakref import WeakSet
 
 import click
 
 
 F = TypeVar("F", bound=Callable[..., Any])
+
+# Keep track of wrapped CLI groups to prevent double-wrapping
+_wrapped_cli_groups: WeakSet[click.Group] = WeakSet()
 
 
 def async_to_sync_click(cli_group: click.Group) -> None:
@@ -22,7 +26,7 @@ def async_to_sync_click(cli_group: click.Group) -> None:
 
     """
     # Avoid double-wrapping if already processed
-    if hasattr(cli_group, "_commands_wrapped"):
+    if cli_group in _wrapped_cli_groups:
         return
 
     # Convert each async command to sync
@@ -40,7 +44,7 @@ def async_to_sync_click(cli_group: click.Group) -> None:
             command.callback = make_sync_callback(original_callback)
 
     # Mark as wrapped to prevent double-wrapping
-    cli_group._commands_wrapped = True
+    _wrapped_cli_groups.add(cli_group)
 
 
 def async_command(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -61,4 +65,4 @@ def async_command(func: Callable[..., Any]) -> Callable[..., Any]:
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         return asyncio.run(func(*args, **kwargs))
 
-    return wrapper  # type: ignore
+    return wrapper  # type: ignore[return-value]

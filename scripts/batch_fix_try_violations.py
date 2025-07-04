@@ -60,7 +60,7 @@ def fix_try401_violations():
 
             # Fix common TRY401 patterns
             patterns = [
-                # logger.exception(f"message: {e}")
+                # logger.exception("message")
                 (r'logger\.exception\(f"([^"]*?): \{e\}"\)', r'logger.exception("\1")'),
                 (r'logger\.exception\(f"([^"]*?) \{e\}"\)', r'logger.exception("\1")'),
                 (r'logger\.exception\(f"([^"]*?)\{e\}"\)', r'logger.exception("\1")'),

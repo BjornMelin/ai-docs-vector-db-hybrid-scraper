@@ -1,15 +1,15 @@
-# Shared cache configuration for workflows
-# This file defines optimized caching strategies for different workflow types
+# Shared cache configuration for optimized workflows
+# This file defines unified caching strategies to maximize cache hit rates
 
-# Python dependency caching (uv-specific)
+# Python dependency caching (uv-specific) - UNIFIED KEY STRATEGY
 python-deps:
-  key: python-deps-${{ runner.os }}-${{ matrix.python-version || '3.13' }}-${{ hashFiles('**/uv.lock', 'pyproject.toml') }}
+  key: python-env-${{ runner.os }}-${{ matrix.python-version || '3.12' }}-${{ hashFiles('**/uv.lock', 'pyproject.toml') }}${{ inputs.cache-suffix || '' }}
   paths:
     - ~/.cache/uv
     - .venv
   restore-keys:
-    - python-deps-${{ runner.os }}-${{ matrix.python-version || '3.13' }}-
-    - python-deps-${{ runner.os }}-
+    - python-env-${{ runner.os }}-${{ matrix.python-version || '3.12' }}-
+    - python-env-${{ runner.os }}-
 
 # Ruff linting cache
 ruff:

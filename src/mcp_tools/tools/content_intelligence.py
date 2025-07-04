@@ -4,8 +4,11 @@ This module provides MCP tools for AI-powered content analysis, quality assessme
 and adaptive extraction recommendations using the Content Intelligence Service.
 """
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING
+
+import redis
 
 from src.services.content_intelligence.models import ContentType
 
@@ -110,7 +113,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 error=result.error,
             )
 
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             await ctx.error(f"Content intelligence analysis failed: {e}")
             return ContentIntelligenceResult(
                 success=False,
@@ -165,9 +168,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 f"(confidence: {result.confidence_scores.get(result.primary_type, 0.0):.2f})"
             )
 
-            return result
-
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             await ctx.error(f"Content classification failed: {e}")
 
             return ContentClassification(
@@ -176,6 +177,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 confidence_scores={},
                 classification_reasoning=f"Classification failed: {e!s}",
             )
+        else:
+            return result
 
     @mcp.tool()
     async def assess_content_quality(
@@ -227,9 +230,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 f"(meets threshold: {result.meets_threshold})"
             )
 
-            return result
-
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             await ctx.error(f"Quality assessment failed: {e}")
             return QualityScore(
                 overall_score=0.1,
@@ -239,6 +240,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 quality_issues=[f"Assessment failed: {e!s}"],
                 improvement_suggestions=["Retry content extraction"],
             )
+        else:
+            return result
 
     @mcp.tool()
     async def extract_content_metadata(
@@ -285,14 +288,14 @@ def register_tools(mcp, client_manager: ClientManager):
                 f"{len(result.tags)} tags, {len(result.topics)} topics"
             )
 
-            return result
-
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             await ctx.error(f"Metadata extraction failed: {e}")
             return ContentMetadata(
                 word_count=len(request.content.split()),
                 char_count=len(request.content),
             )
+        else:
+            return result
 
     @mcp.tool()
     async def get_adaptation_recommendations(
@@ -345,11 +348,12 @@ def register_tools(mcp, client_manager: ClientManager):
             )
 
             # Convert to serializable format
-            return [rec.model_dump() for rec in recommendations]
 
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             await ctx.error(f"Adaptation recommendation failed: {e}")
             return []
+        else:
+            return [rec.model_dump() for rec in recommendations]
 
     @mcp.tool()
     async def get_content_intelligence_metrics(ctx: Context = None) -> dict:
@@ -389,11 +393,11 @@ def register_tools(mcp, client_manager: ClientManager):
                 f"{metrics['cache_hit_rate']:.1%} cache hit rate"
             )
 
-            return metrics
-
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             await ctx.error(f"Failed to retrieve metrics: {e}")
             return {
                 "service_available": False,
                 "error": f"Metrics retrieval failed: {e!s}",
             }
+        else:
+            return metrics

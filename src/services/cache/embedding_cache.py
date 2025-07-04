@@ -1,10 +1,13 @@
 import typing
+
+
 """Specialized cache for embedding vectors with DragonflyDB optimizations."""
 
 import hashlib
-import logging  # noqa: PLC0415
+import logging
 
 from .dragonfly_cache import DragonflyCache
+
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +58,9 @@ class EmbeddingCache:
                 # Validate dimensions if provided
                 if dimensions is not None and len(cached) != dimensions:
                     logger.warning(
-                        f"Cached embedding dimensions mismatch: "
-                        f"expected {dimensions}, got {len(cached)}"
+                        "Cached embedding dimensions mismatch: "
+                        "expected %d, got %d",
+                        dimensions, len(cached)
                     )
                     return None
 
@@ -65,7 +69,7 @@ class EmbeddingCache:
 
             return None
 
-        except Exception:
+        except (AttributeError, ConnectionError, RuntimeError, TimeoutError) as e:
             logger.error(f"Error retrieving embedding from cache: {e}")
             return None
 
@@ -113,7 +117,7 @@ class EmbeddingCache:
 
             return success
 
-        except Exception:
+        except (AttributeError, ImportError, RuntimeError, ValueError) as e:
             logger.error(f"Error caching embedding: {e}")
             return False
 
@@ -170,7 +174,7 @@ class EmbeddingCache:
 
             return cached, missing
 
-        except Exception:
+        except (AttributeError, ConnectionError, RuntimeError, TimeoutError) as e:
             logger.error(f"Error in batch embedding retrieval: {e}")
             # Return all as missing on error
             return {}, texts
@@ -237,7 +241,7 @@ class EmbeddingCache:
 
             return success
 
-        except Exception:
+        except (AttributeError, ConnectionError, ImportError, RuntimeError) as e:
             logger.error(f"Error in batch embedding caching: {e}")
             return False
 
@@ -285,7 +289,7 @@ class EmbeddingCache:
 
             return missing_texts
 
-        except Exception:
+        except (ConnectionError, ImportError, RuntimeError, TimeoutError) as e:
             logger.error(f"Error in cache warming: {e}")
             return common_queries  # Return all as missing on error
 
@@ -328,7 +332,7 @@ class EmbeddingCache:
 
             return 0
 
-        except Exception:
+        except (AttributeError, ConnectionError, ImportError, RuntimeError) as e:
             logger.error(f"Error invalidating model cache: {e}")
             return 0
 
@@ -365,7 +369,7 @@ class EmbeddingCache:
                             models.get(f"{provider}:{model}", 0) + 1
                         )
 
-                except Exception:
+                except (ImportError, RuntimeError, ValueError) as e:
                     continue
 
             stats["by_provider"] = providers
@@ -373,9 +377,13 @@ class EmbeddingCache:
 
             return stats
 
-        except Exception:
+        except (ConnectionError, ImportError, RuntimeError, TimeoutError) as e:
             logger.error(f"Error getting cache stats: {e}")
             return {"error": str(e)}
+
+    async def get_stats(self) -> dict:
+        """Alias for get_cache_stats for compatibility."""
+        return await self.get_cache_stats()
 
     def _get_key(
         self,
@@ -404,5 +412,4 @@ class EmbeddingCache:
         # Include dimensions in key if provided
         if dimensions is not None:
             return f"emb:{provider}:{model}:{dimensions}:{text_hash}"
-        else:
-            return f"emb:{provider}:{model}:{text_hash}"
+        return f"emb:{provider}:{model}:{text_hash}"

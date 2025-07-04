@@ -89,7 +89,7 @@ def create_mock_tools(client_manager) -> dict[str, AsyncMock]:
             raise ValueError(msg)
         if not isinstance(result, list):
             msg = f"Invalid response: expected list, got {type(result).__name__}"
-            raise ValueError(msg)
+            raise TypeError(msg)
 
         return result
 

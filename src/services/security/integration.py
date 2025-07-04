@@ -15,7 +15,7 @@ system, bringing together all security components into a cohesive framework:
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,6 +29,11 @@ from src.services.security.rate_limiter import DistributedRateLimiter
 
 
 logger = logging.getLogger(__name__)
+
+
+def _raise_security_system_unhealthy() -> None:
+    """Raise HTTPException for unhealthy security system."""
+    raise HTTPException(status_code=503, detail="Security system unhealthy")
 
 
 class SecurityManager:
@@ -85,8 +90,8 @@ class SecurityManager:
 
             logger.info("All security components initialized successfully")
 
-        except Exception as e:
-            logger.exception(f"Failed to initialize security components: {e}")
+        except Exception:
+            logger.exception("Failed to initialize security components")
             # Set fallback configurations
             self._setup_fallback_security()
 
@@ -116,9 +121,8 @@ class SecurityManager:
             Configured security middleware
         """
         if not all([self.rate_limiter, self.ai_validator, self.security_monitor]):
-            raise RuntimeError(
-                "Security components not initialized. Call initialize_components() first."
-            )
+            msg = "Security components not initialized. Call initialize_components()."
+            raise RuntimeError(msg)
 
         # Create security middleware
         self.middleware = SecurityMiddleware(
@@ -190,7 +194,7 @@ class SecurityManager:
             try:
                 rate_limiter_health = await self.rate_limiter.get_health_status()
                 status["rate_limiter"] = rate_limiter_health
-            except Exception as e:
+            except (AttributeError, RuntimeError, TypeError) as e:
                 status["rate_limiter"] = {"error": str(e), "healthy": False}
 
         # Security monitor metrics
@@ -199,7 +203,7 @@ class SecurityManager:
                 status["security_metrics"] = (
                     self.security_monitor.get_security_metrics()
                 )
-            except Exception as e:
+            except (AttributeError, RuntimeError, TypeError) as e:
                 status["security_metrics"] = {"error": str(e)}
 
         # Middleware status
@@ -262,12 +266,31 @@ class SecurityManager:
 
             logger.info("Security resources cleaned up")
 
-        except Exception as e:
-            logger.exception(f"Error during security cleanup: {e}")
+        except Exception:
+            logger.exception("Error during security cleanup")
+
+
+class _SecurityManagerSingleton:
+    """Singleton holder for security manager instance."""
+
+    _instance: SecurityManager | None = None
+
+    @classmethod
+    def get_instance(cls) -> SecurityManager:
+        """Get the singleton security manager instance."""
+        if cls._instance is None:
+            cls._instance = SecurityManager()
+        return cls._instance
+
+    @classmethod
+    def set_instance(cls, security_config: SecurityConfig) -> SecurityManager:
+        """Set the singleton instance with configuration."""
+        cls._instance = SecurityManager(security_config)
+        return cls._instance
 
 
 # Global security manager instance
-security_manager = SecurityManager()
+security_manager = _SecurityManagerSingleton.get_instance()
 
 
 async def get_security_manager() -> SecurityManager:
@@ -276,7 +299,7 @@ async def get_security_manager() -> SecurityManager:
     Returns:
         Global security manager instance
     """
-    return security_manager
+    return _SecurityManagerSingleton.get_instance()
 
 
 def setup_application_security(
@@ -297,11 +320,11 @@ def setup_application_security(
     Returns:
         Configured security manager
     """
-    global security_manager
-
     # Initialize security manager with config
     if security_config:
-        security_manager = SecurityManager(security_config)
+        security_manager = _SecurityManagerSingleton.set_instance(security_config)
+    else:
+        security_manager = _SecurityManagerSingleton.get_instance()
 
     @app.on_event("startup")
     async def startup_security():
@@ -340,13 +363,13 @@ def setup_application_security(
 
             if is_healthy:
                 return {"status": "healthy", "details": status}
-            raise HTTPException(status_code=503, detail="Security system unhealthy")
+            _raise_security_system_unhealthy()
 
         except Exception as e:
             logger.exception("Security health check failed")
             raise HTTPException(
                 status_code=503, detail=f"Security health check failed: {e!s}"
-            )
+            ) from e
 
     @app.get("/security/metrics")
     async def security_metrics():
@@ -376,8 +399,12 @@ def setup_application_security(
     # Add API key dependency for protected endpoints
     security_scheme = HTTPBearer(auto_error=False)
 
+    # Module-level singleton for dependency
+    _security_dependency = Depends(security_scheme)
+
+    # Create the dependency function
     async def validate_api_key_dependency(
-        credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
+        credentials: HTTPAuthorizationCredentials | None = _security_dependency,
     ) -> bool:
         """Dependency for API key validation."""
         return await security_manager.validate_api_key(credentials)

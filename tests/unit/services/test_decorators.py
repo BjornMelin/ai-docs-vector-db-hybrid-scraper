@@ -345,7 +345,7 @@ class TestValidateInput:
         def validate_number(value):
             if not isinstance(value, int | float):
                 msg = "Must be a number"
-                raise ValueError(msg)
+                raise TypeError(msg)
             return float(value)
 
         @validate_input(num=validate_number)
@@ -379,7 +379,7 @@ class TestValidateInput:
         def validate_string(value):
             if not isinstance(value, str):
                 msg = "Must be string"
-                raise ValueError(msg)
+                raise TypeError(msg)
             return value.strip()
 
         def validate_number(value):
@@ -476,14 +476,13 @@ class TestRateLimiter:
         await limiter.acquire()
 
         # Next call should provide retry_after
-        try:
+        with pytest.raises(RateLimitError) as exc_info:
             await limiter.acquire()
-            msg = "Should have raised RateLimitError"
-            raise AssertionError(msg)
-        except RateLimitError as e:
-            assert hasattr(e, "retry_after")
-            assert e.retry_after > 0
-            assert e.retry_after <= 1.0
+
+        e = exc_info.value
+        assert hasattr(e, "retry_after")
+        assert e.retry_after > 0
+        assert e.retry_after <= 1.0
 
     @pytest.mark.asyncio
     async def test_rate_limiter_concurrent_access(self):

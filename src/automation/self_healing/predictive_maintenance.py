@@ -10,10 +10,9 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
-from pydantic import BaseModel, Field
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 
@@ -236,7 +235,8 @@ class TimeSeriesPredictor:
         if len(data_points) < self.window_size:
             return []
 
-        # Simple linear extrapolation (in real implementation, use more sophisticated models)
+        # Simple linear extrapolation
+        # (in real implementation, use more sophisticated models)
         recent_values = [dp.value for dp in data_points[-20:]]
 
         # Calculate trend
@@ -256,7 +256,8 @@ class TimeSeriesPredictor:
         expected_range: tuple[float, float],
     ) -> str:
         """Calculate severity of detected anomaly."""
-        # Normalize anomaly score (isolation forest returns negative scores for anomalies)
+        # Normalize anomaly score
+        # (isolation forest returns negative scores for anomalies)
         normalized_score = abs(anomaly_score)
 
         # Calculate deviation from expected range
@@ -420,9 +421,7 @@ class ComponentHealthAnalyzer:
         avg_deviation = sum(deviations) / len(deviations)
 
         # Convert to health score (1.0 = perfect health, 0.0 = critical)
-        health_score = max(0.0, 1.0 - avg_deviation)
-
-        return health_score
+        return max(0.0, 1.0 - avg_deviation)
 
     def _determine_health_status(self, health_score: float) -> ComponentHealth:
         """Determine health status based on health score."""
@@ -437,7 +436,7 @@ class ComponentHealthAnalyzer:
         return ComponentHealth.CRITICAL
 
     def _calculate_degradation_rate(
-        self, component: str, current_health_score: float
+        self, component: str, _current_health_score: float
     ) -> float:
         """Calculate health degradation rate."""
         if (
@@ -596,7 +595,7 @@ class ComponentHealthAnalyzer:
         # Calculate trends
         health_scores = [assessment.health_score for assessment in history[-20:]]
 
-        patterns = {
+        return {
             "average_health_score": sum(health_scores) / len(health_scores),
             "health_trend": "improving"
             if health_scores[-1] > health_scores[0]
@@ -611,8 +610,6 @@ class ComponentHealthAnalyzer:
             ),  # Last day
             "common_risk_factors": self._find_common_risk_factors(history),
         }
-
-        return patterns
 
     def _find_common_risk_factors(
         self, history: list[ComponentHealthAssessment]
@@ -636,7 +633,8 @@ class ComponentHealthAnalyzer:
 
 
 class PredictiveMaintenanceScheduler:
-    """Schedules predictive maintenance based on ML predictions and business constraints."""
+    """Schedules predictive maintenance based on ML predictions and business
+    constraints."""
 
     def __init__(
         self,
@@ -669,8 +667,8 @@ class PredictiveMaintenanceScheduler:
 
         try:
             await self.continuous_prediction_loop()
-        except Exception as e:
-            logger.exception(f"Predictive maintenance monitoring failed: {e}")
+        except Exception:
+            logger.exception("Predictive maintenance monitoring failed")
             self.monitoring_enabled = False
             raise
 
@@ -716,19 +714,20 @@ class PredictiveMaintenanceScheduler:
                 # Log status
                 if new_recommendations or anomalies:
                     logger.info(
-                        f"Predictive maintenance cycle: {len(new_recommendations)} new recommendations, "
+                        f"Predictive maintenance cycle: "
+                        f"{len(new_recommendations)} new recommendations, "
                         f"{len(anomalies)} anomalies detected"
                     )
 
-            except Exception as e:
-                logger.exception(f"Error in predictive maintenance loop: {e}")
+            except Exception:
+                logger.exception("Error in predictive maintenance loop")
 
             # Wait for next cycle
             await asyncio.sleep(self.prediction_interval)
 
     async def update_time_series_data(self, metrics: SystemMetrics):
         """Update time series data with current metrics."""
-        timestamp = datetime.utcnow()
+        timestamp = datetime.now(tz=datetime.UTC)
 
         # Add system-level metrics
         system_metrics = [
@@ -759,7 +758,7 @@ class PredictiveMaintenanceScheduler:
         self, metrics: SystemMetrics
     ) -> list[AnomalyDetection]:
         """Detect anomalies in current metrics."""
-        timestamp = datetime.utcnow()
+        timestamp = datetime.now(tz=datetime.UTC)
         anomalies = []
 
         # Check each metric for anomalies
@@ -782,9 +781,10 @@ class PredictiveMaintenanceScheduler:
             if anomaly:
                 anomalies.append(anomaly)
                 logger.warning(
-                    f"Anomaly detected: {anomaly.metric_name} = {anomaly.current_value} "
-                    f"(expected: {anomaly.expected_range[0]:.2f}-{anomaly.expected_range[1]:.2f}) "
-                    f"- {anomaly.severity} severity"
+                    f"Anomaly detected: {anomaly.metric_name} = "
+                    f"{anomaly.current_value} (expected: "
+                    f"{anomaly.expected_range[0]:.2f}-{anomaly.expected_range[1]:.2f})"
+                    f" - {anomaly.severity} severity"
                 )
 
         return anomalies
@@ -829,9 +829,10 @@ class PredictiveMaintenanceScheduler:
         health_assessments: list[ComponentHealthAssessment],
         anomalies: list[AnomalyDetection],
     ) -> list[MaintenanceRecommendation]:
-        """Generate maintenance recommendations based on health assessments and anomalies."""
+        """Generate maintenance recommendations based on health assessments and
+        anomalies."""
         recommendations = []
-        current_time = datetime.utcnow()
+        current_time = datetime.now(tz=datetime.UTC)
 
         # Generate recommendations based on health assessments
         for assessment in health_assessments:
@@ -873,7 +874,10 @@ class PredictiveMaintenanceScheduler:
                     component=assessment.component_name,
                     maintenance_type=maintenance_type,
                     urgency=urgency,
-                    description=f"Maintenance required for {assessment.component_name} (health: {assessment.health_status.value})",
+                    description=(
+                        f"Maintenance required for {assessment.component_name} "
+                        f"(health: {assessment.health_status.value})"
+                    ),
                     estimated_duration_minutes=self._estimate_maintenance_duration(
                         assessment.component_name, maintenance_type
                     ),
@@ -902,7 +906,10 @@ class PredictiveMaintenanceScheduler:
                     component=self._map_metric_to_component(anomaly.metric_name),
                     maintenance_type=MaintenanceType.CORRECTIVE,
                     urgency=urgency,
-                    description=f"Address {anomaly.metric_name} anomaly: {anomaly.recommendation}",
+                    description=(
+                        f"Address {anomaly.metric_name} anomaly: "
+                        f"{anomaly.recommendation}"
+                    ),
                     estimated_duration_minutes=30,
                     optimal_execution_window=(
                         current_time,
@@ -928,7 +935,7 @@ class PredictiveMaintenanceScheduler:
             rec
             for rec in self.pending_recommendations
             if rec.urgency in [MaintenanceUrgency.CRITICAL, MaintenanceUrgency.HIGH]
-            and datetime.utcnow() >= rec.optimal_execution_window[0]
+            and datetime.now(tz=datetime.UTC) >= rec.optimal_execution_window[0]
         ]
 
         # Sort by urgency and confidence
@@ -954,7 +961,7 @@ class PredictiveMaintenanceScheduler:
             execution_id=f"exec_{recommendation.recommendation_id}",
             recommendation=recommendation,
             status="starting",
-            start_time=datetime.utcnow(),
+            start_time=datetime.now(tz=datetime.UTC),
         )
 
         try:
@@ -983,7 +990,7 @@ class PredictiveMaintenanceScheduler:
 
             execution.success = success
             execution.status = "completed" if success else "failed"
-            execution.end_time = datetime.utcnow()
+            execution.end_time = datetime.now(tz=datetime.UTC)
 
             # Capture metrics after maintenance
             post_metrics = (
@@ -997,17 +1004,18 @@ class PredictiveMaintenanceScheduler:
             }
 
             logger.info(
-                f"Maintenance execution completed: {execution.execution_id} - Success: {success}"
+                f"Maintenance execution completed: {execution.execution_id} - "
+                f"Success: {success}"
             )
 
-            return execution
-
         except Exception as e:
-            logger.exception(f"Maintenance execution failed: {e}")
+            logger.exception("Maintenance execution failed")
             execution.status = "failed"
             execution.success = False
-            execution.end_time = datetime.utcnow()
+            execution.end_time = datetime.now(tz=datetime.UTC)
             execution.notes = f"Execution failed: {e!s}"
+            return execution
+        else:
             return execution
 
     async def _execute_predictive_maintenance(
@@ -1047,7 +1055,7 @@ class PredictiveMaintenanceScheduler:
             description=recommendation.description,
             affected_components=[recommendation.component],
             metrics_snapshot={},
-            detection_time=datetime.utcnow(),
+            detection_time=datetime.now(tz=datetime.UTC),
             contributing_factors=["Predictive maintenance detected anomaly"],
             business_impact_score=0.5,
             auto_remediation_eligible=True,
@@ -1094,9 +1102,9 @@ class PredictiveMaintenanceScheduler:
     async def cleanup_completed_maintenance(self):
         """Clean up completed maintenance executions."""
         completed_executions = [
-            exec
-            for exec in self.scheduled_maintenance
-            if exec.status in ["completed", "failed"]
+            execution
+            for execution in self.scheduled_maintenance
+            if execution.status in ["completed", "failed"]
         ]
 
         for execution in completed_executions:

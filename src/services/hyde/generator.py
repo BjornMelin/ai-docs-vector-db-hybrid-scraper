@@ -4,18 +4,31 @@ import asyncio
 import hashlib
 import logging
 import time
-from typing import TYPE_CHECKING
+from typing import Any, Protocol
 
 from pydantic import BaseModel
 
-from src.infrastructure.client_manager import ClientManager
 from src.services.base import BaseService
 from src.services.errors import EmbeddingServiceError
 
 from .config import HyDEConfig, HyDEPromptConfig
 
 
+class OpenAIClientProtocol(Protocol):
+    """Protocol for OpenAI client."""
+
+    async def chat_completions_create(self, **kwargs) -> Any:
+        """Create chat completion."""
+        ...
+
+
 logger = logging.getLogger(__name__)
+
+
+def _raise_openai_client_not_available() -> None:
+    """Raise EmbeddingServiceError for unavailable OpenAI client."""
+    msg = "OpenAI client not available"
+    raise EmbeddingServiceError(msg)
 
 
 class GenerationResult(BaseModel):
@@ -36,21 +49,20 @@ class HypotheticalDocumentGenerator(BaseService):
         self,
         config: HyDEConfig,
         prompt_config: HyDEPromptConfig,
-        client_manager: ClientManager | None = None,
+        openai_client: OpenAIClientProtocol | None = None,
     ):
         """Initialize generator.
 
         Args:
             config: HyDE configuration
             prompt_config: Prompt configuration
-            client_manager: Optional client manager (will create one if not provided)
+            openai_client: Optional OpenAI client for LLM operations
 
         """
         super().__init__(config)
         self.config = config
         self.prompt_config = prompt_config
-        self.client_manager = client_manager or ClientManager.from_unified_config()
-        self._llm_client = None
+        self._llm_client = openai_client
 
         # Metrics tracking
         self.generation_count = 0
@@ -68,23 +80,18 @@ class HypotheticalDocumentGenerator(BaseService):
     async def initialize(self) -> None:
         """Initialize the generator.
 
-        Sets up LLM client connection and validates availability.
+        Validates that OpenAI client is available.
 
         Raises:
-            EmbeddingServiceError: If initialization fails or OpenAI client unavailable
+            EmbeddingServiceError: If OpenAI client unavailable
 
         """
         if self._initialized:
             return
 
         try:
-            # Initialize client manager and get OpenAI client
-            await self.client_manager.initialize()
-            self._llm_client = await self.client_manager.get_openai_client()
-
             if not self._llm_client:
-                msg = "OpenAI client not available"
-                raise EmbeddingServiceError(msg)
+                _raise_openai_client_not_available()
 
             # Test LLM connection
             await self._llm_client.models.list()
@@ -99,11 +106,9 @@ class HypotheticalDocumentGenerator(BaseService):
     async def cleanup(self) -> None:
         """Cleanup generator resources.
 
-        Releases LLM client and client manager resources.
+        Releases LLM client reference.
         Safe to call multiple times.
         """
-        if self.client_manager:
-            await self.client_manager.cleanup()
         self._llm_client = None
         self._initialized = False
         logger.info("HyDE document generator cleaned up")
@@ -180,14 +185,13 @@ class HypotheticalDocumentGenerator(BaseService):
                     f"in {generation_time:.2f}s, diversity={diversity_score:.2f}"
                 )
 
-            return result
-
         except Exception as e:
-            logger.error(
-                f"Failed to generate hypothetical documents: {e}", exc_info=True
-            )
+            logger.exception("Failed to generate hypothetical documents: ")
             msg = f"Document generation failed: {e}"
             raise EmbeddingServiceError(msg) from e
+
+        else:
+            return result
 
     def _build_diverse_prompts(
         self,
@@ -303,14 +307,12 @@ class HypotheticalDocumentGenerator(BaseService):
         documents = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Filter out exceptions and empty documents
-        valid_documents = [
+        return [
             doc
             for doc in documents
             if isinstance(doc, str)
             and len(doc.strip()) >= self.config.min_generation_length
         ]
-
-        return valid_documents
 
     async def _generate_sequential(self, prompts: list[str]) -> list[str]:
         """Generate documents sequentially."""
@@ -321,7 +323,7 @@ class HypotheticalDocumentGenerator(BaseService):
                 document = await self._generate_single_document(prompt)
                 if len(document.strip()) >= self.config.min_generation_length:
                     documents.append(document)
-            except Exception as e:
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                 logger.warning(
                     f"Failed to generate document: {e}"
                 )  # TODO: Convert f-string to logging format
@@ -348,7 +350,7 @@ class HypotheticalDocumentGenerator(BaseService):
         except TimeoutError:
             logger.warning("Document generation timed out")
             return ""
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Failed to generate document: {e}"
             )  # TODO: Convert f-string to logging format
@@ -392,11 +394,9 @@ class HypotheticalDocumentGenerator(BaseService):
         input_tokens = tokens * 0.7
         output_tokens = tokens * 0.3
 
-        cost = (input_tokens / 1000) * model_costs["input"] + (
+        return (input_tokens / 1000) * model_costs["input"] + (
             output_tokens / 1000
         ) * model_costs["output"]
-
-        return cost
 
     def _calculate_diversity_score(self, documents: list[str]) -> float:
         """Calculate diversity score between generated documents."""

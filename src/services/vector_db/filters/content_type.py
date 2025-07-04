@@ -10,7 +10,7 @@ import re
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator
 from qdrant_client import models
 
 from .base import BaseFilter, FilterError, FilterResult
@@ -273,98 +273,131 @@ class ContentTypeFilter(BaseFilter):
 
         """
         try:
-            # Validate and parse criteria
             criteria = ContentTypeCriteria.model_validate(filter_criteria)
-
-            # Build Qdrant filter conditions
-            conditions = []
-            metadata = {"applied_filters": [], "classification_info": {}}
-
-            # Process document type filters
-            doc_type_conditions = self._build_document_type_filters(criteria)
-            conditions.extend(doc_type_conditions)
-            if doc_type_conditions:
-                metadata["applied_filters"].append("document_types")
-
-            # Process category filters
-            category_conditions = self._build_category_filters(criteria)
-            conditions.extend(category_conditions)
-            if category_conditions:
-                metadata["applied_filters"].append("categories")
-
-            # Process intent filters
-            intent_conditions = self._build_intent_filters(criteria)
-            conditions.extend(intent_conditions)
-            if intent_conditions:
-                metadata["applied_filters"].append("intents")
-
-            # Process language and framework filters
-            lang_conditions = self._build_language_filters(criteria)
-            conditions.extend(lang_conditions)
-            if lang_conditions:
-                metadata["applied_filters"].append("languages")
-
-            # Process quality filters
-            quality_conditions = self._build_quality_filters(criteria)
-            conditions.extend(quality_conditions)
-            if quality_conditions:
-                metadata["applied_filters"].append("quality")
-
-            # Process content characteristic filters
-            char_conditions = self._build_characteristic_filters(criteria)
-            conditions.extend(char_conditions)
-            if char_conditions:
-                metadata["applied_filters"].append("characteristics")
-
-            # Process site and source filters
-            site_conditions = self._build_site_filters(criteria)
-            conditions.extend(site_conditions)
-            if site_conditions:
-                metadata["applied_filters"].append("sites")
-
-            # Process semantic filters
-            semantic_conditions = self._build_semantic_filters(criteria, context)
-            conditions.extend(semantic_conditions)
-            if semantic_conditions:
-                metadata["applied_filters"].append("semantic")
-
-            # Calculate performance impact
-            performance_impact = self._estimate_performance_impact(len(conditions))
-
-            # Build final filter
-            final_filter = None
-            if conditions:
-                final_filter = models.Filter(must=conditions)
-
-                # Add classification metadata
-                metadata["classification_info"] = {
-                    "total_conditions": len(conditions),
-                    "semantic_enabled": criteria.semantic_similarity_threshold
-                    is not None,
-                    "quality_filtering": criteria.min_quality_score is not None,
-                }
-
-            self._logger.info(
-                f"Applied content type filter with {len(conditions)} conditions: "
-                f"{metadata['applied_filters']}"
-            )
-
-            return FilterResult(
-                filter_conditions=final_filter,
-                metadata=metadata,
-                confidence_score=0.90,
-                performance_impact=performance_impact,
-            )
-
         except Exception as e:
-            error_msg = f"Failed to apply content type filter: {e}"
-            self._logger.error(error_msg, exc_info=True)
+            error_msg = f"Failed to validate content type criteria: {e}"
+            self._logger.exception(error_msg)
             raise FilterError(
                 error_msg,
                 filter_name=self.name,
                 filter_criteria=filter_criteria,
                 underlying_error=e,
             ) from e
+
+        try:
+            conditions, metadata = self._build_all_filter_conditions(criteria, context)
+        except Exception as e:
+            error_msg = f"Failed to apply content type filter: {e}"
+            self._logger.exception(error_msg)
+            raise FilterError(
+                error_msg,
+                filter_name=self.name,
+                filter_criteria=filter_criteria,
+                underlying_error=e,
+            ) from e
+
+        try:
+            return self._create_filter_result(conditions, metadata, criteria)
+        except Exception as e:
+            error_msg = f"Failed to apply content type filter: {e}"
+            self._logger.exception(error_msg)
+            raise FilterError(
+                error_msg,
+                filter_name=self.name,
+                filter_criteria=filter_criteria,
+                underlying_error=e,
+            ) from e
+
+    def _build_all_filter_conditions(
+        self, criteria: ContentTypeCriteria, context: dict[str, Any] | None = None
+    ) -> tuple[list[models.FieldCondition], dict[str, Any]]:
+        """Build all filter conditions and metadata."""
+        conditions = []
+        metadata = {"applied_filters": [], "classification_info": {}}
+
+        # Process document type filters
+        doc_type_conditions = self._build_document_type_filters(criteria)
+        conditions.extend(doc_type_conditions)
+        if doc_type_conditions:
+            metadata["applied_filters"].append("document_types")
+
+        # Process category filters
+        category_conditions = self._build_category_filters(criteria)
+        conditions.extend(category_conditions)
+        if category_conditions:
+            metadata["applied_filters"].append("categories")
+
+        # Process intent filters
+        intent_conditions = self._build_intent_filters(criteria)
+        conditions.extend(intent_conditions)
+        if intent_conditions:
+            metadata["applied_filters"].append("intents")
+
+        # Process language and framework filters
+        lang_conditions = self._build_language_filters(criteria)
+        conditions.extend(lang_conditions)
+        if lang_conditions:
+            metadata["applied_filters"].append("languages")
+
+        # Process quality filters
+        quality_conditions = self._build_quality_filters(criteria)
+        conditions.extend(quality_conditions)
+        if quality_conditions:
+            metadata["applied_filters"].append("quality")
+
+        # Process content characteristic filters
+        char_conditions = self._build_characteristic_filters(criteria)
+        conditions.extend(char_conditions)
+        if char_conditions:
+            metadata["applied_filters"].append("characteristics")
+
+        # Process site and source filters
+        site_conditions = self._build_site_filters(criteria)
+        conditions.extend(site_conditions)
+        if site_conditions:
+            metadata["applied_filters"].append("sites")
+
+        # Process semantic filters
+        semantic_conditions = self._build_semantic_filters(criteria, context)
+        conditions.extend(semantic_conditions)
+        if semantic_conditions:
+            metadata["applied_filters"].append("semantic")
+
+        return conditions, metadata
+
+    def _create_filter_result(
+        self,
+        conditions: list[models.FieldCondition],
+        metadata: dict[str, Any],
+        criteria: ContentTypeCriteria,
+    ) -> FilterResult:
+        """Create the final filter result."""
+        # Calculate performance impact
+        performance_impact = self._estimate_performance_impact(len(conditions))
+
+        # Build final filter
+        final_filter = None
+        if conditions:
+            final_filter = models.Filter(must=conditions)
+
+            # Add classification metadata
+            metadata["classification_info"] = {
+                "total_conditions": len(conditions),
+                "semantic_enabled": criteria.semantic_similarity_threshold is not None,
+                "quality_filtering": criteria.min_quality_score is not None,
+            }
+
+        self._logger.info(
+            f"Applied content type filter with {len(conditions)} conditions: "
+            f"{metadata['applied_filters']}"
+        )
+
+        return FilterResult(
+            filter_conditions=final_filter,
+            metadata=metadata,
+            confidence_score=0.90,
+            performance_impact=performance_impact,
+        )
 
     def _build_document_type_filters(
         self, criteria: ContentTypeCriteria
@@ -636,12 +669,13 @@ class ContentTypeFilter(BaseFilter):
         """Validate content type filter criteria."""
         try:
             ContentTypeCriteria.model_validate(filter_criteria)
-            return True
-        except Exception as e:
+        except ValidationError as e:
             self._logger.warning(
                 f"Invalid content type criteria: {e}"
             )  # TODO: Convert f-string to logging format
             return False
+        else:
+            return True
 
     def get_supported_operators(self) -> list[str]:
         """Get supported content type operators."""

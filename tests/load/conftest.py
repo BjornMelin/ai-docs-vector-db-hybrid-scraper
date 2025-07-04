@@ -50,7 +50,7 @@ class LoadTestConfig:
 class LoadTestMetrics:
     """Metrics collected during load testing."""
 
-    _total_requests: int = 0
+    total_requests: int = 0
     successful_requests: int = 0
     failed_requests: int = 0
     response_times: list[float] = field(default_factory=list)
@@ -413,14 +413,14 @@ def load_test_runner():
                     await target_function(**_kwargs)
                     response_time = time.perf_counter() - start_time
 
-                    metrics._total_requests += 1
+                    metrics.total_requests += 1
                     metrics.successful_requests += 1
                     metrics.response_times.append(response_time)
 
-                except Exception as e:
+                except (TimeoutError, ConnectionError, RuntimeError) as e:
                     response_time = time.perf_counter() - start_time
 
-                    metrics._total_requests += 1
+                    metrics.total_requests += 1
                     metrics.failed_requests += 1
                     metrics.response_times.append(response_time)
                     metrics.errors.append(str(e))
@@ -449,27 +449,35 @@ def load_test_runner():
                 p95_response_time_ms = float("inf")
 
             error_rate_percent = (
-                metrics.failed_requests / max(metrics._total_requests, 1)
+                metrics.failed_requests / max(metrics.total_requests, 1)
             ) * 100
 
             # Check each criterion
             success = True
 
-            if "max_error_rate_percent" in criteria:
-                if error_rate_percent > criteria["max_error_rate_percent"]:
-                    success = False
+            if (
+                "max_error_rate_percent" in criteria
+                and error_rate_percent > criteria["max_error_rate_percent"]
+            ):
+                success = False
 
-            if "max_avg_response_time_ms" in criteria:
-                if avg_response_time_ms > criteria["max_avg_response_time_ms"]:
-                    success = False
+            if (
+                "max_avg_response_time_ms" in criteria
+                and avg_response_time_ms > criteria["max_avg_response_time_ms"]
+            ):
+                success = False
 
-            if "max_p95_response_time_ms" in criteria:
-                if p95_response_time_ms > criteria["max_p95_response_time_ms"]:
-                    success = False
+            if (
+                "max_p95_response_time_ms" in criteria
+                and p95_response_time_ms > criteria["max_p95_response_time_ms"]
+            ):
+                success = False
 
-            if "min_throughput_rps" in criteria:
-                if metrics.throughput_rps < criteria["min_throughput_rps"]:
-                    success = False
+            if (
+                "min_throughput_rps" in criteria
+                and metrics.throughput_rps < criteria["min_throughput_rps"]
+            ):
+                success = False
 
             return success
 
@@ -483,7 +491,7 @@ def load_test_runner():
             # Calculate key metrics
             avg_response_time_ms = statistics.mean(metrics.response_times) * 1000
             error_rate_percent = (
-                metrics.failed_requests / max(metrics._total_requests, 1)
+                metrics.failed_requests / max(metrics.total_requests, 1)
             ) * 100
 
             # Grade based on performance
@@ -528,7 +536,7 @@ def load_test_runner():
 
             # High error rate
             error_rate_percent = (
-                metrics.failed_requests / max(metrics._total_requests, 1)
+                metrics.failed_requests / max(metrics.total_requests, 1)
             ) * 100
             if error_rate_percent > 5:
                 bottlenecks.append(f"High error rate: {error_rate_percent:.2f}%")
@@ -606,7 +614,7 @@ def load_test_runner():
                 return {"error": "No test results provided"}
 
             # Aggregate metrics
-            _total_requests = sum(r.metrics._total_requests for r in results)
+            _total_requests = sum(r.metrics.total_requests for r in results)
             _total_successful = sum(r.metrics.successful_requests for r in results)
             _total_failed = sum(r.metrics.failed_requests for r in results)
 
@@ -648,7 +656,7 @@ def load_test_runner():
                         "test_type": r.test_type.value,
                         "success": r.success,
                         "grade": r.performance_grade,
-                        "requests": r.metrics._total_requests,
+                        "requests": r.metrics.total_requests,
                         "throughput_rps": round(r.metrics.throughput_rps, 2),
                         "bottlenecks": r.bottlenecks_identified,
                     }

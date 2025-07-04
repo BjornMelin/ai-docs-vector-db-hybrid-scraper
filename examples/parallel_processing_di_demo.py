@@ -13,17 +13,24 @@ Portfolio Achievement: Full ML optimization pipeline with 3-5x performance impro
 
 import asyncio
 import logging
+import subprocess
 import sys
 import time
+import traceback
+import unittest.mock
 from pathlib import Path
+
+from src.config.core import Config
+from src.infrastructure.client_manager import ClientManager
+from src.infrastructure.container import (
+    DependencyContext,
+    initialize_container,
+    shutdown_container,
+)
 
 
 # Add src to path for importing
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-from src.config.core import Config
-from src.infrastructure.client_manager import ClientManager
-from src.infrastructure.container import DependencyContext
 
 
 # Configure logging
@@ -85,13 +92,13 @@ async def demonstrate_container_integration():
                 status = await parallel_system.get_system_status()
                 print(f"✅ System status: {status['system_health']['status']}")
 
-                return True
-
-            except Exception as e:
+            except (subprocess.SubprocessError, OSError, TimeoutError) as e:
                 print(f"❌ Failed to get parallel processing system: {e}")
                 return False
+            else:
+                return True
 
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError, TimeoutError) as e:
         print(f"❌ Container integration failed: {e}")
         return False
 
@@ -102,7 +109,6 @@ async def demonstrate_client_manager_integration():
     print("-" * 40)
 
     # Mock the service managers to avoid complex initialization
-    import unittest.mock
 
     with (
         unittest.mock.patch("src.services.managers.DatabaseManager") as mock_db_manager,
@@ -151,7 +157,6 @@ async def demonstrate_client_manager_integration():
         try:
             # Initialize container first
             config = Config()
-            from src.infrastructure.container import initialize_container
 
             await initialize_container(config)
             print("✅ DI Container initialized")
@@ -189,19 +194,15 @@ async def demonstrate_client_manager_integration():
             await client_manager.cleanup()
             print("✅ ClientManager cleanup completed")
 
-            from src.infrastructure.container import shutdown_container
-
             await shutdown_container()
             print("✅ Container shutdown completed")
 
-            return True
-
-        except Exception as e:
+        except (subprocess.SubprocessError, OSError, TimeoutError) as e:
             print(f"❌ ClientManager integration failed: {e}")
-            import traceback
-
             traceback.print_exc()
             return False
+        else:
+            return True
 
 
 async def demonstrate_document_processing():
@@ -228,11 +229,15 @@ async def demonstrate_document_processing():
                     "url": "test1.html",
                 },
                 {
-                    "content": "Another document about parallel processing and optimization.",
+                    "content": (
+                        "Another document about parallel processing and optimization."
+                    ),
                     "url": "test2.html",
                 },
                 {
-                    "content": "Document about performance improvements and scalability.",
+                    "content": (
+                        "Document about performance improvements and scalability."
+                    ),
                     "url": "test3.html",
                 },
             ]
@@ -256,12 +261,11 @@ async def demonstrate_document_processing():
             # Display results
             print("📊 Processing Results:")
             print(f"   • Documents processed: {len(results['documents'])}")
-            print(
-                f"   • Processing time: {results['processing_stats']['processing_time_ms']:.2f}ms"
-            )
-            print(
-                f"   • Throughput: {results['processing_stats']['throughput_docs_per_second']:.2f} docs/sec"
-            )
+            processing_time = results["processing_stats"]["processing_time_ms"]
+            print(f"   • Processing time: {processing_time:.2f}ms")
+
+            throughput = results["processing_stats"]["throughput_docs_per_second"]
+            print(f"   • Throughput: {throughput:.2f} docs/sec")
 
             # Display optimization status
             opt_status = results["optimization_enabled"]
@@ -272,10 +276,8 @@ async def demonstrate_document_processing():
 
             return True
 
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError, TimeoutError) as e:
         print(f"❌ Document processing failed: {e}")
-        import traceback
-
         traceback.print_exc()
         return False
 
@@ -312,8 +314,10 @@ async def main():
         if success:
             success_count += 1
 
+    total_tests = len(results)
+    success_rate = success_count / total_tests * 100
     print(
-        f"\nOverall Success Rate: {success_count}/{len(results)} ({success_count / len(results) * 100:.1f}%)"
+        f"\nOverall Success Rate: {success_count}/{total_tests} ({success_rate:.1f}%)"
     )
 
     if success_count == len(results):

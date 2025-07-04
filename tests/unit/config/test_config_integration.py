@@ -13,14 +13,17 @@ import pytest
 import yaml
 from hypothesis import given, strategies as st
 
-from src.config.core import (
+from src.config import (
     Config,
+    CrawlProvider,
     DocumentationSite,
+    EmbeddingProvider,
+    Environment,
+    LogLevel,
     get_config,
     reset_config,
     set_config,
 )
-from src.config.enums import CrawlProvider, EmbeddingProvider, Environment, LogLevel
 
 
 class TestEnvironmentVariableLoading:
@@ -121,9 +124,11 @@ class TestEnvironmentVariableLoading:
         ]
 
         for env_key, env_value in invalid_env_vars:
-            with patch.dict(os.environ, {env_key: env_value}, clear=False):
-                with pytest.raises(ValueError):
-                    Config()
+            with (
+                patch.dict(os.environ, {env_key: env_value}, clear=False),
+                pytest.raises(ValueError),
+            ):
+                Config()
 
     @given(
         debug=st.booleans(),

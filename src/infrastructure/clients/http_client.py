@@ -1,7 +1,7 @@
 """HTTP client provider."""
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 import aiohttp
 
@@ -37,14 +37,13 @@ class HTTPClientProvider:
                 self._healthy = False
                 return False
 
-            self._healthy = True
-            return True
-        except Exception as e:
-            logger.warning(
-                f"HTTP client health check failed: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (AttributeError, RuntimeError, ValueError) as e:
+            logger.warning("HTTP client health check failed: %s", e)
             self._healthy = False
             return False
+        else:
+            self._healthy = True
+            return True
 
     async def get(
         self, url: str, headers: dict[str, str] | None = None, **kwargs
@@ -63,7 +62,8 @@ class HTTPClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("HTTP client is not available or unhealthy")
+            msg = "HTTP client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.get(url, headers=headers, **kwargs)
 
@@ -91,7 +91,8 @@ class HTTPClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("HTTP client is not available or unhealthy")
+            msg = "HTTP client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.post(
             url, data=data, json=json, headers=headers, **kwargs
@@ -121,7 +122,8 @@ class HTTPClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("HTTP client is not available or unhealthy")
+            msg = "HTTP client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.put(
             url, data=data, json=json, headers=headers, **kwargs
@@ -144,7 +146,8 @@ class HTTPClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("HTTP client is not available or unhealthy")
+            msg = "HTTP client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.delete(url, headers=headers, **kwargs)
 
@@ -166,6 +169,7 @@ class HTTPClientProvider:
             RuntimeError: If client is unhealthy
         """
         if not self.client:
-            raise RuntimeError("HTTP client is not available or unhealthy")
+            msg = "HTTP client is not available or unhealthy"
+            raise RuntimeError(msg)
 
         return await self.client.request(method, url, headers=headers, **kwargs)

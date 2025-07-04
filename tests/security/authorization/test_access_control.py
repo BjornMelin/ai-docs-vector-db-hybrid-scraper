@@ -330,14 +330,20 @@ class TestAccessControl:
                     return False
 
                 # Time-based restrictions
-                if context.get("time_restricted") and not context.get("business_hours"):
-                    if user_role not in ["admin", "api_service"]:
-                        return False
+                if (
+                    context.get("time_restricted")
+                    and not context.get("business_hours")
+                    and user_role not in ["admin", "api_service"]
+                ):
+                    return False
 
                 # Location-based restrictions
-                if context.get("ip_restricted") and not context.get("trusted_ip"):
-                    if permission in ["admin", "delete", "system_config"]:
-                        return False
+                if (
+                    context.get("ip_restricted")
+                    and not context.get("trusted_ip")
+                    and permission in ["admin", "delete", "system_config"]
+                ):
+                    return False
 
                 # MFA requirements
                 return not (user_role == "admin" and not context.get("mfa_verified"))
@@ -484,11 +490,11 @@ class TestAccessControl:
                     return False
 
                 # Check ownership for user resources
-                if acl.get("ownership_check") and user_role == "user":
-                    if not user_id or not resource_owner or user_id != resource_owner:
-                        return False
-
-                return True
+                return not (
+                    acl.get("ownership_check")
+                    and user_role == "user"
+                    and (not user_id or not resource_owner or user_id != resource_owner)
+                )
 
         resource_perms = ResourcePermissions()
 

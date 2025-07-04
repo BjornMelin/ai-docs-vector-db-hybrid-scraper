@@ -550,8 +550,7 @@ class TestContractPerformanceValidation:
         async def concurrent_validation_test():
             """Run concurrent validations."""
             tasks = [validate_request(i) for i in range(100)]
-            results = await asyncio.gather(*tasks)
-            return results
+            return await asyncio.gather(*tasks)
 
         # Run concurrent validation test
         start_time = time.time()

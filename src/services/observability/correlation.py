@@ -85,6 +85,7 @@ class TraceCorrelationManager:
     def set_business_context(
         self,
         operation_type: str,
+        *,
         query_type: str | None = None,
         search_method: str | None = None,
         ai_provider: str | None = None,
@@ -355,6 +356,7 @@ class ErrorCorrelationTracker:
     def record_error(
         self,
         error: Exception,
+        *,
         error_type: str = "application_error",
         severity: str = "error",
         user_impact: str = "medium",
@@ -515,6 +517,7 @@ def set_request_context(
 
 def set_business_context(
     operation_type: str,
+    *,
     query_type: str | None = None,
     search_method: str | None = None,
     ai_provider: str | None = None,
@@ -525,11 +528,11 @@ def set_business_context(
     manager = get_correlation_manager()
     manager.set_business_context(
         operation_type,
-        query_type,
-        search_method,
-        ai_provider,
-        model_name,
-        cache_strategy,
+        query_type=query_type,
+        search_method=search_method,
+        ai_provider=ai_provider,
+        model_name=model_name,
+        cache_strategy=cache_strategy,
     )
 
 
@@ -555,7 +558,11 @@ def record_error(
     """Record error using global error tracker."""
     tracker = get_error_tracker()
     return tracker.record_error(
-        error, error_type, severity, user_impact, recovery_action
+        error,
+        error_type=error_type,
+        severity=severity,
+        user_impact=user_impact,
+        recovery_action=recovery_action,
     )
 
 

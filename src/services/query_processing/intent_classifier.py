@@ -557,7 +557,7 @@ class QueryIntentClassifier:
                         intent_scores[intent] = (
                             intent_scores[intent] * 0.7 + semantic_scores[intent] * 0.3
                         )
-            except Exception:
+            except (OSError, PermissionError):
                 logger.warning("Semantic intent classification failed")
 
         # Determine complexity level
@@ -700,11 +700,12 @@ class QueryIntentClassifier:
                 )
                 scores[intent] = max(0.0, similarity)  # Ensure non-negative
 
-            return scores
-
-        except Exception:
+        except (OSError, PermissionError):
             logger.exception("Semantic intent classification failed")
             return {}
+
+        else:
+            return scores
 
     def _cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:
         """Calculate cosine similarity between two vectors."""
@@ -720,7 +721,7 @@ class QueryIntentClassifier:
                 return 0.0
 
             return float(dot_product / (magnitude1 * magnitude2))
-        except Exception:
+        except (AttributeError, RuntimeError, ValueError):
             return 0.0
 
     def _assess_complexity(self, query: str) -> QueryComplexity:

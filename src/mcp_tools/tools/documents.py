@@ -25,10 +25,16 @@ from src.chunking import DocumentChunker
 from src.config import ChunkingConfig, ChunkingStrategy
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
-from src.security import MLSecurityValidator as SecurityValidator
+from src.security import SecurityValidator
 
 
 logger = logging.getLogger(__name__)
+
+
+def _raise_scrape_error(url: str) -> None:
+    """Raise ValueError for scraping failure."""
+    msg = f"Failed to scrape {url}"
+    raise ValueError(msg)
 
 
 def register_tools(mcp, client_manager: ClientManager):
@@ -74,13 +80,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 or not crawl_result.get("success")
                 or not crawl_result.get("content")
             ):
-
-                def _raise_scrape_error():
-                    msg = f"Failed to scrape {request.url}"
-                    raise ValueError(msg)
-
                 await ctx.error(f"Failed to scrape {request.url}")
-                _raise_scrape_error()
+                _raise_scrape_error(request.url)
 
             # Apply Content Intelligence analysis
             enriched_content = None
@@ -111,7 +112,7 @@ def register_tools(mcp, client_manager: ClientManager):
                         await ctx.warning(
                             f"Content intelligence analysis failed for {doc_id}"
                         )
-                except Exception as e:
+                except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                     await ctx.warning(
                         f"Content intelligence analysis error for {doc_id}: {e}"
                     )
@@ -132,9 +133,9 @@ def register_tools(mcp, client_manager: ClientManager):
                     content_type in ["code", "reference"]
                     and request.chunk_strategy == ChunkingStrategy.BASIC
                 ):
-                    chunk_config.strategy = ChunkingStrategy.SEMANTIC
+                    chunk_config.strategy = ChunkingStrategy.ENHANCED
                     await ctx.debug(
-                        f"Upgraded chunking strategy to SEMANTIC for {content_type} content"
+                        f"Upgraded chunking strategy to ENHANCED for {content_type} content"
                     )
 
             # Chunk the document
@@ -301,7 +302,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     )
                     result = await add_document(doc_request, ctx)
                     successes.append(result)
-                except Exception:
+                except (ConnectionError, OSError, PermissionError):
                     failures.append(url)
 
         # Process all URLs concurrently

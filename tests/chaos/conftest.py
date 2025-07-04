@@ -34,6 +34,8 @@ class FailureType(Enum):
     AUTHENTICATION_FAILURE = "auth_failure"
     RATE_LIMIT_EXCEEDED = "rate_limit_exceeded"
     PARTIAL_FAILURE = "partial_failure"
+    RESOURCE_EXHAUSTION = "resource_exhaustion"
+    SLOW_RESPONSE = "slow_response"
 
 
 @dataclass
@@ -156,8 +158,6 @@ def fault_injector():
             fault_id = f"service_unavailable_{target}_{time.time()}"
 
             async def service_fault():
-                msg = f"Service {target} is temporarily unavailable"
-                raise CustomError(msg)
                 msg = f"Service {target} is temporarily unavailable"
                 raise CustomError(msg)
 
@@ -326,7 +326,7 @@ def resilience_validator():
             for _i in range(failure_threshold + 2):
                 try:
                     await service_func()
-                except Exception:
+                except (TimeoutError, ConnectionError, MemoryError, CustomError):
                     results["failure_count"] += 1
 
                     # Check if circuit breaker should be triggered
@@ -343,7 +343,7 @@ def resilience_validator():
                     await service_func()
                     results["recovery_successful"] = True
                     results["recovery_time"] = time.time() - start_time
-                except Exception:
+                except (TimeoutError, ConnectionError, MemoryError, CustomError):
                     results["recovery_successful"] = False
 
             return results
@@ -382,7 +382,7 @@ def resilience_validator():
                     await service_func()
                     results["success_on_retry"] = True
                     break
-                except Exception:
+                except (TimeoutError, ConnectionError, MemoryError, CustomError):
                     if attempt < max_retries:
                         await asyncio.sleep(backoff_factor * (2**attempt))
 
@@ -404,14 +404,14 @@ def resilience_validator():
 
             try:
                 await service_func()
-            except Exception:
+            except (TimeoutError, ConnectionError, MemoryError, CustomError):
                 results["primary_service_failed"] = True
                 results["fallback_triggered"] = True
 
                 try:
                     await fallback_func()
                     results["fallback_successful"] = True
-                except Exception:
+                except (TimeoutError, ConnectionError, MemoryError, CustomError):
                     results["fallback_successful"] = False
 
             results["response_time"] = time.time() - start_time
@@ -435,7 +435,7 @@ def resilience_validator():
                     await health_check_func()
                     recovery_time = time.time() - start_time
                     break
-                except Exception:
+                except (TimeoutError, ConnectionError, MemoryError, CustomError):
                     await asyncio.sleep(check_interval)
 
             return {
@@ -622,7 +622,13 @@ def chaos_experiment_runner():
                     experiment, target_system
                 )
 
-            except Exception as e:
+            except (
+                TimeoutError,
+                ConnectionError,
+                MemoryError,
+                CustomError,
+                ValueError,
+            ) as e:
                 result.errors.append(str(e))
 
             finally:
@@ -654,10 +660,11 @@ def chaos_experiment_runner():
                 if hasattr(target_system, "simulate_service_unavailable"):
                     await target_system.simulate_service_unavailable()
 
-            elif experiment.failure_type == FailureType.MEMORY_EXHAUSTION:
+            elif experiment.failure_type == FailureType.MEMORY_EXHAUSTION and hasattr(
+                target_system, "simulate_memory_pressure"
+            ):
                 # Simulate memory pressure
-                if hasattr(target_system, "simulate_memory_pressure"):
-                    await target_system.simulate_memory_pressure()
+                await target_system.simulate_memory_pressure()
 
         async def _stop_failure_injection(
             self, _experiment: ChaosExperiment, target_system: Any
@@ -671,7 +678,7 @@ def chaos_experiment_runner():
             if hasattr(target_system, "health_check"):
                 try:
                     await target_system.health_check()
-                except Exception:
+                except (TimeoutError, ConnectionError, MemoryError, CustomError):
                     return False
                 else:
                     return True
