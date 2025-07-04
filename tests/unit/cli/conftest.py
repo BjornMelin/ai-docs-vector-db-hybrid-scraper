@@ -398,7 +398,7 @@ def interactive_cli_runner():
 
     class InteractiveCLIRunner(CliRunner):
         def __init__(self):
-            super().__init__(mix_stderr=False)
+            super().__init__()
             self.input_responses = []
             self.current_response_index = 0
 

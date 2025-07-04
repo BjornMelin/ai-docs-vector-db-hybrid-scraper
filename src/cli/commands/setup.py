@@ -20,7 +20,7 @@ from src.cli.wizard import ProfileManager, TemplateManager, WizardValidator
 
 # Optional import for config validation
 try:
-    from .config import validate_config
+    from .config import validate as validate_config
 except ImportError:
     validate_config = None
 
@@ -489,7 +489,7 @@ class ConfigurationWizard:
 )
 @click.pass_context
 def setup(
-    ctx: click.Context, profile: str | None, _output: Path | None, config_dir: Path
+    ctx: click.Context, profile: str | None, output: Path | None, config_dir: Path
 ):
     """🧙 Modern template-driven configuration wizard.
 

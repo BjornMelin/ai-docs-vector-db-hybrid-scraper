@@ -496,15 +496,17 @@ class TestModernConfigurationWizard:
 
         with (
             patch.object(
-                wizard.profile_manager, "profile_templates", {"test": "test-template"}
+                wizard.profile_manager, "profile_templates", {"test": "testing"}
             ),
             patch.object(
                 wizard.template_manager, "create_config_from_template"
             ) as mock_create,
             patch.object(wizard.validator, "validate_and_show_errors") as mock_validate,
+            patch.object(wizard, "customize_template") as mock_customize,
         ):
             mock_create.return_value = config_mock
             mock_validate.return_value = False
+            mock_customize.return_value = {}  # No customizations
 
             with patch("src.cli.commands.setup.questionary") as mock_questionary:
                 mock_questionary.confirm.return_value.ask.side_effect = [
@@ -598,7 +600,7 @@ class TestSetupCommandModernized:
             mock_wizard_class.return_value = mock_wizard
 
             with (
-                patch("src.cli.commands.config.validate_config"),
+                patch("src.cli.commands.setup.validate_config"),
                 patch("src.cli.commands.setup.questionary") as mock_questionary,
             ):
                 mock_questionary.confirm.return_value.ask.return_value = (
@@ -623,7 +625,10 @@ class TestSetupCommandModernized:
             with patch("pathlib.Path.read_text") as mock_read:
                 mock_read.return_value = '{"test": "config"}'
 
-                with patch("src.cli.commands.setup.questionary") as mock_questionary:
+                with (
+                    patch("src.cli.commands.setup.questionary") as mock_questionary,
+                    patch("src.cli.commands.setup.validate_config", None),
+                ):
                     mock_questionary.confirm.return_value.ask.return_value = True
 
                     result = interactive_cli_runner.invoke(setup, [])
@@ -708,12 +713,15 @@ class TestSetupIntegrationModernized:
             mock_wizard.run_setup.return_value = temp_profiles_dir / "personal.json"
             mock_wizard_class.return_value = mock_wizard
 
-            result = interactive_cli_runner.invoke(
-                setup, ["--config-dir", str(temp_profiles_dir.parent)]
-            )
+            with patch("src.cli.commands.setup.questionary") as mock_questionary:
+                mock_questionary.confirm.return_value.ask.return_value = False
 
-            # Should succeed even with existing profiles
-            assert result.exit_code == 0
+                result = interactive_cli_runner.invoke(
+                    setup, ["--config-dir", str(temp_profiles_dir.parent)]
+                )
+
+                # Should succeed even with existing profiles
+                assert result.exit_code == 0
 
     def test_wizard_accessibility_features(self, rich_output_capturer):
         """Test wizard accessibility features and user guidance."""
