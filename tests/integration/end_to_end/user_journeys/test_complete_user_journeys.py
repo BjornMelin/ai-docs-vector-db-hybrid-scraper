@@ -705,7 +705,8 @@ class TestCrossSystemIntegration:
         service_validations = [
             step
             for step in result.step_results
-            if ("health" in step["step_name"] or "consistency" in step["step_name"]) and step["success"]
+            if ("health" in step["step_name"] or "consistency" in step["step_name"])
+            and step["success"]
         ]
         assert len(service_validations) >= 2, "System health not validated adequately"
 

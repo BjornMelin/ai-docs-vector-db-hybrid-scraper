@@ -10,6 +10,15 @@ from typing import Any
 import pytest
 
 
+class BrowserTestError(Exception):
+    """Custom exception for browser testing errors."""
+
+    def __init__(self, message: str):
+        """Initialize with error message."""
+        super().__init__(message)
+        self.message = message
+
+
 @pytest.fixture
 def mock_browser_config():
     """Browser configuration for testing."""
@@ -303,14 +312,14 @@ async def mock_browser_setup(mock_browser_config):
 
         async def goto(self, url: str, **kwargs):
             """Navigate to URL."""
-            import asyncio
-
             # Simulate timeout errors for invalid domains or very short timeouts
             timeout = kwargs.get("timeout", 30000)
             if "this-domain-does-not-exist" in url:
-                raise RuntimeError(f"net::ERR_NAME_NOT_RESOLVED at {url}")
+                error_msg = f"net::ERR_NAME_NOT_RESOLVED at {url}"
+                raise BrowserTestError(error_msg)
             if "delay" in url and timeout < 3000:  # delay endpoint with short timeout
-                raise TimeoutError(f"Navigation timeout of {timeout}ms exceeded")
+                timeout_msg = f"Navigation timeout of {timeout}ms exceeded"
+                raise BrowserTestError(timeout_msg)
 
             self.url = url
             self._title = f"Test Page - {url}"

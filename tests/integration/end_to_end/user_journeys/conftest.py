@@ -7,6 +7,7 @@ across the entire AI Documentation Vector DB Hybrid Scraper system.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import shutil
 import tempfile
 import time
@@ -320,8 +321,7 @@ def journey_executor():
             url = params["url"]
             await asyncio.sleep(0.1)  # Simulate processing time
             # Generate a unique document ID for this crawled URL
-            import hashlib
-            doc_id = f"doc_{hashlib.md5(url.encode()).hexdigest()[:8]}"
+            doc_id = f"doc_{hashlib.sha256(url.encode()).hexdigest()[:8]}"
             return {
                 "url": url,
                 "document_id": doc_id,  # Add document_id for context

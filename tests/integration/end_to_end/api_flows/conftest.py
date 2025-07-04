@@ -6,9 +6,17 @@ This module provides fixtures for testing API workflows and client interactions.
 import asyncio
 import time
 from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
+
+
+class APITestError(Exception):
+    """Custom exception for API testing errors."""
+
+    def __init__(self, message: str):
+        """Initialize with error message."""
+        super().__init__(message)
+        self.message = message
 
 
 @pytest.fixture
@@ -60,9 +68,10 @@ def mock_api_client():
             # Check for configured error responses
             if endpoint in self.error_responses:
                 error_config = self.error_responses[endpoint]
-                raise Exception(
+                error_msg = (
                     f"HTTP {error_config['status_code']}: {error_config['message']}"
                 )
+                raise APITestError(error_msg)
 
             # Route to appropriate mock response
             base_response = {
