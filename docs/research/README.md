@@ -14,7 +14,7 @@ This directory contains all research documentation organized by domain and imple
 - **Status**: Active development research
 - **Timeline**: V3 Solo Developer approach (12-16 weeks)
 - **Focus**: Browser-use v0.3.2 integration and optimization
-- **Documents**: 
+- **Documents**:
   - Implementation guides, PRDs, and archived version research
   - See [browser-use/README.md](browser-use/README.md) for details
 
@@ -22,7 +22,7 @@ This directory contains all research documentation organized by domain and imple
 - **Status**: 85% Complete - Ready for final implementation
 - **Timeline**: 6 specialized subagents for completion
 - **Focus**: System architecture modernization and performance optimization
-- **Documents**: 
+- **Documents**:
   - Master transformation plan and subagent execution strategies
   - See [transformation/README.md](transformation/README.md) for details
 
@@ -88,19 +88,19 @@ flowchart LR
 ## 🔗 Quick Navigation
 
 ### By Status
-- **Active Research**: [Browser-Use Enhancement](browser-use/) | [Transformation Completion](transformation/)
-- **Implementation Ready**: [Portfolio ULTRATHINK Transformation](transformation/)
+- **Active Research**: [Browser-Use Enhancement](browser-use/README.md) | [Transformation Completion](transformation/README.md)
+- **Implementation Ready**: [Portfolio ULTRATHINK Transformation](transformation/README.md)
 - **Historical Archive**: Available in planning/ directory
 
 ### By Domain
-- **Browser Automation**: [browser-use/](browser-use/)
-- **System Architecture**: [transformation/](transformation/)
+- **Browser Automation**: [browser-use/](browser-use/README.md)
+- **System Architecture**: [transformation/](transformation/README.md)
 - **Performance Optimization**: Available in planning/archive/detailed-reports/
 
 ### Integration Points
-- **User Documentation**: [../users/](../users/) - End-user impact of research
-- **Developer Documentation**: [../developers/](../developers/) - Technical implementation details
-- **Operator Documentation**: [../operators/](../operators/) - Deployment and operations
+- **User Documentation**: [../users/README.md](../users/README.md) - End-user impact of research
+- **Developer Documentation**: [../developers/README.md](../developers/README.md) - Technical implementation details
+- **Operator Documentation**: [../operators/README.md](../operators/README.md) - Deployment and operations
 
 ---
 

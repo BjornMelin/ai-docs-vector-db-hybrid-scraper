@@ -553,7 +553,7 @@ uv run pytest tests/security/ --html=security_report.html --self-contained-html
 ### Documentation Links
 - [Testing Best Practices](./testing-best-practices.md)
 - [AI/ML Testing Patterns](./ai-ml-testing-guide.md)
-- [Performance Testing Guide](./performance-testing.md)
+- [Performance Testing Guide](./performance-testing-guide.md)
 
 ### Tool Documentation
 - [pytest Documentation](https://docs.pytest.org/)

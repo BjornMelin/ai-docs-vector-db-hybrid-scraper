@@ -35,7 +35,7 @@ This directory contains research and development documentation for integrating b
 
 ## 🔗 Related Research
 
-- [Transformation Research](../transformation/) - System-wide modernization efforts
+- [Transformation Research](../transformation/README.md) - System-wide modernization efforts
 - [MCP Tools Integration](../../developers/integration-guide.md) - Development integration patterns
 
 ---
