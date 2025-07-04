@@ -103,8 +103,8 @@ def main(ctx: click.Context, config: Path | None, quiet: bool):
     # Load configuration
     try:
         if config:
-            # Load from specific file - with new config this would be:
-            ctx.obj["config"] = Config.load_from_file(config)
+            # Load from specific file using Pydantic BaseSettings parse_file method
+            ctx.obj["config"] = Config.parse_file(config)
         else:
             ctx.obj["config"] = get_config()
     except (OSError, ValueError, RuntimeError) as e:
