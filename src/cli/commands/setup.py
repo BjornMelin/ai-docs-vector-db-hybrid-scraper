@@ -476,21 +476,13 @@ class ConfigurationWizard:
     help="Pre-select a configuration profile (personal, development, production, etc.)",
 )
 @click.option(
-    "--output",
-    "-o",
-    type=click.Path(path_type=Path),
-    help="Output configuration file path (optional, uses profile default)",
-)
-@click.option(
     "--config-dir",
     type=click.Path(path_type=Path, exists=True),
     default=Path("config"),
     help="Configuration directory (default: config/)",
 )
 @click.pass_context
-def setup(
-    ctx: click.Context, profile: str | None, output: Path | None, config_dir: Path
-):
+def setup(ctx: click.Context, profile: str | None, config_dir: Path):
     """🧙 Modern template-driven configuration wizard.
 
     This wizard uses configuration profiles and templates to guide you through

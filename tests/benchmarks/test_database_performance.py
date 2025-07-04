@@ -11,6 +11,7 @@ Run with: pytest tests/benchmarks/ --benchmark-only
 
 import asyncio
 import logging
+import os
 import random
 import time
 from contextlib import asynccontextmanager
@@ -19,8 +20,6 @@ from typing import Any
 import psutil
 import pytest
 from qdrant_client import AsyncQdrantClient
-
-# Mock classes for testing since modules don't exist
 from qdrant_client.models import (
     Distance,
     FieldCondition,
@@ -36,31 +35,51 @@ from src.services.vector_db.indexing import QdrantIndexing
 from src.services.vector_db.search import QdrantSearch
 
 
+# Optional metrics import for enterprise monitoring
+try:
+    from src.services.monitoring.metrics import initialize_metrics
+except ImportError:
+    initialize_metrics = None
+
+
+# Safe imports for optional dependencies
+try:
+    import docker
+    from testcontainers.core.container import DockerContainer
+
+    _DOCKER_IMPORTS_AVAILABLE = True
+except ImportError:
+    docker = None
+    DockerContainer = None
+    _DOCKER_IMPORTS_AVAILABLE = False
+
+
 # Safe Docker availability detection
 def _check_docker_availability():
     """Safely check if Docker is available without raising exceptions."""
-    try:
-        import docker
-        from testcontainers.core.container import DockerContainer
-
-        # Test if Docker daemon is accessible
-        try:
-            client = docker.from_env()
-            client.ping()
-            client.close()
-            return True, docker, DockerContainer
-        except (OSError, ConnectionError, FileNotFoundError, Exception):
-            return False, docker, DockerContainer
-    except ImportError:
+    if not _DOCKER_IMPORTS_AVAILABLE:
         return False, None, None
+
+    try:
+        # Test if Docker daemon is accessible
+        client = docker.from_env()
+        client.ping()
+        client.close()
+    except (OSError, ConnectionError, TimeoutError):
+        return False, docker, DockerContainer
+    else:
+        return True, docker, DockerContainer
+
 
 DOCKER_AVAILABLE, docker, DockerContainer = _check_docker_availability()
 
 # Environment variable to force enable CI-compatible mode
-import os
 
 
-CI_MODE = os.getenv("CI", "false").lower() == "true" or os.getenv("GITHUB_ACTIONS", "false").lower() == "true"
+CI_MODE = (
+    os.getenv("CI", "false").lower() == "true"
+    or os.getenv("GITHUB_ACTIONS", "false").lower() == "true"
+)
 
 
 class RealPerformanceMonitor:
@@ -116,8 +135,7 @@ class MockQdrantClientForCI:
         """Mock get collections with realistic timing."""
         await asyncio.sleep(0.001)  # Simulate network latency
         collection_list = [
-            type("Collection", (), {"name": name})()
-            for name in self.collections.keys()
+            type("Collection", (), {"name": name})() for name in self.collections
         ]
         return type("Collections", (), {"collections": collection_list})()
 
@@ -126,17 +144,20 @@ class MockQdrantClientForCI:
         await asyncio.sleep(0.005)  # Simulate collection creation time
         self.collections[collection_name] = {
             "config": vectors_config,
-            "points_count": 0
+            "points_count": 0,
         }
 
     async def get_collection(self, collection_name):
         """Mock get collection info."""
         await asyncio.sleep(0.001)
         if collection_name not in self.collections:
-            raise Exception(f"Collection {collection_name} not found")
-        return type("CollectionInfo", (), {
-            "points_count": self.collections[collection_name]["points_count"]
-        })()
+            msg = f"Collection {collection_name} not found"
+            raise ValueError(msg)
+        return type(
+            "CollectionInfo",
+            (),
+            {"points_count": self.collections[collection_name]["points_count"]},
+        )()
 
     async def delete_collection(self, collection_name):
         """Mock collection deletion."""
@@ -158,12 +179,18 @@ class MockQdrantClientForCI:
         for point in points:
             self.points[collection_name][point.id] = point
 
-        self.collections[collection_name]["points_count"] = len(self.points[collection_name])
+        self.collections[collection_name]["points_count"] = len(
+            self.points[collection_name]
+        )
 
-    async def search(self, collection_name, query_vector, limit=10, query_filter=None, **kwargs):
+    async def search(
+        self, collection_name, query_vector, limit=10, query_filter=None, **kwargs
+    ):
         """Mock vector search with realistic timing."""
         # Simulate search time based on collection size
-        collection_size = self.collections.get(collection_name, {}).get("points_count", 0)
+        collection_size = self.collections.get(collection_name, {}).get(
+            "points_count", 0
+        )
         search_time = 0.001 + (collection_size * 0.00001)  # Base 1ms + 0.01ms per point
         await asyncio.sleep(search_time)
 
@@ -175,20 +202,24 @@ class MockQdrantClientForCI:
                 break
 
             # Apply filter if specified
-            if query_filter and hasattr(query_filter, 'must'):
+            if query_filter and hasattr(query_filter, "must"):
                 # Simple filter simulation
                 match_filter = True
                 for condition in query_filter.must:
-                    if hasattr(condition, 'key') and hasattr(condition, 'match'):
+                    if hasattr(condition, "key") and hasattr(condition, "match"):
                         filter_key = condition.key
                         # Handle both dict and object match types
-                        if hasattr(condition.match, 'get'):
-                            filter_value = condition.match.get('value')
-                        elif hasattr(condition.match, 'value'):
+                        if hasattr(condition.match, "get"):
+                            filter_value = condition.match.get("value")
+                        elif hasattr(condition.match, "value"):
                             filter_value = condition.match.value
                         else:
                             # Fallback for simple dict
-                            filter_value = condition.match.get('value') if isinstance(condition.match, dict) else condition.match
+                            filter_value = (
+                                condition.match.get("value")
+                                if isinstance(condition.match, dict)
+                                else condition.match
+                            )
 
                         if point.payload.get(filter_key) != filter_value:
                             match_filter = False
@@ -198,16 +229,18 @@ class MockQdrantClientForCI:
 
             # Mock result with realistic score
             score = 0.9 - (i * 0.1)  # Decreasing relevance
-            result = type("SearchResult", (), {
-                "id": point_id,
-                "score": score,
-                "payload": point.payload
-            })()
+            result = type(
+                "SearchResult",
+                (),
+                {"id": point_id, "score": score, "payload": point.payload},
+            )()
             results.append(result)
 
         return results
 
-    async def create_payload_index(self, collection_name, field_name, field_type, **kwargs):
+    async def create_payload_index(
+        self, collection_name, field_name, field_type, **kwargs
+    ):
         """Mock payload index creation."""
         await asyncio.sleep(0.01)  # Simulate index creation time
         # Just track that index was created (simplified)
@@ -487,9 +520,9 @@ class TestDatabasePerformance:
             else:
                 # Initialize metrics registry for real components
                 try:
-                    from src.services.monitoring.metrics import initialize_metrics
-                    initialize_metrics(config)
-                except (ImportError, RuntimeError, AttributeError):
+                    if initialize_metrics is not None:
+                        initialize_metrics(config)
+                except (RuntimeError, AttributeError, ImportError, OSError):
                     # If metrics initialization fails, skip it for benchmarks
                     pass
 
@@ -511,10 +544,19 @@ class TestDatabasePerformance:
                     )()
 
                     # Initialize collections module (only for real components)
-                    if hasattr(service, 'collections') and hasattr(service.collections, 'initialize'):
+                    if hasattr(service, "collections") and hasattr(
+                        service.collections, "initialize"
+                    ):
                         await service.collections.initialize()
 
-                except Exception:
+                except (
+                    RuntimeError,
+                    AttributeError,
+                    ImportError,
+                    ConnectionError,
+                    TimeoutError,
+                    OSError,
+                ):
                     # If service initialization fails, fall back to simple client-only approach
                     service = type(
                         "QdrantService",
