@@ -275,6 +275,7 @@ def journey_executor():
             action: str,
             params: dict[str, Any],
             context: dict[str, Any],
+            timeout_seconds: float = 30.0,
         ) -> dict[str, Any]:
             """Perform the specified action."""
             # Replace context variables in params
@@ -296,6 +297,7 @@ def journey_executor():
                 "browser_navigate": self._action_browser_navigate,
                 "browser_interact": self._action_browser_interact,
                 "validate_search_results": self._action_validate_search_results,
+                "unknown_action": self._action_unknown,  # For error testing
             }
 
             handler = action_handlers.get(action)
@@ -305,10 +307,10 @@ def journey_executor():
 
             # Execute with timeout
             try:
-                async with asyncio.timeout(30.0):
+                async with asyncio.timeout(timeout_seconds):
                     return await handler(resolved_params, context)
             except TimeoutError as e:
-                msg = f"Action '{action}' timed out after 30.0s"
+                msg = f"Action '{action}' timed out after {timeout_seconds}s"
                 raise TimeoutError(msg) from e
 
         async def _action_crawl_url(
@@ -317,8 +319,12 @@ def journey_executor():
             """Mock URL crawling action."""
             url = params["url"]
             await asyncio.sleep(0.1)  # Simulate processing time
+            # Generate a unique document ID for this crawled URL
+            import hashlib
+            doc_id = f"doc_{hashlib.md5(url.encode()).hexdigest()[:8]}"
             return {
                 "url": url,
+                "document_id": doc_id,  # Add document_id for context
                 "title": f"Test Page for {url}",
                 "content": f"Content from {url}",
                 "metadata": {"word_count": 150, "language": "en"},
@@ -488,6 +494,14 @@ def journey_executor():
                 "validation_passed": len(valid_results) > 0,
                 "min_score_threshold": min_score,
             }
+
+        async def _action_unknown(
+            self, _params: dict[str, Any], _context: dict[str, Any]
+        ) -> dict[str, Any]:
+            """Mock action that always fails for error testing."""
+            await asyncio.sleep(0.01)  # Simulate some processing
+            msg = "Simulated failure for error recovery testing"
+            raise RuntimeError(msg)
 
         def _resolve_context_variables(
             self, params: dict[str, Any], context: dict[str, Any]

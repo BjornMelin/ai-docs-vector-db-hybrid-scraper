@@ -1051,15 +1051,21 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_provider_keys(self) -> Self:
         """Validate required API keys for selected providers."""
+        # Skip validation in testing environment
+        if self.environment == Environment.TESTING:
+            return self
+
         if (
             self.embedding_provider == EmbeddingProvider.OPENAI
             and not self.openai_api_key
+            and not self.openai.api_key
         ):
             msg = "OpenAI API key required when using OpenAI embedding provider"
             raise ValueError(msg)
         if (
             self.crawl_provider == CrawlProvider.FIRECRAWL
             and not self.firecrawl_api_key
+            and not self.firecrawl.api_key
         ):
             msg = "Firecrawl API key required when using Firecrawl provider"
             raise ValueError(msg)

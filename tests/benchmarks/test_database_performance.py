@@ -28,13 +28,30 @@ from qdrant_client.models import (
     PointStruct,
     VectorParams,
 )
-from testcontainers.core.container import DockerContainer
 
 from src.config import Config, get_config
 from src.services.vector_db.collections import QdrantCollections
 from src.services.vector_db.documents import QdrantDocuments
 from src.services.vector_db.indexing import QdrantIndexing
 from src.services.vector_db.search import QdrantSearch
+
+
+# Docker availability detection
+try:
+    import docker
+    from testcontainers.core.container import DockerContainer
+
+    # Test if Docker is actually available
+    try:
+        docker_client = docker.from_env()
+        docker_client.ping()
+        DOCKER_AVAILABLE = True
+        docker_client.close()
+    except Exception:
+        DOCKER_AVAILABLE = False
+except ImportError:
+    DOCKER_AVAILABLE = False
+    DockerContainer = None
 
 
 class RealPerformanceMonitor:
@@ -88,6 +105,11 @@ class ContainerizedQdrantFixture:
 
     async def start_qdrant_container(self):
         """Start Qdrant container for testing."""
+        if not DOCKER_AVAILABLE:
+            raise pytest.skip(
+                "Docker not available - skipping containerized database performance tests"
+            )
+
         self.container = DockerContainer("qdrant/qdrant:latest")
         self.container.with_exposed_ports(6333)
         self.container.start()
@@ -320,6 +342,10 @@ class TestDatabasePerformance:
     @pytest.fixture
     async def real_qdrant_service(self):
         """Create real Qdrant service using containerized Qdrant instance."""
+        if not DOCKER_AVAILABLE:
+            pytest.skip(
+                "Docker not available - skipping containerized database performance tests"
+            )
 
         # Get config
         config = get_config()
@@ -397,6 +423,10 @@ class TestDatabasePerformance:
             )
         return vectors
 
+    @pytest.mark.skipif(
+        not DOCKER_AVAILABLE,
+        reason="Docker not available - skipping containerized database performance tests",
+    )
     def test_real_collection_operations_performance(
         self, benchmark, real_qdrant_service
     ):
@@ -453,6 +483,10 @@ class TestDatabasePerformance:
         )
         assert result["info_time"] < 1.0, "Collection info retrieval should be fast"
 
+    @pytest.mark.skipif(
+        not DOCKER_AVAILABLE,
+        reason="Docker not available - skipping containerized database performance tests",
+    )
     def test_real_vector_upsert_performance(
         self, benchmark, real_qdrant_service, sample_vectors
     ):
@@ -525,6 +559,10 @@ class TestDatabasePerformance:
             f"\n📊 Vector Upsert: {result['throughput_vectors_per_second']:.1f} vectors/sec"
         )
 
+    @pytest.mark.skipif(
+        not DOCKER_AVAILABLE,
+        reason="Docker not available - skipping containerized database performance tests",
+    )
     def test_real_search_performance(
         self, benchmark, real_qdrant_service, sample_vectors
     ):
@@ -609,6 +647,10 @@ class TestDatabasePerformance:
         )
 
     @pytest.mark.slow
+    @pytest.mark.skipif(
+        not DOCKER_AVAILABLE,
+        reason="Docker not available - skipping containerized database performance tests",
+    )
     def test_real_concurrent_database_operations(
         self, benchmark, real_qdrant_service, sample_vectors
     ):
@@ -705,6 +747,10 @@ class TestDatabasePerformance:
             f"\n⚡ Concurrent DB: {result['operations_per_second']:.1f} ops/sec, {result['success_rate']:.1%} success"
         )
 
+    @pytest.mark.skipif(
+        not DOCKER_AVAILABLE,
+        reason="Docker not available - skipping containerized database performance tests",
+    )
     def test_real_payload_indexing_performance(
         self, benchmark, real_qdrant_service, sample_vectors
     ):
@@ -814,6 +860,10 @@ class TestDatabasePerformance:
 class TestEnterpriseFeatures:
     """Test enterprise-specific database features performance."""
 
+    @pytest.mark.skipif(
+        not DOCKER_AVAILABLE,
+        reason="Docker not available - skipping containerized database performance tests",
+    )
     def test_connection_affinity_performance(
         self, benchmark, database_manager, expected_performance
     ):
@@ -857,6 +907,10 @@ class TestEnterpriseFeatures:
             f"\n🎯 Connection affinity hit rate: {affinity_rate:.1%} (target: >{min_affinity:.1%})"
         )
 
+    @pytest.mark.skipif(
+        not DOCKER_AVAILABLE,
+        reason="Docker not available - skipping containerized database performance tests",
+    )
     def test_enterprise_monitoring_overhead(self, benchmark, database_manager):
         """Test that enterprise monitoring adds minimal overhead."""
 

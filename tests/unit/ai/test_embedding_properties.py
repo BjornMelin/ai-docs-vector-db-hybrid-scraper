@@ -22,7 +22,11 @@ class TestEmbeddingPropertiesFixed:
     @settings(
         max_examples=10,
         deadline=2000,
-        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example],
+        suppress_health_check=[
+            HealthCheck.too_slow,
+            HealthCheck.large_base_example,
+            HealthCheck.function_scoped_fixture,
+        ],
     )
     @pytest.mark.ai
     @pytest.mark.property
@@ -54,7 +58,11 @@ class TestEmbeddingPropertiesFixed:
     @settings(
         max_examples=10,
         deadline=2000,
-        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example],
+        suppress_health_check=[
+            HealthCheck.too_slow,
+            HealthCheck.large_base_example,
+            HealthCheck.function_scoped_fixture,
+        ],
     )
     @pytest.mark.ai
     @pytest.mark.property
@@ -84,7 +92,11 @@ class TestEmbeddingPropertiesFixed:
     @settings(
         max_examples=5,
         deadline=3000,
-        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example],
+        suppress_health_check=[
+            HealthCheck.too_slow,
+            HealthCheck.large_base_example,
+            HealthCheck.function_scoped_fixture,
+        ],
     )
     @pytest.mark.ai
     @pytest.mark.property
@@ -121,7 +133,11 @@ class TestEmbeddingPropertiesFixed:
     @settings(
         max_examples=5,
         deadline=2000,
-        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example],
+        suppress_health_check=[
+            HealthCheck.too_slow,
+            HealthCheck.large_base_example,
+            HealthCheck.function_scoped_fixture,
+        ],
     )
     @pytest.mark.ai
     @pytest.mark.property
@@ -195,7 +211,11 @@ class TestEmbeddingPropertiesFixed:
     @settings(
         max_examples=5,
         deadline=2000,
-        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example],
+        suppress_health_check=[
+            HealthCheck.too_slow,
+            HealthCheck.large_base_example,
+            HealthCheck.function_scoped_fixture,
+        ],
     )
     @pytest.mark.ai
     @pytest.mark.property
@@ -235,7 +255,11 @@ class TestEmbeddingPropertiesFixed:
     @settings(
         max_examples=5,
         deadline=2000,
-        suppress_health_check=[HealthCheck.too_slow, HealthCheck.large_base_example],
+        suppress_health_check=[
+            HealthCheck.too_slow,
+            HealthCheck.large_base_example,
+            HealthCheck.function_scoped_fixture,
+        ],
     )
     @pytest.mark.ai
     @pytest.mark.property

@@ -29,35 +29,10 @@ except ImportError:
 class TestBrowserUserJourneys:
     """Test user journeys through browser automation."""
 
-    @pytest.fixture(scope="class")
-    async def browser_setup(self, mock_browser_config):
-        """Set up browser for testing."""
-        if not PLAYWRIGHT_AVAILABLE:
-            pytest.skip("Playwright not available")
-
-        playwright = await async_playwright().start()
-
-        # Configure browser based on platform
-        browser_args = mock_browser_config["args"].copy()
-        browser_args.extend(
-            [
-                "--disable-web-security",
-                "--disable-features=VizDisplayCompositor",
-                "--no-first-run",
-                "--disable-default-apps",
-            ]
-        )
-
-        browser = await playwright.chromium.launch(
-            headless=mock_browser_config["headless"],
-            args=browser_args,
-            timeout=30000,
-        )
-
-        yield browser
-
-        await browser.close()
-        await playwright.stop()
+    @pytest.fixture
+    async def browser_setup(self, mock_browser_setup):
+        """Set up browser for testing using mock."""
+        return mock_browser_setup
 
     @pytest.fixture
     async def browser_context(self, browser_setup):

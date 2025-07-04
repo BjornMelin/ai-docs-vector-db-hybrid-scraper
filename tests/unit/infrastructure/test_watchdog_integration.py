@@ -31,8 +31,7 @@ class TestWatchdogIntegration:
         Path(f.name).unlink(missing_ok=True)
 
     @pytest.mark.asyncio
-    @pytest.mark.usefixtures("_temp_config_file")
-    async def test_file_watcher_setup(self):
+    async def test_file_watcher_setup(self, temp_config_file):
         """Test that file watcher is properly set up.
 
         Verifies that watchdog observer is configured correctly

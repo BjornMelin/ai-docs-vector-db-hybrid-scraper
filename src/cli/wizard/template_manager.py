@@ -183,7 +183,10 @@ class TemplateManager:
 
         for template_name in ordered_templates:
             template_data = self._templates[template_name]
-            metadata = self._metadata[template_name]
+            metadata = self._metadata.get(
+                template_name,
+                {"use_case": "Unknown", "features": "No description available"},
+            )
 
             # Extract key info from template
             embedding_provider = template_data.get("embedding_provider", "unknown")
@@ -223,7 +226,10 @@ class TemplateManager:
 
         # Create preview panel
         console.print(f"\n[bold cyan]📋 Template Preview: {name}[/bold cyan]")
-        console.print(f"[dim]{metadata['description']}[/dim]\n")
+        if metadata and "description" in metadata:
+            console.print(f"[dim]{metadata['description']}[/dim]\n")
+        else:
+            console.print("[dim]No description available[/dim]\n")
 
         # Show key configuration sections
         sections = [
