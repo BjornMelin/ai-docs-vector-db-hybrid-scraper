@@ -66,11 +66,13 @@ def classifier(mock_embedding_manager):
 class TestContentClassifier:
     """Test ContentClassifier functionality."""
 
+    @pytest.mark.asyncio
     async def test_initialize(self, classifier):
         """Test classifier initialization."""
         await classifier.initialize()
         assert classifier._initialized is True
 
+    @pytest.mark.asyncio
     async def test_classify_documentation_content(self, classifier):
         """Test classification of documentation content."""
         content = """
@@ -102,6 +104,7 @@ class TestContentClassifier:
         assert ContentType.DOCUMENTATION in result.confidence_scores
         assert result.confidence_scores[ContentType.DOCUMENTATION] > 0.5
 
+    @pytest.mark.asyncio
     async def test_classify_code_content(self, classifier):
         """Test classification of code content."""
         content = """
@@ -131,6 +134,7 @@ class TestContentClassifier:
         assert ContentType.CODE in result.confidence_scores
         assert result.confidence_scores[ContentType.CODE] > 0.5
 
+    @pytest.mark.asyncio
     async def test_classify_faq_content(self, classifier):
         """Test classification of FAQ content."""
         content = """
@@ -157,6 +161,7 @@ class TestContentClassifier:
         assert result.primary_type == ContentType.FAQ
         assert ContentType.FAQ in result.confidence_scores
 
+    @pytest.mark.asyncio
     async def test_classify_tutorial_content(self, classifier):
         """Test classification of tutorial content."""
         content = """
@@ -199,6 +204,7 @@ class TestContentClassifier:
         assert result.primary_type == ContentType.TUTORIAL
         assert ContentType.TUTORIAL in result.confidence_scores
 
+    @pytest.mark.asyncio
     async def test_classify_blog_content(self, classifier):
         """Test classification of blog content."""
         content = """
@@ -233,6 +239,7 @@ class TestContentClassifier:
         assert result.primary_type == ContentType.BLOG
         assert ContentType.BLOG in result.confidence_scores
 
+    @pytest.mark.asyncio
     async def test_classify_forum_content(self, classifier):
         """Test classification of forum content."""
         content = """
@@ -278,6 +285,7 @@ class TestContentClassifier:
         assert result.primary_type == ContentType.FORUM
         assert ContentType.FORUM in result.confidence_scores
 
+    @pytest.mark.asyncio
     async def test_classify_news_content(self, classifier):
         """Test classification of news content."""
         content = """
@@ -308,6 +316,7 @@ class TestContentClassifier:
         assert result.primary_type == ContentType.NEWS
         assert ContentType.NEWS in result.confidence_scores
 
+    @pytest.mark.asyncio
     async def test_classify_with_url_hints(self, classifier):
         """Test that URL patterns influence classification."""
         content = "Some generic content that could be anything."
@@ -336,6 +345,7 @@ class TestContentClassifier:
         assert isinstance(code_result, ContentClassification)
         assert isinstance(blog_result, ContentClassification)
 
+    @pytest.mark.asyncio
     async def test_classify_mixed_content(self, classifier):
         """Test classification of content with mixed characteristics."""
         content = """
@@ -382,6 +392,7 @@ class TestContentClassifier:
             or ContentType.CODE in result.confidence_scores
         )
 
+    @pytest.mark.asyncio
     async def test_classify_programming_language_detection(self, classifier):
         """Test programming language detection in code content."""
         python_content = """
@@ -427,6 +438,7 @@ class TestContentClassifier:
         # Both should be classified as code but may have different
         # language-specific metadata
 
+    @pytest.mark.asyncio
     async def test_classify_unknown_content(self, classifier):
         """Test classification of content that doesn't fit clear categories."""
         content = """
@@ -446,6 +458,7 @@ class TestContentClassifier:
             or max(result.confidence_scores.values()) < 0.6
         )
 
+    @pytest.mark.asyncio
     async def test_classify_empty_content(self, classifier):
         """Test classification with empty or minimal content."""
         await classifier.initialize()
@@ -456,6 +469,7 @@ class TestContentClassifier:
         result = await classifier.classify_content("   ", "https://example.com")
         assert result.primary_type == ContentType.UNKNOWN
 
+    @pytest.mark.asyncio
     async def test_classify_with_title(self, classifier):
         """Test classification when title is provided."""
         content = "Some content here."
@@ -469,11 +483,13 @@ class TestContentClassifier:
         assert result.primary_type in [ContentType.REFERENCE, ContentType.DOCUMENTATION]
         assert result.classification_reasoning is not None
 
+    @pytest.mark.asyncio
     async def test_classifier_not_initialized(self, classifier):
         """Test that classifier raises error when not initialized."""
         with pytest.raises(RuntimeError, match="ContentClassifier not initialized"):
             await classifier.classify_content("test content", "https://example.com")
 
+    @pytest.mark.asyncio
     async def test_embedding_generation_error(self, classifier, mock_embedding_manager):
         """Test handling of embedding generation errors."""
         mock_embedding_manager.generate_embeddings.side_effect = Exception(
@@ -489,6 +505,7 @@ class TestContentClassifier:
         assert isinstance(result, ContentClassification)
         assert result.primary_type is not None
 
+    @pytest.mark.asyncio
     async def test_cleanup(self, classifier):
         """Test classifier cleanup."""
         await classifier.initialize()

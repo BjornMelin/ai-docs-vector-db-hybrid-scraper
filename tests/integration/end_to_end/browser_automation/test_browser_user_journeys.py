@@ -52,6 +52,7 @@ class TestBrowserUserJourneys:
         yield page
         await page.close()
 
+    @pytest.mark.asyncio
     async def test_documentation_discovery_journey(
         self,
         page: Page,
@@ -243,6 +244,7 @@ class TestBrowserUserJourneys:
             )
             assert _total_duration < 30, f"Journey took too long: {_total_duration}s"
 
+    @pytest.mark.asyncio
     async def test_multi_page_crawling_journey(
         self,
         page: Page,
@@ -356,6 +358,7 @@ class TestBrowserUserJourneys:
                 f"Page text too short: {info['textLength']} chars"
             )
 
+    @pytest.mark.asyncio
     async def test_form_interaction_journey(
         self,
         page: Page,
@@ -596,6 +599,7 @@ class TestBrowserUserJourneys:
             )
 
     @pytest.mark.slow
+    @pytest.mark.asyncio
     async def test_performance_monitoring_journey(
         self,
         page: Page,
@@ -727,6 +731,7 @@ class TestBrowserUserJourneys:
             avg_load = performance_result["aggregate_metrics"]["avg_load_time_ms"]
             assert avg_load < 8000, f"Average load time too high: {avg_load}ms"
 
+    @pytest.mark.asyncio
     async def test_error_handling_journey(
         self,
         page: Page,

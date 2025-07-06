@@ -52,6 +52,7 @@ class TestSearchService:
         assert "Self-learning search pattern optimization" in instructions
         assert "Multi-provider result fusion" in instructions
 
+    @pytest.mark.asyncio
     async def test_initialize_with_client_manager(self, mock_client_manager):
         """Test service initialization with client manager."""
         service = SearchService()
@@ -64,6 +65,7 @@ class TestSearchService:
             assert service.client_manager == mock_client_manager
             mock_register.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_initialize_logs_success_message(self, mock_client_manager, caplog):
         """Test that initialization logs success message."""
         service = SearchService()
@@ -76,6 +78,7 @@ class TestSearchService:
                 "SearchService initialized with autonomous capabilities" in caplog.text
             )
 
+    @pytest.mark.asyncio
     async def test_register_search_tools_raises_error_when_not_initialized(self):
         """Test that tool registration raises error when service not initialized."""
         service = SearchService()
@@ -83,6 +86,7 @@ class TestSearchService:
         with pytest.raises(RuntimeError, match="SearchService not initialized"):
             await service._register_search_tools()
 
+    @pytest.mark.asyncio
     async def test_register_search_tools_calls_all_tool_registrations(
         self, mock_client_manager
     ):
@@ -119,6 +123,7 @@ class TestSearchService:
                     service.mcp, mock_client_manager
                 )
 
+    @pytest.mark.asyncio
     async def test_register_search_tools_logs_success_message(
         self, mock_client_manager, caplog
     ):
@@ -154,6 +159,7 @@ class TestSearchService:
         assert mcp_server == service.mcp
         assert mcp_server.name == "test-service"
 
+    @pytest.mark.asyncio
     async def test_get_service_info_returns_comprehensive_metadata(self):
         """Test that service info contains all expected metadata and capabilities."""
         service = SearchService()
@@ -191,6 +197,7 @@ class TestSearchService:
 class TestSearchServiceAdvancedFeatures:
     """Test advanced SearchService features and integration scenarios."""
 
+    @pytest.mark.asyncio
     async def test_service_handles_initialization_with_complex_client_manager(
         self, mock_client_manager
     ):
@@ -210,6 +217,7 @@ class TestSearchServiceAdvancedFeatures:
             assert service.client_manager == mock_client_manager
             mock_register.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_service_info_includes_i5_research_integration(self):
         """Test that service info correctly references I5 research basis."""
         service = SearchService()
@@ -220,6 +228,7 @@ class TestSearchServiceAdvancedFeatures:
         assert "autonomous_web_search" in service_info["capabilities"]
         assert "multi_provider_orchestration" in service_info["capabilities"]
 
+    @pytest.mark.asyncio
     async def test_autonomous_features_are_comprehensive(self):
         """Test that autonomous features cover all expected capabilities."""
         service = SearchService()
@@ -234,6 +243,7 @@ class TestSearchServiceAdvancedFeatures:
         assert "quality_assessment" in autonomous_features
         assert "self_learning_patterns" in autonomous_features
 
+    @pytest.mark.asyncio
     async def test_web_search_orchestration_tool_registration(
         self, mock_client_manager
     ):
@@ -271,6 +281,7 @@ class TestSearchServiceAdvancedFeatures:
         assert "Multi-provider result fusion and synthesis" in instructions
         assert "Real-time search strategy optimization" in instructions
 
+    @pytest.mark.asyncio
     async def test_error_handling_during_tool_registration(
         self, mock_client_manager, caplog
     ):
@@ -298,6 +309,7 @@ class TestSearchServiceAdvancedFeatures:
             # Tool registration should raise the exception
             await service._register_search_tools()
 
+    @pytest.mark.asyncio
     async def test_service_capability_discovery_and_reporting(self):
         """Test service capability discovery and comprehensive reporting."""
         service = SearchService()
@@ -313,6 +325,7 @@ class TestSearchServiceAdvancedFeatures:
         assert "version" in service_info
         assert "research_basis" in service_info
 
+    @pytest.mark.asyncio
     async def test_multi_provider_orchestration_capability(self):
         """Test that service reports multi-provider orchestration capability."""
         service = SearchService()
@@ -322,6 +335,7 @@ class TestSearchServiceAdvancedFeatures:
         assert "multi_provider_orchestration" in service_info["capabilities"]
         assert "intelligent_result_fusion" in service_info["capabilities"]
 
+    @pytest.mark.asyncio
     async def test_service_supports_intelligent_result_fusion(self):
         """Test that service supports intelligent result fusion."""
         service = SearchService()
@@ -336,6 +350,7 @@ class TestSearchServiceAdvancedFeatures:
 class TestSearchServiceErrorHandling:
     """Test SearchService error handling and recovery scenarios."""
 
+    @pytest.mark.asyncio
     async def test_initialization_with_none_client_manager_raises_error(self):
         """Test that initialization with None client manager is handled properly."""
         service = SearchService()
@@ -347,6 +362,7 @@ class TestSearchServiceErrorHandling:
         with pytest.raises(RuntimeError, match="SearchService not initialized"):
             await service._register_search_tools()
 
+    @pytest.mark.asyncio
     async def test_get_service_info_works_without_initialization(self):
         """Test that get_service_info works even without full initialization."""
         service = SearchService()
@@ -357,6 +373,7 @@ class TestSearchServiceErrorHandling:
         assert service_info["service"] == "search"
         assert service_info["status"] == "active"
 
+    @pytest.mark.asyncio
     async def test_get_mcp_server_works_without_initialization(self):
         """Test that get_mcp_server works without full initialization."""
         service = SearchService()
@@ -367,6 +384,7 @@ class TestSearchServiceErrorHandling:
         assert mcp_server == service.mcp
         assert mcp_server.name == "search-service"
 
+    @pytest.mark.asyncio
     async def test_multiple_initialization_calls_are_safe(self, mock_client_manager):
         """Test that multiple initialization calls are handled safely."""
         service = SearchService()
@@ -385,6 +403,7 @@ class TestSearchServiceErrorHandling:
             # Should handle multiple calls gracefully
             assert second_call_count >= first_call_count
 
+    @pytest.mark.asyncio
     async def test_service_recovery_after_tool_registration_failure(
         self, mock_client_manager
     ):
@@ -417,6 +436,7 @@ class TestSearchServiceErrorHandling:
 class TestSearchServicePerformanceAndOptimization:
     """Test SearchService performance characteristics and optimization features."""
 
+    @pytest.mark.asyncio
     async def test_service_initialization_is_efficient(self, mock_client_manager):
         """Test that service initialization is efficient and doesn't block."""
 
@@ -432,6 +452,7 @@ class TestSearchServicePerformanceAndOptimization:
         # Initialization should be fast (< 1 second)
         assert end_time - start_time < 1.0
 
+    @pytest.mark.asyncio
     async def test_get_service_info_performance(self):
         """Test that get_service_info is performant for capability discovery."""
 
@@ -448,6 +469,7 @@ class TestSearchServicePerformanceAndOptimization:
         # Should complete quickly (< 0.1 seconds for 10 calls)
         assert end_time - start_time < 0.1
 
+    @pytest.mark.asyncio
     async def test_service_supports_concurrent_access(self, mock_client_manager):
         """Test that service supports concurrent access patterns."""
 

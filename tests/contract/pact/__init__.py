@@ -1,1 +1,0 @@
-"""Pact contract testing module."""

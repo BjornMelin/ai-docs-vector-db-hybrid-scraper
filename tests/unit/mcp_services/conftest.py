@@ -273,6 +273,6 @@ async def initialized_mock_services(
 @pytest.fixture
 def event_loop():
     """Create event loop for async tests."""
-    loop = asyncio.new_event_loop()
+    loop = event_loop
     yield loop
     loop.close()

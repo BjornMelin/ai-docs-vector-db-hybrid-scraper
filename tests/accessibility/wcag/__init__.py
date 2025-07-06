@@ -1,1 +1,0 @@
-"""WCAG compliance accessibility tests."""

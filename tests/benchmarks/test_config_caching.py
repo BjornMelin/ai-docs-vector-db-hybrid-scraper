@@ -73,7 +73,7 @@ class ConfigCache:
 
 # NOTE: The optimized module no longer exists
 # These functions need to be reimplemented or tests updated
-# from src.config.optimized import (
+# from src.config import (
 #     FastConfig,
 #     ConfigFactory,
 #     get_development_config,

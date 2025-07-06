@@ -19,8 +19,10 @@ import psutil
 import pytest
 
 # Mock imports - these modules might not exist, so we'll create mocks
-from src.config import CacheConfig
-from src.config.settings import get_settings
+from src.config import (
+    CacheConfig,
+    get_settings
+)
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.vector_db.service import QdrantService
 
@@ -758,7 +760,10 @@ class VectorSearch:
 
         return documents
 
-    def test_real_embedding_generation_performance(
+
+    @pytest.mark.asyncio
+
+    async def test_real_embedding_generation_performance(
         self, benchmark, real_embedding_manager, realistic_documents
     ):
         """Benchmark real embedding generation with actual providers."""
@@ -779,7 +784,7 @@ class VectorSearch:
 
                 return results
 
-            return asyncio.run(generate_embeddings())
+            return await generate_embeddings()
 
         # Run benchmark with pytest-benchmark
         results = benchmark(generate_embeddings_sync)
@@ -798,7 +803,9 @@ class VectorSearch:
         )
 
     @pytest.mark.slow
-    def test_real_vector_search_performance(
+
+    @pytest.mark.asyncio
+    async def test_real_vector_search_performance(
         self,
         benchmark,
         real_qdrant_service,
@@ -864,7 +871,7 @@ class VectorSearch:
 
                 return search_results
 
-            return asyncio.run(vector_search())
+            return await vector_search()
 
         # Run benchmark
         results = benchmark(vector_search_sync)
@@ -879,7 +886,10 @@ class VectorSearch:
             "Results should have similarity scores"
         )
 
-    def test_real_cache_performance(
+
+    @pytest.mark.asyncio
+
+    async def test_real_cache_performance(
         self, benchmark, real_embedding_manager, realistic_documents
     ):
         """Benchmark real caching system performance."""
@@ -919,7 +929,7 @@ class VectorSearch:
                     "warm_results": len(warm_results),
                 }
 
-            return asyncio.run(cache_performance())
+            return await cache_performance()
 
         # Run benchmark
         results = benchmark(cache_performance_sync)
@@ -936,7 +946,9 @@ class VectorSearch:
         print(f"   Warm cache: {results['warm_time']:.3f}s")
 
     @pytest.mark.slow
-    def test_real_concurrent_operations_performance(
+
+    @pytest.mark.asyncio
+    async def test_real_concurrent_operations_performance(
         self, benchmark, real_embedding_manager, realistic_documents
     ):
         """Benchmark concurrent operations with real system components."""
@@ -973,7 +985,7 @@ class VectorSearch:
                     "operations": len(test_texts),
                 }
 
-            return asyncio.run(concurrent_operations())
+            return await concurrent_operations()
 
         # Run benchmark
         results = benchmark(concurrent_operations_sync)
@@ -988,7 +1000,10 @@ class VectorSearch:
         print(f"   Sequential: {results['sequential_time']:.3f}s")
         print(f"   Concurrent: {results['concurrent_time']:.3f}s")
 
-    def test_real_memory_usage_optimization(
+
+    @pytest.mark.asyncio
+
+    async def test_real_memory_usage_optimization(
         self, benchmark, real_embedding_manager, realistic_documents
     ):
         """Benchmark memory usage patterns with real components."""
@@ -1029,7 +1044,7 @@ class VectorSearch:
                     "operations": len(results),
                 }
 
-            return asyncio.run(memory_usage())
+            return await memory_usage()
 
         # Run benchmark
         results = benchmark(memory_usage_sync)
@@ -1107,4 +1122,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    await main()

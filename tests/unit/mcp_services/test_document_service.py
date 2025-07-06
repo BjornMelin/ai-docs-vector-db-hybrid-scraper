@@ -61,6 +61,7 @@ class TestDocumentService:
         assert "Self-learning document processing patterns" in instructions
         assert "Autonomous collection provisioning" in instructions
 
+    @pytest.mark.asyncio
     async def test_initialize_with_client_manager(self, mock_client_manager):
         """Test service initialization with client manager."""
         service = DocumentService()
@@ -73,6 +74,7 @@ class TestDocumentService:
             assert service.client_manager == mock_client_manager
             mock_register.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_initialize_logs_success_message(self, mock_client_manager, caplog):
         """Test that initialization logs success message with 5-tier capabilities."""
         service = DocumentService()
@@ -88,6 +90,7 @@ class TestDocumentService:
                 in caplog.text
             )
 
+    @pytest.mark.asyncio
     async def test_register_document_tools_raises_error_when_not_initialized(self):
         """Test that tool registration raises error when service not initialized."""
         service = DocumentService()
@@ -95,6 +98,7 @@ class TestDocumentService:
         with pytest.raises(RuntimeError, match="DocumentService not initialized"):
             await service._register_document_tools()
 
+    @pytest.mark.asyncio
     async def test_register_document_tools_calls_all_tool_registrations(
         self, mock_client_manager
     ):
@@ -144,6 +148,7 @@ class TestDocumentService:
                 service.mcp, mock_client_manager
             )
 
+    @pytest.mark.asyncio
     async def test_register_document_tools_logs_success_message(
         self, mock_client_manager, caplog
     ):
@@ -179,6 +184,7 @@ class TestDocumentService:
         assert mcp_server == service.mcp
         assert mcp_server.name == "test-service"
 
+    @pytest.mark.asyncio
     async def test_get_service_info_returns_comprehensive_metadata(self):
         """Test that service info contains all expected metadata and capabilities."""
         service = DocumentService()
@@ -216,6 +222,7 @@ class TestDocumentService:
 class TestDocumentServiceCrawlingCapabilities:
     """Test DocumentService 5-tier crawling and intelligent processing capabilities."""
 
+    @pytest.mark.asyncio
     async def test_5_tier_crawling_tool_registration(self, mock_client_manager):
         """Test that 5-tier crawling tools are properly registered."""
         service = DocumentService()
@@ -242,6 +249,7 @@ class TestDocumentServiceCrawlingCapabilities:
                 service.mcp, mock_client_manager
             )
 
+    @pytest.mark.asyncio
     async def test_content_intelligence_tool_registration(self, mock_client_manager):
         """Test that content intelligence tools are properly registered."""
         service = DocumentService()
@@ -285,6 +293,7 @@ class TestDocumentServiceCrawlingCapabilities:
         assert "Content intelligence and quality assessment" in instructions
         assert "Advanced chunking strategies with AST-based processing" in instructions
 
+    @pytest.mark.asyncio
     async def test_tier_selection_optimization_capability(self):
         """Test that service reports tier selection optimization capability."""
         service = DocumentService()
@@ -295,6 +304,7 @@ class TestDocumentServiceCrawlingCapabilities:
         assert "intelligent_crawling" in service_info["capabilities"]
         assert "tier_selection_optimization" in service_info["autonomous_features"]
 
+    @pytest.mark.asyncio
     async def test_content_quality_assessment_capability(self):
         """Test that service supports content quality assessment."""
         service = DocumentService()
@@ -305,6 +315,7 @@ class TestDocumentServiceCrawlingCapabilities:
         assert "content_intelligence" in service_info["capabilities"]
         assert "content_quality_assessment" in service_info["autonomous_features"]
 
+    @pytest.mark.asyncio
     async def test_autonomous_processing_capability(self):
         """Test that service supports autonomous processing."""
         service = DocumentService()
@@ -314,6 +325,7 @@ class TestDocumentServiceCrawlingCapabilities:
         assert "autonomous_processing" in service_info["capabilities"]
         assert "processing_pattern_learning" in service_info["autonomous_features"]
 
+    @pytest.mark.asyncio
     async def test_collection_provisioning_capability(self):
         """Test that service supports autonomous collection provisioning."""
         service = DocumentService()
@@ -327,6 +339,7 @@ class TestDocumentServiceCrawlingCapabilities:
 class TestDocumentServiceProjectOrganization:
     """Test DocumentService project organization and management capabilities."""
 
+    @pytest.mark.asyncio
     async def test_project_organization_tool_registration(self, mock_client_manager):
         """Test that project organization tools are properly registered."""
         service = DocumentService()
@@ -351,6 +364,7 @@ class TestDocumentServiceProjectOrganization:
                 service.mcp, mock_client_manager
             )
 
+    @pytest.mark.asyncio
     async def test_document_management_tool_registration(self, mock_client_manager):
         """Test that document management tools are properly registered."""
         service = DocumentService()
@@ -380,6 +394,7 @@ class TestDocumentServiceProjectOrganization:
                 service.mcp, mock_client_manager
             )
 
+    @pytest.mark.asyncio
     async def test_collection_management_capability(self):
         """Test that service supports collection management."""
         service = DocumentService()
@@ -403,6 +418,7 @@ class TestDocumentServiceProjectOrganization:
 class TestDocumentServiceErrorHandling:
     """Test DocumentService error handling and recovery scenarios."""
 
+    @pytest.mark.asyncio
     async def test_initialization_with_none_client_manager_raises_error(self):
         """Test that initialization with None client manager is handled properly."""
         service = DocumentService()
@@ -414,6 +430,7 @@ class TestDocumentServiceErrorHandling:
         with pytest.raises(RuntimeError, match="DocumentService not initialized"):
             await service._register_document_tools()
 
+    @pytest.mark.asyncio
     async def test_get_service_info_works_without_initialization(self):
         """Test that get_service_info works even without full initialization."""
         service = DocumentService()
@@ -424,6 +441,7 @@ class TestDocumentServiceErrorHandling:
         assert service_info["service"] == "document"
         assert service_info["status"] == "active"
 
+    @pytest.mark.asyncio
     async def test_error_handling_during_tool_registration(
         self, mock_client_manager, caplog
     ):
@@ -454,6 +472,7 @@ class TestDocumentServiceErrorHandling:
             # Tool registration should raise the exception
             await service._register_document_tools()
 
+    @pytest.mark.asyncio
     async def test_service_recovery_after_tool_registration_failure(
         self, mock_client_manager
     ):
@@ -484,6 +503,7 @@ class TestDocumentServiceErrorHandling:
             # Should not raise error on retry
             await service._register_document_tools()
 
+    @pytest.mark.asyncio
     async def test_multiple_initialization_calls_are_safe(self, mock_client_manager):
         """Test that multiple initialization calls are handled safely."""
         service = DocumentService()
@@ -506,6 +526,7 @@ class TestDocumentServiceErrorHandling:
 class TestDocumentServiceIntegrationScenarios:
     """Test DocumentService integration scenarios and advanced use cases."""
 
+    @pytest.mark.asyncio
     async def test_service_handles_initialization_with_complex_client_manager(
         self, mock_client_manager
     ):
@@ -526,6 +547,7 @@ class TestDocumentServiceIntegrationScenarios:
             assert service.client_manager == mock_client_manager
             mock_register.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_service_info_includes_i3_research_integration(self):
         """Test that service info correctly references I3 research basis."""
         service = DocumentService()
@@ -536,6 +558,7 @@ class TestDocumentServiceIntegrationScenarios:
         assert "5_tier_crawling" in service_info["capabilities"]
         assert "intelligent_crawling" in service_info["capabilities"]
 
+    @pytest.mark.asyncio
     async def test_comprehensive_capability_reporting(self):
         """Test comprehensive capability reporting for service discovery."""
         service = DocumentService()
@@ -551,6 +574,7 @@ class TestDocumentServiceIntegrationScenarios:
         assert "version" in service_info
         assert "research_basis" in service_info
 
+    @pytest.mark.asyncio
     async def test_service_supports_concurrent_access(self, mock_client_manager):
         """Test that service supports concurrent access patterns."""
 
@@ -571,6 +595,7 @@ class TestDocumentServiceIntegrationScenarios:
                 assert not isinstance(result, Exception)
                 assert result["service"] == "document"
 
+    @pytest.mark.asyncio
     async def test_ml_powered_tier_selection_capability(self):
         """Test that service supports ML-powered tier selection."""
         service = DocumentService()

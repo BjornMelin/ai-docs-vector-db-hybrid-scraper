@@ -64,6 +64,7 @@ class TestSystemService:
         assert "Intelligent configuration optimization" in instructions
         assert "Cost and performance correlation analysis" in instructions
 
+    @pytest.mark.asyncio
     async def test_initialize_with_client_manager(self, mock_client_manager):
         """Test service initialization with client manager."""
         service = SystemService()
@@ -76,6 +77,7 @@ class TestSystemService:
             assert service.client_manager == mock_client_manager
             mock_register.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_initialize_logs_success_message(self, mock_client_manager, caplog):
         """Test that initialization logs success message with self-healing capabilities."""
         service = SystemService()
@@ -88,6 +90,7 @@ class TestSystemService:
 
         assert "SystemService initialized with self-healing capabilities" in caplog.text
 
+    @pytest.mark.asyncio
     async def test_register_system_tools_raises_error_when_not_initialized(self):
         """Test that tool registration raises error when service not initialized."""
         service = SystemService()
@@ -95,6 +98,7 @@ class TestSystemService:
         with pytest.raises(RuntimeError, match="SystemService not initialized"):
             await service._register_system_tools()
 
+    @pytest.mark.asyncio
     async def test_register_system_tools_calls_all_tool_registrations(
         self, mock_client_manager
     ):
@@ -131,6 +135,7 @@ class TestSystemService:
                     service.mcp, mock_client_manager
                 )
 
+    @pytest.mark.asyncio
     async def test_register_system_tools_logs_success_message(
         self, mock_client_manager, caplog
     ):
@@ -165,6 +170,7 @@ class TestSystemService:
         assert mcp_server == service.mcp
         assert mcp_server.name == "test-service"
 
+    @pytest.mark.asyncio
     async def test_get_service_info_returns_comprehensive_metadata(self):
         """Test that service info contains all expected metadata and capabilities."""
         service = SystemService()
@@ -202,6 +208,7 @@ class TestSystemService:
 class TestSystemServiceHealthAndMonitoring:
     """Test SystemService health monitoring and system management capabilities."""
 
+    @pytest.mark.asyncio
     async def test_system_health_tool_registration(self, mock_client_manager):
         """Test that system health tools are properly registered."""
         service = SystemService()
@@ -228,6 +235,7 @@ class TestSystemServiceHealthAndMonitoring:
             service.mcp, mock_client_manager
         )
 
+    @pytest.mark.asyncio
     async def test_health_monitoring_capability(self):
         """Test that service reports health monitoring capability."""
         service = SystemService()
@@ -237,6 +245,7 @@ class TestSystemServiceHealthAndMonitoring:
         assert "health_monitoring" in service_info["capabilities"]
         assert "resource_management" in service_info["capabilities"]
 
+    @pytest.mark.asyncio
     async def test_self_healing_capability(self):
         """Test that service supports self-healing capability."""
         service = SystemService()
@@ -261,6 +270,7 @@ class TestSystemServiceHealthAndMonitoring:
 class TestSystemServiceConfigurationManagement:
     """Test SystemService configuration management and optimization capabilities."""
 
+    @pytest.mark.asyncio
     async def test_configuration_tool_registration(self, mock_client_manager):
         """Test that configuration tools are properly registered."""
         service = SystemService()
@@ -287,6 +297,7 @@ class TestSystemServiceConfigurationManagement:
                 service.mcp, mock_client_manager
             )
 
+    @pytest.mark.asyncio
     async def test_configuration_management_capability(self):
         """Test that service supports configuration management."""
         service = SystemService()
@@ -310,6 +321,7 @@ class TestSystemServiceConfigurationManagement:
 class TestSystemServiceCostAndResourceOptimization:
     """Test SystemService cost estimation and resource optimization capabilities."""
 
+    @pytest.mark.asyncio
     async def test_cost_estimation_tool_registration(self, mock_client_manager):
         """Test that cost estimation tools are properly registered."""
         service = SystemService()
@@ -338,6 +350,7 @@ class TestSystemServiceCostAndResourceOptimization:
                 service.mcp, mock_client_manager
             )
 
+    @pytest.mark.asyncio
     async def test_cost_optimization_capability(self):
         """Test that service supports cost optimization."""
         service = SystemService()
@@ -347,6 +360,7 @@ class TestSystemServiceCostAndResourceOptimization:
         assert "cost_estimation" in service_info["capabilities"]
         assert "cost_intelligence" in service_info["autonomous_features"]
 
+    @pytest.mark.asyncio
     async def test_resource_management_capability(self):
         """Test that service supports resource management."""
         service = SystemService()
@@ -369,6 +383,7 @@ class TestSystemServiceCostAndResourceOptimization:
 class TestSystemServiceEmbeddingAndDataProcessing:
     """Test SystemService embedding optimization and data processing capabilities."""
 
+    @pytest.mark.asyncio
     async def test_embeddings_tool_registration(self, mock_client_manager):
         """Test that embedding tools are properly registered."""
         service = SystemService()
@@ -395,6 +410,7 @@ class TestSystemServiceEmbeddingAndDataProcessing:
                 service.mcp, mock_client_manager
             )
 
+    @pytest.mark.asyncio
     async def test_filtering_tool_registration(self, mock_client_manager):
         """Test that filtering tools are properly registered."""
         service = SystemService()
@@ -421,6 +437,7 @@ class TestSystemServiceEmbeddingAndDataProcessing:
                 service.mcp, mock_client_manager
             )
 
+    @pytest.mark.asyncio
     async def test_embedding_optimization_capability(self):
         """Test that service supports embedding optimization."""
         service = SystemService()
@@ -429,6 +446,7 @@ class TestSystemServiceEmbeddingAndDataProcessing:
 
         assert "embedding_optimization" in service_info["capabilities"]
 
+    @pytest.mark.asyncio
     async def test_data_filtering_capability(self):
         """Test that service supports data filtering."""
         service = SystemService()
@@ -451,6 +469,7 @@ class TestSystemServiceEmbeddingAndDataProcessing:
 class TestSystemServiceErrorHandling:
     """Test SystemService error handling and recovery scenarios."""
 
+    @pytest.mark.asyncio
     async def test_initialization_with_none_client_manager_raises_error(self):
         """Test that initialization with None client manager is handled properly."""
         service = SystemService()
@@ -462,6 +481,7 @@ class TestSystemServiceErrorHandling:
         with pytest.raises(RuntimeError, match="SystemService not initialized"):
             await service._register_system_tools()
 
+    @pytest.mark.asyncio
     async def test_get_service_info_works_without_initialization(self):
         """Test that get_service_info works even without full initialization."""
         service = SystemService()
@@ -472,6 +492,7 @@ class TestSystemServiceErrorHandling:
         assert service_info["service"] == "system"
         assert service_info["status"] == "active"
 
+    @pytest.mark.asyncio
     async def test_error_handling_during_tool_registration(self, mock_client_manager):
         """Test error handling during tool registration process."""
         service = SystemService()
@@ -497,6 +518,7 @@ class TestSystemServiceErrorHandling:
             # Tool registration should raise the exception
             await service._register_system_tools()
 
+    @pytest.mark.asyncio
     async def test_service_recovery_after_tool_registration_failure(
         self, mock_client_manager
     ):
@@ -525,6 +547,7 @@ class TestSystemServiceErrorHandling:
             # Should not raise error on retry
             await service._register_system_tools()
 
+    @pytest.mark.asyncio
     async def test_multiple_initialization_calls_are_safe(self, mock_client_manager):
         """Test that multiple initialization calls are handled safely."""
         service = SystemService()
@@ -547,6 +570,7 @@ class TestSystemServiceErrorHandling:
 class TestSystemServiceSelfHealingCapabilities:
     """Test SystemService self-healing and autonomous capabilities."""
 
+    @pytest.mark.asyncio
     async def test_fault_tolerance_capability(self):
         """Test that service reports fault tolerance capability."""
         service = SystemService()
@@ -555,6 +579,7 @@ class TestSystemServiceSelfHealingCapabilities:
 
         assert "fault_tolerance" in service_info["autonomous_features"]
 
+    @pytest.mark.asyncio
     async def test_predictive_maintenance_capability(self):
         """Test that service supports predictive maintenance."""
         service = SystemService()
@@ -573,6 +598,7 @@ class TestSystemServiceSelfHealingCapabilities:
         assert "Self-healing system recovery and fault tolerance" in instructions
         assert "Predictive maintenance and resource scaling" in instructions
 
+    @pytest.mark.asyncio
     async def test_configuration_optimization_capability(self):
         """Test that service supports autonomous configuration optimization."""
         service = SystemService()
@@ -581,6 +607,7 @@ class TestSystemServiceSelfHealingCapabilities:
 
         assert "configuration_optimization" in service_info["autonomous_features"]
 
+    @pytest.mark.asyncio
     async def test_cost_intelligence_capability(self):
         """Test that service supports cost intelligence."""
         service = SystemService()
@@ -589,6 +616,7 @@ class TestSystemServiceSelfHealingCapabilities:
 
         assert "cost_intelligence" in service_info["autonomous_features"]
 
+    @pytest.mark.asyncio
     async def test_comprehensive_autonomous_features(self):
         """Test that all autonomous features are comprehensive."""
         service = SystemService()
@@ -607,6 +635,7 @@ class TestSystemServiceSelfHealingCapabilities:
 class TestSystemServicePerformanceAndIntegration:
     """Test SystemService performance characteristics and integration scenarios."""
 
+    @pytest.mark.asyncio
     async def test_service_initialization_is_efficient(self, mock_client_manager):
         """Test that service initialization is efficient and doesn't block."""
 
@@ -622,6 +651,7 @@ class TestSystemServicePerformanceAndIntegration:
         # Initialization should be fast (< 1 second)
         assert end_time - start_time < 1.0
 
+    @pytest.mark.asyncio
     async def test_get_service_info_performance(self):
         """Test that get_service_info is performant for capability discovery."""
 
@@ -638,6 +668,7 @@ class TestSystemServicePerformanceAndIntegration:
         # Should complete quickly (< 0.1 seconds for 10 calls)
         assert end_time - start_time < 0.1
 
+    @pytest.mark.asyncio
     async def test_service_supports_concurrent_access(self, mock_client_manager):
         """Test that service supports concurrent access patterns."""
 
@@ -658,6 +689,7 @@ class TestSystemServicePerformanceAndIntegration:
                 assert not isinstance(result, Exception)
                 assert result["service"] == "system"
 
+    @pytest.mark.asyncio
     async def test_service_handles_initialization_with_complex_client_manager(
         self, mock_client_manager
     ):
@@ -678,6 +710,7 @@ class TestSystemServicePerformanceAndIntegration:
             assert service.client_manager == mock_client_manager
             mock_register.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_comprehensive_capability_reporting(self):
         """Test comprehensive capability reporting for service discovery."""
         service = SystemService()

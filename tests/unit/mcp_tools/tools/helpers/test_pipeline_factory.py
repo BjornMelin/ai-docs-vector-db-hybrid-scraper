@@ -84,6 +84,7 @@ class TestPipelineFactoryBasics:
         factory = QueryProcessingPipelineFactory(mock_client_manager)
         assert factory.client_manager is mock_client_manager
 
+    @pytest.mark.asyncio
     async def test_service_dependency_gathering(
         self, pipeline_factory, _mock_context, _mock_services
     ):
@@ -107,6 +108,7 @@ class TestPipelineFactoryBasics:
 class TestPipelineFactoryErrorHandling:
     """Test error handling scenarios in pipeline factory."""
 
+    @pytest.mark.asyncio
     async def test_cache_manager_unavailable(self, pipeline_factory, _mock_context):
         """Test graceful handling when cache manager is unavailable."""
         # Configure cache manager to fail
@@ -124,6 +126,7 @@ class TestPipelineFactoryErrorHandling:
         # This test verifies the error condition is detectable
         assert pipeline_factory.client_manager.get_cache_manager.side_effect
 
+    @pytest.mark.asyncio
     async def test_critical_service_failure(self, pipeline_factory, _mock_context):
         """Test behavior when critical services fail."""
         # Configure embedding manager to fail (critical service)
@@ -141,6 +144,7 @@ class TestPipelineFactoryErrorHandling:
 class TestPipelineFactoryIntegration:
     """Test integration scenarios that focus on real-world usage patterns."""
 
+    @pytest.mark.asyncio
     async def test_factory_interface_contract(self, pipeline_factory, _mock_context):
         """Test that factory provides the expected interface contract."""
         # This test verifies the factory has the expected public interface
@@ -156,6 +160,7 @@ class TestPipelineFactoryIntegration:
         params = list(sig.parameters.keys())
         assert "ctx" in params or len(params) >= 1
 
+    @pytest.mark.asyncio
     async def test_logging_behavior(self, _pipeline_factory, mock_context):
         """Test that factory provides appropriate logging when context is available."""
         # Test logging behavior without full pipeline creation
@@ -175,6 +180,7 @@ class TestPipelineFactoryIntegration:
 class TestPipelineFactoryRealWorld:
     """Test real-world usage patterns and integration scenarios."""
 
+    @pytest.mark.asyncio
     async def test_service_configuration_validation(self, _mock_services):
         """Test that services are properly configured for pipeline creation."""
         # Verify that all required services have the expected interface

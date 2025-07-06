@@ -115,6 +115,7 @@ class TestQueryValidationHelper:
         assert collection == "docs"
         assert query == "How to hack?"
 
+    @pytest.mark.asyncio
     async def test_validate_force_options_valid_strategy(
         self, validation_helper, mock_context
     ):
@@ -134,6 +135,7 @@ class TestQueryValidationHelper:
         assert dimension is None
         assert len(mock_context.logs["warning"]) == 0
 
+    @pytest.mark.asyncio
     async def test_validate_force_options_valid_dimension(
         self, validation_helper, mock_context
     ):
@@ -153,6 +155,7 @@ class TestQueryValidationHelper:
         assert dimension == MatryoshkaDimension.LARGE
         assert len(mock_context.logs["warning"]) == 0
 
+    @pytest.mark.asyncio
     async def test_validate_force_options_all_valid(
         self, validation_helper, mock_context
     ):
@@ -172,6 +175,7 @@ class TestQueryValidationHelper:
         assert dimension == MatryoshkaDimension.SMALL
         assert len(mock_context.logs["warning"]) == 0
 
+    @pytest.mark.asyncio
     async def test_validate_force_options_invalid_strategy(
         self, validation_helper, mock_context
     ):
@@ -197,6 +201,7 @@ class TestQueryValidationHelper:
             in mock_context.logs["warning"][0]
         )
 
+    @pytest.mark.asyncio
     async def test_validate_force_options_invalid_dimension(
         self, validation_helper, mock_context
     ):
@@ -219,6 +224,7 @@ class TestQueryValidationHelper:
         assert len(mock_context.logs["warning"]) == 1
         assert "Invalid force_dimension '999'" in mock_context.logs["warning"][0]
 
+    @pytest.mark.asyncio
     async def test_validate_force_options_dimension_exception(
         self, validation_helper, mock_context
     ):
@@ -243,6 +249,7 @@ class TestQueryValidationHelper:
             "Invalid force_dimension 'not_a_number'" in mock_context.logs["warning"][0]
         )
 
+    @pytest.mark.asyncio
     async def test_validate_force_options_none_values(
         self, validation_helper, mock_context
     ):
@@ -262,6 +269,7 @@ class TestQueryValidationHelper:
         assert dimension is None
         assert len(mock_context.logs["warning"]) == 0
 
+    @pytest.mark.asyncio
     async def test_validate_force_options_empty_strings(
         self, validation_helper, mock_context
     ):
@@ -281,6 +289,7 @@ class TestQueryValidationHelper:
         assert dimension is None
         assert len(mock_context.logs["warning"]) == 0
 
+    @pytest.mark.asyncio
     async def test_validate_force_options_case_insensitive_strategy(
         self, validation_helper, mock_context
     ):
@@ -300,6 +309,7 @@ class TestQueryValidationHelper:
         assert dimension is None
         assert len(mock_context.logs["warning"]) == 0
 
+    @pytest.mark.asyncio
     async def test_validate_force_options_all_dimension_values(
         self, validation_helper, mock_context
     ):
@@ -329,6 +339,7 @@ class TestQueryValidationHelper:
             assert dimension == expected_dim
             assert len(mock_context.logs["warning"]) == 0
 
+    @pytest.mark.asyncio
     async def test_validate_force_options_all_strategy_values(
         self, validation_helper, mock_context
     ):

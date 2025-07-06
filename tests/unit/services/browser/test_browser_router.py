@@ -165,6 +165,7 @@ class TestDomainPreferences:
 class TestEnhancedRouterInitialization:
     """Test enhanced router initialization."""
 
+    @pytest.mark.asyncio
     async def test_initialization(self, enhanced_router):
         """Test router initializes with enhanced features."""
         assert enhanced_router.routing_config is not None
@@ -172,6 +173,7 @@ class TestEnhancedRouterInitialization:
         assert enhanced_router.circuit_breakers is not None
         assert enhanced_router.domain_tier_success is not None
 
+    @pytest.mark.asyncio
     async def test_default_tier_configs_loaded(self, enhanced_router):
         """Test default tier configurations are loaded."""
         config = enhanced_router.routing_config
@@ -193,6 +195,7 @@ class TestEnhancedRouterInitialization:
 class TestEnhancedTierSelection:
     """Test enhanced tier selection logic."""
 
+    @pytest.mark.asyncio
     async def test_domain_preference_selection(self, enhanced_router):
         """Test domain preferences are respected."""
         # Add test domain preference
@@ -210,6 +213,7 @@ class TestEnhancedTierSelection:
         tier = enhanced_router._check_domain_preferences("test.example.com")
         assert tier == "browser_use"
 
+    @pytest.mark.asyncio
     async def test_url_pattern_selection(self, enhanced_router):
         """Test URL pattern matching for tier selection."""
         # Configure test patterns
@@ -223,6 +227,7 @@ class TestEnhancedTierSelection:
         tier = enhanced_router._check_url_patterns("https://api.example.com/data.json")
         assert tier == "lightweight"
 
+    @pytest.mark.asyncio
     async def test_interaction_tier_selection(self, enhanced_router):
         """Test tier selection for interaction requirements."""
         # Configure tiers with interaction support
@@ -244,6 +249,7 @@ class TestEnhancedTierSelection:
 class TestPerformanceTracking:
     """Test performance tracking and analysis."""
 
+    @pytest.mark.asyncio
     async def test_record_performance(self, enhanced_router):
         """Test performance recording."""
         await enhanced_router._record_performance(
@@ -262,6 +268,7 @@ class TestPerformanceTracking:
         assert entry.success is True
         assert entry.response_time_ms == 1000
 
+    @pytest.mark.asyncio
     async def test_performance_analysis(self, enhanced_router):
         """Test performance analysis calculation."""
         # Add test performance data
@@ -284,6 +291,7 @@ class TestPerformanceTracking:
         assert analysis.success_rate == 0.8
         assert analysis.average_response_time_ms > 1000
 
+    @pytest.mark.asyncio
     async def test_performance_based_selection(self, enhanced_router):
         """Test performance-based tier selection."""
         # Enable performance routing
@@ -314,6 +322,7 @@ class TestPerformanceTracking:
         tier = await enhanced_router._get_performance_based_tier("example.com")
         assert tier == "crawl4ai"  # Better performance
 
+    @pytest.mark.asyncio
     async def test_performance_score_calculation(self, enhanced_router):
         """Test performance score calculation."""
         analysis = TierPerformanceAnalysis(
@@ -336,6 +345,7 @@ class TestPerformanceTracking:
 class TestIntelligentFallback:
     """Test intelligent fallback strategies."""
 
+    @pytest.mark.asyncio
     async def test_fallback_order_with_performance(self, enhanced_router):
         """Test fallback order considers performance."""
         # Enable intelligent fallback
@@ -374,6 +384,7 @@ class TestIntelligentFallback:
         assert fallback_order[0] == "playwright"
         assert fallback_order[1] == "browser_use"
 
+    @pytest.mark.asyncio
     async def test_capability_based_fallback(self, enhanced_router):
         """Test fallback considers error type and tier capabilities."""
         tier_config = enhanced_router.routing_config.tier_configs["lightweight"]
@@ -399,6 +410,7 @@ class TestCircuitBreakerIntegration:
     """Test circuit breaker integration with routing."""
 
     @patch("src.services.browser.enhanced_router.logger")
+    @pytest.mark.asyncio
     async def test_circuit_breaker_prevents_tier_selection(
         self, _mock_logger, enhanced_router
     ):
@@ -444,6 +456,7 @@ class TestCircuitBreakerIntegration:
 class TestEnhancedMetrics:
     """Test enhanced metrics and reporting."""
 
+    @pytest.mark.asyncio
     async def test_get_performance_report(self, enhanced_router):
         """Test comprehensive performance report generation."""
         # Add test data
@@ -485,6 +498,7 @@ class TestScrapeWithEnhancements:
     """Test enhanced scraping functionality."""
 
     @patch("src.services.browser.enhanced_router.logger")
+    @pytest.mark.asyncio
     async def test_scrape_with_all_enhancements(self, _mock_logger, enhanced_router):
         """Test scraping uses all enhanced features."""
         # Initialize router
@@ -522,6 +536,7 @@ class TestScrapeWithEnhancements:
         # Check performance was recorded
         assert len(enhanced_router.performance_history) == 1
 
+    @pytest.mark.asyncio
     async def test_scrape_fallback_on_failure(self, enhanced_router):
         """Test scraping falls back on failure."""
         # Initialize router

@@ -28,6 +28,7 @@ class TestRetryAsync:
         mock_func = AsyncMock(return_value="success")
 
         @retry_async(max_attempts=3)
+        @pytest.mark.asyncio
         async def test_func():
             return await mock_func()
 
@@ -49,6 +50,7 @@ class TestRetryAsync:
             return "success"
 
         @retry_async(max_attempts=3, base_delay=0.01)  # Fast for testing
+        @pytest.mark.asyncio
         async def test_func():
             return await flaky_func()
 
@@ -62,6 +64,7 @@ class TestRetryAsync:
         mock_func = AsyncMock(side_effect=ValueError("Persistent error"))
 
         @retry_async(max_attempts=3, base_delay=0.01)
+        @pytest.mark.asyncio
         async def test_func():
             return await mock_func()
 
@@ -75,6 +78,7 @@ class TestRetryAsync:
         """Test retry decorator with non-retryable exception."""
 
         @retry_async(max_attempts=3, exceptions=(ValueError,))
+        @pytest.mark.asyncio
         async def test_func():
             msg = "Non-retryable error"
             raise TypeError(msg)
@@ -98,6 +102,7 @@ class TestRetryAsync:
         try:
 
             @retry_async(max_attempts=3, base_delay=1.0, backoff_factor=2.0)
+            @pytest.mark.asyncio
             async def test_func():
                 msg = "Test error"
                 raise ValueError(msg)
@@ -128,6 +133,7 @@ class TestRetryAsync:
             @retry_async(
                 max_attempts=4, base_delay=10.0, max_delay=15.0, backoff_factor=2.0
             )
+            @pytest.mark.asyncio
             async def test_func():
                 msg = "Test error"
                 raise ValueError(msg)
@@ -151,6 +157,7 @@ class TestCircuitBreaker:
         mock_func = AsyncMock(return_value="success")
 
         @circuit_breaker(failure_threshold=3)
+        @pytest.mark.asyncio
         async def test_func():
             return await mock_func()
 
@@ -163,6 +170,7 @@ class TestCircuitBreaker:
         """Test circuit breaker opens after threshold failures."""
 
         @circuit_breaker(failure_threshold=2, recovery_timeout=0.1)
+        @pytest.mark.asyncio
         async def test_func():
             msg = "Test error"
             raise ValueError(msg)
@@ -191,6 +199,7 @@ class TestCircuitBreaker:
             return "recovered"
 
         @circuit_breaker(failure_threshold=2, recovery_timeout=0.05)
+        @pytest.mark.asyncio
         async def test_func():
             return await flaky_func()
 
@@ -216,6 +225,7 @@ class TestCircuitBreaker:
         """Test circuit breaker behavior when half-open attempt fails."""
 
         @circuit_breaker(failure_threshold=1, recovery_timeout=0.05)
+        @pytest.mark.asyncio
         async def test_func():
             msg = "Still failing"
             raise ValueError(msg)
@@ -244,6 +254,7 @@ class TestHandleMCPErrors:
         """Test MCP error handler with successful function."""
 
         @handle_mcp_errors
+        @pytest.mark.asyncio
         async def test_func():
             return {"data": "success"}
 
@@ -256,6 +267,7 @@ class TestHandleMCPErrors:
         """Test MCP error handler with ToolError."""
 
         @handle_mcp_errors
+        @pytest.mark.asyncio
         async def test_func():
             msg = "Tool execution failed"
             raise ToolError(msg, error_code="tool_error")
@@ -270,6 +282,7 @@ class TestHandleMCPErrors:
         """Test MCP error handler with ResourceError."""
 
         @handle_mcp_errors
+        @pytest.mark.asyncio
         async def test_func():
             msg = "Resource not found"
             raise ResourceError(msg, error_code="not_found")
@@ -284,6 +297,7 @@ class TestHandleMCPErrors:
         """Test MCP error handler with ValidationError."""
 
         @handle_mcp_errors
+        @pytest.mark.asyncio
         async def test_func():
             msg = "Invalid input"
             raise ValidationError(msg, error_code="validation_failed")
@@ -298,6 +312,7 @@ class TestHandleMCPErrors:
         """Test MCP error handler with RateLimitError."""
 
         @handle_mcp_errors
+        @pytest.mark.asyncio
         async def test_func():
             msg = "Rate limit exceeded"
             raise RateLimitError(msg, retry_after=60.0)
@@ -312,6 +327,7 @@ class TestHandleMCPErrors:
         """Test MCP error handler with generic exception."""
 
         @handle_mcp_errors
+        @pytest.mark.asyncio
         async def test_func():
             msg = "Unexpected error"
             raise RuntimeError(msg)
@@ -326,6 +342,7 @@ class TestHandleMCPErrors:
         """Test that existing safe response format is preserved."""
 
         @handle_mcp_errors
+        @pytest.mark.asyncio
         async def test_func():
             return {"success": True, "data": "custom", "timestamp": 123456}
 
@@ -349,6 +366,7 @@ class TestValidateInput:
             return float(value)
 
         @validate_input(num=validate_number)
+        @pytest.mark.asyncio
         async def test_func(num):
             return num * 2
 
@@ -366,6 +384,7 @@ class TestValidateInput:
             return value
 
         @validate_input(num=validate_positive)
+        @pytest.mark.asyncio
         async def test_func(num):
             return num
 
@@ -386,6 +405,7 @@ class TestValidateInput:
             return int(value)
 
         @validate_input(name=validate_string, age=validate_number)
+        @pytest.mark.asyncio
         async def test_func(name, age):
             return f"{name} is {age}"
 
@@ -400,6 +420,7 @@ class TestValidateInput:
             return value.upper()
 
         @validate_input(name=validate_string)
+        @pytest.mark.asyncio
         async def test_func(name="default"):
             return name
 
@@ -414,6 +435,7 @@ class TestValidateInput:
             return int(value)
 
         @validate_input(missing_param=validate_number)
+        @pytest.mark.asyncio
         async def test_func(present_param):
             return present_param
 

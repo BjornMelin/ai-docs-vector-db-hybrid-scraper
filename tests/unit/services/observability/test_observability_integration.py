@@ -1,3 +1,4 @@
+import pytest
 """Integration tests for the complete observability system."""
 
 import asyncio
@@ -245,7 +246,9 @@ class TestObservabilitySystemIntegration:
                 assert len(error_id) == 36  # UUID format
 
     @patch("src.services.observability.instrumentation.trace")
-    def test_async_operations_observability(self, mock_trace):
+
+    @pytest.mark.asyncio
+    async def test_async_operations_observability(self, mock_trace):
         """Test observability with async operations."""
         # Setup mocks
         span = Mock()
@@ -290,7 +293,7 @@ class TestObservabilitySystemIntegration:
                 }
 
         # Run async pipeline
-        result = asyncio.run(async_ai_pipeline())
+        result = await async_ai_pipeline()
 
         assert result["correlation_id"] is not None
         assert len(result["embeddings"]) == 2

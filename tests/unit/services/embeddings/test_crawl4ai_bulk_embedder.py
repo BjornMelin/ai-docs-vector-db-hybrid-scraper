@@ -2,6 +2,8 @@
 
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
+import respx
+import httpx
 
 import pytest
 from click.testing import CliRunner
@@ -298,9 +300,7 @@ https://example.com/page2,Page 2
 </urlset>"""
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_response = AsyncMock()
             mock_response.content = sitemap_xml.encode()
-            mock_response.raise_for_status = AsyncMock()
 
             mock_client.return_value.__aenter__.return_value.get = AsyncMock(
                 return_value=mock_response
@@ -522,7 +522,7 @@ class TestCLI:
     def test_cli_with_urls(self):
         """Test CLI with direct URLs."""
         with (
-            patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
+            patch("src.crawl4ai_bulk_embedder.asyncio.run")  # Mocking async execution as mock_run,
             patch("src.crawl4ai_bulk_embedder.ConfigLoader.load_config") as mock_config,
         ):
             mock_config.return_value = MagicMock()
@@ -548,7 +548,7 @@ class TestCLI:
         urls_file.write_text("https://example.com/page1\n")
 
         with (
-            patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
+            patch("src.crawl4ai_bulk_embedder.asyncio.run")  # Mocking async execution as mock_run,
             patch("src.crawl4ai_bulk_embedder.ConfigLoader.load_config") as mock_config,
         ):
             mock_config.return_value = MagicMock()
@@ -569,7 +569,7 @@ class TestCLI:
     def test_cli_with_sitemap(self):
         """Test CLI with sitemap."""
         with (
-            patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
+            patch("src.crawl4ai_bulk_embedder.asyncio.run")  # Mocking async execution as mock_run,
             patch("src.crawl4ai_bulk_embedder.ConfigLoader.load_config") as mock_config,
         ):
             mock_config.return_value = MagicMock()
@@ -605,7 +605,7 @@ class TestCLI:
         config_file.write_text("{}")
 
         with (
-            patch("src.crawl4ai_bulk_embedder.asyncio.run") as mock_run,
+            patch("src.crawl4ai_bulk_embedder.asyncio.run")  # Mocking async execution as mock_run,
             patch("src.crawl4ai_bulk_embedder.ConfigLoader.load_config") as mock_config,
         ):
             mock_config.return_value = MagicMock()

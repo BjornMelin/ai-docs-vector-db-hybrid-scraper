@@ -24,7 +24,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 from testcontainers.redis import RedisContainer
 
-from src.config.security.config import SecurityConfig
+from src.config import SecurityConfig
 from src.services.fastapi.middleware.security import SecurityMiddleware
 
 

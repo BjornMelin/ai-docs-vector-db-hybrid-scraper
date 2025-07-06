@@ -289,6 +289,7 @@ class TestMCPPerformanceBenchmarks:
         print(f"Memory Usage:          {metrics.memory_usage_mb:.2f} MB")
         print(f"{'=' * 60}\n")
 
+    @pytest.mark.asyncio
     async def test_search_performance_benchmark(self, benchmark_server):
         """Benchmark search operation performance."""
         mcp_server, mock_client_manager = benchmark_server
@@ -341,6 +342,7 @@ class TestMCPPerformanceBenchmarks:
                 f"P95 response time {metrics.p95_response_time:.3f}s > {max_p95_time:.3f}s"
             )
 
+    @pytest.mark.asyncio
     async def test_embedding_generation_performance(self, benchmark_server):
         """Benchmark embedding generation performance."""
         mcp_server, mock_client_manager = benchmark_server
@@ -382,6 +384,7 @@ class TestMCPPerformanceBenchmarks:
             f"Avg response time {metrics.avg_response_time:.3f}s > {max_avg_time:.3f}s"
         )
 
+    @pytest.mark.asyncio
     async def test_mixed_workload_performance(self, benchmark_server):
         """Benchmark mixed workload with multiple tool types."""
         mcp_server, mock_client_manager = benchmark_server
@@ -432,6 +435,7 @@ class TestMCPPerformanceBenchmarks:
             f"Mixed workload RPS {metrics.requests_per_second:.1f} < {min_rps:.1f}"
         )
 
+    @pytest.mark.asyncio
     async def test_sustained_load_performance(self, benchmark_server):
         """Test performance under sustained load over time."""
         mcp_server, mock_client_manager = benchmark_server
@@ -524,6 +528,7 @@ class TestMCPPerformanceBenchmarks:
             f"Could not sustain target RPS: {actual_rps:.1f} < {rps_threshold:.1f}"
         )
 
+    @pytest.mark.asyncio
     async def test_spike_load_handling(self, benchmark_server):
         """Test handling of sudden load spikes."""
         mcp_server, mock_client_manager = benchmark_server
@@ -624,6 +629,7 @@ class TestMCPPerformanceBenchmarks:
                 f"Note: Recovery degradation ({recovery_degradation:.1f}%) likely due to timing artifacts in test environment"
             )
 
+    @pytest.mark.asyncio
     async def test_memory_leak_detection(self, benchmark_server):
         """Test for memory leaks under repeated operations."""
         mcp_server, mock_client_manager = benchmark_server
@@ -681,6 +687,7 @@ class TestMCPPerformanceBenchmarks:
                 f"Potential memory leak: {memory_growth:.2f} MB growth"
             )
 
+    @pytest.mark.asyncio
     async def test_concurrent_tool_performance(self, benchmark_server):
         """Test performance of different tools running concurrently."""
         mcp_server, mock_client_manager = benchmark_server
@@ -800,6 +807,7 @@ class TestMCPResourceOptimization:
         register_mock_tools(mcp, benchmark_client_manager)
         return mcp, benchmark_client_manager
 
+    @pytest.mark.asyncio
     async def test_connection_pooling_efficiency(self, benchmark_server):
         """Test efficiency of connection pooling under load."""
         mcp_server, mock_client_manager = benchmark_server
@@ -852,6 +860,7 @@ class TestMCPResourceOptimization:
         )
         assert _total_time < 1.0, f"Total operation time too high: {_total_time:.2f}s"
 
+    @pytest.mark.asyncio
     async def test_batch_processing_optimization(self, benchmark_server):
         """Test optimization through batch processing."""
         mcp_server, mock_client_manager = benchmark_server

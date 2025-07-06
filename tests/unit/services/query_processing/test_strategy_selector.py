@@ -52,11 +52,13 @@ class TestSearchStrategySelector:
             len(strategy_selector._complexity_adjustments) == 4
         )  # All complexity levels
 
+    @pytest.mark.asyncio
     async def test_initialize(self, strategy_selector):
         """Test strategy selector initialization."""
         await strategy_selector.initialize()
         assert strategy_selector._initialized is True
 
+    @pytest.mark.asyncio
     async def test_strategy_mapping_coverage(self, initialized_selector):
         """Test that all intents have strategy mappings."""
         for intent in QueryIntent:
@@ -67,6 +69,7 @@ class TestSearchStrategySelector:
             assert "dimension" in config
             assert "reasoning" in config
 
+    @pytest.mark.asyncio
     async def test_conceptual_intent_strategy(
         self, initialized_selector, sample_intent_classification
     ):
@@ -82,6 +85,7 @@ class TestSearchStrategySelector:
         assert selection.confidence > 0.0
         assert "semantic understanding" in selection.reasoning.lower()
 
+    @pytest.mark.asyncio
     async def test_procedural_intent_strategy(self, initialized_selector):
         """Test strategy selection for procedural intent."""
         classification = QueryIntentClassification(
@@ -98,6 +102,7 @@ class TestSearchStrategySelector:
         assert selection.matryoshka_dimension == MatryoshkaDimension.LARGE
         assert "hypothetical document generation" in selection.reasoning.lower()
 
+    @pytest.mark.asyncio
     async def test_factual_intent_strategy(self, initialized_selector):
         """Test strategy selection for factual intent."""
         classification = QueryIntentClassification(
@@ -114,6 +119,7 @@ class TestSearchStrategySelector:
         assert selection.matryoshka_dimension == MatryoshkaDimension.SMALL
         assert "keyword + semantic matching" in selection.reasoning.lower()
 
+    @pytest.mark.asyncio
     async def test_troubleshooting_intent_strategy(self, initialized_selector):
         """Test strategy selection for troubleshooting intent."""
         classification = QueryIntentClassification(
@@ -130,6 +136,7 @@ class TestSearchStrategySelector:
         assert selection.matryoshka_dimension == MatryoshkaDimension.LARGE
         assert "reranking for relevance" in selection.reasoning.lower()
 
+    @pytest.mark.asyncio
     async def test_advanced_intent_strategies(self, initialized_selector):
         """Test strategy selection for advanced intent categories."""
         test_cases = [
@@ -160,6 +167,7 @@ class TestSearchStrategySelector:
                 f"Intent {intent} should use {expected_strategy}"
             )
 
+    @pytest.mark.asyncio
     async def test_complexity_adjustments(self, initialized_selector):
         """Test complexity-based strategy adjustments."""
         base_classification = QueryIntentClassification(
@@ -193,6 +201,7 @@ class TestSearchStrategySelector:
             simple_selection.fallback_strategies
         )
 
+    @pytest.mark.asyncio
     async def test_performance_requirements_latency(
         self, initialized_selector, sample_intent_classification
     ):
@@ -210,6 +219,7 @@ class TestSearchStrategySelector:
         # Check that latency consideration is reflected in estimated latency
         assert selection.estimated_latency_ms <= 100  # Should be optimized for speed
 
+    @pytest.mark.asyncio
     async def test_performance_requirements_quality(
         self, initialized_selector, sample_intent_classification
     ):
@@ -229,6 +239,7 @@ class TestSearchStrategySelector:
         )
         assert "quality" in selection.reasoning.lower()
 
+    @pytest.mark.asyncio
     async def test_context_adjustments(
         self, initialized_selector, sample_intent_classification
     ):
@@ -258,6 +269,7 @@ class TestSearchStrategySelector:
             elif expected_strategy_type == SearchStrategy.FILTERED:
                 assert SearchStrategy.FILTERED in all_strategies
 
+    @pytest.mark.asyncio
     async def test_secondary_intents_incorporation(self, initialized_selector):
         """Test incorporation of secondary intents into fallback strategies."""
         classification = QueryIntentClassification(
@@ -284,6 +296,7 @@ class TestSearchStrategySelector:
             or performance_strategy in all_strategies
         )
 
+    @pytest.mark.asyncio
     async def test_confidence_calculation(
         self, initialized_selector, sample_intent_classification
     ):
@@ -309,6 +322,7 @@ class TestSearchStrategySelector:
             high_confidence_selection.confidence > low_confidence_selection.confidence
         )
 
+    @pytest.mark.asyncio
     async def test_estimated_metrics(
         self, initialized_selector, sample_intent_classification
     ):
@@ -322,6 +336,7 @@ class TestSearchStrategySelector:
         assert selection.estimated_latency_ms > 0
         assert selection.estimated_latency_ms < 1000  # Should be reasonable
 
+    @pytest.mark.asyncio
     async def test_fallback_strategy_limits(self, initialized_selector):
         """Test that fallback strategies are properly limited."""
         classification = QueryIntentClassification(
@@ -348,6 +363,7 @@ class TestSearchStrategySelector:
             len(selection.fallback_strategies) <= 3
         )  # Allow reasonable number of fallbacks
 
+    @pytest.mark.asyncio
     async def test_dimension_boost_for_complexity(self, initialized_selector):
         """Test dimension boost for complex queries."""
         base_classification = QueryIntentClassification(
@@ -378,6 +394,7 @@ class TestSearchStrategySelector:
             >= simple_selection.matryoshka_dimension.value
         )
 
+    @pytest.mark.asyncio
     async def test_strategy_performance_estimates(self, strategy_selector):
         """Test strategy performance estimate consistency."""
         # All strategies should have performance estimates
@@ -387,6 +404,7 @@ class TestSearchStrategySelector:
             assert 0 < perf["latency"] < 1000  # Reasonable latency range
             assert 0.0 <= perf["quality"] <= 1.0  # Valid quality range
 
+    @pytest.mark.asyncio
     async def test_uninitialized_selector_error(
         self, strategy_selector, sample_intent_classification
     ):
@@ -394,11 +412,13 @@ class TestSearchStrategySelector:
         with pytest.raises(RuntimeError, match="not initialized"):
             await strategy_selector.select_strategy(sample_intent_classification)
 
+    @pytest.mark.asyncio
     async def test_cleanup(self, initialized_selector):
         """Test strategy selector cleanup."""
         await initialized_selector.cleanup()
         assert initialized_selector._initialized is False
 
+    @pytest.mark.asyncio
     async def test_reasoning_content(
         self, initialized_selector, sample_intent_classification
     ):
@@ -415,6 +435,7 @@ class TestSearchStrategySelector:
             in selection.reasoning.lower()
         )
 
+    @pytest.mark.asyncio
     async def test_dimension_multiplier_effects(
         self, initialized_selector, sample_intent_classification
     ):
@@ -443,6 +464,7 @@ class TestSearchStrategySelector:
         )
         assert large_selection.estimated_quality >= small_selection.estimated_quality
 
+    @pytest.mark.asyncio
     async def test_performance_requirements_no_fast_strategies_available(
         self, initialized_selector
     ):
@@ -467,6 +489,7 @@ class TestSearchStrategySelector:
         assert selection.primary_strategy is not None
         assert selection.fallback_strategies is not None
 
+    @pytest.mark.asyncio
     async def test_performance_requirements_no_quality_strategies_available(
         self, initialized_selector
     ):
@@ -491,6 +514,7 @@ class TestSearchStrategySelector:
         assert selection.primary_strategy is not None
         assert selection.fallback_strategies is not None
 
+    @pytest.mark.asyncio
     async def test_context_adjustments_programming_language_edge_cases(
         self, initialized_selector
     ):
@@ -515,6 +539,7 @@ class TestSearchStrategySelector:
         semantic_count = sum(1 for s in all_strategies if s == SearchStrategy.SEMANTIC)
         assert semantic_count <= 2  # At most primary + one fallback
 
+    @pytest.mark.asyncio
     async def test_context_adjustments_version_context(self, initialized_selector):
         """Test version context adjustments."""
         # Use a strategy that doesn't have HYBRID in primary/fallbacks
@@ -536,6 +561,7 @@ class TestSearchStrategySelector:
         all_strategies = [selection.primary_strategy, *selection.fallback_strategies]
         assert SearchStrategy.HYBRID in all_strategies
 
+    @pytest.mark.asyncio
     async def test_context_adjustments_urgency_with_fast_primary(
         self, initialized_selector
     ):
@@ -558,6 +584,7 @@ class TestSearchStrategySelector:
         # Should keep SEMANTIC as primary since it's already fast
         assert selection.primary_strategy == SearchStrategy.SEMANTIC
 
+    @pytest.mark.asyncio
     async def test_fallback_strategy_optimization_for_tight_latency(
         self, initialized_selector
     ):
@@ -587,6 +614,7 @@ class TestSearchStrategySelector:
         assert selection.primary_strategy in fast_strategies
         assert "latency" in selection.reasoning.lower()
 
+    @pytest.mark.asyncio
     async def test_quality_strategy_optimization(self, initialized_selector):
         """Test strategy optimization for quality requirements."""
         # Use SEMANTIC which has lower quality
@@ -616,6 +644,7 @@ class TestSearchStrategySelector:
         )
         assert "quality" in selection.reasoning.lower()
 
+    @pytest.mark.asyncio
     async def test_unknown_intent_fallback(self, initialized_selector):
         """Test fallback behavior for unknown/unmapped intents."""
         # Create a classification with an intent that might not be in mapping
@@ -645,6 +674,7 @@ class TestSearchStrategySelector:
             # Restore original mapping
             initialized_selector._intent_strategy_map = original_map
 
+    @pytest.mark.asyncio
     async def test_complex_context_combination(self, initialized_selector):
         """Test complex combinations of context adjustments."""
         classification = QueryIntentClassification(
@@ -679,6 +709,7 @@ class TestSearchStrategySelector:
         all_strategies = [selection.primary_strategy, *selection.fallback_strategies]
         assert SearchStrategy.FILTERED in all_strategies
 
+    @pytest.mark.asyncio
     async def test_confidence_score_edge_cases(self, initialized_selector):
         """Test confidence score calculations with edge cases."""
         # Test with missing confidence score
@@ -696,6 +727,7 @@ class TestSearchStrategySelector:
         expected_confidence = min(0.5 * 1.2, 1.0)
         assert abs(selection.confidence - expected_confidence) < 0.01
 
+    @pytest.mark.asyncio
     async def test_secondary_intents_limit(self, initialized_selector):
         """Test that secondary intents are limited properly."""
         classification = QueryIntentClassification(
@@ -724,6 +756,7 @@ class TestSearchStrategySelector:
         # Should limit fallback strategies appropriately
         assert len(selection.fallback_strategies) <= 3  # Implementation limits to 3
 
+    @pytest.mark.asyncio
     async def test_force_reranking_for_expert_queries(self, initialized_selector):
         """Test force reranking behavior for expert complexity queries."""
         # Use an intent that doesn't normally use RERANKED
@@ -741,6 +774,7 @@ class TestSearchStrategySelector:
         all_strategies = [selection.primary_strategy, *selection.fallback_strategies]
         assert SearchStrategy.RERANKED in all_strategies
 
+    @pytest.mark.asyncio
     async def test_programming_language_context_without_semantic(
         self, initialized_selector
     ):
@@ -764,6 +798,7 @@ class TestSearchStrategySelector:
         all_strategies = [selection.primary_strategy, *selection.fallback_strategies]
         assert SearchStrategy.SEMANTIC in all_strategies
 
+    @pytest.mark.asyncio
     async def test_version_context_without_hybrid(self, initialized_selector):
         """Test version context when HYBRID is not in strategies."""
         # Use an intent where HYBRID is not in primary or fallbacks
@@ -785,6 +820,7 @@ class TestSearchStrategySelector:
         all_strategies = [selection.primary_strategy, *selection.fallback_strategies]
         assert SearchStrategy.HYBRID in all_strategies
 
+    @pytest.mark.asyncio
     async def test_urgency_context_with_slow_primary(self, initialized_selector):
         """Test urgency context when primary strategy is slow."""
         # Use an intent with a slow primary strategy

@@ -1,1 +1,0 @@
-"""Color contrast accessibility tests."""

@@ -130,12 +130,14 @@ class TestAdvancedSearchOrchestrator:
         assert hasattr(orchestrator, "ranking_service")
         assert hasattr(orchestrator, "federated_service")
 
+    @pytest.mark.asyncio
     async def test_initialize(self, orchestrator):
         """Test orchestrator initialization."""
         await orchestrator.initialize()
         # The new orchestrator doesn't use _initialized flag the same way
         # but initialization should complete without error
 
+    @pytest.mark.asyncio
     async def test_basic_query_processing(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -147,6 +149,7 @@ class TestAdvancedSearchOrchestrator:
         assert response.total_results >= 0  # May be 0 with mocked search
         assert response.processing_time_ms > 0
 
+    @pytest.mark.asyncio
     async def test_advanced_search(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -157,6 +160,7 @@ class TestAdvancedSearchOrchestrator:
         assert response.total_results >= 0  # May be 0 with mocked search
         assert response.processing_time_ms > 0
 
+    @pytest.mark.asyncio
     async def test_query_expansion_enabled(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -171,6 +175,7 @@ class TestAdvancedSearchOrchestrator:
         # Query expansion should be tracked in features_used
         assert "query_expansion" in response.features_used
 
+    @pytest.mark.asyncio
     async def test_query_expansion_disabled(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -184,6 +189,7 @@ class TestAdvancedSearchOrchestrator:
         # Query expansion should NOT be in features_used
         assert "query_expansion" not in response.features_used
 
+    @pytest.mark.asyncio
     async def test_clustering_enabled(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -197,6 +203,7 @@ class TestAdvancedSearchOrchestrator:
         # With few results, clustering might not be applied
         # but the feature should be attempted
 
+    @pytest.mark.asyncio
     async def test_clustering_disabled(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -210,6 +217,7 @@ class TestAdvancedSearchOrchestrator:
         # Clustering should not be in features_used
         assert "result_clustering" not in response.features_used
 
+    @pytest.mark.asyncio
     async def test_personalization_enabled(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -226,6 +234,7 @@ class TestAdvancedSearchOrchestrator:
             # Should have applied personalized ranking
             pass
 
+    @pytest.mark.asyncio
     async def test_federation_enabled(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -238,6 +247,7 @@ class TestAdvancedSearchOrchestrator:
         assert response.processing_time_ms > 0
         # Federation should be attempted
 
+    @pytest.mark.asyncio
     async def test_rag_enabled(self, initialized_orchestrator, advanced_sample_request):
         """Test search with RAG answer generation enabled."""
         advanced_sample_request.enable_rag = True
@@ -248,6 +258,7 @@ class TestAdvancedSearchOrchestrator:
         assert response.processing_time_ms > 0
         # RAG features are portfolio features - should work
 
+    @pytest.mark.asyncio
     async def test_pipeline_fast_mode(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -260,6 +271,7 @@ class TestAdvancedSearchOrchestrator:
         assert response.processing_time_ms > 0
         # Fast pipeline should complete quickly
 
+    @pytest.mark.asyncio
     async def test_pipeline_comprehensive_mode(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -272,6 +284,7 @@ class TestAdvancedSearchOrchestrator:
         assert response.processing_time_ms > 0
         # Comprehensive mode should use more features
 
+    @pytest.mark.asyncio
     async def test_error_handling(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -283,6 +296,7 @@ class TestAdvancedSearchOrchestrator:
         assert response.processing_time_ms > 0
         # Should always return a response even if there are internal errors
 
+    @pytest.mark.asyncio
     async def test_performance_requirements(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -294,6 +308,7 @@ class TestAdvancedSearchOrchestrator:
         assert isinstance(response, AdvancedSearchResult)
         # Should respect performance constraints
 
+    @pytest.mark.asyncio
     async def test_user_context_integration(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -306,6 +321,7 @@ class TestAdvancedSearchOrchestrator:
         assert isinstance(response, AdvancedSearchResult)
         # Context should be handled properly
 
+    @pytest.mark.asyncio
     async def test_caching_behavior(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -322,6 +338,7 @@ class TestAdvancedSearchOrchestrator:
         assert isinstance(response2, AdvancedSearchResult)
         assert response2.cache_hit is True
 
+    @pytest.mark.asyncio
     async def test_stats_tracking(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -336,6 +353,7 @@ class TestAdvancedSearchOrchestrator:
         assert stats["total_searches"] >= 1
         assert "avg_processing_time" in stats
 
+    @pytest.mark.asyncio
     async def test_features_tracking(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -348,6 +366,7 @@ class TestAdvancedSearchOrchestrator:
         assert hasattr(response, "features_used")
         assert isinstance(response.features_used, list)
 
+    @pytest.mark.asyncio
     async def test_timing_measurements(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -357,6 +376,7 @@ class TestAdvancedSearchOrchestrator:
         assert isinstance(response, AdvancedSearchResult)
         assert response.processing_time_ms > 0
 
+    @pytest.mark.asyncio
     async def test_empty_query_handling(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -371,6 +391,7 @@ class TestAdvancedSearchOrchestrator:
         assert response.total_results >= 0
         assert response.processing_time_ms > 0
 
+    @pytest.mark.asyncio
     async def test_uninitialized_orchestrator(
         self, orchestrator, advanced_sample_request
     ):
@@ -380,6 +401,7 @@ class TestAdvancedSearchOrchestrator:
 
         assert isinstance(response, AdvancedSearchResult)
 
+    @pytest.mark.asyncio
     async def test_multiple_searches_stats(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -395,6 +417,7 @@ class TestAdvancedSearchOrchestrator:
         assert stats["total_searches"] >= 3
         assert stats["avg_processing_time"] > 0
 
+    @pytest.mark.asyncio
     async def test_cache_stats_tracking(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -412,6 +435,7 @@ class TestAdvancedSearchOrchestrator:
         assert stats["cache_hits"] >= 1
         assert stats["cache_misses"] >= 1
 
+    @pytest.mark.asyncio
     async def test_result_limits(
         self, initialized_orchestrator, advanced_sample_request
     ):
@@ -423,11 +447,13 @@ class TestAdvancedSearchOrchestrator:
         assert isinstance(response, AdvancedSearchResult)
         assert len(response.results) <= 3  # Should respect limit
 
+    @pytest.mark.asyncio
     async def test_cleanup(self, initialized_orchestrator):
         """Test orchestrator cleanup."""
         await initialized_orchestrator.cleanup()
         # Cleanup should complete without error
 
+    @pytest.mark.asyncio
     async def test_cache_clearing(self, initialized_orchestrator):
         """Test cache clearing functionality."""
         # Clear cache should work without error

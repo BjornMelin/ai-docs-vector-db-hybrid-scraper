@@ -41,6 +41,7 @@ class TestSPLADEProvider:
         """Create SPLADEProvider instance without SPLADE config."""
         return SPLADEProvider(mock_config)
 
+    @pytest.mark.asyncio
     async def test_initialization(self, provider):
         """Test SPLADE provider initialization."""
         assert provider.config is not None
@@ -50,16 +51,19 @@ class TestSPLADEProvider:
         assert isinstance(provider._cache, dict)
         assert isinstance(provider._token_vocab, dict)
 
+    @pytest.mark.asyncio
     async def test_initialization_without_config(self, provider_no_config):
         """Test initialization without explicit SPLADE config."""
         assert provider_no_config.splade_config is not None
         assert isinstance(provider_no_config.splade_config, SPLADEConfig)
 
+    @pytest.mark.asyncio
     async def test_provider_initialization_process(self, provider):
         """Test provider initialization process."""
         await provider.initialize()
         # Should complete without error even if SPLADE model loading fails
 
+    @pytest.mark.asyncio
     async def test_fallback_vocabulary_structure(self, provider):
         """Test fallback vocabulary structure and content."""
         vocab = provider._build_fallback_vocabulary()
@@ -82,6 +86,7 @@ class TestSPLADEProvider:
             assert isinstance(token_id, int)
             assert token_id > 0
 
+    @pytest.mark.asyncio
     async def test_basic_sparse_vector_generation(self, provider):
         """Test basic sparse vector generation."""
         text = "How to implement async functions in Python?"
@@ -100,6 +105,7 @@ class TestSPLADEProvider:
             assert isinstance(weight, float)
             assert weight > 0
 
+    @pytest.mark.asyncio
     async def test_sparse_vector_normalization(self, provider):
         """Test sparse vector normalization."""
         text = "Python programming tutorial"
@@ -115,6 +121,7 @@ class TestSPLADEProvider:
         norm = math.sqrt(sum(weight**2 for weight in normalized.values()))
         assert abs(norm - 1.0) < 0.1  # Allow some tolerance
 
+    @pytest.mark.asyncio
     async def test_programming_aware_tokenization(self, provider):
         """Test programming-aware tokenization."""
         code_text = "def calculateSum(a, b): return a + b"
@@ -128,6 +135,7 @@ class TestSPLADEProvider:
         assert "(" in tokens
         assert ")" in tokens
 
+    @pytest.mark.asyncio
     async def test_camel_case_tokenization(self, provider):
         """Test camelCase tokenization."""
         camel_text = "calculateSum functionName"
@@ -140,6 +148,7 @@ class TestSPLADEProvider:
         assert "function" in tokens
         assert "name" in tokens
 
+    @pytest.mark.asyncio
     async def test_snake_case_tokenization(self, provider):
         """Test snake_case tokenization."""
         snake_text = "function_name variable_value"
@@ -152,6 +161,7 @@ class TestSPLADEProvider:
         assert "variable" in tokens
         assert "value" in tokens
 
+    @pytest.mark.asyncio
     async def test_tf_score_calculation(self, provider):
         """Test term frequency score calculation."""
         tokens = ["python", "function", "python", "code", "function", "function"]
@@ -166,6 +176,7 @@ class TestSPLADEProvider:
         # function appears more often, should have higher score
         assert tf_scores["function"] > tf_scores["code"]
 
+    @pytest.mark.asyncio
     async def test_semantic_expansion(self, provider):
         """Test semantic expansion of terms."""
         tf_scores = {"function": 1.0, "variable": 0.8, "error": 0.6}
@@ -182,6 +193,7 @@ class TestSPLADEProvider:
         # Should include expansions
         assert len(expanded) >= len(tf_scores)
 
+    @pytest.mark.asyncio
     async def test_programming_keyword_expansion(self, provider):
         """Test programming keyword semantic expansion."""
         tf_scores = {"function": 1.0}
@@ -195,6 +207,7 @@ class TestSPLADEProvider:
             if term in expanded:
                 assert expanded[term] > 0
 
+    @pytest.mark.asyncio
     async def test_question_specific_expansion(self, provider):
         """Test question-specific term boosting."""
         tf_scores = {"tutorial": 0.5}
@@ -212,6 +225,7 @@ class TestSPLADEProvider:
         if "tutorial" in question_expanded and "tutorial" in non_question_expanded:
             assert question_expanded["tutorial"] >= non_question_expanded["tutorial"]
 
+    @pytest.mark.asyncio
     async def test_token_id_generation(self, provider):
         """Test token ID generation and consistency."""
         token = "python"  # noqa: S105 # Test token, not a password
@@ -224,6 +238,7 @@ class TestSPLADEProvider:
         assert isinstance(id1, int)
         assert id1 > 0
 
+    @pytest.mark.asyncio
     async def test_unknown_token_handling(self, provider):
         """Test handling of unknown tokens."""
         unknown_token = "veryunusualtoken12345"  # noqa: S105 # Test token, not a password
@@ -236,6 +251,7 @@ class TestSPLADEProvider:
         # Should be added to vocabulary
         assert unknown_token in provider._token_vocab
 
+    @pytest.mark.asyncio
     async def test_sparse_vector_top_k_filtering(self, provider):
         """Test top-k filtering of sparse vectors."""
         # Create a sparse vector with many tokens
@@ -249,6 +265,7 @@ class TestSPLADEProvider:
         max_filtered_weight = max(filtered.values())
         assert max_filtered_weight == max(large_sparse_vector.values())
 
+    @pytest.mark.asyncio
     async def test_caching_functionality(self, provider):
         """Test sparse vector caching."""
         text = "Python programming tutorial"
@@ -265,6 +282,7 @@ class TestSPLADEProvider:
         cache_key = f"{text}_True"
         assert cache_key in provider._cache
 
+    @pytest.mark.asyncio
     async def test_cache_disable(self, provider):
         """Test disabling cache functionality."""
         provider.splade_config.cache_embeddings = False
@@ -276,6 +294,7 @@ class TestSPLADEProvider:
         cache_key = f"{text}_True"
         assert cache_key not in provider._cache
 
+    @pytest.mark.asyncio
     async def test_batch_generation(self, provider):
         """Test batch sparse vector generation."""
         texts = [
@@ -291,6 +310,7 @@ class TestSPLADEProvider:
             assert isinstance(vector, dict)
             assert len(vector) > 0
 
+    @pytest.mark.asyncio
     async def test_empty_text_handling(self, provider):
         """Test handling of empty or whitespace text."""
         empty_texts = ["", "   ", "\n\t"]
@@ -300,6 +320,7 @@ class TestSPLADEProvider:
             # Should return empty dict or minimal vector
             assert isinstance(vector, dict)
 
+    @pytest.mark.asyncio
     async def test_long_text_handling(self, provider):
         """Test handling of very long text."""
         long_text = "python function " * 1000  # Very long text
@@ -309,6 +330,7 @@ class TestSPLADEProvider:
         assert isinstance(vector, dict)
         assert len(vector) > 0
 
+    @pytest.mark.asyncio
     async def test_special_characters_handling(self, provider):
         """Test handling of text with special characters."""
         special_text = "def func(): return @decorator #comment"
@@ -318,6 +340,7 @@ class TestSPLADEProvider:
         assert isinstance(vector, dict)
         assert len(vector) > 0
 
+    @pytest.mark.asyncio
     async def test_token_categorization(self, provider):
         """Test token categorization functionality."""
         test_cases = [
@@ -332,6 +355,7 @@ class TestSPLADEProvider:
             category = provider._categorize_token(token)
             assert category == expected_category
 
+    @pytest.mark.asyncio
     async def test_token_info_retrieval(self, provider):
         """Test token information retrieval."""
         # Add a token to vocabulary
@@ -345,12 +369,14 @@ class TestSPLADEProvider:
         assert info["id"] == token_id
         assert "category" in info
 
+    @pytest.mark.asyncio
     async def test_unknown_token_info(self, provider):
         """Test token info for unknown token ID."""
         unknown_id = 999999
         info = provider.get_token_info(unknown_id)
         assert info is None
 
+    @pytest.mark.asyncio
     async def test_cache_clearing(self, provider):
         """Test cache clearing functionality."""
         # Generate some vectors to populate cache
@@ -363,6 +389,7 @@ class TestSPLADEProvider:
 
         assert len(provider._cache) == 0
 
+    @pytest.mark.asyncio
     async def test_cache_statistics(self, provider):
         """Test cache statistics retrieval."""
         # Generate some vectors
@@ -378,6 +405,7 @@ class TestSPLADEProvider:
         assert isinstance(stats["vocabulary_size"], int)
         assert isinstance(stats["cache_enabled"], bool)
 
+    @pytest.mark.asyncio
     async def test_error_handling_in_generation(self, provider):
         """Test error handling during sparse vector generation."""
         # Mock an error in the fallback generation
@@ -391,12 +419,14 @@ class TestSPLADEProvider:
         finally:
             provider._generate_with_fallback = original_method
 
+    @pytest.mark.asyncio
     async def test_normalization_with_empty_vector(self, provider):
         """Test normalization handling with empty vectors."""
         empty_vector = {}
         normalized = provider._normalize_sparse_vector(empty_vector)
         assert normalized == {}
 
+    @pytest.mark.asyncio
     async def test_normalization_with_zero_norm(self, provider):
         """Test normalization handling when norm is zero."""
         zero_vector = {1: 0.0, 2: 0.0}
@@ -412,6 +442,7 @@ class TestSPLADEProvider:
             ("class MyClass(object):", ["class", "my", "class", "object"]),
         ],
     )
+    @pytest.mark.asyncio
     async def test_specific_tokenization_cases(self, provider, text, expected_features):
         """Test specific tokenization scenarios."""
         tokens = provider._tokenize_text(text)
@@ -419,6 +450,7 @@ class TestSPLADEProvider:
         for feature in expected_features:
             assert feature in tokens
 
+    @pytest.mark.asyncio
     async def test_programming_language_specific_vectors(self, provider):
         """Test sparse vectors for different programming languages."""
         test_cases = [
@@ -440,6 +472,7 @@ class TestSPLADEProvider:
             for j in range(i + 1, len(vectors)):
                 assert vectors[i] != vectors[j]
 
+    @pytest.mark.asyncio
     async def test_semantic_consistency(self, provider):
         """Test semantic consistency for related terms."""
         related_texts = [
@@ -468,6 +501,7 @@ class TestSPLADEProvider:
                         shared_count += 1
             assert shared_count > 0  # Should share tokens with at least one other
 
+    @pytest.mark.asyncio
     async def test_weight_distribution(self, provider):
         """Test that weight distribution is reasonable."""
         # Use text with repeated tokens to create frequency variation
@@ -487,6 +521,7 @@ class TestSPLADEProvider:
         )  # Should have variation due to frequency differences
         assert all(w > 0 for w in weights)  # All positive
 
+    @pytest.mark.asyncio
     async def test_fallback_model_simulation(self, provider):
         """Test behavior when actual SPLADE model is not available."""
         # The provider should use fallback implementation

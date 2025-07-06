@@ -48,7 +48,7 @@ COPY pyproject.toml uv.lock ./
 
 # Create virtual environment and install dependencies with UV
 RUN uv python install 3.12
-RUN uv venv /opt/venv --python 3.12 --relocatable
+RUN uv venv /opt/venv --python 3.12
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
@@ -101,8 +101,7 @@ RUN useradd --system --no-create-home --uid ${UID} --shell /bin/false appuser \
     && chown -R appuser:appuser /app \
     && chown -R appuser:appuser /opt/venv \
     && mkdir -p /home/appuser/.local/share/uv \
-    && chown -R appuser:appuser /home/appuser/.local \
-    && chown -R appuser:appuser /root/.local/share/uv
+    && chown -R appuser:appuser /home/appuser/.local
 
 # Switch to non-root user
 USER appuser

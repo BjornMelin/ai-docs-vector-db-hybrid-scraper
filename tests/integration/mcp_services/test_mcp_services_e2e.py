@@ -98,6 +98,7 @@ class TestMCPServicesEndToEndWorkflows:
             "orchestrator": orchestrator_service,
         }
 
+    @pytest.mark.asyncio
     async def test_complete_research_workflow_e2e(self, e2e_services_environment):
         """Test complete research workflow from search to analytics end-to-end."""
         services = e2e_services_environment
@@ -155,6 +156,7 @@ class TestMCPServicesEndToEndWorkflows:
         call_args = orchestrator.agentic_orchestrator.orchestrate.call_args
         assert "preferred_services" in call_args[1]["constraints"]
 
+    @pytest.mark.asyncio
     async def test_service_discovery_and_capability_assessment_e2e(
         self, e2e_services_environment
     ):
@@ -200,6 +202,7 @@ class TestMCPServicesEndToEndWorkflows:
         # Verify discovery engine was consulted
         orchestrator.discovery_engine.get_tool_recommendations.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_autonomous_decision_making_e2e(self, e2e_services_environment):
         """Test autonomous decision making across services end-to-end."""
         services = e2e_services_environment
@@ -245,6 +248,7 @@ class TestMCPServicesEndToEndWorkflows:
             assert "avg_confidence" in decision_metrics
             assert "success_rate" in decision_metrics
 
+    @pytest.mark.asyncio
     async def test_error_handling_and_recovery_e2e(self, e2e_services_environment):
         """Test error handling and recovery across services end-to-end."""
         services = e2e_services_environment
@@ -284,6 +288,7 @@ class TestMCPServicesEndToEndWorkflows:
         recovered_services = await orchestrator.get_all_services()
         assert recovered_services["search"]["status"] == "active"
 
+    @pytest.mark.asyncio
     async def test_performance_under_load_e2e(self, e2e_services_environment):
         """Test performance under load end-to-end."""
         services = e2e_services_environment
@@ -323,6 +328,7 @@ class TestMCPServicesEndToEndWorkflows:
         operations_per_second = total_operations / total_time
         assert operations_per_second >= 50  # At least 50 operations per second
 
+    @pytest.mark.asyncio
     async def test_enterprise_integration_e2e(self, e2e_services_environment):
         """Test enterprise integration features end-to-end."""
         services = e2e_services_environment
@@ -367,6 +373,7 @@ class TestMCPServicesEndToEndWorkflows:
             enterprise_tool_integration = result["enterprise_integration"]
             assert len(enterprise_tool_integration) > 0
 
+    @pytest.mark.asyncio
     async def test_research_implementation_validation_e2e(
         self, e2e_services_environment
     ):
@@ -404,6 +411,7 @@ class TestMCPServicesEndToEndWorkflows:
 class TestMCPServicesRealWorldScenarios:
     """Test real-world scenarios and use cases."""
 
+    @pytest.mark.asyncio
     async def test_intelligent_document_processing_workflow(
         self, e2e_services_environment
     ):
@@ -436,6 +444,7 @@ class TestMCPServicesRealWorldScenarios:
         assert "workflow_orchestration" in orchestrator_info["capabilities"]
         assert "intelligent_routing" in orchestrator_info["autonomous_features"]
 
+    @pytest.mark.asyncio
     async def test_autonomous_system_optimization_scenario(
         self, e2e_services_environment
     ):
@@ -462,6 +471,7 @@ class TestMCPServicesRealWorldScenarios:
         assert "cross_service_optimization" in orchestrator_info["capabilities"]
         assert "performance_optimization" in orchestrator_info["autonomous_features"]
 
+    @pytest.mark.asyncio
     async def test_enterprise_observability_scenario(self, e2e_services_environment):
         """Test enterprise observability integration scenario."""
         services = e2e_services_environment
@@ -480,6 +490,7 @@ class TestMCPServicesRealWorldScenarios:
         # Verify OpenTelemetry integration
         assert enterprise_integration["opentelemetry_integration"] is True
 
+    @pytest.mark.asyncio
     async def test_multi_agent_coordination_scenario(self, e2e_services_environment):
         """Test multi-agent coordination scenario."""
         services = e2e_services_environment
@@ -518,6 +529,7 @@ class TestMCPServicesRealWorldScenarios:
             assert "services_used" in result
             assert "orchestration_reasoning" in result
 
+    @pytest.mark.asyncio
     async def test_scalability_and_performance_scenario(self, e2e_services_environment):
         """Test scalability and performance under realistic load."""
         services = e2e_services_environment
@@ -552,6 +564,7 @@ class TestMCPServicesRealWorldScenarios:
 class TestMCPServicesQualityAndReliability:
     """Test quality and reliability characteristics of MCP services."""
 
+    @pytest.mark.asyncio
     async def test_service_consistency_and_reliability(self, e2e_services_environment):
         """Test service consistency and reliability over multiple operations."""
         services = e2e_services_environment
@@ -575,6 +588,7 @@ class TestMCPServicesQualityAndReliability:
                     result["autonomous_features"] == first_result["autonomous_features"]
                 )
 
+    @pytest.mark.asyncio
     async def test_service_isolation_and_fault_tolerance(
         self, e2e_services_environment
     ):
@@ -605,6 +619,7 @@ class TestMCPServicesQualityAndReliability:
         search_result = await services["search"].get_service_info()
         assert search_result["status"] == "active"
 
+    @pytest.mark.asyncio
     async def test_comprehensive_coverage_validation(self, e2e_services_environment):
         """Test comprehensive coverage of all expected features."""
         services = e2e_services_environment

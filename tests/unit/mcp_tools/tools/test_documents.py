@@ -7,10 +7,12 @@
 """
 
 from unittest.mock import AsyncMock, Mock, patch
+import respx
+import httpx
 
 import pytest
 
-from src.config.settings import ChunkingStrategy
+from src.config import ChunkingStrategy
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
@@ -43,7 +45,7 @@ def mock_client_manager():
 
     # Mock cache manager
     mock_cache = AsyncMock()
-    mock_cache.get = AsyncMock(return_value=None)  # No cached results
+    respx.get('https://api.example.com/').mock(return_value=httpx.Response(200, json=None))
     manager.get_cache_manager = AsyncMock(return_value=mock_cache)
 
     # Mock crawl manager (browser manager)
@@ -159,6 +161,7 @@ class TestDocumentToolRegistration:
 class TestAddDocument:
     """Test single document addition tool."""
 
+    @pytest.mark.asyncio
     async def test_successful_document_addition(
         self, mock_mcp, mock_context, mock_client_manager, sample_document_request
     ):
@@ -216,6 +219,7 @@ class TestAddDocument:
                 "processed successfully" in msg for msg in mock_context.logs["info"]
             )
 
+    @pytest.mark.asyncio
     async def test_invalid_url_rejected(
         self, mock_mcp, mock_context, sample_document_request
     ):
@@ -243,6 +247,7 @@ class TestAddDocument:
                 for msg in mock_context.logs["error"]
             )
 
+    @pytest.mark.asyncio
     async def test_crawl_manager_unavailable(
         self, mock_mcp, mock_context, mock_client_manager, sample_document_request
     ):
@@ -271,6 +276,7 @@ class TestAddDocument:
                 for msg in mock_context.logs["error"]
             )
 
+    @pytest.mark.asyncio
     async def test_scraping_failure(
         self, mock_mcp, mock_context, mock_client_manager, sample_document_request
     ):
@@ -306,6 +312,7 @@ class TestAddDocument:
             # Verify error logging
             assert any("Failed to scrape" in msg for msg in mock_context.logs["error"])
 
+    @pytest.mark.asyncio
     async def test_embedding_failure(
         self, mock_mcp, mock_context, mock_client_manager, sample_document_request
     ):
@@ -347,6 +354,7 @@ class TestAddDocument:
                 for msg in mock_context.logs["error"]
             )
 
+    @pytest.mark.asyncio
     async def test_vector_db_storage_failure(
         self, mock_mcp, mock_context, mock_client_manager, sample_document_request
     ):
@@ -396,6 +404,7 @@ class TestAddDocument:
 class TestAddDocumentBatch:
     """Test batch document processing tool."""
 
+    @pytest.mark.asyncio
     async def test_successful_batch_processing(
         self, mock_mcp, mock_context, mock_client_manager, sample_batch_request
     ):
@@ -434,6 +443,7 @@ class TestAddDocumentBatch:
                 assert isinstance(response, AddDocumentResponse)
                 assert response.collection == "batch_collection"
 
+    @pytest.mark.asyncio
     async def test_partial_batch_failure(
         self, mock_mcp, mock_context, _mock_client_manager, sample_batch_request
     ):
@@ -462,6 +472,7 @@ class TestAddDocumentBatch:
             assert len(result.successful) == 2
             assert len(result.failed) == 1
 
+    @pytest.mark.asyncio
     async def test_complete_batch_failure(
         self, mock_mcp, mock_context, sample_batch_request
     ):
@@ -482,6 +493,7 @@ class TestAddDocumentBatch:
             assert len(result.successful) == 0
             assert len(result.failed) == 3
 
+    @pytest.mark.asyncio
     async def test_batch_with_concurrency_control(
         self, mock_mcp, mock_context, mock_client_manager
     ):
@@ -527,6 +539,7 @@ class TestAddDocumentBatch:
 class TestDocumentIntegration:
     """Test integration scenarios and real-world usage patterns."""
 
+    @pytest.mark.asyncio
     async def test_minimal_document_request(self, mock_mcp, mock_context):
         """Test document tool handles minimal request data correctly."""
         minimal_request = DocumentRequest(
@@ -550,6 +563,7 @@ class TestDocumentIntegration:
                 error_msg = str(e)
                 assert "URL not allowed" in error_msg
 
+    @pytest.mark.asyncio
     async def test_comprehensive_document_workflow(
         self, mock_mcp, mock_context, mock_client_manager
     ):

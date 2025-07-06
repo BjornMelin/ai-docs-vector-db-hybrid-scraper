@@ -9,8 +9,13 @@ from unittest.mock import patch
 import pytest
 import yaml
 
-from src.config import Config, ConfigLoadError, ConfigManager, get_degradation_handler
-from src.config.reloader import ConfigReloader
+from src.config import (
+    Config,
+    ConfigLoadError,
+    ConfigManager,
+    ConfigReloader,
+    get_degradation_handler
+)
 
 
 @pytest.fixture

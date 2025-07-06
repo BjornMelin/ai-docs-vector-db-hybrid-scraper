@@ -16,7 +16,10 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from src.config import Config, SQLAlchemyConfig
+from src.config import (
+    Config,
+    DatabaseConfig
+)
 from src.infrastructure.client_manager import ClientManager
 from src.infrastructure.shared import CircuitBreaker, ClientHealth, ClientState
 from src.services.errors import APIError
@@ -580,6 +583,7 @@ class TestClientManagerIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
+    @pytest.mark.asyncio
     async def test_full_lifecycle(self, config):
         """Test full lifecycle of ClientManager."""
         ClientManager.reset_singleton()
@@ -629,7 +633,7 @@ class TestClientManagerDatabaseIntegration:
         """Test creation of database manager."""
 
         config = Config()
-        config.database = SQLAlchemyConfig(
+        config.database = DatabaseConfig(
             database_url="sqlite+aiosqlite:///:memory:",
             echo_queries=True,
             pool_size=20,
@@ -662,7 +666,7 @@ class TestClientManagerDatabaseIntegration:
         """Test database manager through managed_client interface."""
 
         config = Config()
-        config.database = SQLAlchemyConfig(
+        config.database = DatabaseConfig(
             database_url="sqlite+aiosqlite:///:memory:",
             echo_queries=True,
             pool_size=20,
@@ -684,7 +688,7 @@ class TestClientManagerDatabaseIntegration:
         """Test database manager is included in cleanup."""
 
         config = Config()
-        config.database = SQLAlchemyConfig(database_url="sqlite+aiosqlite:///:memory:")
+        config.database = DatabaseConfig(database_url="sqlite+aiosqlite:///:memory:")
 
         client_manager = ClientManager(config)
 
@@ -703,7 +707,7 @@ class TestClientManagerDatabaseIntegration:
         """Test database manager uses enterprise DatabaseManager with monitoring."""
 
         config = Config()
-        config.database = SQLAlchemyConfig(
+        config.database = DatabaseConfig(
             database_url="sqlite+aiosqlite:///:memory:",
         )
 

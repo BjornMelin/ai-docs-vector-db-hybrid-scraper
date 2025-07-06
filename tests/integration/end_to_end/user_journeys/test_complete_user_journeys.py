@@ -17,6 +17,7 @@ from tests.integration.end_to_end.user_journeys.conftest import JourneyStep, Use
 class TestCompleteUserJourneys:
     """Test complete user journeys across the entire system."""
 
+    @pytest.mark.asyncio
     async def test_document_processing_journey(
         self,
         journey_executor,
@@ -54,6 +55,7 @@ class TestCompleteUserJourneys:
         assert "store_in_vector_db" in step_names
         assert "validate_storage" in step_names
 
+    @pytest.mark.asyncio
     async def test_search_and_discovery_journey(
         self,
         journey_executor,
@@ -93,6 +95,7 @@ class TestCompleteUserJourneys:
             if step["step_name"] == "validate_search_quality":
                 assert step["success"], "Search quality validation failed"
 
+    @pytest.mark.asyncio
     async def test_project_management_journey(
         self,
         journey_executor,
@@ -130,6 +133,7 @@ class TestCompleteUserJourneys:
         assert documents_added >= 2, "Not enough documents added"
         assert len(collections_used) >= 2, "Not enough collections used"
 
+    @pytest.mark.asyncio
     async def test_api_client_journey(
         self,
         journey_executor,
@@ -178,6 +182,7 @@ class TestCompleteUserJourneys:
         ]
         assert len(health_checks) >= 1, "System health check failed"
 
+    @pytest.mark.asyncio
     async def test_administrative_monitoring_journey(
         self,
         journey_executor,
@@ -214,6 +219,7 @@ class TestCompleteUserJourneys:
         assert performance_tests_count >= 1, "Performance testing not executed"
 
     @pytest.mark.slow
+    @pytest.mark.asyncio
     async def test_concurrent_user_journeys(
         self,
         journey_executor,
@@ -263,6 +269,7 @@ class TestCompleteUserJourneys:
         for result in successful_results:
             assert result.success, f"Concurrent journey failed: {result.journey_name}"
 
+    @pytest.mark.asyncio
     async def test_error_recovery_journey(
         self,
         journey_executor,
@@ -332,6 +339,7 @@ class TestCompleteUserJourneys:
         assert recovery_step_succeeded, "Recovery step should have succeeded"
 
     @pytest.mark.performance
+    @pytest.mark.asyncio
     async def test_journey_performance_benchmarks(
         self,
         journey_executor,
@@ -388,6 +396,7 @@ class TestCompleteUserJourneys:
             "performance_benchmarks", performance_results
         )
 
+    @pytest.mark.asyncio
     async def test_data_flow_validation_journey(
         self,
         journey_executor,
@@ -530,6 +539,7 @@ class TestCompleteUserJourneys:
         )
 
     @pytest.mark.browser
+    @pytest.mark.asyncio
     async def test_browser_automation_journey(
         self,
         journey_executor,
@@ -622,6 +632,7 @@ class TestCompleteUserJourneys:
 class TestCrossSystemIntegration:
     """Test integration across different system components."""
 
+    @pytest.mark.asyncio
     async def test_multi_service_workflow(
         self,
         journey_executor,
@@ -710,6 +721,7 @@ class TestCrossSystemIntegration:
         ]
         assert len(service_validations) >= 2, "System health not validated adequately"
 
+    @pytest.mark.asyncio
     async def test_load_resilience_journey(
         self,
         journey_executor,

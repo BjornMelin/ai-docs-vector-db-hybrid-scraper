@@ -299,6 +299,7 @@ class TestLifespanContextManager:
     @patch("src.unified_mcp_server.run_periodic_health_checks")
     @patch("src.unified_mcp_server.update_system_metrics_periodically")
     @patch("src.unified_mcp_server.update_cache_metrics_periodically")
+    @pytest.mark.asyncio
     async def test_lifespan_successful_initialization(
         self,
         mock_update_cache_metrics,
@@ -362,6 +363,7 @@ class TestLifespanContextManager:
     @pytest.mark.asyncio
     @patch("src.unified_mcp_server.validate_configuration")
     @patch("src.unified_mcp_server.ClientManager")
+    @pytest.mark.asyncio
     async def test_lifespan_validation_failure(
         self, mock_client_manager_class, mock_validate_config
     ):
@@ -381,6 +383,7 @@ class TestLifespanContextManager:
     @patch("src.unified_mcp_server.validate_configuration")
     @patch("src.unified_mcp_server.ClientManager")
     @patch("src.config.get_config")
+    @pytest.mark.asyncio
     async def test_lifespan_client_manager_initialization_failure(
         self, mock_get_config, mock_client_manager_class, _mock_validate_config
     ):
@@ -412,6 +415,7 @@ class TestLifespanContextManager:
     @patch("src.unified_mcp_server.run_periodic_health_checks")
     @patch("src.unified_mcp_server.update_system_metrics_periodically")
     @patch("src.unified_mcp_server.update_cache_metrics_periodically")
+    @pytest.mark.asyncio
     async def test_lifespan_cleanup_on_exception(
         self,
         mock_update_cache_metrics,
@@ -475,6 +479,7 @@ class TestLifespanContextManager:
     @patch("src.unified_mcp_server.ClientManager")
     @patch("src.unified_mcp_server.register_all_tools")
     @patch("src.config.get_config")
+    @pytest.mark.asyncio
     async def test_lifespan_cleanup_exception_handling(
         self,
         mock_get_config,
@@ -509,6 +514,7 @@ class TestLifespanContextManager:
     @patch("src.unified_mcp_server.validate_configuration")
     @patch("src.unified_mcp_server.ClientManager")
     @patch("src.unified_mcp_server.register_all_tools")
+    @pytest.mark.asyncio
     async def test_lifespan_without_client_manager(self, mock_validate_config):
         """Test lifespan cleanup when client manager was not created."""
         # Simulate failure before client manager creation

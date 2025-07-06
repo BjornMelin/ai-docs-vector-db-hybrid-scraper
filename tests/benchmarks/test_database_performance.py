@@ -28,7 +28,10 @@ from qdrant_client.models import (
     VectorParams,
 )
 
-from src.config import Config, get_config
+from src.config import (
+    Config,
+    get_config
+)
 from src.services.vector_db.collections import QdrantCollections
 from src.services.vector_db.documents import QdrantDocuments
 from src.services.vector_db.indexing import QdrantIndexing
@@ -491,6 +494,10 @@ def expected_performance():
     }
 
 
+@pytest.mark.skipif(
+    CI_MODE or not DOCKER_AVAILABLE,
+    reason="Skipping Docker-dependent tests in CI or when Docker is not available",
+)
 class TestDatabasePerformance:
     """Real database performance benchmarks using pytest-benchmark."""
 
@@ -595,7 +602,10 @@ class TestDatabasePerformance:
             )
         return vectors
 
-    def test_real_collection_operations_performance(
+
+    @pytest.mark.asyncio
+
+    async def test_real_collection_operations_performance(
         self, benchmark, real_qdrant_service
     ):
         """Benchmark real collection creation and management operations."""
@@ -639,7 +649,7 @@ class TestDatabasePerformance:
                     in [c.name for c in collections.collections],
                 }
 
-            return asyncio.run(collection_operations())
+            return await collection_operations()
 
         # Run benchmark with pytest-benchmark
         result = benchmark(collection_operations_sync)
@@ -651,7 +661,10 @@ class TestDatabasePerformance:
         )
         assert result["info_time"] < 1.0, "Collection info retrieval should be fast"
 
-    def test_real_vector_upsert_performance(
+
+    @pytest.mark.asyncio
+
+    async def test_real_vector_upsert_performance(
         self, benchmark, real_qdrant_service, sample_vectors
     ):
         """Benchmark real vector upsert operations."""
@@ -705,7 +718,7 @@ class TestDatabasePerformance:
                     / max(upsert_time, 0.001),
                 }
 
-            return asyncio.run(vector_upsert())
+            return await vector_upsert()
 
         # Run benchmark
         result = benchmark(vector_upsert_sync)
@@ -723,7 +736,10 @@ class TestDatabasePerformance:
             f"\n📊 Vector Upsert: {result['throughput_vectors_per_second']:.1f} vectors/sec"
         )
 
-    def test_real_search_performance(
+
+    @pytest.mark.asyncio
+
+    async def test_real_search_performance(
         self, benchmark, real_qdrant_service, sample_vectors
     ):
         """Benchmark real vector search operations."""
@@ -789,7 +805,7 @@ class TestDatabasePerformance:
                     "search_throughput": len(search_times) / sum(search_times),
                 }
 
-            return asyncio.run(search_performance())
+            return await search_performance()
 
         # Run benchmark
         result = benchmark(search_performance_sync)
@@ -807,7 +823,9 @@ class TestDatabasePerformance:
         )
 
     @pytest.mark.slow
-    def test_real_concurrent_database_operations(
+
+    @pytest.mark.asyncio
+    async def test_real_concurrent_database_operations(
         self, benchmark, real_qdrant_service, sample_vectors
     ):
         """Benchmark concurrent database operations with real Qdrant."""
@@ -885,7 +903,7 @@ class TestDatabasePerformance:
                     "success_rate": successful_operations / len(results),
                 }
 
-            return asyncio.run(concurrent_db())
+            return await concurrent_db()
 
         # Run benchmark
         result = benchmark(concurrent_db_sync)
@@ -903,7 +921,10 @@ class TestDatabasePerformance:
             f"\n⚡ Concurrent DB: {result['operations_per_second']:.1f} ops/sec, {result['success_rate']:.1%} success"
         )
 
-    def test_real_payload_indexing_performance(
+
+    @pytest.mark.asyncio
+
+    async def test_real_payload_indexing_performance(
         self, benchmark, real_qdrant_service, sample_vectors
     ):
         """Benchmark payload indexing operations with real data."""
@@ -988,7 +1009,7 @@ class TestDatabasePerformance:
                     else 0,
                 }
 
-            return asyncio.run(payload_indexing())
+            return await payload_indexing()
 
         # Run benchmark
         result = benchmark(payload_indexing_sync)
@@ -1017,7 +1038,10 @@ class TestEnterpriseFeatures:
     ):
         """Test connection affinity hit rate performance."""
 
-        def test_affinity_sync():
+
+        @pytest.mark.asyncio
+
+        async def test_affinity_sync():
             """Test connection affinity management synchronously."""
 
             async def test_affinity():
@@ -1040,7 +1064,7 @@ class TestEnterpriseFeatures:
                 summary = database_manager.query_monitor.get_performance_summary()
                 return summary.get("affinity_hit_rate", 0.73)  # Default from monitoring
 
-            return asyncio.run(test_affinity())
+            return await test_affinity()
 
         # Run the benchmark
         affinity_rate = benchmark(test_affinity_sync)
@@ -1055,7 +1079,10 @@ class TestEnterpriseFeatures:
             f"\n🎯 Connection affinity hit rate: {affinity_rate:.1%} (target: >{min_affinity:.1%})"
         )
 
-    def test_enterprise_monitoring_overhead(self, benchmark, database_manager):
+
+    @pytest.mark.asyncio
+
+    async def test_enterprise_monitoring_overhead(self, benchmark, database_manager):
         """Test that enterprise monitoring adds minimal overhead."""
 
         def monitoring_overhead_test_sync():
@@ -1067,7 +1094,7 @@ class TestEnterpriseFeatures:
                     result = await session.execute("SELECT 1")
                     return result.fetchone()
 
-            return asyncio.run(monitoring_overhead_test())
+            return await monitoring_overhead_test()
 
         # Run the benchmark
         result = benchmark(monitoring_overhead_test_sync)
@@ -1078,7 +1105,11 @@ class TestEnterpriseFeatures:
         # pytest-benchmark automatically handles performance tracking and comparison
 
 
-def test_benchmark_performance_targets(database_manager, expected_performance):
+
+@pytest.mark.asyncio
+
+
+async def test_benchmark_performance_targets(database_manager, expected_performance):
     """Validate that our database meets all BJO-134 performance targets."""
 
     async def validate_targets():
@@ -1094,7 +1125,7 @@ def test_benchmark_performance_targets(database_manager, expected_performance):
         }
 
     # Run validation
-    results = asyncio.run(validate_targets())
+    results = await validate_targets()
 
     # Assert all targets are met
     assert results["ml_accuracy"] >= expected_performance["min_ml_accuracy"], (

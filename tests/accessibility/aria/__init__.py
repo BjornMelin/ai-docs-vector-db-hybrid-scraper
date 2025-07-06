@@ -1,1 +1,0 @@
-"""ARIA attributes accessibility tests."""

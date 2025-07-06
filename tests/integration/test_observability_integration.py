@@ -9,7 +9,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import src.services.observability.middleware
-from src.config import get_config, reset_config
+from src.config import (
+    get_config,
+    reset_config
+)
 from src.services.observability.config import ObservabilityConfig
 from src.services.observability.dependencies import (
     get_ai_tracer,
@@ -63,15 +66,17 @@ class TestObservabilityIntegration:
         config = get_config()
         assert config.observability.enabled is True
 
-    @patch("opentelemetry.trace")
-    @patch("opentelemetry.metrics")
-    @patch("opentelemetry.sdk.trace.TracerProvider")
-    @patch("opentelemetry.sdk.metrics.MeterProvider")
-    @patch("opentelemetry.sdk.trace.export.BatchSpanProcessor")
-    @patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter")
-    @patch("opentelemetry.exporter.otlp.proto.grpc.metric_exporter.OTLPMetricExporter")
-    @patch("opentelemetry.sdk.metrics.export.PeriodicExportingMetricReader")
-    @patch("opentelemetry.sdk.resources.Resource")
+    @patch("src.services.observability.init._tracer_provider", new=MagicMock())
+    @patch("src.services.observability.init._meter_provider", new=MagicMock())
+    @patch("src.services.observability.init.trace")
+    @patch("src.services.observability.init.metrics")
+    @patch("src.services.observability.init.TracerProvider")
+    @patch("src.services.observability.init.MeterProvider")
+    @patch("src.services.observability.init.BatchSpanProcessor")
+    @patch("src.services.observability.init.OTLPSpanExporter")
+    @patch("src.services.observability.init.OTLPMetricExporter")
+    @patch("src.services.observability.init.PeriodicExportingMetricReader")
+    @patch("src.services.observability.init.Resource")
     @patch("src.services.observability.init._setup_auto_instrumentation")
     def test_full_observability_initialization(
         self,
@@ -194,6 +199,7 @@ class TestFastAPIObservabilityIntegration:
         self.app = FastAPI(title="Test API")
 
         @self.app.get("/test")
+        @pytest.mark.asyncio
         async def test_endpoint():
             return {"message": "test"}
 
@@ -482,17 +488,20 @@ class TestEndToEndObservabilityFlow:
         shutdown_observability()
         reset_config()
 
-    @patch("opentelemetry.trace")
-    @patch("opentelemetry.metrics")
-    @patch("opentelemetry.sdk.trace.TracerProvider")
-    @patch("opentelemetry.sdk.metrics.MeterProvider")
-    @patch("opentelemetry.sdk.trace.export.BatchSpanProcessor")
-    @patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter")
-    @patch("opentelemetry.exporter.otlp.proto.grpc.metric_exporter.OTLPMetricExporter")
-    @patch("opentelemetry.sdk.metrics.export.PeriodicExportingMetricReader")
-    @patch("opentelemetry.sdk.resources.Resource")
+    @patch("src.services.observability.init._tracer_provider", new=MagicMock())
+    @patch("src.services.observability.init._meter_provider", new=MagicMock())
+    @patch("src.services.observability.init.trace")
+    @patch("src.services.observability.init.metrics")
+    @patch("src.services.observability.init.TracerProvider")
+    @patch("src.services.observability.init.MeterProvider")
+    @patch("src.services.observability.init.BatchSpanProcessor")
+    @patch("src.services.observability.init.OTLPSpanExporter")
+    @patch("src.services.observability.init.OTLPMetricExporter")
+    @patch("src.services.observability.init.PeriodicExportingMetricReader")
+    @patch("src.services.observability.init.Resource")
     @patch("src.services.observability.init._setup_auto_instrumentation")
-    def test_complete_observability_flow(
+    @pytest.mark.asyncio
+    async def test_complete_observability_flow(
         self,
         _mock_auto_instrumentation,
         mock_resource,
@@ -506,7 +515,9 @@ class TestEndToEndObservabilityFlow:
         _mock_trace,
     ):
         """Test complete observability flow from configuration to shutdown."""
-        # Setup comprehensive mocks
+        # Import the module to access globals
+        from src.services.observability import init as obs_init
+                # Setup comprehensive mocks
         mock_resource.create.return_value = MagicMock()
 
         mock_tracer_provider_instance = MagicMock()
@@ -520,6 +531,20 @@ class TestEndToEndObservabilityFlow:
 
         mock_metric_reader_instance = MagicMock()
         mock_metric_reader.return_value = mock_metric_reader_instance
+        
+        # Mock the get_tracer_provider and get_meter_provider functions
+        _mock_trace.get_tracer_provider.return_value = mock_tracer_provider_instance
+        _mock_metrics.get_meter_provider.return_value = mock_meter_provider_instance
+        
+        # Mock tracer and meter instances
+        mock_tracer = MagicMock()
+        mock_meter = MagicMock()
+        mock_tracer_provider_instance.get_tracer.return_value = mock_tracer
+        mock_meter_provider_instance.get_meter.return_value = mock_meter
+        
+        # Set the global variables that shutdown_observability expects
+        obs_init._tracer_provider = mock_tracer_provider_instance
+        obs_init._meter_provider = mock_meter_provider_instance
 
         # Step 1: Enable observability via environment
         with patch.dict("os.environ", {"AI_DOCS_OBSERVABILITY__ENABLED": "true"}):
@@ -541,19 +566,17 @@ class TestEndToEndObservabilityFlow:
             assert meter is not None
 
             # Step 4: Test health check
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                health = loop.run_until_complete(get_observability_health(service))
+            health = await get_observability_health(service)
 
-                assert health["enabled"] is True
-                assert health["status"] == "healthy"
-
-            finally:
-                loop.close()
+            assert health["enabled"] is True
+            assert health["status"] == "healthy"
 
             # Step 5: Test shutdown
             shutdown_observability()
+            
+            # After shutdown, the globals should be None
+            assert obs_init._tracer_provider is None
+            assert obs_init._meter_provider is None
             assert is_observability_enabled() is False
 
             # Verify shutdown was called on providers
@@ -581,6 +604,7 @@ class TestEndToEndObservabilityFlow:
 
         # Test function instrumentation
         @instrument_function(operation_type="test_function")
+        @pytest.mark.asyncio
         async def test_ai_function():
             await asyncio.sleep(0.001)
             return "success"

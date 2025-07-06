@@ -1159,11 +1159,11 @@ class TestFederatedSearchService:
         assert merged[2]["id"] == "docs_2"
         assert merged[3]["id"] == "api_2"
 
-    def test_result_merging_by_priority(self, service, sample_metadata):
+    async def test_result_merging_by_priority(self, service, sample_metadata):
         """Test priority-based result merging."""
         # Register collections to set up priority mapping
         for name, metadata in sample_metadata.items():
-            asyncio.run(service.register_collection(name, metadata))
+            await service.register_collection(name, metadata
 
         collection_results = [
             CollectionSearchResult(
@@ -1258,7 +1258,10 @@ class TestFederatedSearchService:
         assert merged[1]["id"] == "1"  # 10:00:00
         assert merged[2]["id"] == "2"  # 09:00:00 (oldest)
 
-    def test_result_merging_diversity_optimized(self, service):
+
+    @pytest.mark.asyncio
+
+    async def test_result_merging_diversity_optimized(self, service):
         """Test diversity-optimized result merging."""
         collection_results = [
             CollectionSearchResult(
@@ -1306,7 +1309,10 @@ class TestFederatedSearchService:
             len(set(collections_seen)) == 2
         )  # Should have both collections represented
 
-    def test_deduplication(self, service):
+
+    @pytest.mark.asyncio
+
+    async def test_deduplication(self, service):
         """Test result deduplication."""
         results = [
             {
@@ -1339,7 +1345,10 @@ class TestFederatedSearchService:
         # Should keep all results
         assert len(deduplicated) == len(results)
 
-    def test_quality_metrics_calculation(self, service):
+
+    @pytest.mark.asyncio
+
+    async def test_quality_metrics_calculation(self, service):
         """Test quality metrics calculation."""
         collection_results = [
             CollectionSearchResult(
@@ -1371,28 +1380,28 @@ class TestFederatedSearchService:
         request = FederatedSearchRequest(query="test")
 
         # Register some collections for coverage calculation
-        asyncio.run(
+        await 
             service.register_collection(
                 "docs",
                 CollectionMetadata(
                     collection_name="docs", document_count=100, vector_size=768
-                ),
+                ,
             )
         )
-        asyncio.run(
+        await 
             service.register_collection(
                 "api",
                 CollectionMetadata(
                     collection_name="api", document_count=50, vector_size=768
-                ),
+                ,
             )
         )
-        asyncio.run(
+        await 
             service.register_collection(
                 "tutorials",
                 CollectionMetadata(
                     collection_name="tutorials", document_count=25, vector_size=768
-                ),
+                ,
             )
         )
 
@@ -1578,11 +1587,11 @@ class TestFederatedSearchService:
         assert len(service.federated_cache) == 0
         assert service.cache_stats == {"hits": 0, "misses": 0}
 
-    def test_get_collection_registry(self, service, sample_metadata):
+    async def test_get_collection_registry(self, service, sample_metadata):
         """Test getting collection registry."""
         # Register collections
         for name, metadata in sample_metadata.items():
-            asyncio.run(service.register_collection(name, metadata))
+            await service.register_collection(name, metadata
 
         registry = service.get_collection_registry()
 
@@ -1721,7 +1730,7 @@ class TestSearchModeIntegration:
         service = FederatedSearchService(max_concurrent_searches=3)
 
         for name, metadata in sample_metadata.items():
-            asyncio.run(service.register_collection(name, metadata))
+            await service.register_collection(name, metadata
 
         return service
 
@@ -1748,18 +1757,14 @@ class TestSearchModeIntegration:
             mock_search.side_effect = slow_search
 
             # Test parallel
-            start_time = asyncio.get_event_loop().time()
             await service_with_collections._execute_parallel_search(
                 FederatedSearchRequest(query="test"), ["docs", "api", "tutorials"]
             )
-            parallel_time = asyncio.get_event_loop().time() - start_time
 
             # Test sequential
-            start_time = asyncio.get_event_loop().time()
             await service_with_collections._execute_sequential_search(
                 FederatedSearchRequest(query="test"), ["docs", "api", "tutorials"]
             )
-            sequential_time = asyncio.get_event_loop().time() - start_time
 
             # Parallel should be faster (or at least not significantly slower)
             assert parallel_time <= sequential_time * 1.5  # Allow some variance

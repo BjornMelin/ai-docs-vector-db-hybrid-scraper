@@ -98,6 +98,7 @@ def journey_data_manager():
     return MockJourneyDataManager()
 
 
+@pytest.mark.asyncio
 async def test_complete_system_integration_scenario(
     integration_test_manager,
     journey_data_manager,
@@ -136,6 +137,7 @@ async def test_complete_system_integration_scenario(
     )
 
 
+@pytest.mark.asyncio
 async def test_integration_test_summary(
     integration_test_manager,
     journey_data_manager,

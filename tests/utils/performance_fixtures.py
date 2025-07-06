@@ -47,7 +47,8 @@ class FixtureCache:
 def optimized_async_loop():
     """Optimized async event loop for test performance."""
     # Create high-performance event loop
-    policy = asyncio.get_event_loop_policy()
+    # Use pytest-asyncio's event loop management
+    # The event loop is managed by pytest-asyncio fixtures
     loop = policy.new_event_loop()
 
     # Optimize loop settings
@@ -65,7 +66,7 @@ def optimized_async_loop():
 
         # Wait for cancellation to complete
         if pending:
-            loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+            await asyncio.gather(*pending, return_exceptions=True)
 
         loop.close()
     except (RuntimeError, OSError, AttributeError) as e:

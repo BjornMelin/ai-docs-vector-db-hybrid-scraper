@@ -4,7 +4,11 @@ from datetime import datetime, timezone
 
 import pytest
 from pydantic import ValidationError
-from src.config import ChunkingStrategy, DocumentStatus, ChunkingConfig
+from src.config import (
+    ChunkingConfig,
+    ChunkingStrategy,
+    DocumentStatus
+)
 from src.models.document_processing import Chunk
 from src.models.document_processing import ChunkType
 from src.models.document_processing import CodeBlock

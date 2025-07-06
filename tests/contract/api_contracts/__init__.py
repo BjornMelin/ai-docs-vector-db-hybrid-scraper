@@ -1,1 +1,0 @@
-"""API contract testing module."""

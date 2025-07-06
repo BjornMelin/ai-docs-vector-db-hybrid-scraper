@@ -6,7 +6,7 @@ configuration settings that have been moved to Pydantic models and enums.
 
 import pytest
 
-from src.config.settings import (
+from src.config import (
     CacheConfig,
     CacheType,
     ChunkingConfig,
@@ -15,7 +15,7 @@ from src.config.settings import (
     LogLevel,
     PerformanceConfig,
     SearchAccuracy,
-    VectorType,
+    VectorType
 )
 from src.core import constants
 
@@ -253,7 +253,7 @@ class TestMigratedConfigModels:
         # Test basic cache settings
         assert isinstance(config.enable_caching, bool)
         assert isinstance(config.enable_local_cache, bool)
-        assert config.ttl_seconds > 0
+        # Note: ttl_seconds doesn't exist, using specific TTL fields instead
 
         # Test TTL settings (updated structure)
         assert isinstance(config.cache_ttl_seconds, dict)

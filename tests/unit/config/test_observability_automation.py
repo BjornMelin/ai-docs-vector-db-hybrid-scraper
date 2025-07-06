@@ -3,10 +3,10 @@
 Tests the observability configuration and monitoring capabilities.
 """
 
-from src.config.settings import (
+from src.config import (
     Environment,
     ObservabilityConfig,
-    Settings,
+    Settings
 )
 
 

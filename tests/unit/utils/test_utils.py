@@ -20,6 +20,7 @@ class TestAsyncToSyncClick:
 
         # Create an async command
         @cli_group.command()
+        @pytest.mark.asyncio
         async def test_command():
             return "async result"
 
@@ -74,6 +75,7 @@ class TestAsyncToSyncClick:
         cli_group = click.Group()
 
         @cli_group.command()
+        @pytest.mark.asyncio
         async def test_command():
             return "result"
 
@@ -139,7 +141,7 @@ class TestAsyncToSyncClick:
         assert sync_cmd.callback is original_sync_callback
         assert sync_cmd.callback() == "sync"
 
-    @patch("asyncio.run")
+    @patch("asyncio.run")  # Testing async command execution
     def test_async_to_sync_click_uses_asyncio_run(self, mock_run):
         """Test that converted commands use asyncio.run."""
         mock_run.return_value = "mocked result"
@@ -147,6 +149,7 @@ class TestAsyncToSyncClick:
         cli_group = click.Group()
 
         @cli_group.command()
+        @pytest.mark.asyncio
         async def test_command():
             return "original result"
 
@@ -185,6 +188,7 @@ class TestAsyncCommand:
         """Test basic async_command decorator."""
 
         @async_command
+        @pytest.mark.asyncio
         async def test_func():
             return "async result"
 
@@ -216,12 +220,13 @@ class TestAsyncCommand:
         with pytest.raises(RuntimeError, match="Test error"):
             failing_func()
 
-    @patch("asyncio.run")
+    @patch("asyncio.run")  # Testing async command execution
     def test_async_command_uses_asyncio_run(self, mock_run):
         """Test that async_command uses asyncio.run."""
         mock_run.return_value = "mocked result"
 
         @async_command
+        @pytest.mark.asyncio
         async def test_func():
             return "original result"
 
@@ -270,7 +275,8 @@ class TestAsyncCommand:
         assert return_list() == [1, 2, 3]
         assert return_none() is None
 
-    def test_async_command_with_awaitable_operations(self):
+    @pytest.mark.asyncio
+    async def test_async_command_with_awaitable_operations(self):
         """Test async_command with actual async operations."""
 
         @async_command
@@ -303,7 +309,8 @@ class TestModuleExports:
 class TestIntegration:
     """Integration tests combining different utilities."""
 
-    def test_async_command_with_click_integration(self):
+    @pytest.mark.asyncio
+    async def test_async_command_with_click_integration(self):
         """Test async_command decorator with Click commands."""
 
         @click.command()

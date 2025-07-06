@@ -1,6 +1,7 @@
 """Extended tests for crawl4ai_bulk_embedder to improve coverage."""
 
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
+import respx
 
 import httpx
 import pytest

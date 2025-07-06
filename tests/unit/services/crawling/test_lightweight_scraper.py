@@ -1,3 +1,4 @@
+import respx
 """Tests for the lightweight HTTP scraper."""
 
 from unittest.mock import AsyncMock, MagicMock, patch

@@ -85,6 +85,7 @@ class TestVectorDBManagerInitialization:
         assert manager.qdrant_url is None
         assert not manager._initialized
 
+    @pytest.mark.asyncio
     async def test_initialize_with_client_manager_not_initialized(
         self, mock_client_manager
     ):
@@ -97,6 +98,7 @@ class TestVectorDBManagerInitialization:
         assert manager._initialized
         mock_client_manager.initialize.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_initialize_with_url_override(self, mock_client_manager, mock_config):
         """Test initialization with URL override."""
         mock_client_manager.config = mock_config
@@ -111,6 +113,7 @@ class TestVectorDBManagerInitialization:
         assert mock_config.qdrant.url == "http://custom:6333"
         assert manager._initialized
 
+    @pytest.mark.asyncio
     async def test_initialize_with_existing_client_manager(self, mock_client_manager):
         """Test initialization with existing ClientManager."""
         manager = VectorDBManager(client_manager=mock_client_manager)
@@ -120,6 +123,7 @@ class TestVectorDBManagerInitialization:
         # Should not create new ClientManager
         assert manager.client_manager == mock_client_manager
 
+    @pytest.mark.asyncio
     async def test_double_initialization(self, mock_client_manager):
         """Test that double initialization is safe."""
         manager = VectorDBManager(client_manager=mock_client_manager)
@@ -129,6 +133,7 @@ class TestVectorDBManagerInitialization:
 
         assert manager._initialized
 
+    @pytest.mark.asyncio
     async def test_cleanup(self, mock_client_manager):
         """Test manager cleanup."""
         manager = VectorDBManager(client_manager=mock_client_manager)
@@ -139,6 +144,7 @@ class TestVectorDBManagerInitialization:
         assert not manager._initialized
         mock_client_manager.cleanup.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_cleanup_with_uninitialized_manager(self, mock_client_manager):
         """Test cleanup when manager is not yet initialized."""
         manager = VectorDBManager(client_manager=mock_client_manager)
@@ -150,6 +156,7 @@ class TestVectorDBManagerInitialization:
 class TestVectorDBManagerServiceAccess:
     """Test service access methods."""
 
+    @pytest.mark.asyncio
     async def test_get_qdrant_service(self, mock_client_manager, _mock_qdrant_service):
         """Test getting QdrantService."""
         mock_client_manager.get_qdrant_service.return_value = _mock_qdrant_service
@@ -162,6 +169,7 @@ class TestVectorDBManagerServiceAccess:
         assert manager._initialized
         mock_client_manager.get_qdrant_service.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_get_embedding_manager(
         self, mock_client_manager, mock_embedding_manager
     ):
@@ -176,6 +184,7 @@ class TestVectorDBManagerServiceAccess:
         assert manager._initialized
         mock_client_manager.get_embedding_manager.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_service_access_triggers_initialization(
         self, mock_client_manager, _mock_qdrant_service
     ):
@@ -193,6 +202,7 @@ class TestVectorDBManagerServiceAccess:
 class TestVectorDBManagerCollectionOperations:
     """Test collection management operations."""
 
+    @pytest.mark.asyncio
     async def test_list_collections_success(
         self, mock_client_manager, _mock_qdrant_service
     ):
@@ -207,6 +217,7 @@ class TestVectorDBManagerCollectionOperations:
         assert collections == ["test1", "test2"]
         _mock_qdrant_service.list_collections.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_list_collections_error(
         self, mock_client_manager, _mock_qdrant_service
     ):
@@ -222,6 +233,7 @@ class TestVectorDBManagerCollectionOperations:
 
         assert collections == []
 
+    @pytest.mark.asyncio
     async def test_create_collection_success(
         self, mock_client_manager, _mock_qdrant_service
     ):
@@ -241,6 +253,7 @@ class TestVectorDBManagerCollectionOperations:
             collection_name="test_collection", vector_size=1536, distance="Cosine"
         )
 
+    @pytest.mark.asyncio
     async def test_create_collection_error(
         self, mock_client_manager, _mock_qdrant_service
     ):
@@ -257,6 +270,7 @@ class TestVectorDBManagerCollectionOperations:
 
         assert result is False
 
+    @pytest.mark.asyncio
     async def test_delete_collection_success(
         self, mock_client_manager, _mock_qdrant_service
     ):
@@ -274,6 +288,7 @@ class TestVectorDBManagerCollectionOperations:
             "test_collection"
         )
 
+    @pytest.mark.asyncio
     async def test_delete_collection_error(
         self, mock_client_manager, _mock_qdrant_service
     ):
@@ -290,6 +305,7 @@ class TestVectorDBManagerCollectionOperations:
 
         assert result is False
 
+    @pytest.mark.asyncio
     async def test_get_collection_info_success(
         self, mock_client_manager, _mock_qdrant_service
     ):
@@ -311,6 +327,7 @@ class TestVectorDBManagerCollectionOperations:
         assert info.vector_count == 100
         assert info.vector_size == 1536
 
+    @pytest.mark.asyncio
     async def test_get_collection_info_not_found(
         self, mock_client_manager, _mock_qdrant_service
     ):
@@ -325,6 +342,7 @@ class TestVectorDBManagerCollectionOperations:
 
         assert info is None
 
+    @pytest.mark.asyncio
     async def test_get_collection_info_error(
         self, mock_client_manager, _mock_qdrant_service
     ):
@@ -343,6 +361,7 @@ class TestVectorDBManagerCollectionOperations:
 class TestVectorDBManagerSearchOperations:
     """Test search operations."""
 
+    @pytest.mark.asyncio
     async def test_search_vectors_success(
         self, mock_client_manager, _mock_qdrant_service
     ):
@@ -371,6 +390,7 @@ class TestVectorDBManagerSearchOperations:
         assert results[0].title == "Test"
         assert results[0].content == "Content"
 
+    @pytest.mark.asyncio
     async def test_search_vectors_empty_payload(
         self, mock_client_manager, _mock_qdrant_service
     ):
@@ -391,6 +411,7 @@ class TestVectorDBManagerSearchOperations:
         assert results[0].title == ""
         assert results[0].content == ""
 
+    @pytest.mark.asyncio
     async def test_search_vectors_error(
         self, mock_client_manager, _mock_qdrant_service
     ):
@@ -410,6 +431,7 @@ class TestVectorDBManagerSearchOperations:
 class TestVectorDBManagerDatabaseStats:
     """Test database statistics."""
 
+    @pytest.mark.asyncio
     async def test_get_database_stats_success(
         self, mock_client_manager, _mock_qdrant_service
     ):
@@ -445,6 +467,7 @@ class TestVectorDBManagerDatabaseStats:
         assert stats.collections[1].name == "collection2"
         assert stats.collections[1].vector_count == 200
 
+    @pytest.mark.asyncio
     async def test_get_database_stats_error(
         self, mock_client_manager, _mock_qdrant_service
     ):
@@ -459,6 +482,7 @@ class TestVectorDBManagerDatabaseStats:
 
         assert stats is None
 
+    @pytest.mark.asyncio
     async def test_get_stats_alias(self, mock_client_manager, _mock_qdrant_service):
         """Test get_stats method (alias for get_database_stats)."""
         _mock_qdrant_service.list_collections.return_value = []
@@ -476,6 +500,7 @@ class TestVectorDBManagerDatabaseStats:
 class TestVectorDBManagerClearCollection:
     """Test collection clearing functionality."""
 
+    @pytest.mark.asyncio
     async def test_clear_collection_success(
         self, mock_client_manager, _mock_qdrant_service
     ):
@@ -505,6 +530,7 @@ class TestVectorDBManagerClearCollection:
             collection_name="test_collection", vector_size=1536, distance="Cosine"
         )
 
+    @pytest.mark.asyncio
     async def test_clear_collection_not_found(
         self, mock_client_manager, _mock_qdrant_service
     ):
@@ -519,6 +545,7 @@ class TestVectorDBManagerClearCollection:
 
         assert result is False
 
+    @pytest.mark.asyncio
     async def test_clear_collection_error(
         self, mock_client_manager, _mock_qdrant_service
     ):
@@ -537,6 +564,7 @@ class TestVectorDBManagerClearCollection:
 class TestCreateEmbeddingsFunction:
     """Test the create_embeddings utility function."""
 
+    @pytest.mark.asyncio
     async def test_create_embeddings_success(self, mock_embedding_manager):
         """Test successful embedding creation."""
         mock_embedding_manager.generate_embeddings.return_value = [[0.1, 0.2, 0.3]]
@@ -548,6 +576,7 @@ class TestCreateEmbeddingsFunction:
             ["test text"]
         )
 
+    @pytest.mark.asyncio
     async def test_create_embeddings_empty_result(self, mock_embedding_manager):
         """Test embedding creation with empty result."""
         mock_embedding_manager.generate_embeddings.return_value = []
@@ -556,6 +585,7 @@ class TestCreateEmbeddingsFunction:
 
         assert result == []
 
+    @pytest.mark.asyncio
     async def test_create_embeddings_error(self, mock_embedding_manager):
         """Test embedding creation with error."""
         mock_embedding_manager.generate_embeddings.side_effect = Exception(
@@ -965,6 +995,7 @@ class TestUtilityFunctions:
 class TestCreateEmbeddingsUtility:
     """Test create_embeddings utility function."""
 
+    @pytest.mark.asyncio
     async def test_create_embeddings_success(self):
         """Test successful embedding creation."""
         mock_embedding_manager = AsyncMock()
@@ -979,6 +1010,7 @@ class TestCreateEmbeddingsUtility:
             ["test text"]
         )
 
+    @pytest.mark.asyncio
     async def test_create_embeddings_empty_result(self):
         """Test embedding creation with empty result."""
         mock_embedding_manager = AsyncMock()
@@ -988,6 +1020,7 @@ class TestCreateEmbeddingsUtility:
 
         assert result == []
 
+    @pytest.mark.asyncio
     async def test_create_embeddings_error(self):
         """Test embedding creation with error."""
         mock_embedding_manager = AsyncMock()

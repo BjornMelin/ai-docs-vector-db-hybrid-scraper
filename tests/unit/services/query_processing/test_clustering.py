@@ -1015,6 +1015,7 @@ class TestResultClusteringService:
 
     @pytest.mark.asyncio
     @patch("sklearn.cluster.KMeans")
+    @pytest.mark.asyncio
     async def test_cluster_results_success(
         self, mock_kmeans_class, clustering_service, clustering_request
     ):

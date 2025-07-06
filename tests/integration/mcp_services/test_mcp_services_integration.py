@@ -90,6 +90,7 @@ class TestMCPServicesCompleteIntegration:
 
         return services
 
+    @pytest.mark.asyncio
     async def test_all_services_initialize_successfully(
         self, complete_mcp_services_setup
     ):
@@ -108,6 +109,7 @@ class TestMCPServicesCompleteIntegration:
             assert service_name in services
             assert services[service_name].client_manager is not None
 
+    @pytest.mark.asyncio
     async def test_all_services_report_capabilities_correctly(
         self, complete_mcp_services_setup
     ):
@@ -127,6 +129,7 @@ class TestMCPServicesCompleteIntegration:
             assert len(service_info["capabilities"]) > 0
             assert len(service_info["autonomous_features"]) > 0
 
+    @pytest.mark.asyncio
     async def test_service_capability_discovery_integration(
         self, complete_mcp_services_setup
     ):
@@ -171,6 +174,7 @@ class TestMCPServicesCompleteIntegration:
                     f"Service {service_name} missing capability {cap}"
                 )
 
+    @pytest.mark.asyncio
     async def test_research_basis_integration_validation(
         self, complete_mcp_services_setup
     ):
@@ -190,6 +194,7 @@ class TestMCPServicesCompleteIntegration:
             expected_basis = expected_research_basis[service_name]
             assert expected_basis in service_info["research_basis"]
 
+    @pytest.mark.asyncio
     async def test_enterprise_observability_integration_validation(
         self, complete_mcp_services_setup
     ):
@@ -207,6 +212,7 @@ class TestMCPServicesCompleteIntegration:
         assert enterprise_integration["correlation_manager_leveraged"] is True
         assert enterprise_integration["performance_monitor_integrated"] is True
 
+    @pytest.mark.asyncio
     async def test_concurrent_service_access_performance(
         self, complete_mcp_services_setup
     ):
@@ -224,9 +230,24 @@ class TestMCPServicesCompleteIntegration:
             tasks.append(task)
 
         # Execute all tasks concurrently
-        start_time = asyncio.get_event_loop().time()
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        end_time = asyncio.get_event_loop().time()
+
+        # Verify all operations succeeded
+        for result in results:
+            assert not isinstance(result, Exception)
+            assert "service" in result
+            assert result["status"] == "active"
+
+        # Run concurrent operations on all services
+        start_time = time.time()
+        tasks = []
+        for service in services.values():
+            task = asyncio.create_task(get_service_info_concurrent(service))
+            tasks.append(task)
+
+        # Execute all tasks concurrently
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        end_time = time.time()
 
         # Verify all operations succeeded
         for result in results:
@@ -296,6 +317,7 @@ class TestMCPServicesOrchestratorIntegration:
 
         return orchestrator
 
+    @pytest.mark.asyncio
     async def test_orchestrator_coordinates_all_domain_services(
         self, orchestrator_with_real_services
     ):
@@ -312,6 +334,7 @@ class TestMCPServicesOrchestratorIntegration:
             assert all_services[service_name]["service"] == service_name
             assert all_services[service_name]["status"] == "active"
 
+    @pytest.mark.asyncio
     async def test_orchestrator_service_capability_aggregation(
         self, orchestrator_with_real_services
     ):
@@ -356,6 +379,7 @@ class TestMCPServicesOrchestratorIntegration:
             assert "capabilities" in service_info
             assert len(service_info["capabilities"]) > 0
 
+    @pytest.mark.asyncio
     async def test_orchestrator_handles_individual_service_failures(
         self, orchestrator_with_real_services
     ):
@@ -427,6 +451,7 @@ class TestMCPServicesWorkflowOrchestration:
             "analytics": analytics_service,
         }
 
+    @pytest.mark.asyncio
     async def test_complex_research_workflow_orchestration(
         self, workflow_test_environment, sample_workflow_description
     ):
@@ -479,6 +504,7 @@ class TestMCPServicesWorkflowOrchestration:
         # Verify agentic orchestrator was used
         orchestrator.agentic_orchestrator.orchestrate.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_service_performance_optimization_workflow(
         self, workflow_test_environment, mock_discovery_engine
     ):
@@ -519,6 +545,7 @@ class TestMCPServicesWorkflowOrchestration:
         # Verify discovery engine was consulted
         mock_discovery_engine.get_tool_recommendations.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_cross_service_error_propagation_and_recovery(
         self, workflow_test_environment
     ):
@@ -546,6 +573,7 @@ class TestMCPServicesWorkflowOrchestration:
 class TestMCPServicesEnterpriseIntegration:
     """Test enterprise integration scenarios and observability."""
 
+    @pytest.mark.asyncio
     async def test_analytics_service_enterprise_observability_integration(
         self, mock_client_manager, mock_observability_components
     ):
@@ -590,6 +618,7 @@ class TestMCPServicesEnterpriseIntegration:
         assert enterprise_integration["no_duplicate_infrastructure"] is True
         assert enterprise_integration["opentelemetry_integration"] is True
 
+    @pytest.mark.asyncio
     async def test_no_duplicate_infrastructure_validation(
         self, mock_client_manager, mock_observability_components
     ):
@@ -640,6 +669,7 @@ class TestMCPServicesEnterpriseIntegration:
 class TestMCPServicesAutonomousCapabilities:
     """Test autonomous capabilities across all services."""
 
+    @pytest.mark.asyncio
     async def test_all_services_report_autonomous_features(
         self, complete_mcp_services_setup
     ):
@@ -684,6 +714,7 @@ class TestMCPServicesAutonomousCapabilities:
                     f"Service {service_name} missing autonomous feature {feature}"
                 )
 
+    @pytest.mark.asyncio
     async def test_autonomous_capability_assessment_integration(
         self, complete_mcp_services_setup
     ):
@@ -712,6 +743,7 @@ class TestMCPServicesAutonomousCapabilities:
         for features in all_autonomous_capabilities.values():
             assert len(features) < len(all_features)
 
+    @pytest.mark.asyncio
     async def test_service_coordination_autonomous_features(
         self, complete_mcp_services_setup
     ):
@@ -732,6 +764,7 @@ class TestMCPServicesAutonomousCapabilities:
         for feature in coordination_features:
             assert feature in autonomous_features
 
+    @pytest.mark.asyncio
     async def test_research_implementation_autonomous_validation(
         self, complete_mcp_services_setup
     ):
@@ -757,6 +790,7 @@ class TestMCPServicesAutonomousCapabilities:
 class TestMCPServicesPerformanceAndScalability:
     """Test performance and scalability characteristics of MCP services."""
 
+    @pytest.mark.asyncio
     async def test_services_initialization_performance(self, mock_client_manager):
         """Test that services initialize within acceptable time limits."""
         # Test each service initialization performance
@@ -794,6 +828,7 @@ class TestMCPServicesPerformanceAndScalability:
                 f"{service_class.__name__} took {initialization_time}s to initialize"
             )
 
+    @pytest.mark.asyncio
     async def test_concurrent_service_operations_scalability(
         self, complete_mcp_services_setup
     ):
@@ -825,6 +860,7 @@ class TestMCPServicesPerformanceAndScalability:
         total_time = end_time - start_time
         assert total_time < 2.0  # Should complete within 2 seconds
 
+    @pytest.mark.asyncio
     async def test_memory_efficiency_during_operations(
         self, complete_mcp_services_setup
     ):

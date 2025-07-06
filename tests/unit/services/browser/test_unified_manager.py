@@ -53,6 +53,7 @@ async def unified_manager(mock_config):
 class TestUnifiedBrowserManagerInitialization:
     """Test initialization and cleanup of UnifiedBrowserManager."""
 
+    @pytest.mark.asyncio
     async def test_initialization_success(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -69,6 +70,7 @@ class TestUnifiedBrowserManagerInitialization:
             assert unified_manager._automation_router is mock_automation_router
             mock_client_manager.initialize.assert_awaited_once()
 
+    @pytest.mark.asyncio
     async def test_initialization_idempotent(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -84,6 +86,7 @@ class TestUnifiedBrowserManagerInitialization:
 
             mock_client_manager.initialize.assert_awaited_once()  # Only called once
 
+    @pytest.mark.asyncio
     async def test_initialization_failure(self, unified_manager, mock_client_manager):
         """Test initialization failure handling."""
         with patch("src.infrastructure.client_manager.ClientManager") as mock_cm:
@@ -95,6 +98,7 @@ class TestUnifiedBrowserManagerInitialization:
 
             assert "Failed to initialize unified browser manager" in str(exc_info.value)
 
+    @pytest.mark.asyncio
     async def test_cleanup(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -118,6 +122,7 @@ class TestUnifiedBrowserManagerInitialization:
 class TestUnifiedScrapingAPI:
     """Test the unified scraping API."""
 
+    @pytest.mark.asyncio
     async def test_scrape_with_request_object(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -176,6 +181,7 @@ class TestUnifiedScrapingAPI:
                 timeout=30000,
             )
 
+    @pytest.mark.asyncio
     async def test_scrape_with_url_parameter(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -203,6 +209,7 @@ class TestUnifiedScrapingAPI:
             assert response.success is True
             assert response.tier_used == "lightweight"
 
+    @pytest.mark.asyncio
     async def test_scrape_with_forced_tier(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -231,6 +238,7 @@ class TestUnifiedScrapingAPI:
             call_args = mock_automation_router.scrape.call_args
             assert call_args._kwargs["force_tool"] == "browser_use"
 
+    @pytest.mark.asyncio
     async def test_scrape_with_fallback(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -261,6 +269,7 @@ class TestUnifiedScrapingAPI:
             assert response.failed_tiers == ["lightweight", "crawl4ai"]
             assert response.tier_used == "playwright"
 
+    @pytest.mark.asyncio
     async def test_scrape_error_handling(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -286,6 +295,7 @@ class TestUnifiedScrapingAPI:
             assert response.tier_used == "none"
             assert response.quality_score == 0.0
 
+    @pytest.mark.asyncio
     async def test_scrape_not_initialized(self, unified_manager):
         """Test scraping when manager not initialized."""
         with pytest.raises(CrawlServiceError) as exc_info:
@@ -293,6 +303,7 @@ class TestUnifiedScrapingAPI:
 
         assert "UnifiedBrowserManager not initialized" in str(exc_info.value)
 
+    @pytest.mark.asyncio
     async def test_scrape_no_url_or_request(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -316,6 +327,7 @@ class TestUnifiedScrapingAPI:
 class TestMetricsTracking:
     """Test metrics tracking functionality."""
 
+    @pytest.mark.asyncio
     async def test_metrics_initialization(self, unified_manager):
         """Test that metrics are properly initialized."""
         assert len(unified_manager._tier_metrics) == 6
@@ -334,6 +346,7 @@ class TestMetricsTracking:
             assert metrics.successful_requests == 0
             assert metrics.failed_requests == 0
 
+    @pytest.mark.asyncio
     async def test_metrics_update_on_success(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -364,6 +377,7 @@ class TestMetricsTracking:
             assert metrics.failed_requests == 0
             assert metrics.success_rate == 1.0
 
+    @pytest.mark.asyncio
     async def test_metrics_update_on_failure(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -389,6 +403,7 @@ class TestMetricsTracking:
             assert metrics.successful_requests == 0
             assert metrics.failed_requests == 1
 
+    @pytest.mark.asyncio
     async def test_get_tier_metrics(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -437,6 +452,7 @@ class TestMetricsTracking:
             assert all_metrics["crawl4ai"]._total_requests == 1
             assert all_metrics["lightweight"]._total_requests == 1
 
+    @pytest.mark.asyncio
     async def test_average_response_time_calculation(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -471,6 +487,7 @@ class TestMetricsTracking:
 class TestURLAnalysis:
     """Test URL analysis functionality."""
 
+    @pytest.mark.asyncio
     async def test_analyze_url_success(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -497,6 +514,7 @@ class TestURLAnalysis:
             assert "estimated_time_ms" in analysis["expected_performance"]
             assert "success_rate" in analysis["expected_performance"]
 
+    @pytest.mark.asyncio
     async def test_analyze_url_error_handling(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -522,6 +540,7 @@ class TestURLAnalysis:
             assert analysis["error"] == "Analysis failed"
             assert analysis["recommended_tier"] == "crawl4ai"  # Default fallback
 
+    @pytest.mark.asyncio
     async def test_analyze_url_not_initialized(self, unified_manager):
         """Test URL analysis when manager not initialized."""
         with pytest.raises(CrawlServiceError) as exc_info:
@@ -533,6 +552,7 @@ class TestURLAnalysis:
 class TestSystemStatus:
     """Test system status reporting."""
 
+    @pytest.mark.asyncio
     async def test_get_system_status_not_initialized(self, unified_manager):
         """Test system status when not initialized."""
         status = unified_manager.get_system_status()
@@ -540,6 +560,7 @@ class TestSystemStatus:
         assert status["status"] == "not_initialized"
         assert status["error"] == "Manager not initialized"
 
+    @pytest.mark.asyncio
     async def test_get_system_status_healthy(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -567,6 +588,7 @@ class TestSystemStatus:
             assert status["tier_count"] == 2
             assert status["router_available"] is True
 
+    @pytest.mark.asyncio
     async def test_get_system_status_degraded(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -596,6 +618,7 @@ class TestSystemStatus:
 class TestQualityScoring:
     """Test content quality scoring."""
 
+    @pytest.mark.asyncio
     async def test_quality_score_calculation(self, unified_manager):
         """Test quality score calculation based on content length."""
         # Test various content lengths
@@ -616,6 +639,7 @@ class TestQualityScoring:
 class TestCustomActions:
     """Test handling of custom actions."""
 
+    @pytest.mark.asyncio
     async def test_scrape_with_custom_actions(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -661,6 +685,7 @@ class TestCustomActions:
 class TestUnifiedBrowserManagerMonitoring:
     """Test monitoring system integration with UnifiedBrowserManager."""
 
+    @pytest.mark.asyncio
     async def test_monitoring_integration(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -708,6 +733,7 @@ class TestUnifiedBrowserManagerMonitoring:
             assert call_args[1]["response_time_ms"] > 0
             assert call_args[1]["cache_hit"] is False
 
+    @pytest.mark.asyncio
     async def test_monitoring_disabled(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -750,6 +776,7 @@ class TestUnifiedBrowserManagerMonitoring:
             mock_monitor.record_request_metrics.assert_not_called()
             assert response.success is True
 
+    @pytest.mark.asyncio
     async def test_monitoring_system_health_in_status(self, unified_manager):
         """Test that monitoring health appears in system status."""
         # Enable monitoring
@@ -776,6 +803,7 @@ class TestUnifiedBrowserManagerMonitoring:
         assert status["monitoring_health"]["overall_status"] == "healthy"
         mock_monitor.get_system_health.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_monitoring_error_handling(
         self, unified_manager, mock_client_manager, mock_automation_router
     ):
@@ -819,6 +847,7 @@ class TestUnifiedBrowserManagerMonitoring:
             assert response.success is True
             mock_monitor.record_request_metrics.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_monitoring_cache_hit_tracking(self, unified_manager):
         """Test monitoring tracks cache hits correctly."""
         # Enable both caching and monitoring
@@ -855,6 +884,7 @@ class TestUnifiedBrowserManagerMonitoring:
         assert call_args[1]["success"] is True
         assert call_args[1]["cache_hit"] is True
 
+    @pytest.mark.asyncio
     async def test_monitoring_cleanup_on_manager_cleanup(self, unified_manager):
         """Test monitoring is stopped when manager is cleaned up."""
         # Enable monitoring

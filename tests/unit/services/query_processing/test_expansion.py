@@ -332,6 +332,7 @@ class TestQueryExpansionService:
         assert service_configured.enable_domain_expansion is True
         assert service_configured.cache_size == 500
 
+    @pytest.mark.asyncio
     async def test_basic_expansion(self, service):
         """Test basic query expansion."""
         request = QueryExpansionRequest(
@@ -349,6 +350,7 @@ class TestQueryExpansionService:
         assert result.processing_time_ms > 0
         assert result.cache_hit is False
 
+    @pytest.mark.asyncio
     async def test_synonym_based_expansion(self, service):
         """Test synonym-based expansion strategy."""
         request = QueryExpansionRequest(
@@ -370,6 +372,7 @@ class TestQueryExpansionService:
             function_synonyms or len(result.expanded_terms) == 0
         )  # May not find synonyms
 
+    @pytest.mark.asyncio
     async def test_semantic_based_expansion(self, service):
         """Test semantic-based expansion strategy."""
         request = QueryExpansionRequest(
@@ -389,6 +392,7 @@ class TestQueryExpansionService:
         )
         assert semantic_terms or len(result.expanded_terms) == 0
 
+    @pytest.mark.asyncio
     async def test_context_aware_expansion(self, service):
         """Test context-aware expansion strategy."""
         request = QueryExpansionRequest(
@@ -407,6 +411,7 @@ class TestQueryExpansionService:
         )
         assert context_terms or len(result.expanded_terms) == 0
 
+    @pytest.mark.asyncio
     async def test_domain_specific_expansion(self, service):
         """Test domain-specific expansion strategy."""
         request = QueryExpansionRequest(
@@ -425,6 +430,7 @@ class TestQueryExpansionService:
         )
         assert domain_terms or len(result.expanded_terms) == 0
 
+    @pytest.mark.asyncio
     async def test_hybrid_expansion(self, service):
         """Test hybrid expansion strategy."""
         request = QueryExpansionRequest(
@@ -441,6 +447,7 @@ class TestQueryExpansionService:
         # May include synonym_dictionary, semantic_model, context_analysis
         assert len(sources) >= 0  # Could be empty if no expansions found
 
+    @pytest.mark.asyncio
     async def test_learning_based_expansion(self, service):
         """Test learning-based expansion strategy."""
         # Add some feedback data
@@ -461,6 +468,7 @@ class TestQueryExpansionService:
         )
         assert learned_terms or len(result.expanded_terms) == 0
 
+    @pytest.mark.asyncio
     async def test_expansion_scopes(self, service):
         """Test different expansion scopes."""
         base_request = QueryExpansionRequest(
@@ -499,6 +507,7 @@ class TestQueryExpansionService:
         for term in moderate_result.expanded_terms:
             assert term.confidence >= 0.6
 
+    @pytest.mark.asyncio
     async def test_term_exclusion(self, service):
         """Test excluding specific terms."""
         request = QueryExpansionRequest(
@@ -515,6 +524,7 @@ class TestQueryExpansionService:
         for term in result.expanded_terms:
             assert term.term not in excluded_terms
 
+    @pytest.mark.asyncio
     async def test_max_expanded_terms_limit(self, service):
         """Test max expanded terms limit."""
         request = QueryExpansionRequest(
@@ -529,6 +539,7 @@ class TestQueryExpansionService:
         # Should not exceed max terms
         assert len(result.expanded_terms) <= 2
 
+    @pytest.mark.asyncio
     async def test_min_confidence_filtering(self, service):
         """Test minimum confidence filtering."""
         request = QueryExpansionRequest(
@@ -543,6 +554,7 @@ class TestQueryExpansionService:
         for term in result.expanded_terms:
             assert term.confidence >= 0.9
 
+    @pytest.mark.asyncio
     async def test_caching_functionality(self, service):
         """Test expansion result caching."""
         request = QueryExpansionRequest(
@@ -566,6 +578,7 @@ class TestQueryExpansionService:
         assert result1.original_query == result2.original_query
         assert result1.expansion_strategy == result2.expansion_strategy
 
+    @pytest.mark.asyncio
     async def test_cache_disabled(self, service):
         """Test expansion with caching disabled."""
         request = QueryExpansionRequest(
@@ -582,6 +595,7 @@ class TestQueryExpansionService:
         assert result2.cache_hit is False
         assert len(service.expansion_cache) == 0
 
+    @pytest.mark.asyncio
     async def test_empty_query(self, service):
         """Test expansion with empty query."""
         request = QueryExpansionRequest(
@@ -595,6 +609,7 @@ class TestQueryExpansionService:
         assert result.expanded_query == ""
         assert result.confidence_score >= 0.0
 
+    @pytest.mark.asyncio
     async def test_single_term_query(self, service):
         """Test expansion with single term query."""
         request = QueryExpansionRequest(
@@ -609,6 +624,7 @@ class TestQueryExpansionService:
         # May or may not find expansions
         assert isinstance(result.expanded_terms, list)
 
+    @pytest.mark.asyncio
     async def test_special_characters_query(self, service):
         """Test expansion with special characters in query."""
         request = QueryExpansionRequest(
@@ -622,6 +638,7 @@ class TestQueryExpansionService:
         assert isinstance(result, QueryExpansionResult)
         assert result.processing_time_ms > 0
 
+    @pytest.mark.asyncio
     async def test_error_handling(self, service):
         """Test error handling in expansion."""
         request = QueryExpansionRequest(
@@ -860,7 +877,7 @@ class TestQueryExpansionService:
         assert len(service.expansion_cache) == 0
         assert service.cache_stats == {"hits": 0, "misses": 0}
 
-    def test_disabled_semantic_expansion(self):
+    async def test_disabled_semantic_expansion(self):
         """Test service with semantic expansion disabled."""
         service = QueryExpansionService(enable_semantic_expansion=False)
 
@@ -871,10 +888,10 @@ class TestQueryExpansionService:
             strategy=ExpansionStrategy.SEMANTIC_BASED,
         )
 
-        result = asyncio.run(service._semantic_expansion(key_terms, request))
+        await service._semantic_expansion(key_terms, request
         assert result == []
 
-    def test_disabled_domain_expansion(self):
+    async def test_disabled_domain_expansion(self):
         """Test service with domain expansion disabled."""
         service = QueryExpansionService(enable_domain_expansion=False)
 
@@ -886,9 +903,10 @@ class TestQueryExpansionService:
             target_domains=["programming"],
         )
 
-        result = asyncio.run(service._domain_specific_expansion(key_terms, request))
+        await service._domain_specific_expansion(key_terms, request
         assert result == []
 
+    @pytest.mark.asyncio
     async def test_build_expanded_query_formatting(self, service):
         """Test expanded query building and formatting."""
         # Test with no expanded terms
@@ -965,6 +983,7 @@ class TestQueryExpansionService:
         assert method_term.confidence == 0.9
         assert method_term.source == "source2"
 
+    @pytest.mark.asyncio
     async def test_comprehensive_hybrid_strategy(self, service):
         """Test hybrid strategy comprehensively."""
         request = QueryExpansionRequest(

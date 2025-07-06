@@ -2,12 +2,12 @@
 
 import pytest
 from pydantic import ValidationError
-from src.config.settings import (
+from src.config import (
     ChunkingStrategy,
     FusionAlgorithm,
     SearchAccuracy,
     SearchStrategy,
-    VectorType,
+    VectorType
 )
 from src.mcp_tools.models.requests import AnalyticsRequest
 from src.mcp_tools.models.requests import BatchRequest

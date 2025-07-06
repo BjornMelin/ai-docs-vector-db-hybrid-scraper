@@ -254,6 +254,7 @@ class TestCircuitBreakerDecorator:
         config = CircuitBreakerConfig.enterprise_mode()
 
         @circuit_breaker(config)
+        @pytest.mark.asyncio
         async def test_func():
             return "test"
 
@@ -305,6 +306,7 @@ class TestConcurrentAccess:
         counter_lock = threading.Lock()
         global_counter = 0
 
+        @pytest.mark.asyncio
         async def test_func():
             nonlocal global_counter
             # Use thread-safe counter to ensure unique IDs

@@ -23,13 +23,13 @@ import pytest
 from pydantic import BaseModel, Field, ValidationError
 from pydantic_settings import BaseSettings
 
-from src.config import Config
-from src.config.settings import (
+from src.config import (
+    Config,
     Settings,
     create_settings_from_env,
     get_settings,
     reset_settings,
-    set_settings,
+    set_settings
 )
 
 

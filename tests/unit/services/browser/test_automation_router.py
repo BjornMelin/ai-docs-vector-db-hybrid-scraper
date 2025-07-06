@@ -5,7 +5,12 @@ from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
 
-from src.config import BrowserUseConfig, Config, Crawl4AIConfig, PlaywrightConfig
+from src.config import (
+    BrowserUseConfig,
+    Config,
+    Crawl4AIConfig,
+    PlaywrightConfig
+)
 from src.services.browser.automation_router import AutomationRouter
 from src.services.errors import CrawlServiceError
 
@@ -123,6 +128,7 @@ class TestAutomationRouterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIAdapter")
+    @pytest.mark.asyncio
     async def test_initialize_crawl4ai_success(self, mock_adapter_class, router):
         """Test successful Crawl4AI adapter initialization."""
         mock_adapter = AsyncMock()
@@ -138,6 +144,7 @@ class TestAutomationRouterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.browser_use_adapter.BrowserUseAdapter")
+    @pytest.mark.asyncio
     async def test_initialize_browser_use_success(self, mock_adapter_class, router):
         """Test successful BrowserUse adapter initialization."""
         mock_adapter = AsyncMock()
@@ -152,6 +159,7 @@ class TestAutomationRouterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PlaywrightAdapter")
+    @pytest.mark.asyncio
     async def test_initialize_playwright_success(self, mock_adapter_class, router):
         """Test successful Playwright adapter initialization."""
         mock_adapter = AsyncMock()
@@ -495,6 +503,7 @@ class TestAutomationRouterScraping:
 class TestToolSelection:
     """Test tool selection logic."""
 
+    @pytest.mark.asyncio
     async def test_select_tool_routing_rules(self, router):
         """Test tool selection based on routing rules."""
         router.routing_rules = {
@@ -511,6 +520,7 @@ class TestToolSelection:
         tool = await router._select_tool("https://github.com/user/repo", False, None)
         assert tool == "playwright"
 
+    @pytest.mark.asyncio
     async def test_select_tool_interaction_required(self, router):
         """Test tool selection when interaction is required."""
         router._adapters = {"browser_use": MagicMock(), "playwright": MagicMock()}
@@ -519,6 +529,7 @@ class TestToolSelection:
         tool = await router._select_tool("https://example.com", True, None)
         assert tool == "browser_use"
 
+    @pytest.mark.asyncio
     async def test_select_tool_custom_actions(self, router):
         """Test tool selection with custom actions."""
         router._adapters = {"browser_use": MagicMock(), "playwright": MagicMock()}
@@ -527,6 +538,7 @@ class TestToolSelection:
         tool = await router._select_tool("https://example.com", False, actions)
         assert tool == "browser_use"
 
+    @pytest.mark.asyncio
     async def test_select_tool_spa_patterns(self, router):
         """Test tool selection for SPA patterns."""
         router._adapters = {"browser_use": MagicMock(), "crawl4ai": MagicMock()}
@@ -535,6 +547,7 @@ class TestToolSelection:
         tool = await router._select_tool("https://example.com/spa/app", False, None)
         assert tool == "browser_use"
 
+    @pytest.mark.asyncio
     async def test_select_tool_default_crawl4ai(self, router):
         """Test default tool selection when crawl4ai available."""
         router._adapters = {"crawl4ai": MagicMock()}
@@ -542,6 +555,7 @@ class TestToolSelection:
         tool = await router._select_tool("https://example.com", False, None)
         assert tool == "crawl4ai"
 
+    @pytest.mark.asyncio
     async def test_select_tool_default_playwright(self, router):
         """Test default tool selection when only playwright available."""
         router._adapters = {"playwright": MagicMock()}
@@ -549,6 +563,7 @@ class TestToolSelection:
         tool = await router._select_tool("https://example.com", False, None)
         assert tool == "playwright"
 
+    @pytest.mark.asyncio
     async def test_select_tool_default_browser_use(self, router):
         """Test default tool selection when only browser_use available."""
         router._adapters = {"browser_use": MagicMock()}
@@ -658,6 +673,7 @@ class TestMetrics:
         assert crawl4ai_metrics["_total_attempts"] == 2
         assert crawl4ai_metrics["available"] is False  # No adapters in this test
 
+    @pytest.mark.asyncio
     async def test_get_recommended_tool(self, router):
         """Test tool recommendation based on metrics."""
         # Setup adapters

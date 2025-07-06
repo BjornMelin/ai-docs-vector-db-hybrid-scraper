@@ -72,6 +72,7 @@ class TestMCPEdgeCases:
 
     # Input Validation Edge Cases
 
+    @pytest.mark.asyncio
     async def test_empty_string_inputs(self, edge_case_server):
         """Test handling of empty string inputs."""
         mcp_server, mock_client_manager = edge_case_server
@@ -88,6 +89,7 @@ class TestMCPEdgeCases:
         with pytest.raises(ValidationError):
             DocumentRequest(url="", collection="docs")
 
+    @pytest.mark.asyncio
     async def test_extremely_long_inputs(self, edge_case_server):
         """Test handling of extremely long input strings."""
         mcp_server, mock_client_manager = edge_case_server
@@ -118,6 +120,7 @@ class TestMCPEdgeCases:
             error_msg = str(e).lower()
             assert "too long" in error_msg or "size" in error_msg
 
+    @pytest.mark.asyncio
     async def test_special_characters_in_inputs(self, edge_case_server):
         """Test handling of special characters and Unicode."""
         mcp_server, mock_client_manager = edge_case_server
@@ -152,6 +155,7 @@ class TestMCPEdgeCases:
             # Should handle all special characters safely
             assert isinstance(result, list)
 
+    @pytest.mark.asyncio
     async def test_boundary_value_limits(self, edge_case_server):
         """Test boundary values for numeric parameters."""
         mcp_server, mock_client_manager = edge_case_server
@@ -179,6 +183,7 @@ class TestMCPEdgeCases:
 
     # Service Failure Scenarios
 
+    @pytest.mark.asyncio
     async def test_vector_service_connection_failure(self, edge_case_server):
         """Test handling when vector database is unavailable."""
         mcp_server, mock_client_manager = edge_case_server
@@ -201,6 +206,7 @@ class TestMCPEdgeCases:
                 limit=5,
             )
 
+    @pytest.mark.asyncio
     async def test_embedding_service_timeout(self, edge_case_server):
         """Test handling of embedding service timeouts."""
         mcp_server, mock_client_manager = edge_case_server
@@ -225,6 +231,7 @@ class TestMCPEdgeCases:
                 timeout=1.0,  # Short timeout
             )
 
+    @pytest.mark.asyncio
     async def test_crawling_service_failure(self, edge_case_server):
         """Test handling of crawling service failures."""
         mcp_server, mock_client_manager = edge_case_server
@@ -254,6 +261,7 @@ class TestMCPEdgeCases:
 
     # Resource Exhaustion Scenarios
 
+    @pytest.mark.asyncio
     async def test_memory_exhaustion_handling(self, edge_case_server):
         """Test handling when approaching memory limits."""
         mcp_server, mock_client_manager = edge_case_server
@@ -275,6 +283,7 @@ class TestMCPEdgeCases:
         with pytest.raises(MemoryError):
             await embedding_tool.handler(texts=huge_text_list)
 
+    @pytest.mark.asyncio
     async def test_rate_limiting_scenarios(self, edge_case_server):
         """Test handling of rate limiting from external services."""
         mcp_server, mock_client_manager = edge_case_server
@@ -317,6 +326,7 @@ class TestMCPEdgeCases:
 
     # Malformed Request Scenarios
 
+    @pytest.mark.asyncio
     async def test_malformed_json_rpc_requests(self):
         """Test handling of malformed JSON-RPC requests."""
         # Test missing required fields
@@ -347,6 +357,7 @@ class TestMCPEdgeCases:
                 )
             )
 
+    @pytest.mark.asyncio
     async def test_invalid_tool_names(self, edge_case_server):
         """Test handling of requests for non-existent tools."""
         mcp_server, mock_client_manager = edge_case_server
@@ -360,6 +371,7 @@ class TestMCPEdgeCases:
 
         assert non_existent_tool is None, "Non-existent tool should not be found"
 
+    @pytest.mark.asyncio
     async def test_missing_required_parameters(self, edge_case_server):
         """Test handling of missing required parameters."""
         mcp_server, mock_client_manager = edge_case_server
@@ -376,6 +388,7 @@ class TestMCPEdgeCases:
 
     # Concurrent Error Scenarios
 
+    @pytest.mark.asyncio
     async def test_concurrent_service_failures(self, edge_case_server):
         """Test handling of multiple concurrent service failures."""
         mcp_server, mock_client_manager = edge_case_server
@@ -418,6 +431,7 @@ class TestMCPEdgeCases:
 
     # Recovery and Retry Scenarios
 
+    @pytest.mark.asyncio
     async def test_service_recovery_after_failure(self, edge_case_server):
         """Test that services can recover after transient failures."""
         mcp_server, mock_client_manager = edge_case_server
@@ -461,6 +475,7 @@ class TestMCPEdgeCases:
 
     # Security Edge Cases
 
+    @pytest.mark.asyncio
     async def test_path_traversal_prevention(self, edge_case_server):
         """Test prevention of path traversal attacks."""
         mcp_server, mock_client_manager = edge_case_server
@@ -493,6 +508,7 @@ class TestMCPEdgeCases:
                     collection="docs",
                 )
 
+    @pytest.mark.asyncio
     async def test_injection_attack_prevention(self, edge_case_server):
         """Test prevention of injection attacks."""
         mcp_server, mock_client_manager = edge_case_server
@@ -526,6 +542,7 @@ class TestMCPEdgeCases:
 
     # Data Corruption Scenarios
 
+    @pytest.mark.asyncio
     async def test_corrupted_response_handling(self, edge_case_server):
         """Test handling of corrupted service responses."""
         mcp_server, mock_client_manager = edge_case_server
@@ -561,6 +578,7 @@ class TestMCPEdgeCases:
                 error_msg = str(e).lower()
                 assert "invalid" in error_msg or "corrupt" in error_msg
 
+    @pytest.mark.asyncio
     async def test_partial_failure_handling(self, edge_case_server):
         """Test handling when some operations succeed and others fail."""
         mcp_server, mock_client_manager = edge_case_server
@@ -599,6 +617,7 @@ class TestMCPEdgeCases:
 
     # State Consistency Edge Cases
 
+    @pytest.mark.asyncio
     async def test_state_consistency_after_errors(self, edge_case_server):
         """Test that server state remains consistent after errors."""
         mcp_server, mock_client_manager = edge_case_server

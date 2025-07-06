@@ -78,6 +78,7 @@ class TestRAGPipelineIntegration:
         return components
 
     @integration_test
+    @pytest.mark.asyncio
     async def test_end_to_end_rag_query_processing(
         self, mock_services, mock_rag_components, test_documents
     ):
@@ -130,6 +131,7 @@ class TestRAGPipelineIntegration:
         text_generator.generate_response.assert_called_once()
 
     @integration_test
+    @pytest.mark.asyncio
     async def test_document_ingestion_pipeline(
         self, mock_services, mock_rag_components, test_documents
     ):
@@ -178,6 +180,7 @@ class TestRAGPipelineIntegration:
         vector_db.upsert_documents.assert_called_once()
 
     @integration_test
+    @pytest.mark.asyncio
     async def test_rag_pipeline_error_handling(
         self, mock_services, mock_rag_components
     ):
@@ -222,6 +225,7 @@ class TestRAGPipelineIntegration:
             )
 
     @integration_test
+    @pytest.mark.asyncio
     async def test_rag_pipeline_with_different_query_types(
         self, mock_services, mock_rag_components
     ):
@@ -264,6 +268,7 @@ class TestRAGPipelineIntegration:
             assert response["sources_used"] >= 0
 
     @integration_test
+    @pytest.mark.asyncio
     async def test_rag_pipeline_performance_integration(
         self, mock_services, mock_rag_components
     ):
@@ -297,6 +302,7 @@ class TestRAGPipelineIntegration:
         assert text_generator.generate_response.call_count >= 1
 
     @integration_test
+    @pytest.mark.asyncio
     async def test_concurrent_rag_requests(self, mock_services, mock_rag_components):
         """Test RAG pipeline under concurrent load."""
         embedding_manager = mock_rag_components["embedding_manager"]

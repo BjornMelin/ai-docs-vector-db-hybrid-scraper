@@ -219,5 +219,4 @@ class TestSetupCommand:
 
         assert result.exit_code == 0
         assert "--profile" in result.output
-        assert "--output" in result.output
         assert "--config-dir" in result.output

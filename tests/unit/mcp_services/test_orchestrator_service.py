@@ -72,6 +72,7 @@ class TestOrchestratorService:
         assert service.system_service is None
         assert service.agentic_orchestrator is None
 
+    @pytest.mark.asyncio
     async def test_initialize_with_client_manager(self, mock_client_manager):
         """Test service initialization with client manager."""
         service = OrchestratorService()
@@ -94,6 +95,7 @@ class TestOrchestratorService:
             mock_agentic_init.assert_called_once()
             mock_register.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_initialize_logs_success_message(self, mock_client_manager, caplog):
         """Test that initialization logs success message with multi-service coordination."""
         service = OrchestratorService()
@@ -121,6 +123,7 @@ class TestOrchestratorService:
 class TestOrchestratorServiceDomainServicesInitialization:
     """Test OrchestratorService domain services initialization."""
 
+    @pytest.mark.asyncio
     async def test_initialize_domain_services_raises_error_when_not_initialized(self):
         """Test that domain services initialization raises error when service not initialized."""
         service = OrchestratorService()
@@ -128,6 +131,7 @@ class TestOrchestratorServiceDomainServicesInitialization:
         with pytest.raises(RuntimeError, match="OrchestratorService not initialized"):
             await service._initialize_domain_services()
 
+    @pytest.mark.asyncio
     async def test_initialize_domain_services_creates_all_services(
         self, mock_client_manager
     ):
@@ -173,6 +177,7 @@ class TestOrchestratorServiceDomainServicesInitialization:
             )
             mock_system_service.initialize.assert_called_once_with(mock_client_manager)
 
+    @pytest.mark.asyncio
     async def test_initialize_domain_services_handles_service_initialization_failures(
         self, mock_client_manager, caplog
     ):
@@ -213,6 +218,7 @@ class TestOrchestratorServiceDomainServicesInitialization:
             assert service.analytics_service == mock_analytics_service
             assert service.system_service == mock_system_service
 
+    @pytest.mark.asyncio
     async def test_initialize_domain_services_logs_individual_service_success(
         self, mock_client_manager, caplog
     ):
@@ -247,6 +253,7 @@ class TestOrchestratorServiceDomainServicesInitialization:
 class TestOrchestratorServiceAgenticOrchestration:
     """Test OrchestratorService agentic orchestration initialization."""
 
+    @pytest.mark.asyncio
     async def test_initialize_agentic_orchestration_without_client_manager(self):
         """Test that agentic orchestration returns early without client manager."""
         service = OrchestratorService()
@@ -256,6 +263,7 @@ class TestOrchestratorServiceAgenticOrchestration:
 
         assert service.agentic_orchestrator is None
 
+    @pytest.mark.asyncio
     async def test_initialize_agentic_orchestration_creates_components(
         self, mock_client_manager, mock_agentic_orchestrator, mock_discovery_engine
     ):
@@ -278,6 +286,7 @@ class TestOrchestratorServiceAgenticOrchestration:
             mock_agentic_orchestrator.initialize.assert_called_once()
             mock_discovery_engine.initialize_discovery.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_initialize_agentic_orchestration_logs_success_message(
         self, mock_client_manager, caplog
     ):
@@ -304,6 +313,7 @@ class TestOrchestratorServiceAgenticOrchestration:
 class TestOrchestratorServiceToolRegistration:
     """Test OrchestratorService orchestrator tools registration."""
 
+    @pytest.mark.asyncio
     async def test_register_orchestrator_tools_raises_error_when_not_initialized(self):
         """Test that tool registration raises error when service not initialized."""
         service = OrchestratorService()
@@ -311,6 +321,7 @@ class TestOrchestratorServiceToolRegistration:
         with pytest.raises(RuntimeError, match="OrchestratorService not initialized"):
             await service._register_orchestrator_tools()
 
+    @pytest.mark.asyncio
     async def test_register_orchestrator_tools_creates_mcp_tools(
         self, mock_client_manager
     ):
@@ -339,6 +350,7 @@ class TestOrchestratorServiceToolRegistration:
         for tool_name in expected_tools:
             assert tool_name in registered_tools
 
+    @pytest.mark.asyncio
     async def test_orchestrate_multi_service_workflow_tool_with_agentic_orchestrator(
         self, mock_client_manager, mock_agentic_orchestrator
     ):
@@ -392,6 +404,7 @@ class TestOrchestratorServiceToolRegistration:
         assert "execution_time_ms" in result
         assert "confidence" in result
 
+    @pytest.mark.asyncio
     async def test_orchestrate_multi_service_workflow_tool_without_agentic_orchestrator(
         self, mock_client_manager
     ):
@@ -424,6 +437,7 @@ class TestOrchestratorServiceToolRegistration:
         assert "error" in result
         assert result["error"] == "Agentic orchestrator not initialized"
 
+    @pytest.mark.asyncio
     async def test_get_service_capabilities_tool(
         self, mock_client_manager, initialized_mock_services
     ):
@@ -467,6 +481,7 @@ class TestOrchestratorServiceToolRegistration:
             assert services[service_name]["service"] == service_name
             assert services[service_name]["status"] == "active"
 
+    @pytest.mark.asyncio
     async def test_get_service_capabilities_tool_handles_service_errors(
         self, mock_client_manager
     ):
@@ -511,6 +526,7 @@ class TestOrchestratorServiceToolRegistration:
         assert "Service error" in services["search"]["error"]
         assert services["document"]["status"] == "not_initialized"
 
+    @pytest.mark.asyncio
     async def test_optimize_service_performance_tool(
         self, mock_client_manager, mock_discovery_engine
     ):
@@ -547,6 +563,7 @@ class TestOrchestratorServiceToolRegistration:
         assert "recommendations" in result
         assert "performance_impact" in result
 
+    @pytest.mark.asyncio
     async def test_optimize_service_performance_tool_without_discovery_engine(
         self, mock_client_manager
     ):
@@ -579,6 +596,7 @@ class TestOrchestratorServiceToolRegistration:
         assert "error" in result
         assert result["error"] == "Discovery engine not available"
 
+    @pytest.mark.asyncio
     async def test_register_orchestrator_tools_logs_success_message(
         self, mock_client_manager, caplog
     ):
@@ -607,6 +625,7 @@ class TestOrchestratorServiceServiceInfo:
         assert mcp_server == service.mcp
         assert mcp_server.name == "test-service"
 
+    @pytest.mark.asyncio
     async def test_get_service_info_returns_comprehensive_metadata(self):
         """Test that service info contains all expected metadata and capabilities."""
         service = OrchestratorService()
@@ -648,6 +667,7 @@ class TestOrchestratorServiceServiceInfo:
         ]
         assert service_info["coordinated_services"] == expected_coordinated_services
 
+    @pytest.mark.asyncio
     async def test_get_all_services_returns_service_information(
         self, initialized_mock_services
     ):
@@ -668,6 +688,7 @@ class TestOrchestratorServiceServiceInfo:
             assert result[service_name]["service"] == service_name
             assert result[service_name]["status"] == "active"
 
+    @pytest.mark.asyncio
     async def test_get_all_services_handles_service_errors(self):
         """Test that get_all_services handles service errors gracefully."""
         service = OrchestratorService()
@@ -694,6 +715,7 @@ class TestOrchestratorServiceServiceInfo:
 class TestOrchestratorServiceErrorHandling:
     """Test OrchestratorService error handling and recovery scenarios."""
 
+    @pytest.mark.asyncio
     async def test_initialization_with_none_client_manager_raises_error(self):
         """Test that domain services initialization with None client manager raises error."""
         service = OrchestratorService()
@@ -705,6 +727,7 @@ class TestOrchestratorServiceErrorHandling:
         with pytest.raises(RuntimeError, match="OrchestratorService not initialized"):
             await service._initialize_domain_services()
 
+    @pytest.mark.asyncio
     async def test_get_service_info_works_without_initialization(self):
         """Test that get_service_info works even without full initialization."""
         service = OrchestratorService()
@@ -715,6 +738,7 @@ class TestOrchestratorServiceErrorHandling:
         assert service_info["service"] == "orchestrator"
         assert service_info["status"] == "active"
 
+    @pytest.mark.asyncio
     async def test_multiple_initialization_calls_are_safe(self, mock_client_manager):
         """Test that multiple initialization calls are handled safely."""
         service = OrchestratorService()
@@ -747,6 +771,7 @@ class TestOrchestratorServiceErrorHandling:
             assert second_agentic_calls >= first_agentic_calls
             assert second_register_calls >= first_register_calls
 
+    @pytest.mark.asyncio
     async def test_service_handles_partial_service_initialization_failures(
         self, mock_client_manager, caplog
     ):
@@ -783,6 +808,7 @@ class TestOrchestratorServiceErrorHandling:
 class TestOrchestratorServicePerformanceAndIntegration:
     """Test OrchestratorService performance characteristics and integration scenarios."""
 
+    @pytest.mark.asyncio
     async def test_service_initialization_is_efficient(self, mock_client_manager):
         """Test that service initialization is efficient and doesn't block."""
 
@@ -808,6 +834,7 @@ class TestOrchestratorServicePerformanceAndIntegration:
         # Initialization should be fast (< 2 seconds for orchestrator)
         assert end_time - start_time < 2.0
 
+    @pytest.mark.asyncio
     async def test_service_supports_concurrent_access(self, mock_client_manager):
         """Test that service supports concurrent access patterns."""
 
@@ -838,6 +865,7 @@ class TestOrchestratorServicePerformanceAndIntegration:
                 assert not isinstance(result, Exception)
                 assert result["service"] == "orchestrator"
 
+    @pytest.mark.asyncio
     async def test_comprehensive_capability_reporting(self):
         """Test comprehensive capability reporting for service discovery."""
         service = OrchestratorService()
@@ -856,6 +884,7 @@ class TestOrchestratorServicePerformanceAndIntegration:
         assert "version" in service_info
         assert "research_basis" in service_info
 
+    @pytest.mark.asyncio
     async def test_fastmcp_2_0_server_composition_integration(self):
         """Test FastMCP 2.0+ server composition integration."""
         service = OrchestratorService()

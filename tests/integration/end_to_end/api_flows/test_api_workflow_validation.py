@@ -264,6 +264,7 @@ class TestAPIWorkflowValidation:
 
         return MockAPIClient()
 
+    @pytest.mark.asyncio
     async def test_authentication_workflow(self, mock_api_client, journey_data_manager):
         """Test complete authentication workflow."""
         auth_steps = []
@@ -352,6 +353,7 @@ class TestAPIWorkflowValidation:
             f"Authentication took too long: {_total_duration}s"
         )
 
+    @pytest.mark.asyncio
     async def test_document_management_workflow(
         self, mock_api_client, journey_data_manager
     ):
@@ -503,6 +505,7 @@ class TestAPIWorkflowValidation:
             f"Document management took too long: {_total_duration}s"
         )
 
+    @pytest.mark.asyncio
     async def test_search_workflow(self, mock_api_client, journey_data_manager):
         """Test complete search workflow."""
         search_steps = []
@@ -643,6 +646,7 @@ class TestAPIWorkflowValidation:
             f"Search workflow took too long: {_total_duration}s"
         )
 
+    @pytest.mark.asyncio
     async def test_error_handling_workflow(self, mock_api_client, journey_data_manager):
         """Test API error handling and recovery workflows."""
         error_handling_steps = []
@@ -826,6 +830,7 @@ class TestAPIWorkflowValidation:
             )
 
     @pytest.mark.performance
+    @pytest.mark.asyncio
     async def test_api_performance_workflow(
         self, mock_api_client, journey_data_manager
     ):
@@ -1010,6 +1015,7 @@ class TestAPIWorkflowValidation:
                     f"Throughput too low: {step['throughput_rps']:.2f} RPS"
                 )
 
+    @pytest.mark.asyncio
     async def test_complete_api_integration_workflow(
         self, mock_api_client, journey_data_manager
     ):

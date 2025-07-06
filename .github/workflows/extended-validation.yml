@@ -47,6 +47,7 @@ jobs:
     name: Performance Benchmarks
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule' || github.event.inputs.run-performance == 'true' || contains(github.event.pull_request.labels.*.name, 'performance')
+    timeout-minutes: 30
     
     strategy:
       matrix:
@@ -69,35 +70,32 @@ jobs:
         run: |
           uv pip install pytest-benchmark matplotlib pandas
 
+      - name: Setup benchmark environment
+        run: |
+          # Create necessary directories for benchmarks
+          mkdir -p tests/fixtures/{cache,data,logs,vectors,embeddings}
+          mkdir -p tests/benchmarks/{cache,data,logs,.benchmarks}
+          mkdir -p logs cache data
+          
+          # Set environment variables for CI
+          echo "CI=true" >> $GITHUB_ENV
+          echo "TESTING=true" >> $GITHUB_ENV
+          echo "SKIP_BROWSER_TESTS=1" >> $GITHUB_ENV
+          echo "SKIP_DOCKER_TESTS=1" >> $GITHUB_ENV
+
       - name: Run performance benchmarks
         run: |
           echo "⚡ Running ${{ matrix.benchmark-suite }} performance benchmarks..."
           
-          case "${{ matrix.benchmark-suite }}" in
-            "config")
-              BENCHMARK_PATH="tests/benchmarks/test_config_performance.py"
-              OUTPUT_FILE="config_benchmark_results.json"
-              ;;
-            "core")
-              BENCHMARK_PATH="tests/benchmarks"
-              OUTPUT_FILE="core_benchmark_results.json"
-              ;;
-            "integration")
-              BENCHMARK_PATH="tests/performance"
-              OUTPUT_FILE="integration_benchmark_results.json"
-              ;;
-          esac
+          # Use the benchmark runner script for better control and error handling
+          uv run python scripts/run_benchmarks.py \
+            --suite="${{ matrix.benchmark-suite }}" \
+            --output-dir="."
           
-          if [ -d "$BENCHMARK_PATH" ] || [ -f "$BENCHMARK_PATH" ]; then
-            uv run pytest "$BENCHMARK_PATH" \
-              --benchmark-only \
-              --benchmark-json="$OUTPUT_FILE" \
-              --benchmark-verbose \
-              --benchmark-min-rounds=3 \
-              --benchmark-max-time=300
-          else
-            echo "No benchmarks found for ${{ matrix.benchmark-suite }}"
-            echo '{}' > "$OUTPUT_FILE"
+          # Ensure output file exists even on failure
+          OUTPUT_FILE="${{ matrix.benchmark-suite }}_benchmark_results.json"
+          if [ ! -f "$OUTPUT_FILE" ]; then
+            echo '{"benchmarks": [], "error": "No results generated"}' > "$OUTPUT_FILE"
           fi
 
       - name: Generate performance report

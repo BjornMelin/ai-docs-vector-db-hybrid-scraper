@@ -545,9 +545,7 @@ class TestFilterComposer:
         )
         criteria["execution_strategy"] = "parallel"
 
-        start_time = asyncio.get_event_loop().time()
         result = await composer.apply(criteria)
-        end_time = asyncio.get_event_loop().time()
 
         # Should execute in parallel (faster than sequential)
         execution_time = end_time - start_time

@@ -83,6 +83,7 @@ async def enhanced_router_with_rate_limiting(mock_config, mock_adapters):
 class TestEnhancedRouterRateLimiting:
     """Test EnhancedAutomationRouter rate limiting functionality."""
 
+    @pytest.mark.asyncio
     async def test_rate_limiting_blocks_excessive_requests(
         self, enhanced_router_with_rate_limiting
     ):
@@ -111,6 +112,7 @@ class TestEnhancedRouterRateLimiting:
         # (depends on fallback configuration)
         assert len(results) == 5
 
+    @pytest.mark.asyncio
     async def test_rate_limiting_fallback_behavior(
         self, enhanced_router_with_rate_limiting
     ):
@@ -137,6 +139,7 @@ class TestEnhancedRouterRateLimiting:
         # Check that playwright was called (fallback)
         router._try_playwright.assert_called()
 
+    @pytest.mark.asyncio
     async def test_rate_limiting_with_circuit_breaker(
         self, enhanced_router_with_rate_limiting
     ):
@@ -162,6 +165,7 @@ class TestEnhancedRouterRateLimiting:
         status = router.rate_limiter.get_status("crawl4ai")
         assert status["recent_requests"] == 3
 
+    @pytest.mark.asyncio
     async def test_concurrent_rate_limiting(self, enhanced_router_with_rate_limiting):
         """Test rate limiting with concurrent requests."""
         router = enhanced_router_with_rate_limiting
@@ -191,6 +195,7 @@ class TestEnhancedRouterRateLimiting:
         successes = sum(1 for r in results if isinstance(r, dict) and r.get("success"))
         assert successes >= 3  # At least concurrent limit
 
+    @pytest.mark.asyncio
     async def test_rate_limit_status_in_performance_report(
         self, enhanced_router_with_rate_limiting
     ):
@@ -216,6 +221,7 @@ class TestEnhancedRouterRateLimiting:
         lightweight_status = rate_status["tiers"]["lightweight"]
         assert lightweight_status["recent_requests"] == 2
 
+    @pytest.mark.asyncio
     async def test_rate_limit_reset_functionality(
         self, enhanced_router_with_rate_limiting
     ):
@@ -244,6 +250,7 @@ class TestEnhancedRouterRateLimiting:
         result = await router.scrape(url, force_tool="browser_use")
         assert result["success"] is True
 
+    @pytest.mark.asyncio
     async def test_different_tier_rate_limits(self, enhanced_router_with_rate_limiting):
         """Test that different tiers have independent rate limits."""
         router = enhanced_router_with_rate_limiting
@@ -266,6 +273,7 @@ class TestEnhancedRouterRateLimiting:
         status = router.rate_limiter.get_status("lightweight")
         assert status["remaining_capacity"] > 0
 
+    @pytest.mark.asyncio
     async def test_rate_limit_context_timeout(self, enhanced_router_with_rate_limiting):
         """Test rate limit context with timeout."""
         router = enhanced_router_with_rate_limiting
@@ -286,6 +294,7 @@ class TestEnhancedRouterRateLimiting:
         # Should have used fallback due to rate limit
         assert "fallback_from" in result or result.get("tier_used") != "browser_use"
 
+    @pytest.mark.asyncio
     async def test_rate_limiter_metrics_tracking(
         self, enhanced_router_with_rate_limiting
     ):
@@ -306,6 +315,7 @@ class TestEnhancedRouterRateLimiting:
         assert "remaining_capacity" in status
 
     @patch("src.services.browser.enhanced_router.logger")
+    @pytest.mark.asyncio
     async def test_rate_limit_logging(
         self, mock_logger, enhanced_router_with_rate_limiting
     ):

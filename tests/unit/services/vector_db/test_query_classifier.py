@@ -8,7 +8,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.config import Config, QueryComplexity, QueryType
+from src.config import (
+    Config,
+    QueryComplexity,
+    QueryType
+)
 from src.models.vector_search import QueryClassification, QueryFeatures
 from src.services.vector_db.query_classifier import QueryClassifier
 
@@ -79,6 +83,7 @@ class TestQueryClassifier:
             ("Benefits of microservices architecture", QueryType.CONCEPTUAL),
         ],
     )
+    @pytest.mark.asyncio
     async def test_query_type_classification(self, classifier, query, expected_type):
         """Test query type classification for various query types."""
         result = await classifier.classify_query(query)
@@ -125,6 +130,7 @@ class TestQueryClassifier:
             ),
         ],
     )
+    @pytest.mark.asyncio
     async def test_complexity_assessment(self, classifier, query, expected_complexity):
         """Test query complexity assessment."""
         result = await classifier.classify_query(query)
@@ -151,6 +157,7 @@ class TestQueryClassifier:
             ),  # ML classifies as data_science
         ],
     )
+    @pytest.mark.asyncio
     async def test_domain_detection(self, classifier, query, expected_domain):
         """Test domain detection."""
         result = await classifier.classify_query(query)
@@ -175,6 +182,7 @@ class TestQueryClassifier:
             ("General programming concepts", None),
         ],
     )
+    @pytest.mark.asyncio
     async def test_programming_language_detection(
         self, classifier, query, expected_language
     ):
@@ -183,6 +191,7 @@ class TestQueryClassifier:
 
         assert result.programming_language == expected_language
 
+    @pytest.mark.asyncio
     async def test_feature_extraction_basic(self, classifier):
         """Test basic feature extraction."""
         query = "How to implement async functions in Python with error handling?"
@@ -196,6 +205,7 @@ class TestQueryClassifier:
         assert features.semantic_complexity >= 0  # Can be 0.0 for some queries
         assert features.keyword_density > 0
 
+    @pytest.mark.asyncio
     async def test_feature_extraction_code_syntax(self, classifier):
         """Test feature extraction for code syntax."""
         query = "def calculate_sum(a, b): return a + b"
@@ -205,6 +215,7 @@ class TestQueryClassifier:
         assert features.has_function_names is False  # No parentheses without arguments
         # Code keywords may not be detected for pure syntax, focus on programming_syntax
 
+    @pytest.mark.asyncio
     async def test_feature_extraction_function_calls(self, classifier):
         """Test feature extraction for function calls."""
         query = "How to use print() and len() functions?"
@@ -212,6 +223,7 @@ class TestQueryClassifier:
 
         assert features.has_function_names is True
 
+    @pytest.mark.asyncio
     async def test_question_type_identification(self, classifier):
         """Test question type identification."""
         test_cases = [
@@ -234,6 +246,7 @@ class TestQueryClassifier:
             question_type = classifier._identify_question_type(query.lower())
             assert question_type == expected_type
 
+    @pytest.mark.asyncio
     async def test_technical_depth_assessment(self, classifier):
         """Test technical depth assessment."""
         # Advanced query
@@ -259,6 +272,7 @@ class TestQueryClassifier:
         )
         assert medium_depth == "basic"  # ML classifies as basic rather than medium
 
+    @pytest.mark.asyncio
     async def test_entity_extraction(self, classifier):
         """Test entity extraction."""
         query = 'Use "pandas" library with `DataFrame` and call process()'
@@ -268,6 +282,7 @@ class TestQueryClassifier:
         assert "dataframe" in entities
         assert "process" in entities
 
+    @pytest.mark.asyncio
     async def test_semantic_complexity_calculation(self, classifier):
         """Test semantic complexity calculation."""
         # High complexity query
@@ -288,6 +303,7 @@ class TestQueryClassifier:
 
         assert high_score > low_score
 
+    @pytest.mark.asyncio
     async def test_keyword_density_calculation(self, classifier):
         """Test keyword density calculation."""
         # High density query
@@ -306,6 +322,7 @@ class TestQueryClassifier:
 
         assert high_density > low_density
 
+    @pytest.mark.asyncio
     async def test_confidence_calculation(self, classifier):
         """Test confidence score calculation."""
         # High confidence query (clear programming syntax)
@@ -317,6 +334,7 @@ class TestQueryClassifier:
 
         assert confidence > 0.7
 
+    @pytest.mark.asyncio
     async def test_multimodal_detection(self, classifier):
         """Test multimodal detection."""
         multimodal_queries = [
@@ -342,6 +360,7 @@ class TestQueryClassifier:
             is_multimodal = classifier._detect_multimodal(query, features)
             assert is_multimodal is False
 
+    @pytest.mark.asyncio
     async def test_empty_query_handling(self, classifier):
         """Test handling of empty or very short queries."""
         result = await classifier.classify_query("")
@@ -350,6 +369,7 @@ class TestQueryClassifier:
         assert result.query_type == QueryType.CONCEPTUAL  # Default fallback
         assert result.confidence > 0
 
+    @pytest.mark.asyncio
     async def test_very_long_query_handling(self, classifier):
         """Test handling of very long queries."""
         long_query = " ".join(["word"] * 100)  # 100-word query
@@ -358,6 +378,7 @@ class TestQueryClassifier:
         assert isinstance(result, QueryClassification)
         assert result.confidence > 0
 
+    @pytest.mark.asyncio
     async def test_special_characters_handling(self, classifier):
         """Test handling of queries with special characters."""
         special_query = "How to use @decorator and #include <stdio.h> in code?"
@@ -366,6 +387,7 @@ class TestQueryClassifier:
         assert isinstance(result, QueryClassification)
         assert result.query_type == QueryType.CODE
 
+    @pytest.mark.asyncio
     async def test_mixed_language_query(self, classifier):
         """Test handling of queries mentioning multiple programming languages."""
         mixed_query = "Compare Python and JavaScript async patterns"
@@ -374,6 +396,7 @@ class TestQueryClassifier:
         assert isinstance(result, QueryClassification)
         assert result.programming_language in ["python", "javascript"]
 
+    @pytest.mark.asyncio
     async def test_classification_with_context(self, classifier):
         """Test classification with additional context."""
         query = "How to debug this issue?"
@@ -384,6 +407,7 @@ class TestQueryClassifier:
         assert isinstance(result, QueryClassification)
         assert result.query_type == QueryType.TROUBLESHOOTING
 
+    @pytest.mark.asyncio
     async def test_error_handling_in_classification(self, classifier):
         """Test error handling during classification."""
         # Mock an error in feature extraction
@@ -398,6 +422,7 @@ class TestQueryClassifier:
         finally:
             classifier._extract_features = original_extract
 
+    @pytest.mark.asyncio
     async def test_classification_consistency(self, classifier):
         """Test that classification is consistent for the same query."""
         query = "How to implement binary search in Python?"
@@ -431,6 +456,7 @@ class TestQueryClassifier:
             ("How to fix 404 error?", {"question_type": "how"}),
         ],
     )
+    @pytest.mark.asyncio
     async def test_specific_feature_extraction(
         self, classifier, query, expected_features
     ):
@@ -445,6 +471,7 @@ class TestQueryClassifier:
             else:
                 assert actual_value == expected_value
 
+    @pytest.mark.asyncio
     async def test_programming_keyword_detection(self, classifier):
         """Test programming keyword detection."""
         programming_query = "function class variable array object string boolean import"
@@ -456,6 +483,7 @@ class TestQueryClassifier:
         assert prog_features.has_code_keywords is True
         assert non_prog_features.has_code_keywords is False
 
+    @pytest.mark.asyncio
     async def test_code_syntax_pattern_matching(self, classifier):
         """Test code syntax pattern matching."""
         test_patterns = [

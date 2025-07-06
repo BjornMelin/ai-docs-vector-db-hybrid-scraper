@@ -219,6 +219,7 @@ class TestFeatureFlags:
         """Test enterprise_only decorator with async functions."""
 
         @enterprise_only(fallback_value="simple_result")
+        @pytest.mark.asyncio
         async def test_function():
             return "enterprise_result"
 
@@ -266,6 +267,7 @@ class TestFeatureFlags:
         """Test conditional_feature decorator with async functions."""
 
         @conditional_feature("enable_advanced_monitoring", fallback_value="disabled")
+        @pytest.mark.asyncio
         async def test_function():
             return "enabled"
 

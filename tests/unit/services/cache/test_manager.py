@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from src.config.enums import CacheType
+from src.config import CacheType
 from src.services.cache.manager import CacheManager
 
 

@@ -69,7 +69,8 @@ class TestInstrumentFunction:
     """Test function instrumentation decorator."""
 
     @patch("src.services.observability.tracking.get_tracer")
-    def test_instrument_async_function(self, mock_get_tracer):
+    @pytest.mark.asyncio
+    async def test_instrument_async_function(self, mock_get_tracer):
         """Test instrumenting async function."""
         mock_tracer = MagicMock()
         mock_span = MagicMock()
@@ -83,24 +84,16 @@ class TestInstrumentFunction:
             return f"result-{arg1}-{arg2}"
 
         # Test function execution
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            result = loop.run_until_complete(
-                test_async_function("value1", arg2="value2")
-            )
+        result = await test_async_function("value1", arg2="value2")
 
-            assert result == "result-value1-value2"
+        assert result == "result-value1-value2"
 
-            # Verify span attributes
-            mock_span.set_attribute.assert_any_call("operation.type", "test_operation")
-            mock_span.set_attribute.assert_any_call(
-                "function.name", "test_async_function"
-            )
-            mock_span.set_attribute.assert_any_call("function.success", True)
-
-        finally:
-            loop.close()
+        # Verify span attributes
+        mock_span.set_attribute.assert_any_call("operation.type", "test_operation")
+        mock_span.set_attribute.assert_any_call(
+            "function.name", "test_async_function"
+        )
+        mock_span.set_attribute.assert_any_call("function.success", True)
 
     @patch("src.services.observability.tracking.get_tracer")
     def test_instrument_sync_function(self, mock_get_tracer):

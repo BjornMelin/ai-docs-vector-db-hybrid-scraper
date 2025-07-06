@@ -80,6 +80,7 @@ class TestAnalyticsService:
         assert service.correlation_manager is None
         assert service.performance_monitor is None
 
+    @pytest.mark.asyncio
     async def test_initialize_with_client_manager(
         self, mock_client_manager, mock_observability_components
     ):
@@ -100,6 +101,7 @@ class TestAnalyticsService:
             mock_obs_init.assert_called_once()
             mock_register.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_initialize_logs_success_message(self, mock_client_manager, caplog):
         """Test that initialization logs success message with agentic observability."""
         service = AnalyticsService()
@@ -118,6 +120,7 @@ class TestAnalyticsService:
                 in caplog.text
             )
 
+    @pytest.mark.asyncio
     async def test_initialize_observability_integration(self, caplog):
         """Test observability integration initialization."""
         service = AnalyticsService()
@@ -146,6 +149,7 @@ class TestAnalyticsService:
                 in caplog.text
             )
 
+    @pytest.mark.asyncio
     async def test_register_analytics_tools_raises_error_when_not_initialized(self):
         """Test that tool registration raises error when service not initialized."""
         service = AnalyticsService()
@@ -153,6 +157,7 @@ class TestAnalyticsService:
         with pytest.raises(RuntimeError, match="AnalyticsService not initialized"):
             await service._register_analytics_tools()
 
+    @pytest.mark.asyncio
     async def test_register_analytics_tools_calls_all_tool_registrations(
         self, mock_client_manager
     ):
@@ -200,6 +205,7 @@ class TestAnalyticsService:
             # Verify enhanced tools were registered
             mock_enhanced.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_register_analytics_tools_logs_success_message(
         self, mock_client_manager, caplog
     ):
@@ -238,6 +244,7 @@ class TestAnalyticsService:
         assert mcp_server == service.mcp
         assert mcp_server.name == "test-service"
 
+    @pytest.mark.asyncio
     async def test_get_service_info_returns_comprehensive_metadata(self):
         """Test that service info contains all expected metadata and capabilities."""
         service = AnalyticsService()
@@ -274,6 +281,7 @@ class TestAnalyticsService:
         ]
         assert service_info["autonomous_features"] == expected_autonomous_features
 
+    @pytest.mark.asyncio
     async def test_get_service_info_includes_enterprise_integration_details(self):
         """Test that service info includes enterprise integration details."""
         service = AnalyticsService()
@@ -292,6 +300,7 @@ class TestAnalyticsService:
 class TestAnalyticsServiceEnhancedObservabilityTools:
     """Test AnalyticsService enhanced observability tools with enterprise integration."""
 
+    @pytest.mark.asyncio
     async def test_register_enhanced_observability_tools_creates_mcp_tools(
         self, mock_client_manager
     ):
@@ -320,6 +329,7 @@ class TestAnalyticsServiceEnhancedObservabilityTools:
         for tool_name in expected_tools:
             assert tool_name in registered_tools
 
+    @pytest.mark.asyncio
     async def test_get_agentic_decision_metrics_tool_with_ai_tracker(
         self, mock_client_manager
     ):
@@ -362,6 +372,7 @@ class TestAnalyticsServiceEnhancedObservabilityTools:
         assert enterprise_integration["existing_metrics_extended"] is True
         assert enterprise_integration["correlation_tracking"] is True
 
+    @pytest.mark.asyncio
     async def test_get_agentic_decision_metrics_tool_without_ai_tracker(
         self, mock_client_manager
     ):
@@ -394,6 +405,7 @@ class TestAnalyticsServiceEnhancedObservabilityTools:
         assert "error" in result
         assert result["error"] == "AI tracker not available"
 
+    @pytest.mark.asyncio
     async def test_get_multi_agent_workflow_visualization_tool(
         self, mock_client_manager
     ):
@@ -440,6 +452,7 @@ class TestAnalyticsServiceEnhancedObservabilityTools:
         assert enterprise_integration["existing_correlation_extended"] is True
         assert enterprise_integration["workflow_context_propagation"] is True
 
+    @pytest.mark.asyncio
     async def test_get_auto_rag_performance_monitoring_tool(self, mock_client_manager):
         """Test get_auto_rag_performance_monitoring tool with performance monitor integration."""
         service = AnalyticsService()
@@ -485,6 +498,7 @@ class TestAnalyticsServiceEnhancedObservabilityTools:
         assert enterprise_integration["ai_operation_tracking_integrated"] is True
         assert enterprise_integration["cost_attribution_enabled"] is True
 
+    @pytest.mark.asyncio
     async def test_enhanced_tools_log_success_message(
         self, mock_client_manager, caplog
     ):
@@ -504,6 +518,7 @@ class TestAnalyticsServiceEnhancedObservabilityTools:
 class TestAnalyticsServiceJ1ResearchIntegration:
     """Test AnalyticsService J1 research integration and enterprise observability."""
 
+    @pytest.mark.asyncio
     async def test_j1_research_tool_registration(self, mock_client_manager):
         """Test that J1 research tools (agentic RAG) are properly registered."""
         service = AnalyticsService()
@@ -555,6 +570,7 @@ class TestAnalyticsServiceJ1ResearchIntegration:
             in instructions
         )
 
+    @pytest.mark.asyncio
     async def test_enterprise_observability_integration_no_duplication(self):
         """Test that enterprise integration doesn't create duplicate infrastructure."""
         service = AnalyticsService()
@@ -568,6 +584,7 @@ class TestAnalyticsServiceJ1ResearchIntegration:
         assert enterprise_integration["correlation_manager_leveraged"] is True
         assert enterprise_integration["performance_monitor_integrated"] is True
 
+    @pytest.mark.asyncio
     async def test_agentic_observability_capabilities(self):
         """Test comprehensive agentic observability capabilities."""
         service = AnalyticsService()
@@ -584,6 +601,7 @@ class TestAnalyticsServiceJ1ResearchIntegration:
         assert "failure_prediction" in service_info["autonomous_features"]
         assert "decision_quality_tracking" in service_info["autonomous_features"]
 
+    @pytest.mark.asyncio
     async def test_opentelemetry_integration_capability(self):
         """Test OpenTelemetry integration capability."""
         service = AnalyticsService()
@@ -613,6 +631,7 @@ class TestAnalyticsServiceJ1ResearchIntegration:
 class TestAnalyticsServiceErrorHandling:
     """Test AnalyticsService error handling and recovery scenarios."""
 
+    @pytest.mark.asyncio
     async def test_initialization_with_none_client_manager_raises_error(self):
         """Test that initialization with None client manager is handled properly."""
         service = AnalyticsService()
@@ -624,6 +643,7 @@ class TestAnalyticsServiceErrorHandling:
         with pytest.raises(RuntimeError, match="AnalyticsService not initialized"):
             await service._register_analytics_tools()
 
+    @pytest.mark.asyncio
     async def test_get_service_info_works_without_initialization(self):
         """Test that get_service_info works even without full initialization."""
         service = AnalyticsService()
@@ -634,6 +654,7 @@ class TestAnalyticsServiceErrorHandling:
         assert service_info["service"] == "analytics"
         assert service_info["status"] == "active"
 
+    @pytest.mark.asyncio
     async def test_enhanced_tools_handle_missing_observability_components(
         self, mock_client_manager
     ):
@@ -652,6 +673,7 @@ class TestAnalyticsServiceErrorHandling:
         # Tools should be registered even without observability components
         assert service.mcp.tool.called
 
+    @pytest.mark.asyncio
     async def test_error_handling_during_tool_registration(self, mock_client_manager):
         """Test error handling during tool registration process."""
         service = AnalyticsService()
@@ -680,6 +702,7 @@ class TestAnalyticsServiceErrorHandling:
             # Tool registration should raise the exception
             await service._register_analytics_tools()
 
+    @pytest.mark.asyncio
     async def test_multiple_initialization_calls_are_safe(self, mock_client_manager):
         """Test that multiple initialization calls are handled safely."""
         service = AnalyticsService()
@@ -710,6 +733,7 @@ class TestAnalyticsServiceErrorHandling:
 class TestAnalyticsServicePerformanceAndIntegration:
     """Test AnalyticsService performance characteristics and integration scenarios."""
 
+    @pytest.mark.asyncio
     async def test_service_initialization_is_efficient(self, mock_client_manager):
         """Test that service initialization is efficient and doesn't block."""
 
@@ -730,6 +754,7 @@ class TestAnalyticsServicePerformanceAndIntegration:
         # Initialization should be fast (< 1 second)
         assert end_time - start_time < 1.0
 
+    @pytest.mark.asyncio
     async def test_observability_integration_performance(self):
         """Test that observability integration is performant."""
 
@@ -750,6 +775,7 @@ class TestAnalyticsServicePerformanceAndIntegration:
         # Observability integration should be fast (< 0.1 seconds)
         assert end_time - start_time < 0.1
 
+    @pytest.mark.asyncio
     async def test_service_supports_concurrent_access(self, mock_client_manager):
         """Test that service supports concurrent access patterns."""
 

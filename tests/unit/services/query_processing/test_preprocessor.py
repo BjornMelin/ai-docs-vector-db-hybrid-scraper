@@ -28,11 +28,13 @@ class TestQueryPreprocessor:
         assert len(preprocessor._spelling_corrections) > 0
         assert len(preprocessor._synonym_expansions) > 0
 
+    @pytest.mark.asyncio
     async def test_initialize(self, preprocessor):
         """Test preprocessor initialization."""
         await preprocessor.initialize()
         assert preprocessor._initialized is True
 
+    @pytest.mark.asyncio
     async def test_basic_preprocessing(self, initialized_preprocessor):
         """Test basic query preprocessing."""
         query = "What is phython?"
@@ -45,6 +47,7 @@ class TestQueryPreprocessor:
         assert len(result.corrections_applied) > 0
         assert result.preprocessing_time_ms > 0
 
+    @pytest.mark.asyncio
     async def test_spell_correction(self, initialized_preprocessor):
         """Test spelling correction functionality."""
         test_cases = [
@@ -62,6 +65,7 @@ class TestQueryPreprocessor:
             assert expected_correction in result.processed_query.lower()
             assert len(result.corrections_applied) > 0
 
+    @pytest.mark.asyncio
     async def test_spell_correction_disabled(self, initialized_preprocessor):
         """Test disabling spell correction."""
         query = "phython programming"
@@ -73,6 +77,7 @@ class TestQueryPreprocessor:
         assert result.processed_query == query.strip()
         assert len(result.corrections_applied) == 0
 
+    @pytest.mark.asyncio
     async def test_synonym_expansion(self, initialized_preprocessor):
         """Test synonym expansion functionality."""
         test_cases = [
@@ -94,6 +99,7 @@ class TestQueryPreprocessor:
                 or len(result.expansions_added) > 0
             )
 
+    @pytest.mark.asyncio
     async def test_expansion_disabled(self, initialized_preprocessor):
         """Test disabling synonym expansion."""
         query = "API development"
@@ -104,6 +110,7 @@ class TestQueryPreprocessor:
 
         assert len(result.expansions_added) == 0
 
+    @pytest.mark.asyncio
     async def test_text_normalization(self, initialized_preprocessor):
         """Test text normalization functionality."""
         # Test cases where normalization actually changes the text
@@ -143,6 +150,7 @@ class TestQueryPreprocessor:
             # Check that normalization was not marked as applied when text doesn't change
             assert result.normalization_applied is False
 
+    @pytest.mark.asyncio
     async def test_normalization_disabled(self, initialized_preprocessor):
         """Test disabling text normalization."""
         query = "What   is    Python???"
@@ -155,6 +163,7 @@ class TestQueryPreprocessor:
         # Query should be stripped but not normalized
         assert result.processed_query == query.strip()
 
+    @pytest.mark.asyncio
     async def test_context_extraction(self, initialized_preprocessor):
         """Test context extraction functionality."""
         test_cases = [
@@ -191,6 +200,7 @@ class TestQueryPreprocessor:
                         expected in detected_values for expected in expected_values
                     )
 
+    @pytest.mark.asyncio
     async def test_context_extraction_disabled(self, initialized_preprocessor):
         """Test disabling context extraction."""
         query = "React with TypeScript development"
@@ -201,6 +211,7 @@ class TestQueryPreprocessor:
 
         assert result.context_extracted == {}
 
+    @pytest.mark.asyncio
     async def test_version_detection(self, initialized_preprocessor):
         """Test version number detection in context."""
         test_cases = [
@@ -218,6 +229,7 @@ class TestQueryPreprocessor:
                 "version" in str(v) for v in context.values()
             )
 
+    @pytest.mark.asyncio
     async def test_urgency_detection(self, initialized_preprocessor):
         """Test urgency indicator detection."""
         high_urgency_queries = [
@@ -246,6 +258,7 @@ class TestQueryPreprocessor:
             if "urgency" in context:
                 assert context["urgency"] == "medium"
 
+    @pytest.mark.asyncio
     async def test_experience_level_detection(self, initialized_preprocessor):
         """Test experience level indicator detection."""
         beginner_queries = [
@@ -286,6 +299,7 @@ class TestQueryPreprocessor:
             if "experience_level" in context:
                 assert context["experience_level"] == "advanced"
 
+    @pytest.mark.asyncio
     async def test_complexity_indicators(self, initialized_preprocessor):
         """Test complexity indicator detection."""
         complex_queries = [
@@ -308,6 +322,7 @@ class TestQueryPreprocessor:
                     for indicator in indicators
                 )
 
+    @pytest.mark.asyncio
     async def test_comprehensive_preprocessing(self, initialized_preprocessor):
         """Test comprehensive preprocessing with all features enabled."""
         query = "How to fix authetication  phython  api???"
@@ -335,6 +350,7 @@ class TestQueryPreprocessor:
         # Should track processing time
         assert result.preprocessing_time_ms > 0
 
+    @pytest.mark.asyncio
     async def test_long_query_expansion_limit(self, initialized_preprocessor):
         """Test that very long queries don't get expanded."""
         long_query = " ".join(["word"] * 20)  # 20 words
@@ -346,6 +362,7 @@ class TestQueryPreprocessor:
         # Should not add expansions to very long queries
         assert len(result.expansions_added) == 0
 
+    @pytest.mark.asyncio
     async def test_processing_time_measurement(self, initialized_preprocessor):
         """Test that processing time is measured."""
         query = "Simple query"
@@ -355,6 +372,7 @@ class TestQueryPreprocessor:
         assert result.preprocessing_time_ms >= 0
         assert isinstance(result.preprocessing_time_ms, float)
 
+    @pytest.mark.asyncio
     async def test_uninitialized_preprocessor_error(self, preprocessor):
         """Test error when using uninitialized preprocessor."""
         query = "test query"
@@ -362,11 +380,13 @@ class TestQueryPreprocessor:
         with pytest.raises(RuntimeError, match="not initialized"):
             await preprocessor.preprocess_query(query)
 
+    @pytest.mark.asyncio
     async def test_cleanup(self, initialized_preprocessor):
         """Test preprocessor cleanup."""
         await initialized_preprocessor.cleanup()
         assert initialized_preprocessor._initialized is False
 
+    @pytest.mark.asyncio
     async def test_empty_query_handling(self, initialized_preprocessor):
         """Test handling of empty queries."""
         result = await initialized_preprocessor.preprocess_query("   ")
@@ -376,6 +396,7 @@ class TestQueryPreprocessor:
         assert len(result.corrections_applied) == 0
         assert len(result.expansions_added) == 0
 
+    @pytest.mark.asyncio
     async def test_special_characters_normalization(self, initialized_preprocessor):
         """Test normalization of special characters."""
         query = 'What\'s the "best" way to handle -dashes- and...ellipses?'
@@ -389,6 +410,7 @@ class TestQueryPreprocessor:
         assert "-" in result.processed_query  # Normalized dashes
         assert result.normalization_applied is True
 
+    @pytest.mark.asyncio
     async def test_technical_abbreviations_normalization(
         self, initialized_preprocessor
     ):
@@ -404,6 +426,7 @@ class TestQueryPreprocessor:
         assert len(result.processed_query) > 0
         # Note: actual expansion depends on implementation details
 
+    @pytest.mark.asyncio
     async def test_remove_stop_words_directly(self, initialized_preprocessor):
         """Test the _remove_stop_words method directly for coverage."""
         # Test with short query (should not remove stop words)
@@ -444,6 +467,7 @@ class TestQueryPreprocessor:
         assert "handle" in result
         assert "this?" in result
 
+    @pytest.mark.asyncio
     async def test_normalization_edge_cases(self, initialized_preprocessor):
         """Test edge cases in text normalization."""
         # Test empty string after strip
@@ -478,6 +502,7 @@ class TestQueryPreprocessor:
         )
         assert result.processed_query == unicode_query
 
+    @pytest.mark.asyncio
     async def test_spell_correction_edge_cases(self, initialized_preprocessor):
         """Test edge cases in spell correction."""
         # Test case sensitivity
@@ -503,6 +528,7 @@ class TestQueryPreprocessor:
         assert result.processed_query == "pythonic"
         assert len(result.corrections_applied) > 0
 
+    @pytest.mark.asyncio
     async def test_expansion_edge_cases(self, initialized_preprocessor):
         """Test edge cases in synonym expansion."""
         # Test expansion with already expanded terms
@@ -518,6 +544,7 @@ class TestQueryPreprocessor:
         rest_api_count = processed_lower.count("rest api")
         assert rest_api_count <= 2  # Original + max one expansion
 
+    @pytest.mark.asyncio
     async def test_context_extraction_edge_cases(self, initialized_preprocessor):
         """Test edge cases in context extraction."""
         # Test empty query
@@ -546,6 +573,7 @@ class TestQueryPreprocessor:
         assert "security" in context["complexity_indicators"]
         assert "architectural" in context["complexity_indicators"]
 
+    @pytest.mark.asyncio
     async def test_error_handling(self, initialized_preprocessor):
         """Test error handling and edge cases."""
         # Test very long query processing

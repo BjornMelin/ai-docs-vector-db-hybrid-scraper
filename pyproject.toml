@@ -677,6 +677,7 @@ dev = [
     "semgrep>=1.79.0",
     "pylint>=3.3.7",
     "pytest-timeout>=2.4.0",
+    "pytest-env>=1.1.5",
 ]
 
 # ===== Production-Ready Pylint Configuration =====
