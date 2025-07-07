@@ -1,19 +1,19 @@
 """Integration Tests for RAG Pipeline with Service Mocking.
 
 This module provides comprehensive integration tests for the RAG pipeline,
-demonstrating modern testing patterns with realistic service mocking and
+demonstrating  testing patterns with realistic service mocking and
 end-to-end workflow validation.
 """
 
+import asyncio
+import time
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import respx
 
 from tests.utils.modern_ai_testing import (
-from typing import Dict
-from typing import Any
-
     IntegrationTestingPatterns,
     ModernAITestingUtils,
     integration_test,
@@ -78,6 +78,7 @@ class TestRAGPipelineIntegration:
         return components
 
     @integration_test
+    @pytest.mark.asyncio
     async def test_end_to_end_rag_query_processing(
         self, mock_services, mock_rag_components, test_documents
     ):
@@ -130,6 +131,7 @@ class TestRAGPipelineIntegration:
         text_generator.generate_response.assert_called_once()
 
     @integration_test
+    @pytest.mark.asyncio
     async def test_document_ingestion_pipeline(
         self, mock_services, mock_rag_components, test_documents
     ):
@@ -178,6 +180,7 @@ class TestRAGPipelineIntegration:
         vector_db.upsert_documents.assert_called_once()
 
     @integration_test
+    @pytest.mark.asyncio
     async def test_rag_pipeline_error_handling(
         self, mock_services, mock_rag_components
     ):
@@ -222,6 +225,7 @@ class TestRAGPipelineIntegration:
             )
 
     @integration_test
+    @pytest.mark.asyncio
     async def test_rag_pipeline_with_different_query_types(
         self, mock_services, mock_rag_components
     ):
@@ -264,12 +268,11 @@ class TestRAGPipelineIntegration:
             assert response["sources_used"] >= 0
 
     @integration_test
+    @pytest.mark.asyncio
     async def test_rag_pipeline_performance_integration(
         self, mock_services, mock_rag_components
     ):
         """Test RAG pipeline performance characteristics in integration."""
-        import time
-
         embedding_manager = mock_rag_components["embedding_manager"]
         vector_db = mock_rag_components["vector_db"]
         text_generator = mock_rag_components["text_generator"]
@@ -283,9 +286,7 @@ class TestRAGPipelineIntegration:
         query_embedding = await embedding_manager.generate_single(query)
         search_results = await vector_db.search(query_vector=query_embedding, limit=5)
         contexts = [result["payload"]["text"] for result in search_results["result"]]
-        response = await text_generator.generate_response(
-            query=query, contexts=contexts
-        )
+        await text_generator.generate_response(query=query, contexts=contexts)
 
         end_time = time.perf_counter()
         total_latency = end_time - start_time
@@ -301,10 +302,9 @@ class TestRAGPipelineIntegration:
         assert text_generator.generate_response.call_count >= 1
 
     @integration_test
+    @pytest.mark.asyncio
     async def test_concurrent_rag_requests(self, mock_services, mock_rag_components):
         """Test RAG pipeline under concurrent load."""
-        import asyncio
-
         embedding_manager = mock_rag_components["embedding_manager"]
         vector_db = mock_rag_components["vector_db"]
         text_generator = mock_rag_components["text_generator"]
@@ -317,7 +317,7 @@ class TestRAGPipelineIntegration:
             "Describe natural language processing",
         ]
 
-        async def process_query(query: str) -> Dict[str, Any]:
+        async def process_query(query: str) -> dict[str, Any]:
             """Process a single query through the RAG pipeline."""
             query_embedding = await embedding_manager.generate_single(query)
             search_results = await vector_db.search(

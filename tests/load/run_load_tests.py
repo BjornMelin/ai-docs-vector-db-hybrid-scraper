@@ -10,22 +10,25 @@ import contextlib
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
 import time
+
+# Add the project root to Python path
+import traceback
 from pathlib import Path
 
 
-# Add the project root to Python path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from locust import main as locust_main
-from locust.env import Environment
-from locust.log import setup_logging
+from locust import main as locust_main  # noqa: E402
+from locust.env import Environment  # noqa: E402
+from locust.log import setup_logging  # noqa: E402
 
-from tests.load.load_profiles import LOAD_PROFILES, get_load_profile
-from tests.load.locust_load_runner import (
+from tests.load.load_profiles import LOAD_PROFILES, get_load_profile  # noqa: E402
+from tests.load.locust_load_runner import (  # noqa: E402
     AdminUser,
     VectorDBUser,
     create_load_test_environment,
@@ -80,7 +83,7 @@ class LoadTestRunner:
     ) -> dict:
         """Run load test using Locust."""
         logger.info(
-            f"Starting Locust load test with config: {config}"
+            "Starting Locust load test with config: %s", config
         )  # TODO: Convert f-string to logging format
 
         # Create environment
@@ -94,7 +97,7 @@ class LoadTestRunner:
             if load_profile:
                 env.shape_class = load_profile
                 logger.info(
-                    f"Applied load profile: {profile}"
+                    "Applied load profile: %s", profile
                 )  # TODO: Convert f-string to logging format
 
         if headless:
@@ -129,16 +132,16 @@ class LoadTestRunner:
                 # Save report
                 report_file = self._save_report(report)
                 logger.info(
-                    f"Test report saved to: {report_file}"
+                    "Test report saved to: %s", report_file
                 )  # TODO: Convert f-string to logging format
 
             return report
         # Run with web UI
         logger.info(
-            f"Starting Locust web UI on port {web_port}"
+            "Starting Locust web UI on port %s", web_port
         )  # TODO: Convert f-string to logging format
         logger.info(
-            f"Visit http://localhost:{web_port} to control the test"
+            "Visit http://localhost:%s to control the test", web_port
         )  # TODO: Convert f-string to logging format
 
         # Set up Locust arguments for web mode
@@ -168,50 +171,29 @@ class LoadTestRunner:
     def run_pytest_load_tests(
         self, test_type: str = "all", markers: list[str] | None = None
     ) -> dict:
-        """Run load tests using pytest."""
-        logger.info(
-            f"Running pytest load tests: {test_type}"
-        )  # TODO: Convert f-string to logging format
+        """Run load tests using pytest with comprehensive security validation."""
+        logger.info("Running pytest load tests: %s", test_type)
 
-        # Build pytest command
-        cmd = ["uv", "run", "pytest", "tests/load/", "-v"]
+        # Security: Validate and sanitize all inputs
+        sanitized_test_type = self._validate_test_type(test_type)
+        sanitized_markers = self._validate_markers(markers) if markers else None
 
-        # Add markers if specified
-        if markers:
-            for marker in markers:
-                cmd.extend(["-m", marker])
-        elif test_type != "all":
-            cmd.extend(["-m", test_type])
+        # Build secure pytest command with validated inputs
+        cmd = self._build_secure_pytest_command(sanitized_test_type, sanitized_markers)
 
-        # Add specific test directories based on type
-        if test_type == "load":
-            cmd = ["uv", "run", "pytest", "tests/load/load_testing/", "-v"]
-        elif test_type == "stress":
-            cmd = ["uv", "run", "pytest", "tests/load/stress_testing/", "-v"]
-        elif test_type == "spike":
-            cmd = ["uv", "run", "pytest", "tests/load/spike_testing/", "-v"]
-        elif test_type == "endurance":
-            cmd = ["uv", "run", "pytest", "tests/load/endurance_testing/", "-v"]
-        elif test_type == "volume":
-            cmd = ["uv", "run", "pytest", "tests/load/volume_testing/", "-v"]
-        elif test_type == "scalability":
-            cmd = ["uv", "run", "pytest", "tests/load/scalability/", "-v"]
+        # Enhanced security validation
+        self._validate_command_security(cmd)
 
-        # Add output options
-        cmd.extend(["--tb=short", "--disable-warnings"])
-
-        # Validate command components for security
-        allowed_executables = ["uv", "python", "python3"]
-        if cmd[0] not in allowed_executables:
-            msg = f"Executable '{cmd[0]}' not allowed"
-            raise ValueError(msg)
-
-        # Run tests
+        # Run tests with security constraints
         try:
-            result = (
-                subprocess.run(  # Secure: validated executable, no shell, no user input
-                    cmd, capture_output=True, text=True, cwd=project_root, check=False
-                )
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                cwd=project_root,
+                check=False,
+                timeout=3600,  # Security: Prevent hanging processes
+                env=self._get_secure_environment(),  # Security: Clean environment
             )
 
             return {
@@ -222,6 +204,13 @@ class LoadTestRunner:
                 "command": " ".join(cmd),
             }
 
+        except subprocess.TimeoutExpired:
+            logger.exception("Pytest execution timed out after 1 hour")
+            return {
+                "status": "timeout",
+                "error": "Test execution exceeded 1 hour timeout",
+                "command": " ".join(cmd),
+            }
         except Exception as e:
             logger.exception("Failed to run pytest tests")
             return {
@@ -233,7 +222,7 @@ class LoadTestRunner:
     def run_custom_scenario(self, scenario_file: str) -> dict:
         """Run a custom load test scenario from JSON file."""
         logger.info(
-            f"Running custom scenario: {scenario_file}"
+            "Running custom scenario: %s", scenario_file
         )  # TODO: Convert f-string to logging format
 
         try:
@@ -282,14 +271,14 @@ class LoadTestRunner:
     def benchmark_endpoints(self, endpoints: list[str], config: dict) -> dict:
         """Benchmark specific endpoints."""
         logger.info(
-            f"Benchmarking endpoints: {endpoints}"
+            "Benchmarking endpoints: %s", endpoints
         )  # TODO: Convert f-string to logging format
 
         results = {}
 
         for endpoint in endpoints:
             logger.info(
-                f"Benchmarking endpoint: {endpoint}"
+                "Benchmarking endpoint: %s", endpoint
             )  # TODO: Convert f-string to logging format
 
             # Create custom user class for this endpoint
@@ -306,7 +295,7 @@ class LoadTestRunner:
         # Save report
         report_file = self._save_report(comparative_report, "endpoint_benchmark")
         logger.info(
-            f"Endpoint benchmark report saved to: {report_file}"
+            "Endpoint benchmark report saved to: %s", report_file
         )  # TODO: Convert f-string to logging format
 
         return comparative_report
@@ -316,7 +305,7 @@ class LoadTestRunner:
     ) -> dict:
         """Validate performance against a baseline."""
         logger.info(
-            f"Running performance regression test against baseline: {baseline_file}"
+            "Running performance regression test against baseline: %s", baseline_file
         )
 
         try:
@@ -335,7 +324,7 @@ class LoadTestRunner:
             # Save regression report
             report_file = self._save_report(regression_analysis, "regression_analysis")
             logger.info(
-                f"Regression analysis saved to: {report_file}"
+                "Regression analysis saved to: %s", report_file
             )  # TODO: Convert f-string to logging format
 
         except Exception:
@@ -359,15 +348,15 @@ class LoadTestRunner:
         """Generate comprehensive test report."""
         stats = env.stats
 
-        if not stats or stats._total.num_requests == 0:
+        if not stats or stats.total.num_requests == 0:
             return {
                 "status": "no_data",
                 "message": "No requests were made during the test",
             }
 
         # Calculate key metrics
-        _total_requests = stats._total.num_requests
-        _total_failures = stats._total.num_failures
+        _total_requests = stats.total.num_requests
+        _total_failures = stats.total.num_failures
         success_rate = (
             ((_total_requests - _total_failures) / _total_requests) * 100
             if _total_requests > 0
@@ -397,10 +386,10 @@ class LoadTestRunner:
                 "_total_requests": _total_requests,
                 "_total_failures": _total_failures,
                 "success_rate_percent": success_rate,
-                "avg_response_time_ms": stats._total.avg_response_time,
-                "min_response_time_ms": stats._total.min_response_time,
-                "max_response_time_ms": stats._total.max_response_time,
-                "requests_per_second": stats._total.current_rps,
+                "avg_response_time_ms": stats.total.avg_response_time,
+                "min_response_time_ms": stats.total.min_response_time,
+                "max_response_time_ms": stats.total.max_response_time,
+                "requests_per_second": stats.total.current_rps,
                 "percentiles": percentiles,
             },
             "endpoint_breakdown": {},
@@ -439,7 +428,7 @@ class LoadTestRunner:
 
     def _generate_endpoint_comparison(self, results: dict) -> dict:
         """Generate comparative analysis of endpoint performance."""
-        comparison = {
+        return {
             "timestamp": time.time(),
             "endpoints": results,
             "analysis": {
@@ -457,8 +446,6 @@ class LoadTestRunner:
                 ),
             },
         }
-
-        return comparison
 
     def _analyze_performance_regression(self, baseline: dict, current: dict) -> dict:
         """Analyze performance regression between baseline and current results."""
@@ -531,22 +518,22 @@ class LoadTestRunner:
 
     def _calculate_performance_grade(self, stats) -> str:
         """Calculate performance grade based on test results."""
-        if stats._total.num_requests == 0:
+        if stats.total.num_requests == 0:
             return "N/A"
 
         score = 100
 
         # Deduct for high response times
-        avg_response_time = stats._total.avg_response_time
+        avg_response_time = stats.total.avg_response_time
         if avg_response_time > 100:
             score -= min(40, (avg_response_time - 100) / 25)
 
         # Deduct for errors
-        error_rate = (stats._total.num_failures / stats._total.num_requests) * 100
+        error_rate = (stats.total.num_failures / stats.total.num_requests) * 100
         score -= error_rate * 10
 
         # Deduct for low throughput
-        rps = stats._total.current_rps
+        rps = stats.total.current_rps
         if rps < 10:
             score -= (10 - rps) * 2
 
@@ -565,11 +552,11 @@ class LoadTestRunner:
         """Generate performance recommendations based on test results."""
         recommendations = []
 
-        if stats._total.num_requests == 0:
+        if stats.total.num_requests == 0:
             return ["No requests were made - check test configuration"]
 
         # Response time recommendations
-        avg_response_time = stats._total.avg_response_time
+        avg_response_time = stats.total.avg_response_time
         if avg_response_time > 1000:
             recommendations.append(
                 "High response times detected - consider optimizing database queries and adding caching"
@@ -580,7 +567,7 @@ class LoadTestRunner:
             )
 
         # Error rate recommendations
-        error_rate = (stats._total.num_failures / stats._total.num_requests) * 100
+        error_rate = (stats.total.num_failures / stats.total.num_requests) * 100
         if error_rate > 5:
             recommendations.append(
                 "High error rate - implement better error handling and retry mechanisms"
@@ -591,7 +578,7 @@ class LoadTestRunner:
             )
 
         # Throughput recommendations
-        rps = stats._total.current_rps
+        rps = stats.total.current_rps
         if rps < 10:
             recommendations.append(
                 "Low throughput - consider horizontal scaling or performance optimization"
@@ -621,6 +608,207 @@ class LoadTestRunner:
             json.dump(report, f, indent=2)
 
         return str(filepath)
+
+    def _validate_test_type(self, test_type: str) -> str:
+        """Validate and sanitize test type parameter against injection attacks."""
+        if not isinstance(test_type, str):
+            msg = "Test type must be a string"
+            raise TypeError(msg)
+
+        # Security: Allowlist of valid test types
+        valid_test_types = {
+            "all",
+            "load",
+            "stress",
+            "spike",
+            "endurance",
+            "volume",
+            "scalability",
+        }
+
+        # Security: Remove any non-alphanumeric characters except underscore
+        sanitized = re.sub(r"[^a-zA-Z0-9_]", "", test_type.strip())
+
+        if not sanitized:
+            msg = "Invalid test type: empty after sanitization"
+            raise ValueError(msg)
+
+        if sanitized not in valid_test_types:
+            msg = f"Invalid test type: {sanitized}. Must be one of: {valid_test_types}"
+            raise ValueError(msg)
+
+        return sanitized
+
+    def _validate_markers(self, markers: list[str]) -> list[str]:
+        """Validate and sanitize pytest markers against injection attacks."""
+        if not isinstance(markers, list):
+            msg = "Markers must be a list"
+            raise TypeError(msg)
+
+        sanitized_markers = []
+        # Security: Allowlist of valid marker patterns
+        valid_marker_pattern = re.compile(r"^[a-zA-Z0-9_][a-zA-Z0-9_-]*$")
+
+        for marker in markers:
+            if not isinstance(marker, str):
+                msg = "Each marker must be a string"
+                raise TypeError(msg)
+
+            # Security: Remove any dangerous characters
+            sanitized = re.sub(r"[^a-zA-Z0-9_-]", "", marker.strip())
+
+            if not sanitized:
+                continue  # Skip empty markers
+
+            if not valid_marker_pattern.match(sanitized):
+                msg = f"Invalid marker format: {marker}"
+                raise ValueError(msg)
+
+            # Security: Limit marker length to prevent buffer overflow
+            if len(sanitized) > 50:
+                msg = f"Marker too long: {marker}"
+                raise ValueError(msg)
+
+            sanitized_markers.append(sanitized)
+
+        # Security: Limit total number of markers
+        if len(sanitized_markers) > 10:
+            msg = "Too many markers specified (maximum 10)"
+            raise ValueError(msg)
+
+        return sanitized_markers
+
+    def _build_secure_pytest_command(
+        self, test_type: str, markers: list[str] | None
+    ) -> list[str]:
+        """Build pytest command with security constraints."""
+        # Security: Start with hardcoded base command
+        cmd = ["uv", "run", "pytest"]
+
+        # Security: Map test types to secure paths within tests/load/
+        test_type_paths = {
+            "all": "tests/load/",
+            "load": "tests/load/load_testing/",
+            "stress": "tests/load/stress_testing/",
+            "spike": "tests/load/spike_testing/",
+            "endurance": "tests/load/endurance_testing/",
+            "volume": "tests/load/volume_testing/",
+            "scalability": "tests/load/scalability/",
+        }
+
+        # Security: Use predefined path mapping instead of dynamic construction
+        test_path = test_type_paths.get(test_type, "tests/load/")
+        cmd.append(test_path)
+
+        # Security: Add hardcoded safe options
+        cmd.extend(["-v", "--tb=short", "--disable-warnings"])
+
+        # Security: Add validated markers
+        if markers:
+            for marker in markers:
+                cmd.extend(["-m", marker])
+        elif test_type != "all":
+            cmd.extend(["-m", test_type])
+
+        return cmd
+
+    def _validate_command_security(self, cmd: list[str]) -> None:
+        """Perform comprehensive security validation on the command."""
+        if not isinstance(cmd, list):
+            msg = "Command must be a list"
+            raise TypeError(msg)
+
+        if not cmd:
+            msg = "Command cannot be empty"
+            raise ValueError(msg)
+
+        # Security: Validate executable
+        allowed_executables = {"uv", "python", "python3"}
+        if cmd[0] not in allowed_executables:
+            msg = f"Executable '{cmd[0]}' not allowed"
+            raise ValueError(msg)
+
+        # Security: Validate all command components
+        dangerous_patterns = [
+            r"[;&|`$(){}[\]<>]",  # Shell metacharacters
+            r"\.\.",  # Directory traversal
+            r"/dev/",  # Device files
+            r"/proc/",  # Process files
+            r"/sys/",  # System files
+            r"~",  # Home directory expansion
+            r"\$[A-Za-z_]",  # Environment variable expansion
+        ]
+
+        for component in cmd:
+            if not isinstance(component, str):
+                msg = "All command components must be strings"
+                raise TypeError(msg)
+
+            # Security: Check for dangerous patterns
+            for pattern in dangerous_patterns:
+                if re.search(pattern, component):
+                    msg = f"Dangerous pattern detected in command: {component}"
+                    raise ValueError(msg)
+
+            # Security: Validate path components
+            if component.startswith("/") and not component.startswith("tests/"):
+                # Allow absolute paths only if they're in the tests directory
+                tests_path = str(project_root / "tests")
+                if not component.startswith(tests_path):
+                    msg = f"Absolute path not allowed: {component}"
+                    raise ValueError(msg)
+
+        # Security: Validate command length to prevent argument overflow
+        if len(cmd) > 50:
+            msg = "Command too long (maximum 50 arguments)"
+            raise ValueError(msg)
+
+        # Security: Validate total command string length
+        cmd_str = " ".join(cmd)
+        if len(cmd_str) > 2000:
+            msg = "Command string too long (maximum 2000 characters)"
+            raise ValueError(msg)
+
+    def _get_secure_environment(self) -> dict[str, str]:
+        """Get a secure environment for subprocess execution."""
+        # Security: Start with minimal environment
+        secure_env = {
+            "PATH": os.environ.get("PATH", ""),
+            "HOME": os.environ.get("HOME", ""),
+            "USER": os.environ.get("USER", ""),
+            "PYTHONPATH": str(project_root),
+        }
+
+        # Security: Add only safe environment variables
+        safe_vars = {
+            "TERM",
+            "LANG",
+            "LC_ALL",
+            "TZ",
+            "UV_CACHE_DIR",
+            "PYTEST_CURRENT_TEST",
+            "CI",
+            "GITHUB_ACTIONS",
+        }
+
+        for var in safe_vars:
+            if var in os.environ:
+                secure_env[var] = os.environ[var]
+
+        # Security: Remove any variables that could be used for injection
+        dangerous_vars = {
+            "LD_PRELOAD",
+            "LD_LIBRARY_PATH",
+            "DYLD_INSERT_LIBRARIES",
+            "PYTHONINSPECT",
+            "PYTHONSTARTUP",
+            "PYTHONEXECUTABLE",
+        }
+
+        for var in dangerous_vars:
+            secure_env.pop(var, None)
+
+        return secure_env
 
 
 def main():
@@ -825,8 +1013,6 @@ def main():
     except Exception:
         logger.exception("Test execution failed")
         if args.verbose:
-            import traceback
-
             traceback.print_exc()
         sys.exit(1)
 

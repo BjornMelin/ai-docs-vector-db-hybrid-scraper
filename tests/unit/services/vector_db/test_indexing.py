@@ -28,6 +28,7 @@ class TestQdrantIndexing:
         """Create QdrantIndexing instance."""
         return QdrantIndexing(mock_client, mock_config)
 
+    @pytest.mark.asyncio
     async def test_create_payload_indexes_success(self, indexing_service, mock_client):
         """Test successful payload index creation."""
         await indexing_service.create_payload_indexes("test_collection")
@@ -59,6 +60,7 @@ class TestQdrantIndexing:
         ]
         assert len(integer_calls) >= 10  # created_at, last_updated, word_count, etc.
 
+    @pytest.mark.asyncio
     async def test_create_payload_indexes_error(self, indexing_service, mock_client):
         """Test payload index creation error."""
         mock_client.create_payload_index.side_effect = Exception(
@@ -70,6 +72,7 @@ class TestQdrantIndexing:
         ):
             await indexing_service.create_payload_indexes("test_collection")
 
+    @pytest.mark.asyncio
     async def test_list_payload_indexes_success(self, indexing_service, mock_client):
         """Test successful payload index listing."""
         # Mock collection info with payload schema
@@ -97,6 +100,7 @@ class TestQdrantIndexing:
         assert "non_indexed_field" not in result
         assert len(result) == 2
 
+    @pytest.mark.asyncio
     async def test_list_payload_indexes_no_schema(self, indexing_service, mock_client):
         """Test payload index listing with no schema."""
         mock_collection_info = MagicMock()
@@ -107,6 +111,7 @@ class TestQdrantIndexing:
 
         assert result == []
 
+    @pytest.mark.asyncio
     async def test_list_payload_indexes_no_index_attribute(
         self, indexing_service, mock_client
     ):
@@ -122,6 +127,7 @@ class TestQdrantIndexing:
 
         assert result == []
 
+    @pytest.mark.asyncio
     async def test_list_payload_indexes_error(self, indexing_service, mock_client):
         """Test payload index listing error."""
         mock_client.get_collection.side_effect = Exception("Get collection failed")
@@ -129,6 +135,7 @@ class TestQdrantIndexing:
         with pytest.raises(QdrantServiceError, match="Failed to list payload indexes"):
             await indexing_service.list_payload_indexes("test_collection")
 
+    @pytest.mark.asyncio
     async def test_drop_payload_index_success(self, indexing_service, mock_client):
         """Test successful payload index drop."""
         await indexing_service.drop_payload_index("test_collection", "test_field")
@@ -137,6 +144,7 @@ class TestQdrantIndexing:
             collection_name="test_collection", field_name="test_field", wait=True
         )
 
+    @pytest.mark.asyncio
     async def test_drop_payload_index_error(self, indexing_service, mock_client):
         """Test payload index drop error."""
         mock_client.delete_payload_index.side_effect = Exception("Drop failed")
@@ -144,6 +152,7 @@ class TestQdrantIndexing:
         with pytest.raises(QdrantServiceError, match="Failed to drop payload index"):
             await indexing_service.drop_payload_index("test_collection", "test_field")
 
+    @pytest.mark.asyncio
     async def test_reindex_collection_success(self, indexing_service, _mock_client):
         """Test successful collection reindexing."""
         # Mock existing indexes
@@ -162,6 +171,7 @@ class TestQdrantIndexing:
             assert mock_drop.call_count == 3  # Should drop all existing indexes
             mock_create.assert_called_once_with("test_collection")
 
+    @pytest.mark.asyncio
     async def test_reindex_collection_drop_error(
         self, indexing_service, _mock_client, _caplog
     ):
@@ -186,6 +196,7 @@ class TestQdrantIndexing:
             mock_create.assert_called_once()
             assert "Failed to drop index" in _caplog.text
 
+    @pytest.mark.asyncio
     async def test_reindex_collection_error(self, indexing_service, _mock_client):
         """Test collection reindexing error."""
         with (
@@ -198,6 +209,7 @@ class TestQdrantIndexing:
         ):
             await indexing_service.reindex_collection("test_collection")
 
+    @pytest.mark.asyncio
     async def test_get_payload_index_stats_success(self, indexing_service, mock_client):
         """Test successful payload index stats retrieval."""
         mock_collection_info = MagicMock()
@@ -231,6 +243,7 @@ class TestQdrantIndexing:
         assert result["payload_schema"]["field1"]["indexed"] is True
         assert result["payload_schema"]["field2"]["indexed"] is False
 
+    @pytest.mark.asyncio
     async def test_get_payload_index_stats_no_schema(
         self, indexing_service, mock_client
     ):
@@ -246,6 +259,7 @@ class TestQdrantIndexing:
 
         assert result["payload_schema"] == {}
 
+    @pytest.mark.asyncio
     async def test_get_payload_index_stats_error(self, indexing_service, mock_client):
         """Test payload index stats error."""
         mock_client.get_collection.side_effect = Exception("Stats failed")
@@ -255,6 +269,7 @@ class TestQdrantIndexing:
         ):
             await indexing_service.get_payload_index_stats("test_collection")
 
+    @pytest.mark.asyncio
     async def test_validate_index_health_healthy(self, indexing_service, mock_client):
         """Test index health validation with healthy status."""
         mock_collection_info = MagicMock()
@@ -291,6 +306,7 @@ class TestQdrantIndexing:
         assert len(result["payload_indexes"]["missing_indexes"]) == 0
         assert len(result["payload_indexes"]["extra_indexes"]) == 0
 
+    @pytest.mark.asyncio
     async def test_validate_index_health_missing_indexes(
         self, indexing_service, mock_client
     ):
@@ -311,6 +327,7 @@ class TestQdrantIndexing:
         assert result["health_score"] < 100.0
         assert len(result["payload_indexes"]["missing_indexes"]) > 0
 
+    @pytest.mark.asyncio
     async def test_validate_index_health_extra_indexes(
         self, indexing_service, mock_client
     ):
@@ -348,6 +365,7 @@ class TestQdrantIndexing:
         assert "extra_field1" in result["payload_indexes"]["extra_indexes"]
         assert "extra_field2" in result["payload_indexes"]["extra_indexes"]
 
+    @pytest.mark.asyncio
     async def test_validate_index_health_critical_status(
         self, indexing_service, mock_client
     ):
@@ -367,6 +385,7 @@ class TestQdrantIndexing:
         assert result["status"] == "critical"
         assert result["health_score"] < 80.0
 
+    @pytest.mark.asyncio
     async def test_validate_index_health_warning_status(
         self, indexing_service, mock_client
     ):
@@ -400,6 +419,7 @@ class TestQdrantIndexing:
         assert result["status"] == "warning"
         assert 80.0 <= result["health_score"] < 95.0
 
+    @pytest.mark.asyncio
     async def test_validate_index_health_with_timestamp(
         self, indexing_service, mock_client
     ):
@@ -416,6 +436,7 @@ class TestQdrantIndexing:
 
         assert result["validation_timestamp"] == 1234567890
 
+    @pytest.mark.asyncio
     async def test_validate_index_health_error(self, indexing_service, mock_client):
         """Test index health validation error."""
         mock_client.get_collection.side_effect = Exception("Health check failed")
@@ -423,6 +444,7 @@ class TestQdrantIndexing:
         with pytest.raises(QdrantServiceError, match="Failed to validate index health"):
             await indexing_service.validate_index_health("test_collection")
 
+    @pytest.mark.asyncio
     async def test_get_index_usage_stats_success(self, indexing_service, mock_client):
         """Test successful index usage stats retrieval."""
         mock_collection_info = MagicMock()
@@ -459,6 +481,7 @@ class TestQdrantIndexing:
 
         assert result["generated_at"] == 1234567890
 
+    @pytest.mark.asyncio
     async def test_get_index_usage_stats_large_collection(
         self, indexing_service, mock_client
     ):
@@ -477,6 +500,7 @@ class TestQdrantIndexing:
             for suggestion in result["optimization_suggestions"]
         )
 
+    @pytest.mark.asyncio
     async def test_get_index_usage_stats_many_indexes(
         self, indexing_service, mock_client
     ):
@@ -498,6 +522,7 @@ class TestQdrantIndexing:
             for suggestion in result["optimization_suggestions"]
         )
 
+    @pytest.mark.asyncio
     async def test_get_index_usage_stats_no_keyword_indexes(
         self, indexing_service, mock_client
     ):
@@ -519,6 +544,7 @@ class TestQdrantIndexing:
             for suggestion in result["optimization_suggestions"]
         )
 
+    @pytest.mark.asyncio
     async def test_get_index_usage_stats_optimal_config(
         self, indexing_service, mock_client
     ):
@@ -539,6 +565,7 @@ class TestQdrantIndexing:
             "optimal" in suggestion for suggestion in result["optimization_suggestions"]
         )
 
+    @pytest.mark.asyncio
     async def test_get_index_usage_stats_error(self, indexing_service, mock_client):
         """Test index usage stats error."""
         mock_client.get_collection.side_effect = Exception("Stats failed")
@@ -546,6 +573,7 @@ class TestQdrantIndexing:
         with pytest.raises(QdrantServiceError, match="Failed to get index usage stats"):
             await indexing_service.get_index_usage_stats("test_collection")
 
+    @pytest.mark.asyncio
     async def test_generate_index_recommendations_missing(self, indexing_service):
         """Test recommendation generation with missing indexes."""
         recommendations = indexing_service._generate_index_recommendations(
@@ -555,6 +583,7 @@ class TestQdrantIndexing:
         assert any("Create missing indexes" in rec for rec in recommendations)
         assert any("doc_type, language" in rec for rec in recommendations)
 
+    @pytest.mark.asyncio
     async def test_generate_index_recommendations_extra(self, indexing_service):
         """Test recommendation generation with extra indexes."""
         recommendations = indexing_service._generate_index_recommendations(
@@ -566,6 +595,7 @@ class TestQdrantIndexing:
         assert any("removing unused indexes" in rec for rec in recommendations)
         assert any("unused_field1, unused_field2" in rec for rec in recommendations)
 
+    @pytest.mark.asyncio
     async def test_generate_index_recommendations_critical(self, indexing_service):
         """Test recommendation generation for critical status."""
         recommendations = indexing_service._generate_index_recommendations(
@@ -574,6 +604,7 @@ class TestQdrantIndexing:
 
         assert any("Critical:" in rec for rec in recommendations)
 
+    @pytest.mark.asyncio
     async def test_generate_index_recommendations_warning(self, indexing_service):
         """Test recommendation generation for warning status."""
         recommendations = indexing_service._generate_index_recommendations(
@@ -582,6 +613,7 @@ class TestQdrantIndexing:
 
         assert any("Warning:" in rec for rec in recommendations)
 
+    @pytest.mark.asyncio
     async def test_generate_index_recommendations_healthy(self, indexing_service):
         """Test recommendation generation for healthy status."""
         recommendations = indexing_service._generate_index_recommendations(
@@ -590,6 +622,7 @@ class TestQdrantIndexing:
 
         assert any("All indexes are healthy" in rec for rec in recommendations)
 
+    @pytest.mark.asyncio
     async def test_initialization_and_config(
         self, indexing_service, mock_client, mock_config
     ):
@@ -597,6 +630,7 @@ class TestQdrantIndexing:
         assert indexing_service.client is mock_client
         assert indexing_service.config is mock_config
 
+    @pytest.mark.asyncio
     async def test_create_payload_indexes_field_types(
         self, indexing_service, mock_client
     ):
@@ -636,6 +670,7 @@ class TestQdrantIndexing:
         assert "created_at" in integer_fields
         assert "word_count" in integer_fields
 
+    @pytest.mark.asyncio
     async def test_index_health_calculation_edge_cases(
         self, indexing_service, mock_client
     ):
@@ -652,6 +687,7 @@ class TestQdrantIndexing:
         assert result["health_score"] >= 0
         assert result["_total_points"] == 0
 
+    @pytest.mark.asyncio
     async def test_stats_with_missing_data_type(self, indexing_service, mock_client):
         """Test stats generation with missing data type attributes."""
         mock_collection_info = MagicMock()

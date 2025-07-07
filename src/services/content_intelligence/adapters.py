@@ -247,9 +247,8 @@ class SiteAdapter:
             parsed = urlparse(url)
             domain = parsed.netloc.lower()
             # Remove 'www.' prefix
-            domain = domain.removeprefix("www.")
-            return domain
-        except Exception:
+            return domain.removeprefix("www.")
+        except (AttributeError, TypeError, ValueError):
             return ""
 
     def _detect_content_patterns(self, content: str) -> list[str]:

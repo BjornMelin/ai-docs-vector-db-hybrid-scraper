@@ -168,6 +168,7 @@ class TestHypotheticalDocumentGenerator:
             # Verify that from_unified_config was called
             mock_from_config.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_initialize_success(self, generator, mock_client_manager):
         """Test successful initialization."""
         await generator.initialize()
@@ -176,6 +177,7 @@ class TestHypotheticalDocumentGenerator:
         mock_client_manager.initialize.assert_called_once()
         mock_client_manager.get_openai_client.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_initialize_no_openai_client(self, generator, mock_client_manager):
         """Test initialization failure when OpenAI client not available."""
         mock_client_manager.get_openai_client.return_value = None
@@ -186,6 +188,7 @@ class TestHypotheticalDocumentGenerator:
         assert "OpenAI client not available" in str(exc_info.value)
         assert generator._initialized is False
 
+    @pytest.mark.asyncio
     async def test_initialize_client_error(self, generator, mock_client_manager):
         """Test initialization failure when client manager fails."""
         mock_client_manager.initialize.side_effect = Exception("Client error")
@@ -196,6 +199,7 @@ class TestHypotheticalDocumentGenerator:
         assert "Failed to initialize HyDE generator" in str(exc_info.value)
         assert generator._initialized is False
 
+    @pytest.mark.asyncio
     async def test_initialize_already_initialized(self, generator, mock_client_manager):
         """Test initialization when already initialized."""
         generator._initialized = True
@@ -206,6 +210,7 @@ class TestHypotheticalDocumentGenerator:
         mock_client_manager.initialize.assert_not_called()
         mock_client_manager.get_openai_client.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_cleanup(self, generator, mock_client_manager):
         """Test cleanup."""
         generator._initialized = True
@@ -340,6 +345,7 @@ class TestHypotheticalDocumentGenerator:
         for variation in variations:
             assert "test query" in variation
 
+    @pytest.mark.asyncio
     async def test_generate_single_document_success(
         self, generator, _mock_client_manager
     ):
@@ -361,6 +367,7 @@ class TestHypotheticalDocumentGenerator:
         assert result == "Generated document content"
         mock_llm_client.chat.completions.create.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_generate_single_document_timeout(
         self, generator, _mock_client_manager
     ):
@@ -376,6 +383,7 @@ class TestHypotheticalDocumentGenerator:
 
         assert result == ""  # Returns empty string on timeout
 
+    @pytest.mark.asyncio
     async def test_generate_single_document_error(
         self, generator, _mock_client_manager
     ):
@@ -393,6 +401,7 @@ class TestHypotheticalDocumentGenerator:
 
         assert result == ""  # Returns empty string on error
 
+    @pytest.mark.asyncio
     async def test_generate_parallel(self, generator, _mock_client_manager):
         """Test parallel document generation."""
         generator._initialized = True
@@ -412,6 +421,7 @@ class TestHypotheticalDocumentGenerator:
         assert len(documents) == 3
         assert all("Document for:" in doc for doc in documents)
 
+    @pytest.mark.asyncio
     async def test_generate_parallel_with_errors(self, generator, _mock_client_manager):
         """Test parallel generation with some errors."""
         generator._initialized = True
@@ -441,6 +451,7 @@ class TestHypotheticalDocumentGenerator:
         assert len(documents) == 2
         assert all("Valid document content" in doc for doc in documents)
 
+    @pytest.mark.asyncio
     async def test_generate_sequential(self, generator, _mock_client_manager):
         """Test sequential document generation."""
         generator._initialized = True
@@ -555,6 +566,7 @@ class TestHypotheticalDocumentGenerator:
         identical = ["same content", "same content"]
         assert generator._calculate_diversity_score(identical) == 0.0
 
+    @pytest.mark.asyncio
     async def test_generate_documents_success(self, generator, _mock_client_manager):
         """Test successful document generation."""
         generator._initialized = True
@@ -576,6 +588,7 @@ class TestHypotheticalDocumentGenerator:
         assert result.cost_estimate > 0
         assert result.diversity_score >= 0
 
+    @pytest.mark.asyncio
     async def test_generate_documents_sequential_mode(
         self, generator, _mock_client_manager
     ):
@@ -595,6 +608,7 @@ class TestHypotheticalDocumentGenerator:
         assert result.documents == mock_documents
         generator._generate_sequential.assert_called_once_with(mock_prompts)
 
+    @pytest.mark.asyncio
     async def test_generate_documents_not_initialized(self, generator):
         """Test document generation when not initialized."""
 
@@ -603,6 +617,7 @@ class TestHypotheticalDocumentGenerator:
 
         assert "not initialized" in str(exc_info.value).lower()
 
+    @pytest.mark.asyncio
     async def test_generate_documents_failure(self, generator, _mock_client_manager):
         """Test document generation failure handling."""
         generator._initialized = True

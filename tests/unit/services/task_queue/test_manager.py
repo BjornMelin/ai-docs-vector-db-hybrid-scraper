@@ -26,6 +26,12 @@ def manager(config):
     return TaskQueueManager(config)
 
 
+@pytest.fixture
+def test_redis_password():
+    """Test Redis password value."""
+    return "override_pass"
+
+
 class TestTaskQueueManager:
     """Test TaskQueueManager functionality."""
 
@@ -44,15 +50,15 @@ class TestTaskQueueManager:
         assert settings.password is None
         assert settings.database == 1
 
-    def test_create_redis_settings_with_auth(self, manager):
+    def test_create_redis_settings_with_auth(self, manager, test_redis_password):
         """Test Redis settings with authentication."""
         manager.config.task_queue.redis_url = "redis://user:pass@localhost:6380"
-        manager.config.task_queue.redis_password = "override_pass"  # Test data
+        manager.config.task_queue.redis_password = test_redis_password
 
         settings = manager._create_redis_settings()
         assert settings.host == "localhost"
         assert settings.port == 6380
-        assert settings.password == "override_pass"  # Test data
+        assert settings.password == test_redis_password
 
     def test_create_redis_settings_custom_port(self, manager):
         """Test Redis settings with custom port."""

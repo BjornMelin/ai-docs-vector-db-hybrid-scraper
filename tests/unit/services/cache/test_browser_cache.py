@@ -4,6 +4,8 @@ import asyncio  # noqa: PLC0415
 import json  # noqa: PLC0415
 import time  # noqa: PLC0415
 from unittest.mock import AsyncMock
+import respx
+import httpx
 from unittest.mock import patch
 
 import pytest
@@ -205,6 +207,7 @@ class TestBrowserCache:
         ttl = browser_cache._determine_ttl(url, 1000)
         assert ttl == browser_cache.default_ttl
 
+    @pytest.mark.asyncio
     async def test_get_from_local_cache(
         self, browser_cache, mock_local_cache, sample_cache_entry
     ):
@@ -222,6 +225,7 @@ class TestBrowserCache:
         assert browser_cache._cache_stats["hits"] == 1
         assert mock_local_cache.get_count == 1
 
+    @pytest.mark.asyncio
     async def test_get_from_distributed_cache(
         self,
         browser_cache,
@@ -245,6 +249,7 @@ class TestBrowserCache:
         # Should be promoted to local cache
         assert key in mock_local_cache.data
 
+    @pytest.mark.asyncio
     async def test_get_cache_miss(self, browser_cache):
         """Test cache miss."""
         result = await browser_cache.get("browser:nonexistent:key")
@@ -252,6 +257,7 @@ class TestBrowserCache:
         assert result is None
         assert browser_cache._cache_stats["misses"] == 1
 
+    @pytest.mark.asyncio
     async def test_set_to_both_caches(
         self,
         browser_cache,
@@ -268,6 +274,7 @@ class TestBrowserCache:
         assert key in mock_local_cache.data
         assert key in mock_distributed_cache.data
 
+    @pytest.mark.asyncio
     async def test_set_with_custom_ttl(self, browser_cache, sample_cache_entry):
         """Test setting entry with custom TTL."""
         key = browser_cache._generate_cache_key(sample_cache_entry.url)
@@ -275,6 +282,7 @@ class TestBrowserCache:
 
         assert success is True
 
+    @pytest.mark.asyncio
     async def test_delete_from_both_caches(
         self,
         browser_cache,
@@ -296,11 +304,11 @@ class TestBrowserCache:
         assert key not in mock_local_cache.data
         assert key not in mock_distributed_cache.data
 
+    @pytest.mark.asyncio
     async def test_invalidate_pattern(self, browser_cache, mock_distributed_cache):
         """Test pattern-based cache invalidation."""
         # Mock distributed cache with pattern support
         mock_distributed_cache.invalidate_pattern = AsyncMock(return_value=5)
-
         count = await browser_cache.invalidate_pattern("example.com")
 
         assert count == 5
@@ -335,6 +343,7 @@ class TestBrowserCache:
         assert stats["hit_rate"] == 0.0
 
     @patch("src.services.cache.browser_cache.logger")
+    @pytest.mark.asyncio
     async def test_get_with_error_handling(
         self, mock_logger, browser_cache, mock_local_cache
     ):
@@ -349,6 +358,7 @@ class TestBrowserCache:
         mock_logger.warning.assert_called()
 
     @patch("src.services.cache.browser_cache.logger")
+    @pytest.mark.asyncio
     async def test_set_with_error_handling(
         self, mock_logger, browser_cache, mock_local_cache, sample_cache_entry
     ):
@@ -363,6 +373,7 @@ class TestBrowserCache:
         assert success is False
         mock_logger.error.assert_called()
 
+    @pytest.mark.asyncio
     async def test_get_or_fetch_cache_hit(self, browser_cache, sample_cache_entry):
         """Test get_or_fetch with cache hit."""
         # Pre-populate cache
@@ -381,6 +392,7 @@ class TestBrowserCache:
         assert result.url == sample_cache_entry.url
         fetch_func.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_get_or_fetch_cache_miss(self, browser_cache):
         """Test get_or_fetch with cache miss."""
         # Mock fetch function
@@ -410,6 +422,7 @@ class TestBrowserCache:
         assert cached is not None
         assert cached.content == "Fresh content"
 
+    @pytest.mark.asyncio
     async def test_get_or_fetch_error_handling(self, browser_cache):
         """Test get_or_fetch error handling."""
         # Mock fetch function that raises error
@@ -424,6 +437,7 @@ class TestBrowserCache:
 class TestBrowserCacheIntegration:
     """Test browser cache integration scenarios."""
 
+    @pytest.mark.asyncio
     async def test_concurrent_cache_operations(self, browser_cache, sample_cache_entry):
         """Test concurrent cache operations."""
         key = browser_cache._generate_cache_key(sample_cache_entry.url)
@@ -438,6 +452,7 @@ class TestBrowserCacheIntegration:
         results = await asyncio.gather(*tasks)
         assert all(r is not None for r in results)
 
+    @pytest.mark.asyncio
     async def test_cache_expiration_behavior(self, browser_cache):
         """Test cache behavior with different TTLs."""
         # Create entries with different content types
@@ -466,6 +481,7 @@ class TestBrowserCacheIntegration:
         assert await browser_cache.get(static_key) is not None
         assert await browser_cache.get(dynamic_key) is not None
 
+    @pytest.mark.asyncio
     async def test_cache_without_distributed(self, mock_local_cache):
         """Test browser cache with only local cache."""
         cache = BrowserCache(
@@ -490,6 +506,7 @@ class TestBrowserCacheIntegration:
         assert result is not None
         assert result.url == entry.url
 
+    @pytest.mark.asyncio
     async def test_cache_without_local(self, mock_distributed_cache):
         """Test browser cache with only distributed cache."""
         cache = BrowserCache(

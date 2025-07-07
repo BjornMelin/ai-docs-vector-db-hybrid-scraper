@@ -108,7 +108,9 @@ jobs:
           echo "Running security scans..."
           
           # Install security tools
-          pip install pip-audit bandit safety
+          uv tool install pip-audit
+          uv tool install bandit  
+          uv tool install safety
           
           # Audit dependencies for known vulnerabilities
           echo "Scanning for dependency vulnerabilities..."

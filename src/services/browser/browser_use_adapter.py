@@ -24,12 +24,12 @@ try:
 except ImportError:
     BROWSER_USE_AVAILABLE = False
     logger.warning("browser-use not available")
-    Agent = None  # type: ignore
-    Browser = None  # type: ignore
-    BrowserConfig = None  # type: ignore
-    ChatOpenAI = None  # type: ignore
-    ChatAnthropic = None  # type: ignore
-    ChatGoogleGenerativeAI = None  # type: ignore
+    Agent = None  # type: ignore[assignment]
+    Browser = None  # type: ignore[assignment]
+    BrowserConfig = None  # type: ignore[assignment]
+    ChatOpenAI = None  # type: ignore[assignment]
+    ChatAnthropic = None  # type: ignore[assignment]
+    ChatGoogleGenerativeAI = None  # type: ignore[assignment]
 
 
 class BrowserUseAdapter(BaseService):
@@ -125,7 +125,9 @@ class BrowserUseAdapter(BaseService):
             self._browser = Browser(config=browser_config)
             self._initialized = True
             self.logger.info(
-                f"BrowserUse adapter initialized with {self.config.llm_provider}/{self.config.model}"
+                "BrowserUse adapter initialized with %s/%s",
+                self.config.llm_provider,
+                self.config.model,
             )
         except Exception as e:
             msg = "Failed to initialize browser-use"
@@ -136,7 +138,7 @@ class BrowserUseAdapter(BaseService):
         if hasattr(self, "_browser") and self._browser:
             try:
                 await self._browser.close()
-            except Exception:
+            except (OSError, AttributeError, ConnectionError, ImportError):
                 self.logger.exception("Error cleaning up browser-use")
             finally:
                 # Always reset state even if close() fails
@@ -188,9 +190,7 @@ class BrowserUseAdapter(BaseService):
 
         while retry_count < self.config.max_retries:
             try:
-                self.logger.info(
-                    f"Executing browser-use task: {task[:100]}..."
-                )  # TODO: Convert f-string to logging format
+                self.logger.info("Executing browser-use task: %s...", task[:100])
 
                 # Create enhanced task with context
                 full_task = f"""
@@ -231,9 +231,7 @@ class BrowserUseAdapter(BaseService):
             except TimeoutError:
                 retry_count += 1
                 error_msg = f"browser-use timeout after {timeout}ms"
-                self.logger.warning(
-                    f"{error_msg} (attempt {retry_count})"
-                )  # TODO: Convert f-string to logging format
+                self.logger.warning("%s (attempt %d)", error_msg, retry_count)
 
                 if retry_count >= self.config.max_retries:
                     return self._build_error_result(url, start_time, error_msg, task)
@@ -241,12 +239,10 @@ class BrowserUseAdapter(BaseService):
                 # Exponential backoff
                 await asyncio.sleep(2**retry_count)
 
-            except Exception:
+            except (OSError, PermissionError):
                 retry_count += 1
                 error_msg = "browser-use execution error"
-                self.logger.warning(
-                    f"{error_msg} (attempt {retry_count})"
-                )  # TODO: Convert f-string to logging format
+                self.logger.warning("%s (attempt %d)", error_msg, retry_count)
 
                 if retry_count >= self.config.max_retries:
                     return self._build_error_result(url, start_time, error_msg, task)
@@ -408,7 +404,7 @@ class BrowserUseAdapter(BaseService):
                 content = str(result) if result else ""
                 html = ""
                 title = ""
-        except Exception:
+        except (AttributeError, RuntimeError, ValueError):
             self.logger.warning("Failed to extract page content")
             # Fallback to agent result
             content = str(result) if result else ""
@@ -585,7 +581,7 @@ class BrowserUseAdapter(BaseService):
                 "response_time_ms": 15000,
                 "available": True,
             }
-        except Exception:
+        except (AttributeError, RuntimeError, ValueError):
             return {
                 "healthy": False,
                 "status": "error",
@@ -636,7 +632,7 @@ class BrowserUseAdapter(BaseService):
                 "error": result.get("error") if not result.get("success") else None,
             }
 
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             return {
                 "success": False,
                 "error": str(e),

@@ -126,6 +126,7 @@ class TestMCPProtocolE2E:
         register_mock_tools(mcp, mock_client_manager)
         return mcp
 
+    @pytest.mark.asyncio
     async def test_json_rpc_request_response_cycle(
         self, mcp_server_e2e, mock_client_manager
     ):
@@ -189,6 +190,7 @@ class TestMCPProtocolE2E:
                 == "Comprehensive machine learning tutorial covering basics to advanced topics"
             )
 
+    @pytest.mark.asyncio
     async def test_tool_chain_execution(self, mcp_server_e2e, mock_client_manager):
         """Test executing multiple tools in sequence (tool chaining)."""
         # Step 1: Create a project
@@ -271,6 +273,7 @@ class TestMCPProtocolE2E:
         assert len(search_result) == 1
         assert search_result[0]["metadata"]["project_id"] == project_id
 
+    @pytest.mark.asyncio
     async def test_error_propagation_through_protocol(
         self, mcp_server_e2e, mock_client_manager
     ):
@@ -302,7 +305,7 @@ class TestMCPProtocolE2E:
                 collection="documentation",
                 limit=10,
             )
-        except Exception as e:
+        except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
             # JSON-RPC 2.0 error response format
             error_response = {
                 "jsonrpc": "2.0",
@@ -320,6 +323,7 @@ class TestMCPProtocolE2E:
                 in error_response["error"]["data"]["error"]
             )
 
+    @pytest.mark.asyncio
     async def test_concurrent_requests_handling(
         self, mcp_server_e2e, mock_client_manager
     ):
@@ -386,6 +390,7 @@ class TestMCPProtocolE2E:
                 f"Concurrent execution took {execution_time:.3f}s, expected < 0.5s"
             )
 
+    @pytest.mark.asyncio
     async def test_large_response_handling(self, mcp_server_e2e, mock_client_manager):
         """Test handling of large responses through MCP protocol."""
         search_tool = None
@@ -434,6 +439,7 @@ class TestMCPProtocolE2E:
                 "Response should be substantial for large data test"
             )
 
+    @pytest.mark.asyncio
     async def test_session_state_management(self, mcp_server_e2e, mock_client_manager):
         """Test session state management across multiple requests."""
         # Simulate session-aware operations
@@ -492,6 +498,7 @@ class TestMCPProtocolE2E:
                 "session-project-456"
             ]
 
+    @pytest.mark.asyncio
     async def test_authentication_and_authorization(
         self, mcp_server_e2e, mock_client_manager
     ):
@@ -521,6 +528,7 @@ class TestMCPProtocolE2E:
             assert len(result) == 1
             assert result[0]["content"] == "Authenticated content"
 
+    @pytest.mark.asyncio
     async def test_transport_layer_compatibility(self, _mcp_server_e2e):
         """Test compatibility with different transport layers."""
         # Test HTTP transport simulation
@@ -555,6 +563,7 @@ class TestMCPProtocolE2E:
         assert stdio_request["jsonrpc"] == "2.0"
         assert stdio_request["method"] == "tools/call"
 
+    @pytest.mark.asyncio
     async def test_protocol_compliance_json_rpc_2_0(self):
         """Test JSON-RPC 2.0 protocol compliance."""
         # Test valid request structure
@@ -608,7 +617,7 @@ class TestMCPPerformance:
 
     @pytest.fixture
     async def performance_server(self):
-        """Create server optimized for performance testing."""
+        """Create server  for performance testing."""
         mcp = MockMCPServer("performance-test-server")
 
         # Mock optimized client manager
@@ -634,6 +643,7 @@ class TestMCPPerformance:
         register_mock_tools(mcp, mock_client_manager)
         return mcp, mock_client_manager
 
+    @pytest.mark.asyncio
     async def test_high_frequency_requests(self, performance_server):
         """Test handling high-frequency requests."""
         mcp_server, mock_client_manager = performance_server
@@ -672,6 +682,7 @@ class TestMCPPerformance:
             f"Performance: {requests_per_second:.1f} req/s, expected > 50 req/s"
         )
 
+    @pytest.mark.asyncio
     async def test_memory_usage_stability(self, performance_server):
         """Test memory usage remains stable under load."""
         mcp_server, mock_client_manager = performance_server
@@ -701,6 +712,7 @@ class TestMCPPerformance:
         # If we reach here without memory issues, test passes
         assert True, "Memory usage remained stable"
 
+    @pytest.mark.asyncio
     async def test_response_time_consistency(self, performance_server):
         """Test response time consistency under varying loads."""
         mcp_server, mock_client_manager = performance_server

@@ -31,7 +31,7 @@ from src.mcp_tools.models.requests import (
     SearchRequest,
 )
 from src.mcp_tools.models.responses import HyDEAdvancedResponse, SearchResult
-from src.security import MLSecurityValidator as SecurityValidator
+from src.security import MLSecurityValidator
 
 
 logger = logging.getLogger(__name__)
@@ -135,7 +135,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             # Validate collection name
-            security_validator = SecurityValidator.from_unified_config()
+            security_validator = MLSecurityValidator.from_unified_config()
             request.collection = security_validator.validate_collection_name(
                 request.collection
             )
@@ -191,12 +191,14 @@ def register_tools(mcp, client_manager: ClientManager):
             await ctx.info(
                 f"Multi-stage search {request_id} completed: {len(search_results)} results"
             )
-            return search_results
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError):
             await ctx.error("Multi-stage search {request_id} failed")
             logger.exception("Multi-stage search failed")
             raise
+
+        else:
+            return search_results
 
     @mcp.tool()
     async def hyde_search(
@@ -215,7 +217,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             # Validate collection name and query
-            security_validator = SecurityValidator.from_unified_config()
+            security_validator = MLSecurityValidator.from_unified_config()
             request.collection = security_validator.validate_collection_name(
                 request.collection
             )
@@ -224,7 +226,7 @@ def register_tools(mcp, client_manager: ClientManager):
             # Get services
             try:
                 hyde_engine = await client_manager.get_hyde_engine()
-            except Exception:
+            except (ConnectionError, OSError, TimeoutError, ValueError):
                 await ctx.warning(
                     "HyDE engine not available, falling back to regular search"
                 )
@@ -324,7 +326,6 @@ def register_tools(mcp, client_manager: ClientManager):
             await ctx.info(
                 f"HyDE search {request_id} completed: {len(search_results)} results found"
             )
-            return search_results
 
         except Exception as e:
             await ctx.error("HyDE search {request_id} failed")
@@ -373,7 +374,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             # Validate inputs
-            security_validator = SecurityValidator.from_unified_config()
+            security_validator = MLSecurityValidator.from_unified_config()
             collection = security_validator.validate_collection_name(collection)
             query = security_validator.validate_query_string(query)
 
@@ -415,7 +416,7 @@ def register_tools(mcp, client_manager: ClientManager):
                         query, collection, limit, domain, use_cache, client_manager, ctx
                     )
                     result_dict["ab_test_results"] = ab_test_results
-                except Exception:
+                except (ConnectionError, OSError, PermissionError):
                     if ctx:
                         await ctx.warning("A/B testing failed")
                     # Fallback to regular HyDE search
@@ -510,7 +511,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
             return HyDEAdvancedResponse(**result_dict)
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError):
             if ctx:
                 await ctx.error("Advanced HyDE search {request_id} failed")
             logger.exception("Advanced HyDE search failed")
@@ -531,7 +532,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         try:
             # Validate collection name and query
-            security_validator = SecurityValidator.from_unified_config()
+            security_validator = MLSecurityValidator.from_unified_config()
             request.collection = security_validator.validate_collection_name(
                 request.collection
             )
@@ -574,9 +575,10 @@ def register_tools(mcp, client_manager: ClientManager):
             await ctx.info(
                 f"Filtered search {request_id} completed: {len(search_results)} results"
             )
-            return search_results
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError):
             await ctx.error("Filtered search {request_id} failed")
             logger.exception("Filtered search failed")
             raise
+        else:
+            return search_results

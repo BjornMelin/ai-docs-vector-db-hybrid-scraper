@@ -91,13 +91,6 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
         # Execute request with timeout
         try:
             response = await self._execute_with_timeout(request, call_next)
-
-            # Record success for circuit breaker
-            if self.config.enable_circuit_breaker:
-                self._record_success(endpoint)
-
-            return response
-
         except TimeoutError:
             # Handle timeout
             logger.warning(
@@ -122,13 +115,19 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError):
             # Record failure for circuit breaker
             if self.config.enable_circuit_breaker:
                 self._record_failure(endpoint)
 
             # Re-raise the exception
             raise
+        else:
+            # Record success for circuit breaker
+            if self.config.enable_circuit_breaker:
+                self._record_success(endpoint)
+
+            return response
 
     async def _execute_with_timeout(
         self, request: Request, call_next: Callable
@@ -321,7 +320,7 @@ class BulkheadMiddleware(BaseHTTPMiddleware):
     to prevent resource exhaustion.
     """
 
-    def __init__(self, app: Callable, max_concurrent: int = 10):
+    def __init__(self, app, max_concurrent=10):
         """Initialize bulkhead middleware.
 
         Args:

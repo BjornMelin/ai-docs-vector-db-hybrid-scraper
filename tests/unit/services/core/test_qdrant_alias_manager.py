@@ -1,7 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-
 """Tests for Qdrant alias manager service."""
 
 from unittest.mock import AsyncMock, MagicMock
@@ -17,6 +13,10 @@ from src.services.core.qdrant_alias_manager import (
     QdrantAliasManager,
 )
 from src.services.errors import QdrantServiceError
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
 
 
 class TestQdrantAliasManagerValidation:
@@ -173,6 +173,7 @@ class TestQdrantAliasManager:
         assert manager._task_queue_manager == mock_task_queue_manager
         assert manager._initialized is True  # Already initialized via client
 
+    @pytest.mark.asyncio
     async def test_initialize_no_op(self, alias_manager):
         """Test that initialize is a no-op."""
         # Should not raise any exceptions
@@ -181,11 +182,13 @@ class TestQdrantAliasManager:
         # State should remain unchanged
         assert alias_manager._initialized is True
 
+    @pytest.mark.asyncio
     async def test_cleanup_no_tasks(self, alias_manager):
         """Test cleanup when no deletion tasks exist."""
         # Should not raise any exceptions
         await alias_manager.cleanup()
 
+    @pytest.mark.asyncio
     async def test_cleanup_with_pending_tasks(self, alias_manager):
         """Test cleanup method (no-op as tasks are managed by task queue)."""
         # Current implementation uses task queue manager for persistence
@@ -197,6 +200,7 @@ class TestQdrantAliasManager:
         # No assertions needed as cleanup is a no-op
         # All deletion scheduling is handled by task queue manager
 
+    @pytest.mark.asyncio
     async def test_create_alias_success(self, alias_manager, mock_client):
         """Test successful alias creation."""
         mock_client.get_aliases.return_value = MagicMock(
@@ -217,6 +221,7 @@ class TestQdrantAliasManager:
         assert operations[0].create_alias.alias_name == "test_alias"
         assert operations[0].create_alias.collection_name == "test_collection"
 
+    @pytest.mark.asyncio
     async def test_create_alias_already_exists_no_force(
         self, alias_manager, mock_client
     ):
@@ -234,6 +239,7 @@ class TestQdrantAliasManager:
         # Should not call update_collection_aliases
         mock_client.update_collection_aliases.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_create_alias_already_exists_with_force(
         self, alias_manager, mock_client
     ):
@@ -264,16 +270,19 @@ class TestQdrantAliasManager:
         assert len(create_ops) == 1
         assert isinstance(create_ops[0], CreateAliasOperation)
 
+    @pytest.mark.asyncio
     async def test_create_alias_invalid_alias_name(self, alias_manager):
         """Test creating alias with invalid alias name."""
         with pytest.raises(QdrantServiceError):
             await alias_manager.create_alias("invalid name", "test_collection")
 
+    @pytest.mark.asyncio
     async def test_create_alias_invalid_collection_name(self, alias_manager):
         """Test creating alias with invalid collection name."""
         with pytest.raises(QdrantServiceError):
             await alias_manager.create_alias("test_alias", "invalid name")
 
+    @pytest.mark.asyncio
     async def test_create_alias_client_error(self, alias_manager, mock_client):
         """Test alias creation with client error."""
         mock_client.get_aliases.return_value = MagicMock(aliases=[])
@@ -284,6 +293,7 @@ class TestQdrantAliasManager:
 
         assert "Failed to create alias" in str(exc_info.value)
 
+    @pytest.mark.asyncio
     async def test_switch_alias_success(self, alias_manager, mock_client):
         """Test successful alias switching."""
         # Mock existing alias
@@ -306,6 +316,7 @@ class TestQdrantAliasManager:
         assert isinstance(operations[1], CreateAliasOperation)
         assert operations[1].create_alias.collection_name == "new_collection"
 
+    @pytest.mark.asyncio
     async def test_switch_alias_same_collection(self, alias_manager, mock_client):
         """Test switching alias to same collection."""
         # Mock existing alias pointing to same collection
@@ -320,6 +331,7 @@ class TestQdrantAliasManager:
         # Should not call update_collection_aliases
         mock_client.update_collection_aliases.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_switch_alias_no_existing_alias(self, alias_manager, mock_client):
         """Test switching non-existent alias."""
         mock_client.get_aliases.return_value = MagicMock(aliases=[])
@@ -335,6 +347,7 @@ class TestQdrantAliasManager:
         assert isinstance(operations[0], CreateAliasOperation)
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_switch_alias_with_delete_old(
         self, alias_manager, mock_client, mock_task_queue_manager
     ):
@@ -361,6 +374,7 @@ class TestQdrantAliasManager:
         # Should schedule deletion task via task queue manager
         mock_task_queue_manager.enqueue.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_switch_alias_invalid_names(self, alias_manager):
         """Test switching alias with invalid names."""
         with pytest.raises(QdrantServiceError):
@@ -369,6 +383,7 @@ class TestQdrantAliasManager:
         with pytest.raises(QdrantServiceError):
             await alias_manager.switch_alias("alias", "invalid name")
 
+    @pytest.mark.asyncio
     async def test_switch_alias_client_error(self, alias_manager, mock_client):
         """Test alias switching with client error."""
         # First call to get_aliases should succeed to get current collection
@@ -385,6 +400,7 @@ class TestQdrantAliasManager:
 
         assert "Failed to switch alias" in str(exc_info.value)
 
+    @pytest.mark.asyncio
     async def test_delete_alias_success(self, alias_manager, mock_client):
         """Test successful alias deletion."""
         result = await alias_manager.delete_alias("test_alias")
@@ -399,6 +415,7 @@ class TestQdrantAliasManager:
         assert isinstance(operations[0], DeleteAliasOperation)
         assert operations[0].delete_alias.alias_name == "test_alias"
 
+    @pytest.mark.asyncio
     async def test_delete_alias_client_error(self, alias_manager, mock_client):
         """Test alias deletion with client error."""
         mock_client.update_collection_aliases.side_effect = Exception("Client error")
@@ -407,6 +424,7 @@ class TestQdrantAliasManager:
 
         assert result is False
 
+    @pytest.mark.asyncio
     async def test_alias_exists_true(self, alias_manager, mock_client):
         """Test checking if alias exists (true case)."""
         existing_alias = MagicMock()
@@ -417,6 +435,7 @@ class TestQdrantAliasManager:
 
         assert result is True
 
+    @pytest.mark.asyncio
     async def test_alias_exists_false(self, alias_manager, mock_client):
         """Test checking if alias exists (false case)."""
         mock_client.get_aliases.return_value = MagicMock(aliases=[])
@@ -425,6 +444,7 @@ class TestQdrantAliasManager:
 
         assert result is False
 
+    @pytest.mark.asyncio
     async def test_alias_exists_client_error(self, alias_manager, mock_client):
         """Test checking if alias exists with client error."""
         mock_client.get_aliases.side_effect = Exception("Client error")
@@ -433,6 +453,7 @@ class TestQdrantAliasManager:
 
         assert result is False
 
+    @pytest.mark.asyncio
     async def test_get_collection_for_alias_exists(self, alias_manager, mock_client):
         """Test getting collection for existing alias."""
         existing_alias = MagicMock()
@@ -444,6 +465,7 @@ class TestQdrantAliasManager:
 
         assert result == "test_collection"
 
+    @pytest.mark.asyncio
     async def test_get_collection_for_alias_not_exists(
         self, alias_manager, mock_client
     ):
@@ -454,6 +476,7 @@ class TestQdrantAliasManager:
 
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_get_collection_for_alias_client_error(
         self, alias_manager, mock_client
     ):
@@ -464,6 +487,7 @@ class TestQdrantAliasManager:
 
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_list_aliases_success(self, alias_manager, mock_client):
         """Test listing all aliases successfully."""
         alias1 = MagicMock()
@@ -481,6 +505,7 @@ class TestQdrantAliasManager:
         expected = {"alias1": "collection1", "alias2": "collection2"}
         assert result == expected
 
+    @pytest.mark.asyncio
     async def test_list_aliases_empty(self, alias_manager, mock_client):
         """Test listing aliases when none exist."""
         mock_client.get_aliases.return_value = MagicMock(aliases=[])
@@ -489,6 +514,7 @@ class TestQdrantAliasManager:
 
         assert result == {}
 
+    @pytest.mark.asyncio
     async def test_list_aliases_client_error(self, alias_manager, mock_client):
         """Test listing aliases with client error."""
         mock_client.get_aliases.side_effect = Exception("Client error")
@@ -497,6 +523,7 @@ class TestQdrantAliasManager:
 
         assert result == {}
 
+    @pytest.mark.asyncio
     async def test_safe_delete_collection_with_aliases(
         self, alias_manager, mock_client
     ):
@@ -514,6 +541,7 @@ class TestQdrantAliasManager:
         # Should not delete collection if aliases exist
         mock_client.delete_collection.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_safe_delete_collection_no_aliases(
         self, alias_manager, mock_client, mock_task_queue_manager
     ):
@@ -532,6 +560,7 @@ class TestQdrantAliasManager:
         assert call_args[0][0] == "delete_collection"
         assert call_args[1]["collection_name"] == "test_collection"
 
+    @pytest.mark.asyncio
     async def test_safe_delete_collection_background_deletion(
         self, alias_manager, mock_client, mock_task_queue_manager
     ):
@@ -550,6 +579,7 @@ class TestQdrantAliasManager:
         assert call_args[1]["grace_period_minutes"] == 1
         assert call_args[1]["_delay"] == 60  # 1 minute * 60 seconds
 
+    @pytest.mark.asyncio
     async def test_safe_delete_collection_deletion_failure(
         self, alias_manager, mock_client, mock_task_queue_manager
     ):
@@ -564,6 +594,7 @@ class TestQdrantAliasManager:
                 "test_collection", grace_period_minutes=0.01
             )
 
+    @pytest.mark.asyncio
     async def test_clone_collection_schema_success(self, alias_manager, mock_client):
         """Test successful collection schema cloning."""
         # Mock source collection info
@@ -597,6 +628,7 @@ class TestQdrantAliasManager:
         # Verify payload indexes were created
         assert mock_client.create_payload_index.call_count == 2
 
+    @pytest.mark.asyncio
     async def test_clone_collection_schema_no_payload_schema(
         self, alias_manager, mock_client
     ):
@@ -620,6 +652,7 @@ class TestQdrantAliasManager:
         # Should not attempt to create payload indexes
         mock_client.create_payload_index.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_clone_collection_schema_client_error(
         self, alias_manager, mock_client
     ):
@@ -633,6 +666,7 @@ class TestQdrantAliasManager:
 
         assert "Failed to clone collection schema" in str(exc_info.value)
 
+    @pytest.mark.asyncio
     async def test_copy_collection_data_success(self, alias_manager, mock_client):
         """Test successful collection data copying."""
         # Mock source collection info
@@ -667,6 +701,7 @@ class TestQdrantAliasManager:
             collection_name="target", points=mock_points
         )
 
+    @pytest.mark.asyncio
     async def test_copy_collection_data_with_limit(self, alias_manager, mock_client):
         """Test copying collection data with limit."""
         mock_source_info = MagicMock()
@@ -690,6 +725,7 @@ class TestQdrantAliasManager:
         # Should call upsert twice (5 + 5 = 10, then stop)
         assert mock_client.upsert.call_count == 2
 
+    @pytest.mark.asyncio
     async def test_copy_collection_data_with_progress_callback(
         self, alias_manager, mock_client
     ):
@@ -713,6 +749,7 @@ class TestQdrantAliasManager:
         assert result == 10
         assert progress_calls == [(10, 10)]
 
+    @pytest.mark.asyncio
     async def test_copy_collection_data_progress_callback_error(
         self, alias_manager, mock_client
     ):
@@ -735,6 +772,7 @@ class TestQdrantAliasManager:
 
         assert result == 10
 
+    @pytest.mark.asyncio
     async def test_copy_collection_data_invalid_names(self, alias_manager):
         """Test copying collection data with invalid names."""
         with pytest.raises(QdrantServiceError):
@@ -743,6 +781,7 @@ class TestQdrantAliasManager:
         with pytest.raises(QdrantServiceError):
             await alias_manager.copy_collection_data("source", "invalid name")
 
+    @pytest.mark.asyncio
     async def test_copy_collection_data_client_error(self, alias_manager, mock_client):
         """Test copying collection data with client error."""
         mock_client.get_collection.side_effect = Exception("Client error")
@@ -752,6 +791,7 @@ class TestQdrantAliasManager:
 
         assert "Failed to copy collection data" in str(exc_info.value)
 
+    @pytest.mark.asyncio
     async def test_validate_collection_compatibility_compatible(
         self, alias_manager, mock_client
     ):
@@ -778,6 +818,7 @@ class TestQdrantAliasManager:
         assert is_compatible is True
         assert message == "Collections are compatible"
 
+    @pytest.mark.asyncio
     async def test_validate_collection_compatibility_different_vectors(
         self, alias_manager, mock_client
     ):
@@ -797,6 +838,7 @@ class TestQdrantAliasManager:
         assert is_compatible is False
         assert "Vector configurations differ" in message
 
+    @pytest.mark.asyncio
     async def test_validate_collection_compatibility_different_hnsw(
         self, alias_manager, mock_client
     ):
@@ -822,6 +864,7 @@ class TestQdrantAliasManager:
         assert is_compatible is False
         assert "HNSW configurations differ" in message
 
+    @pytest.mark.asyncio
     async def test_validate_collection_compatibility_different_quantization(
         self, alias_manager, mock_client
     ):
@@ -849,6 +892,7 @@ class TestQdrantAliasManager:
         assert is_compatible is False
         assert "Quantization configuration mismatch" in message
 
+    @pytest.mark.asyncio
     async def test_validate_collection_compatibility_client_error(
         self, alias_manager, mock_client
     ):
@@ -862,6 +906,7 @@ class TestQdrantAliasManager:
         assert is_compatible is False
         assert "Validation error" in message
 
+    @pytest.mark.asyncio
     async def test_validate_collection_compatibility_model_dump(
         self, alias_manager, mock_client
     ):

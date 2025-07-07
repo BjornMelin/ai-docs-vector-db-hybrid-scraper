@@ -5,7 +5,7 @@ using the centralized ClientManager for all client operations.
 """
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from src.config import Config
 from src.services.base import BaseService
@@ -26,7 +26,28 @@ logger = logging.getLogger(__name__)
 
 
 class QdrantService(BaseService):
-    """Unified Qdrant service facade delegating to focused modules."""
+    """Enterprise-grade Qdrant vector database service with advanced search
+    capabilities.
+
+    This service provides a unified interface to Qdrant vector database operations with
+    sophisticated search algorithms, deployment infrastructure, and performance
+    optimization:
+
+    - **Hybrid Search**: Dense + sparse vector fusion with configurable algorithms
+      (RRF, DBSF)
+    - **Multi-Stage Retrieval**: Advanced retrieval strategies with weighted fusion
+    - **HyDE Search**: Hypothetical Document Embeddings for enhanced semantic matching
+    - **Enterprise Deployment**: A/B testing, blue-green deployment, canary releases
+    - **Performance Optimization**: HNSW tuning, quantization, payload indexing
+    - **Modular Architecture**: Focused modules for collections, search, indexing,
+      documents
+
+    The service automatically routes requests through deployment infrastructure when
+    enabled,
+    supporting enterprise features like feature flags, A/B testing, and canary
+    deployments
+    for production-grade vector search systems.
+    """
 
     def __init__(self, config: Config, client_manager: "ClientManager"):
         """Initialize Qdrant service with modular components.
@@ -63,28 +84,41 @@ class QdrantService(BaseService):
             return
 
         try:
-            # Get the Qdrant client from ClientManager
             client = await self._client_manager.get_qdrant_client()
-
-            # Initialize all focused modules with the shared client
-            self._collections = QdrantCollections(self.config, client)
-            self._search = QdrantSearch(client, self.config)
-            self._indexing = QdrantIndexing(client, self.config)
-            self._documents = QdrantDocuments(client, self.config)
-
-            # Initialize each module
-            await self._collections.initialize()
-
-            # Initialize deployment infrastructure if enabled
-            await self._initialize_deployment_services()
-
-            self._initialized = True
-            logger.info("QdrantService initialized with modular architecture")
-
         except Exception as e:
             self._initialized = False
-            msg = f"Failed to initialize QdrantService: {e}"
+            msg = f"Failed to get Qdrant client: {e}"
             raise QdrantServiceError(msg) from e
+
+        try:
+            self._initialize_qdrant_modules(client)
+        except Exception as e:
+            self._initialized = False
+            msg = f"Failed to initialize Qdrant modules: {e}"
+            raise QdrantServiceError(msg) from e
+
+        try:
+            await self._collections.initialize()
+        except Exception as e:
+            self._initialized = False
+            msg = f"Failed to initialize collections: {e}"
+            raise QdrantServiceError(msg) from e
+
+        try:
+            await self._initialize_deployment_services()
+        except (AttributeError, ConnectionError, ValueError, RuntimeError) as e:
+            logger.warning("Failed to initialize deployment services: %s", e)
+            # Don't fail initialization for optional deployment services
+
+        self._initialized = True
+        logger.info("QdrantService initialized with modular architecture")
+
+    def _initialize_qdrant_modules(self, client) -> None:
+        """Initialize all Qdrant modules with the shared client."""
+        self._collections = QdrantCollections(self.config, client)
+        self._search = QdrantSearch(client, self.config)
+        self._indexing = QdrantIndexing(client, self.config)
+        self._documents = QdrantDocuments(client, self.config)
 
     async def _initialize_deployment_services(self) -> None:
         """Initialize deployment services based on configuration and feature flags.
@@ -98,42 +132,57 @@ class QdrantService(BaseService):
         Services are only initialized if enabled in configuration.
         """
         try:
-            # Initialize feature flag manager if deployment services are enabled
-            if self.config.deployment.enable_feature_flags:
-                self._feature_flag_manager = (
-                    await self._client_manager.get_feature_flag_manager()
-                )
-                logger.info("Initialized FeatureFlagManager for QdrantService")
+            await self._initialize_feature_flag_manager()
+        except (AttributeError, ConnectionError, ValueError, RuntimeError) as e:
+            logger.warning("Failed to initialize feature flag manager: %s", e)
 
-            # Initialize A/B testing manager if enabled
-            if self.config.deployment.enable_ab_testing:
-                self._ab_testing_manager = (
-                    await self._client_manager.get_ab_testing_manager()
-                )
-                if self._ab_testing_manager:
-                    logger.info("Initialized ABTestingManager for QdrantService")
+        try:
+            await self._initialize_ab_testing_manager()
+        except (AttributeError, ConnectionError, ValueError, RuntimeError) as e:
+            logger.warning("Failed to initialize A/B testing manager: %s", e)
 
-            # Store deployment services for search routing
-            if (
-                self.config.deployment.enable_blue_green
-                or self.config.deployment.enable_canary
-                or self.config.deployment.enable_ab_testing
-            ):
-                # Get deployment services and store references
-                blue_green = await self._client_manager.get_blue_green_deployment()
-                canary = await self._client_manager.get_canary_deployment()
+        try:
+            await self._initialize_deployment_routing()
+        except (AttributeError, ConnectionError, ValueError, RuntimeError) as e:
+            logger.warning("Failed to initialize deployment routing: %s", e)
 
-                # Store deployment services for routing decisions
-                self._blue_green_deployment = blue_green
-                self._canary_deployment = canary
+    async def _initialize_feature_flag_manager(self) -> None:
+        """Initialize feature flag manager if enabled."""
+        if not self.config.deployment.enable_feature_flags:
+            return
 
-                logger.info("Initialized deployment services for QdrantService routing")
+        self._feature_flag_manager = (
+            await self._client_manager.get_feature_flag_manager()
+        )
+        logger.info("Initialized FeatureFlagManager for QdrantService")
 
-        except Exception as e:
-            logger.warning(
-                f"Failed to initialize deployment services: {e}. Continuing with standard mode."
-            )
-            # Don't raise exception - deployment services are optional
+    async def _initialize_ab_testing_manager(self) -> None:
+        """Initialize A/B testing manager if enabled."""
+        if not self.config.deployment.enable_ab_testing:
+            return
+
+        self._ab_testing_manager = await self._client_manager.get_ab_testing_manager()
+        if self._ab_testing_manager:
+            logger.info("Initialized ABTestingManager for QdrantService")
+
+    async def _initialize_deployment_routing(self) -> None:
+        """Initialize deployment routing services if any are enabled."""
+        if not (
+            self.config.deployment.enable_blue_green
+            or self.config.deployment.enable_canary
+            or self.config.deployment.enable_ab_testing
+        ):
+            return
+
+        # Get deployment services and store references
+        blue_green = await self._client_manager.get_blue_green_deployment()
+        canary = await self._client_manager.get_canary_deployment()
+
+        # Store deployment services for routing decisions
+        self._blue_green_deployment = blue_green
+        self._canary_deployment = canary
+
+        logger.info("Initialized deployment services for QdrantService routing")
 
     async def cleanup(self) -> None:
         """Cleanup all Qdrant modules (delegated to ClientManager)."""
@@ -173,7 +222,8 @@ class QdrantService(BaseService):
             vector_size: Dimension of the vectors to be stored
             distance: Distance metric for similarity search (Cosine, Euclid, Dot)
             sparse_vector_name: Optional name for sparse vector field
-            enable_quantization: Whether to enable vector quantization for storage efficiency
+            enable_quantization: Whether to enable vector quantization for storage
+                efficiency
             collection_type: Type of collection for specialized configurations
 
         Returns:
@@ -200,12 +250,14 @@ class QdrantService(BaseService):
             try:
                 await self._indexing.create_payload_indexes(collection_name)
                 logger.info(
-                    f"Payload indexes created for collection: {collection_name}"
+                    "Payload indexes created for collection: %s", collection_name
                 )
-            except Exception as e:
+            except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
                 logger.warning(
-                    f"Failed to create payload indexes for {collection_name}: {e}. "
-                    "Collection created successfully but filtering may be slower."
+                    "Failed to create payload indexes for %s: %s. "
+                    "Collection created successfully but filtering may be slower.",
+                    collection_name,
+                    e,
                 )
 
         return result
@@ -295,6 +347,50 @@ class QdrantService(BaseService):
 
     # Search API (delegates to QdrantSearch)
 
+    async def search(
+        self,
+        collection_name: str,
+        query_vector: list[float],
+        limit: int = 10,
+        filter_conditions: dict[str, Any] | None = None,
+        score_threshold: float | None = None,
+    ) -> list[dict[str, Any]]:
+        """Basic vector search method.
+
+        Args:
+            collection_name: Name of the collection to search
+            query_vector: Query vector for similarity search
+            limit: Maximum number of results
+            filter_conditions: Optional filter conditions
+            score_threshold: Optional score threshold
+
+        Returns:
+            List of search results
+
+        Raises:
+            QdrantServiceError: If search fails
+        """
+        if not self._search:
+            msg = "Search module not initialized"
+            raise QdrantServiceError(msg)
+
+        # Use filtered search if we have filter conditions, otherwise hybrid search
+        if filter_conditions:
+            return await self.filtered_search(
+                collection_name=collection_name,
+                query_vector=query_vector,
+                limit=limit,
+                filter_conditions=filter_conditions,
+                score_threshold=score_threshold,
+            )
+        # Use hybrid search as the default search method
+        return await self.hybrid_search(
+            collection_name=collection_name,
+            query_vector=query_vector,
+            limit=limit,
+            score_threshold=score_threshold or 0.0,
+        )
+
     async def hybrid_search(
         self,
         collection_name: str,
@@ -329,25 +425,31 @@ class QdrantService(BaseService):
         """
         self._validate_initialized()
 
-        # Route search through deployment infrastructure if enabled
+        # Enterprise deployment routing: A/B testing and canary deployments
+        # This enables sophisticated production deployment strategies
+        # with gradual rollouts
         if self._ab_testing_manager and user_id:
-            # Check for active A/B tests and route accordingly
+            # Check for active A/B tests and route users to test variants
+            # This allows testing different search parameters and algorithms
             variant = await self._ab_testing_manager.assign_user_to_variant(
                 test_id="hybrid_search_test", user_id=user_id
             )
             if variant and variant == "variant":
-                # Use alternative search parameters for A/B testing
-                search_accuracy = "accurate"  # Example: use higher accuracy for variant
+                # Apply variant-specific search parameters for A/B testing
+                # Example: use higher accuracy for variant group to measure impact
+                search_accuracy = "accurate"
 
-        # Check canary deployment routing
+        # Canary deployment routing for gradual rollout of search improvements
+        # Routes a percentage of users to the new version for safety validation
         if self._canary_deployment and user_id:
             canary_assignment = await self._canary_deployment.should_route_to_canary(
                 user_id
             )
             if canary_assignment:
-                # Route to canary version with enhanced monitoring
+                # Route to canary version with enhanced monitoring and metrics
+                # This enables safe deployment of search algorithm changes
                 logger.debug(
-                    f"Routing user {user_id} to canary deployment for hybrid search"
+                    "Routing user %s to canary deployment for hybrid search", user_id
                 )
 
         # Execute search with deployment tracking
@@ -422,7 +524,8 @@ class QdrantService(BaseService):
             )
             if canary_assignment:
                 logger.debug(
-                    f"Routing user {user_id} to canary deployment for multi-stage search"
+                    "Routing user %s to canary deployment for multi-stage search",
+                    user_id,
                 )
 
         # Execute search with deployment tracking
@@ -471,7 +574,8 @@ class QdrantService(BaseService):
             request_id: Optional request ID for canary metrics tracking
 
         Returns:
-            list[dict[str, object]]: Search results combining query and hypothetical matches
+            list[dict[str, object]]: Search results combining query and hypothetical
+                matches
 
         Raises:
             QdrantServiceError: If HyDE search fails
@@ -496,7 +600,7 @@ class QdrantService(BaseService):
             )
             if canary_assignment:
                 logger.debug(
-                    f"Routing user {user_id} to canary deployment for HyDE search"
+                    "Routing user %s to canary deployment for HyDE search", user_id
                 )
 
         # Execute search with deployment tracking
@@ -568,7 +672,7 @@ class QdrantService(BaseService):
             )
             if canary_assignment:
                 logger.debug(
-                    f"Routing user {user_id} to canary deployment for filtered search"
+                    "Routing user %s to canary deployment for filtered search", user_id
                 )
 
         # Execute search with deployment tracking
@@ -922,7 +1026,8 @@ class QdrantService(BaseService):
         Args:
             collection_name: Name of the collection to create
             vector_size: Dimension of the vectors to be stored
-            collection_type: Type for optimized HNSW settings ("general", "code", "scientific")
+            collection_type: Type for optimized HNSW settings
+                ("general", "code", "scientific")
             distance: Distance metric for similarity search (Cosine, Euclid, Dot)
             sparse_vector_name: Optional name for sparse vector field
             enable_quantization: Whether to enable vector quantization
@@ -973,3 +1078,26 @@ class QdrantService(BaseService):
         if not self._initialized or not self._collections:
             msg = "Service not initialized. Call initialize() first."
             raise QdrantServiceError(msg)
+
+    @property
+    def is_initialized(self) -> bool:
+        """Check if the service is properly initialized.
+
+        Returns:
+            bool: True if service is initialized and ready for use
+
+        """
+        return self._initialized and self._collections is not None
+
+    async def get_client(self):
+        """Get the Qdrant client instance.
+
+        Returns:
+            The Qdrant client instance for direct operations
+
+        Raises:
+            QdrantServiceError: If service is not initialized
+
+        """
+        self._validate_initialized()
+        return await self._client_manager.get_qdrant_client()

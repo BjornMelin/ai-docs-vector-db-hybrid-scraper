@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: qdrant
+  namespace: ai-docs-system
+  labels:
+    app.kubernetes.io/name: qdrant
+    app.kubernetes.io/component: vector-database
+    app.kubernetes.io/part-of: ai-docs-system
+spec:
+  serviceName: qdrant-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: qdrant
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: qdrant
+        app.kubernetes.io/component: vector-database
+    spec:
+      containers:
+      - name: qdrant
+        image: qdrant/qdrant:latest
+        ports:
+        - containerPort: 6333
+          name: http-api
+        - containerPort: 6334
+          name: grpc-api
+        env:
+        - name: QDRANT__SERVICE__HTTP_PORT
+          value: "6333"
+        - name: QDRANT__SERVICE__GRPC_PORT
+          value: "6334"
+        - name: QDRANT__LOG_LEVEL
+          value: "INFO"
+        - name: QDRANT__STORAGE__ON_DISK_PAYLOAD
+          value: "true"
+        - name: QDRANT__STORAGE__QUANTIZATION__ALWAYS_RAM
+          value: "true"
+        - name: QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS
+          value: "8"
+        - name: QDRANT__STORAGE__OPTIMIZERS__DEFAULT_SEGMENT_NUMBER
+          value: "16"
+        - name: QDRANT__STORAGE__WRITE_CONSISTENCY_FACTOR
+          value: "1"
+        - name: QDRANT__STORAGE__REPLICATION_FACTOR
+          value: "1"
+        - name: QDRANT__STORAGE__SPARSE_VECTORS__ON_DISK
+          value: "true"
+        - name: QDRANT__STORAGE__QUANTIZATION__SCALAR__TYPE
+          value: "int8"
+        - name: QDRANT__STORAGE__HNSW__M
+          value: "16"
+        - name: QDRANT__STORAGE__HNSW__EF_CONSTRUCT
+          value: "128"
+        volumeMounts:
+        - name: qdrant-storage
+          mountPath: /qdrant/storage
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1"
+          limits:
+            memory: "4Gi"
+            cpu: "2"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 6333
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 6333
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+  volumeClaimTemplates:
+  - metadata:
+      name: qdrant-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 50Gi
+      storageClassName: gp2  # Change to your preferred storage class
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qdrant
+  namespace: ai-docs-system
+  labels:
+    app.kubernetes.io/name: qdrant
+    app.kubernetes.io/component: vector-database
+spec:
+  selector:
+    app.kubernetes.io/name: qdrant
+  ports:
+  - name: http-api
+    port: 6333
+    targetPort: 6333
+  - name: grpc-api
+    port: 6334
+    targetPort: 6334
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qdrant-headless
+  namespace: ai-docs-system
+  labels:
+    app.kubernetes.io/name: qdrant
+    app.kubernetes.io/component: vector-database
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: qdrant
+  ports:
+  - name: http-api
+    port: 6333
+    targetPort: 6333
+  - name: grpc-api
+    port: 6334
+    targetPort: 6334

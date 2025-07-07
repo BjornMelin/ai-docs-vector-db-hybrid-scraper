@@ -1,6 +1,7 @@
 """Advanced hybrid search service - backward compatibility wrapper.
 
-This module provides a backward compatibility wrapper around the new AdvancedSearchOrchestrator.
+This module provides a backward compatibility wrapper around the new
+AdvancedSearchOrchestrator.
 It maps the old AdvancedHybridSearchService API to the new unified orchestrator.
 """
 
@@ -12,19 +13,23 @@ from typing import Any
 
 from qdrant_client import AsyncQdrantClient
 
-from src.config import ABTestVariant, Config, OptimizationStrategy
+from src.config import (
+    ABTestVariant,
+    Config,
+    OptimizationStrategy,
+    SearchMode,
+    SearchPipeline,
+)
 from src.models.vector_search import (
     HybridSearchRequest,
     HybridSearchResponse,
     RetrievalMetrics,
     SearchResult,
 )
-from src.services.errors import QdrantServiceError
+from src.services.errors import ServiceError
 from src.services.query_processing import (
     AdvancedSearchOrchestrator,
     AdvancedSearchRequest,
-    SearchMode,
-    SearchPipeline,
 )
 
 from .adaptive_fusion_tuner import AdaptiveFusionTuner
@@ -86,10 +91,8 @@ class HybridSearchService:
         try:
             await self.splade_provider.initialize()
             logger.info("Advanced hybrid search service initialized successfully")
-        except Exception as e:
-            logger.error(
-                f"Failed to initialize advanced search service: {e}", exc_info=True
-            )
+        except Exception:
+            logger.exception("Failed to initialize advanced search service: %s")
             if not self.enable_fallback:
                 raise
 
@@ -107,126 +110,162 @@ class HybridSearchService:
         query_id = str(uuid.uuid4())
 
         try:
-            # Map old request to new AdvancedSearchRequest
-            advanced_request = AdvancedSearchRequest(
-                query=request.query,
-                collection_name=request.collection_name,
-                limit=request.limit,
-                score_threshold=request.score_threshold,
-                user_id=request.user_id,
-                session_id=request.session_id,
-                # Select appropriate search mode based on enabled features
-                search_mode=self._determine_search_mode(request),
-                # Select appropriate pipeline based on optimization strategy
-                pipeline=self._determine_pipeline(request),
-                # Enable features based on request
-                enable_expansion=request.enable_adaptive_fusion,
-                enable_clustering=False,  # Not enabled in old API
-                enable_personalization=request.enable_adaptive_fusion,
-                enable_federation=False,  # Not enabled in old API
-                enable_caching=True,
-                # Pass through existing configurations
-                max_processing_time_ms=self.fallback_timeout_ms,
-                quality_threshold=0.7,
-            )
-
-            # Handle query classification if enabled
-            if request.enable_query_classification:
-                query_classification = await self._classify_query_with_timeout(
-                    request.query,
-                    {"user_id": request.user_id, "session_id": request.session_id},
-                )
-                if query_classification:
-                    # Store classification in context for later use
-                    advanced_request.context["query_classification"] = (
-                        query_classification
-                    )
-
-            # Handle model selection if enabled
-            if (
-                request.enable_model_selection
-                and "query_classification" in advanced_request.context
-            ):
-                model_selection = await self._select_model_with_timeout(
-                    advanced_request.context["query_classification"], request
-                )
-                if model_selection:
-                    # Pass model selection to orchestrator via context
-                    advanced_request.context["model_selection"] = model_selection
-
-            # Handle SPLADE if enabled
-            if request.enable_splade:
-                sparse_vector = await self._generate_sparse_vector_with_timeout(
-                    request.query, request.splade_config
-                )
-                if sparse_vector:
-                    # Pass sparse vector configuration via context
-                    advanced_request.context["splade_config"] = {
-                        "enabled": True,
-                        "vector": sparse_vector,
-                        "config": request.splade_config,
-                    }
-
-            # Execute search through new orchestrator
-            orchestrator_result = await self.orchestrator.search(advanced_request)
-
-            # Map orchestrator result to old response format
-            response = HybridSearchResponse(
-                results=self._format_search_results(orchestrator_result.results),
-                retrieval_metrics=RetrievalMetrics(
-                    query_vector_time_ms=orchestrator_result.search_metadata.get(
-                        "vector_generation_time_ms", 50.0
-                    ),
-                    search_time_ms=orchestrator_result.total_processing_time_ms - 50.0,
-                    total_time_ms=orchestrator_result.total_processing_time_ms,
-                    results_count=len(orchestrator_result.results),
-                    filtered_count=len(orchestrator_result.results),
-                    cache_hit=orchestrator_result.search_metadata.get(
-                        "cache_hit", False
-                    ),
-                    hnsw_ef_used=request.search_params.hnsw_ef,
-                ),
-                query_classification=advanced_request.context.get(
-                    "query_classification", None
-                ),
-                model_selection=advanced_request.context.get("model_selection", None),
-                optimization_applied=orchestrator_result.optimizations_applied != [],
-                # A/B test handling
-                ab_test_variant=self._assign_ab_test_variant(request)
-                if request.ab_test_config
-                else None,
-            )
-
-            # Handle adaptive fusion if enabled
-            if (
-                request.enable_adaptive_fusion
-                and "query_classification" in advanced_request.context
-            ):
-                # Get fusion weights from orchestrator metadata
-                fusion_metadata = orchestrator_result.search_metadata.get(
-                    "fusion_weights"
-                )
-                if fusion_metadata:
-                    response.fusion_weights = fusion_metadata
-                    response.effectiveness_score = (
-                        orchestrator_result.search_metadata.get("effectiveness_score")
-                    )
-
-            # Store for learning
-            await self._store_search_for_learning(query_id, request, response)
-
-            return response
-
+            advanced_request = self._build_advanced_search_request(request)
         except Exception as e:
-            logger.error(
-                f"Advanced hybrid search failed: {e}", exc_info=True
-            )  # TODO: Convert f-string to logging format
-
-            # Fallback to basic search
+            logger.exception("Failed to build advanced search request: %s")
             if self.enable_fallback:
                 return await self._perform_fallback_search(request, start_time, str(e))
-            msg = f"Advanced hybrid search failed: {e}"
-            raise QdrantServiceError(msg) from e
+            msg = f"Request preparation failed: {e}"
+            raise ServiceError(msg) from e
+
+        try:
+            await self._prepare_search_context(request, advanced_request)
+        except Exception as e:
+            logger.exception("Failed to prepare search context: %s")
+            if self.enable_fallback:
+                return await self._perform_fallback_search(request, start_time, str(e))
+            msg = f"Context preparation failed: {e}"
+            raise ServiceError(msg) from e
+
+        try:
+            orchestrator_result = await self.orchestrator.search(advanced_request)
+        except Exception as e:
+            logger.exception("Orchestrator search failed: %s")
+            if self.enable_fallback:
+                return await self._perform_fallback_search(request, start_time, str(e))
+            msg = f"Search execution failed: {e}"
+            raise ServiceError(msg) from e
+
+        try:
+            response = self._build_hybrid_search_response(
+                request, advanced_request, orchestrator_result
+            )
+        except Exception as e:
+            logger.exception("Failed to build search response: %s")
+            if self.enable_fallback:
+                return await self._perform_fallback_search(request, start_time, str(e))
+            msg = f"Response construction failed: {e}"
+            raise ServiceError(msg) from e
+
+        try:
+            await self._store_search_for_learning(query_id, request, response)
+        except (OSError, AttributeError, ConnectionError) as e:
+            logger.warning("Failed to store search for learning: %s", e)
+            # Don't fail the request for learning storage issues
+
+        return response
+
+    def _build_advanced_search_request(
+        self, request: HybridSearchRequest
+    ) -> AdvancedSearchRequest:
+        """Build advanced search request from hybrid search request."""
+        return AdvancedSearchRequest(
+            query=request.query,
+            collection_name=request.collection_name,
+            limit=request.limit,
+            score_threshold=request.score_threshold,
+            user_id=request.user_id,
+            session_id=request.session_id,
+            # Select appropriate search mode based on enabled features
+            search_mode=self._determine_search_mode(request),
+            # Select appropriate pipeline based on optimization strategy
+            pipeline=self._determine_pipeline(request),
+            # Enable features based on request
+            enable_expansion=request.enable_adaptive_fusion,
+            enable_clustering=False,  # Not enabled in old API
+            enable_personalization=request.enable_adaptive_fusion,
+            enable_federation=False,  # Not enabled in old API
+            enable_caching=True,
+            # Pass through existing configurations
+            max_processing_time_ms=self.fallback_timeout_ms,
+            quality_threshold=0.7,
+        )
+
+    async def _prepare_search_context(
+        self, request: HybridSearchRequest, advanced_request: AdvancedSearchRequest
+    ) -> None:
+        """Prepare search context with classification, model selection, and SPLADE."""
+        # Handle query classification if enabled
+        if request.enable_query_classification:
+            query_classification = await self._classify_query_with_timeout(
+                request.query,
+                {"user_id": request.user_id, "session_id": request.session_id},
+            )
+            if query_classification:
+                # Store classification in context for later use
+                advanced_request.context["query_classification"] = query_classification
+
+        # Handle model selection if enabled
+        if (
+            request.enable_model_selection
+            and "query_classification" in advanced_request.context
+        ):
+            model_selection = await self._select_model_with_timeout(
+                advanced_request.context["query_classification"], request
+            )
+            if model_selection:
+                # Pass model selection to orchestrator via context
+                advanced_request.context["model_selection"] = model_selection
+
+        # Handle SPLADE if enabled
+        if request.enable_splade:
+            sparse_vector = await self._generate_sparse_vector_with_timeout(
+                request.query, request.splade_config
+            )
+            if sparse_vector:
+                # Pass sparse vector configuration via context
+                advanced_request.context["splade_config"] = {
+                    "enabled": True,
+                    "vector": sparse_vector,
+                    "config": request.splade_config,
+                }
+
+    def _build_hybrid_search_response(
+        self,
+        request: HybridSearchRequest,
+        advanced_request: AdvancedSearchRequest,
+        orchestrator_result,
+    ) -> HybridSearchResponse:
+        """Build hybrid search response from orchestrator result."""
+        # Map orchestrator result to old response format
+        response = HybridSearchResponse(
+            results=self._format_search_results(orchestrator_result.results),
+            retrieval_metrics=RetrievalMetrics(
+                query_vector_time_ms=orchestrator_result.search_metadata.get(
+                    "vector_generation_time_ms", 50.0
+                ),
+                search_time_ms=orchestrator_result.total_processing_time_ms - 50.0,
+                total_time_ms=orchestrator_result.total_processing_time_ms,
+                results_count=len(orchestrator_result.results),
+                filtered_count=len(orchestrator_result.results),
+                cache_hit=orchestrator_result.search_metadata.get("cache_hit", False),
+                hnsw_ef_used=request.search_params.hnsw_ef,
+            ),
+            query_classification=advanced_request.context.get(
+                "query_classification", None
+            ),
+            model_selection=advanced_request.context.get("model_selection", None),
+            optimization_applied=orchestrator_result.optimizations_applied != [],
+            # A/B test handling
+            ab_test_variant=self._assign_ab_test_variant(request)
+            if request.ab_test_config
+            else None,
+        )
+
+        # Handle adaptive fusion if enabled
+        if (
+            request.enable_adaptive_fusion
+            and "query_classification" in advanced_request.context
+        ):
+            # Get fusion weights from orchestrator metadata
+            fusion_metadata = orchestrator_result.search_metadata.get("fusion_weights")
+            if fusion_metadata:
+                response.fusion_weights = fusion_metadata
+                response.effectiveness_score = orchestrator_result.search_metadata.get(
+                    "effectiveness_score"
+                )
+
+        return response
 
     def _determine_search_mode(self, request: HybridSearchRequest) -> SearchMode:
         """Determine the appropriate search mode based on request features."""
@@ -262,10 +301,8 @@ class HybridSearchService:
                 "Query classification timed out, using default classification"
             )
             return None
-        except Exception as e:
-            logger.warning(
-                f"Query classification failed: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (asyncio.CancelledError, RuntimeError) as e:
+            logger.warning("Query classification failed: %s", e)
             return None
 
     async def _select_model_with_timeout(
@@ -282,10 +319,8 @@ class HybridSearchService:
         except TimeoutError:
             logger.warning("Model selection timed out, using default model")
             return None
-        except Exception as e:
-            logger.warning(
-                f"Model selection failed: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (ValueError, ConnectionError, RuntimeError) as e:
+            logger.warning("Model selection failed: %s", e)
             return None
 
     async def _generate_sparse_vector_with_timeout(
@@ -300,10 +335,8 @@ class HybridSearchService:
         except TimeoutError:
             logger.warning("SPLADE generation timed out, skipping sparse vector")
             return None
-        except Exception as e:
-            logger.warning(
-                f"SPLADE generation failed: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (ValueError, ConnectionError, RuntimeError) as e:
+            logger.warning("SPLADE generation failed: %s", e)
             return None
 
     def _assign_ab_test_variant(self, request: HybridSearchRequest) -> ABTestVariant:
@@ -357,10 +390,8 @@ class HybridSearchService:
                 fallback_reason=f"Advanced search failed: {error_msg}",
             )
 
-        except Exception as e:
-            logger.error(
-                f"Fallback search also failed: {e}", exc_info=True
-            )  # TODO: Convert f-string to logging format
+        except Exception:
+            logger.exception("Fallback search also failed: %s")
             return HybridSearchResponse(
                 results=[],
                 retrieval_metrics=RetrievalMetrics(
@@ -408,14 +439,10 @@ class HybridSearchService:
                     performance_score,
                 )
 
-            logger.debug(
-                f"Stored search data for learning: {query_id}"
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Stored search data for learning: %s", query_id)
 
-        except Exception as e:
-            logger.error(
-                f"Failed to store search for learning: {e}", exc_info=True
-            )  # TODO: Convert f-string to logging format
+        except Exception:
+            logger.exception("Failed to store search for learning: %s")
 
     async def update_with_user_feedback(
         self, query_id: str, _user_feedback: dict[str, Any]
@@ -424,14 +451,10 @@ class HybridSearchService:
         try:
             # This would update the adaptive fusion tuner and other components
             # with user feedback for continuous improvement
-            logger.debug(
-                f"Processing user feedback for query {query_id}"
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Processing user feedback for query %s", query_id)
 
-        except Exception as e:
-            logger.error(
-                f"Failed to process user feedback: {e}", exc_info=True
-            )  # TODO: Convert f-string to logging format
+        except Exception:
+            logger.exception("Failed to process user feedback: %s")
 
     def get_performance_statistics(self) -> dict[str, Any]:
         """Get performance statistics for monitoring."""

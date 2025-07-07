@@ -2,7 +2,7 @@
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class BaseAction(BaseModel):
@@ -10,8 +10,7 @@ class BaseAction(BaseModel):
 
     type: str = Field(..., description="Type of action to perform")
 
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="forbid")
 
 
 class ClickAction(BaseAction):

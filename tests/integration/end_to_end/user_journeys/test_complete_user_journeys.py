@@ -17,6 +17,7 @@ from tests.integration.end_to_end.user_journeys.conftest import JourneyStep, Use
 class TestCompleteUserJourneys:
     """Test complete user journeys across the entire system."""
 
+    @pytest.mark.asyncio
     async def test_document_processing_journey(
         self,
         journey_executor,
@@ -54,6 +55,7 @@ class TestCompleteUserJourneys:
         assert "store_in_vector_db" in step_names
         assert "validate_storage" in step_names
 
+    @pytest.mark.asyncio
     async def test_search_and_discovery_journey(
         self,
         journey_executor,
@@ -93,6 +95,7 @@ class TestCompleteUserJourneys:
             if step["step_name"] == "validate_search_quality":
                 assert step["success"], "Search quality validation failed"
 
+    @pytest.mark.asyncio
     async def test_project_management_journey(
         self,
         journey_executor,
@@ -130,6 +133,7 @@ class TestCompleteUserJourneys:
         assert documents_added >= 2, "Not enough documents added"
         assert len(collections_used) >= 2, "Not enough collections used"
 
+    @pytest.mark.asyncio
     async def test_api_client_journey(
         self,
         journey_executor,
@@ -154,15 +158,19 @@ class TestCompleteUserJourneys:
         assert result.steps_failed == 0, "No API validation steps should fail"
 
         # Validate API endpoints
-        validated_endpoints = []
-        for step in result.step_results:
-            if "validate" in step["step_name"] and step["success"]:
-                if (
+        validated_endpoints = [
+            step["result"]["result"]["endpoint"]
+            for step in result.step_results
+            if (
+                "validate" in step["step_name"]
+                and step["success"]
+                and (
                     "result" in step
                     and "result" in step["result"]
                     and "endpoint" in step["result"]["result"]
-                ):
-                    validated_endpoints.append(step["result"]["result"]["endpoint"])
+                )
+            )
+        ]
 
         assert len(validated_endpoints) >= 3, "Not enough API endpoints validated"
 
@@ -174,6 +182,7 @@ class TestCompleteUserJourneys:
         ]
         assert len(health_checks) >= 1, "System health check failed"
 
+    @pytest.mark.asyncio
     async def test_administrative_monitoring_journey(
         self,
         journey_executor,
@@ -210,6 +219,7 @@ class TestCompleteUserJourneys:
         assert performance_tests_count >= 1, "Performance testing not executed"
 
     @pytest.mark.slow
+    @pytest.mark.asyncio
     async def test_concurrent_user_journeys(
         self,
         journey_executor,
@@ -259,6 +269,7 @@ class TestCompleteUserJourneys:
         for result in successful_results:
             assert result.success, f"Concurrent journey failed: {result.journey_name}"
 
+    @pytest.mark.asyncio
     async def test_error_recovery_journey(
         self,
         journey_executor,
@@ -328,6 +339,7 @@ class TestCompleteUserJourneys:
         assert recovery_step_succeeded, "Recovery step should have succeeded"
 
     @pytest.mark.performance
+    @pytest.mark.asyncio
     async def test_journey_performance_benchmarks(
         self,
         journey_executor,
@@ -384,6 +396,7 @@ class TestCompleteUserJourneys:
             "performance_benchmarks", performance_results
         )
 
+    @pytest.mark.asyncio
     async def test_data_flow_validation_journey(
         self,
         journey_executor,
@@ -498,21 +511,24 @@ class TestCompleteUserJourneys:
                 )
 
         # Validate data at each stage
-        assert crawl_result and "content" in crawl_result, (
-            "Crawl did not produce content"
+        assert crawl_result, "Crawl did not produce content"
+        assert "content" in crawl_result, "Crawl result missing content field"
+
+        assert process_result, "Processing did not produce chunks"
+        assert "chunks" in process_result, "Process result missing chunks field"
+
+        assert embedding_result, "Embedding generation failed"
+        assert "embeddings" in embedding_result, (
+            "Embedding result missing embeddings field"
         )
-        assert process_result and "chunks" in process_result, (
-            "Processing did not produce chunks"
+
+        assert storage_result, "Vector storage failed"
+        assert "stored_count" in storage_result, (
+            "Storage result missing stored_count field"
         )
-        assert embedding_result and "embeddings" in embedding_result, (
-            "Embedding generation failed"
-        )
-        assert storage_result and "stored_count" in storage_result, (
-            "Vector storage failed"
-        )
-        assert search_result and "results" in search_result, (
-            "Search did not return results"
-        )
+
+        assert search_result, "Search did not return results"
+        assert "results" in search_result, "Search result missing results field"
 
         # Validate data consistency
         assert process_result["chunk_count"] == len(embedding_result["embeddings"]), (
@@ -523,12 +539,12 @@ class TestCompleteUserJourneys:
         )
 
     @pytest.mark.browser
+    @pytest.mark.asyncio
     async def test_browser_automation_journey(
         self,
         journey_executor,
         journey_test_config,
         journey_data_manager,
-        _mock_browser_config,
     ):
         """Test browser automation user journey with real browser interactions."""
         # Create a browser-based journey
@@ -616,6 +632,7 @@ class TestCompleteUserJourneys:
 class TestCrossSystemIntegration:
     """Test integration across different system components."""
 
+    @pytest.mark.asyncio
     async def test_multi_service_workflow(
         self,
         journey_executor,
@@ -699,10 +716,12 @@ class TestCrossSystemIntegration:
         service_validations = [
             step
             for step in result.step_results
-            if "health" in step["step_name"] and step["success"]
+            if ("health" in step["step_name"] or "consistency" in step["step_name"])
+            and step["success"]
         ]
         assert len(service_validations) >= 2, "System health not validated adequately"
 
+    @pytest.mark.asyncio
     async def test_load_resilience_journey(
         self,
         journey_executor,

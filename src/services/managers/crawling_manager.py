@@ -1,11 +1,13 @@
 """Crawling manager service coordinator."""
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Optional
 
 from dependency_injector.wiring import Provide, inject
 
 from src.infrastructure.container import ApplicationContainer
+from src.services.crawling.manager import CrawlManager as CoreManager
 from src.services.errors import CrawlServiceError
 
 
@@ -42,8 +44,6 @@ class CrawlingManager:
             return
 
         try:
-            from src.services.crawling.manager import CrawlManager as CoreManager
-
             self._core_manager = CoreManager(
                 config=config,
                 rate_limiter=None,  # TODO: Add rate limiter injection
@@ -54,12 +54,11 @@ class CrawlingManager:
             logger.info("CrawlingManager service initialized with 5-tier automation")
 
         except Exception as e:
-            logger.error(
-                f"Failed to initialize CrawlingManager: {e}"
+            logger.exception(
+                "Failed to initialize CrawlingManager: ",
             )  # TODO: Convert f-string to logging format
-            raise CrawlServiceError(
-                f"Failed to initialize crawling manager: {e}"
-            ) from e
+            msg = f"Failed to initialize crawling manager: {e}"
+            raise CrawlServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup crawling manager resources."""
@@ -95,13 +94,14 @@ class CrawlingManager:
             CrawlServiceError: If manager not initialized or scraping fails
         """
         if not self._initialized or not self._core_manager:
-            raise CrawlServiceError("Crawling manager not initialized")
+            msg = "Crawling manager not initialized"
+            raise CrawlServiceError(msg)
 
         try:
             return await self._core_manager.scrape_url(url, preferred_provider)
         except Exception as e:
-            logger.error(
-                f"URL scraping failed for {url}: {e}"
+            logger.exception(
+                "URL scraping failed for : {e}",
             )  # TODO: Convert f-string to logging format
             return {
                 "success": False,
@@ -135,15 +135,18 @@ class CrawlingManager:
             CrawlServiceError: If manager not initialized
         """
         if not self._initialized or not self._core_manager:
-            raise CrawlServiceError("Crawling manager not initialized")
+            msg = "Crawling manager not initialized"
+            raise CrawlServiceError(msg)
 
         try:
             return await self._core_manager.crawl_site(
-                url, max_pages, preferred_provider
+                url,
+                max_pages,
+                preferred_provider,
             )
         except Exception as e:
-            logger.error(
-                f"Site crawling failed for {url}: {e}"
+            logger.exception(
+                "Site crawling failed for : {e}",
             )  # TODO: Convert f-string to logging format
             return {
                 "success": False,
@@ -166,18 +169,21 @@ class CrawlingManager:
             CrawlServiceError: If manager not initialized
         """
         if not self._initialized or not self._core_manager:
-            raise CrawlServiceError("Crawling manager not initialized")
+            msg = "Crawling manager not initialized"
+            raise CrawlServiceError(msg)
 
         try:
             return await self._core_manager.get_recommended_tool(url)
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             logger.warning(
-                f"Tool recommendation failed for {url}: {e}"
+                f"Tool recommendation failed for {url}: {e}",
             )  # TODO: Convert f-string to logging format
             return "crawl4ai"  # Default fallback
 
     async def map_url(
-        self, url: str, include_subdomains: bool = False
+        self,
+        url: str,
+        include_subdomains: bool = False,
     ) -> dict[str, Any]:
         """Map a website to get list of URLs.
 
@@ -194,13 +200,14 @@ class CrawlingManager:
             CrawlServiceError: If manager not initialized
         """
         if not self._initialized or not self._core_manager:
-            raise CrawlServiceError("Crawling manager not initialized")
+            msg = "Crawling manager not initialized"
+            raise CrawlServiceError(msg)
 
         try:
             return await self._core_manager.map_url(url, include_subdomains)
-        except Exception as e:
+        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             logger.warning(
-                f"URL mapping failed for {url}: {e}"
+                f"URL mapping failed for {url}: {e}",
             )  # TODO: Convert f-string to logging format
             return {
                 "success": False,
@@ -223,9 +230,9 @@ class CrawlingManager:
 
         try:
             return self._core_manager.get_metrics()
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
-                f"Failed to get crawling metrics: {e}"
+                f"Failed to get crawling metrics: {e}",
             )  # TODO: Convert f-string to logging format
             return {}
 
@@ -243,9 +250,9 @@ class CrawlingManager:
 
         try:
             return self._core_manager.get_provider_info()
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
-                f"Failed to get provider info: {e}"
+                f"Failed to get provider info: {e}",
             )  # TODO: Convert f-string to logging format
             return {}
 
@@ -263,9 +270,9 @@ class CrawlingManager:
 
         try:
             return self._core_manager.get_tier_metrics()
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
-                f"Failed to get tier metrics: {e}"
+                f"Failed to get tier metrics: {e}",
             )  # TODO: Convert f-string to logging format
             return {}
 
@@ -287,9 +294,9 @@ class CrawlingManager:
                 status["providers"] = self.get_provider_info()
                 status["metrics"] = self.get_metrics()
                 status["tier_metrics"] = self.get_tier_metrics()
-            except Exception as e:
+            except (ValueError, TypeError, UnicodeDecodeError) as e:
                 logger.warning(
-                    f"Failed to get crawling status: {e}"
+                    f"Failed to get crawling status: {e}",
                 )  # TODO: Convert f-string to logging format
                 status["error"] = str(e)
 
@@ -321,7 +328,8 @@ class CrawlingManager:
             Extracted content with metadata
         """
         if not self._initialized or not self._core_manager:
-            raise CrawlServiceError("Crawling manager not initialized")
+            msg = "Crawling manager not initialized"
+            raise CrawlServiceError(msg)
 
         try:
             # Use scrape_url as base and extract specific content
@@ -355,11 +363,9 @@ class CrawlingManager:
                     "metadata": metadata,
                 }
 
-            return extracted
-
         except Exception as e:
-            logger.error(
-                f"Content extraction failed for {url}: {e}"
+            logger.exception(
+                "Content extraction failed for : {e}",
             )  # TODO: Convert f-string to logging format
             return {
                 "success": False,
@@ -368,6 +374,9 @@ class CrawlingManager:
                 "content_type": content_type,
                 "content": None,
             }
+
+        else:
+            return extracted
 
     async def bulk_scrape(
         self,
@@ -386,9 +395,8 @@ class CrawlingManager:
             List of scraping results for each URL
         """
         if not self._initialized or not self._core_manager:
-            raise CrawlServiceError("Crawling manager not initialized")
-
-        import asyncio
+            msg = "Crawling manager not initialized"
+            raise CrawlServiceError(msg)
 
         semaphore = asyncio.Semaphore(max_concurrent)
 
@@ -411,16 +419,14 @@ class CrawlingManager:
                             "url": urls[i],
                             "content": "",
                             "metadata": {},
-                        }
+                        },
                     )
                 else:
                     processed_results.append(result)
 
-            return processed_results
-
         except Exception as e:
-            logger.error(
-                f"Bulk scraping failed: {e}"
+            logger.exception(
+                "Bulk scraping failed: ",
             )  # TODO: Convert f-string to logging format
             # Return error results for all URLs
             return [
@@ -433,3 +439,5 @@ class CrawlingManager:
                 }
                 for url in urls
             ]
+        else:
+            return processed_results

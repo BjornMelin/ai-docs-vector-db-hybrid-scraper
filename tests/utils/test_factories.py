@@ -1,7 +1,7 @@
 """Standardized test data factories following 2025 patterns.
 
 This module provides factory classes and functions for generating consistent
-test data across all test categories. Uses modern patterns like dataclasses,
+test data across all test categories. Uses  patterns like dataclasses,
 type hints, and builder patterns.
 """
 
@@ -437,7 +437,7 @@ class ConfigFactory:
         Returns:
             Database configuration dictionary
         """
-        config = {
+        return {
             "url": url,
             "pool_size": pool_size,
             "echo": echo,
@@ -446,7 +446,6 @@ class ConfigFactory:
             "isolation_level": None,
             **_kwargs,
         }
-        return config
 
     @staticmethod
     def create_vector_db_config(
@@ -468,7 +467,7 @@ class ConfigFactory:
         Returns:
             Vector database configuration dictionary
         """
-        config = {
+        return {
             "host": host,
             "port": port,
             "collection_name": collection_name,
@@ -477,7 +476,6 @@ class ConfigFactory:
             "timeout": 60.0,
             **_kwargs,
         }
-        return config
 
     @staticmethod
     def create_api_config(
@@ -497,7 +495,7 @@ class ConfigFactory:
         Returns:
             API configuration dictionary
         """
-        config = {
+        return {
             "base_url": base_url,
             "timeout": timeout,
             "max_retries": max_retries,
@@ -508,7 +506,6 @@ class ConfigFactory:
             },
             **_kwargs,
         }
-        return config
 
 
 class PerformanceDataFactory:

@@ -118,6 +118,7 @@ class TestMemoryAdaptiveDispatcherInitialization:
         assert provider.semaphore is not None
         assert provider.semaphore._value == dispatcher_config.max_concurrent_crawls
 
+    @pytest.mark.asyncio
     async def test_dispatcher_initialization(self, _dispatcher_config):
         """Test dispatcher initialization during provider setup."""
         # Create provider with dispatcher disabled, then set up mocks
@@ -141,6 +142,7 @@ class TestMemoryAdaptiveDispatcherInitialization:
         # verify that the provider is ready for use
         assert provider._initialized is True
 
+    @pytest.mark.asyncio
     async def test_dispatcher_cleanup(self, _dispatcher_config):
         """Test dispatcher cleanup during provider teardown."""
         # Create provider with mocked components
@@ -184,6 +186,7 @@ class TestMemoryAdaptiveDispatcherScraping:
 
         return provider
 
+    @pytest.mark.asyncio
     async def test_scrape_with_dispatcher_success(self, provider_with_dispatcher):
         """Test successful scraping with Memory-Adaptive Dispatcher."""
         provider = provider_with_dispatcher
@@ -221,6 +224,7 @@ class TestMemoryAdaptiveDispatcherScraping:
         assert result["html"] == "<html>Test</html>"
         assert "dispatcher_stats" in result["metadata"]
 
+    @pytest.mark.asyncio
     async def test_scrape_with_dispatcher_error(self, provider_with_dispatcher):
         """Test error handling during scraping with Memory-Adaptive Dispatcher."""
         provider = provider_with_dispatcher
@@ -236,6 +240,7 @@ class TestMemoryAdaptiveDispatcherScraping:
         assert "Dispatcher error" in result["error"]
         assert "dispatcher_stats" in result["metadata"]
 
+    @pytest.mark.asyncio
     async def test_scrape_with_semaphore_fallback(self):
         """Test scraping with semaphore fallback when dispatcher disabled."""
         config = Crawl4AIConfig(enable_memory_adaptive_dispatcher=False)
@@ -291,6 +296,7 @@ class TestStreamingMode:
 
         return provider
 
+    @pytest.mark.asyncio
     async def test_streaming_scrape_success(self, streaming_provider):
         """Test successful streaming scrape."""
         provider = streaming_provider
@@ -329,6 +335,7 @@ class TestStreamingMode:
         assert result["metadata"]["streaming"]["enabled"] is True
         assert result["metadata"]["streaming"]["chunks_received"] == 2
 
+    @pytest.mark.asyncio
     async def test_streaming_iterator(self, streaming_provider):
         """Test streaming iterator functionality."""
         provider = streaming_provider
@@ -364,6 +371,7 @@ class TestStreamingMode:
         assert results[0]["streaming"] is True
         assert results[1]["streaming"] is True
 
+    @pytest.mark.asyncio
     async def test_streaming_without_dispatcher_error(self):
         """Test that streaming requires Memory-Adaptive Dispatcher."""
         config = Crawl4AIConfig(enable_memory_adaptive_dispatcher=False)
@@ -443,6 +451,7 @@ class TestPerformanceMonitoring:
 class TestLXMLWebScrapingStrategy:
     """Test LXMLWebScrapingStrategy integration."""
 
+    @pytest.mark.asyncio
     async def test_lxml_strategy_integration(self):
         """Test LXMLWebScrapingStrategy is used when available."""
         config = Crawl4AIConfig(enable_memory_adaptive_dispatcher=False)
@@ -460,6 +469,7 @@ class TestLXMLWebScrapingStrategy:
 
     @patch("src.services.crawling.crawl4ai_provider.MEMORY_ADAPTIVE_AVAILABLE", False)
     @patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler")
+    @pytest.mark.asyncio
     async def test_lxml_strategy_unavailable(self, mock_crawler):
         """Test fallback when LXMLWebScrapingStrategy unavailable."""
         config = Crawl4AIConfig(enable_memory_adaptive_dispatcher=True)
@@ -485,6 +495,7 @@ class TestErrorHandling:
         provider._initialized = True
         return provider
 
+    @pytest.mark.asyncio
     async def test_scrape_not_initialized_error(self, error_provider):
         """Test error when provider not initialized."""
         provider = error_provider
@@ -493,6 +504,7 @@ class TestErrorHandling:
         with pytest.raises(CrawlServiceError, match="Provider not initialized"):
             await provider.scrape_url("https://example.com")
 
+    @pytest.mark.asyncio
     async def test_streaming_not_initialized_error(self, error_provider):
         """Test error when trying to stream from uninitialized provider."""
         provider = error_provider
@@ -502,6 +514,7 @@ class TestErrorHandling:
             async for _ in provider.scrape_url_stream("https://example.com"):
                 pass
 
+    @pytest.mark.asyncio
     async def test_dispatcher_stats_error_handling(self):
         """Test error handling in dispatcher stats collection."""
         config = Crawl4AIConfig(enable_memory_adaptive_dispatcher=True)
@@ -532,6 +545,7 @@ class TestBulkCrawlingWithDispatcher:
         provider._initialized = True
         return provider
 
+    @pytest.mark.asyncio
     async def test_bulk_crawl_with_dispatcher(self, bulk_provider):
         """Test bulk crawling utilizes Memory-Adaptive Dispatcher."""
         provider = bulk_provider
@@ -560,6 +574,7 @@ class TestBulkCrawlingWithDispatcher:
                 == "memory_adaptive"
             )
 
+    @pytest.mark.asyncio
     async def test_bulk_crawl_error_handling(self, bulk_provider):
         """Test error handling in bulk crawling operations."""
         provider = bulk_provider
@@ -617,6 +632,7 @@ class TestConfigurationIntegration:
         assert provider.use_memory_dispatcher is False
         assert provider.dispatcher is None
 
+    @pytest.mark.asyncio
     async def test_streaming_configuration_override(self):
         """Test streaming configuration can be overridden per request."""
         config = Crawl4AIConfig(enable_streaming=False)

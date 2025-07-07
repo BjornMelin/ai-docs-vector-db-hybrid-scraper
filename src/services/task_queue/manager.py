@@ -41,7 +41,7 @@ class TaskQueueManager(BaseService):
             try:
                 self.metrics_registry = get_metrics_registry()
                 logger.debug("Task queue monitoring enabled")
-            except Exception:
+            except (AttributeError, ConnectionError, RuntimeError, TimeoutError):
                 logger.debug("Task queue monitoring disabled")
 
     def _create_redis_settings(self) -> RedisSettings:
@@ -83,7 +83,7 @@ class TaskQueueManager(BaseService):
             self._redis_pool = await create_pool(self._redis_settings)
             logger.info("Task queue manager initialized")
             self._initialized = True
-        except Exception:
+        except (OSError, AttributeError, ConnectionError, ImportError):
             logger.exception("Failed to initialize task queue")
             raise
 
@@ -148,10 +148,11 @@ class TaskQueueManager(BaseService):
             if self.metrics_registry:
                 self.metrics_registry.record_task_execution(task_name, 0.0, False)
 
+        except (TimeoutError, OSError, PermissionError):
+            logger.exception("Error enqueueing task {task_name}")
             return None
 
-        except Exception:
-            logger.exception("Error enqueueing task {task_name}")
+        else:
             return None
 
     async def get_job_status(self, job_id: str) -> dict[str, Any]:
@@ -212,10 +213,12 @@ class TaskQueueManager(BaseService):
                     f"Cancelled job {job_id}"
                 )  # TODO: Convert f-string to logging format
                 return True
+
+        except (TimeoutError, OSError, PermissionError):
+            logger.exception("Error cancelling job")
             return False
 
-        except Exception:
-            logger.exception("Error cancelling job")
+        else:
             return False
 
     async def get_queue_stats(self, queue_name: str | None = None) -> dict[str, int]:
@@ -236,7 +239,7 @@ class TaskQueueManager(BaseService):
         try:
             # Get job counts by status
             # ARQ stores jobs with different key patterns
-            stats = {
+            return {
                 "pending": 0,
                 "running": 0,
                 "complete": 0,
@@ -246,9 +249,7 @@ class TaskQueueManager(BaseService):
             # This is a simplified version - in production you might want
             # to implement more detailed statistics gathering
 
-            return stats
-
-        except Exception:
+        except (ConnectionError, OSError, PermissionError):
             logger.exception("Error getting queue stats")
             return {"error": -1}
 

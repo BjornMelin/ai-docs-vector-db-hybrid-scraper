@@ -10,8 +10,8 @@ import random
 
 import pytest
 
-from ..base_load_test import create_load_test_runner
-from ..load_profiles import (
+from tests.load.base_load_test import create_load_test_runner
+from tests.load.load_profiles import (
     RampUpLoadProfile,
     SteadyLoadProfile,
     create_custom_step_profile,

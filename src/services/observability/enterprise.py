@@ -6,21 +6,25 @@ intelligent alerting, and AI-powered anomaly detection.
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 import statistics
-import time
+import uuid
 from collections import defaultdict, deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 import numpy as np
-from pydantic import BaseModel, Field
 
-from src.config.enterprise import EnterpriseConfig
+from src.config import Config, create_enterprise_config
+
+
+# Type alias for clarity
+EnterpriseConfig = Config
 
 
 logger = logging.getLogger(__name__)
@@ -235,7 +239,7 @@ class MetricsCollector:
     def get_metric_values(
         self,
         metric_name: str,
-        tags: dict[str, str] = None,
+        tags: dict[str, str] | None = None,
         since: datetime | None = None,
     ) -> list[float]:
         """Get metric values matching criteria."""
@@ -255,7 +259,7 @@ class MetricsCollector:
         return [m.value for m in metrics]
 
     def get_metric_statistics(
-        self, metric_name: str, tags: dict[str, str] = None
+        self, metric_name: str, tags: dict[str, str] | None = None
     ) -> dict[str, float]:
         """Get statistical summary of metric."""
         values = self.get_metric_values(metric_name, tags)
@@ -375,7 +379,7 @@ class DistributedTracer:
                 "trace_id": trace_id,
                 "status": "in_progress",
                 "span_count": len(spans),
-                "services": list(set(s.service_name for s in spans)),
+                "services": list({s.service_name for s in spans}),
             }
 
         total_duration = max(s.end_time for s in completed_spans) - min(
@@ -387,15 +391,13 @@ class DistributedTracer:
             "status": "completed",
             "span_count": len(spans),
             "total_duration_ms": total_duration.total_seconds() * 1000,
-            "services": list(set(s.service_name for s in spans)),
+            "services": list({s.service_name for s in spans}),
             "errors": sum(1 for s in completed_spans if s.status == TraceStatus.ERROR),
             "root_operation": spans[0].operation_name if spans else None,
         }
 
     def _generate_span_id(self) -> str:
         """Generate unique span ID."""
-        import uuid
-
         return str(uuid.uuid4())[:16]
 
     def cleanup_old_traces(self) -> None:
@@ -497,13 +499,13 @@ class AlertManager:
     def add_alert(self, alert: Alert) -> None:
         """Add an alert definition."""
         self.alerts[alert.name] = alert
-        logger.info(f"Added alert: {alert.name}")
+        logger.info("Added alert: %s", alert.name)
 
     def remove_alert(self, alert_name: str) -> None:
         """Remove an alert definition."""
         if alert_name in self.alerts:
             del self.alerts[alert_name]
-            logger.info(f"Removed alert: {alert_name}")
+            logger.info("Removed alert: %s", alert_name)
 
     def check_alerts(self, metrics_collector: MetricsCollector) -> list[Alert]:
         """Check all alerts against current metrics."""
@@ -532,8 +534,8 @@ class AlertManager:
                     alert.resolve()
                     self._record_alert_event(alert, "resolved", latest_value)
 
-            except Exception as e:
-                logger.exception(f"Error checking alert {alert.name}: {e}")
+            except Exception:
+                logger.exception("Error checking alert %s", alert.name)
 
         return triggered_alerts
 
@@ -585,8 +587,8 @@ class AlertManager:
         for handler in self.notification_handlers:
             try:
                 handler(alert)
-            except Exception as e:
-                logger.exception(f"Error in alert notification handler: {e}")
+            except Exception:
+                logger.exception("Error in alert notification handler")
 
 
 class EnterpriseObservabilityPlatform:
@@ -639,25 +641,21 @@ class EnterpriseObservabilityPlatform:
             self.is_initialized = True
             logger.info("Enterprise observability platform started successfully")
 
-        except Exception as e:
-            logger.exception(f"Failed to initialize observability platform: {e}")
+        except Exception:
+            logger.exception("Failed to initialize observability platform")
             raise
 
     async def cleanup(self) -> None:
         """Cleanup observability platform resources."""
         if self.cleanup_task:
             self.cleanup_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.cleanup_task
-            except asyncio.CancelledError:
-                pass
 
         if self.monitoring_task:
             self.monitoring_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.monitoring_task
-            except asyncio.CancelledError:
-                pass
 
         self.is_initialized = False
         logger.info("Enterprise observability platform cleanup completed")
@@ -666,8 +664,9 @@ class EnterpriseObservabilityPlatform:
         self,
         name: str,
         value: float,
+        *,
         metric_type: MetricType = MetricType.GAUGE,
-        tags: dict[str, str] = None,
+        tags: dict[str, str] | None = None,
         service_name: str = "unknown",
     ) -> None:
         """Record a metric."""
@@ -695,8 +694,6 @@ class EnterpriseObservabilityPlatform:
     ) -> TraceSpan:
         """Start a new distributed trace."""
         if trace_id is None:
-            import uuid
-
             trace_id = str(uuid.uuid4())
 
         return self.distributed_tracer.start_trace(
@@ -721,16 +718,15 @@ class EnterpriseObservabilityPlatform:
         """Finish a span."""
         self.distributed_tracer.finish_span(span, status)
 
-        if status == TraceStatus.SUCCESS:
+        if status == TraceStatus.SUCCESS and span.duration_ms:
             # Record performance metrics
-            if span.duration_ms:
-                self.record_metric(
-                    "span.duration",
-                    span.duration_ms,
-                    MetricType.TIMER,
-                    {"operation": span.operation_name},
-                    span.service_name,
-                )
+            self.record_metric(
+                "span.duration",
+                span.duration_ms,
+                metric_type=MetricType.TIMER,
+                tags={"operation": span.operation_name},
+                service_name=span.service_name,
+            )
 
         # Check if trace is complete
         trace = self.distributed_tracer.get_trace(span.trace_id)
@@ -770,10 +766,7 @@ class EnterpriseObservabilityPlatform:
         # Get all metrics for the service
         service_metrics = {}
 
-        for (
-            metric_key,
-            metric_metadata,
-        ) in self.metrics_collector.metric_metadata.items():
+        for metric_metadata in self.metrics_collector.metric_metadata.values():
             if metric_metadata["tags"].get("service") == service_name:
                 stats = self.metrics_collector.get_metric_statistics(
                     metric_metadata["name"], metric_metadata["tags"]
@@ -831,8 +824,8 @@ class EnterpriseObservabilityPlatform:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
-                logger.exception(f"Error in cleanup loop: {e}")
+            except Exception:
+                logger.exception("Error in cleanup loop")
 
     async def _monitoring_loop(self) -> None:
         """Background monitoring and alerting."""
@@ -851,8 +844,8 @@ class EnterpriseObservabilityPlatform:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
-                logger.exception(f"Error in monitoring loop: {e}")
+            except Exception:
+                logger.exception("Error in monitoring loop")
 
     async def _update_anomaly_baselines(self) -> None:
         """Update anomaly detection baselines."""
@@ -867,8 +860,8 @@ class EnterpriseObservabilityPlatform:
                 if len(values) >= 10:  # Need minimum samples
                     self.anomaly_detector.update_baseline(metadata["name"], values)
 
-            except Exception as e:
-                logger.exception(f"Error updating baseline for {metric_key}: {e}")
+            except Exception:
+                logger.exception("Error updating baseline for %s", metric_key)
 
     def _handle_alert_notification(self, alert: Alert) -> None:
         """Handle alert notifications."""
@@ -896,9 +889,7 @@ async def get_observability_platform(
 
     if _observability_platform is None:
         if config is None:
-            from src.config.enterprise import load_enterprise_configuration
-
-            config = await load_enterprise_configuration()
+            config = create_enterprise_config()
 
         _observability_platform = EnterpriseObservabilityPlatform(config)
         await _observability_platform.initialize()

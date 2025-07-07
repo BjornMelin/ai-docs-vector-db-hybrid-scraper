@@ -141,7 +141,7 @@ classDiagram
         +register_singleton(interface, impl) None
         +register_scoped(interface, impl) None
         +register_transient(interface, impl) None
-        +resolve[T](interface) T
+        +resolve**[T]**(interface) **T**
         +wire_dependencies(obj) None
         +create_scope() Scope
     }
@@ -1996,7 +1996,6 @@ hybrid vector search, and zero-downtime deployments.
 
 _🏗️ This architecture supports high-performance document processing, intelligent search capabilities,
 and robust operational patterns. All components are designed with scalability, reliability, and maintainability in mind._
-
 
 ## 🚀 Enterprise Deployment Features
 

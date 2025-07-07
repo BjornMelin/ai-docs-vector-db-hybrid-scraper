@@ -151,14 +151,16 @@ class TestObservabilityInitialization:
             "opentelemetry.exporter.otlp.proto.grpc.metric_exporter"
         ].OTLPMetricExporter = MagicMock()
 
-        with patch.dict("sys.modules", mock_modules):
-            with patch("src.services.observability.init._setup_auto_instrumentation"):
-                result = initialize_observability(config)
+        with (
+            patch.dict("sys.modules", mock_modules),
+            patch("src.services.observability.init._setup_auto_instrumentation"),
+        ):
+            result = initialize_observability(config)
 
-                assert result is True
+            assert result is True
 
-                # Verify console exporter was configured (two span processors: OTLP + Console)
-                assert mock_tracer_provider_instance.add_span_processor.call_count == 2
+            # Verify console exporter was configured (two span processors: OTLP + Console)
+            assert mock_tracer_provider_instance.add_span_processor.call_count == 2
 
     def test_initialize_observability_exception_handling(self):
         """Test initialization handles exceptions gracefully."""
