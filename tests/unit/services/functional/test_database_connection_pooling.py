@@ -111,15 +111,16 @@ class MockCircuitBreaker:
 
         try:
             result = func(*args, **_kwargs)
-            self.success_count += 1
-            if self.failure_count > 0:
-                self.failure_count = max(0, self.failure_count - 1)
-            return result
         except Exception:
             self.failure_count += 1
             if self.failure_count >= 5:
                 self.state = "open"
             raise
+        else:
+            self.success_count += 1
+            if self.failure_count > 0:
+                self.failure_count = max(0, self.failure_count - 1)
+            return result
 
     def get_uptime_sla(self) -> float:
         """Get current uptime SLA."""
@@ -193,11 +194,9 @@ class TestDatabaseConnectionPooling:
             try:
                 conn = await mock_pool.get_connection()
                 await mock_pool.release_connection(conn)
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError) as e:
                 # Expected exception in stress test
-                logger.debug(
-                    f"Expected connection pool exception: {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.debug("Expected connection pool exception: %s", e)
 
         hit_rate = mock_pool.get_affinity_hit_rate()
         # Should be approximately 73% hit rate
@@ -356,7 +355,7 @@ class TestDatabaseConnectionPooling:
 
 @pytest.mark.database_pooling
 class TestAdvancedPoolingFeatures:
-    """Test advanced pooling features."""
+    """Test  pooling features."""
 
     def test_connection_health_monitoring(self):
         """Test connection health monitoring."""

@@ -193,28 +193,28 @@ class ConfigManager:
         self.environments[environment_name] = env
 
     def save_config_file(
-        self, environment_name: str, file_path: Path, format: str = "yaml"
+        self, environment_name: str, file_path: Path, file_format: str = "yaml"
     ):
         """Save environment configuration to a file.
 
         Args:
             environment_name: Name of environment to save
             file_path: Path where to save the configuration
-            format: File format ("yaml" or "json")
+            file_format: File format ("yaml" or "json")
         """
         env = self.get_environment(environment_name)
         config_data = asdict(env)
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        if format.lower() == "yaml":
+        if file_format.lower() == "yaml":
             with Path(file_path).open("w") as f:
                 yaml.dump(config_data, f, default_flow_style=False)
-        elif format.lower() == "json":
+        elif file_format.lower() == "json":
             with Path(file_path).open("w") as f:
                 json.dump(config_data, f, indent=2)
         else:
-            msg = f"Unsupported format: {format}"
+            msg = f"Unsupported format: {file_format}"
             raise ValueError(msg)
 
     def cleanup_temp_directories(self):
@@ -461,7 +461,7 @@ def create_test_file(
     return file_path
 
 
-def setup__mock_services(environment_name: str = "unit") -> dict[str, Any]:
+def setup_mock_services(environment_name: str = "unit") -> dict[str, Any]:
     """Setup mock services for testing.
 
     Args:
@@ -472,7 +472,7 @@ def setup__mock_services(environment_name: str = "unit") -> dict[str, Any]:
     """
     env = get_test_environment(environment_name)
 
-    _mock_services = {
+    return {
         "vector_db": {
             "url": env.vector_db_url,
             "collections": ["test_collection"],
@@ -498,8 +498,6 @@ def setup__mock_services(environment_name: str = "unit") -> dict[str, Any]:
             "status": "active",
         },
     }
-
-    return _mock_services
 
 
 def validate_test_environment(environment_name: str) -> dict[str, Any]:

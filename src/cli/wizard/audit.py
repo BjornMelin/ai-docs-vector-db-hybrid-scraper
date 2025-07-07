@@ -55,7 +55,7 @@ class ConfigAuditor:
     def log_wizard_start(self, profile: str, template: str) -> None:
         """Log the start of a wizard session."""
         self.logger.info(
-            f"Wizard session started - Profile: {profile}, Template: {template}"
+            "Wizard session started - Profile: %s, Template: %s", profile, template
         )
 
     def log_wizard_completion(
@@ -63,8 +63,10 @@ class ConfigAuditor:
     ) -> None:
         """Log successful wizard completion."""
         self.logger.info(
-            f"Wizard completed - Profile: {profile}, Config: {config_path}, "
-            f"Customizations: {len(customizations)} items"
+            "Wizard completed - Profile: %s, Config: %s, Customizations: %d items",
+            profile,
+            config_path,
+            len(customizations),
         )
 
         # Save detailed audit record
@@ -80,23 +82,21 @@ class ConfigAuditor:
 
     def log_validation_failure(self, errors: list[str]) -> None:
         """Log configuration validation failures."""
-        self.logger.warning(
-            f"Validation failed - {len(errors)} errors: {errors}"
-        )  # TODO: Convert f-string to logging format
+        self.logger.warning("Validation failed - %d errors: %s", len(errors), errors)
 
     def log_security_event(self, event_type: str, details: str) -> None:
         """Log security-related events."""
-        self.logger.warning(
-            f"Security event - {event_type}: {details}"
-        )  # TODO: Convert f-string to logging format
+        self.logger.warning("Security event - %s: %s", event_type, details)
 
     def log_template_customization(
         self, template: str, section: str, changes: dict[str, Any]
     ) -> None:
         """Log template customizations."""
         self.logger.info(
-            f"Template customized - Template: {template}, Section: {section}, "
-            f"Changes: {changes}"
+            "Template customized - Template: %s, Section: %s, Changes: %s",
+            template,
+            section,
+            changes,
         )
 
     def _save_audit_record(self, record: dict[str, Any]) -> None:
@@ -217,6 +217,4 @@ class ConfigAuditor:
                 continue
 
         if deleted_count > 0:
-            self.logger.info(
-                f"Cleaned up {deleted_count} old audit files"
-            )  # TODO: Convert f-string to logging format
+            self.logger.info("Cleaned up %d old audit files", deleted_count)

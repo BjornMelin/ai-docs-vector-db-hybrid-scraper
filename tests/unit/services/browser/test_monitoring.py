@@ -39,6 +39,7 @@ async def monitor(monitor_config):
 class TestBrowserAutomationMonitor:
     """Test monitoring system functionality."""
 
+    @pytest.mark.asyncio
     async def test_monitor_initialization(self, monitor):
         """Test monitor initializes correctly."""
         assert monitor.config is not None
@@ -47,6 +48,7 @@ class TestBrowserAutomationMonitor:
         assert len(monitor.health_status) == 0
         assert len(monitor.alerts) == 0
 
+    @pytest.mark.asyncio
     async def test_start_stop_monitoring(self, monitor):
         """Test starting and stopping monitoring."""
         # Start monitoring
@@ -58,6 +60,7 @@ class TestBrowserAutomationMonitor:
         await monitor.stop_monitoring()
         assert monitor.monitoring_active is False
 
+    @pytest.mark.asyncio
     async def test_record_successful_request_metrics(self, monitor):
         """Test recording metrics for successful requests."""
         # Record successful request
@@ -80,6 +83,7 @@ class TestBrowserAutomationMonitor:
         assert health.status == "healthy"
         assert health.success_rate == 1.0
 
+    @pytest.mark.asyncio
     async def test_record_failed_request_metrics(self, monitor):
         """Test recording metrics for failed requests."""
         # Record failed request
@@ -105,6 +109,7 @@ class TestBrowserAutomationMonitor:
         health = monitor.health_status["browser_use"]
         assert health.status == "unhealthy"
 
+    @pytest.mark.asyncio
     async def test_alert_generation_high_error_rate(self, monitor):
         """Test alert generation for high error rate."""
         # Record multiple failed requests to trigger alert
@@ -125,6 +130,7 @@ class TestBrowserAutomationMonitor:
         assert error_alerts[0].tier == "crawl4ai"
         assert error_alerts[0].severity == AlertSeverity.HIGH
 
+    @pytest.mark.asyncio
     async def test_alert_generation_slow_response(self, monitor):
         """Test alert generation for slow response times."""
         # Record request with slow response time
@@ -144,6 +150,7 @@ class TestBrowserAutomationMonitor:
         assert slow_alerts[0].tier == "playwright"
         assert slow_alerts[0].severity == AlertSeverity.MEDIUM
 
+    @pytest.mark.asyncio
     async def test_alert_cooldown(self, monitor):
         """Test alert cooldown prevents spam."""
         # Record failed requests
@@ -170,6 +177,7 @@ class TestBrowserAutomationMonitor:
         final_alert_count = len(monitor.get_active_alerts())
         assert final_alert_count == initial_alert_count
 
+    @pytest.mark.asyncio
     async def test_alert_rate_limiting(self, monitor):
         """Test alert rate limiting prevents too many alerts."""
         # Generate many different alerts quickly
@@ -190,6 +198,7 @@ class TestBrowserAutomationMonitor:
         alerts = monitor.get_active_alerts()
         assert len(alerts) <= monitor.config.max_alerts_per_hour
 
+    @pytest.mark.asyncio
     async def test_health_status_calculation(self, monitor):
         """Test health status calculation logic."""
         # Record mostly successful requests first to establish baseline
@@ -212,6 +221,7 @@ class TestBrowserAutomationMonitor:
         assert 0.0 <= health.success_rate <= 1.0
         assert health.component == "test_tier"
 
+    @pytest.mark.asyncio
     async def test_get_system_health(self, monitor):
         """Test getting overall system health."""
         # Record metrics for multiple tiers
@@ -227,6 +237,7 @@ class TestBrowserAutomationMonitor:
         assert system_health["tier_health"]["unhealthy"] == 1
         assert "tier_details" in system_health
 
+    @pytest.mark.asyncio
     async def test_get_recent_metrics(self, monitor):
         """Test retrieving recent metrics."""
         # Record metrics for different tiers at different times
@@ -245,6 +256,7 @@ class TestBrowserAutomationMonitor:
         assert len(tier1_metrics) == 2
         assert all(m.tier == "tier1" for m in tier1_metrics)
 
+    @pytest.mark.asyncio
     async def test_get_active_alerts(self, monitor):
         """Test retrieving active alerts."""
         # Generate alerts of different severities
@@ -263,6 +275,7 @@ class TestBrowserAutomationMonitor:
         high_alerts = monitor.get_active_alerts(severity=AlertSeverity.HIGH)
         assert all(a.severity == AlertSeverity.HIGH for a in high_alerts)
 
+    @pytest.mark.asyncio
     async def test_resolve_alert(self, monitor):
         """Test resolving alerts."""
         # Generate an alert
@@ -284,6 +297,7 @@ class TestBrowserAutomationMonitor:
                 assert alert.resolved_at is not None
                 break
 
+    @pytest.mark.asyncio
     async def test_alert_handlers(self, monitor):
         """Test alert handler functionality."""
         handler_calls = []
@@ -301,6 +315,7 @@ class TestBrowserAutomationMonitor:
         assert len(handler_calls) > 0
         assert isinstance(handler_calls[0], Alert)
 
+    @pytest.mark.asyncio
     async def test_monitoring_loop_cleanup(self, monitor):
         """Test that monitoring loop cleans up old data."""
         # Add some old metrics (simulate by modifying timestamp)
@@ -327,6 +342,7 @@ class TestBrowserAutomationMonitor:
         remaining_metrics = [m for m in monitor.metrics_history if m.tier == "old_tier"]
         assert len(remaining_metrics) == 0
 
+    @pytest.mark.asyncio
     async def test_cache_miss_rate_alert(self, monitor):
         """Test cache miss rate alert generation."""
         # Record requests with low cache hit rate
@@ -345,6 +361,7 @@ class TestBrowserAutomationMonitor:
         assert len(cache_alerts) > 0
         assert cache_alerts[0].severity == AlertSeverity.LOW
 
+    @pytest.mark.asyncio
     async def test_performance_metrics_aggregation(self, monitor):
         """Test that performance metrics are properly aggregated."""
         # Record multiple requests with varying performance

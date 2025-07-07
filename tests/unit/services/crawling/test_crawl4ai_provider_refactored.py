@@ -42,6 +42,7 @@ class TestCrawl4AIProvider:
         result.media = {}
         return result
 
+    @pytest.mark.asyncio
     async def test_initialization(self, provider):
         """Test provider initialization."""
         assert not provider._initialized
@@ -49,6 +50,7 @@ class TestCrawl4AIProvider:
         assert provider.config.viewport["width"] == 1920
 
     @patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler")
+    @pytest.mark.asyncio
     async def test_initialize_success(self, mock_crawler_class, provider):
         """Test successful initialization."""
         mock_crawler = AsyncMock()
@@ -63,6 +65,7 @@ class TestCrawl4AIProvider:
         mock_crawler.start.assert_called_once()
 
     @patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler")
+    @pytest.mark.asyncio
     async def test_cleanup(self, mock_crawler_class, provider):
         """Test cleanup after initialization."""
         mock_crawler = AsyncMock()
@@ -78,6 +81,7 @@ class TestCrawl4AIProvider:
         mock_crawler.close.assert_called_once()
 
     @patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler")
+    @pytest.mark.asyncio
     async def test_scrape_url_success(
         self, mock_crawler_class, provider, mock_crawler_result
     ):
@@ -97,12 +101,14 @@ class TestCrawl4AIProvider:
         assert result["provider"] == "crawl4ai"
         mock_crawler.arun.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_scrape_url_not_initialized(self, provider):
         """Test scraping without initialization."""
         with pytest.raises(CrawlServiceError, match="Provider not initialized"):
             await provider.scrape_url("https://example.com")
 
     @patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler")
+    @pytest.mark.asyncio
     async def test_scrape_url_failure(self, mock_crawler_class, provider):
         """Test URL scraping failure."""
         mock_crawler = AsyncMock()
@@ -121,6 +127,7 @@ class TestCrawl4AIProvider:
         assert result["provider"] == "crawl4ai"
 
     @patch("src.services.crawling.crawl4ai_provider.AsyncWebCrawler")
+    @pytest.mark.asyncio
     async def test_scrape_url_exception(self, mock_crawler_class, provider):
         """Test URL scraping with exception."""
         mock_crawler = AsyncMock()

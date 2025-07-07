@@ -5,6 +5,7 @@ behavior under different concurrency levels and user interaction patterns.
 """
 
 import random
+import statistics
 
 import pytest
 
@@ -16,6 +17,7 @@ from tests.load.conftest import LoadTestConfig, LoadTestType
 class TestConcurrentUsersLoad:
     """Test concurrent user scenarios."""
 
+    @pytest.mark.asyncio
     async def test_low_concurrency_baseline(
         self, load_test_runner, mock_load_test_service
     ):
@@ -42,11 +44,12 @@ class TestConcurrentUsersLoad:
         assert result.success, (
             f"Low concurrency test failed: {result.bottlenecks_identified}"
         )
-        assert result.metrics._total_requests > 0
+        assert result.metrics.total_requests > 0
         assert (
-            result.metrics.successful_requests >= result.metrics._total_requests * 0.98
+            result.metrics.successful_requests >= result.metrics.total_requests * 0.98
         )
 
+    @pytest.mark.asyncio
     async def test_moderate_concurrency(self, load_test_runner, mock_load_test_service):
         """Test performance with moderate concurrency."""
         config = LoadTestConfig(
@@ -65,9 +68,10 @@ class TestConcurrentUsersLoad:
             config=config, target_function=mock_load_test_service.process_request
         )
 
-        assert result.metrics._total_requests > 0
+        assert result.metrics.total_requests > 0
         assert result.metrics.peak_concurrent_users <= config.concurrent_users
 
+    @pytest.mark.asyncio
     async def test_high_concurrency_scaling(
         self, load_test_runner, mock_load_test_service
     ):
@@ -92,9 +96,10 @@ class TestConcurrentUsersLoad:
         )
 
         # Under high load, some degradation is expected but should not fail completely
-        assert result.metrics._total_requests > 0
+        assert result.metrics.total_requests > 0
         assert result.metrics.successful_requests > 0
 
+    @pytest.mark.asyncio
     async def test_concurrent_user_ramp_up(
         self, load_test_runner, mock_load_test_service
     ):
@@ -135,7 +140,7 @@ class TestConcurrentUsersLoad:
                     step_metrics = {
                         "step": step,
                         "concurrent_users": current_users,
-                        "_total_requests": result.metrics._total_requests,
+                        "_total_requests": result.metrics.total_requests,
                         "successful_requests": result.metrics.successful_requests,
                         "throughput_rps": result.metrics.throughput_rps,
                         "avg_response_time": sum(result.metrics.response_times)
@@ -144,7 +149,7 @@ class TestConcurrentUsersLoad:
                         else 0,
                         "error_rate": (
                             result.metrics.failed_requests
-                            / max(result.metrics._total_requests, 1)
+                            / max(result.metrics.total_requests, 1)
                         )
                         * 100,
                     }
@@ -152,7 +157,7 @@ class TestConcurrentUsersLoad:
                     self.metrics_history.append(step_metrics)
 
                     # Verify basic functionality
-                    assert result.metrics._total_requests > 0, (
+                    assert result.metrics.total_requests > 0, (
                         f"No requests in step {step}"
                     )
 
@@ -172,6 +177,7 @@ class TestConcurrentUsersLoad:
             assert current["concurrent_users"] > previous["concurrent_users"]
             assert current["_total_requests"] >= 0  # Should have some requests
 
+    @pytest.mark.asyncio
     async def test_concurrent_user_bursts(
         self, load_test_runner, mock_load_test_service
     ):
@@ -216,10 +222,10 @@ class TestConcurrentUsersLoad:
                         "pattern": pattern["name"],
                         "users": pattern["users"],
                         "duration": pattern["duration"],
-                        "requests": result.metrics._total_requests,
+                        "requests": result.metrics.total_requests,
                         "success_rate": (
                             result.metrics.successful_requests
-                            / max(result.metrics._total_requests, 1)
+                            / max(result.metrics.total_requests, 1)
                         )
                         * 100,
                         "avg_response_time": sum(result.metrics.response_times)
@@ -231,7 +237,7 @@ class TestConcurrentUsersLoad:
                     results.append(pattern_result)
 
                     # Verify requests were made
-                    assert result.metrics._total_requests > 0, (
+                    assert result.metrics.total_requests > 0, (
                         f"No requests in {pattern['name']}"
                     )
 
@@ -253,6 +259,7 @@ class TestConcurrentUsersLoad:
             recovery_1_success_rate >= burst_1_success_rate * 0.8
         )  # Recovery should improve
 
+    @pytest.mark.asyncio
     async def test_concurrent_user_steady_state(
         self, load_test_runner, mock_load_test_service
     ):
@@ -284,7 +291,6 @@ class TestConcurrentUsersLoad:
                 response_times = result.metrics.response_times
                 if response_times:
                     # Check for response time stability (coefficient of variation)
-                    import statistics
 
                     mean_rt = statistics.mean(response_times)
                     stdev_rt = (
@@ -314,7 +320,7 @@ class TestConcurrentUsersLoad:
             duration_minutes=1
         )  # Short test for CI
 
-        assert result.metrics._total_requests > 0
+        assert result.metrics.total_requests > 0
         assert result.metrics.successful_requests > 0
 
         # Verify stability analysis was performed
@@ -322,6 +328,7 @@ class TestConcurrentUsersLoad:
             assert "stability_grade" in stability
             print(f"Stability grade: {stability['stability_grade']}")
 
+    @pytest.mark.asyncio
     async def test_concurrent_mixed_workloads(
         self, load_test_runner, mock_load_test_service
     ):
@@ -393,7 +400,7 @@ class TestConcurrentUsersLoad:
 
             workload_result = {
                 "workload": workload_config["name"],
-                "_total_requests": result.metrics._total_requests,
+                "_total_requests": result.metrics.total_requests,
                 "throughput": result.metrics.throughput_rps,
                 "avg_response_time": sum(result.metrics.response_times)
                 / len(result.metrics.response_times)
@@ -401,14 +408,14 @@ class TestConcurrentUsersLoad:
                 else 0,
                 "error_rate": (
                     result.metrics.failed_requests
-                    / max(result.metrics._total_requests, 1)
+                    / max(result.metrics.total_requests, 1)
                 )
                 * 100,
             }
 
             workload_results.append(workload_result)
 
-            assert result.metrics._total_requests > 0, (
+            assert result.metrics.total_requests > 0, (
                 f"No requests for {workload_config['name']}"
             )
 

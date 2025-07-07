@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Multi-stage Dockerfile for ARQ task queue worker
+# Multi-stage Dockerfile for ARQ task queue worker - 2025 UV Edition
 
 # =========================================
 # Stage 1: Build Environment
@@ -9,6 +9,8 @@ FROM python:3.12 AS builder
 # Prevent Python from writing pyc files and buffer stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
 
 # Set working directory
 WORKDIR /app
@@ -37,18 +39,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxcb1-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency files first for better layer caching
-COPY pyproject.toml requirements.txt ./
+# Install UV - the modern Python package manager
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
-# Install Python dependencies to a virtual environment
-RUN python -m venv /opt/venv
+# Copy dependency files first for better layer caching
+COPY pyproject.toml uv.lock ./
+
+# Create virtual environment and install dependencies with UV
+RUN uv python install 3.12
+RUN uv venv /opt/venv --python 3.12
+ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Upgrade pip and install build tools
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
-
-# Install dependencies with increased timeout and retries
-RUN pip install --no-cache-dir --timeout=1000 --retries=5 -r requirements.txt
+# Install dependencies with UV (much faster than pip)
+RUN uv sync --frozen --no-dev
 
 # =========================================
 # Stage 2: Runtime Environment

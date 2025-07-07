@@ -14,7 +14,7 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any
 
 import psutil
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
@@ -85,24 +85,25 @@ class AdaptiveCircuitBreaker:
     async def call(self, func: Callable, *args, **kwargs):
         """Execute function with circuit breaker protection."""
         if self._should_reject():
-            raise CircuitBreakerOpenError(f"Circuit breaker {self.name} is open")
+            msg = f"Circuit breaker {self.name} is open"
+            raise CircuitBreakerOpenError(msg)
 
+        start_time = time.time()
         try:
-            start_time = time.time()
             result = (
                 await func(*args, **kwargs)
                 if asyncio.iscoroutinefunction(func)
                 else func(*args, **kwargs)
             )
 
-            # Record success
-            self._record_success(time.time() - start_time)
-            return result
-
-        except Exception as e:
+        except (TimeoutError, OSError, PermissionError):
             # Record failure
             self._record_failure(time.time() - start_time)
             raise
+        else:
+            # Record success
+            self._record_success(time.time() - start_time)
+            return result
 
     def _should_reject(self) -> bool:
         """Determine if request should be rejected."""
@@ -123,10 +124,12 @@ class AdaptiveCircuitBreaker:
         self.state.success_count += 1
         self.state.total_requests += 1
 
-        if self.state.state == "half_open":
-            if self.state.success_count >= self.half_open_max_calls:
-                self.state.state = "closed"
-                self.state.failure_count = 0
+        if (
+            self.state.state == "half_open"
+            and self.state.success_count >= self.half_open_max_calls
+        ):
+            self.state.state = "closed"
+            self.state.failure_count = 0
 
         # Adapt thresholds based on success patterns
         self._adapt_thresholds(success=True, response_time=response_time)
@@ -221,10 +224,14 @@ class SelfHealingDatabaseManager:
             self.engine = await self._create_engine_with_retry()
             logger.info("Database connection initialized successfully")
 
-        except Exception as e:
-            logger.exception(f"Failed to initialize database: {e}")
+        except (OSError, AttributeError, ConnectionError, ImportError):
+            logger.exception("Failed to initialize database")
             # Start background recovery
-            asyncio.create_task(self._background_recovery())
+            recovery_task = asyncio.create_task(self._background_recovery())
+            # Store reference to prevent task garbage collection
+            recovery_task.add_done_callback(
+                lambda _: logger.debug("Background recovery task completed")
+            )
 
     async def _create_engine_with_retry(self) -> AsyncEngine:
         """Create database engine with exponential backoff retry."""
@@ -241,19 +248,21 @@ class SelfHealingDatabaseManager:
                 async with engine.begin() as conn:
                     await conn.execute("SELECT 1")
 
-                return engine
-
             except Exception as e:
                 if attempt == self.max_retries - 1:
                     raise
 
                 delay = min(self.base_delay * (2**attempt), self.max_delay)
                 logger.warning(
-                    f"Database connection attempt {attempt + 1} failed, retrying in {delay}s: {e}"
+                    f"Database connection attempt {attempt + 1} failed, "
+                    f"retrying in {delay}s: {e}"
                 )
                 await asyncio.sleep(delay)
+            else:
+                return engine
 
-        raise RuntimeError("Failed to establish database connection after retries")
+        msg = "Failed to establish database connection after retries"
+        raise RuntimeError(msg)
 
     @asynccontextmanager
     async def get_session(self):
@@ -269,9 +278,9 @@ class SelfHealingDatabaseManager:
 
             yield session
 
-        except Exception as e:
+        except (ConnectionError, OSError, PermissionError):
             self.error_count += 1
-            logger.exception(f"Database session error: {e}")
+            logger.exception("Database session error")
 
             # Attempt automatic recovery
             if self._should_attempt_recovery():
@@ -286,7 +295,8 @@ class SelfHealingDatabaseManager:
     async def _create_session(self) -> AsyncSession:
         """Create a new database session."""
         if not self.engine:
-            raise DatabaseNotAvailableError("Database engine not available")
+            msg = "Database engine not available"
+            raise DatabaseNotAvailableError(msg)
 
         return AsyncSession(self.engine)
 
@@ -310,10 +320,14 @@ class SelfHealingDatabaseManager:
             self.engine = await self._create_engine_with_retry()
             logger.info("Database recovery successful")
 
-        except Exception as e:
-            logger.exception(f"Database recovery failed: {e}")
+        except (ConnectionError, OSError, PermissionError):
+            logger.exception("Database recovery failed")
             # Schedule retry
-            asyncio.create_task(self._delayed_recovery())
+            retry_task = asyncio.create_task(self._delayed_recovery())
+            # Store reference to prevent task garbage collection
+            retry_task.add_done_callback(
+                lambda _: logger.debug("Delayed recovery task completed")
+            )
 
     async def _delayed_recovery(self):
         """Attempt recovery after a delay."""
@@ -337,14 +351,14 @@ class SelfHealingDatabaseManager:
             async with self.engine.begin() as conn:
                 await conn.execute("SELECT 1")
 
+        except (AttributeError, RuntimeError, ValueError):
+            return HealthStatus.UNHEALTHY
+        else:
             failure_rate = self.circuit_breaker.state.failure_rate
             if failure_rate < 0.1:
                 return HealthStatus.HEALTHY
             if failure_rate < 0.5:
                 return HealthStatus.DEGRADED
-            return HealthStatus.UNHEALTHY
-
-        except Exception:
             return HealthStatus.UNHEALTHY
 
 
@@ -381,8 +395,8 @@ class AutoScalingManager:
 
                 await asyncio.sleep(check_interval)
 
-            except Exception as e:
-                logger.exception(f"Auto-scaling monitoring error: {e}")
+            except (TimeoutError, OSError, PermissionError):
+                logger.exception("Auto-scaling monitoring error")
                 await asyncio.sleep(30)  # Shorter interval on error
 
     async def _collect_metrics(self) -> SystemMetrics:
@@ -453,7 +467,8 @@ class AutoScalingManager:
     async def _scale_up(self, metrics: SystemMetrics):
         """Scale up system resources."""
         logger.info(
-            f"Scaling up - CPU: {metrics.cpu_percent}%, Memory: {metrics.memory_percent}%"
+            f"Scaling up - CPU: {metrics.cpu_percent}%, "
+            f"Memory: {metrics.memory_percent}%"
         )
 
         # In a real implementation, this would:
@@ -467,7 +482,8 @@ class AutoScalingManager:
     async def _scale_down(self, metrics: SystemMetrics):
         """Scale down system resources."""
         logger.info(
-            f"Scaling down - CPU: {metrics.cpu_percent}%, Memory: {metrics.memory_percent}%"
+            f"Scaling down - CPU: {metrics.cpu_percent}%, "
+            f"Memory: {metrics.memory_percent}%"
         )
 
         # In a real implementation, this would:
@@ -500,7 +516,11 @@ class SelfHealingManager:
 
         # Initialize auto-scaling
         self.scaling_manager = AutoScalingManager()
-        asyncio.create_task(self.scaling_manager.start_monitoring())
+        scaling_task = asyncio.create_task(self.scaling_manager.start_monitoring())
+        # Store reference to prevent task garbage collection
+        scaling_task.add_done_callback(
+            lambda _: logger.debug("Auto-scaling monitoring task completed")
+        )
 
         logger.info("Self-healing infrastructure initialized")
 
@@ -539,14 +559,19 @@ class DatabaseNotAvailableError(Exception):
 
 
 # Global instance
-_self_healing_manager: SelfHealingManager | None = None
+class _SelfHealingManagerSingleton:
+    """Singleton holder for self-healing manager instance."""
+
+    _instance: SelfHealingManager | None = None
+
+    @classmethod
+    async def get_instance(cls) -> SelfHealingManager:
+        """Get the singleton self-healing manager instance."""
+        if cls._instance is None:
+            cls._instance = SelfHealingManager()
+        return cls._instance
 
 
 async def get_self_healing_manager() -> SelfHealingManager:
     """Get the global self-healing manager instance."""
-    global _self_healing_manager
-
-    if _self_healing_manager is None:
-        _self_healing_manager = SelfHealingManager()
-
-    return _self_healing_manager
+    return await _SelfHealingManagerSingleton.get_instance()

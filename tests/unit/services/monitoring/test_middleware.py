@@ -274,6 +274,7 @@ class TestCustomMetricsMiddleware:
         assert middleware.metrics_registry is None
 
         @app.get("/test")
+        @pytest.mark.asyncio
         async def test_endpoint():
             return {"status": "ok"}
 
@@ -306,6 +307,7 @@ class TestMiddlewareIntegration:
         )
 
         @app.get("/api/test")
+        @pytest.mark.asyncio
         async def test_endpoint():
             return {"status": "ok"}
 

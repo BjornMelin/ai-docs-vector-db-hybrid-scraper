@@ -8,6 +8,7 @@ for maximum portfolio demonstration performance.
 import asyncio
 import gc
 import logging
+import subprocess
 import threading
 import time
 from collections import defaultdict, deque
@@ -17,12 +18,28 @@ from dataclasses import dataclass, field
 
 import psutil
 import uvloop
+
+
+try:
+    import httpx
+except ImportError:
+    httpx = None
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
 from src.config import PerformanceConfig
 
+
+# Optional imports to avoid circular dependencies
+try:
+    from src.config import Config
+    from src.infrastructure.client_manager import ClientManager
+    from src.services.embeddings.manager import EmbeddingManager
+except ImportError:
+    Config = None
+    ClientManager = None
+    EmbeddingManager = None
 
 logger = logging.getLogger(__name__)
 
@@ -124,54 +141,106 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
         )
 
         try:
-            # Process the request
             response = await call_next(request)
-
-            # Calculate metrics
-            end_time = time.perf_counter()
-            response_time = end_time - start_time
-            memory_after = (
-                self._get_memory_usage() if self.config.track_memory_usage else None
-            )
-
-            # Create metrics record
-            metrics = RequestMetrics(
-                endpoint=endpoint,
-                method=request.method,
-                status_code=response.status_code,
-                response_time=response_time,
-                memory_before=memory_before,
-                memory_after=memory_after,
-            )
-
-            # Record metrics
-            self._record_metrics(metrics)
-
-            # Add performance headers
-            response.headers["X-Response-Time"] = f"{response_time:.4f}"
-            if memory_after and memory_before:
-                memory_delta = memory_after - memory_before
-                response.headers["X-Memory-Delta"] = f"{memory_delta:.2f}"
-
-            return response
-
-        except Exception:
-            # Record failed request metrics
-            end_time = time.perf_counter()
-            response_time = end_time - start_time
-
-            metrics = RequestMetrics(
-                endpoint=endpoint,
-                method=request.method,
-                status_code=500,  # Assume 500 for exceptions
-                response_time=response_time,
-                memory_before=memory_before,
-            )
-
-            self._record_metrics(metrics)
-
-            # Re-raise the exception
+        except (ConnectionError, TimeoutError, ValueError, httpx.RequestError):
+            self._handle_request_failure(endpoint, request, start_time, memory_before)
             raise
+        else:
+            return self._finalize_successful_request(
+                response, endpoint, request, start_time, memory_before
+            )
+
+    def _handle_request_failure(
+        self,
+        endpoint: str,
+        request: Request,
+        start_time: float,
+        memory_before: float | None,
+    ) -> None:
+        """Handle failed request and record metrics.
+
+        Args:
+            endpoint: Request endpoint
+            request: HTTP request
+            start_time: Request start time
+            memory_before: Memory usage before request
+        """
+        end_time = time.perf_counter()
+        response_time = end_time - start_time
+
+        metrics = RequestMetrics(
+            endpoint=endpoint,
+            method=request.method,
+            status_code=500,  # Assume 500 for exceptions
+            response_time=response_time,
+            memory_before=memory_before,
+        )
+
+        self._record_metrics(metrics)
+
+    def _finalize_successful_request(
+        self,
+        response: Response,
+        endpoint: str,
+        request: Request,
+        start_time: float,
+        memory_before: float | None,
+    ) -> Response:
+        """Finalize successful request with metrics and headers.
+
+        Args:
+            response: HTTP response
+            endpoint: Request endpoint
+            request: HTTP request
+            start_time: Request start time
+            memory_before: Memory usage before request
+
+        Returns:
+            Response with performance headers
+        """
+        # Calculate metrics
+        end_time = time.perf_counter()
+        response_time = end_time - start_time
+        memory_after = (
+            self._get_memory_usage() if self.config.track_memory_usage else None
+        )
+
+        # Create and record metrics
+        metrics = RequestMetrics(
+            endpoint=endpoint,
+            method=request.method,
+            status_code=response.status_code,
+            response_time=response_time,
+            memory_before=memory_before,
+            memory_after=memory_after,
+        )
+        self._record_metrics(metrics)
+
+        # Add performance headers
+        self._add_performance_headers(
+            response, response_time, memory_before, memory_after
+        )
+        return response
+
+    def _add_performance_headers(
+        self,
+        response: Response,
+        response_time: float,
+        memory_before: float | None,
+        memory_after: float | None,
+    ) -> None:
+        """Add performance headers to response.
+
+        Args:
+            response: HTTP response
+            response_time: Request processing time
+            memory_before: Memory usage before request
+            memory_after: Memory usage after request
+        """
+        response.headers["X-Response-Time"] = f"{response_time:.4f}"
+        if memory_after and memory_before:
+            memory_delta = memory_after - memory_before
+            response.headers["X-Memory-Delta"] = f"{memory_delta:.2f}"
 
     def _get_endpoint_key(self, request: Request) -> str:
         """Generate endpoint key for metrics grouping.
@@ -193,14 +262,22 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 
         """
         try:
-            if self._process:
-                memory_info = self._process.memory_info()
-                return memory_info.rss / 1024 / 1024  # Convert to MB
-        except Exception as e:
-            logger.warning(
-                f"Failed to get memory usage: {e}"
-            )  # TODO: Convert f-string to logging format
-        return None
+            return self._get_process_memory()
+        except (subprocess.SubprocessError, OSError, TimeoutError) as e:
+            logger.warning(f"Failed to get memory usage: {e}")
+            return None
+
+    def _get_process_memory(self) -> float | None:
+        """Get process memory usage safely.
+
+        Returns:
+            Memory usage in MB or None
+        """
+        if not self._process:
+            return None
+
+        memory_info = self._process.memory_info()
+        return memory_info.rss / 1024 / 1024  # Convert to MB
 
     def _record_metrics(self, metrics: RequestMetrics) -> None:
         """Record metrics in thread-safe manner.
@@ -291,7 +368,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
                         "memory_usage_percent": self._process.memory_percent(),
                         "cpu_percent": cpu_percent,
                     }
-                except Exception as e:
+                except (subprocess.SubprocessError, OSError, TimeoutError) as e:
                     logger.warning(
                         f"Failed to get system metrics: {e}"
                     )  # TODO: Convert f-string to logging format
@@ -412,7 +489,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 
 
 @asynccontextmanager
-async def optimized_lifespan(app):
+async def optimized_lifespan(_app):
     """Optimized application lifespan with uvloop and service warming.
 
     This lifespan context manager implements performance optimizations:
@@ -423,11 +500,10 @@ async def optimized_lifespan(app):
     # Install uvloop for better async performance
     try:
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    except (ConnectionError, OSError, TimeoutError) as e:
+        logger.warning(f"Failed to install uvloop: {e}")
+    else:
         logger.info("uvloop event loop policy installed for better performance")
-    except Exception as e:
-        logger.warning(
-            f"Failed to install uvloop: {e}"
-        )  # TODO: Convert f-string to logging format
 
     # Pre-warm critical services
     await _warm_services()
@@ -441,61 +517,71 @@ async def optimized_lifespan(app):
 async def _warm_services():
     """Warm up critical services for better first-request performance."""
     try:
-        # Import here to avoid circular dependencies
-        from src.config import Config
-        from src.infrastructure.client_manager import ClientManager
-        from src.services.embeddings.manager import EmbeddingManager
+        await _perform_service_warmup()
+    except Exception:
+        logger.exception("Service warm-up failed")
 
-        logger.info("Starting service warm-up...")
 
-        # Warm embedding service with a test embedding
-        try:
-            config = Config()
-            client_manager = ClientManager(config)
-            await client_manager.initialize()
+async def _perform_service_warmup() -> None:
+    """Perform the actual service warm-up operations."""
+    if Config is None or ClientManager is None or EmbeddingManager is None:
+        logger.warning("Required imports not available for service warm-up")
+        return
 
-            embedding_manager = EmbeddingManager(config)
-            await embedding_manager.initialize()
-            await embedding_manager.generate_single("warmup query")
-            logger.info("Embedding service warmed up successfully")
-        except Exception as e:
-            logger.warning(
-                f"Failed to warm embedding service: {e}"
-            )  # TODO: Convert f-string to logging format
+    logger.info("Starting service warm-up...")
 
-        # Warm vector database connection
-        try:
-            qdrant_client = await client_manager.get_qdrant_client()
-            # Simple health check to warm the connection
-            await qdrant_client.get_collections()
-            logger.info("Vector database connection warmed up successfully")
-        except Exception as e:
-            logger.warning(
-                f"Failed to warm vector database: {e}"
-            )  # TODO: Convert f-string to logging format
+    config = Config()
+    client_manager = ClientManager(config)
+    await client_manager.initialize()
 
-        logger.info("Service warm-up completed")
+    # Warm services sequentially
+    await _warm_embedding_service(config, client_manager)
+    await _warm_vector_database(client_manager)
 
-    except Exception as e:
-        logger.exception(f"Service warm-up failed: {e}")
+    logger.info("Service warm-up completed")
+
+
+async def _warm_embedding_service(config, client_manager) -> None:
+    """Warm up the embedding service."""
+    try:
+        embedding_manager = EmbeddingManager(config, client_manager)
+        await embedding_manager.initialize()
+        await embedding_manager.generate_embeddings(["warmup query"])
+    except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
+        logger.warning(f"Failed to warm embedding service: {e}")
+    else:
+        logger.info("Embedding service warmed up successfully")
+
+
+async def _warm_vector_database(client_manager) -> None:
+    """Warm up the vector database connection."""
+    try:
+        qdrant_client = await client_manager.get_qdrant_client()
+        await qdrant_client.get_collections()
+    except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
+        logger.warning(f"Failed to warm vector database: {e}")
+    else:
+        logger.info("Vector database connection warmed up successfully")
 
 
 async def _cleanup_services():
     """Clean up services and connections."""
     try:
-        # Import here to avoid circular dependencies
-        from src.config import Config
-        from src.infrastructure.client_manager import ClientManager
+        await _perform_service_cleanup()
+    except (ImportError, ModuleNotFoundError, AttributeError) as e:
+        logger.warning(f"Service cleanup failed: {e}")
 
-        config = Config()
-        client_manager = ClientManager(config)
-        await client_manager.cleanup()
-        logger.info("Service cleanup completed")
 
-    except Exception as e:
-        logger.warning(
-            f"Service cleanup failed: {e}"
-        )  # TODO: Convert f-string to logging format
+async def _perform_service_cleanup() -> None:
+    """Perform the actual service cleanup operations."""
+    if Config is None or ClientManager is None:
+        logger.warning("Required imports not available for service cleanup")
+        return
+
+    config = Config()
+    client_manager = ClientManager(config)
+    await client_manager.cleanup()
+    logger.info("Service cleanup completed")
 
 
 class AdvancedPerformanceMiddleware(PerformanceMiddleware):
@@ -568,12 +654,11 @@ class AdvancedPerformanceMiddleware(PerformanceMiddleware):
 
         # Add P95 latency calculation
         with self._stats_lock:
-            all_response_times = []
-            for stats in self._endpoint_stats.values():
-                for metric in stats.recent_requests:
-                    all_response_times.append(
-                        metric.response_time * 1000
-                    )  # Convert to ms
+            all_response_times = [
+                metric.response_time * 1000  # Convert to ms
+                for stats in self._endpoint_stats.values()
+                for metric in stats.recent_requests
+            ]
 
             if all_response_times:
                 all_response_times.sort()

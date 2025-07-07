@@ -9,9 +9,13 @@ from unittest.mock import patch
 import pytest
 import yaml
 
-from src.config.config_manager import ConfigManager
-from src.config.core import Config
-from src.config.error_handling import ConfigLoadError, get_degradation_handler
+from src.config import (
+    Config,
+    ConfigLoadError,
+    ConfigManager,
+    ConfigReloader,
+    get_degradation_handler,
+)
 
 
 @pytest.fixture
@@ -272,8 +276,8 @@ class TestRealWorldErrorScenarios:
         def tracking_listener(old, new):
             listener_calls.append(
                 (
-                    old.openai.api_key if old.openai.api_key else None,
-                    new.openai.api_key if new.openai.api_key else None,
+                    old.openai.api_key or None,
+                    new.openai.api_key or None,
                 )
             )
 
@@ -334,8 +338,6 @@ class TestEnvironmentSpecificErrors:
         """Test signal handler error recovery."""
         if not hasattr(signal, "SIGHUP"):
             pytest.skip("SIGHUP not available on this platform")
-
-        from src.config.reload import ConfigReloader
 
         config_file = config_dir / "config.json"
         config_file.write_text('{"openai": {"api_key": "sk-test"}}')

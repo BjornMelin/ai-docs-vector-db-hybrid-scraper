@@ -26,13 +26,13 @@ class TestCacheStats:
         assert stats.sets == 15
         assert stats.errors == 2
 
-    def test_cache_stats__total_requests_property(self):
+    def test_cache_stats_total_requests_property(self):
         """Test _total_requests property calculation."""
         stats = CacheStats(hits=10, misses=5)
 
         assert stats._total_requests == 15
 
-    def test_cache_stats__total_requests_zero(self):
+    def test_cache_stats_total_requests_zero(self):
         """Test _total_requests property when both hits and misses are zero."""
         stats = CacheStats()
 
@@ -90,7 +90,7 @@ class TestCacheStats:
         stats.hits = 8
         stats.misses = 2
 
-        # Properties should reflect new values
+        # Properties should reflect  values
         assert stats._total_requests == 10
         assert stats.hit_rate == 0.8
 

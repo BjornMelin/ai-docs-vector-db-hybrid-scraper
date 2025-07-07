@@ -200,6 +200,7 @@ class TestBrowserUseAdapterInitialization:
     """Test BrowserUse adapter initialization process."""
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", False)
+    @pytest.mark.asyncio
     async def test_initialize_browser_use_unavailable(self, basic_config):
         """Test initialization when browser-use is not available."""
         adapter = BrowserUseAdapter(basic_config)
@@ -211,6 +212,7 @@ class TestBrowserUseAdapterInitialization:
     @patch("src.services.browser.browser_use_adapter.Browser")
     @patch("src.services.browser.browser_use_adapter.BrowserConfig")
     @patch("src.services.browser.browser_use_adapter.ChatOpenAI")
+    @pytest.mark.asyncio
     async def test_initialize_success(
         self, mock_chat_openai, mock_browser_config, mock_browser, basic_config
     ):
@@ -246,6 +248,7 @@ class TestBrowserUseAdapterInitialization:
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
     @patch("src.services.browser.browser_use_adapter.ChatOpenAI")
+    @pytest.mark.asyncio
     async def test_initialize_already_initialized(self, mock_chat_openai, basic_config):
         """Test initialization when already initialized."""
         adapter = BrowserUseAdapter(basic_config)
@@ -258,6 +261,7 @@ class TestBrowserUseAdapterInitialization:
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
     @patch("src.services.browser.browser_use_adapter.ChatOpenAI")
+    @pytest.mark.asyncio
     async def test_initialize_llm_setup_failure(self, mock_chat_openai, basic_config):
         """Test initialization failure during LLM setup."""
         adapter = BrowserUseAdapter(basic_config)
@@ -276,6 +280,7 @@ class TestBrowserUseAdapterScraping:
     """Test BrowserUse scraping functionality."""
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_scrape_not_initialized(self, basic_config):
         """Test scraping when not initialized."""
         adapter = BrowserUseAdapter(basic_config)
@@ -285,6 +290,7 @@ class TestBrowserUseAdapterScraping:
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
     @patch("src.services.browser.browser_use_adapter.Agent")
+    @pytest.mark.asyncio
     async def test_scrape_simple_success(self, mock_agent_class, basic_config):
         """Test successful simple scraping."""
         adapter = BrowserUseAdapter(basic_config)
@@ -328,6 +334,7 @@ class TestBrowserUseAdapterScraping:
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
     @patch("src.services.browser.browser_use_adapter.Agent")
+    @pytest.mark.asyncio
     async def test_scrape_with_instructions(self, mock_agent_class, basic_config):
         """Test scraping with action instructions."""
         adapter = BrowserUseAdapter(basic_config)
@@ -370,6 +377,7 @@ class TestBrowserUseAdapterScraping:
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
     @patch("src.services.browser.browser_use_adapter.Agent")
+    @pytest.mark.asyncio
     async def test_scrape_with_retry(self, mock_agent_class, basic_config):
         """Test scraping with retry on failure."""
         adapter = BrowserUseAdapter(basic_config)
@@ -401,6 +409,7 @@ class TestBrowserUseAdapterScraping:
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
     @patch("src.services.browser.browser_use_adapter.Agent")
+    @pytest.mark.asyncio
     async def test_scrape_all_retries_failed(self, mock_agent_class, basic_config):
         """Test scraping when all retries fail."""
         adapter = BrowserUseAdapter(basic_config)
@@ -421,6 +430,7 @@ class TestBrowserUseAdapterScraping:
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
     @patch("src.services.browser.browser_use_adapter.Agent")
+    @pytest.mark.asyncio
     async def test_scrape_timeout(self, mock_agent_class, basic_config):
         """Test scraping with timeout."""
         adapter = BrowserUseAdapter(basic_config)
@@ -449,6 +459,7 @@ class TestBrowserUseAdapterUtilities:
     """Test utility methods."""
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_cleanup(self, basic_config):
         """Test cleanup process."""
         adapter = BrowserUseAdapter(basic_config)
@@ -465,6 +476,7 @@ class TestBrowserUseAdapterUtilities:
         assert adapter._initialized is False
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_cleanup_with_error(self, basic_config):
         """Test cleanup with error during close."""
         adapter = BrowserUseAdapter(basic_config)
@@ -484,6 +496,7 @@ class TestBrowserUseAdapterUtilities:
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", True)
     @patch("src.services.browser.browser_use_adapter.Agent")
+    @pytest.mark.asyncio
     async def test_health_check_healthy(self, mock_agent_class, basic_config):
         """Test health check when healthy."""
         adapter = BrowserUseAdapter(basic_config)
@@ -513,6 +526,7 @@ class TestBrowserUseAdapterUtilities:
         assert "browser-use" in result["adapter"]
 
     @patch("src.services.browser.browser_use_adapter.BROWSER_USE_AVAILABLE", False)
+    @pytest.mark.asyncio
     async def test_health_check_unavailable(self, basic_config):
         """Test health check when browser-use unavailable."""
         adapter = BrowserUseAdapter(basic_config)
@@ -585,6 +599,7 @@ class TestBrowserUseAdapterIntegration:
     @patch("src.services.browser.browser_use_adapter.Browser")
     @patch("src.services.browser.browser_use_adapter.Agent")
     @patch("src.services.browser.browser_use_adapter.ChatOpenAI")
+    @pytest.mark.asyncio
     async def test_full_scraping_flow(
         self,
         mock_chat_openai,

@@ -5,7 +5,7 @@ Optimized for solo developer use with in-memory LRU cache and minimal overhead.
 
 import logging
 import time
-from typing import Any, Dict
+from typing import Any
 
 from src.architecture.service_factory import BaseService
 

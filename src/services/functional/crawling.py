@@ -18,6 +18,16 @@ from .dependencies import get_crawling_client
 
 logger = logging.getLogger(__name__)
 
+# Constants for crawling limits and thresholds
+MAX_PAGES_LIMIT = 1000
+MAX_PARALLEL_LIMIT = 20
+LOW_RESOURCE_THRESHOLD = 10
+MEDIUM_RESOURCE_THRESHOLD = 100
+HIGH_PARALLEL_THRESHOLD = 20
+LOW_PARALLEL_TASKS = 3
+HIGH_PARALLEL_TASKS = 5
+DEFAULT_BATCH_SIZE = 10
+
 
 @circuit_breaker(CircuitBreakerConfig.enterprise_mode())
 async def crawl_url(
@@ -44,7 +54,7 @@ async def crawl_url(
     """
     try:
         if not crawling_client:
-            raise HTTPException(status_code=500, detail="Crawling client not available")
+            _raise_crawling_client_unavailable()
 
         if not url:
             _raise_url_required()
@@ -57,11 +67,11 @@ async def crawl_url(
         if result.get("success"):
             logger.info(
                 f"Successfully crawled {url} using {result.get('tier_used', 'unknown')} "
-                f"in {result.get('automation_time_ms', 0)}ms"
+                f"in {result.get('automation_time_ms', 0)}ms",
             )
         else:
             logger.warning(
-                f"Failed to crawl {url}: {result.get('error', 'Unknown error')}"
+                f"Failed to crawl {url}: {result.get('error', 'Unknown error')}",
             )
 
     except HTTPException:
@@ -99,12 +109,12 @@ async def crawl_site(
     """
     try:
         if not crawling_client:
-            raise HTTPException(status_code=500, detail="Crawling client not available")
+            _raise_crawling_client_unavailable()
 
         if not url:
             _raise_url_required()
 
-        if max_pages <= 0 or max_pages > 1000:
+        if max_pages <= 0 or max_pages > MAX_PAGES_LIMIT:
             _raise_invalid_max_pages()
 
         result = await crawling_client.crawl_site(
@@ -116,11 +126,11 @@ async def crawl_site(
         if result.get("success"):
             logger.info(
                 f"Successfully crawled {result.get('total_pages', 0)} pages from {url} "
-                f"using {result.get('provider', 'unknown')} provider"
+                f"using {result.get('provider', 'unknown')} provider",
             )
         else:
             logger.warning(
-                f"Site crawl failed for {url}: {result.get('error', 'Unknown error')}"
+                f"Site crawl failed for {url}: {result.get('error', 'Unknown error')}",
             )
 
     except HTTPException:
@@ -128,7 +138,8 @@ async def crawl_site(
     except Exception as e:
         logger.exception(f"Site crawling failed for {url}")
         raise HTTPException(
-            status_code=500, detail=f"Site crawling failed: {e!s}"
+            status_code=500,
+            detail=f"Site crawling failed: {e!s}",
         ) from e
     else:
         return result
@@ -157,10 +168,10 @@ async def get_crawl_metrics(
 
         metrics = crawling_client.get_metrics()
         logger.debug(
-            f"Retrieved crawl metrics for {len(metrics)} tiers"
+            f"Retrieved crawl metrics for {len(metrics)} tiers",
         )  # TODO: Convert f-string to logging format
 
-    except Exception:
+    except (ConnectionError, OSError, PermissionError):
         logger.exception("Crawl metrics retrieval failed")
         return {}
     else:
@@ -195,12 +206,12 @@ async def get_recommended_tool(
 
         recommendation = await crawling_client.get_recommended_tool(url)
         logger.debug(
-            f"Recommended tool for {url}: {recommendation}"
+            f"Recommended tool for {url}: {recommendation}",
         )  # TODO: Convert f-string to logging format
 
     except HTTPException:
         raise
-    except Exception:
+    except (ConnectionError, OSError, PermissionError):
         logger.exception(f"Tool recommendation failed for {url}")
         return "crawl4ai"  # Graceful fallback
     else:
@@ -230,10 +241,10 @@ async def get_provider_info(
 
         info = crawling_client.get_provider_info()
         logger.debug(
-            f"Retrieved provider info for {len(info)} tools"
+            f"Retrieved provider info for {len(info)} tools",
         )  # TODO: Convert f-string to logging format
 
-    except Exception:
+    except (ConnectionError, OSError, PermissionError):
         logger.exception("Provider info retrieval failed")
         return {}
     else:
@@ -263,10 +274,10 @@ async def get_tier_metrics(
 
         metrics = crawling_client.get_tier_metrics()
         logger.debug(
-            f"Retrieved tier metrics for {len(metrics)} tiers"
+            f"Retrieved tier metrics for {len(metrics)} tiers",
         )  # TODO: Convert f-string to logging format
 
-    except Exception:
+    except (ConnectionError, OSError, PermissionError):
         logger.exception("Tier metrics retrieval failed")
         return {}
     else:
@@ -302,7 +313,7 @@ async def batch_crawl_urls(
         if not urls:
             return []
 
-        if max_parallel <= 0 or max_parallel > 20:
+        if max_parallel <= 0 or max_parallel > MAX_PARALLEL_LIMIT:
             _raise_invalid_max_parallel()
 
         semaphore = asyncio.Semaphore(max_parallel)
@@ -324,7 +335,7 @@ async def batch_crawl_urls(
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 logger.error(
-                    f"URL {urls[i]} failed: {result}"
+                    f"URL {urls[i]} failed: {result}",
                 )  # TODO: Convert f-string to logging format
                 processed_results.append(
                     {
@@ -333,7 +344,7 @@ async def batch_crawl_urls(
                         "url": urls[i],
                         "content": "",
                         "metadata": {},
-                    }
+                    },
                 )
             else:
                 processed_results.append(result)
@@ -341,7 +352,7 @@ async def batch_crawl_urls(
         successful_count = sum(1 for r in processed_results if r.get("success", False))
         logger.info(
             f"Batch crawled {len(urls)} URLs with {successful_count} successes "
-            f"using max {max_parallel} parallel operations"
+            f"using max {max_parallel} parallel operations",
         )
 
     except HTTPException:
@@ -349,7 +360,8 @@ async def batch_crawl_urls(
     except Exception as e:
         logger.exception("Batch URL crawling failed")
         raise HTTPException(
-            status_code=500, detail=f"Batch crawling failed: {e!s}"
+            status_code=500,
+            detail=f"Batch crawling failed: {e!s}",
         ) from e
     else:
         return processed_results
@@ -378,7 +390,7 @@ async def validate_url(url: str) -> dict[str, Any]:
                 "valid": False,
                 "error": "Invalid URL format",
                 "details": {
-                    "parsed": {"scheme": parsed.scheme, "netloc": parsed.netloc}
+                    "parsed": {"scheme": parsed.scheme, "netloc": parsed.netloc},
                 },
             }
 
@@ -392,7 +404,7 @@ async def validate_url(url: str) -> dict[str, Any]:
 
         # Basic domain validation
         domain_pattern = re.compile(
-            r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$"
+            r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$",
         )
         if not domain_pattern.match(parsed.netloc.split(":")[0]):
             return {
@@ -455,9 +467,9 @@ async def estimate_crawl_cost(
         estimated_time_minutes = estimated_time_seconds / 60
 
         # Resource requirements estimation
-        if len(urls) <= 10:
+        if len(urls) <= LOW_RESOURCE_THRESHOLD:
             resource_requirements = "low"
-        elif len(urls) <= 100:
+        elif len(urls) <= MEDIUM_RESOURCE_THRESHOLD:
             resource_requirements = "medium"
         else:
             resource_requirements = "high"
@@ -469,8 +481,10 @@ async def estimate_crawl_cost(
             "estimated_time_seconds": estimated_time_seconds,
             "resource_requirements": resource_requirements,
             "recommendations": {
-                "batch_size": min(10, len(urls)),
-                "parallel_limit": 5 if len(urls) > 20 else 3,
+                "batch_size": min(DEFAULT_BATCH_SIZE, len(urls)),
+                "parallel_limit": HIGH_PARALLEL_TASKS
+                if len(urls) > HIGH_PARALLEL_THRESHOLD
+                else LOW_PARALLEL_TASKS,
             },
         }
 
@@ -498,3 +512,8 @@ def _raise_invalid_max_pages() -> None:
 def _raise_invalid_max_parallel() -> None:
     """Raise HTTPException for invalid max_parallel."""
     raise HTTPException(status_code=400, detail="max_parallel must be between 1 and 20")
+
+
+def _raise_crawling_client_unavailable() -> None:
+    """Raise HTTPException for unavailable crawling client."""
+    raise HTTPException(status_code=500, detail="Crawling client not available")

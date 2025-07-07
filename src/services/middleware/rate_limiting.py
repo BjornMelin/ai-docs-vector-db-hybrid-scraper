@@ -8,7 +8,7 @@ import logging
 from collections.abc import Callable
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, Request, Response
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -69,7 +69,7 @@ class ModernRateLimiter:
 
         logger.info(
             f"ModernRateLimiter initialized with Redis: {redis_url}, "
-            f"default_limits: {default_limits}"
+            f"default_limits: {default_limits}",
         )
 
     def limit(self, rate: str, per_method: bool = False):
@@ -114,7 +114,9 @@ class ModernRateLimiter:
         return False
 
     async def _rate_limit_handler(
-        self, request: Request, exc: RateLimitExceeded
+        self,
+        request: Request,
+        exc: RateLimitExceeded,
     ) -> Response:
         """Handle rate limit exceeded exceptions.
 
@@ -146,7 +148,7 @@ class ModernRateLimiter:
         # Log rate limit exceeded for monitoring
         client_ip = get_remote_address(request)
         logger.warning(
-            f"Rate limit exceeded for {client_ip} on {request.url.path}: {exc.detail}"
+            f"Rate limit exceeded for {client_ip} on {request.url.path}: {exc.detail}",
         )
 
         return response
@@ -164,39 +166,40 @@ class ModernRateLimiter:
             key = self.key_func(request)
             # This would require extending slowapi or accessing internal state
             # For now, return basic information
+        except Exception as e:
+            logger.exception("Error getting current limits")
+            return {"error": str(e)}
+
+        else:
             return {
                 "key": key,
                 "limiter_storage": self.redis_url,
-                "default_limits": self.limiter.default_limits,
+                "default_limits": getattr(
+                    self.limiter,
+                    "default_limits",
+                    getattr(self.limiter, "_default_limits", None),
+                ),
             }
-        except Exception as e:
-            logger.exception(f"Error getting current limits: {e}")
-            return {"error": str(e)}
 
-    async def reset_limits(self, key: str) -> bool:
+    async def reset_limits(self, _key: str) -> bool:
         """Reset rate limits for a specific key.
 
         Args:
-            key: Rate limit key to reset
+            _key: Rate limit key to reset
 
         Returns:
             True if successful, False otherwise
         """
         try:
-            # This would require accessing the limiter's storage directly
-            if hasattr(self.limiter, "_storage"):
-                storage = self.limiter._storage
-                if hasattr(storage, "clear"):
-                    await storage.clear(key)
-                    logger.info(
-                        f"Reset rate limits for key: {key}"
-                    )  # TODO: Convert f-string to logging format
-                    return True
-
-            logger.warning("Rate limit reset not supported")
+            # Rate limit reset requires direct storage access which is not exposed
+            # by slowapi's public interface. This is intentionally not supported
+            # to maintain proper encapsulation of the rate limiting library.
+            logger.warning("Rate limit reset not supported by current implementation")
+        except Exception:
+            logger.exception("Error resetting limits for {key}")
             return False
-        except Exception as e:
-            logger.exception(f"Error resetting limits for {key}: {e}")
+
+        else:
             return False
 
     async def get_stats(self) -> dict[str, Any]:
@@ -209,7 +212,11 @@ class ModernRateLimiter:
             return {
                 "limiter": {
                     "redis_url": self.redis_url,
-                    "default_limits": self.limiter.default_limits,
+                    "default_limits": getattr(
+                        self.limiter,
+                        "default_limits",
+                        getattr(self.limiter, "_default_limits", None),
+                    ),
                     "key_function": self.key_func.__name__,
                 },
                 "middleware": {
@@ -218,7 +225,7 @@ class ModernRateLimiter:
                 },
             }
         except Exception as e:
-            logger.exception(f"Error getting rate limiter stats: {e}")
+            logger.exception("Error getting rate limiter stats")
             return {"error": str(e)}
 
 
@@ -238,7 +245,7 @@ def create_api_key_limiter(redis_url: str) -> Limiter:
     def get_api_key(request: Request) -> str:
         """Extract API key from request headers."""
         api_key = request.headers.get("X-API-Key") or request.headers.get(
-            "Authorization"
+            "Authorization",
         )
         if api_key and api_key.startswith("Bearer "):
             api_key = api_key[7:]  # Remove "Bearer " prefix

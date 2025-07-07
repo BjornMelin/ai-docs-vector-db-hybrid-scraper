@@ -16,9 +16,10 @@ import json
 import logging
 import time
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import Request
 
@@ -164,6 +165,7 @@ class SecurityMonitor:
     def log_security_event(
         self,
         event_type: str,
+        *,
         request: Request | None = None,
         event_data: dict[str, Any] | None = None,
         severity: str | None = None,
@@ -238,8 +240,8 @@ class SecurityMonitor:
             # Check for automated response triggers
             self._check_automated_responses(security_event)
 
-        except Exception as e:
-            logger.exception(f"Failed to log security event: {e}")
+        except Exception:
+            logger.exception("Failed to log security event")
 
     def _determine_severity(self, event_type: SecurityEventType) -> SecuritySeverity:
         """Determine severity based on event type.
@@ -451,20 +453,19 @@ class SecurityMonitor:
             event: Security event to evaluate
         """
         # Auto-block IPs with critical threats
-        if event.severity == SecuritySeverity.CRITICAL:
-            if event.event_type in (
-                SecurityEventType.AI_THREAT_DETECTED,
-                SecurityEventType.SUSPICIOUS_ACTIVITY,
-            ):
-                logger.critical(
-                    f"Critical security event detected - consider IP blocking: {event.client_ip}",
-                    extra={
-                        "event_type": event.event_type.value,
-                        "client_ip": event.client_ip,
-                        "endpoint": event.endpoint,
-                        "event_data": event.event_data,
-                    },
-                )
+        if event.severity == SecuritySeverity.CRITICAL and event.event_type in (
+            SecurityEventType.AI_THREAT_DETECTED,
+            SecurityEventType.SUSPICIOUS_ACTIVITY,
+        ):
+            logger.critical(
+                f"Critical event - consider blocking IP: {event.client_ip}",
+                extra={
+                    "event_type": event.event_type.value,
+                    "client_ip": event.client_ip,
+                    "endpoint": event.endpoint,
+                    "event_data": event.event_data,
+                },
+            )
 
         # Alert on repeated threats from same IP
         recent_ip_events = [
@@ -476,7 +477,7 @@ class SecurityMonitor:
 
         if len(recent_ip_events) >= 3:
             logger.critical(
-                f"Repeated security violations from IP {event.client_ip} - automatic blocking recommended",
+                f"Repeated violations from {event.client_ip} - auto-block advised",
                 extra={
                     "violation_count": len(recent_ip_events),
                     "client_ip": event.client_ip,
@@ -493,8 +494,8 @@ class SecurityMonitor:
         """
         self.log_security_event(
             SecurityEventType.RATE_LIMIT_EXCEEDED.value,
-            request,
-            {
+            request=request,
+            event_data={
                 "rate_limit": limit,
                 "endpoint": request.url.path,
                 "method": request.method,
@@ -529,8 +530,8 @@ class SecurityMonitor:
         if hash(request.url.path) % 100 == 0:  # Log 1% of successful requests
             self.log_security_event(
                 SecurityEventType.REQUEST_SUCCESS.value,
-                request,
-                {
+                request=request,
+                event_data={
                     "processing_time": processing_time,
                     "endpoint": request.url.path,
                     "method": request.method,
@@ -640,12 +641,12 @@ class SecurityMonitor:
             "generated_at": datetime.now(UTC).isoformat(),
         }
 
-    def export_security_logs(self, hours: int = 24, format: str = "json") -> str:
+    def export_security_logs(self, hours: int = 24, file_format: str = "json") -> str:
         """Export security logs for external analysis.
 
         Args:
             hours: Number of hours to export
-            format: Export format (json, csv)
+            file_format: Export format (json, csv)
 
         Returns:
             Exported log data as string
@@ -658,20 +659,23 @@ class SecurityMonitor:
             e for e in self.recent_events if e.timestamp.timestamp() > cutoff_time
         ]
 
-        if format.lower() == "json":
+        if file_format.lower() == "json":
             return json.dumps(
                 [e.to_dict() for e in relevant_events], indent=2, default=str
             )
-        if format.lower() == "csv":
+        if file_format.lower() == "csv":
             # Simple CSV export
             lines = ["timestamp,event_type,severity,client_ip,endpoint,method"]
-            for event in relevant_events:
-                lines.append(
+            lines.extend(
+                [
                     f"{event.timestamp.isoformat()},{event.event_type.value},"
                     f"{event.severity.value},{event.client_ip},{event.endpoint},{event.method}"
-                )
+                    for event in relevant_events
+                ]
+            )
             return "\n".join(lines)
-        raise ValueError(f"Unsupported export format: {format}")
+        msg = f"Unsupported export format: {file_format}"
+        raise ValueError(msg)
 
     def cleanup_old_data(self, days: int = 30) -> int:
         """Clean up old security data to manage memory usage.

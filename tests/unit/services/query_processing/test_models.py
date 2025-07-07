@@ -26,8 +26,8 @@ class TestQueryIntent:
         assert QueryIntent.FACTUAL == "factual"
         assert QueryIntent.TROUBLESHOOTING == "troubleshooting"
 
-    def test_advanced_intents(self):
-        """Test advanced intent categories."""
+    def test_intents(self):
+        """Test  intent categories."""
         assert QueryIntent.COMPARATIVE == "comparative"
         assert QueryIntent.ARCHITECTURAL == "architectural"
         assert QueryIntent.PERFORMANCE == "performance"

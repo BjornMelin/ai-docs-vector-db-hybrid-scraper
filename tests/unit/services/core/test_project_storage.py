@@ -84,6 +84,7 @@ class TestProjectStorage:
             assert data_dir.exists()
             assert storage.storage_path == data_dir / "projects.json"
 
+    @pytest.mark.asyncio
     async def test_initialize_creates_storage_file(self, project_storage):
         """Test initialization creates storage file if it doesn't exist."""
         assert not project_storage.storage_path.exists()
@@ -98,6 +99,7 @@ class TestProjectStorage:
             data = json.load(f)
             assert data == {}
 
+    @pytest.mark.asyncio
     async def test_initialize_loads_existing_projects(self, project_storage):
         """Test initialization loads existing projects from file."""
         # Create file with existing data
@@ -115,6 +117,7 @@ class TestProjectStorage:
         assert project_storage._initialized is True
         assert project_storage._projects_cache == test_data
 
+    @pytest.mark.asyncio
     async def test_initialize_handles_corrupted_json(self, project_storage):
         """Test initialization handles corrupted JSON file."""
         # Create corrupted JSON file
@@ -131,6 +134,7 @@ class TestProjectStorage:
         backup_path = project_storage.storage_path.with_suffix(".json.bak")
         assert backup_path.exists()
 
+    @pytest.mark.asyncio
     async def test_initialize_failure_raises_error(self, project_storage):
         """Test initialization failure raises ProjectStorageError."""
         # Mock _save_projects to raise an exception during file creation
@@ -145,6 +149,7 @@ class TestProjectStorage:
             assert "Failed to initialize project storage" in str(exc_info.value)
             assert project_storage._initialized is False
 
+    @pytest.mark.asyncio
     async def test_initialize_already_initialized(self, project_storage):
         """Test that multiple initialization calls are safe."""
         await project_storage.initialize()
@@ -157,6 +162,7 @@ class TestProjectStorage:
         assert project_storage._initialized is True
 
     @patch("src.services.core.project_storage.aiofiles", None)  # Test without aiofiles
+    @pytest.mark.asyncio
     async def test_load_projects_without_aiofiles(self, project_storage):
         """Test loading projects without aiofiles (fallback mode)."""
         test_data = {"project1": {"name": "Test"}}
@@ -170,6 +176,7 @@ class TestProjectStorage:
         assert loaded_data == test_data
         assert project_storage._projects_cache == test_data
 
+    @pytest.mark.asyncio
     async def test_load_projects_with_aiofiles(self, project_storage):
         """Test loading projects with aiofiles."""
         test_data = {"project1": {"name": "Test"}}
@@ -186,6 +193,7 @@ class TestProjectStorage:
         assert loaded_data == test_data
         assert project_storage._projects_cache == test_data
 
+    @pytest.mark.asyncio
     async def test_load_projects_file_not_found(self, project_storage):
         """Test loading projects when file doesn't exist."""
         loaded_data = await project_storage.load_projects()
@@ -193,6 +201,7 @@ class TestProjectStorage:
         assert loaded_data == {}
         assert project_storage._projects_cache == {}
 
+    @pytest.mark.asyncio
     async def test_load_projects_empty_file(self, project_storage):
         """Test loading projects from empty file."""
         project_storage.storage_path.parent.mkdir(parents=True, exist_ok=True)
@@ -203,6 +212,7 @@ class TestProjectStorage:
         assert loaded_data == {}
         assert project_storage._projects_cache == {}
 
+    @pytest.mark.asyncio
     async def test_save_project(self, project_storage):
         """Test saving a single project."""
         await project_storage.initialize()
@@ -224,6 +234,7 @@ class TestProjectStorage:
             file_data = json.load(f)
             assert file_data["test_project"] == project_data
 
+    @pytest.mark.asyncio
     async def test_get_project_exists(self, project_storage):
         """Test getting an existing project."""
         await project_storage.initialize()
@@ -235,6 +246,7 @@ class TestProjectStorage:
 
         assert retrieved_data == project_data
 
+    @pytest.mark.asyncio
     async def test_get_project_not_exists(self, project_storage):
         """Test getting a non-existent project."""
         await project_storage.initialize()
@@ -243,6 +255,7 @@ class TestProjectStorage:
 
         assert retrieved_data is None
 
+    @pytest.mark.asyncio
     async def test_list_projects(self, project_storage):
         """Test listing all projects."""
         await project_storage.initialize()
@@ -259,6 +272,7 @@ class TestProjectStorage:
         assert project1 in projects
         assert project2 in projects
 
+    @pytest.mark.asyncio
     async def test_list_projects_empty(self, project_storage):
         """Test listing projects when none exist."""
         await project_storage.initialize()
@@ -267,6 +281,7 @@ class TestProjectStorage:
 
         assert projects == []
 
+    @pytest.mark.asyncio
     async def test_update_project_exists(self, project_storage):
         """Test updating an existing project."""
         await project_storage.initialize()
@@ -282,6 +297,7 @@ class TestProjectStorage:
         assert updated_data["version"] == 2
         assert "updated_at" in updated_data
 
+    @pytest.mark.asyncio
     async def test_update_project_not_exists(self, project_storage):
         """Test updating a non-existent project raises error."""
         await project_storage.initialize()
@@ -293,6 +309,7 @@ class TestProjectStorage:
 
         assert "Project nonexistent not found" in str(exc_info.value)
 
+    @pytest.mark.asyncio
     async def test_update_project_adds_timestamp(self, project_storage):
         """Test that update_project adds updated_at timestamp."""
         await project_storage.initialize()
@@ -311,6 +328,7 @@ class TestProjectStorage:
         updated_data = await project_storage.get_project("test_project")
         assert updated_data["updated_at"] == "2023-01-01T12:00:00"
 
+    @pytest.mark.asyncio
     async def test_delete_project_exists(self, project_storage):
         """Test deleting an existing project."""
         await project_storage.initialize()
@@ -328,6 +346,7 @@ class TestProjectStorage:
             file_data = json.load(f)
             assert "test_project" not in file_data
 
+    @pytest.mark.asyncio
     async def test_delete_project_not_exists(self, project_storage):
         """Test deleting a non-existent project (should not raise error)."""
         await project_storage.initialize()
@@ -338,6 +357,7 @@ class TestProjectStorage:
         assert "nonexistent" not in project_storage._projects_cache
 
     @patch("src.services.core.project_storage.aiofiles", None)  # Test without aiofiles
+    @pytest.mark.asyncio
     async def test_save_projects_without_aiofiles(self, project_storage):
         """Test saving projects without aiofiles (fallback mode)."""
         await project_storage.initialize()
@@ -354,6 +374,7 @@ class TestProjectStorage:
             file_data = json.load(f)
             assert file_data == test_data
 
+    @pytest.mark.asyncio
     async def test_save_projects_with_aiofiles(self, project_storage):
         """Test saving projects with aiofiles."""
         await project_storage.initialize()
@@ -372,6 +393,7 @@ class TestProjectStorage:
         assert written_data == test_data
         mock_replace.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_save_projects_atomic_write(self, project_storage):
         """Test that _save_projects uses atomic write (temp file then rename)."""
         await project_storage.initialize()
@@ -384,6 +406,7 @@ class TestProjectStorage:
         # Verify atomic operation
         mock_replace.assert_called_once_with(project_storage.storage_path)
 
+    @pytest.mark.asyncio
     async def test_save_projects_failure_raises_error(self, project_storage):
         """Test that _save_projects raises error on failure."""
         await project_storage.initialize()
@@ -397,6 +420,7 @@ class TestProjectStorage:
 
             assert "Failed to save projects" in str(exc_info.value)
 
+    @pytest.mark.asyncio
     async def test_cleanup(self, project_storage):
         """Test cleanup method."""
         await project_storage.initialize()
@@ -409,6 +433,7 @@ class TestProjectStorage:
         assert project_storage._projects_cache == {}
         assert project_storage._initialized is False
 
+    @pytest.mark.asyncio
     async def test_concurrent_access_protection(self, project_storage):
         """Test that concurrent operations are protected by lock."""
         await project_storage.initialize()
@@ -432,6 +457,7 @@ class TestProjectStorage:
             file_data = json.load(f)
             assert len(file_data) == 10
 
+    @pytest.mark.asyncio
     async def test_json_serialization_with_datetime(self, project_storage):
         """Test JSON serialization handles datetime objects."""
         await project_storage.initialize()
@@ -449,6 +475,7 @@ class TestProjectStorage:
         loaded_data = await project_storage.get_project("test_project")
         assert loaded_data == project_data
 
+    @pytest.mark.asyncio
     async def test_large_project_data(self, project_storage):
         """Test handling of large project data."""
         await project_storage.initialize()
@@ -468,6 +495,7 @@ class TestProjectStorage:
         assert len(loaded_data["data"]) == 1000
         assert len(loaded_data["metadata"]) == 100
 
+    @pytest.mark.asyncio
     async def test_special_characters_in_project_data(self, project_storage):
         """Test handling of special characters in project data."""
         await project_storage.initialize()
@@ -485,6 +513,7 @@ class TestProjectStorage:
         loaded_data = await project_storage.get_project("special_project")
         assert loaded_data == project_data
 
+    @pytest.mark.asyncio
     async def test_error_handling_during_load(self, project_storage):
         """Test error handling during project loading."""
         # Test with permission denied
@@ -492,6 +521,7 @@ class TestProjectStorage:
             loaded_data = await project_storage.load_projects()
             assert loaded_data == {}
 
+    @pytest.mark.asyncio
     async def test_file_locking_behavior(self, project_storage):
         """Test that file operations respect async locks."""
         await project_storage.initialize()

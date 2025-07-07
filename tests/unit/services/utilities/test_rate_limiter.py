@@ -45,6 +45,7 @@ class TestRateLimiter:
         assert limiter.tokens == 200
         assert abs(limiter.refill_rate - (100 / 30)) < 0.0001  # 100/30
 
+    @pytest.mark.asyncio
     async def test_acquire_single_token_success(self):
         """Test acquiring a single token successfully."""
         limiter = RateLimiter(max_calls=60)
@@ -54,6 +55,7 @@ class TestRateLimiter:
 
         assert limiter.tokens == initial_tokens - 1
 
+    @pytest.mark.asyncio
     async def test_acquire_multiple_tokens_success(self):
         """Test acquiring multiple tokens successfully."""
         limiter = RateLimiter(max_calls=60)
@@ -63,6 +65,7 @@ class TestRateLimiter:
 
         assert limiter.tokens == initial_tokens - 5
 
+    @pytest.mark.asyncio
     async def test_acquire_exceeds_capacity_error(self):
         """Test acquiring more tokens than bucket capacity."""
         limiter = RateLimiter(max_calls=60)  # max_tokens = 90
@@ -72,6 +75,7 @@ class TestRateLimiter:
 
         assert "exceeds bucket capacity" in str(exc_info.value)
 
+    @pytest.mark.asyncio
     async def test_acquire_with_refill(self):
         """Test token refill during acquisition."""
         limiter = RateLimiter(max_calls=60, time_window=1)  # 60 tokens per second
@@ -88,6 +92,7 @@ class TestRateLimiter:
         # Should have refilled approximately 6 tokens minus the 1 we acquired
         assert limiter.tokens > initial_tokens - 1
 
+    @pytest.mark.asyncio
     async def test_acquire_wait_for_refill(self):
         """Test waiting for token refill when insufficient tokens."""
         limiter = RateLimiter(max_calls=10, time_window=1)  # 10 tokens per second
@@ -105,6 +110,7 @@ class TestRateLimiter:
         # Should have waited approximately 0.5 seconds for 5 tokens
         assert elapsed >= 0.4  # Allow some tolerance
 
+    @pytest.mark.asyncio
     async def test_acquire_concurrent_access(self):
         """Test concurrent token acquisition."""
         limiter = RateLimiter(max_calls=60)
@@ -117,6 +123,7 @@ class TestRateLimiter:
         # Allow for small timing variations due to refill
         assert abs(limiter.tokens - (initial_tokens - 10)) < 1.0
 
+    @pytest.mark.asyncio
     async def test_token_refill_capped_at_maximum(self):
         """Test that token refill is capped at maximum capacity."""
         limiter = RateLimiter(max_calls=60, time_window=1)
@@ -133,6 +140,7 @@ class TestRateLimiter:
         # Tokens should be capped at max_tokens minus the one we just acquired
         assert limiter.tokens == limiter.max_tokens - 1
 
+    @pytest.mark.asyncio
     async def test_refill_rate_calculation(self):
         """Test token refill rate calculation."""
         limiter = RateLimiter(max_calls=120, time_window=60)
@@ -144,6 +152,7 @@ class TestRateLimiter:
         limiter2 = RateLimiter(max_calls=30, time_window=10)
         assert limiter2.refill_rate == 3.0
 
+    @pytest.mark.asyncio
     async def test_acquire_exact_capacity(self):
         """Test acquiring exactly the bucket capacity."""
         limiter = RateLimiter(max_calls=60)  # max_tokens = 90
@@ -152,6 +161,7 @@ class TestRateLimiter:
 
         assert limiter.tokens == 0
 
+    @pytest.mark.asyncio
     async def test_acquire_with_fractional_refill(self):
         """Test token acquisition with fractional refill amounts."""
         limiter = RateLimiter(max_calls=100, time_window=3)  # ~33.33 tokens per second
@@ -193,7 +203,7 @@ class TestRateLimitManager:
         assert manager.default_limits == mock_config.performance.default_rate_limits
 
     def test_get_limiter_new_provider(self, mock_config):
-        """Test getting limiter for new provider."""
+        """Test getting limiter for  provider."""
         manager = RateLimitManager(mock_config)
 
         limiter = manager.get_limiter("openai")
@@ -231,6 +241,7 @@ class TestRateLimitManager:
         assert "No rate limits configured" in str(exc_info.value)
         assert "unknown_provider" in str(exc_info.value)
 
+    @pytest.mark.asyncio
     async def test_acquire_success(self, mock_config):
         """Test successful token acquisition through manager."""
         manager = RateLimitManager(mock_config)
@@ -243,6 +254,7 @@ class TestRateLimitManager:
         assert limiter.max_calls == 60
         # Can't check exact tokens due to potential refill, but limiter should exist
 
+    @pytest.mark.asyncio
     async def test_acquire_with_endpoint(self, mock_config):
         """Test token acquisition with specific endpoint."""
         manager = RateLimitManager(mock_config)
@@ -251,6 +263,7 @@ class TestRateLimitManager:
 
         assert "openai:chat" in manager.limiters
 
+    @pytest.mark.asyncio
     async def test_acquire_unknown_provider(self, mock_config):
         """Test acquisition with unknown provider."""
         manager = RateLimitManager(mock_config)
@@ -315,6 +328,7 @@ class TestAdaptiveRateLimiter:
         assert limiter.min_rate == 0.2
         assert limiter.max_rate == 3.0
 
+    @pytest.mark.asyncio
     async def test_handle_response_rate_limited(self):
         """Test handling rate limited response (429)."""
         limiter = AdaptiveRateLimiter(initial_max_calls=100)
@@ -326,6 +340,7 @@ class TestAdaptiveRateLimiter:
         assert limiter.adjustment_factor == initial_factor * 0.5
         assert limiter.adjustment_factor >= limiter.min_rate
 
+    @pytest.mark.asyncio
     async def test_handle_response_success(self):
         """Test handling successful response."""
         limiter = AdaptiveRateLimiter(initial_max_calls=100)
@@ -337,6 +352,7 @@ class TestAdaptiveRateLimiter:
         # Should increase adjustment factor by 5%
         assert limiter.adjustment_factor == 0.5 * 1.05
 
+    @pytest.mark.asyncio
     async def test_handle_response_multiple_rate_limits(self):
         """Test multiple rate limit responses."""
         limiter = AdaptiveRateLimiter()
@@ -351,6 +367,7 @@ class TestAdaptiveRateLimiter:
         assert factor_after_second < factor_after_first
         assert factor_after_second >= limiter.min_rate
 
+    @pytest.mark.asyncio
     async def test_handle_response_rate_recovery(self):
         """Test rate recovery after successful responses."""
         limiter = AdaptiveRateLimiter()
@@ -367,6 +384,7 @@ class TestAdaptiveRateLimiter:
         assert limiter.adjustment_factor > low_factor
         assert limiter.adjustment_factor <= limiter.max_rate
 
+    @pytest.mark.asyncio
     async def test_handle_response_with_rate_limit_headers(self):
         """Test handling response with rate limit headers."""
         limiter = AdaptiveRateLimiter(initial_max_calls=100)
@@ -384,6 +402,7 @@ class TestAdaptiveRateLimiter:
         expected_calls = int(60 * limiter.adjustment_factor)
         assert limiter.max_calls == expected_calls
 
+    @pytest.mark.asyncio
     async def test_handle_response_invalid_headers(self):
         """Test handling response with invalid rate limit headers."""
         limiter = AdaptiveRateLimiter(initial_max_calls=100)
@@ -399,6 +418,7 @@ class TestAdaptiveRateLimiter:
         # Should ignore invalid headers and not change max_calls
         assert limiter.max_calls == initial_max_calls
 
+    @pytest.mark.asyncio
     async def test_handle_response_partial_headers(self):
         """Test handling response with partial rate limit headers."""
         limiter = AdaptiveRateLimiter(initial_max_calls=100)
@@ -412,6 +432,7 @@ class TestAdaptiveRateLimiter:
         # but should still adjust the factor for successful response
         assert limiter.adjustment_factor == 1.05
 
+    @pytest.mark.asyncio
     async def test_adjustment_factor_bounds(self):
         """Test that adjustment factor stays within bounds."""
         limiter = AdaptiveRateLimiter(min_rate=0.1, max_rate=2.0)
@@ -427,6 +448,7 @@ class TestAdaptiveRateLimiter:
             await limiter.handle_response(200)  # Each increases by 5%
         assert limiter.adjustment_factor <= 2.0  # Clamped to max_rate
 
+    @pytest.mark.asyncio
     async def test_refill_rate_updates_with_adjustment(self):
         """Test that refill rate updates when max_calls changes."""
         limiter = AdaptiveRateLimiter(initial_max_calls=100, time_window=60)
@@ -444,11 +466,13 @@ class TestAdaptiveRateLimiter:
         # Verify adjustment factor changed
         assert limiter.adjustment_factor < initial_adjustment_factor
 
-        # Since headers were provided and adjustment factor changed, max_calls should update
+        # Since headers were provided and adjustment factor changed,
+        # max_calls should update
         expected_max_calls = int(60 * limiter.adjustment_factor)
         assert limiter.max_calls == expected_max_calls
         assert limiter.refill_rate == limiter.max_calls / limiter.time_window
 
+    @pytest.mark.asyncio
     async def test_concurrent_response_handling(self):
         """Test concurrent response handling thread safety."""
         limiter = AdaptiveRateLimiter()
@@ -466,6 +490,7 @@ class TestAdaptiveRateLimiter:
         # Should have valid adjustment factor
         assert 0.1 <= limiter.adjustment_factor <= 2.0
 
+    @pytest.mark.asyncio
     async def test_rate_limit_header_priority(self):
         """Test that rate limit headers take priority over status codes."""
         limiter = AdaptiveRateLimiter(initial_max_calls=100)
@@ -495,6 +520,7 @@ class TestAdaptiveRateLimiter:
         # Should be able to call parent methods
         assert callable(limiter.acquire)
 
+    @pytest.mark.asyncio
     async def test_adaptive_acquire_functionality(self):
         """Test that adaptive limiter can still acquire tokens."""
         limiter = AdaptiveRateLimiter(initial_max_calls=60)

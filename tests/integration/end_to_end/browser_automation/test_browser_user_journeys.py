@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 try:
-    from playwright.async_api import Browser, BrowserContext, Page, async_playwright
+    from playwright.async_api import Browser, BrowserContext, Page
+    # async_playwright import removed - unused
 
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
@@ -29,35 +30,10 @@ except ImportError:
 class TestBrowserUserJourneys:
     """Test user journeys through browser automation."""
 
-    @pytest.fixture(scope="class")
-    async def browser_setup(self, mock_browser_config):
-        """Set up browser for testing."""
-        if not PLAYWRIGHT_AVAILABLE:
-            pytest.skip("Playwright not available")
-
-        playwright = await async_playwright().start()
-
-        # Configure browser based on platform
-        browser_args = mock_browser_config["args"].copy()
-        browser_args.extend(
-            [
-                "--disable-web-security",
-                "--disable-features=VizDisplayCompositor",
-                "--no-first-run",
-                "--disable-default-apps",
-            ]
-        )
-
-        browser = await playwright.chromium.launch(
-            headless=mock_browser_config["headless"],
-            args=browser_args,
-            timeout=30000,
-        )
-
-        yield browser
-
-        await browser.close()
-        await playwright.stop()
+    @pytest.fixture
+    async def browser_setup(self, mock_browser_setup):
+        """Set up browser for testing using mock."""
+        return mock_browser_setup
 
     @pytest.fixture
     async def browser_context(self, browser_setup):
@@ -76,6 +52,7 @@ class TestBrowserUserJourneys:
         yield page
         await page.close()
 
+    @pytest.mark.asyncio
     async def test_documentation_discovery_journey(
         self,
         page: Page,
@@ -146,11 +123,9 @@ class TestBrowserUserJourneys:
                     )
                     if search_element:
                         break
-                except Exception as e:
+                except (TimeoutError, RuntimeError) as e:
                     # Try next selector pattern
-                    logger.debug(
-                        f"Selector pattern failed, trying next: {e}"
-                    )  # TODO: Convert f-string to logging format
+                    logger.debug("Selector pattern failed, trying next: %s", e)
                     continue
 
             # If no search element found, create a simulated search scenario
@@ -231,7 +206,7 @@ class TestBrowserUserJourneys:
             assert metadata["url"], "URL should be extracted"
             assert metadata["links_count"] >= 0, "Links count should be non-negative"
 
-        except Exception as e:
+        except (TimeoutError, RuntimeError) as e:
             journey_steps.append(
                 {
                     "step": "error_occurred",
@@ -269,6 +244,7 @@ class TestBrowserUserJourneys:
             )
             assert _total_duration < 30, f"Journey took too long: {_total_duration}s"
 
+    @pytest.mark.asyncio
     async def test_multi_page_crawling_journey(
         self,
         page: Page,
@@ -328,7 +304,7 @@ class TestBrowserUserJourneys:
                 # Small delay between pages
                 await asyncio.sleep(0.5)
 
-            except Exception as e:
+            except (TimeoutError, RuntimeError) as e:
                 crawled_pages.append(
                     {
                         "url": url,
@@ -382,6 +358,7 @@ class TestBrowserUserJourneys:
                 f"Page text too short: {info['textLength']} chars"
             )
 
+    @pytest.mark.asyncio
     async def test_form_interaction_journey(
         self,
         page: Page,
@@ -422,7 +399,7 @@ class TestBrowserUserJourneys:
                             "success": True,
                         }
                     )
-            except Exception:
+            except (TimeoutError, RuntimeError):
                 form_interactions.append(
                     {
                         "field": "custname",
@@ -447,7 +424,7 @@ class TestBrowserUserJourneys:
                             "success": True,
                         }
                     )
-            except Exception:
+            except (TimeoutError, RuntimeError):
                 form_interactions.append(
                     {
                         "field": "custtel",
@@ -472,7 +449,7 @@ class TestBrowserUserJourneys:
                             "success": True,
                         }
                     )
-            except Exception:
+            except (TimeoutError, RuntimeError):
                 form_interactions.append(
                     {
                         "field": "custemail",
@@ -497,7 +474,7 @@ class TestBrowserUserJourneys:
                             "success": True,
                         }
                     )
-            except Exception:
+            except (TimeoutError, RuntimeError):
                 form_interactions.append(
                     {
                         "field": "delivery",
@@ -542,7 +519,7 @@ class TestBrowserUserJourneys:
                             "error": "Submit button not found",
                         }
                     )
-            except Exception:
+            except (TimeoutError, RuntimeError):
                 journey_steps.append(
                     {
                         "step": "form_submission_validation",
@@ -557,7 +534,7 @@ class TestBrowserUserJourneys:
                     const form = document.querySelector('form');
                     if (!form) return null;
 
-                    const formData = new FormData(form);
+                    const formData =  FormData(form);
                     const data = {};
                     for (let [key, value] of formData.entries()) {
                         data[key] = value;
@@ -579,7 +556,7 @@ class TestBrowserUserJourneys:
                 }
             )
 
-        except Exception as e:
+        except (TimeoutError, RuntimeError) as e:
             journey_steps.append(
                 {
                     "step": "error_in_form_journey",
@@ -622,6 +599,7 @@ class TestBrowserUserJourneys:
             )
 
     @pytest.mark.slow
+    @pytest.mark.asyncio
     async def test_performance_monitoring_journey(
         self,
         page: Page,
@@ -695,7 +673,7 @@ class TestBrowserUserJourneys:
                     f"Page load too slow: {_total_load_time}ms"
                 )
 
-            except Exception as e:
+            except (TimeoutError, RuntimeError) as e:
                 performance_data.append(
                     {
                         "scenario": scenario["name"],
@@ -721,14 +699,12 @@ class TestBrowserUserJourneys:
 
         # Calculate aggregate performance metrics
         if successful_scenarios:
-            load_times = []
-            for scenario in successful_scenarios:
-                if scenario.get("browser_metrics") and scenario["browser_metrics"].get(
-                    "navigation"
-                ):
-                    load_times.append(
-                        scenario["browser_metrics"]["navigation"]["_total"]
-                    )
+            load_times = [
+                scenario["browser_metrics"]["navigation"]["_total"]
+                for scenario in successful_scenarios
+                if scenario.get("browser_metrics")
+                and scenario["browser_metrics"].get("navigation")
+            ]
 
             if load_times:
                 performance_result["aggregate_metrics"] = {
@@ -755,6 +731,7 @@ class TestBrowserUserJourneys:
             avg_load = performance_result["aggregate_metrics"]["avg_load_time_ms"]
             assert avg_load < 8000, f"Average load time too high: {avg_load}ms"
 
+    @pytest.mark.asyncio
     async def test_error_handling_journey(
         self,
         page: Page,
@@ -813,7 +790,7 @@ class TestBrowserUserJourneys:
                     }
                 )
 
-            except Exception as e:
+            except (TimeoutError, RuntimeError) as e:
                 # Navigation failed
                 error_scenarios.append(
                     {

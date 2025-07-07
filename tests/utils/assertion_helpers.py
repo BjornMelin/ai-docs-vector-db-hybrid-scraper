@@ -128,7 +128,7 @@ def assert_pagination_response(
 
 
 class AssertionHelpers:
-    """Collection of advanced assertion utilities for testing."""
+    """Collection of  assertion utilities for testing."""
 
     @staticmethod
     def assert_document_structure(document: dict[str, Any]) -> None:
@@ -254,7 +254,7 @@ class AssertionHelpers:
         if isinstance(timestamp, str):
             # Parse ISO format timestamp
             try:
-                timestamp_dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                timestamp_dt = datetime.fromisoformat(timestamp)
             except ValueError:
                 pytest.fail(f"Invalid timestamp format: {timestamp}")
         elif isinstance(timestamp, datetime):
@@ -527,8 +527,7 @@ async def assert_async_operation_completes(
         AssertionError: If operation times out or fails
     """
     try:
-        result = await asyncio.wait_for(async_operation(), timeout=timeout_seconds)
-        return result  # noqa: TRY300
+        return await asyncio.wait_for(async_operation(), timeout=timeout_seconds)
     except TimeoutError as e:
         msg = f"{operation_name} timed out after {timeout_seconds}s"
         raise AssertionError(msg) from e

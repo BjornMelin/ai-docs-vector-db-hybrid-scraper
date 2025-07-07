@@ -68,13 +68,14 @@ async def generate_embeddings(
 
         logger.info(
             f"Generated embeddings for {len(texts)} texts "
-            f"using {result.get('provider', 'unknown')} provider"
+            f"using {result.get('provider', 'unknown')} provider",
         )
 
     except Exception as e:
         logger.exception("Embedding generation failed")
         raise HTTPException(
-            status_code=500, detail=f"Embedding generation failed: {e!s}"
+            status_code=500,
+            detail=f"Embedding generation failed: {e!s}",
         ) from e
     else:
         return result
@@ -109,10 +110,10 @@ async def rerank_results(
 
         reranked = await embedding_client.rerank_results(query, results)
         logger.info(
-            f"Reranked {len(results)} results"
+            f"Reranked {len(results)} results",
         )  # TODO: Convert f-string to logging format
 
-    except Exception:
+    except (AttributeError, ConnectionError, OSError):
         logger.exception("Reranking failed")
         # Return original results on failure (graceful degradation)
         return results
@@ -148,13 +149,14 @@ async def analyze_text_characteristics(
         logger.debug(
             f"Analyzed {len(texts)} texts: "
             f"type={analysis.text_type}, "
-            f"complexity={analysis.complexity_score:.2f}"
+            f"complexity={analysis.complexity_score:.2f}",
         )
 
     except Exception as e:
         logger.exception("Text analysis failed")
         raise HTTPException(
-            status_code=500, detail=f"Text analysis failed: {e!s}"
+            status_code=500,
+            detail=f"Text analysis failed: {e!s}",
         ) from e
     else:
         return analysis
@@ -187,13 +189,14 @@ async def estimate_embedding_cost(
     try:
         costs = embedding_client.estimate_cost(texts, provider_name)
         logger.debug(
-            f"Estimated costs for {len(texts)} texts"
+            f"Estimated costs for {len(texts)} texts",
         )  # TODO: Convert f-string to logging format
 
     except Exception as e:
         logger.exception("Cost estimation failed")
         raise HTTPException(
-            status_code=500, detail=f"Cost estimation failed: {e!s}"
+            status_code=500,
+            detail=f"Cost estimation failed: {e!s}",
         ) from e
     else:
         return costs
@@ -222,13 +225,14 @@ async def get_provider_info(
 
         info = embedding_client.get_provider_info()
         logger.debug(
-            f"Retrieved info for {len(info)} providers"
+            f"Retrieved info for {len(info)} providers",
         )  # TODO: Convert f-string to logging format
 
     except Exception as e:
         logger.exception("Provider info retrieval failed")
         raise HTTPException(
-            status_code=500, detail=f"Provider info retrieval failed: {e!s}"
+            status_code=500,
+            detail=f"Provider info retrieval failed: {e!s}",
         ) from e
     else:
         return info
@@ -276,13 +280,14 @@ async def get_smart_recommendation(
 
         logger.info(
             f"Smart recommendation: {recommendation['provider']}/{recommendation['model']} "
-            f"(${recommendation['estimated_cost']:.4f}) - {recommendation['reasoning']}"
+            f"(${recommendation['estimated_cost']:.4f}) - {recommendation['reasoning']}",
         )
 
     except Exception as e:
         logger.exception("Smart recommendation failed")
         raise HTTPException(
-            status_code=500, detail=f"Smart recommendation failed: {e!s}"
+            status_code=500,
+            detail=f"Smart recommendation failed: {e!s}",
         ) from e
     else:
         return recommendation
@@ -320,7 +325,8 @@ async def get_usage_report(
     except Exception as e:
         logger.exception("Usage report retrieval failed")
         raise HTTPException(
-            status_code=500, detail=f"Usage report retrieval failed: {e!s}"
+            status_code=500,
+            detail=f"Usage report retrieval failed: {e!s}",
         ) from e
     else:
         return report
@@ -371,27 +377,28 @@ async def batch_generate_embeddings(
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 logger.error(
-                    f"Batch {i} failed: {result}"
+                    f"Batch {i} failed: {result}",
                 )  # TODO: Convert f-string to logging format
                 processed_results.append(
                     {
                         "success": False,
                         "error": str(result),
                         "embeddings": [],
-                    }
+                    },
                 )
             else:
                 processed_results.append(result)
 
         logger.info(
             f"Processed {len(text_batches)} batches with "
-            f"{sum(1 for r in processed_results if r.get('success', True))} successes"
+            f"{sum(1 for r in processed_results if r.get('success', True))} successes",
         )
 
     except Exception as e:
         logger.exception("Batch embedding generation failed")
         raise HTTPException(
-            status_code=500, detail=f"Batch processing failed: {e!s}"
+            status_code=500,
+            detail=f"Batch processing failed: {e!s}",
         ) from e
     else:
         return processed_results

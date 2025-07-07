@@ -263,12 +263,14 @@ class TestSearchOrchestrator:
         assert rag_generator is not None
         assert orchestrator._rag_generator is rag_generator
 
+    @pytest.mark.asyncio
     async def test_initialize(self, orchestrator):
         """Test orchestrator initialization."""
         await orchestrator.initialize()
         # No specific initialization behavior to test in current implementation
         # This mainly verifies the method exists and doesn't raise errors
 
+    @pytest.mark.asyncio
     async def test_cleanup(self, orchestrator):
         """Test orchestrator cleanup."""
         # Add some data to cache
@@ -292,8 +294,9 @@ class TestSearchOrchestrator:
 class TestCoreSearchFunctionality:
     """Test core search functionality."""
 
+    @pytest.mark.asyncio
     async def test_basic_search(self, orchestrator, basic_request):
-        """Test basic search without advanced features."""
+        """Test basic search without  features."""
         result = await orchestrator.search(basic_request)
 
         assert isinstance(result, SearchResult)
@@ -307,6 +310,7 @@ class TestCoreSearchFunctionality:
         assert result._total_results >= 0
         assert result.cache_hit is False
 
+    @pytest.mark.asyncio
     async def test_search_with_mock_results(self, orchestrator, basic_request):
         """Test search returns expected mock results."""
         result = await orchestrator.search(basic_request)
@@ -323,6 +327,7 @@ class TestCoreSearchFunctionality:
         assert "metadata" in first_result
         assert first_result["id"] == "doc_0"
 
+    @pytest.mark.asyncio
     async def test_search_modes(self, orchestrator):
         """Test different search modes."""
         # Basic mode
@@ -348,6 +353,7 @@ class TestCoreSearchFunctionality:
         assert result.expanded_query == "expanded test"
         assert "query_expansion" in result.features_used
 
+    @pytest.mark.asyncio
     async def test_search_with_limit_and_offset(self, orchestrator):
         """Test search respects limit and offset parameters."""
         request = SearchRequest(query="test", limit=5, offset=0)
@@ -356,6 +362,7 @@ class TestCoreSearchFunctionality:
         assert len(result.results) == 5
         assert result.results[0]["id"] == "doc_0"  # First result
 
+    @pytest.mark.asyncio
     async def test_search_error_handling(self, orchestrator, basic_request):
         """Test search error handling."""
         # Mock _execute_search to raise an exception
@@ -375,6 +382,7 @@ class TestCoreSearchFunctionality:
 class TestFeatureIntegration:
     """Test integration of various search features."""
 
+    @pytest.mark.asyncio
     async def test_query_expansion_feature(self, orchestrator):
         """Test query expansion feature."""
         request = SearchRequest(
@@ -394,6 +402,7 @@ class TestFeatureIntegration:
         assert "query_expansion" in result.features_used
         mock_service.expand_query.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_query_expansion_failure(self, orchestrator):
         """Test query expansion failure handling."""
         request = SearchRequest(
@@ -412,6 +421,7 @@ class TestFeatureIntegration:
         assert "query_expansion" not in result.features_used
         assert len(result.results) > 0  # Search should still succeed
 
+    @pytest.mark.asyncio
     async def test_clustering_feature(self, orchestrator):
         """Test result clustering feature."""
         request = SearchRequest(
@@ -482,6 +492,7 @@ class TestFeatureIntegration:
             assert result.results[0]["cluster_id"] == "cluster_1"
             assert result.results[0]["cluster_label"] == "Technical Documentation"
 
+    @pytest.mark.asyncio
     async def test_clustering_with_insufficient_results(self, orchestrator):
         """Test clustering is skipped with insufficient results."""
         request = SearchRequest(
@@ -503,6 +514,7 @@ class TestFeatureIntegration:
             # Clustering should be skipped
             assert "result_clustering" not in result.features_used
 
+    @pytest.mark.asyncio
     async def test_personalized_ranking_feature(self, orchestrator):
         """Test personalized ranking feature."""
         request = SearchRequest(
@@ -546,6 +558,7 @@ class TestFeatureIntegration:
             # Check that personalized score was added
             assert result.results[0]["personalized_score"] == 0.95
 
+    @pytest.mark.asyncio
     async def test_personalized_ranking_without_user_id(self, orchestrator):
         """Test personalized ranking is skipped without user ID."""
         request = SearchRequest(
@@ -560,6 +573,7 @@ class TestFeatureIntegration:
         assert "personalized_ranking" not in result.features_used
 
     @patch("src.config.get_config")
+    @pytest.mark.asyncio
     async def test_rag_feature_enabled(self, mock_get_config, orchestrator):
         """Test RAG answer generation feature."""
         # Mock config
@@ -603,6 +617,7 @@ class TestFeatureIntegration:
         assert result.answer_metrics == {"tokens": 100}
 
     @patch("src.config.get_config")
+    @pytest.mark.asyncio
     async def test_rag_low_confidence_filtering(self, mock_get_config, orchestrator):
         """Test RAG answers are filtered by confidence threshold."""
         # Mock config with high confidence threshold
@@ -635,6 +650,7 @@ class TestFeatureIntegration:
         assert result.generated_answer is None
         assert result.answer_confidence is None
 
+    @pytest.mark.asyncio
     async def test_rag_failure_handling(self, orchestrator):
         """Test RAG failure doesn't break search."""
         request = SearchRequest(query="test", enable_rag=True)
@@ -653,6 +669,7 @@ class TestFeatureIntegration:
         assert result.generated_answer is None
         assert len(result.results) > 0  # Search should still succeed
 
+    @pytest.mark.asyncio
     async def test_federated_search_feature(self, orchestrator):
         """Test federated search feature."""
         # Mock federated search service
@@ -700,6 +717,7 @@ class TestFeatureIntegration:
         assert fed_request.query == "federated search test"
         assert fed_request.target_collections == ["target_collection"]
 
+    @pytest.mark.asyncio
     async def test_federated_search_failure_fallback(self, orchestrator):
         """Test federated search failure falls back to regular search."""
         # Mock federated service to fail
@@ -783,6 +801,7 @@ class TestPipelineConfiguration:
 class TestCachingFunctionality:
     """Test caching functionality."""
 
+    @pytest.mark.asyncio
     async def test_cache_miss_and_hit(self, orchestrator, basic_request):
         """Test cache miss followed by cache hit."""
         # First search should miss cache
@@ -801,6 +820,7 @@ class TestCachingFunctionality:
         assert result1.query_processed == result2.query_processed
         assert result1._total_results == result2._total_results
 
+    @pytest.mark.asyncio
     async def test_cache_disabled(self, orchestrator):
         """Test search with caching disabled."""
         request = SearchRequest(query="test", enable_caching=False)
@@ -813,6 +833,7 @@ class TestCachingFunctionality:
         assert result2.cache_hit is False
         assert len(orchestrator.cache) == 0
 
+    @pytest.mark.asyncio
     async def test_cache_key_generation(self, orchestrator):
         """Test cache key generation."""
         request1 = SearchRequest(query="test", limit=10, user_id="user1")
@@ -832,6 +853,7 @@ class TestCachingFunctionality:
         assert key1 != key3
         assert key2 != key3
 
+    @pytest.mark.asyncio
     async def test_cache_size_limit(self, orchestrator):
         """Test cache respects size limit."""
         orchestrator.cache_size = 2  # Small cache for testing
@@ -858,6 +880,7 @@ class TestCachingFunctionality:
 class TestStatisticsAndPerformance:
     """Test statistics and performance tracking."""
 
+    @pytest.mark.asyncio
     async def test_statistics_tracking(self, orchestrator, basic_request):
         """Test statistics are properly tracked."""
         initial_stats = orchestrator.get_stats()
@@ -874,6 +897,7 @@ class TestStatisticsAndPerformance:
         assert stats["cache_hits"] == 1  # Second search hits cache
         assert stats["cache_misses"] == 1  # First search misses cache
 
+    @pytest.mark.asyncio
     async def test_average_processing_time_calculation(self, orchestrator):
         """Test average processing time calculation."""
         # Perform multiple searches
@@ -963,6 +987,7 @@ class TestUtilityMethods:
 class TestEdgeCasesAndErrorHandling:
     """Test edge cases and error handling."""
 
+    @pytest.mark.asyncio
     async def test_empty_query(self, orchestrator):
         """Test search with empty query."""
         request = SearchRequest(query="")
@@ -971,6 +996,7 @@ class TestEdgeCasesAndErrorHandling:
         assert isinstance(result, SearchResult)
         assert result.query_processed == ""
 
+    @pytest.mark.asyncio
     async def test_very_long_query(self, orchestrator):
         """Test search with very long query."""
         long_query = "a" * 1000  # 1000 character query
@@ -980,11 +1006,13 @@ class TestEdgeCasesAndErrorHandling:
         assert isinstance(result, SearchResult)
         assert result.query_processed == long_query
 
+    @pytest.mark.asyncio
     async def test_zero_limit(self, _orchestrator):
         """Test search with zero limit should fail validation."""
         with pytest.raises(ValueError):
             SearchRequest(query="test", limit=0)
 
+    @pytest.mark.asyncio
     async def test_search_with_all_features_failing(self, orchestrator):
         """Test search continues when all optional features fail."""
         request = SearchRequest(
@@ -1026,6 +1054,7 @@ class TestEdgeCasesAndErrorHandling:
         assert len(result.results) > 0
         assert result.features_used == []  # No features should be marked as used
 
+    @pytest.mark.asyncio
     async def test_search_with_network_timeout_simulation(self, orchestrator):
         """Test search behavior under timeout conditions."""
         request = SearchRequest(
@@ -1038,6 +1067,7 @@ class TestEdgeCasesAndErrorHandling:
         result = await orchestrator.search(request)
         assert isinstance(result, SearchResult)
 
+    @pytest.mark.asyncio
     async def test_comprehensive_feature_integration(
         self, orchestrator, comprehensive_request
     ):

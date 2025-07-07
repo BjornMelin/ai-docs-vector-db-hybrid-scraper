@@ -150,6 +150,7 @@ async def complete_pipeline(
 class TestQueryProcessingIntegration:
     """Test complete query processing integration."""
 
+    @pytest.mark.asyncio
     async def test_end_to_end_conceptual_query(self, complete_pipeline):
         """Test end-to-end processing of a conceptual query."""
         request = QueryProcessingRequest(
@@ -177,6 +178,7 @@ class TestQueryProcessingIntegration:
         assert response._total_processing_time_ms > 0
         assert response.search_time_ms >= 0
 
+    @pytest.mark.asyncio
     async def test_end_to_end_procedural_query(self, complete_pipeline):
         """Test end-to-end processing of a procedural query."""
         request = QueryProcessingRequest(
@@ -195,6 +197,7 @@ class TestQueryProcessingIntegration:
         # Procedural queries should use HyDE strategy
         assert response.strategy_selection.primary_strategy == SearchStrategy.HYDE
 
+    @pytest.mark.asyncio
     async def test_end_to_end_troubleshooting_query(self, complete_pipeline):
         """Test end-to-end processing of a troubleshooting query."""
         request = QueryProcessingRequest(
@@ -213,6 +216,7 @@ class TestQueryProcessingIntegration:
         # Procedural queries should use HyDE strategy
         assert response.strategy_selection.primary_strategy == SearchStrategy.HYDE
 
+    @pytest.mark.asyncio
     async def test_preprocessing_spell_correction_flow(self, complete_pipeline):
         """Test preprocessing with spell correction integration."""
         request = QueryProcessingRequest(
@@ -230,6 +234,7 @@ class TestQueryProcessingIntegration:
         assert "python" in response.preprocessing_result.processed_query.lower()
         assert len(response.preprocessing_result.corrections_applied) > 0
 
+    @pytest.mark.asyncio
     async def test_context_extraction_and_intent_classification(
         self, complete_pipeline
     ):
@@ -255,6 +260,7 @@ class TestQueryProcessingIntegration:
         # Should classify as procedural intent (due to "How to" pattern)
         assert response.intent_classification.primary_intent == QueryIntent.PROCEDURAL
 
+    @pytest.mark.asyncio
     async def test_strategy_selection_based_on_complexity(self, complete_pipeline):
         """Test strategy selection based on query complexity."""
         # Simple query
@@ -293,6 +299,7 @@ class TestQueryProcessingIntegration:
             == QueryComplexity.EXPERT
         )
 
+    @pytest.mark.asyncio
     async def test_forced_strategy_override(self, complete_pipeline):
         """Test forcing a specific search strategy."""
         request = QueryProcessingRequest(
@@ -309,6 +316,7 @@ class TestQueryProcessingIntegration:
         # Strategy should be overridden
         # (Verification would depend on orchestrator implementation)
 
+    @pytest.mark.asyncio
     async def test_performance_requirements_integration(self, complete_pipeline):
         """Test performance requirements affecting strategy selection."""
         request = QueryProcessingRequest(
@@ -326,6 +334,7 @@ class TestQueryProcessingIntegration:
         assert response.success is True
         # Should consider performance constraints
 
+    @pytest.mark.asyncio
     async def test_user_context_integration(self, complete_pipeline):
         """Test user context affecting processing."""
         request = QueryProcessingRequest(
@@ -347,6 +356,7 @@ class TestQueryProcessingIntegration:
         assert response.success is True
         # Context should influence processing
 
+    @pytest.mark.asyncio
     async def test_filters_integration(self, complete_pipeline):
         """Test search filters integration."""
         request = QueryProcessingRequest(
@@ -362,6 +372,7 @@ class TestQueryProcessingIntegration:
         assert response.success is True
         # Filters should be applied in search
 
+    @pytest.mark.asyncio
     async def test_fallback_strategy_usage(
         self, complete_pipeline, _mock_qdrant_service
     ):
@@ -391,6 +402,7 @@ class TestQueryProcessingIntegration:
             # Reset the test flag
             complete_pipeline.orchestrator._test_search_failure = False
 
+    @pytest.mark.asyncio
     async def test_batch_processing_integration(self, complete_pipeline):
         """Test batch processing with various query types."""
         requests = [
@@ -428,6 +440,7 @@ class TestQueryProcessingIntegration:
         ]
         assert len(set(intent_types)) > 1  # Should have different intents
 
+    @pytest.mark.asyncio
     async def test_comprehensive_pipeline_metrics(self, complete_pipeline):
         """Test comprehensive pipeline metrics collection."""
         # Process various queries
@@ -456,6 +469,7 @@ class TestQueryProcessingIntegration:
         assert metrics["average_processing_time"] > 0
         assert "strategy_usage" in metrics
 
+    @pytest.mark.asyncio
     async def test_health_check_integration(self, complete_pipeline):
         """Test health check of integrated system."""
         health = await complete_pipeline.health_check()
@@ -476,6 +490,7 @@ class TestQueryProcessingIntegration:
             if component in components:
                 assert components[component]["status"] == "healthy"
 
+    @pytest.mark.asyncio
     async def test_warm_up_integration(self, complete_pipeline):
         """Test system warm-up integration."""
         result = await complete_pipeline.warm_up()
@@ -484,6 +499,7 @@ class TestQueryProcessingIntegration:
         assert "warmup_time_ms" in result
         assert result["warmup_time_ms"] >= 0
 
+    @pytest.mark.asyncio
     async def test_error_handling_integration(
         self, complete_pipeline, mock_embedding_manager
     ):
@@ -505,11 +521,13 @@ class TestQueryProcessingIntegration:
         assert isinstance(response, type(response))
         # Response might be successful with fallback or unsuccessful with error message
 
+    @pytest.mark.asyncio
     async def test_cleanup_integration(self, complete_pipeline):
         """Test cleanup of integrated system."""
         await complete_pipeline.cleanup()
         # Should clean up all components without errors
 
+    @pytest.mark.asyncio
     async def test_concurrent_processing_integration(self, complete_pipeline):
         """Test concurrent processing with integrated system."""
 
@@ -531,8 +549,9 @@ class TestQueryProcessingIntegration:
         assert len(responses) == 5
         assert all(isinstance(resp, type(responses[0])) for resp in responses)
 
-    async def test_advanced_intent_detection_integration(self, complete_pipeline):
-        """Test detection of advanced intent categories."""
+    @pytest.mark.asyncio
+    async def test_intent_detection_integration(self, complete_pipeline):
+        """Test detection of  intent categories."""
         advanced_queries = [
             (
                 "How to design scalable microservices architecture?",

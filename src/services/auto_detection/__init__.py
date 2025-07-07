@@ -13,7 +13,7 @@ Key Components:
 - HealthChecker: Validates service availability and performance
 """
 
-from src.config.auto_detect import (
+from src.config import (
     AutoDetectedServices,
     AutoDetectionConfig,
     DetectedEnvironment,

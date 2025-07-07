@@ -1,18 +1,22 @@
 import typing
+
+
 """Browser automation result caching for UnifiedBrowserManager.
 
 This module provides caching functionality for browser automation results
 to avoid redundant scrapes and improve performance.
 """
 
+import asyncio
 import hashlib
-import json  # noqa: PLC0415
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import json
+import logging
+import time
 from typing import Any
 from urllib.parse import urlparse
 
 from .base import CacheInterface
+
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +135,19 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
         return f"browser:{key_hash}:{parsed.netloc}"
 
+    def generate_cache_key(self, url: str, tier: str | None = None) -> str:
+        """Generate cache key from URL and tier (public interface).
+
+        Args:
+            url: URL to cache
+            tier: Tier used for scraping
+
+        Returns:
+            Cache key string
+
+        """
+        return self._generate_cache_key(url, tier)
+
     def _determine_ttl(self, url: str, content_length: int) -> int:
         """Determine appropriate TTL based on URL and content.
 
@@ -197,39 +214,69 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
             Cached entry or None
         """
         # Try local cache first
-        if self.local_cache:
-            try:
-                cached_json = await self.local_cache.get(key)
-                if cached_json:
-                    self._cache_stats["hits"] += 1
-                    data = json.loads(cached_json)
-                    logger.debug(f"Browser cache hit (local): {key}")
-                    return BrowserCacheEntry.from_dict(data)
-            except Exception:
-                logger.warning(f"Error reading from local browser cache: {e}")
+        local_result = await self._try_local_cache_get(key)
+        if local_result is not None:
+            return local_result
 
         # Try distributed cache
-        if self.distributed_cache:
-            try:
-                cached_json = await self.distributed_cache.get(key)
-                if cached_json:
-                    self._cache_stats["hits"] += 1
-                    data = json.loads(cached_json)
-                    entry = BrowserCacheEntry.from_dict(data)
-
-                    # Promote to local cache
-                    if self.local_cache:
-                        await self.local_cache.set(
-                            key, cached_json, ttl=300
-                        )  # 5 min local
-
-                    logger.debug(f"Browser cache hit (distributed): {key}")
-                    return entry
-            except Exception:
-                logger.warning(f"Error reading from distributed browser cache: {e}")
+        distributed_result = await self._try_distributed_cache_get(key)
+        if distributed_result is not None:
+            return distributed_result
 
         self._cache_stats["misses"] += 1
         return None
+
+    async def _try_local_cache_get(self, key: str) -> BrowserCacheEntry | None:
+        """Try to get entry from local cache."""
+        if not self.local_cache:
+            return None
+        try:
+            cached_json = await self.local_cache.get(key)
+            if cached_json:
+                self._cache_stats["hits"] += 1
+                data = json.loads(cached_json)
+                logger.debug("Browser cache hit (local): %s", key)
+                return BrowserCacheEntry.from_dict(data)
+        except (ConnectionError, FileNotFoundError, OSError, PermissionError) as e:
+            logger.warning("Error reading from local browser cache: %s", e)
+        return None
+
+    async def _try_distributed_cache_get(self, key: str) -> BrowserCacheEntry | None:
+        """Try to get entry from distributed cache with local promotion."""
+        if not self.distributed_cache:
+            return None
+        try:
+            cached_json = await self.distributed_cache.get(key)
+        except (ConnectionError, FileNotFoundError, OSError, PermissionError) as e:
+            logger.warning("Error reading from distributed browser cache: %s", e)
+            return None
+
+        if cached_json:
+            return await self._process_distributed_cache_hit(key, cached_json)
+        return None
+
+    async def _process_distributed_cache_hit(
+        self, key: str, cached_json: str
+    ) -> BrowserCacheEntry:
+        """Process distributed cache hit by parsing data and promoting to local cache."""
+        self._cache_stats["hits"] += 1
+        data = json.loads(cached_json)
+        entry = BrowserCacheEntry.from_dict(data)
+
+        # Promote to local cache
+        await self._promote_to_local_cache(key, cached_json)
+
+        logger.debug("Browser cache hit (distributed): %s", key)
+        return entry
+
+    async def _promote_to_local_cache(self, key: str, cached_json: str) -> None:
+        """Promote distributed cache hit to local cache."""
+        if not self.local_cache:
+            return
+        try:
+            await self.local_cache.set(key, cached_json, ttl=300)  # 5 min local
+        except (ConnectionError, FileNotFoundError, OSError, PermissionError) as e:
+            logger.warning("Error promoting to local cache for key %s: %s", key, e)
 
     async def set(
         self,
@@ -250,33 +297,67 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         if ttl is None:
             ttl = self._determine_ttl(value.url, len(value.content))
 
+        # Serialize the cache entry
         try:
             cached_json = json.dumps(value.to_dict())
             self._cache_stats["sets"] += 1
+        except (TypeError, ValueError) as e:
+            logger.error("Error serializing browser cache entry: %s", e)
+            return False
 
-            # Store in both caches
-            results = []
+        # Store in both caches
+        success = await self._store_in_both_caches(key, cached_json, ttl)
 
-            if self.local_cache:
-                result = await self.local_cache.set(
-                    key, cached_json, ttl=min(ttl, 3600)
-                )
-                results.append(result)
+        if success:
+            logger.debug(
+                "Cached browser result: %s (TTL: %ds, size: %d)",
+                key,
+                ttl,
+                len(cached_json),
+            )
 
-            if self.distributed_cache:
-                result = await self.distributed_cache.set(key, cached_json, ttl=ttl)
-                results.append(result)
+        return success
 
-            success = any(results) if results else False
-            if success:
-                logger.debug(
-                    f"Cached browser result: {key} (TTL: {ttl}s, size: {len(cached_json)})"
-                )
+    async def _store_in_both_caches(self, key: str, cached_json: str, ttl: int) -> bool:
+        """Store cached JSON in both local and distributed caches."""
+        results = []
 
-            return success
+        # Store in local cache
+        local_result = await self._store_in_local_cache(key, cached_json, ttl)
+        if local_result is not None:
+            results.append(local_result)
 
-        except Exception:
-            logger.error(f"Error caching browser result: {e}")
+        # Store in distributed cache
+        distributed_result = await self._store_in_distributed_cache(
+            key, cached_json, ttl
+        )
+        if distributed_result is not None:
+            results.append(distributed_result)
+
+        return any(results) if results else False
+
+    async def _store_in_local_cache(
+        self, key: str, cached_json: str, ttl: int
+    ) -> bool | None:
+        """Store in local cache with error handling."""
+        if not self.local_cache:
+            return None
+        try:
+            return await self.local_cache.set(key, cached_json, ttl=min(ttl, 3600))
+        except (ConnectionError, RuntimeError, TimeoutError) as e:
+            logger.warning("Error storing in local cache: %s", e)
+            return False
+
+    async def _store_in_distributed_cache(
+        self, key: str, cached_json: str, ttl: int
+    ) -> bool | None:
+        """Store in distributed cache with error handling."""
+        if not self.distributed_cache:
+            return None
+        try:
+            return await self.distributed_cache.set(key, cached_json, ttl=ttl)
+        except (ConnectionError, RuntimeError, TimeoutError) as e:
+            logger.warning("Error storing in distributed cache: %s", e)
             return False
 
     async def delete(self, key: str) -> bool:
@@ -290,21 +371,37 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         """
         results = []
 
-        if self.local_cache:
-            try:
-                result = await self.local_cache.delete(key)
-                results.append(result)
-            except Exception:
-                logger.warning(f"Error deleting from local cache: {e}")
+        # Delete from local cache
+        local_result = await self._delete_from_local_cache(key)
+        if local_result is not None:
+            results.append(local_result)
 
-        if self.distributed_cache:
-            try:
-                result = await self.distributed_cache.delete(key)
-                results.append(result)
-            except Exception:
-                logger.warning(f"Error deleting from distributed cache: {e}")
+        # Delete from distributed cache
+        distributed_result = await self._delete_from_distributed_cache(key)
+        if distributed_result is not None:
+            results.append(distributed_result)
 
         return any(results) if results else False
+
+    async def _delete_from_local_cache(self, key: str) -> bool | None:
+        """Delete from local cache with error handling."""
+        if not self.local_cache:
+            return None
+        try:
+            return await self.local_cache.delete(key)
+        except (ConnectionError, RuntimeError, TimeoutError) as e:
+            logger.warning("Error deleting from local cache: %s", e)
+            return False
+
+    async def _delete_from_distributed_cache(self, key: str) -> bool | None:
+        """Delete from distributed cache with error handling."""
+        if not self.distributed_cache:
+            return None
+        try:
+            return await self.distributed_cache.delete(key)
+        except (ConnectionError, RuntimeError, TimeoutError) as e:
+            logger.warning("Error deleting from distributed cache: %s", e)
+            return False
 
     async def invalidate_pattern(self, pattern: str) -> int:
         """Invalidate cache entries matching pattern.
@@ -321,17 +418,22 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         if self.distributed_cache and hasattr(
             self.distributed_cache, "invalidate_pattern"
         ):
-            try:
-                count = await self.distributed_cache.invalidate_pattern(
-                    f"browser:*{pattern}*"
-                )
-                self._cache_stats["evictions"] += count
-                logger.info(
-                    f"Invalidated {count} browser cache entries matching {pattern}"
-                )
-            except Exception:
-                logger.error(f"Error invalidating browser cache pattern: {e}")
+            count = await self._invalidate_distributed_pattern(pattern)
 
+        return count
+
+    async def _invalidate_distributed_pattern(self, pattern: str) -> int:
+        """Invalidate pattern in distributed cache with error handling."""
+        try:
+            count = await self.distributed_cache.invalidate_pattern(
+                f"browser:*{pattern}*"
+            )
+        except (ConnectionError, OSError, PermissionError) as e:
+            logger.error("Error invalidating browser cache pattern: %s", e)
+            return 0
+
+        self._cache_stats["evictions"] += count
+        logger.info("Invalidated %d browser cache entries matching %s", count, pattern)
         return count
 
     def get_stats(self) -> dict[str, Any]:
@@ -374,13 +476,15 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         cached_entry = await self.get(cache_key)
         if cached_entry:
             logger.info(
-                f"Browser cache hit for {url} "
-                f"(tier: {cached_entry.tier_used}, age: {time.time() - cached_entry.timestamp:.1f}s)"
+                "Browser cache hit for %s (tier: %s, age: %.1fs)",
+                url,
+                cached_entry.tier_used,
+                time.time() - cached_entry.timestamp,
             )
             return cached_entry, True
 
         # Fetch fresh content
-        logger.info(f"Browser cache miss for {url}, fetching fresh content")
+        logger.info("Browser cache miss for %s, fetching fresh content", url)
 
         try:
             result = await fetch_func()
@@ -398,8 +502,8 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
 
             return entry, False
 
-        except Exception:
-            logger.error(f"Error fetching content for {url}: {e}")
+        except (ConnectionError, RuntimeError, TimeoutError) as e:
+            logger.error("Error fetching content for %s: %s", url, e)
             raise
 
     async def exists(self, key: str) -> bool:
@@ -416,14 +520,14 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
             try:
                 if await self.local_cache.exists(key):
                     return True
-            except Exception:
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
                 pass
 
         # Check distributed cache
         if self.distributed_cache:
             try:
                 return await self.distributed_cache.exists(key)
-            except Exception:
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
                 pass
 
         return False
@@ -439,15 +543,15 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         if self.local_cache:
             try:
                 count += await self.local_cache.clear()
-            except Exception:
-                logger.warning(f"Error clearing local cache: {e}")
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
+                logger.warning("Error clearing local cache: %s", e)
 
         if self.distributed_cache:
             try:
                 # Don't double count if same entries in both
                 await self.distributed_cache.clear()
-            except Exception:
-                logger.warning(f"Error clearing distributed cache: {e}")
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
+                logger.warning("Error clearing distributed cache: %s", e)
 
         # Reset stats
         self._cache_stats = {
@@ -469,13 +573,13 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         if self.distributed_cache:
             try:
                 return await self.distributed_cache.size()
-            except Exception:
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
                 pass
 
         if self.local_cache:
             try:
                 return await self.local_cache.size()
-            except Exception:
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
                 pass
 
         return 0
@@ -485,11 +589,11 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         if self.local_cache:
             try:
                 await self.local_cache.close()
-            except Exception:
-                logger.warning(f"Error closing local cache: {e}")
+            except (ConnectionError, OSError, PermissionError) as e:
+                logger.warning("Error closing local cache: %s", e)
 
         if self.distributed_cache:
             try:
                 await self.distributed_cache.close()
-            except Exception:
-                logger.warning(f"Error closing distributed cache: {e}")
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
+                logger.warning("Error closing distributed cache: %s", e)

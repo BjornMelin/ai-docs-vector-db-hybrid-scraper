@@ -3,21 +3,37 @@
 import logging
 from typing import TYPE_CHECKING, Any, Optional
 
+import redis
 from dependency_injector.wiring import Provide, inject
 
-from src.config.enums import CacheType
+from src.config import CacheType
 from src.infrastructure.container import ApplicationContainer
 from src.services.errors import APIError
 
 
 if TYPE_CHECKING:
-    import redis
     from qdrant_client.async_qdrant_client import AsyncQdrantClient
 
     from src.services.cache.manager import CacheManager
     from src.services.vector_db.service import QdrantService
 
+# Imports to avoid circular dependencies
+try:
+    from src.config import get_config
+    from src.services.cache.manager import CacheManager
+    from src.services.vector_db.service import QdrantService
+except ImportError:
+    get_config = None
+    CacheManager = None
+    QdrantService = None
+
 logger = logging.getLogger(__name__)
+
+
+def _raise_required_services_not_available() -> None:
+    """Raise ImportError for required services not available."""
+    msg = "Required services not available"
+    raise ImportError(msg)
 
 
 class DatabaseManager:
@@ -56,7 +72,9 @@ class DatabaseManager:
         self._redis_client = redis_client
 
         # Initialize cache manager
-        from src.services.cache.manager import CacheManager
+        if CacheManager is None:
+            msg = "CacheManager not available"
+            raise ImportError(msg)
 
         self._cache_manager = CacheManager(
             enable_local_cache=True,
@@ -66,8 +84,8 @@ class DatabaseManager:
 
         # Initialize Qdrant service
         try:
-            from src.config import get_config
-            from src.services.vector_db.service import QdrantService
+            if get_config is None or QdrantService is None:
+                _raise_required_services_not_available()
 
             config = get_config()
             self._qdrant_service = QdrantService(config)
@@ -104,19 +122,21 @@ class DatabaseManager:
             APIError: If Qdrant client not available
         """
         if not self._qdrant_client:
-            raise APIError("Qdrant client not available")
+            msg = "Qdrant client not available"
+            raise APIError(msg)
 
         try:
             collections = await self._qdrant_client.get_collections()
             return [col.name for col in collections.collections]
         except Exception as e:
-            logger.error(
-                f"Failed to get collections: {e}"
-            )  # TODO: Convert f-string to logging format
-            raise APIError(f"Failed to get collections: {e}") from e
+            logger.exception("Failed to get collections")
+            msg = f"Failed to get collections: {e}"
+            raise APIError(msg) from e
 
     async def store_embeddings(
-        self, collection_name: str, points: list[dict[str, Any]]
+        self,
+        collection_name: str,
+        points: list[dict[str, Any]],
     ) -> bool:
         """Store embeddings in Qdrant collection.
 
@@ -131,16 +151,18 @@ class DatabaseManager:
             APIError: If storage fails
         """
         if not self._qdrant_service:
-            raise APIError("Qdrant service not available")
+            msg = "Qdrant service not available"
+            raise APIError(msg)
 
         try:
             await self._qdrant_service.upsert_points(collection_name, points)
-            return True
         except Exception as e:
-            logger.error(
-                f"Failed to store embeddings: {e}"
-            )  # TODO: Convert f-string to logging format
-            raise APIError(f"Failed to store embeddings: {e}") from e
+            logger.exception("Failed to store embeddings")
+            msg = f"Failed to store embeddings: {e}"
+            raise APIError(msg) from e
+
+        else:
+            return True
 
     async def search_similar(
         self,
@@ -164,25 +186,27 @@ class DatabaseManager:
             APIError: If search fails
         """
         if not self._qdrant_service:
-            raise APIError("Qdrant service not available")
+            msg = "Qdrant service not available"
+            raise APIError(msg)
 
         try:
-            results = await self._qdrant_service.search(
+            return await self._qdrant_service.search(
                 collection_name=collection_name,
                 query_vector=query_vector,
                 limit=limit,
                 filter_conditions=filter_conditions,
             )
-            return results
         except Exception as e:
-            logger.error(
-                f"Failed to search vectors: {e}"
-            )  # TODO: Convert f-string to logging format
-            raise APIError(f"Failed to search vectors: {e}") from e
+            logger.exception("Failed to search vectors")
+            msg = f"Failed to search vectors: {e}"
+            raise APIError(msg) from e
 
     # Cache Operations
     async def cache_get(
-        self, key: str, cache_type: CacheType = CacheType.CRAWL, default: Any = None
+        self,
+        key: str,
+        cache_type: CacheType = CacheType.LOCAL,
+        default: Any = None,
     ) -> Any:
         """Get value from cache.
 
@@ -199,17 +223,15 @@ class DatabaseManager:
 
         try:
             return await self._cache_manager.get(key, cache_type, default)
-        except Exception as e:
-            logger.warning(
-                f"Cache get failed for {key}: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
+            logger.warning("Cache get failed for %s: %s", key, e)
             return default
 
     async def cache_set(
         self,
         key: str,
         value: Any,
-        cache_type: CacheType = CacheType.CRAWL,
+        cache_type: CacheType = CacheType.LOCAL,
         ttl: int | None = None,
     ) -> bool:
         """Set value in cache.
@@ -228,14 +250,14 @@ class DatabaseManager:
 
         try:
             return await self._cache_manager.set(key, value, cache_type, ttl)
-        except Exception as e:
-            logger.warning(
-                f"Cache set failed for {key}: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
+            logger.warning("Cache set failed for %s: %s", key, e)
             return False
 
     async def cache_delete(
-        self, key: str, cache_type: CacheType = CacheType.CRAWL
+        self,
+        key: str,
+        cache_type: CacheType = CacheType.LOCAL,
     ) -> bool:
         """Delete value from cache.
 
@@ -251,10 +273,8 @@ class DatabaseManager:
 
         try:
             return await self._cache_manager.delete(key, cache_type)
-        except Exception as e:
-            logger.warning(
-                f"Cache delete failed for {key}: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
+            logger.warning("Cache delete failed for %s: %s", key, e)
             return False
 
     # Redis Operations
@@ -269,12 +289,14 @@ class DatabaseManager:
 
         try:
             await self._redis_client.ping()
-            return True
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
-                f"Redis ping failed: {e}"
+                f"Redis ping failed: {e}",
             )  # TODO: Convert f-string to logging format
             return False
+
+        else:
+            return True
 
     async def redis_set(self, key: str, value: str, ex: int | None = None) -> bool:
         """Set value in Redis.
@@ -292,12 +314,14 @@ class DatabaseManager:
 
         try:
             await self._redis_client.set(key, value, ex=ex)
-            return True
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
-                f"Redis set failed for {key}: {e}"
+                f"Redis set failed for {key}: {e}",
             )  # TODO: Convert f-string to logging format
             return False
+
+        else:
+            return True
 
     async def redis_get(self, key: str) -> str | None:
         """Get value from Redis.
@@ -313,9 +337,9 @@ class DatabaseManager:
 
         try:
             return await self._redis_client.get(key)
-        except Exception as e:
+        except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
             logger.warning(
-                f"Redis get failed for {key}: {e}"
+                f"Redis get failed for {key}: {e}",
             )  # TODO: Convert f-string to logging format
             return None
 
@@ -346,7 +370,7 @@ class DatabaseManager:
             try:
                 collections = await self.get_collections()
                 status["qdrant"]["collections"] = collections
-            except Exception:
+            except (ConnectionError, OSError, PermissionError):
                 status["qdrant"]["available"] = False
 
         # Check Redis status
@@ -358,7 +382,7 @@ class DatabaseManager:
             try:
                 cache_stats = await self._cache_manager.get_stats()
                 status["cache"]["stats"] = cache_stats
-            except Exception:
+            except (ConnectionError, OSError, PermissionError):
                 status["cache"]["available"] = False
 
         return status
