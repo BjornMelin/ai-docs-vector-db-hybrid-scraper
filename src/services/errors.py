@@ -290,14 +290,14 @@ def retry_async(
                     )
 
                     await asyncio.sleep(delay)
-                except Exception:
+                except (TimeoutError, OSError, PermissionError):
                     # Non-retryable error
                     logger.exception("Non-retryable error in {func.__name__}")
                     raise
 
             raise last_exception or Exception("All retry attempts failed")
 
-        return wrapper  # type: ignore
+        return wrapper  # type: ignore[misc]
 
     return decorator
 
@@ -415,6 +415,34 @@ class AdvancedCircuitBreaker:
         time_since_failure = datetime.now(tz=UTC) - self.last_failure_time
         return time_since_failure.total_seconds() >= self.adaptive_timeout
 
+    def should_attempt_reset(self) -> bool:
+        """Check if circuit should transition from OPEN to HALF_OPEN (public interface).
+
+        Returns:
+            True if circuit should attempt to reset
+
+        """
+        return self._should_attempt_reset()
+
+    def record_success(self, response_time: float):
+        """Record a successful call (public interface).
+
+        Args:
+            response_time: Response time in seconds
+
+        """
+        return self._record_success(response_time)
+
+    def record_failure(self, exception: Exception, response_time: float):
+        """Record a failed call (public interface).
+
+        Args:
+            exception: The exception that occurred
+            response_time: Response time in seconds
+
+        """
+        return self._record_failure(exception, response_time)
+
     def _update_adaptive_timeout(self, success: bool):
         """Update adaptive timeout based on recent success/failure patterns."""
         if not self.enable_adaptive_timeout:
@@ -493,12 +521,6 @@ class AdvancedCircuitBreaker:
                 else func(*args, **kwargs)
             )
 
-            # Record success
-            response_time = time.time() - start_time
-            self._record_success(response_time)
-
-            return result
-
         except self.expected_exceptions as e:
             # Record failure
             response_time = time.time() - start_time
@@ -511,6 +533,11 @@ class AdvancedCircuitBreaker:
                 f"Not counted against circuit breaker."
             )
             raise
+        else:
+            # Record success
+            response_time = time.time() - start_time
+            self._record_success(response_time)
+            return result
 
     def _record_success(self, response_time: float):
         """Record a successful call."""
@@ -686,11 +713,11 @@ def circuit_breaker(
             return await breaker.call(func, *args, **kwargs)
 
         # Add circuit breaker management methods to the wrapper
-        wrapper.circuit_breaker = breaker  # type: ignore
-        wrapper.get_circuit_status = breaker.get_status  # type: ignore
-        wrapper.reset_circuit = breaker.reset  # type: ignore
+        wrapper.circuit_breaker = breaker  # type: ignore[misc]
+        wrapper.get_circuit_status = breaker.get_status  # type: ignore[misc]
+        wrapper.reset_circuit = breaker.reset  # type: ignore[misc]
 
-        return wrapper  # type: ignore
+        return wrapper  # type: ignore[misc]
 
     return decorator
 
@@ -744,7 +771,7 @@ def tenacity_circuit_breaker(
             # Check circuit breaker state first
             if (
                 breaker.state == CircuitState.OPEN
-                and not breaker._should_attempt_reset()
+                and not breaker.should_attempt_reset()
             ):
                 wait_time = (
                     breaker.adaptive_timeout
@@ -770,11 +797,10 @@ def tenacity_circuit_breaker(
                     try:
                         result = await func(*args, **kwargs)
                         response_time = time.time() - start_time
-                        breaker._record_success(response_time)
-                        return result
+                        breaker.record_success(response_time)
                     except expected_exceptions as e:
                         response_time = time.time() - start_time
-                        breaker._record_failure(e, response_time)
+                        breaker.record_failure(e, response_time)
 
                         # Log retry attempt
                         logger.warning(
@@ -782,13 +808,16 @@ def tenacity_circuit_breaker(
                             "{max_attempts} failed for {service_name}"
                         )
                         raise
+                    else:
+                        return result
+            return None
 
         # Add circuit breaker management methods
-        wrapper.circuit_breaker = breaker  # type: ignore
-        wrapper.get_circuit_status = breaker.get_status  # type: ignore
-        wrapper.reset_circuit = breaker.reset  # type: ignore
+        wrapper.circuit_breaker = breaker  # type: ignore[misc]
+        wrapper.get_circuit_status = breaker.get_status  # type: ignore[misc]
+        wrapper.reset_circuit = breaker.reset  # type: ignore[misc]
 
-        return wrapper  # type: ignore
+        return wrapper  # type: ignore[misc]
 
     return decorator
 
@@ -837,14 +866,14 @@ def handle_mcp_errors(func: Callable[..., Any]) -> Callable[..., Any]:
             error_type = error_type_map.get(type(e), "general")
             logger.warning("{error_type.capitalize()} error in {func.__name__}")
             return safe_response(False, error=str(e), error_type=error_type)
-        except Exception:
+        except (ConnectionError, OSError, PermissionError):
             # Mask internal errors for security
-            logger.error("Unexpected error in {func.__name__}", exc_info=True)
+            logger.exception("Unexpected error in {func.__name__}")
             return safe_response(
                 False, error="Internal server error", error_type="internal"
             )
 
-    return wrapper  # type: ignore
+    return wrapper  # type: ignore[misc]
 
 
 def validate_input(**validators) -> Callable[[F], F]:
@@ -884,7 +913,7 @@ def validate_input(**validators) -> Callable[[F], F]:
 
             return await func(*bound_args.args, **bound_args.kwargs)
 
-        return wrapper  # type: ignore
+        return wrapper  # type: ignore[misc]
 
     return decorator
 
@@ -903,7 +932,7 @@ def validate_input(**validators) -> Callable[[F], F]:
 
 # Custom Pydantic errors following Pydantic 2.0 patterns
 def create_validation_error(
-    field: str, message: str, error_type: str = "value_error", **context
+    field: str, message, error_type="value_error", **context
 ) -> PydanticCustomError:
     """Create a custom Pydantic validation error.
 

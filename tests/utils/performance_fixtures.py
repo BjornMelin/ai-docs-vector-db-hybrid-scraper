@@ -21,7 +21,7 @@ class FixtureCache:
 
     @classmethod
     def get(cls, key: str, factory, ttl: float = 300.0):
-        """Get cached fixture or create new one."""
+        """Get cached fixture or create  one."""
         current_time = time.time()
 
         # Check if cached version is still valid
@@ -30,7 +30,7 @@ class FixtureCache:
             if current_time - creation_time < ttl:
                 return cls._cache[key]
 
-        # Create new fixture
+        # Create  fixture
         fixture = factory()
         cls._cache[key] = fixture
         cls._creation_times[key] = current_time
@@ -44,10 +44,11 @@ class FixtureCache:
 
 
 @pytest.fixture(scope="session")
-def optimized_async_loop():
+def async_loop():
     """Optimized async event loop for test performance."""
     # Create high-performance event loop
-    policy = asyncio.get_event_loop_policy()
+    # Use pytest-asyncio's event loop management
+    # The event loop is managed by pytest-asyncio fixtures
     loop = policy.new_event_loop()
 
     # Optimize loop settings
@@ -65,18 +66,18 @@ def optimized_async_loop():
 
         # Wait for cancellation to complete
         if pending:
-            loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+            await asyncio.gather(*pending, return_exceptions=True)
 
         loop.close()
-    except Exception as e:
+    except (RuntimeError, OSError, AttributeError) as e:
         logger.debug(
-            f"Event loop cleanup error (ignored): {e}"
+            "Event loop cleanup error (ignored): %s", e
         )  # Ignore cleanup errors
 
 
 @pytest.fixture(scope="session")
 def fast_mock_factory():
-    """Factory for creating optimized mock objects."""
+    """Factory for creating  mock objects."""
 
     def create_async_mock(**_kwargs):
         """Create fast async mock with pre-configured methods."""
@@ -247,7 +248,7 @@ def performance_monitor():
                 }
             )
 
-        def get__total_time(self) -> float:
+        def get_total_time(self) -> float:
             """Get _total elapsed time."""
             if self.start_time is None:
                 return 0.0
@@ -356,9 +357,9 @@ async def fast_async_context():
                             await resource.close()
                         else:
                             resource.close()
-                    except Exception as e:
+                    except (AttributeError, RuntimeError, OSError) as e:
                         logger.debug(
-                            f"Resource cleanup error (ignored): {e}"
+                            "Resource cleanup error (ignored): %s", e
                         )  # Ignore cleanup errors
 
         def add_resource(self, resource):
@@ -403,7 +404,7 @@ def performance_assertions():
 
 # Pre-configured test markers for performance optimization
 def pytest_configure(config):
-    """Configure performance-optimized test markers."""
+    """Configure performance- test markers."""
     config.addinivalue_line(
         "markers", "fast_unit: marks test as fast unit test (< 0.1s)"
     )

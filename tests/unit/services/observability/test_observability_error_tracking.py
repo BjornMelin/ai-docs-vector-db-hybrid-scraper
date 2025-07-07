@@ -255,34 +255,34 @@ class TestErrorTracking:
         request_id = correlation_manager.set_request_context(user_id="user123")
 
         # Test embedding generation error
+        error_msg = "OpenAI API unavailable"
         with (
-            pytest.raises(ConnectionError),
             ai_tracker.track_embedding_generation(
                 provider="openai",
                 model="text-embedding-ada-002",
                 input_texts=["test text"],
             ),
+            pytest.raises(ConnectionError, match="OpenAI API unavailable"),
         ):
-            msg = "OpenAI API unavailable"
-            raise ConnectionError(msg)
+            raise ConnectionError(error_msg)
 
         # Test vector search error
+        error_msg = "Vector database timeout"
         with (
-            pytest.raises(TimeoutError),
             ai_tracker.track_vector_search(
                 collection_name="documents", query_type="semantic"
             ),
+            pytest.raises(TimeoutError, match="Vector database timeout"),
         ):
-            msg = "Vector database timeout"
-            raise TimeoutError(msg)
+            raise TimeoutError(error_msg)
 
         # Test LLM call error
+        error_msg = "Invalid API response"
         with (
-            pytest.raises(ValueError),
             ai_tracker.track_llm_call(provider="openai", model="gpt-4"),
+            pytest.raises(ValueError, match="Invalid API response"),
         ):
-            msg = "Invalid API response"
-            raise ValueError(msg)
+            raise ValueError(error_msg)
 
         assert request_id is not None
 
@@ -450,7 +450,7 @@ class TestErrorMetrics:
             # Verify error metrics were recorded
             # In a real implementation, we'd check the actual metric values
 
-        except Exception:
+        except (AttributeError, RuntimeError, ImportError):
             # Handle case where metrics bridge is not available
             pytest.skip("Metrics bridge not available")
 
@@ -482,11 +482,9 @@ class TestErrorMetrics:
                         _raise_value_error("Invalid API response")
                     elif error_type == "timeout_error":
                         _raise_timeout_error("Request timeout")
-            except Exception as e:
+            except (AttributeError, RuntimeError, ImportError) as e:
                 # Errors are expected and tracked by observability system
-                logger.debug(
-                    f"Expected error for observability tracking: {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.debug("Expected error for observability tracking: %s", e)
 
         # AI tracker should have recorded error metrics
         # Verification would be implementation-specific

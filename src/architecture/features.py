@@ -10,7 +10,7 @@ from collections.abc import Awaitable, Callable
 from functools import wraps
 from typing import Any, TypeVar
 
-from .modes import ModeConfig, get_current_mode, get_mode_config
+from .modes import ApplicationMode, ModeConfig, get_current_mode, get_mode_config
 
 
 logger = logging.getLogger(__name__)
@@ -33,15 +33,11 @@ class FeatureFlag:
 
     def is_enterprise_mode(self) -> bool:
         """Check if running in enterprise mode."""
-        from .modes import ApplicationMode
-
         # Use get_current_mode() to allow for runtime testing/mocking
         return get_current_mode() == ApplicationMode.ENTERPRISE
 
     def is_simple_mode(self) -> bool:
         """Check if running in simple mode."""
-        from .modes import ApplicationMode
-
         # Use get_current_mode() to allow for runtime testing/mocking
         return get_current_mode() == ApplicationMode.SIMPLE
 
@@ -74,8 +70,9 @@ def enterprise_only(fallback_value: Any = None, log_access: bool = True):
 
             if log_access:
                 logger.info(
-                    f"Enterprise feature '{func.__name__}' accessed in simple mode, "
-                    f"returning fallback value: {fallback_value}"
+                    "Enterprise feature '%s' accessed in simple mode, returning fallback value: %s",
+                    func.__name__,
+                    fallback_value,
                 )
             return fallback_value
 
@@ -87,15 +84,16 @@ def enterprise_only(fallback_value: Any = None, log_access: bool = True):
 
             if log_access:
                 logger.info(
-                    f"Enterprise feature '{func.__name__}' accessed in simple mode, "
-                    f"returning fallback value: {fallback_value}"
+                    "Enterprise feature '%s' accessed in simple mode, returning fallback value: %s",
+                    func.__name__,
+                    fallback_value,
                 )
             return fallback_value
 
         # Return appropriate wrapper based on whether function is async
         if asyncio.iscoroutinefunction(func):
-            return async_wrapper  # type: ignore
-        return sync_wrapper  # type: ignore
+            return async_wrapper  # type: ignore[return-value]
+        return sync_wrapper  # type: ignore[return-value]
 
     return decorator
 
@@ -123,8 +121,10 @@ def conditional_feature(
 
             if log_access:
                 logger.info(
-                    f"Feature '{feature_name}' ({func.__name__}) disabled in current mode, "
-                    f"returning fallback value: {fallback_value}"
+                    "Feature '%s' (%s) disabled in current mode, returning fallback value: %s",
+                    feature_name,
+                    func.__name__,
+                    fallback_value,
                 )
             return fallback_value
 
@@ -136,15 +136,17 @@ def conditional_feature(
 
             if log_access:
                 logger.info(
-                    f"Feature '{feature_name}' ({func.__name__}) disabled in current mode, "
-                    f"returning fallback value: {fallback_value}"
+                    "Feature '%s' (%s) disabled in current mode, returning fallback value: %s",
+                    feature_name,
+                    func.__name__,
+                    fallback_value,
                 )
             return fallback_value
 
         # Return appropriate wrapper based on whether function is async
         if asyncio.iscoroutinefunction(func):
-            return async_wrapper  # type: ignore
-        return sync_wrapper  # type: ignore
+            return async_wrapper  # type: ignore[return-value]
+        return sync_wrapper  # type: ignore[return-value]
 
     return decorator
 
@@ -172,8 +174,10 @@ def service_required(
 
             if log_access:
                 logger.warning(
-                    f"Service '{service_name}' required for {func.__name__} "
-                    f"but not enabled in current mode, returning fallback: {fallback_value}"
+                    "Service '%s' required for %s but not enabled in current mode, returning fallback: %s",
+                    service_name,
+                    func.__name__,
+                    fallback_value,
                 )
             return fallback_value
 
@@ -185,15 +189,17 @@ def service_required(
 
             if log_access:
                 logger.warning(
-                    f"Service '{service_name}' required for {func.__name__} "
-                    f"but not enabled in current mode, returning fallback: {fallback_value}"
+                    "Service '%s' required for %s but not enabled in current mode, returning fallback: %s",
+                    service_name,
+                    func.__name__,
+                    fallback_value,
                 )
             return fallback_value
 
         # Return appropriate wrapper based on whether function is async
         if asyncio.iscoroutinefunction(func):
-            return async_wrapper  # type: ignore
-        return sync_wrapper  # type: ignore
+            return async_wrapper  # type: ignore[return-value]
+        return sync_wrapper  # type: ignore[return-value]
 
     return decorator
 
@@ -251,7 +257,8 @@ class ModeAwareFeatureManager:
     def get_feature_config(self, name: str) -> dict[str, Any]:
         """Get configuration for a feature in the current mode."""
         if name not in self._feature_registry:
-            raise ValueError(f"Feature '{name}' not registered")
+            msg = f"Feature '{name}' not registered"
+            raise ValueError(msg)
 
         mode_key = (
             "enterprise" if self._feature_flags.is_enterprise_mode() else "simple"

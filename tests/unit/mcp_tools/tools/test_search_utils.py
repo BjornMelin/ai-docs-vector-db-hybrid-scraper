@@ -8,9 +8,11 @@
 
 from unittest.mock import AsyncMock, Mock
 
+import httpx
 import pytest
+import respx
 
-from src.config.enums import SearchStrategy
+from src.config import SearchStrategy
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import SearchRequest
 from src.mcp_tools.models.responses import SearchResult
@@ -43,7 +45,9 @@ def mock_client_manager():
 
     # Mock cache manager
     mock_cache = AsyncMock()
-    mock_cache.get = AsyncMock(return_value=None)  # No cached results by default
+    respx.get("https://api.example.com/").mock(
+        return_value=httpx.Response(200, json=None)
+    )
     mock_cache.set = AsyncMock()
     manager.get_cache_manager = AsyncMock(return_value=mock_cache)
 
@@ -115,6 +119,7 @@ def sample_search_request():
 class TestSearchDocumentsCore:
     """Test core search functionality."""
 
+    @pytest.mark.asyncio
     async def test_successful_hybrid_search(
         self, mock_client_manager, mock_context, sample_search_request
     ):
@@ -187,6 +192,7 @@ class TestSearchDocumentsCore:
             for msg in mock_context.logs["info"]
         )
 
+    @pytest.mark.asyncio
     async def test_dense_search_strategy(self, mock_client_manager, mock_context):
         """Test dense-only search strategy."""
         request = SearchRequest(
@@ -213,6 +219,7 @@ class TestSearchDocumentsCore:
         assert call_args[1]["sparse_vector"] is None
         assert call_args[1]["query_vector"] == [0.1, 0.2, 0.3, 0.4, 0.5]
 
+    @pytest.mark.asyncio
     async def test_sparse_search_strategy(self, mock_client_manager, mock_context):
         """Test sparse-only search strategy."""
         request = SearchRequest(
@@ -239,6 +246,7 @@ class TestSearchDocumentsCore:
         assert call_args[1]["query_vector"] == []
         assert call_args[1]["sparse_vector"] == {1: 0.1, 3: 0.2}
 
+    @pytest.mark.asyncio
     async def test_cache_hit_scenario(
         self, mock_client_manager, mock_context, sample_search_request
     ):
@@ -255,8 +263,9 @@ class TestSearchDocumentsCore:
             }
         ]
         mock_cache = mock_client_manager.get_cache_manager.return_value
-        mock_cache.get = AsyncMock(return_value=cached_results)
-
+        respx.get("https://api.example.com/").mock(
+            return_value=httpx.Response(200, json=cached_results)
+        )
         results = await search_documents_core(
             sample_search_request, mock_client_manager, mock_context
         )
@@ -276,6 +285,7 @@ class TestSearchDocumentsCore:
         # Verify debug logging for cache hit
         assert any("Cache hit for request" in msg for msg in mock_context.logs["debug"])
 
+    @pytest.mark.asyncio
     async def test_sparse_embeddings_not_available_error(
         self, mock_client_manager, mock_context
     ):
@@ -296,6 +306,7 @@ class TestSearchDocumentsCore:
         # Verify error logged
         assert any("Search failed" in msg for msg in mock_context.logs["error"])
 
+    @pytest.mark.asyncio
     async def test_embedding_generation_failure(
         self, mock_client_manager, mock_context, sample_search_request
     ):
@@ -314,6 +325,7 @@ class TestSearchDocumentsCore:
         # Verify error logged
         assert any("Search failed" in msg for msg in mock_context.logs["error"])
 
+    @pytest.mark.asyncio
     async def test_qdrant_search_failure(
         self, mock_client_manager, mock_context, sample_search_request
     ):
@@ -330,6 +342,7 @@ class TestSearchDocumentsCore:
         # Verify error logged
         assert any("Search failed" in msg for msg in mock_context.logs["error"])
 
+    @pytest.mark.asyncio
     async def test_empty_search_results(
         self, mock_client_manager, mock_context, sample_search_request
     ):
@@ -337,7 +350,6 @@ class TestSearchDocumentsCore:
         # Mock empty results
         mock_qdrant = mock_client_manager.get_qdrant_service.return_value
         mock_qdrant.hybrid_search = AsyncMock(return_value=[])
-
         results = await search_documents_core(
             sample_search_request, mock_client_manager, mock_context
         )
@@ -354,6 +366,7 @@ class TestSearchDocumentsCore:
             for msg in mock_context.logs["info"]
         )
 
+    @pytest.mark.asyncio
     async def test_custom_embedding_model(self, mock_client_manager, mock_context):
         """Test search with custom embedding model."""
         request = SearchRequest(
@@ -370,6 +383,7 @@ class TestSearchDocumentsCore:
             model="custom-embedding-model",
         )
 
+    @pytest.mark.asyncio
     async def test_score_threshold_parameter(self, mock_client_manager, mock_context):
         """Test search with score threshold parameter."""
         request = SearchRequest(query="threshold test", score_threshold=0.8)
@@ -381,6 +395,7 @@ class TestSearchDocumentsCore:
         call_args = mock_qdrant.hybrid_search.call_args
         assert call_args[1]["score_threshold"] == 0.8
 
+    @pytest.mark.asyncio
     async def test_custom_cache_ttl(self, mock_client_manager, mock_context):
         """Test search with custom cache TTL."""
         request = SearchRequest(query="cache ttl test", cache_ttl=600)
@@ -392,6 +407,7 @@ class TestSearchDocumentsCore:
         call_args = mock_cache.set.call_args
         assert call_args[1]["ttl"] == 600
 
+    @pytest.mark.asyncio
     async def test_search_accuracy_parameter(self, mock_client_manager, mock_context):
         """Test search with search accuracy parameter."""
         request = SearchRequest(query="accuracy test", search_accuracy="accurate")
@@ -406,6 +422,7 @@ class TestSearchDocumentsCore:
         call_args = mock_qdrant.hybrid_search.call_args
         assert call_args[1]["search_accuracy"] == "accurate"
 
+    @pytest.mark.asyncio
     async def test_reranking_skipped(self, mock_client_manager, mock_context):
         """Test that reranking is currently skipped."""
         request = SearchRequest(query="rerank test", rerank=True)
@@ -422,6 +439,7 @@ class TestSearchDocumentsCore:
             "Applying BGE reranking" in msg for msg in mock_context.logs["debug"]
         )
 
+    @pytest.mark.asyncio
     async def test_context_none_logging(self, mock_client_manager):
         """Test search functionality when context is None."""
         request = SearchRequest(query="no context test")
@@ -432,6 +450,7 @@ class TestSearchDocumentsCore:
         assert len(results) == 2
         assert all(isinstance(r, SearchResult) for r in results)
 
+    @pytest.mark.asyncio
     async def test_search_request_id_generation(
         self, mock_client_manager, mock_context, sample_search_request
     ):
@@ -450,6 +469,7 @@ class TestSearchDocumentsCore:
         request_msg = request_id_msgs[0]
         assert " with strategy SearchStrategy.HYBRID" in request_msg
 
+    @pytest.mark.asyncio
     async def test_sparse_vector_conversion(self, mock_client_manager, mock_context):
         """Test sparse vector conversion to dict format."""
         request = SearchRequest(
@@ -479,6 +499,7 @@ class TestSearchDocumentsCore:
 class TestSearchDocumentsCoreIntegration:
     """Test integration scenarios and edge cases."""
 
+    @pytest.mark.asyncio
     async def test_large_result_set_caching(self, mock_client_manager, mock_context):
         """Test caching behavior with large result sets."""
         # Mock large result set
@@ -498,7 +519,6 @@ class TestSearchDocumentsCoreIntegration:
 
         mock_qdrant = mock_client_manager.get_qdrant_service.return_value
         mock_qdrant.hybrid_search = AsyncMock(return_value=large_results)
-
         request = SearchRequest(query="large test", limit=50)
         results = await search_documents_core(
             request, mock_client_manager, mock_context
@@ -512,6 +532,7 @@ class TestSearchDocumentsCoreIntegration:
         cache_data = mock_cache.set.call_args[0][1]
         assert len(cache_data) == 50
 
+    @pytest.mark.asyncio
     async def test_minimal_search_request(self, mock_client_manager, mock_context):
         """Test search with minimal request parameters."""
         minimal_request = SearchRequest(query="minimal")
@@ -528,6 +549,7 @@ class TestSearchDocumentsCoreIntegration:
         assert call_args[1]["collection_name"] == "documentation"  # Default collection
         assert call_args[1]["limit"] == 10  # Default limit
 
+    @pytest.mark.asyncio
     async def test_search_with_all_parameters(self, mock_client_manager, mock_context):
         """Test search with all possible parameters set."""
         comprehensive_request = SearchRequest(

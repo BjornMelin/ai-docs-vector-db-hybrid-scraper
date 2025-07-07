@@ -59,12 +59,12 @@ class IntegrationTestManager:
             scenario_result["success_rate"] = 1.0
             scenario_result["overall_success"] = True
 
-            return scenario_result
-
-        except Exception as e:
+        except (TimeoutError, ConnectionError, RuntimeError, ValueError) as e:
             scenario_result["_total_duration_s"] = time.perf_counter() - start_time
             scenario_result["overall_success"] = False
             scenario_result["errors"].append(f"Scenario execution failed: {e!s}")
+            return scenario_result
+        else:
             return scenario_result
 
     def get_test_summary(self) -> dict[str, Any]:
@@ -98,6 +98,7 @@ def journey_data_manager():
     return MockJourneyDataManager()
 
 
+@pytest.mark.asyncio
 async def test_complete_system_integration_scenario(
     integration_test_manager,
     journey_data_manager,
@@ -136,6 +137,7 @@ async def test_complete_system_integration_scenario(
     )
 
 
+@pytest.mark.asyncio
 async def test_integration_test_summary(
     integration_test_manager,
     journey_data_manager,

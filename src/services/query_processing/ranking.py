@@ -416,12 +416,10 @@ class PersonalizedRankingService:
                 f"(personalized: {personalization_applied})"
             )
 
-            return result
-
         except Exception as e:
             processing_time_ms = (time.time() - start_time) * 1000
-            self._logger.error(
-                f"Personalized ranking failed: {e}", exc_info=True
+            self._logger.exception(
+                "Personalized ranking failed: "
             )  # TODO: Convert f-string to logging format
 
             # Return fallback result with default ranking
@@ -437,6 +435,9 @@ class PersonalizedRankingService:
                 coverage_score=0.0,
                 ranking_metadata={"error": str(e)},
             )
+
+        else:
+            return result
 
     async def record_interaction(self, interaction: InteractionEvent) -> None:
         """Record user interaction for learning.
@@ -474,9 +475,9 @@ class PersonalizedRankingService:
                 f"for user {user_id} on result {interaction.result_id}"
             )
 
-        except Exception as e:
-            self._logger.error(
-                f"Failed to record interaction: {e}", exc_info=True
+        except Exception:
+            self._logger.exception(
+                "Failed to record interaction: "
             )  # TODO: Convert f-string to logging format
 
     async def _get_user_profile(self, user_id: str) -> UserProfile:
@@ -1002,8 +1003,10 @@ class PersonalizedRankingService:
                 return 0.05
             if age_days <= 90:
                 return 0.02
-            return 0.0
         except (ValueError, TypeError):
+            return 0.0
+
+        else:
             return 0.0
 
     def _find_similar_users(self, user_id: str) -> list[str]:
@@ -1241,9 +1244,7 @@ class PersonalizedRankingService:
 
         # Normalize by maximum possible diversity
         max_diversity = min(10, len(results))
-        diversity_score = len(content_types) / max_diversity
-
-        return diversity_score
+        return len(content_types) / max_diversity
 
     def _calculate_coverage_score(
         self, results: list[RankedResult], user_profile: UserProfile
@@ -1262,8 +1263,7 @@ class PersonalizedRankingService:
                         covered_preferences += 1
                         break
 
-        coverage_score = covered_preferences / len(user_profile.preferences)
-        return coverage_score
+        return covered_preferences / len(user_profile.preferences)
 
     def _calculate_reranking_impact(
         self, original_results: list[dict[str, Any]], ranked_results: list[RankedResult]
@@ -1280,8 +1280,7 @@ class PersonalizedRankingService:
             position_change = abs(new_pos - original_pos)
             total_position_change += position_change
 
-        avg_position_change = total_position_change / len(ranked_results)
-        return avg_position_change
+        return total_position_change / len(ranked_results)
 
     def _generate_content_explanation(
         self, content_boost: float, _user_profile: UserProfile

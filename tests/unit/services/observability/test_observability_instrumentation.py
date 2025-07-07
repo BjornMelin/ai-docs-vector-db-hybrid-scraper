@@ -1,4 +1,4 @@
-"""Tests for advanced OpenTelemetry instrumentation module."""
+"""Tests for  OpenTelemetry instrumentation module."""
 
 import asyncio
 import time
@@ -114,7 +114,8 @@ class TestFunctionInstrumentation:
         with pytest.raises(ValueError):
             failing_function()
 
-    def test_instrument_async_function(self):
+    @pytest.mark.asyncio
+    async def test_instrument_async_function(self):
         """Test async function instrumentation."""
 
         @instrument_function("async_operation")
@@ -126,7 +127,7 @@ class TestFunctionInstrumentation:
             result = await async_function(5)
             assert result == 10
 
-        asyncio.run(run_test())
+        await run_test()
 
 
 class TestVectorSearchInstrumentation:
@@ -282,11 +283,15 @@ class TestContextManagers:
 
     def test_trace_operation_with_exception(self):
         """Test trace_operation context manager with exceptions."""
-        with pytest.raises(ValueError), trace_operation("failing_operation"):
-            msg = "Test error"
-            raise ValueError(msg)
+        error_msg = "Test error"
+        with (
+            trace_operation("failing_operation"),
+            pytest.raises(ValueError, match="Test error"),
+        ):
+            raise ValueError(error_msg)
 
-    def test_trace_async_operation(self):
+    @pytest.mark.asyncio
+    async def test_trace_async_operation(self):
         """Test async trace_operation context manager."""
 
         async def async_test():
@@ -294,10 +299,11 @@ class TestContextManagers:
                 await asyncio.sleep(0.01)
                 return "async_complete"
 
-        result = asyncio.run(async_test())
+        result = await async_test()
         assert result == "async_complete"
 
-    def test_trace_async_operation_with_exception(self):
+    @pytest.mark.asyncio
+    async def test_trace_async_operation_with_exception(self):
         """Test async trace_operation with exceptions."""
 
         async def async_failing_test():
@@ -306,7 +312,7 @@ class TestContextManagers:
                 raise ValueError(msg)
 
         with pytest.raises(ValueError):
-            asyncio.run(async_failing_test())
+            await async_failing_test()
 
 
 class TestPerformanceTracking:
@@ -342,7 +348,8 @@ class TestPerformanceTracking:
         result = outer_operation()
         assert result == "outer_inner_result"
 
-    def test_concurrent_operation_tracking(self):
+    @pytest.mark.asyncio
+    async def test_concurrent_operation_tracking(self):
         """Test tracking of concurrent operations."""
 
         @instrument_function("concurrent_operation")
@@ -352,10 +359,9 @@ class TestPerformanceTracking:
 
         async def run_concurrent_test():
             tasks = [concurrent_task(i) for i in range(3)]
-            results = await asyncio.gather(*tasks)
-            return results
+            return await asyncio.gather(*tasks)
 
-        results = asyncio.run(run_concurrent_test())
+        results = await run_concurrent_test()
         assert len(results) == 3
         assert all("complete" in result for result in results)
 

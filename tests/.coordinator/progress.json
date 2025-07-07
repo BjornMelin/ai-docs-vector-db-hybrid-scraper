@@ -1,0 +1,16 @@
+{
+  "total_files": 171,
+  "processed_files": 0,
+  "issues_fixed": {
+    "naming": 0,
+    "structure": 0,
+    "mocking": 0,
+    "patterns": 0
+  },
+  "target_issues": {
+    "naming": 150,
+    "structure": 108,
+    "mocking": 56,
+    "patterns": 313
+  }
+}

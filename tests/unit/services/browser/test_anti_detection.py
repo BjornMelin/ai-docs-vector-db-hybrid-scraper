@@ -476,6 +476,7 @@ class TestPlaywrightAdapterIntegration:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.async_playwright")
+    @pytest.mark.asyncio
     async def test_playwright_stealth_initialization(self, mock_playwright):
         """Test Playwright initialization with stealth configuration."""
 

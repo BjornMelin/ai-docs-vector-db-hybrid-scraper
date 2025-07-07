@@ -20,7 +20,7 @@ from src.cli.wizard import ProfileManager, TemplateManager, WizardValidator
 
 # Optional import for config validation
 try:
-    from .config import validate_config
+    from .config import validate as validate_config
 except ImportError:
     validate_config = None
 
@@ -45,7 +45,7 @@ def _abort_profile_not_found(profile: str, available_profiles: list[str]) -> Non
     console.print(
         f"[red]Profile '{profile}' not found. Available: {', '.join(available_profiles)}[/red]"
     )
-    raise click.Abort()
+    raise click.Abort
 
 
 class ConfigurationWizard:
@@ -225,6 +225,22 @@ class ConfigurationWizard:
 
         return customizations
 
+    def customize_database(self, template_data: dict[str, Any]) -> dict[str, Any]:
+        """Customize database connection settings (public method for testing)."""
+        return self._customize_database(template_data)
+
+    def customize_api_keys(self, template_data: dict[str, Any]) -> dict[str, Any]:
+        """Customize API keys (public method for testing)."""
+        return self._customize_api_keys(template_data)
+
+    def customize_performance(self, template_data: dict[str, Any]) -> dict[str, Any]:
+        """Customize performance settings (public method for testing)."""
+        return self._customize_performance(template_data)
+
+    def show_success_message(self, config_file: Path) -> None:
+        """Show success message (public method for testing)."""
+        return self._show_success_message(config_file)
+
     def _customize_database(self, _template_data: dict[str, Any]) -> dict[str, Any]:
         """Customize database connection settings."""
         customizations = {}
@@ -348,7 +364,7 @@ class ConfigurationWizard:
 
         if not ready:
             self.console.print("Setup cancelled.")
-            raise click.Abort()
+            raise click.Abort
 
         try:
             # Step 1: Profile Selection (unless pre-selected)
@@ -394,14 +410,14 @@ class ConfigurationWizard:
             # Step 5: Success Message
             self._show_success_message(config_path)
 
-            return config_path
-
         except KeyboardInterrupt:
             self.console.print("\n[yellow]Setup cancelled by user.[/yellow]")
-            raise click.Abort() from None
+            raise click.Abort from None
         except Exception as e:
             self.console.print(f"\n[red]Setup failed: {e}[/red]")
             raise
+        else:
+            return config_path
 
     def _show_success_message(self, config_path: Path) -> None:
         """Show final success message with next steps."""
@@ -460,21 +476,13 @@ class ConfigurationWizard:
     help="Pre-select a configuration profile (personal, development, production, etc.)",
 )
 @click.option(
-    "--output",
-    "-o",
-    type=click.Path(path_type=Path),
-    help="Output configuration file path (optional, uses profile default)",
-)
-@click.option(
     "--config-dir",
     type=click.Path(path_type=Path, exists=True),
     default=Path("config"),
     help="Configuration directory (default: config/)",
 )
 @click.pass_context
-def setup(
-    ctx: click.Context, profile: str | None, _output: Path | None, config_dir: Path
-):
+def setup(ctx: click.Context, profile: str | None, config_dir: Path):
     """🧙 Modern template-driven configuration wizard.
 
     This wizard uses configuration profiles and templates to guide you through
@@ -528,7 +536,7 @@ def setup(
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Setup cancelled by user.[/yellow]")
-        raise click.Abort() from None
+        raise click.Abort from None
     except Exception as e:
         console.print(f"\n[red]Setup failed: {e}[/red]")
-        raise click.Abort() from e
+        raise click.Abort from e

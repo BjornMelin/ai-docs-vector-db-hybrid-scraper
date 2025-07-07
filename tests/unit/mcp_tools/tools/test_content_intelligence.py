@@ -195,6 +195,7 @@ class TestContentIntelligenceToolRegistration:
 class TestAnalyzeContentIntelligence:
     """Test comprehensive content analysis tool."""
 
+    @pytest.mark.asyncio
     async def test_successful_analysis(
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
@@ -238,6 +239,7 @@ class TestAnalyzeContentIntelligence:
         )
         assert any("completed in 125.5ms" in msg for msg in mock_context.logs["info"])
 
+    @pytest.mark.asyncio
     async def test_service_unavailable(
         self, mock_mcp, mock_context, mock_client_manager
     ):
@@ -260,6 +262,7 @@ class TestAnalyzeContentIntelligence:
         assert len(mock_context.logs["error"]) >= 1
         assert any("not available" in msg for msg in mock_context.logs["error"])
 
+    @pytest.mark.asyncio
     async def test_analysis_exception_handling(
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
@@ -287,6 +290,7 @@ class TestAnalyzeContentIntelligence:
 class TestClassifyContentType:
     """Test content type classification tool."""
 
+    @pytest.mark.asyncio
     async def test_successful_classification(
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
@@ -318,6 +322,7 @@ class TestClassifyContentType:
             "classified as: documentation" in msg for msg in mock_context.logs["info"]
         )
 
+    @pytest.mark.asyncio
     async def test_classification_service_unavailable(
         self, mock_mcp, mock_context, mock_client_manager
     ):
@@ -339,6 +344,7 @@ class TestClassifyContentType:
         # Verify error logging
         assert any("not available" in msg for msg in mock_context.logs["error"])
 
+    @pytest.mark.asyncio
     async def test_classification_exception_handling(
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
@@ -365,6 +371,7 @@ class TestClassifyContentType:
 class TestAssessContentQuality:
     """Test content quality assessment tool."""
 
+    @pytest.mark.asyncio
     async def test_successful_quality_assessment(
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
@@ -398,6 +405,7 @@ class TestAssessContentQuality:
         )
         assert any("overall score 0.88" in msg for msg in mock_context.logs["info"])
 
+    @pytest.mark.asyncio
     async def test_quality_assessment_service_unavailable(
         self, mock_mcp, mock_context, mock_client_manager
     ):
@@ -420,6 +428,7 @@ class TestAssessContentQuality:
         # Verify error logging
         assert any("not available" in msg for msg in mock_context.logs["error"])
 
+    @pytest.mark.asyncio
     async def test_quality_assessment_exception_handling(
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
@@ -443,6 +452,7 @@ class TestAssessContentQuality:
 class TestExtractContentMetadata:
     """Test metadata extraction tool."""
 
+    @pytest.mark.asyncio
     async def test_successful_metadata_extraction(
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
@@ -478,6 +488,7 @@ class TestExtractContentMetadata:
         )
         assert any("1500 words, 4 tags" in msg for msg in mock_context.logs["info"])
 
+    @pytest.mark.asyncio
     async def test_metadata_extraction_service_unavailable(
         self, mock_mcp, mock_context, mock_client_manager
     ):
@@ -499,6 +510,7 @@ class TestExtractContentMetadata:
         # Verify error logging
         assert any("not available" in msg for msg in mock_context.logs["error"])
 
+    @pytest.mark.asyncio
     async def test_metadata_extraction_exception_handling(
         self, mock_mcp, mock_context, mock_content_intelligence_service
     ):
@@ -522,6 +534,7 @@ class TestExtractContentMetadata:
 class TestContentIntelligenceIntegration:
     """Test integration scenarios and real-world usage patterns."""
 
+    @pytest.mark.asyncio
     async def test_minimal_request_handling(self, mock_mcp, mock_context):
         """Test tools handle minimal request data correctly."""
         # Test with minimal analysis request
@@ -535,6 +548,7 @@ class TestContentIntelligenceIntegration:
         # Should complete successfully with minimal data
         assert isinstance(result, ContentIntelligenceResult)
 
+    @pytest.mark.asyncio
     async def test_comprehensive_workflow(self, mock_mcp, mock_context):
         """Test a comprehensive workflow using multiple tools."""
         content = "# API Documentation\\n\\nComprehensive REST API guide with examples."

@@ -46,9 +46,12 @@ class ExampleService:
     def update_config(self, old_config: Config, new_config: Config) -> bool:
         """Update service configuration."""
         try:
-            logger.info(
-                f"{self.name} updating from config {old_config.version} to {new_config.version}"
+            old_version = old_config.version
+            new_version = new_config.version
+            update_msg = (
+                f"{self.name} updating from config {old_version} to {new_version}"
             )
+            logger.info(update_msg)
 
             # Simulate configuration validation
             if not new_config.app_name:

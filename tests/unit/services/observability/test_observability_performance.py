@@ -185,12 +185,12 @@ class TestPerformanceMonitor:
         """Test operation monitoring with exceptions."""
         monitor = PerformanceMonitor()
 
+        error_msg = "Test error"
         with (
-            pytest.raises(ValueError),
             monitor.monitor_operation("failing_operation"),
+            pytest.raises(ValueError, match="Test error"),
         ):
-            msg = "Test error"
-            raise ValueError(msg)
+            raise ValueError(error_msg)
 
     def test_monitor_operation_without_resource_tracking(self):
         """Test operation monitoring without resource tracking."""
@@ -208,7 +208,8 @@ class TestPerformanceMonitor:
         with monitor.monitor_operation("no_alert_operation", alert_on_threshold=False):
             time.sleep(0.001)
 
-    def test_monitor_async_operation(self):
+    @pytest.mark.asyncio
+    async def test_monitor_async_operation(self):
         """Test async operation monitoring."""
         monitor = PerformanceMonitor()
 
@@ -219,9 +220,10 @@ class TestPerformanceMonitor:
                 await asyncio.sleep(0.01)
                 performance_data["custom_metrics"]["async_result"] = "success"
 
-        asyncio.run(async_test())
+        await async_test()
 
-    def test_monitor_async_operation_with_exception(self):
+    @pytest.mark.asyncio
+    async def test_monitor_async_operation_with_exception(self):
         """Test async operation monitoring with exceptions."""
         monitor = PerformanceMonitor()
 
@@ -231,7 +233,7 @@ class TestPerformanceMonitor:
                 raise ValueError(msg)
 
         with pytest.raises(ValueError):
-            asyncio.run(async_failing_test())
+            await async_failing_test()
 
 
 class TestPerformanceTracking:
@@ -526,7 +528,8 @@ class TestGlobalMonitorInstance:
         with pytest.raises(RuntimeError, match="Performance monitor not initialized"):
             get_performance_monitor()
 
-    def test_convenience_functions(self):
+    @pytest.mark.asyncio
+    async def test_convenience_functions(self):
         """Test convenience functions."""
         initialize_performance_monitor()
 
@@ -539,7 +542,7 @@ class TestGlobalMonitorInstance:
             async with monitor_async_operation("async_operation"):
                 await asyncio.sleep(0.001)
 
-        asyncio.run(async_test())
+        await async_test()
 
         # Test specialized monitoring
         with monitor_database_query("select"):
@@ -661,7 +664,8 @@ class TestPerformanceEdgeCases:
         ):
             time.sleep(0.001)
 
-    def test_concurrent_operation_monitoring(self):
+    @pytest.mark.asyncio
+    async def test_concurrent_operation_monitoring(self):
         """Test concurrent operation monitoring."""
         monitor = PerformanceMonitor()
 
@@ -673,7 +677,7 @@ class TestPerformanceEdgeCases:
             tasks = [concurrent_operation(i) for i in range(5)]
             await asyncio.gather(*tasks)
 
-        asyncio.run(run_concurrent())
+        await run_concurrent()
 
     def test_operation_history_size_limit(self):
         """Test operation history respects size limit."""

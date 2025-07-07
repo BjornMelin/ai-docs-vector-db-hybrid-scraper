@@ -41,7 +41,7 @@ def complete_collection_name(
             return []
 
         # Create client manager and get collections
-        client_manager = ClientManager(config)
+        client_manager = ClientManager()
         db_manager = VectorDBManager(client_manager)
 
         # Get collection names (synchronously for completion)
@@ -58,7 +58,7 @@ def complete_collection_name(
             CompletionItem(name, help=f"Collection: {name}")
             for name in matching_collections
         ]
-    except Exception:
+    except (ValueError, RuntimeError, TimeoutError):
         # If anything fails, return empty list
         return []
 
@@ -135,7 +135,7 @@ class OperationQueue:
                 try:
                     op.function(*op.args, **op.kwargs)
                     progress.console.print(f"✅ {op.name}")
-                except Exception as e:
+                except (ValueError, RuntimeError, OSError) as e:
                     progress.console.print(f"❌ {op.name}: {e}")
                     return False
 
@@ -189,7 +189,6 @@ def index_documents(
     Documents can be file paths, URLs, or directory paths.
     Supports parallel processing for improved performance.
     """
-    config = ctx.obj["config"]
     rich_cli = ctx.obj["rich_cli"]
 
     # Convert documents to list and validate
@@ -205,7 +204,7 @@ def index_documents(
         return
 
     try:
-        client_manager = ClientManager(config)
+        client_manager = ClientManager()
         VectorDBManager(client_manager)
 
         with Progress(
@@ -253,7 +252,7 @@ def index_documents(
 
     except Exception as e:
         rich_cli.show_error("Batch indexing failed", str(e))
-        raise click.Abort() from e
+        raise click.Abort from e
 
 
 def _show_indexing_preview(
@@ -303,7 +302,6 @@ def create_collections(
     ctx: click.Context, collections: tuple, dimension: int, distance: str, _force: bool
 ):
     """Create multiple collections in batch."""
-    config = ctx.obj["config"]
     rich_cli = ctx.obj["rich_cli"]
 
     collection_list = list(collections)
@@ -326,7 +324,7 @@ def create_collections(
 
     # Create operation queue
     queue = OperationQueue()
-    client_manager = ClientManager(config)
+    client_manager = ClientManager()
     db_manager = VectorDBManager(client_manager)
 
     for collection_name in collection_list:
@@ -366,7 +364,6 @@ def create_collections(
 @click.pass_context
 def delete_collections(ctx: click.Context, collections: tuple, yes: bool):
     """Delete multiple collections in batch."""
-    config = ctx.obj["config"]
     rich_cli = ctx.obj["rich_cli"]
 
     collection_list = list(collections)
@@ -400,7 +397,7 @@ def delete_collections(ctx: click.Context, collections: tuple, yes: bool):
 
     # Create operation queue
     queue = OperationQueue()
-    client_manager = ClientManager(config)
+    client_manager = ClientManager()
     db_manager = VectorDBManager(client_manager)
 
     for collection_name in collection_list:
@@ -433,21 +430,21 @@ def delete_collections(ctx: click.Context, collections: tuple, yes: bool):
 )
 @click.option(
     "--format",
+    "backup_format",
     type=click.Choice(["json", "parquet"]),
     default="json",
     help="Backup format",
 )
 @click.pass_context
 def backup_collections(
-    ctx: click.Context, collections: tuple, output_dir: Path, format: str
+    ctx: click.Context, collections: tuple, output_dir: Path, backup_format: str
 ):
     """Backup collections to files."""
-    config = ctx.obj["config"]
     rich_cli = ctx.obj["rich_cli"]
 
     # If no collections specified, backup all
     if not collections:
-        client_manager = ClientManager(config)
+        client_manager = ClientManager()
         db_manager = VectorDBManager(client_manager)
         collection_names = asyncio.run(db_manager.list_collections())
         asyncio.run(db_manager.cleanup())
@@ -462,7 +459,7 @@ def backup_collections(
     backup_text.append("📦 Backup Plan\n\n", style="bold cyan")
     backup_text.append(f"Collections: {len(collection_names)}\n", style="")
     backup_text.append(f"Output directory: {output_dir}\n", style="")
-    backup_text.append(f"Format: {format.upper()}", style="")
+    backup_text.append(f"Format: {backup_format.upper()}", style="")
 
     panel = Panel(
         backup_text,

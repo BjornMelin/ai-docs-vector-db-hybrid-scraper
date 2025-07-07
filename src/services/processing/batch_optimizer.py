@@ -9,7 +9,7 @@ import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class BatchConfig:
     performance_target_ms: float = 100.0  # Target processing time per batch
 
 
-class BatchProcessor(Generic[T, R]):
+class BatchProcessor:
     """Intelligent batch processing for optimal throughput."""
 
     def __init__(
@@ -79,7 +79,11 @@ class BatchProcessor(Generic[T, R]):
 
         # Schedule delayed batch processing if not already processed
         if not should_process:
-            asyncio.create_task(self._delayed_batch_processing())
+            delayed_task = asyncio.create_task(self._delayed_batch_processing())
+            # Store reference to prevent task garbage collection
+            delayed_task.add_done_callback(
+                lambda _: logger.debug("Delayed batch processing completed"),
+            )
 
         return await future
 
@@ -127,7 +131,9 @@ class BatchProcessor(Generic[T, R]):
                 results = await self.process_func(items)
             else:
                 results = await asyncio.get_event_loop().run_in_executor(
-                    None, self.process_func, items
+                    None,
+                    self.process_func,
+                    items,
                 )
 
             # Calculate processing time
@@ -142,18 +148,20 @@ class BatchProcessor(Generic[T, R]):
                     future.set_result(result)
 
             logger.debug(
-                f"Processed batch of {batch_size} items in {processing_time:.1f}ms"
+                f"Processed batch of {batch_size} items in {processing_time:.1f}ms",
             )
 
         except Exception as e:
-            logger.exception(f"Batch processing failed: {e}")
+            logger.exception("Batch processing failed")
             # Propagate error to all waiting coroutines
             for future in futures:
                 if not future.done():
                     future.set_exception(e)
 
     def _update_performance_metrics(
-        self, batch_size: int, processing_time: float
+        self,
+        batch_size: int,
+        processing_time: float,
     ) -> None:
         """Update performance metrics and adjust optimal batch size.
 
@@ -202,10 +210,11 @@ class BatchProcessor(Generic[T, R]):
 
         # Update optimal batch size within bounds
         self.optimal_batch_size = max(
-            self.config.min_batch_size, min(best_size, self.config.max_batch_size)
+            self.config.min_batch_size,
+            min(best_size, self.config.max_batch_size),
         )
 
-        logger.debug(f"Updated optimal batch size to {self.optimal_batch_size}")
+        logger.debug("Updated optimal batch size to %s", self.optimal_batch_size)
 
     async def _delayed_batch_processing(self) -> None:
         """Process batch after delay if minimum wait time exceeded."""

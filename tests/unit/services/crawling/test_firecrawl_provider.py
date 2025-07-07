@@ -55,6 +55,7 @@ class TestFirecrawlProvider:
 
     @pytest.mark.asyncio
     @patch("src.services.crawling.firecrawl_provider.FirecrawlApp")
+    @pytest.mark.asyncio
     async def test_initialize_success(self, mock_app_class, basic_config):
         """Test successful provider initialization."""
         mock_app = MagicMock()
@@ -71,6 +72,7 @@ class TestFirecrawlProvider:
 
     @pytest.mark.asyncio
     @patch("src.services.crawling.firecrawl_provider.FirecrawlApp")
+    @pytest.mark.asyncio
     async def test_initialize_already_initialized(self, mock_app_class, basic_config):
         """Test initialization when already initialized."""
         provider = FirecrawlProvider(basic_config)
@@ -83,6 +85,7 @@ class TestFirecrawlProvider:
 
     @pytest.mark.asyncio
     @patch("src.services.crawling.firecrawl_provider.FirecrawlApp")
+    @pytest.mark.asyncio
     async def test_initialize_failure(self, mock_app_class, basic_config):
         """Test initialization failure."""
         mock_app_class.side_effect = Exception("API key invalid")
@@ -500,7 +503,7 @@ class TestFirecrawlProvider:
         mock_client.scrape_url.return_value = {"success": True}
         provider._client = mock_client
 
-        with patch("asyncio.get_event_loop") as mock_loop:
+        with patch("asyncio.get_event_loop")  # Testing event loop behavior as mock_loop:
             mock_executor = AsyncMock()
             mock_executor.return_value = {"success": True}
             mock_loop.return_value.run_in_executor = mock_executor
@@ -522,7 +525,7 @@ class TestFirecrawlProvider:
         mock_client.async_crawl_url.return_value = {"id": "crawl-123"}
         provider._client = mock_client
 
-        with patch("asyncio.get_event_loop") as mock_loop:
+        with patch("asyncio.get_event_loop")  # Testing event loop behavior as mock_loop:
             mock_executor = AsyncMock()
             mock_executor.return_value = {"id": "crawl-123"}
             mock_loop.return_value.run_in_executor = mock_executor
