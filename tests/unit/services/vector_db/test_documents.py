@@ -49,6 +49,7 @@ class TestQdrantDocuments:
             },
         ]
 
+    @pytest.mark.asyncio
     async def test_upsert_points_success(
         self, documents_service, mock_client, sample_points
     ):
@@ -61,6 +62,7 @@ class TestQdrantDocuments:
         # Should be called twice due to batch size of 2 with 3 points
         assert mock_client.upsert.call_count == 2
 
+    @pytest.mark.asyncio
     async def test_upsert_points_single_batch(
         self, documents_service, mock_client, sample_points
     ):
@@ -72,6 +74,7 @@ class TestQdrantDocuments:
         assert result is True
         assert mock_client.upsert.call_count == 1
 
+    @pytest.mark.asyncio
     async def test_upsert_points_vector_normalization(
         self, documents_service, mock_client
     ):
@@ -91,6 +94,7 @@ class TestQdrantDocuments:
         assert isinstance(point_struct.vector, dict)
         assert "dense" in point_struct.vector
 
+    @pytest.mark.asyncio
     async def test_upsert_points_collection_not_found(
         self, documents_service, mock_client, sample_points
     ):
@@ -102,6 +106,7 @@ class TestQdrantDocuments:
         ):
             await documents_service.upsert_points("test_collection", sample_points)
 
+    @pytest.mark.asyncio
     async def test_upsert_points_wrong_vector_size(
         self, documents_service, mock_client, sample_points
     ):
@@ -111,6 +116,7 @@ class TestQdrantDocuments:
         with pytest.raises(QdrantServiceError, match="Vector dimension mismatch"):
             await documents_service.upsert_points("test_collection", sample_points)
 
+    @pytest.mark.asyncio
     async def test_upsert_points_payload_too_large(
         self, documents_service, mock_client, sample_points
     ):
@@ -120,6 +126,7 @@ class TestQdrantDocuments:
         with pytest.raises(QdrantServiceError, match="Payload too large"):
             await documents_service.upsert_points("test_collection", sample_points)
 
+    @pytest.mark.asyncio
     async def test_upsert_points_generic_error(
         self, documents_service, mock_client, sample_points
     ):
@@ -129,6 +136,7 @@ class TestQdrantDocuments:
         with pytest.raises(QdrantServiceError, match="Failed to upsert points"):
             await documents_service.upsert_points("test_collection", sample_points)
 
+    @pytest.mark.asyncio
     async def test_get_points_success(self, documents_service, mock_client):
         """Test successful point retrieval."""
         mock_point1 = MagicMock()
@@ -155,6 +163,7 @@ class TestQdrantDocuments:
         assert result[0]["payload"]["title"] == "Test 1"
         assert result[0]["vector"] == {"dense": [0.1, 0.2, 0.3]}
 
+    @pytest.mark.asyncio
     async def test_get_points_payload_only(self, documents_service, mock_client):
         """Test point retrieval with payload only."""
         mock_point = MagicMock()
@@ -174,6 +183,7 @@ class TestQdrantDocuments:
         assert result[0]["payload"]["title"] == "Test 1"
         assert "vector" not in result[0]
 
+    @pytest.mark.asyncio
     async def test_get_points_no_payload(self, documents_service, mock_client):
         """Test point retrieval without payload."""
         mock_point = MagicMock()
@@ -194,6 +204,7 @@ class TestQdrantDocuments:
         assert "payload" not in result[0]
         assert "vector" not in result[0]
 
+    @pytest.mark.asyncio
     async def test_get_points_error(self, documents_service, mock_client):
         """Test point retrieval error."""
         mock_client.retrieve.side_effect = Exception("Retrieve failed")
@@ -201,6 +212,7 @@ class TestQdrantDocuments:
         with pytest.raises(QdrantServiceError, match="Failed to retrieve points"):
             await documents_service.get_points("test_collection", ["point1"])
 
+    @pytest.mark.asyncio
     async def test_delete_points_by_ids(self, documents_service, mock_client):
         """Test point deletion by IDs."""
         result = await documents_service.delete_points(
@@ -212,6 +224,7 @@ class TestQdrantDocuments:
         call_args = mock_client.delete.call_args
         assert isinstance(call_args._kwargs["points_selector"], models.PointIdsList)
 
+    @pytest.mark.asyncio
     async def test_delete_points_by_filter(self, documents_service, mock_client):
         """Test point deletion by filter."""
         filter_condition = {"doc_type": "test"}  # Use a valid keyword field
@@ -225,6 +238,7 @@ class TestQdrantDocuments:
         call_args = mock_client.delete.call_args
         assert isinstance(call_args._kwargs["points_selector"], models.FilterSelector)
 
+    @pytest.mark.asyncio
     async def test_delete_points_no_criteria(self, documents_service, _mock_client):
         """Test point deletion with no criteria provided."""
         with pytest.raises(
@@ -232,6 +246,7 @@ class TestQdrantDocuments:
         ):
             await documents_service.delete_points("test_collection")
 
+    @pytest.mark.asyncio
     async def test_delete_points_error(self, documents_service, mock_client):
         """Test point deletion error."""
         mock_client.delete.side_effect = Exception("Delete failed")
@@ -241,6 +256,7 @@ class TestQdrantDocuments:
                 "test_collection", point_ids=["point1"]
             )
 
+    @pytest.mark.asyncio
     async def test_update_point_payload_merge(self, documents_service, mock_client):
         """Test point payload update with merge."""
         result = await documents_service.update_point_payload(
@@ -253,6 +269,7 @@ class TestQdrantDocuments:
         assert result is True
         mock_client.set_payload.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_update_point_payload_replace(self, documents_service, mock_client):
         """Test point payload update with replace."""
         result = await documents_service.update_point_payload(
@@ -265,6 +282,7 @@ class TestQdrantDocuments:
         assert result is True
         mock_client.overwrite_payload.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_update_point_payload_error(self, documents_service, mock_client):
         """Test point payload update error."""
         mock_client.set_payload.side_effect = Exception("Update failed")
@@ -274,6 +292,7 @@ class TestQdrantDocuments:
                 "test_collection", "point1", {"field": "value"}
             )
 
+    @pytest.mark.asyncio
     async def test_count_points_all(self, documents_service, mock_client):
         """Test point counting without filter."""
         mock_result = MagicMock()
@@ -287,6 +306,7 @@ class TestQdrantDocuments:
             collection_name="test_collection", count_filter=None, exact=True
         )
 
+    @pytest.mark.asyncio
     async def test_count_points_with_filter(self, documents_service, mock_client):
         """Test point counting with filter."""
         mock_result = MagicMock()
@@ -303,6 +323,7 @@ class TestQdrantDocuments:
 
         assert result == 500
 
+    @pytest.mark.asyncio
     async def test_count_points_error(self, documents_service, mock_client):
         """Test point counting error."""
         mock_client.count.side_effect = Exception("Count failed")
@@ -310,6 +331,7 @@ class TestQdrantDocuments:
         with pytest.raises(QdrantServiceError, match="Failed to count points"):
             await documents_service.count_points("test_collection")
 
+    @pytest.mark.asyncio
     async def test_scroll_points_success(self, documents_service, mock_client):
         """Test successful point scrolling."""
         mock_point1 = MagicMock()
@@ -339,6 +361,7 @@ class TestQdrantDocuments:
         assert result["next_offset"] == "next_offset_123"
         assert result["points"][0]["id"] == "point1"
 
+    @pytest.mark.asyncio
     async def test_scroll_points_with_filter(self, documents_service, mock_client):
         """Test point scrolling with filter."""
         mock_client.scroll.return_value = ([], None)
@@ -352,6 +375,7 @@ class TestQdrantDocuments:
         call_args = mock_client.scroll.call_args
         assert call_args._kwargs["scroll_filter"] is not None
 
+    @pytest.mark.asyncio
     async def test_scroll_points_with_vectors(self, documents_service, mock_client):
         """Test point scrolling with vectors."""
         mock_point = MagicMock()
@@ -367,6 +391,7 @@ class TestQdrantDocuments:
 
         assert result["points"][0]["vector"] == {"dense": [0.1, 0.2, 0.3]}
 
+    @pytest.mark.asyncio
     async def test_scroll_points_error(self, documents_service, mock_client):
         """Test point scrolling error."""
         mock_client.scroll.side_effect = Exception("Scroll failed")
@@ -374,6 +399,7 @@ class TestQdrantDocuments:
         with pytest.raises(QdrantServiceError, match="Failed to scroll points"):
             await documents_service.scroll_points("test_collection")
 
+    @pytest.mark.asyncio
     async def test_clear_collection_success(self, documents_service, mock_client):
         """Test successful collection clearing."""
         result = await documents_service.clear_collection("test_collection")
@@ -383,6 +409,7 @@ class TestQdrantDocuments:
         call_args = mock_client.delete.call_args
         assert isinstance(call_args._kwargs["points_selector"], models.FilterSelector)
 
+    @pytest.mark.asyncio
     async def test_clear_collection_error(self, documents_service, mock_client):
         """Test collection clearing error."""
         mock_client.delete.side_effect = Exception("Clear failed")
@@ -390,6 +417,7 @@ class TestQdrantDocuments:
         with pytest.raises(QdrantServiceError, match="Failed to clear collection"):
             await documents_service.clear_collection("test_collection")
 
+    @pytest.mark.asyncio
     async def test_initialization_and_config(
         self, documents_service, mock_client, mock_config
     ):
@@ -397,6 +425,7 @@ class TestQdrantDocuments:
         assert documents_service.client is mock_client
         assert documents_service.config is mock_config
 
+    @pytest.mark.asyncio
     async def test_upsert_points_empty_list(self, documents_service, mock_client):
         """Test point upsert with empty list."""
         result = await documents_service.upsert_points("test_collection", [])
@@ -404,6 +433,7 @@ class TestQdrantDocuments:
         assert result is True
         mock_client.upsert.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_get_points_empty_ids(self, documents_service, mock_client):
         """Test point retrieval with empty ID list."""
         mock_client.retrieve.return_value = []
@@ -412,6 +442,7 @@ class TestQdrantDocuments:
 
         assert result == []
 
+    @pytest.mark.asyncio
     async def test_point_struct_creation(self, documents_service, mock_client):
         """Test PointStruct creation with various vector formats."""
         points = [
@@ -446,6 +477,7 @@ class TestQdrantDocuments:
         # Third point: payload defaults to empty dict
         assert point_structs[2].payload == {}
 
+    @pytest.mark.asyncio
     async def test_error_handling_consistency(self, documents_service, mock_client):
         """Test consistent error handling across methods."""
         mock_client.upsert.side_effect = Exception("Test error")

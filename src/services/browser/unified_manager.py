@@ -10,6 +10,7 @@ import time
 from typing import Any, Literal
 from urllib.parse import urlparse
 
+import redis
 from pydantic import BaseModel, Field
 
 from src.config import Config
@@ -169,58 +170,271 @@ class UnifiedBrowserManager(BaseService):
             return
 
         try:
-            # Get client manager and automation router
-            if ClientManager is None:
-                _raise_client_manager_unavailable()
-
-            self._client_manager = ClientManager()
-            await self._client_manager.initialize()
-
-            # Get enhanced automation router (lazy-initialized in ClientManager)
-            self._automation_router = (
-                await self._client_manager.get_browser_automation_router()
-            )
-
-            # Initialize browser cache if enabled
-            if self._cache_enabled:
-                if BrowserCache is None:
-                    logger.warning("BrowserCache not available, disabling cache")
-                    self._cache_enabled = False
-                else:
-                    # Get cache manager for underlying caches
-                    cache_manager = await self._client_manager.get_cache_manager()
-
-                    self._browser_cache = BrowserCache(
-                        local_cache=cache_manager.local_cache
-                        if hasattr(cache_manager, "local_cache")
-                        else None,
-                        distributed_cache=cache_manager.distributed_cache
-                        if hasattr(cache_manager, "distributed_cache")
-                        else None,
-                        default_ttl=getattr(
-                            self.config.cache, "browser_cache_ttl", 3600
-                        ),
-                        dynamic_content_ttl=getattr(
-                            self.config.cache, "browser_dynamic_ttl", 300
-                        ),
-                        static_content_ttl=getattr(
-                            self.config.cache, "browser_static_ttl", 86400
-                        ),
-                    )
-                logger.info("Browser caching enabled for UnifiedBrowserManager")
-
-            # Start monitoring if enabled
-            if self._monitoring_enabled:
-                await self._monitor.start_monitoring()
-                logger.info("Browser automation monitoring started")
-
-            self._initialized = True
-            logger.info("UnifiedBrowserManager initialized with 5-tier automation")
-
+            await self._initialize_client_manager()
+            await self._initialize_browser_cache()
+            await self._initialize_monitoring()
+            self._finalize_initialization()
         except Exception as e:
             logger.exception("Failed to initialize UnifiedBrowserManager")
             msg = "Failed to initialize unified browser manager"
             raise CrawlServiceError(msg) from e
+
+    async def _initialize_client_manager(self) -> None:
+        """Initialize client manager and automation router."""
+        if ClientManager is None:
+            _raise_client_manager_unavailable()
+
+        self._client_manager = ClientManager()
+        await self._client_manager.initialize()
+
+        # Get enhanced automation router (lazy-initialized in ClientManager)
+        self._automation_router = (
+            await self._client_manager.get_browser_automation_router()
+        )
+
+    async def _initialize_browser_cache(self) -> None:
+        """Initialize browser cache if enabled."""
+        if not self._cache_enabled:
+            return
+
+        if BrowserCache is None:
+            logger.warning("BrowserCache not available, disabling cache")
+            self._cache_enabled = False
+            return
+
+        # Get cache manager for underlying caches
+        cache_manager = await self._client_manager.get_cache_manager()
+
+        self._browser_cache = BrowserCache(
+            local_cache=cache_manager.local_cache
+            if hasattr(cache_manager, "local_cache")
+            else None,
+            distributed_cache=cache_manager.distributed_cache
+            if hasattr(cache_manager, "distributed_cache")
+            else None,
+            default_ttl=getattr(self.config.cache, "browser_cache_ttl", 3600),
+            dynamic_content_ttl=getattr(self.config.cache, "browser_dynamic_ttl", 300),
+            static_content_ttl=getattr(self.config.cache, "browser_static_ttl", 86400),
+        )
+        logger.info("Browser caching enabled for UnifiedBrowserManager")
+
+    async def _initialize_monitoring(self) -> None:
+        """Initialize monitoring system if enabled."""
+        if not self._monitoring_enabled:
+            return
+
+        await self._monitor.start_monitoring()
+        logger.info("Browser automation monitoring started")
+
+    def _finalize_initialization(self) -> None:
+        """Finalize initialization process."""
+        self._initialized = True
+        logger.info("UnifiedBrowserManager initialized with 5-tier automation")
+
+    async def _try_get_cached_result(
+        self, request: UnifiedScrapingRequest, start_time: float
+    ) -> UnifiedScrapingResponse | None:
+        """Try to get cached result for the request."""
+        if not (
+            self._cache_enabled
+            and self._browser_cache
+            and not request.interaction_required
+        ):
+            return None
+
+        try:
+            cache_key = self._browser_cache.generate_cache_key(
+                request.url, None if request.tier == "auto" else request.tier
+            )
+            cached_entry = await self._browser_cache.get(cache_key)
+
+            if cached_entry:
+                return await self._create_cached_response(
+                    request, cached_entry, start_time
+                )
+        except (ConnectionError, RuntimeError, TimeoutError, ValueError):
+            logger.warning(
+                "Cache error for %s, continuing with fresh scrape", request.url
+            )
+
+        return None
+
+    async def _create_cached_response(
+        self,
+        request: UnifiedScrapingRequest,
+        cached_entry,  # BrowserCacheEntry
+        start_time: float,
+    ) -> UnifiedScrapingResponse:
+        """Create response from cached entry."""
+        execution_time = (time.time() - start_time) * 1000
+
+        logger.info(
+            "Browser cache hit for %s (cached tier: %s, age: %.1fs)",
+            request.url,
+            cached_entry.tier_used,
+            time.time() - cached_entry.timestamp,
+        )
+
+        # Update metrics for cache hit
+        self._update_tier_metrics(cached_entry.tier_used, True, execution_time)
+
+        # Record monitoring metrics for cache hit if enabled
+        await self._record_cache_hit_metrics(cached_entry.tier_used, execution_time)
+
+        return UnifiedScrapingResponse(
+            success=True,
+            content=cached_entry.content,
+            url=request.url,
+            title=cached_entry.metadata.get("title", ""),
+            metadata={
+                **cached_entry.metadata,
+                "cached": True,
+                "cache_age_seconds": time.time() - cached_entry.timestamp,
+            },
+            tier_used=cached_entry.tier_used,
+            execution_time_ms=execution_time,
+            fallback_attempted=False,
+            content_length=len(cached_entry.content),
+            quality_score=self._calculate_quality_score(
+                {"success": True, "content": cached_entry.content}
+            ),
+            failed_tiers=[],
+        )
+
+    async def _record_cache_hit_metrics(
+        self, tier_used: str, execution_time: float
+    ) -> None:
+        """Record cache hit metrics if monitoring is enabled."""
+        if not (self._monitoring_enabled and self._monitor):
+            return
+
+        try:
+            await self._monitor.record_request_metrics(
+                tier=tier_used,
+                success=True,
+                response_time_ms=execution_time,
+                cache_hit=True,
+            )
+        except (ConnectionError, OSError, PermissionError):
+            logger.warning("Failed to record cache hit monitoring metrics")
+
+    async def _try_cache_result(
+        self, request: UnifiedScrapingRequest, response: UnifiedScrapingResponse
+    ) -> None:
+        """Try to cache successful scraping result."""
+        if not (
+            self._cache_enabled
+            and self._browser_cache
+            and response.success
+            and not request.interaction_required
+            and response.content_length > 0
+        ):
+            return
+
+        try:
+            await self._store_cache_entry(request, response)
+        except (ConnectionError, OSError, PermissionError):
+            logger.warning("Failed to cache result for %s", request.url)
+
+    async def _store_cache_entry(
+        self, request: UnifiedScrapingRequest, response: UnifiedScrapingResponse
+    ) -> None:
+        """Store cache entry for successful response."""
+        if BrowserCacheEntry is None:
+            logger.warning("BrowserCacheEntry not available, skipping cache")
+            return
+
+        cache_entry = BrowserCacheEntry(
+            url=request.url,
+            content=response.content,
+            metadata={
+                "title": response.title,
+                **response.metadata,
+            },
+            tier_used=response.tier_used,
+        )
+
+        cache_key = self._browser_cache.generate_cache_key(
+            request.url, None if request.tier == "auto" else request.tier
+        )
+
+        await self._browser_cache.set(cache_key, cache_entry)
+        logger.debug(
+            "Cached browser result for %s (tier: %s)", request.url, response.tier_used
+        )
+
+    async def _create_scraping_response(
+        self,
+        request: UnifiedScrapingRequest,
+        result: dict[str, Any],
+        execution_time: float,
+    ) -> UnifiedScrapingResponse:
+        """Create unified scraping response from automation router result."""
+        # Extract tier information
+        tier_used = result.get("provider", "unknown")
+        fallback_attempted = "fallback_from" in result
+        failed_tiers = result.get("failed_tools", [])
+        quality_score = self._calculate_quality_score(result)
+
+        # Update metrics
+        self._update_tier_metrics(tier_used, True, execution_time)
+
+        # Record monitoring metrics if enabled
+        await self._record_success_metrics(tier_used, execution_time)
+
+        return UnifiedScrapingResponse(
+            success=result.get("success", False),
+            content=result.get("content", ""),
+            url=request.url,
+            title=result.get("metadata", {}).get("title", ""),
+            metadata=result.get("metadata", {}),
+            tier_used=tier_used,
+            execution_time_ms=execution_time,
+            fallback_attempted=fallback_attempted,
+            content_length=len(result.get("content", "")),
+            quality_score=quality_score,
+            failed_tiers=failed_tiers,
+        )
+
+    async def _record_success_metrics(
+        self, tier_used: str, execution_time: float
+    ) -> None:
+        """Record success metrics if monitoring is enabled."""
+        if not (self._monitoring_enabled and self._monitor):
+            return
+
+        try:
+            await self._monitor.record_request_metrics(
+                tier=tier_used,
+                success=True,
+                response_time_ms=execution_time,
+                cache_hit=False,  # Fresh scrape
+            )
+        except (ConnectionError, OSError, PermissionError):
+            logger.warning("Failed to record monitoring metrics")
+
+    async def _perform_url_analysis(self, url: str) -> dict[str, Any]:
+        """Perform URL analysis to determine optimal tier."""
+        parsed = urlparse(url)
+        domain = parsed.netloc.lower()
+
+        # Get tier recommendation from AutomationRouter
+        recommended_tier = await self._automation_router.get_recommended_tool(url)
+
+        # Get metrics for tier performance
+        tier_metrics = self._tier_metrics.get(
+            recommended_tier, TierMetrics(tier_name=recommended_tier)
+        )
+
+        return {
+            "url": url,
+            "domain": domain,
+            "recommended_tier": recommended_tier,
+            "expected_performance": {
+                "estimated_time_ms": tier_metrics.average_response_time_ms,
+                "success_rate": tier_metrics.success_rate,
+            },
+        }
 
     async def cleanup(self) -> None:
         """Cleanup all resources."""
@@ -228,7 +442,7 @@ class UnifiedBrowserManager(BaseService):
         if self._monitoring_enabled and self._monitor:
             try:
                 await self._monitor.stop_monitoring()
-            except Exception:
+            except (ConnectionError, OSError, RuntimeError, TimeoutError):
                 logger.warning("Failed to stop monitoring during cleanup")
 
         if self._client_manager:
@@ -273,73 +487,11 @@ class UnifiedBrowserManager(BaseService):
         start_time = time.time()
 
         # Check cache first if enabled
-        if (
-            self._cache_enabled
-            and self._browser_cache
-            and not request.interaction_required
-        ):
-            try:
-                # Generate cache key
-                cache_key = self._browser_cache._generate_cache_key(
-                    request.url, None if request.tier == "auto" else request.tier
-                )
-
-                # Try to get from cache
-                cached_entry = await self._browser_cache.get(cache_key)
-                if cached_entry:
-                    execution_time = (time.time() - start_time) * 1000
-
-                    logger.info(
-                        f"Browser cache hit for {request.url} "
-                        f"(cached tier: {cached_entry.tier_used}, age: {time.time() - cached_entry.timestamp:.1f}s)"
-                    )
-
-                    # Update metrics for cache hit
-                    self._update_tier_metrics(
-                        cached_entry.tier_used, True, execution_time
-                    )
-
-                    # Record monitoring metrics for cache hit if enabled
-                    if self._monitoring_enabled and self._monitor:
-                        try:
-                            await self._monitor.record_request_metrics(
-                                tier=cached_entry.tier_used,
-                                success=True,
-                                response_time_ms=execution_time,
-                                cache_hit=True,
-                            )
-                        except Exception:
-                            logger.warning(
-                                "Failed to record cache hit monitoring metrics"
-                            )
-
-                    # Return cached response
-                    return UnifiedScrapingResponse(
-                        success=True,
-                        content=cached_entry.content,
-                        url=request.url,
-                        title=cached_entry.metadata.get("title", ""),
-                        metadata={
-                            **cached_entry.metadata,
-                            "cached": True,
-                            "cache_age_seconds": time.time() - cached_entry.timestamp,
-                        },
-                        tier_used=cached_entry.tier_used,
-                        execution_time_ms=execution_time,
-                        fallback_attempted=False,
-                        content_length=len(cached_entry.content),
-                        quality_score=self._calculate_quality_score(
-                            {"success": True, "content": cached_entry.content}
-                        ),
-                        failed_tiers=[],
-                    )
-            except Exception:
-                logger.warning(
-                    "Cache error for {request.url}, continuing with fresh scrape"
-                )
+        cache_result = await self._try_get_cached_result(request, start_time)
+        if cache_result:
+            return cache_result
 
         try:
-            # Use AutomationRouter for intelligent tier selection and execution
             result = await self._automation_router.scrape(
                 url=request.url,
                 interaction_required=request.interaction_required,
@@ -347,86 +499,20 @@ class UnifiedBrowserManager(BaseService):
                 force_tool=None if request.tier == "auto" else request.tier,
                 timeout=request.timeout,
             )
-
             execution_time = (time.time() - start_time) * 1000
-
-            # Extract tier information
-            tier_used = result.get("provider", "unknown")
-            fallback_attempted = "fallback_from" in result
-            failed_tiers = result.get("failed_tools", [])
-
-            # Calculate quality score based on content analysis
-            quality_score = self._calculate_quality_score(result)
-
-            # Update metrics
-            self._update_tier_metrics(tier_used, True, execution_time)
-
-            # Record monitoring metrics if enabled
-            if self._monitoring_enabled and self._monitor:
-                try:
-                    await self._monitor.record_request_metrics(
-                        tier=tier_used,
-                        success=True,
-                        response_time_ms=execution_time,
-                        cache_hit=False,  # Fresh scrape
-                    )
-                except Exception:
-                    logger.warning("Failed to record monitoring metrics")
-
-            # Create unified response
-            response = UnifiedScrapingResponse(
-                success=result.get("success", False),
-                content=result.get("content", ""),
-                url=request.url,
-                title=result.get("metadata", {}).get("title", ""),
-                metadata=result.get("metadata", {}),
-                tier_used=tier_used,
-                execution_time_ms=execution_time,
-                fallback_attempted=fallback_attempted,
-                content_length=len(result.get("content", "")),
-                quality_score=quality_score,
-                failed_tiers=failed_tiers,
+            response = await self._create_scraping_response(
+                request, result, execution_time
             )
 
             # Cache successful results if enabled
-            if (
-                self._cache_enabled
-                and self._browser_cache
-                and response.success
-                and not request.interaction_required
-                and response.content_length > 0
-            ):
-                try:
-                    if BrowserCacheEntry is None:
-                        logger.warning(
-                            "BrowserCacheEntry not available, skipping cache"
-                        )
-                        return response
-
-                    cache_entry = BrowserCacheEntry(
-                        url=request.url,
-                        content=response.content,
-                        metadata={
-                            "title": response.title,
-                            **response.metadata,
-                        },
-                        tier_used=response.tier_used,
-                    )
-
-                    cache_key = self._browser_cache._generate_cache_key(
-                        request.url, None if request.tier == "auto" else request.tier
-                    )
-
-                    await self._browser_cache.set(cache_key, cache_entry)
-                    logger.debug(
-                        f"Cached browser result for {request.url} (tier: {tier_used})"
-                    )
-                except Exception:
-                    logger.warning("Failed to cache result for {request.url}")
+            await self._try_cache_result(request, response)
 
             logger.info(
-                f"Unified scraping completed: {request.url} via {tier_used} "
-                f"({execution_time:.1f}ms, quality: {quality_score:.2f})"
+                "Unified scraping completed: %s via %s (%.1fms, quality: %.2f)",
+                request.url,
+                response.tier_used,
+                execution_time,
+                response.quality_score,
             )
 
         except Exception as e:
@@ -442,10 +528,10 @@ class UnifiedBrowserManager(BaseService):
                         response_time_ms=execution_time,
                         error_type=type(e).__name__,
                     )
-                except Exception:
+                except (ConnectionError, OSError, PermissionError) as e:
                     logger.warning("Failed to record error monitoring metrics")
 
-            logger.exception("Unified scraping failed for {request.url}")
+            logger.exception("Unified scraping failed for %s", request.url)
 
             return UnifiedScrapingResponse(
                 success=False,
@@ -474,36 +560,15 @@ class UnifiedBrowserManager(BaseService):
             raise CrawlServiceError(msg)
 
         try:
-            parsed = urlparse(url)
-            domain = parsed.netloc.lower()
-
-            # Get tier recommendation from AutomationRouter
-            recommended_tier = await self._automation_router.get_recommended_tool(url)
-
-            # Get metrics for tier performance
-            tier_metrics = self._tier_metrics.get(
-                recommended_tier, TierMetrics(tier_name=recommended_tier)
-            )
-
-            analysis = {
-                "url": url,
-                "domain": domain,
-                "recommended_tier": recommended_tier,
-                "expected_performance": {
-                    "estimated_time_ms": tier_metrics.average_response_time_ms,
-                    "success_rate": tier_metrics.success_rate,
-                },
-            }
+            return await self._perform_url_analysis(url)
 
         except Exception as e:
-            logger.exception("URL analysis failed for {url}")
+            logger.exception("URL analysis failed for %s", url)
             return {
                 "url": url,
                 "error": str(e),
                 "recommended_tier": "crawl4ai",  # Safe default
             }
-        else:
-            return analysis
 
     def get_tier_metrics(self) -> dict[str, TierMetrics]:
         """Get performance metrics for all tiers.
@@ -529,7 +594,7 @@ class UnifiedBrowserManager(BaseService):
         if self._automation_router:
             try:
                 router_metrics = self._automation_router.get_metrics()
-            except Exception:
+            except (ConnectionError, OSError, PermissionError):
                 logger.warning("Failed to get router metrics")
 
         # Calculate overall health
@@ -553,7 +618,7 @@ class UnifiedBrowserManager(BaseService):
         if self._monitoring_enabled and self._monitor:
             try:
                 monitoring_health = self._monitor.get_system_health()
-            except Exception as e:
+            except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
                 logger.warning("Failed to get monitoring health")
                 monitoring_health = {"error": str(e)}
 

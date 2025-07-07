@@ -165,7 +165,7 @@ Building platforms or tools that incorporate our vector search capabilities.
 1. Review [Architecture](./architecture.md) for system design
 2. Check [Configuration](./configuration.md) for tuning options
 3. Implement monitoring and profiling
-4. See [Performance Optimization](../operators/deployment.md)
+4. See [Performance Optimization](../operators/operations.md)
 
 ## 🔗 Related Resources
 

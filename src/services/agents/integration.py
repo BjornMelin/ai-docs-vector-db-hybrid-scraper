@@ -5,19 +5,15 @@ agentic vector management, and tool orchestration systems into a cohesive
 autonomous AI platform based on I4 research findings.
 """
 
-import asyncio
 import logging
 import time
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Set, Union
-from uuid import uuid4
+from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
 from src.services.agents.coordination import (
-    AgentCoordinationResult,
     CoordinationStrategy,
     ParallelAgentCoordinator,
     TaskDefinition,
@@ -26,14 +22,12 @@ from src.services.agents.tool_orchestration import (
     AdvancedToolOrchestrator,
     ToolCapability,
     ToolDefinition,
-    ToolExecutionMode,
     ToolOrchestrationPlan,
     ToolPriority,
 )
 from src.services.vector_db.agentic_manager import (
     AgentCollectionConfig,
     AgenticVectorManager,
-    AgentWorkflowConfig,
     OptimizationStrategy,
 )
 
@@ -159,7 +153,8 @@ class AgenticSystemStatus(BaseModel):
 
 
 class UnifiedAgenticSystem:
-    """Unified agentic system integrating coordination, vector management, and orchestration.
+    """Unified agentic system integrating coordination, vector management,
+    and orchestration.
 
     This system provides a single interface for complex autonomous AI operations,
     combining the capabilities of:
@@ -185,13 +180,14 @@ class UnifiedAgenticSystem:
 
         # Initialize subsystems
         self.coordinator = ParallelAgentCoordinator(
-            client_manager=client_manager,
-            max_concurrent_agents=self.config.get("max_concurrent_agents", 10),
+            max_parallel_agents=self.config.get("max_concurrent_agents", 10),
         )
 
-        self.vector_manager = AgenticVectorManager(
-            client_manager=client_manager, config=self.config.get("vector_config", {})
-        )
+        # Import QdrantService here to avoid circular imports
+        from src.services.vector_db.service import QdrantService  # noqa: PLC0415
+
+        qdrant_service = QdrantService(self.config, client_manager)
+        self.vector_manager = AgenticVectorManager(qdrant_service)
 
         self.orchestrator = AdvancedToolOrchestrator(
             client_manager=client_manager,
@@ -218,7 +214,7 @@ class UnifiedAgenticSystem:
 
         try:
             # Initialize subsystems
-            await self.coordinator.initialize()
+            await self.coordinator.start_coordination()
             await self.vector_manager.initialize()
 
             # Register default tools with orchestrator
@@ -227,10 +223,8 @@ class UnifiedAgenticSystem:
             self._initialized = True
             logger.info("UnifiedAgenticSystem fully initialized")
 
-        except Exception as e:
-            logger.error(
-                f"Failed to initialize UnifiedAgenticSystem: {e}", exc_info=True
-            )
+        except Exception:
+            logger.exception("Failed to initialize UnifiedAgenticSystem: %s")
             raise
 
     async def execute_unified_request(
@@ -248,7 +242,7 @@ class UnifiedAgenticSystem:
             await self.initialize()
 
         start_time = time.time()
-        request_start = datetime.now()
+        request_start = datetime.now(tz=datetime.timezone.utc)
 
         logger.info(f"Executing unified request {request.request_id}: {request.goal}")
 
@@ -302,8 +296,10 @@ class UnifiedAgenticSystem:
                 completeness=quality_metrics["completeness"],
                 performance_metrics=quality_metrics["performance_metrics"],
                 resource_usage=quality_metrics["resource_usage"],
-                optimization_recommendations=await self._generate_optimization_recommendations(
-                    request, execution_results, quality_metrics
+                optimization_recommendations=(
+                    await self._generate_optimization_recommendations(
+                        request, execution_results, quality_metrics
+                    )
                 ),
             )
 
@@ -315,14 +311,10 @@ class UnifiedAgenticSystem:
                 f"Unified request {request.request_id} completed successfully in {execution_time:.2f}s"
             )
 
-            return response
-
         except Exception as e:
             execution_time = time.time() - start_time
 
-            logger.error(
-                f"Unified request {request.request_id} failed: {e}", exc_info=True
-            )
+            logger.exception(f"Unified request {request.request_id} failed")
 
             # Create error response
             error_response = UnifiedAgentResponse(
@@ -339,6 +331,81 @@ class UnifiedAgenticSystem:
 
             return error_response
 
+        return response
+
+    async def _get_subsystem_statuses(self) -> tuple[dict, dict, dict]:
+        """Get status from all subsystems."""
+        coordinator_status = await self.coordinator.get_coordination_status()
+        vector_status = await self.vector_manager.get_system_status()
+        orchestrator_status = await self.orchestrator.get_orchestration_status()
+        return coordinator_status, vector_status, orchestrator_status
+
+    def _calculate_system_health(
+        self, coordinator_status: dict, vector_status: dict, orchestrator_status: dict
+    ) -> tuple[float, str]:
+        """Calculate overall system health score and status."""
+        health_scores = []
+        if coordinator_status.get("health_score"):
+            health_scores.append(coordinator_status["health_score"])
+        if vector_status.get("health_score"):
+            health_scores.append(vector_status["health_score"])
+        if orchestrator_status.get("healthy_tools", 0) > 0:
+            health_scores.append(
+                orchestrator_status["healthy_tools"]
+                / max(1, orchestrator_status["registered_tools"])
+            )
+
+        overall_health_score = (
+            sum(health_scores) / len(health_scores) if health_scores else 0.0
+        )
+        overall_health = (
+            "healthy"
+            if overall_health_score > 0.8
+            else "degraded"
+            if overall_health_score > 0.5
+            else "critical"
+        )
+        return overall_health_score, overall_health
+
+    def _get_recent_requests(self) -> list:
+        """Get requests from last 24 hours."""
+        cutoff_time = datetime.now(tz=datetime.timezone.utc) - timedelta(hours=24)
+        return [
+            req
+            for req in self.request_history
+            if hasattr(req, "start_time") and req.start_time > cutoff_time
+        ]
+
+    def _calculate_24h_metrics(self, recent_requests: list) -> tuple[float, float]:
+        """Calculate 24h success rate and average response time."""
+        success_rate_24h = (
+            sum(1 for req in recent_requests if req.success) / len(recent_requests)
+            if recent_requests
+            else 0.0
+        )
+
+        avg_response_time = (
+            sum(req.execution_time_seconds for req in recent_requests)
+            / len(recent_requests)
+            * 1000
+            if recent_requests
+            else 0.0
+        )
+        return success_rate_24h, avg_response_time
+
+    def _get_top_capabilities(self, recent_requests: list) -> list[str]:
+        """Get top 5 most used capabilities."""
+        capability_usage = {}
+        for req in recent_requests[-100:]:  # Last 100 requests
+            if req.tool_results and "capabilities_used" in req.tool_results:
+                for cap in req.tool_results["capabilities_used"]:
+                    capability_usage[cap] = capability_usage.get(cap, 0) + 1
+
+        top_capabilities = sorted(
+            capability_usage.items(), key=lambda x: x[1], reverse=True
+        )[:5]
+        return [cap for cap, _ in top_capabilities]
+
     async def get_system_status(self) -> AgenticSystemStatus:
         """Get comprehensive system status.
 
@@ -346,66 +413,20 @@ class UnifiedAgenticSystem:
             Current system status and metrics
         """
         try:
-            # Get subsystem statuses
-            coordinator_status = await self.coordinator.get_coordination_status()
-            vector_status = await self.vector_manager.get_system_status()
-            orchestrator_status = await self.orchestrator.get_orchestration_status()
-
-            # Calculate system health
-            health_scores = []
-            if coordinator_status.get("health_score"):
-                health_scores.append(coordinator_status["health_score"])
-            if vector_status.get("health_score"):
-                health_scores.append(vector_status["health_score"])
-            if orchestrator_status.get("healthy_tools", 0) > 0:
-                health_scores.append(
-                    orchestrator_status["healthy_tools"]
-                    / max(1, orchestrator_status["registered_tools"])
-                )
-
-            overall_health_score = (
-                sum(health_scores) / len(health_scores) if health_scores else 0.0
-            )
-            overall_health = (
-                "healthy"
-                if overall_health_score > 0.8
-                else "degraded"
-                if overall_health_score > 0.5
-                else "critical"
+            (
+                coordinator_status,
+                vector_status,
+                orchestrator_status,
+            ) = await self._get_subsystem_statuses()
+            overall_health_score, overall_health = self._calculate_system_health(
+                coordinator_status, vector_status, orchestrator_status
             )
 
-            # Calculate 24h metrics
-            cutoff_time = datetime.now() - timedelta(hours=24)
-            recent_requests = [
-                req
-                for req in self.request_history
-                if hasattr(req, "start_time") and req.start_time > cutoff_time
-            ]
-
-            success_rate_24h = (
-                sum(1 for req in recent_requests if req.success) / len(recent_requests)
-                if recent_requests
-                else 0.0
+            recent_requests = self._get_recent_requests()
+            success_rate_24h, avg_response_time = self._calculate_24h_metrics(
+                recent_requests
             )
-
-            avg_response_time = (
-                sum(req.execution_time_seconds for req in recent_requests)
-                / len(recent_requests)
-                * 1000
-                if recent_requests
-                else 0.0
-            )
-
-            # Get top capabilities
-            capability_usage = {}
-            for req in recent_requests[-100:]:  # Last 100 requests
-                if req.tool_results and "capabilities_used" in req.tool_results:
-                    for cap in req.tool_results["capabilities_used"]:
-                        capability_usage[cap] = capability_usage.get(cap, 0) + 1
-
-            top_capabilities = sorted(
-                capability_usage.items(), key=lambda x: x[1], reverse=True
-            )[:5]
+            top_capabilities = self._get_top_capabilities(recent_requests)
 
             return AgenticSystemStatus(
                 overall_health=overall_health,
@@ -433,12 +454,12 @@ class UnifiedAgenticSystem:
                         - orchestrator_status.get("active_executions", 0),
                     ),
                 },
-                top_capabilities=[cap for cap, _ in top_capabilities],
+                top_capabilities=top_capabilities,
                 optimization_opportunities=await self._identify_system_optimizations(),
             )
 
         except Exception as e:
-            logger.error(f"Failed to get system status: {e}", exc_info=True)
+            logger.exception("Failed to get system status")
 
             return AgenticSystemStatus(
                 overall_health="unknown",
@@ -455,14 +476,14 @@ class UnifiedAgenticSystem:
                 logger.warning(f"Cancelling active request {request_id}")
 
             # Cleanup subsystems
-            await self.coordinator.cleanup()
-            await self.vector_manager.cleanup()
+            await self.coordinator.stop_coordination()
+            await self.vector_manager.stop_monitoring()
 
             self._initialized = False
             logger.info("UnifiedAgenticSystem cleaned up")
 
-        except Exception as e:
-            logger.error(f"Error during cleanup: {e}", exc_info=True)
+        except Exception:
+            logger.exception("Error during cleanup")
 
     # Private implementation methods
 
@@ -501,11 +522,11 @@ class UnifiedAgenticSystem:
                         )
                         vector_results["optimizations_applied"].append(opt_result)
 
-            return vector_results
-
         except Exception as e:
-            logger.error(f"Vector environment preparation failed: {e}")
+            logger.exception("Vector environment preparation failed")
             return {"error": str(e)}
+
+        return vector_results
 
     async def _compose_tool_chain(
         self, request: UnifiedAgentRequest, vector_results: dict[str, Any]
@@ -530,13 +551,13 @@ class UnifiedAgenticSystem:
                 goal=request.goal, constraints=constraints, preferences=preferences
             )
 
-        except Exception as e:
-            logger.error(f"Tool chain composition failed: {e}")
+        except Exception:
+            logger.exception("Tool chain composition failed")
             raise
 
     async def _create_coordination_tasks(
         self,
-        request: UnifiedAgentRequest,
+        _request: UnifiedAgentRequest,
         vector_results: dict[str, Any],
         orchestration_plan: ToolOrchestrationPlan,
     ) -> list[TaskDefinition]:
@@ -562,18 +583,19 @@ class UnifiedAgenticSystem:
                     task_id=node.node_id,
                     description=f"Execute tool {node.tool_id}",
                     priority=1.0,  # Will be adjusted based on tool priority
-                    estimated_duration_seconds=30.0,  # Default estimation
+                    estimated_duration_ms=30000.0,  # Default estimation (30 seconds in ms)
                     dependencies=node.depends_on,
-                    context=task_context,
+                    required_capabilities=[],  # Default empty capabilities
+                    input_data=task_context,  # Use task_context as input_data
                 )
 
                 tasks.append(task)
 
-            return tasks
-
-        except Exception as e:
-            logger.error(f"Coordination task creation failed: {e}")
+        except Exception:
+            logger.exception("Coordination task creation failed")
             raise
+
+        return tasks
 
     async def _execute_unified_workflow(
         self,
@@ -607,15 +629,15 @@ class UnifiedAgenticSystem:
                 timeout_seconds=request.max_execution_time_seconds,
             )
 
-            return {
-                "coordination_results": coordination_result,
-                "tool_results": tool_result,
-                "integration_success": True,
-            }
-
         except Exception as e:
-            logger.error(f"Unified workflow execution failed: {e}")
+            logger.exception("Unified workflow execution failed")
             return {"error": str(e), "integration_success": False}
+
+        return {
+            "coordination_results": coordination_result,
+            "tool_results": tool_result,
+            "integration_success": True,
+        }
 
     async def _integrate_results(
         self,
@@ -637,7 +659,9 @@ class UnifiedAgenticSystem:
                         "vector_manager",
                         "orchestrator",
                     ],
-                    "integration_time": datetime.now().isoformat(),
+                    "integration_time": datetime.now(
+                        tz=datetime.timezone.utc
+                    ).isoformat(),
                     "success": execution_results.get("integration_success", False),
                 },
             }
@@ -653,11 +677,11 @@ class UnifiedAgenticSystem:
                     "coordination_results"
                 ]["results"]
 
-            return integrated
-
         except Exception as e:
-            logger.error(f"Results integration failed: {e}")
+            logger.exception("Results integration failed")
             return {"error": str(e)}
+
+        return integrated
 
     async def _calculate_quality_metrics(
         self,
@@ -718,8 +742,8 @@ class UnifiedAgenticSystem:
                 "resource_usage": resource_usage,
             }
 
-        except Exception as e:
-            logger.error(f"Quality metrics calculation failed: {e}")
+        except Exception:
+            logger.exception("Quality metrics calculation failed")
             return {
                 "quality_score": 0.5,
                 "confidence": 0.5,
@@ -764,7 +788,7 @@ class UnifiedAgenticSystem:
                 high_resource_usage = any(
                     v > 100
                     for v in quality_metrics["resource_usage"].values()
-                    if isinstance(v, (int, float))
+                    if isinstance(v, int | float)
                 )
                 if high_resource_usage:
                     recommendations.append(
@@ -775,11 +799,11 @@ class UnifiedAgenticSystem:
             if not recommendations:
                 recommendations.append("System performing optimally")
 
-            return recommendations
-
-        except Exception as e:
-            logger.error(f"Recommendation generation failed: {e}")
+        except Exception:
+            logger.exception("Recommendation generation failed")
             return ["Unable to generate recommendations"]
+
+        return recommendations
 
     async def _register_default_tools(self) -> None:
         """Register default tools with the orchestrator."""
@@ -830,8 +854,8 @@ class UnifiedAgenticSystem:
 
             logger.info("Default tools registered with orchestrator")
 
-        except Exception as e:
-            logger.error(f"Failed to register default tools: {e}")
+        except Exception:
+            logger.exception("Failed to register default tools")
 
     async def _update_system_metrics(self, response: UnifiedAgentResponse) -> None:
         """Update system performance metrics."""
@@ -850,11 +874,13 @@ class UnifiedAgenticSystem:
             self.performance_metrics["avg_execution_time"] = new_avg
 
             # Track 24h requests
-            response.start_time = datetime.now()  # Add timestamp
+            response.start_time = datetime.now(
+                tz=datetime.timezone.utc
+            )  # Add timestamp
             self.performance_metrics["last_24h_requests"].append(response)
 
             # Keep only last 24 hours
-            cutoff = datetime.now() - timedelta(hours=24)
+            cutoff = datetime.now(tz=datetime.timezone.utc) - timedelta(hours=24)
             self.performance_metrics["last_24h_requests"] = [
                 req
                 for req in self.performance_metrics["last_24h_requests"]
@@ -866,8 +892,8 @@ class UnifiedAgenticSystem:
             if len(self.request_history) > 1000:
                 self.request_history = self.request_history[-1000:]
 
-        except Exception as e:
-            logger.error(f"Failed to update system metrics: {e}")
+        except Exception:
+            logger.exception("Failed to update system metrics")
 
     async def _identify_system_optimizations(self) -> list[str]:
         """Identify system-wide optimization opportunities."""
@@ -904,8 +930,8 @@ class UnifiedAgenticSystem:
             if not optimizations:
                 optimizations.append("System operating efficiently")
 
-            return optimizations
-
-        except Exception as e:
-            logger.error(f"Failed to identify optimizations: {e}")
+        except Exception:
+            logger.exception("Failed to identify optimizations")
             return ["Unable to analyze optimizations"]
+
+        return optimizations

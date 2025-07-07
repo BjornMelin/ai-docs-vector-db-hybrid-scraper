@@ -4,6 +4,7 @@ This module provides a clean, focused implementation of indexing functionality
 extracted from QdrantService, focusing specifically on payload index management.
 """
 
+import asyncio
 import logging
 import time
 from typing import Any
@@ -34,7 +35,8 @@ class QdrantIndexing:
     async def create_payload_indexes(self, collection_name: str) -> None:
         """Create payload indexes on key metadata fields for 10-100x faster filtering.
 
-        Creates indexes on high-value fields for dramatic search performance improvements:
+        Creates indexes on high-value fields for dramatic search performance
+        improvements:
         - Keyword indexes for exact matching (site_name, embedding_model, etc.)
         - Text indexes for partial matching (title, content_preview)
         - Integer indexes for range queries (scraped_at, word_count, etc.)
@@ -47,9 +49,7 @@ class QdrantIndexing:
 
         """
         try:
-            logger.info(
-                f"Creating payload indexes for collection: {collection_name}"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Creating payload indexes for collection: %s", collection_name)
 
             # Keyword indexes for exact matching (categorical data)
             keyword_fields = [
@@ -74,9 +74,7 @@ class QdrantIndexing:
                     field_schema=models.PayloadSchemaType.KEYWORD,
                     wait=True,
                 )
-                logger.debug(
-                    f"Created keyword index for field: {field}"
-                )  # TODO: Convert f-string to logging format
+                logger.debug("Created keyword index for field: %s", field)
 
             # Text indexes for partial matching (full-text search)
             text_fields = [
@@ -91,9 +89,7 @@ class QdrantIndexing:
                     field_schema=models.PayloadSchemaType.TEXT,
                     wait=True,
                 )
-                logger.debug(
-                    f"Created text index for field: {field}"
-                )  # TODO: Convert f-string to logging format
+                logger.debug("Created text index for field: %s", field)
 
             # Integer indexes for range queries
             integer_fields = [
@@ -119,20 +115,16 @@ class QdrantIndexing:
                     field_schema=models.PayloadSchemaType.INTEGER,
                     wait=True,
                 )
-                logger.debug(
-                    f"Created integer index for field: {field}"
-                )  # TODO: Convert f-string to logging format
+                logger.debug("Created integer index for field: %s", field)
 
             logger.info(
-                f"Successfully created {len(keyword_fields) + len(text_fields) + len(integer_fields)} "
-                f"payload indexes for collection: {collection_name}"
+                "Successfully created %d payload indexes for collection: %s",
+                len(keyword_fields) + len(text_fields) + len(integer_fields),
+                collection_name,
             )
 
         except Exception as e:
-            logger.error(
-                f"Failed to create payload indexes for collection {collection_name}: {e}",
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
             msg = f"Failed to create payload indexes: {e}"
             raise QdrantServiceError(msg) from e
 
@@ -164,17 +156,15 @@ class QdrantIndexing:
                         indexed_fields.append(field_name)
 
             logger.info(
-                f"Found {len(indexed_fields)} indexed fields in {collection_name}"
+                "Found %d indexed fields in %s", len(indexed_fields), collection_name
             )
-            return indexed_fields
 
         except Exception as e:
-            logger.error(
-                f"Failed to list payload indexes for collection {collection_name}: {e}",
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
             msg = f"Failed to list payload indexes: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return indexed_fields
 
     async def drop_payload_index(self, collection_name: str, field_name: str) -> None:
         """Drop a specific payload index.
@@ -191,15 +181,10 @@ class QdrantIndexing:
             await self.client.delete_payload_index(
                 collection_name=collection_name, field_name=field_name, wait=True
             )
-            logger.info(
-                f"Dropped payload index for field: {field_name}"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Dropped payload index for field: %s", field_name)
 
         except Exception as e:
-            logger.error(
-                f"Failed to drop payload index for field {field_name}: {e}",
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
             msg = f"Failed to drop payload index: {e}"
             raise QdrantServiceError(msg) from e
 
@@ -216,9 +201,7 @@ class QdrantIndexing:
 
         """
         try:
-            logger.info(
-                f"Starting full reindex for collection: {collection_name}"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Starting full reindex for collection: %s", collection_name)
 
             # Get existing indexes
             existing_indexes = await self.list_payload_indexes(collection_name)
@@ -227,22 +210,16 @@ class QdrantIndexing:
             for field_name in existing_indexes:
                 try:
                     await self.drop_payload_index(collection_name, field_name)
-                except Exception as e:
-                    logger.warning(
-                        f"Failed to drop index for {field_name}: {e}"
-                    )  # TODO: Convert f-string to logging format
+                except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
+                    logger.warning("Failed to drop index for %s: %s", field_name, e)
 
             # Recreate all indexes
             await self.create_payload_indexes(collection_name)
 
-            logger.info(
-                f"Successfully reindexed collection: {collection_name}"
-            )  # TODO: Convert f-string to logging format
+            logger.info("Successfully reindexed collection: %s", collection_name)
 
         except Exception as e:
-            logger.error(
-                f"Failed to reindex collection {collection_name}: {e}", exc_info=True
-            )
+            logger.exception("Failed to reindex collection: %s", collection_name)
             msg = f"Failed to reindex collection: {e}"
             raise QdrantServiceError(msg) from e
 
@@ -282,15 +259,12 @@ class QdrantIndexing:
                         "type": str(getattr(field_info, "data_type", "unknown")),
                     }
 
-            return stats
-
         except Exception as e:
-            logger.error(
-                f"Failed to get payload index stats for collection {collection_name}: {e}",
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
             msg = f"Failed to get payload index stats: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return stats
 
     async def validate_index_health(self, collection_name: str) -> dict[str, Any]:
         """Validate the health and status of payload indexes for a collection.
@@ -307,7 +281,7 @@ class QdrantIndexing:
         """
         try:
             logger.info(
-                f"Validating payload index health for collection: {collection_name}"
+                "Validating payload index health for collection: %s", collection_name
             )
 
             # Get collection information
@@ -382,19 +356,19 @@ class QdrantIndexing:
             }
 
             logger.info(
-                f"Payload index health validation completed for {collection_name}: "
-                f"Status={status}, Score={health_score:.1f}%"
+                "Payload index health validation completed for %s: "
+                "Status=%s, Score=%.1f%%",
+                collection_name,
+                status,
+                health_score,
             )
-
-            return health_report
 
         except Exception as e:
-            logger.error(
-                f"Failed to validate index health for collection {collection_name}: {e}",
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
             msg = f"Failed to validate index health: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return health_report
 
     async def get_index_usage_stats(self, collection_name: str) -> dict[str, Any]:
         """Get detailed usage statistics for payload indexes.
@@ -411,7 +385,7 @@ class QdrantIndexing:
         """
         try:
             logger.debug(
-                f"Collecting index usage stats for collection: {collection_name}"
+                "Collecting index usage stats for collection: %s", collection_name
             )
 
             # Get basic collection info
@@ -434,7 +408,8 @@ class QdrantIndexing:
                 "index_details": {},
                 "performance_metrics": {
                     "expected_filter_speedup": "10-100x for indexed fields",
-                    "index_selectivity": "High for keyword fields, Medium for text fields",
+                    "index_selectivity": "High for keyword fields, "
+                    "Medium for text fields",
                     "memory_efficiency": "Optimized with proper field type mapping",
                 },
                 "optimization_suggestions": [],
@@ -492,17 +467,20 @@ class QdrantIndexing:
             # Generate optimization suggestions
             if total_points > 100000:
                 usage_stats["optimization_suggestions"].append(
-                    "Large collection detected: Monitor query performance and consider composite indexes"
+                    "Large collection detected: Monitor query performance "
+                    "and consider composite indexes"
                 )
 
             if len(indexed_fields) > 15:
                 usage_stats["optimization_suggestions"].append(
-                    "Many indexes detected: Consider removing unused indexes to reduce overhead"
+                    "Many indexes detected: Consider removing unused indexes "
+                    "to reduce overhead"
                 )
 
             if not keyword_indexes:
                 usage_stats["optimization_suggestions"].append(
-                    "No keyword indexes found: Add core metadata indexes for better filter performance"
+                    "No keyword indexes found: Add core metadata indexes "
+                    "for better filter performance"
                 )
 
             if not usage_stats["optimization_suggestions"]:
@@ -512,15 +490,12 @@ class QdrantIndexing:
 
             usage_stats["generated_at"] = int(time.time())
 
-            return usage_stats
-
         except Exception as e:
-            logger.error(
-                f"Failed to get index usage stats for collection {collection_name}: {e}",
-                exc_info=True,
-            )
+            logger.exception("Operation failed")
             msg = f"Failed to get index usage stats: {e}"
             raise QdrantServiceError(msg) from e
+        else:
+            return usage_stats
 
     def _generate_index_recommendations(
         self, missing_indexes: list[str], extra_indexes: list[str], status: str
@@ -540,17 +515,20 @@ class QdrantIndexing:
 
         if missing_indexes:
             recommendations.append(
-                f"Create missing indexes for optimal performance: {', '.join(missing_indexes)}"
+                f"Create missing indexes for optimal performance: "
+                f"{', '.join(missing_indexes)}"
             )
 
         if extra_indexes:
             recommendations.append(
-                f"Consider removing unused indexes to reduce overhead: {', '.join(extra_indexes)}"
+                f"Consider removing unused indexes to reduce overhead: "
+                f"{', '.join(extra_indexes)}"
             )
 
         if status == "critical":
             recommendations.append(
-                "Critical: Run migration script to create essential indexes for performance"
+                "Critical: Run migration script to create essential indexes "
+                "for performance"
             )
         elif status == "warning":
             recommendations.append(

@@ -1,7 +1,7 @@
 """Function-based service layer with FastAPI dependency injection.
 
 This module provides modern, function-based alternatives to the legacy Manager classes.
-Uses FastAPI's dependency injection system with async patterns and circuit breaker resilience.
+Uses FastAPI's dependency injection with async patterns and circuit breaker resilience.
 
 Architecture Principles:
 - Function composition over inheritance

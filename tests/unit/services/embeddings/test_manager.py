@@ -54,20 +54,19 @@ def mock_client_manager():
 @pytest.fixture
 def mock_openai_client():
     """Create mock OpenAI client."""
-    client = AsyncMock()
-    return client
+    return AsyncMock()
 
 
 @pytest.fixture
 async def embedding_manager(mock_config, mock_client_manager):
     """Create EmbeddingManager instance."""
-    manager = EmbeddingManager(config=mock_config, client_manager=mock_client_manager)
-    return manager
+    return EmbeddingManager(config=mock_config, client_manager=mock_client_manager)
 
 
 class TestEmbeddingManagerInitialization:
     """Test EmbeddingManager initialization."""
 
+    @pytest.mark.asyncio
     async def test_initialization_with_client_manager(
         self, mock_config, mock_client_manager, mock_openai_client
     ):
@@ -103,6 +102,7 @@ class TestEmbeddingManagerInitialization:
             call__kwargs = mock_openai_provider.call_args[1]
             assert call__kwargs["client_manager"] == mock_client_manager
 
+    @pytest.mark.asyncio
     async def test_initialization_without_openai_key(
         self, mock_config, mock_client_manager
     ):
@@ -125,6 +125,7 @@ class TestEmbeddingManagerInitialization:
             assert "openai" not in manager.providers
             assert "fastembed" in manager.providers
 
+    @pytest.mark.asyncio
     async def test_initialization_no_providers_available(
         self, mock_config, mock_client_manager
     ):
@@ -145,6 +146,7 @@ class TestEmbeddingManagerInitialization:
             ):
                 await manager.initialize()
 
+    @pytest.mark.asyncio
     async def test_double_initialization(self, embedding_manager, _mock_openai_client):
         """Test that double initialization is safe."""
         # Create proper async mock providers
@@ -168,6 +170,7 @@ class TestEmbeddingManagerInitialization:
 
             assert embedding_manager._initialized
 
+    @pytest.mark.asyncio
     async def test_cleanup(self, embedding_manager):
         """Test manager cleanup."""
         # Create proper async mock providers
@@ -259,6 +262,7 @@ class TestEmbeddingManagerTextAnalysis:
 class TestEmbeddingManagerProviderSelection:
     """Test provider selection logic."""
 
+    @pytest.mark.asyncio
     async def test_get_provider_instance_by_name(self, embedding_manager):
         """Test getting provider by name."""
         mock_provider = AsyncMock()
@@ -268,6 +272,7 @@ class TestEmbeddingManagerProviderSelection:
 
         assert result == mock_provider
 
+    @pytest.mark.asyncio
     async def test_get_provider_instance_by_quality_tier(self, embedding_manager):
         """Test getting provider by quality tier."""
         mock_openai_provider = AsyncMock()
@@ -283,6 +288,7 @@ class TestEmbeddingManagerProviderSelection:
         result = embedding_manager._get_provider_instance(None, QualityTier.FAST)
         assert result == mock_fastembed_provider
 
+    @pytest.mark.asyncio
     async def test_get_provider_instance_unavailable(self, embedding_manager):
         """Test getting unavailable provider."""
         with pytest.raises(
@@ -290,6 +296,7 @@ class TestEmbeddingManagerProviderSelection:
         ):
             embedding_manager._get_provider_instance("nonexistent", None)
 
+    @pytest.mark.asyncio
     async def test_get_provider_instance_fallback(self, embedding_manager):
         """Test fallback when preferred provider unavailable."""
         mock_provider = AsyncMock()
@@ -304,11 +311,13 @@ class TestEmbeddingManagerProviderSelection:
 class TestEmbeddingManagerEmbeddingGeneration:
     """Test embedding generation."""
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_not_initialized(self, embedding_manager):
         """Test embedding generation when not initialized."""
         with pytest.raises(EmbeddingServiceError, match="Manager not initialized"):
             await embedding_manager.generate_embeddings(["test"])
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_empty_input(self, embedding_manager):
         """Test embedding generation with empty input."""
         embedding_manager._initialized = True
@@ -319,6 +328,7 @@ class TestEmbeddingManagerEmbeddingGeneration:
         assert result["provider"] is None
         assert result["cost"] == 0.0
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_success(self, embedding_manager):
         """Test successful embedding generation."""
         embedding_manager._initialized = True
@@ -370,11 +380,13 @@ class TestEmbeddingManagerEmbeddingGeneration:
 class TestEmbeddingManagerCostEstimation:
     """Test cost estimation functionality."""
 
+    @pytest.mark.asyncio
     async def test_estimate_cost_not_initialized(self, embedding_manager):
         """Test cost estimation when not initialized."""
         with pytest.raises(EmbeddingServiceError, match="Manager not initialized"):
             embedding_manager.estimate_cost(["test"])
 
+    @pytest.mark.asyncio
     async def test_estimate_cost_success(self, embedding_manager):
         """Test successful cost estimation."""
         embedding_manager._initialized = True
@@ -390,6 +402,7 @@ class TestEmbeddingManagerCostEstimation:
         assert result["test"]["_total_cost"] > 0
         assert result["test"]["cost_per_token"] == 0.0001
 
+    @pytest.mark.asyncio
     async def test_estimate_cost_specific_provider(self, embedding_manager):
         """Test cost estimation for specific provider."""
         embedding_manager._initialized = True
@@ -424,11 +437,13 @@ class TestEmbeddingManagerProviderInfo:
         assert info["test"]["cost_per_token"] == 0.0001
         assert info["test"]["max_tokens"] == 8191
 
+    @pytest.mark.asyncio
     async def test_get_optimal_provider_not_initialized(self, embedding_manager):
         """Test optimal provider selection when not initialized."""
         with pytest.raises(EmbeddingServiceError, match="Manager not initialized"):
             await embedding_manager.get_optimal_provider(100)
 
+    @pytest.mark.asyncio
     async def test_get_optimal_provider_quality_required(self, embedding_manager):
         """Test optimal provider selection with quality requirement."""
         embedding_manager._initialized = True
@@ -447,6 +462,7 @@ class TestEmbeddingManagerProviderInfo:
 
         assert result == "openai"
 
+    @pytest.mark.asyncio
     async def test_get_optimal_provider_budget_constraint(self, embedding_manager):
         """Test optimal provider selection with budget constraint."""
         embedding_manager._initialized = True
@@ -470,6 +486,7 @@ class TestEmbeddingManagerProviderInfo:
 
         assert result == "cheap"
 
+    @pytest.mark.asyncio
     async def test_get_optimal_provider_no_candidates(self, embedding_manager):
         """Test optimal provider selection with no valid candidates."""
         embedding_manager._initialized = True
@@ -564,10 +581,10 @@ class TestEmbeddingManagerUsageStats:
 
 
 class TestEmbeddingManagerSmartSelection:
-    """Test smart provider selection and model scoring functionality."""
+    """Test  provider selection and model scoring functionality."""
 
     def test_get_smart_provider_recommendation(self, embedding_manager):
-        """Test smart provider recommendation."""
+        """Test  provider recommendation."""
         embedding_manager._initialized = True
 
         # Create mock text analysis
@@ -679,6 +696,7 @@ class TestEmbeddingManagerSmartSelection:
 class TestEmbeddingManagerReranking:
     """Test reranking functionality."""
 
+    @pytest.mark.asyncio
     async def test_rerank_results_no_reranker(self, embedding_manager):
         """Test reranking when no reranker is available."""
         embedding_manager._reranker = None
@@ -694,6 +712,7 @@ class TestEmbeddingManagerReranking:
         # Should return original results unchanged
         assert reranked == results
 
+    @pytest.mark.asyncio
     async def test_rerank_results_empty_results(self, embedding_manager):
         """Test reranking with empty results."""
         query = "test query"
@@ -703,6 +722,7 @@ class TestEmbeddingManagerReranking:
 
         assert reranked == []
 
+    @pytest.mark.asyncio
     async def test_rerank_results_single_result(self, embedding_manager):
         """Test reranking with single result."""
         query = "test query"
@@ -712,6 +732,7 @@ class TestEmbeddingManagerReranking:
 
         assert reranked == results
 
+    @pytest.mark.asyncio
     async def test_rerank_results_success(self, embedding_manager):
         """Test successful reranking."""
         # Mock reranker
@@ -735,6 +756,7 @@ class TestEmbeddingManagerReranking:
         assert reranked[0]["id"] == 2  # Higher reranker score (0.95)
         assert reranked[1]["id"] == 1  # Lower reranker score (0.9)
 
+    @pytest.mark.asyncio
     async def test_rerank_results_error_handling(self, embedding_manager):
         """Test reranking error handling."""
         # Mock reranker that raises error
@@ -752,8 +774,9 @@ class TestEmbeddingManagerReranking:
 
 
 class TestEmbeddingManagerAdvancedFeatures:
-    """Test advanced embedding generation features."""
+    """Test  embedding generation features."""
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_with_caching(self, embedding_manager):
         """Test embedding generation with caching enabled."""
         embedding_manager._initialized = True
@@ -779,6 +802,7 @@ class TestEmbeddingManagerAdvancedFeatures:
         assert result["embeddings"] == [[0.1] * 1536]
         assert result["cost"] == 0.0
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_with_sparse_vectors(self, embedding_manager):
         """Test embedding generation with sparse vectors."""
         embedding_manager._initialized = True
@@ -811,6 +835,7 @@ class TestEmbeddingManagerAdvancedFeatures:
         assert "sparse_embeddings" in result
         assert result["sparse_embeddings"] == [{0: 0.5, 1: 0.3}]
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_budget_validation(self, embedding_manager):
         """Test budget validation during embedding generation."""
         embedding_manager._initialized = True
@@ -840,6 +865,7 @@ class TestEmbeddingManagerAdvancedFeatures:
                     auto_select=False,
                 )
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_provider_failure(self, embedding_manager):
         """Test handling of provider failures during embedding generation."""
         embedding_manager._initialized = True

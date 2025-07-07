@@ -1,0 +1,62 @@
+name: 'Setup Development Environment'
+description: 'Sets up Python, uv, and installs dependencies with optimized caching'
+
+inputs:
+  python-version:
+    description: 'Python version to set up'
+    required: false
+    default: '3.12'
+  cache-suffix:
+    description: 'Additional suffix for cache key differentiation'
+    required: false
+    default: ''
+  install-dev:
+    description: 'Install development dependencies'
+    required: false
+    default: 'true'
+
+outputs:
+  cache-hit:
+    description: 'Whether cache was hit'
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+        enable-cache: true
+        cache-dependency-glob: "**/uv.lock"
+
+    - name: Cache Python dependencies
+      uses: actions/cache@v4
+      id: cache
+      with:
+        path: |
+          ~/.cache/uv
+          .venv
+        key: python-env-${{ runner.os }}-${{ inputs.python-version }}-${{ hashFiles('**/uv.lock', 'pyproject.toml') }}${{ inputs.cache-suffix }}
+        restore-keys: |
+          python-env-${{ runner.os }}-${{ inputs.python-version }}-
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        if [ "${{ inputs.install-dev }}" == "true" ]; then
+          uv sync --dev --frozen
+        else
+          uv sync --frozen
+        fi
+
+    - name: Verify installation
+      shell: bash
+      run: |
+        uv run python --version
+        uv run python -c "import sys; print(f'Python {sys.version}')"

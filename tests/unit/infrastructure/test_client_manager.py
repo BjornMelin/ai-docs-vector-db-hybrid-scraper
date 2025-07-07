@@ -1,7 +1,7 @@
 """Unit tests for ClientManager with proper dependency injection patterns.
 
-This test module demonstrates modern testing patterns including:
-- Dependency injection for better testability
+This test module demonstrates  testing patterns including:
+- Dependency injection for  testability
 - Test doubles (fakes, stubs, mocks) for isolation
 - Comprehensive coverage of functionality
 - Clear test organization and naming
@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from src.config import Config, SQLAlchemyConfig
+from src.config import Config, DatabaseConfig
 from src.infrastructure.client_manager import ClientManager
 from src.infrastructure.shared import CircuitBreaker, ClientHealth, ClientState
 from src.services.errors import APIError
@@ -26,7 +26,7 @@ class TestError(Exception):
     """Custom exception for this module."""
 
 
-# Abstract interfaces for better testability
+# Abstract interfaces for  testability
 class ClientFactoryInterface(ABC):
     """Abstract interface for creating API clients."""
 
@@ -580,6 +580,7 @@ class TestClientManagerIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
+    @pytest.mark.asyncio
     async def test_full_lifecycle(self, config):
         """Test full lifecycle of ClientManager."""
         ClientManager.reset_singleton()
@@ -629,7 +630,7 @@ class TestClientManagerDatabaseIntegration:
         """Test creation of database manager."""
 
         config = Config()
-        config.database = SQLAlchemyConfig(
+        config.database = DatabaseConfig(
             database_url="sqlite+aiosqlite:///:memory:",
             echo_queries=True,
             pool_size=20,
@@ -662,7 +663,7 @@ class TestClientManagerDatabaseIntegration:
         """Test database manager through managed_client interface."""
 
         config = Config()
-        config.database = SQLAlchemyConfig(
+        config.database = DatabaseConfig(
             database_url="sqlite+aiosqlite:///:memory:",
             echo_queries=True,
             pool_size=20,
@@ -684,7 +685,7 @@ class TestClientManagerDatabaseIntegration:
         """Test database manager is included in cleanup."""
 
         config = Config()
-        config.database = SQLAlchemyConfig(database_url="sqlite+aiosqlite:///:memory:")
+        config.database = DatabaseConfig(database_url="sqlite+aiosqlite:///:memory:")
 
         client_manager = ClientManager(config)
 
@@ -703,7 +704,7 @@ class TestClientManagerDatabaseIntegration:
         """Test database manager uses enterprise DatabaseManager with monitoring."""
 
         config = Config()
-        config.database = SQLAlchemyConfig(
+        config.database = DatabaseConfig(
             database_url="sqlite+aiosqlite:///:memory:",
         )
 
@@ -728,7 +729,7 @@ class TestClientManagerDatabaseIntegration:
 
 
 class TestClientManagerAdvancedCoverage:
-    """Test advanced coverage scenarios for AB testing and service getters."""
+    """Test  coverage scenarios for AB testing and service getters."""
 
     @pytest.mark.asyncio
     async def test_get_ab_testing_manager_creation(self):

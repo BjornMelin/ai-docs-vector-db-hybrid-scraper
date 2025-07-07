@@ -470,7 +470,7 @@ def main():
         demo_security_monitoring_integration()
         demo_data_classification()
 
-        logger.info("\n" + "=" * 60)
+        logger.info("\n%s", "=" * 60)
         logger.info("All demonstrations completed successfully!")
         logger.info("Enhanced security configuration management provides:")
         logger.info("✓ Configuration encryption at rest")

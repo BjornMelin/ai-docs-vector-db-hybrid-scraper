@@ -8,9 +8,11 @@
 
 from unittest.mock import AsyncMock, Mock, patch
 
+import httpx
 import pytest
+import respx
 
-from src.config.enums import ChunkingStrategy
+from src.config import ChunkingStrategy
 from src.infrastructure.client_manager import ClientManager
 from src.mcp_tools.models.requests import BatchRequest, DocumentRequest
 from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
@@ -43,7 +45,9 @@ def mock_client_manager():
 
     # Mock cache manager
     mock_cache = AsyncMock()
-    mock_cache.get = AsyncMock(return_value=None)  # No cached results
+    respx.get("https://api.example.com/").mock(
+        return_value=httpx.Response(200, json=None)
+    )
     manager.get_cache_manager = AsyncMock(return_value=mock_cache)
 
     # Mock crawl manager (browser manager)
@@ -159,6 +163,7 @@ class TestDocumentToolRegistration:
 class TestAddDocument:
     """Test single document addition tool."""
 
+    @pytest.mark.asyncio
     async def test_successful_document_addition(
         self, mock_mcp, mock_context, mock_client_manager, sample_document_request
     ):
@@ -216,6 +221,7 @@ class TestAddDocument:
                 "processed successfully" in msg for msg in mock_context.logs["info"]
             )
 
+    @pytest.mark.asyncio
     async def test_invalid_url_rejected(
         self, mock_mcp, mock_context, sample_document_request
     ):
@@ -232,9 +238,10 @@ class TestAddDocument:
                 await tool_func(sample_document_request, mock_context)
                 msg = "Expected ValueError to be raised"
                 raise AssertionError(msg)
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError) as e:
                 # Verify error is propagated correctly
-                assert "URL not allowed" in str(e)
+                error_msg = str(e)
+                assert "URL not allowed" in error_msg
 
             # Verify error logging
             assert any(
@@ -242,6 +249,7 @@ class TestAddDocument:
                 for msg in mock_context.logs["error"]
             )
 
+    @pytest.mark.asyncio
     async def test_crawl_manager_unavailable(
         self, mock_mcp, mock_context, mock_client_manager, sample_document_request
     ):
@@ -261,7 +269,8 @@ class TestAddDocument:
                 raise AssertionError(msg)
             except AttributeError as e:
                 # Verify error is related to None crawl manager
-                assert "'NoneType' object has no attribute 'scrape_url'" in str(e)
+                error_msg = str(e)
+                assert "'NoneType' object has no attribute 'scrape_url'" in error_msg
 
             # Verify error logging
             assert any(
@@ -269,6 +278,7 @@ class TestAddDocument:
                 for msg in mock_context.logs["error"]
             )
 
+    @pytest.mark.asyncio
     async def test_scraping_failure(
         self, mock_mcp, mock_context, mock_client_manager, sample_document_request
     ):
@@ -298,11 +308,13 @@ class TestAddDocument:
                 raise AssertionError(msg)
             except ValueError as e:
                 # Verify error relates to scraping failure
-                assert "Failed to scrape" in str(e)
+                error_msg = str(e)
+                assert "Failed to scrape" in error_msg
 
             # Verify error logging
             assert any("Failed to scrape" in msg for msg in mock_context.logs["error"])
 
+    @pytest.mark.asyncio
     async def test_embedding_failure(
         self, mock_mcp, mock_context, mock_client_manager, sample_document_request
     ):
@@ -333,9 +345,10 @@ class TestAddDocument:
                 await tool_func(sample_document_request, mock_context)
                 msg = "Expected Exception to be raised"
                 raise AssertionError(msg)
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError) as e:
                 # Verify error relates to embedding failure
-                assert "Embedding service error" in str(e)
+                error_msg = str(e)
+                assert "Embedding service error" in error_msg
 
             # Verify error logging
             assert any(
@@ -343,6 +356,7 @@ class TestAddDocument:
                 for msg in mock_context.logs["error"]
             )
 
+    @pytest.mark.asyncio
     async def test_vector_db_storage_failure(
         self, mock_mcp, mock_context, mock_client_manager, sample_document_request
     ):
@@ -377,9 +391,10 @@ class TestAddDocument:
                 await tool_func(sample_document_request, mock_context)
                 msg = "Expected Exception to be raised"
                 raise AssertionError(msg)
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError) as e:
                 # Verify error relates to vector DB failure
-                assert "Vector DB storage error" in str(e)
+                error_msg = str(e)
+                assert "Vector DB storage error" in error_msg
 
             # Verify error logging
             assert any(
@@ -391,6 +406,7 @@ class TestAddDocument:
 class TestAddDocumentBatch:
     """Test batch document processing tool."""
 
+    @pytest.mark.asyncio
     async def test_successful_batch_processing(
         self, mock_mcp, mock_context, mock_client_manager, sample_batch_request
     ):
@@ -429,6 +445,7 @@ class TestAddDocumentBatch:
                 assert isinstance(response, AddDocumentResponse)
                 assert response.collection == "batch_collection"
 
+    @pytest.mark.asyncio
     async def test_partial_batch_failure(
         self, mock_mcp, mock_context, _mock_client_manager, sample_batch_request
     ):
@@ -457,6 +474,7 @@ class TestAddDocumentBatch:
             assert len(result.successful) == 2
             assert len(result.failed) == 1
 
+    @pytest.mark.asyncio
     async def test_complete_batch_failure(
         self, mock_mcp, mock_context, sample_batch_request
     ):
@@ -477,6 +495,7 @@ class TestAddDocumentBatch:
             assert len(result.successful) == 0
             assert len(result.failed) == 3
 
+    @pytest.mark.asyncio
     async def test_batch_with_concurrency_control(
         self, mock_mcp, mock_context, mock_client_manager
     ):
@@ -522,6 +541,7 @@ class TestAddDocumentBatch:
 class TestDocumentIntegration:
     """Test integration scenarios and real-world usage patterns."""
 
+    @pytest.mark.asyncio
     async def test_minimal_document_request(self, mock_mcp, mock_context):
         """Test document tool handles minimal request data correctly."""
         minimal_request = DocumentRequest(
@@ -542,8 +562,10 @@ class TestDocumentIntegration:
                 raise AssertionError(msg)
             except ValueError as e:
                 # Should handle minimal data gracefully even when URL validation fails
-                assert "URL not allowed" in str(e)
+                error_msg = str(e)
+                assert "URL not allowed" in error_msg
 
+    @pytest.mark.asyncio
     async def test_comprehensive_document_workflow(
         self, mock_mcp, mock_context, mock_client_manager
     ):

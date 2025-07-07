@@ -1,7 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-
 """Stress testing scenarios for system breaking point analysis.
 
 This module implements various stress testing scenarios to identify system
@@ -10,6 +6,7 @@ extreme load conditions.
 """
 
 import asyncio
+import random
 import time
 
 import pytest
@@ -17,11 +14,16 @@ import pytest
 from tests.load.conftest import LoadTestConfig, LoadTestType
 
 
+class TestError(Exception):
+    """Custom exception for this module."""
+
+
 @pytest.mark.stress
 @pytest.mark.asyncio
 class TestStressScenarios:
     """Test various stress scenarios to find system limits."""
 
+    @pytest.mark.asyncio
     async def test_cpu_intensive_stress(self, load_test_runner, mock_load_test_service):
         """Test CPU-intensive stress scenarios."""
 
@@ -83,12 +85,12 @@ class TestStressScenarios:
                 "level": stress_level["name"],
                 "cpu_factor": stress_level["factor"],
                 "users": stress_level["users"],
-                "_total_requests": result.metrics._total_requests,
+                "_total_requests": result.metrics.total_requests,
                 "successful_requests": result.metrics.successful_requests,
                 "failed_requests": result.metrics.failed_requests,
                 "success_rate": (
                     result.metrics.successful_requests
-                    / max(result.metrics._total_requests, 1)
+                    / max(result.metrics.total_requests, 1)
                 )
                 * 100,
                 "avg_response_time": sum(result.metrics.response_times)
@@ -101,7 +103,7 @@ class TestStressScenarios:
             stress_results.append(stress_result)
 
             # Check if system is still responsive
-            assert result.metrics._total_requests > 0, (
+            assert result.metrics.total_requests > 0, (
                 f"System completely unresponsive at {stress_level['name']}"
             )
 
@@ -126,6 +128,7 @@ class TestStressScenarios:
                 f"Breaking point identified at: {breaking_point['level']} ({breaking_point['cpu_factor']}x CPU load)"
             )
 
+    @pytest.mark.asyncio
     async def test_memory_pressure_stress(
         self, load_test_runner, mock_load_test_service
     ):
@@ -159,13 +162,13 @@ class TestStressScenarios:
                         for key in old_keys:
                             del self.memory_pressure[key]
 
-                    return result
-
                 except Exception:
                     # Clean up on error
                     if memory_key in self.memory_pressure:
                         del self.memory_pressure[memory_key]
                     raise
+                else:
+                    return result
 
         memory_stress = MemoryStressSimulator(mock_load_test_service)
 
@@ -205,10 +208,10 @@ class TestStressScenarios:
                 "level": memory_level["name"],
                 "data_size_mb": memory_level["data_mb"],
                 "users": memory_level["users"],
-                "_total_requests": result.metrics._total_requests,
+                "_total_requests": result.metrics.total_requests,
                 "success_rate": (
                     result.metrics.successful_requests
-                    / max(result.metrics._total_requests, 1)
+                    / max(result.metrics.total_requests, 1)
                 )
                 * 100,
                 "avg_response_time": sum(result.metrics.response_times)
@@ -220,7 +223,7 @@ class TestStressScenarios:
 
             memory_results.append(memory_result)
 
-            assert result.metrics._total_requests > 0, (
+            assert result.metrics.total_requests > 0, (
                 f"No requests processed at {memory_level['name']}"
             )
 
@@ -232,6 +235,7 @@ class TestStressScenarios:
                 f"  {result['level']}: {result['success_rate']:.1f}% success, {result['simulated_memory_objects']} memory objects"
             )
 
+    @pytest.mark.asyncio
     async def test_connection_exhaustion_stress(
         self, load_test_runner, mock_load_test_service
     ):
@@ -308,12 +312,12 @@ class TestStressScenarios:
                 "test": test["name"],
                 "users": test["users"],
                 "rps": test["rps"],
-                "_total_requests": result.metrics._total_requests,
+                "_total_requests": result.metrics.total_requests,
                 "successful_requests": result.metrics.successful_requests,
                 "connection_failures": connection_stress.connection_failures,
                 "success_rate": (
                     result.metrics.successful_requests
-                    / max(result.metrics._total_requests, 1)
+                    / max(result.metrics.total_requests, 1)
                 )
                 * 100,
                 "_total_failures": result.metrics.failed_requests,
@@ -321,7 +325,7 @@ class TestStressScenarios:
 
             connection_results.append(connection_result)
 
-            assert result.metrics._total_requests > 0, (
+            assert result.metrics.total_requests > 0, (
                 f"No requests attempted at {test['name']}"
             )
 
@@ -333,6 +337,7 @@ class TestStressScenarios:
                 f"  {result['test']}: {result['success_rate']:.1f}% success, {result['connection_failures']} connection failures"
             )
 
+    @pytest.mark.asyncio
     async def test_cascading_failure_stress(
         self, load_test_runner, mock_load_test_service
     ):
@@ -358,7 +363,6 @@ class TestStressScenarios:
                     self.consecutive_failures = 0
 
                 # Simulate failure probability that increases with load
-                import random
 
                 current_load = self.service.request_count / 100.0  # Normalize load
                 failure_probability = min(
@@ -426,12 +430,12 @@ class TestStressScenarios:
                 "test": test["name"],
                 "users": test["users"],
                 "duration": test["duration"],
-                "_total_requests": result.metrics._total_requests,
+                "_total_requests": result.metrics.total_requests,
                 "successful_requests": result.metrics.successful_requests,
                 "failed_requests": result.metrics.failed_requests,
                 "success_rate": (
                     result.metrics.successful_requests
-                    / max(result.metrics._total_requests, 1)
+                    / max(result.metrics.total_requests, 1)
                 )
                 * 100,
                 "initial_cascade_level": initial_cascade_level,
@@ -442,7 +446,7 @@ class TestStressScenarios:
 
             cascade_results.append(cascade_result)
 
-            assert result.metrics._total_requests > 0, (
+            assert result.metrics.total_requests > 0, (
                 f"No requests processed during {test['name']}"
             )
 
@@ -454,6 +458,7 @@ class TestStressScenarios:
                 f"  {result['test']}: {result['success_rate']:.1f}% success, cascade level: {result['initial_cascade_level']:.1f} → {result['final_cascade_level']:.1f}"
             )
 
+    @pytest.mark.asyncio
     async def test_resource_exhaustion_recovery(
         self, load_test_runner, mock_load_test_service
     ):
@@ -541,11 +546,11 @@ class TestStressScenarios:
             phase_result = {
                 "phase": phase["phase"],
                 "users": phase["users"],
-                "_total_requests": result.metrics._total_requests,
+                "_total_requests": result.metrics.total_requests,
                 "successful_requests": result.metrics.successful_requests,
                 "success_rate": (
                     result.metrics.successful_requests
-                    / max(result.metrics._total_requests, 1)
+                    / max(result.metrics.total_requests, 1)
                 )
                 * 100,
                 "initial_resources": initial_resources,
@@ -560,7 +565,7 @@ class TestStressScenarios:
 
             exhaustion_results.append(phase_result)
 
-            assert result.metrics._total_requests > 0, (
+            assert result.metrics.total_requests > 0, (
                 f"No requests processed during {phase['phase']}"
             )
 

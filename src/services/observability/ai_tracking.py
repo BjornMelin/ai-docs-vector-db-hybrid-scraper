@@ -561,6 +561,7 @@ class AIOperationTracker:
         provider: str,
         model: str,
         _operation_type: str,
+        *,
         success_rate: float,
         avg_latency_ms: float,
         cost_per_operation: float | None = None,

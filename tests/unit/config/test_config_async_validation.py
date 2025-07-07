@@ -4,10 +4,11 @@ Tests async configuration loading and validation patterns.
 """
 
 import asyncio
+import json
 
 import pytest
 
-from src.config.core import Config, get_config, reset_config
+from src.config import Config, get_config, reset_config
 
 
 class TestAsyncConfigurationLoading:
@@ -75,9 +76,10 @@ class TestAsyncConfigurationLoading:
             await asyncio.sleep(0.01)  # Simulate validation work
             try:
                 config = Config.model_validate(config_data)
-                return config, None
-            except Exception as e:
+            except (ConnectionError, RuntimeError, ValueError) as e:
                 return None, str(e)
+            else:
+                return config, None
 
         # Valid config
         valid_config_data = {
@@ -201,8 +203,6 @@ class TestAsyncConfigurationLoading:
             data = config.model_dump(mode="json")  # Use JSON mode for serialization
 
             if format_type == "json":
-                import json
-
                 return json.dumps(data, indent=2)
             if format_type == "dict":
                 return data

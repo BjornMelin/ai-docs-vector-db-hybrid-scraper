@@ -6,7 +6,7 @@ and cost tracking that integrates seamlessly with the existing configuration.
 
 import logging
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -19,6 +19,12 @@ except ImportError:
 
 
 logger = logging.getLogger(__name__)
+
+
+def _raise_config_system_unavailable() -> None:
+    """Raise ImportError for unavailable config system."""
+    msg = "Config system not available"
+    raise ImportError(msg)
 
 
 class ObservabilityConfig(BaseModel):
@@ -113,8 +119,7 @@ def get_observability_config() -> ObservabilityConfig:
     try:
         # Try to get from main config if available
         if get_config is None:
-            msg = "Config system not available"
-            raise ImportError(msg)
+            _raise_config_system_unavailable()
 
         main_config = get_config()
 
@@ -140,7 +145,7 @@ def get_observability_config() -> ObservabilityConfig:
 
         return ObservabilityConfig(**config_dict)
 
-    except Exception as e:
+    except (ValueError, TypeError, UnicodeDecodeError) as e:
         logger.warning(
             f"Could not load from main config, using defaults: {e}"
         )  # TODO: Convert f-string to logging format

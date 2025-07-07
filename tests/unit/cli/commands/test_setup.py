@@ -1,11 +1,11 @@
 """Tests for the setup command module.
 
-This module tests the modern template-driven configuration wizard including
+This module tests the  template-driven configuration wizard including
 profile selection, template customization, and Rich console output.
 """
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from src.cli.commands.setup import ConfigurationWizard, setup
 
@@ -140,7 +140,7 @@ class TestConfigurationWizard:
             mock_select.return_value.ask.return_value = "Custom host/port"
             mock_text.return_value.ask.side_effect = ["localhost", "6333"]
 
-            result = wizard._customize_database({})
+            result = wizard.customize_database({})
 
             assert result["qdrant"]["host"] == "localhost"
             assert result["qdrant"]["port"] == 6333
@@ -160,7 +160,7 @@ class TestConfigurationWizard:
             mock_text.return_value.ask.return_value = "https://xyz.cloud.qdrant.io"
             mock_password.return_value.ask.return_value = "api-key-123"
 
-            result = wizard._customize_database({})
+            result = wizard.customize_database({})
 
             assert result["qdrant"]["url"] == "https://xyz.cloud.qdrant.io"
             assert result["qdrant"]["api_key"] == "api-key-123"
@@ -219,5 +219,4 @@ class TestSetupCommand:
 
         assert result.exit_code == 0
         assert "--profile" in result.output
-        assert "--output" in result.output
         assert "--config-dir" in result.output

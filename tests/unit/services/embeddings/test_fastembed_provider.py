@@ -1,25 +1,22 @@
-import asyncio
-
-from src.services.embeddings.base import EmbeddingProvider
-
-
-class TestError(Exception):
-    """Custom exception for this module."""
-
-
 """Tests for services/embeddings/fastembed_provider.py - FastEmbed integration.
 
 This module tests the FastEmbed provider that provides local embedding model management,
 model loading and inference optimization, memory management, and performance tuning.
 """
 
+import asyncio
 from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
 
+from src.services.embeddings.base import EmbeddingProvider
 from src.services.embeddings.fastembed_provider import FastEmbedProvider
 from src.services.errors import EmbeddingServiceError
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
 
 
 class TestFastEmbedProviderInitialization:

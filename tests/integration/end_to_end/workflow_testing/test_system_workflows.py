@@ -143,6 +143,7 @@ def journey_data_manager():
     return MockJourneyDataManager()
 
 
+@pytest.mark.asyncio
 async def test_complete_document_ingestion_workflow(
     workflow_orchestrator,
     system_components,

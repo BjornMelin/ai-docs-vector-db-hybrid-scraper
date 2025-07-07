@@ -53,15 +53,18 @@ class TestQdrantCollections:
         """Create QdrantCollections instance."""
         return QdrantCollections(mock_config, mock_client)
 
+    @pytest.mark.asyncio
     async def test_initialization_success(self, collections_service):
         """Test successful service initialization."""
         assert collections_service._initialized is True
 
+    @pytest.mark.asyncio
     async def test_initialize_already_initialized(self, collections_service):
         """Test initialization when already initialized."""
         await collections_service.initialize()
         # Should complete without error
 
+    @pytest.mark.asyncio
     async def test_initialize_no_client(self, mock_config):
         """Test initialization with no client."""
         service = QdrantCollections(mock_config, None)
@@ -70,11 +73,13 @@ class TestQdrantCollections:
         with pytest.raises(QdrantServiceError, match="QdrantClient must be provided"):
             await service.initialize()
 
+    @pytest.mark.asyncio
     async def test_cleanup_success(self, collections_service):
         """Test successful cleanup."""
         await collections_service.cleanup()
         assert collections_service._initialized is False
 
+    @pytest.mark.asyncio
     async def test_create_collection_success(self, collections_service, mock_client):
         """Test successful collection creation."""
         mock_collections = MagicMock()
@@ -93,6 +98,7 @@ class TestQdrantCollections:
         assert result is True
         mock_client.create_collection.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_create_collection_already_exists(
         self, collections_service, mock_client
     ):
@@ -110,6 +116,7 @@ class TestQdrantCollections:
         assert result is True
         mock_client.create_collection.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_create_collection_with_sparse_vectors(
         self, collections_service, mock_client
     ):
@@ -128,6 +135,7 @@ class TestQdrantCollections:
         call_args = mock_client.create_collection.call_args
         assert call_args._kwargs["sparse_vectors_config"] is not None
 
+    @pytest.mark.asyncio
     async def test_create_collection_without_quantization(
         self, collections_service, mock_client
     ):
@@ -146,6 +154,7 @@ class TestQdrantCollections:
         call_args = mock_client.create_collection.call_args
         assert call_args._kwargs["quantization_config"] is None
 
+    @pytest.mark.asyncio
     async def test_create_collection_invalid_distance(
         self, collections_service, mock_client
     ):
@@ -164,6 +173,7 @@ class TestQdrantCollections:
                 distance="InvalidDistance",
             )
 
+    @pytest.mark.asyncio
     async def test_create_collection_unauthorized(
         self, collections_service, mock_client
     ):
@@ -180,6 +190,7 @@ class TestQdrantCollections:
                 collection_name="test_collection", vector_size=1536
             )
 
+    @pytest.mark.asyncio
     async def test_create_collection_already_exists_error(
         self, collections_service, mock_client
     ):
@@ -197,6 +208,7 @@ class TestQdrantCollections:
 
         assert result is True  # Should handle gracefully
 
+    @pytest.mark.asyncio
     async def test_create_collection_payload_index_failure(
         self, collections_service, mock_client, __caplog
     ):
@@ -212,6 +224,7 @@ class TestQdrantCollections:
 
         assert result is True  # Collection creation should succeed
 
+    @pytest.mark.asyncio
     async def test_delete_collection_success(self, collections_service, mock_client):
         """Test successful collection deletion."""
         result = await collections_service.delete_collection("test_collection")
@@ -219,6 +232,7 @@ class TestQdrantCollections:
         assert result is True
         mock_client.delete_collection.assert_called_once_with("test_collection")
 
+    @pytest.mark.asyncio
     async def test_delete_collection_error(self, collections_service, mock_client):
         """Test collection deletion error."""
         mock_client.delete_collection.side_effect = Exception("Delete failed")
@@ -226,6 +240,7 @@ class TestQdrantCollections:
         with pytest.raises(QdrantServiceError, match="Failed to delete collection"):
             await collections_service.delete_collection("test_collection")
 
+    @pytest.mark.asyncio
     async def test_get_collection_info_success(self, collections_service, mock_client):
         """Test successful collection info retrieval."""
         mock_info = MagicMock()
@@ -243,6 +258,7 @@ class TestQdrantCollections:
         assert result["points_count"] == 1000
         assert result["config"] == {"vector_size": 1536}
 
+    @pytest.mark.asyncio
     async def test_get_collection_info_no_config(
         self, collections_service, mock_client
     ):
@@ -258,6 +274,7 @@ class TestQdrantCollections:
 
         assert result["config"] == {}
 
+    @pytest.mark.asyncio
     async def test_get_collection_info_error(self, collections_service, mock_client):
         """Test collection info retrieval error."""
         mock_client.get_collection.side_effect = Exception("Info failed")
@@ -265,6 +282,7 @@ class TestQdrantCollections:
         with pytest.raises(QdrantServiceError, match="Failed to get collection info"):
             await collections_service.get_collection_info("test_collection")
 
+    @pytest.mark.asyncio
     async def test_list_collections_success(self, collections_service, mock_client):
         """Test successful collection listing."""
         mock_collection1 = MagicMock()
@@ -280,6 +298,7 @@ class TestQdrantCollections:
 
         assert result == ["collection1", "collection2"]
 
+    @pytest.mark.asyncio
     async def test_list_collections_error(self, collections_service, mock_client):
         """Test collection listing error."""
         mock_client.get_collections.side_effect = Exception("List failed")
@@ -287,6 +306,7 @@ class TestQdrantCollections:
         with pytest.raises(QdrantServiceError, match="Failed to list collections"):
             await collections_service.list_collections()
 
+    @pytest.mark.asyncio
     async def test_list_collections_details_success(
         self, collections_service, mock_client
     ):
@@ -315,6 +335,7 @@ class TestQdrantCollections:
         assert result[0]["vector_count"] == 1000
         assert result[0]["indexed_count"] == 1000
 
+    @pytest.mark.asyncio
     async def test_list_collections_details_with_error(
         self, collections_service, mock_client
     ):
@@ -337,6 +358,7 @@ class TestQdrantCollections:
         assert result[0]["name"] == "test_collection"
         assert "error" in result[0]
 
+    @pytest.mark.asyncio
     async def test_list_collections_details_error(
         self, collections_service, mock_client
     ):
@@ -348,6 +370,7 @@ class TestQdrantCollections:
         ):
             await collections_service.list_collections_details()
 
+    @pytest.mark.asyncio
     async def test_trigger_collection_optimization_success(
         self, collections_service, mock_client
     ):
@@ -364,6 +387,7 @@ class TestQdrantCollections:
             change_aliases_operations=[]
         )
 
+    @pytest.mark.asyncio
     async def test_trigger_collection_optimization_error(
         self, collections_service, mock_client
     ):
@@ -392,6 +416,7 @@ class TestQdrantCollections:
         assert "ef_construct" in config_info["hnsw_parameters"]
         assert "description" in config_info
 
+    @pytest.mark.asyncio
     async def test_get_hnsw_config_for_collection_type(self, collections_service):
         """Test HNSW config retrieval for different collection types."""
         api_config = collections_service._get_hnsw_config_for_collection_type(
@@ -409,6 +434,7 @@ class TestQdrantCollections:
         )
         assert unknown_config is not None  # Should fall back to general
 
+    @pytest.mark.asyncio
     async def test_validate_hnsw_configuration_success(self, collections_service):
         """Test successful HNSW configuration validation."""
         mock_collection_info = MagicMock()
@@ -427,6 +453,7 @@ class TestQdrantCollections:
         assert "current_configuration" in result
         assert "optimal_configuration" in result
 
+    @pytest.mark.asyncio
     async def test_validate_hnsw_configuration_no_config(self, collections_service):
         """Test HNSW configuration validation with no config."""
         mock_collection_info = MagicMock()
@@ -441,6 +468,7 @@ class TestQdrantCollections:
         assert result["current_configuration"]["m"] == 16
         assert result["current_configuration"]["ef_construct"] == 200
 
+    @pytest.mark.asyncio
     async def test_validate_hnsw_configuration_error(self, collections_service):
         """Test HNSW configuration validation with error."""
 
@@ -457,6 +485,7 @@ class TestQdrantCollections:
 
         assert result["health_score"] == 85.0
 
+    @pytest.mark.asyncio
     async def test_infer_collection_type(self, collections_service):
         """Test collection type inference from name."""
         assert (
@@ -475,6 +504,7 @@ class TestQdrantCollections:
             collections_service._infer_collection_type("random_name") == "general_docs"
         )
 
+    @pytest.mark.asyncio
     async def test_calculate_hnsw_optimality_score(
         self, collections_service, mock_config
     ):
@@ -495,11 +525,13 @@ class TestQdrantCollections:
         )
         assert score < 100.0
 
+    @pytest.mark.asyncio
     async def test_inheritance_from_base_service(self, collections_service):
         """Test that QdrantCollections inherits from BaseService."""
 
         assert isinstance(collections_service, BaseService)
 
+    @pytest.mark.asyncio
     async def test_not_initialized_check(self, mock_config, mock_client):
         """Test validation when service is not initialized."""
         service = QdrantCollections(mock_config, mock_client)

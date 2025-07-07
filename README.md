@@ -413,10 +413,15 @@ redis-cli -p 6379 ping              # DragonflyDB
 - **[Configuration Reference](docs/developers/configuration.md)** - Complete configuration docs
 
 #### 🚀 For Operators
-- **[Deployment Guide](docs/operators/deployment.md)** - Production deployment
-- **[Monitoring & Observability](docs/operators/monitoring.md)** - Comprehensive monitoring
-- **[Operations Manual](docs/operators/operations.md)** - Day-to-day procedures
-- **[Security Guide](docs/operators/security.md)** - Security implementation
+- **[Operations Guide](docs/operators/operations.md)** - Production deployment and day-to-day procedures
+- **[Monitoring & Observability](docs/operators/monitoring.md)** - Comprehensive monitoring and alerting
+- **[Configuration Management](docs/operators/configuration.md)** - System configuration and tuning
+- **[Security Guide](docs/operators/security.md)** - Security implementation and best practices
+
+#### 🔬 Research & Development
+- **[Research Documentation](docs/research/)** - System enhancement research and analysis
+- **[Browser-Use Integration](docs/research/browser-use/)** - V3 Solo Developer browser automation enhancement
+- **[Portfolio ULTRATHINK Transformation](docs/research/transformation/)** - 85% complete system modernization
 
 ## 🤝 Contributing
 

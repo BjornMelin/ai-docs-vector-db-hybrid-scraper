@@ -254,7 +254,7 @@ def register_tools(app: FastMCP) -> None:
             await rag_generator.initialize()
 
             results["connectivity_test"] = True
-            results["openai_client_available"] = rag_generator._llm_client is not None
+            results["openai_client_available"] = rag_generator.llm_client_available
 
             # Cleanup
             await rag_generator.cleanup()
@@ -290,14 +290,15 @@ def register_tools(app: FastMCP) -> None:
             rag_generator = RAGGenerator(config.rag)
             rag_generator.clear_cache()
 
-            return {
-                "status": "success",
-                "message": "RAG answer cache cleared successfully",
-            }
-
         except Exception as e:
             logger.exception("Failed to clear RAG cache")
             msg = "Failed to clear RAG cache"
             raise RuntimeError(msg) from e
+
+        else:
+            return {
+                "status": "success",
+                "message": "RAG answer cache cleared successfully",
+            }
 
     logger.info("RAG MCP tools registered successfully")
