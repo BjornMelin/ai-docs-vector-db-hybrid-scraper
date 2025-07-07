@@ -12,6 +12,12 @@ from src.mcp_tools.models.responses import SearchResult
 logger = logging.getLogger(__name__)
 
 
+def _raise_sparse_embeddings_not_available() -> None:
+    """Raise ValueError for sparse embeddings not available."""
+    msg = "Sparse embeddings not available for sparse search"
+    raise ValueError(msg)
+
+
 async def search_documents_core(
     request: SearchRequest, client_manager: ClientManager, ctx=None
 ) -> list[SearchResult]:
@@ -72,8 +78,7 @@ async def search_documents_core(
 
         # Use hybrid_search for all strategies
         if request.strategy == SearchStrategy.SPARSE and not sparse_vector:
-            msg = "Sparse embeddings not available for sparse search"
-            raise ValueError(msg)
+            _raise_sparse_embeddings_not_available()
 
         # For sparse-only search, pass empty dense vector
         query_vector = (
@@ -141,9 +146,10 @@ async def search_documents_core(
 
         if ctx:
             await ctx.info(f"Search completed: {len(search_results)} results found")
-        return search_results
 
     except Exception as e:
         if ctx:
             await ctx.error(f"Search failed: {e!s}")
         raise
+    else:
+        return search_results

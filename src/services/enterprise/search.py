@@ -7,13 +7,59 @@ and portfolio demonstrations.
 import asyncio
 import logging
 import time
-from typing import Any, Optional
+from typing import Any
 
 from src.architecture.service_factory import BaseService
-from src.models.vector_search import SearchRequest, SearchResponse
+from src.models.requests import SearchRequest
+from src.models.vector_search import SearchResponse
+
+
+# Optional imports for enterprise features
+try:
+    from src.services.analytics.search_analytics import SearchAnalyticsService
+    from src.services.embeddings.manager import EmbeddingManager
+    from src.services.monitoring.metrics import MetricsCollector
+    from src.services.query_processing.expansion import QueryExpansionService
+    from src.services.query_processing.ranking import RankingService
+    from src.services.search.personalization import PersonalizationService
+    from src.services.vector_db.hybrid_search import HybridSearchService
+    from src.services.vector_db.service import VectorDBService
+except ImportError:
+    VectorDBService = None
+    HybridSearchService = None
+    RankingService = None
+    QueryExpansionService = None
+    PersonalizationService = None
+    SearchAnalyticsService = None
+    MetricsCollector = None
+    EmbeddingManager = None
 
 
 logger = logging.getLogger(__name__)
+
+
+def _raise_hybrid_search_service_not_available() -> None:
+    """Raise ImportError for HybridSearchService not available."""
+    msg = "HybridSearchService not available"
+    raise ImportError(msg)
+
+
+def _raise_ranking_service_not_available() -> None:
+    """Raise ImportError for RankingService not available."""
+    msg = "RankingService not available"
+    raise ImportError(msg)
+
+
+def _raise_query_expansion_service_not_available() -> None:
+    """Raise ImportError for QueryExpansionService not available."""
+    msg = "QueryExpansionService not available"
+    raise ImportError(msg)
+
+
+def _raise_metrics_collector_not_available() -> None:
+    """Raise ImportError for MetricsCollector not available."""
+    msg = "MetricsCollector not available"
+    raise ImportError(msg)
 
 
 class EnterpriseSearchService(BaseService):
@@ -55,8 +101,8 @@ class EnterpriseSearchService(BaseService):
             self._mark_initialized()
             logger.info("Enterprise search service initialized successfully")
 
-        except Exception as e:
-            logger.exception(f"Failed to initialize enterprise search service: {e}")
+        except Exception:
+            logger.exception("Failed to initialize enterprise search service")
             raise
 
     async def cleanup(self) -> None:
@@ -92,9 +138,8 @@ class EnterpriseSearchService(BaseService):
         try:
             # Check cache first
             cache_key = self._generate_cache_key(request)
-            cached_result = await self._get_cached_result(cache_key)
-            if cached_result:
-                logger.debug(f"Cache hit for query: {request.query[:50]}...")
+            if cached_result := await self._get_cached_result(cache_key):
+                logger.debug("Cache hit for query: %s...", request.query[:50])
                 return cached_result
 
             # Perform query expansion if enabled
@@ -139,10 +184,8 @@ class EnterpriseSearchService(BaseService):
             # Record analytics
             await self._record_search_analytics(request, response)
 
-            return response
-
         except Exception as e:
-            logger.exception(f"Enterprise search failed: {e}")
+            logger.exception("Enterprise search failed")
             return SearchResponse(
                 query=request.query,
                 results=[],
@@ -151,6 +194,9 @@ class EnterpriseSearchService(BaseService):
                 processing_time_ms=(time.time() - start_time) * 1000,
                 error=str(e),
             )
+
+        else:
+            return response
 
     async def hybrid_search(
         self, request: SearchRequest, expanded_query: str | None = None
@@ -168,10 +214,10 @@ class EnterpriseSearchService(BaseService):
 
         # Handle exceptions
         if isinstance(vector_results, Exception):
-            logger.error(f"Vector search failed: {vector_results}")
+            logger.error("Vector search failed: %s", vector_results)
             vector_results = []
         if isinstance(keyword_results, Exception):
-            logger.error(f"Keyword search failed: {keyword_results}")
+            logger.error("Keyword search failed: %s", keyword_results)
             keyword_results = []
 
         # Fusion ranking (simplified)
@@ -190,12 +236,13 @@ class EnterpriseSearchService(BaseService):
                 return await self.query_expander.expand(query)
 
             # Fallback: simple synonym expansion (placeholder)
-            expanded = query  # Would implement actual expansion logic
-            return expanded
 
-        except Exception as e:
-            logger.exception(f"Query expansion failed: {e}")
+        except Exception:
+            logger.exception("Query expansion failed")
             return query
+
+        else:
+            return query  # Would implement actual expansion logic
 
     async def rerank_results(
         self, results: list[dict[str, Any]], query: str
@@ -212,13 +259,15 @@ class EnterpriseSearchService(BaseService):
             # Fallback: simple relevance-based reranking
             return sorted(results, key=lambda x: x.get("score", 0), reverse=True)
 
-        except Exception as e:
-            logger.exception(f"Reranking failed: {e}")
+        except Exception:
+            logger.exception("Reranking failed")
             return results
 
     async def _initialize_vector_search(self) -> None:
         """Initialize vector search components."""
-        from src.services.vector_db.service import VectorDBService
+        if VectorDBService is None:
+            logger.warning("VectorDBService not available")
+            return
 
         self.vector_db = VectorDBService()
         await self.vector_db.initialize()
@@ -227,7 +276,8 @@ class EnterpriseSearchService(BaseService):
         """Initialize hybrid search components."""
         if self.enable_hybrid_search:
             try:
-                from src.services.vector_db.hybrid_search import HybridSearchService
+                if HybridSearchService is None:
+                    _raise_hybrid_search_service_not_available()
 
                 self.hybrid_searcher = HybridSearchService()
                 await self.hybrid_searcher.initialize()
@@ -241,7 +291,8 @@ class EnterpriseSearchService(BaseService):
         """Initialize reranking components."""
         if self.enable_reranking:
             try:
-                from src.services.query_processing.ranking import RankingService
+                if RankingService is None:
+                    _raise_ranking_service_not_available()
 
                 self.reranker = RankingService()
                 await self.reranker.initialize()
@@ -253,9 +304,8 @@ class EnterpriseSearchService(BaseService):
         """Initialize query expansion components."""
         if self.enable_query_expansion:
             try:
-                from src.services.query_processing.expansion import (
-                    QueryExpansionService,
-                )
+                if QueryExpansionService is None:
+                    _raise_query_expansion_service_not_available()
 
                 self.query_expander = QueryExpansionService()
                 await self.query_expander.initialize()
@@ -267,7 +317,8 @@ class EnterpriseSearchService(BaseService):
         """Initialize analytics components."""
         if self.enable_analytics:
             try:
-                from src.services.monitoring.metrics import MetricsCollector
+                if MetricsCollector is None:
+                    _raise_metrics_collector_not_available()
 
                 self.metrics_collector = MetricsCollector()
                 await self.metrics_collector.initialize()
@@ -285,10 +336,13 @@ class EnterpriseSearchService(BaseService):
         self, request: SearchRequest, query: str
     ) -> list[dict[str, Any]]:
         """Perform vector search."""
-        from src.services.embeddings.manager import EmbeddingManager
+        if EmbeddingManager is None:
+            msg = "EmbeddingManager not available"
+            raise ImportError(msg)
 
         embedding_manager = EmbeddingManager()
-        query_embedding = await embedding_manager.generate_embedding(query)
+        embedding_result = await embedding_manager.generate_embeddings([query])
+        query_embedding = embedding_result["embeddings"][0]
 
         return await self.vector_db.search(
             query_vector=query_embedding,
@@ -297,7 +351,7 @@ class EnterpriseSearchService(BaseService):
         )
 
     async def _perform_keyword_search(
-        self, request: SearchRequest, query: str
+        self, _request: SearchRequest, _query: str
     ) -> list[dict[str, Any]]:
         """Perform keyword search (placeholder)."""
         # Would implement actual keyword search
@@ -316,15 +370,14 @@ class EnterpriseSearchService(BaseService):
         seen_ids = set()
         fused = []
         for result in combined:
-            result_id = result.get("id", "")
-            if result_id not in seen_ids:
+            if (result_id := result.get("id", "")) not in seen_ids:
                 seen_ids.add(result_id)
                 fused.append(result)
 
         return fused
 
     async def _apply_personalization(
-        self, results: list[dict[str, Any]], user_id: str
+        self, results: list[dict[str, Any]], _user_id: str
     ) -> list[dict[str, Any]]:
         """Apply personalization to search results."""
         # Placeholder personalization logic

@@ -5,8 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from qdrant_client import AsyncQdrantClient, models
 
-from src.config import Config
-from src.config.enums import SearchAccuracy, VectorType
+from src.config import Config, SearchAccuracy, VectorType
 from src.models.vector_search import PrefetchConfig
 from src.services.errors import QdrantServiceError
 from src.services.vector_db.search import QdrantSearch
@@ -55,6 +54,7 @@ class TestQdrantSearch:
         result.points = points
         return result
 
+    @pytest.mark.asyncio
     async def test_hybrid_search_success(
         self,
         search_service,
@@ -82,6 +82,7 @@ class TestQdrantSearch:
         assert result[0]["payload"]["title"] == "Document 1"
         mock_client.query_points.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_hybrid_search_dense_only(
         self, search_service, mock_client, sample_query_vector, mock_search_results
     ):
@@ -102,6 +103,7 @@ class TestQdrantSearch:
             "prefetch" not in call_args._kwargs or call_args._kwargs["prefetch"] is None
         )
 
+    @pytest.mark.asyncio
     async def test_hybrid_search_fusion_dbsf(
         self,
         search_service,
@@ -124,6 +126,7 @@ class TestQdrantSearch:
         # Should use DBSF fusion
         assert call_args._kwargs["query"].fusion == models.Fusion.DBSF
 
+    @pytest.mark.asyncio
     async def test_hybrid_search_accuracy_levels(
         self, search_service, mock_client, sample_query_vector, mock_search_results
     ):
@@ -141,6 +144,7 @@ class TestQdrantSearch:
 
         assert mock_client.query_points.call_count == len(accuracy_levels)
 
+    @pytest.mark.asyncio
     async def test_hybrid_search_collection_not_found(
         self, search_service, mock_client, sample_query_vector
     ):
@@ -154,6 +158,7 @@ class TestQdrantSearch:
                 collection_name="test_collection", query_vector=sample_query_vector
             )
 
+    @pytest.mark.asyncio
     async def test_hybrid_search_wrong_vector_size(
         self, search_service, mock_client, sample_query_vector
     ):
@@ -165,6 +170,7 @@ class TestQdrantSearch:
                 collection_name="test_collection", query_vector=sample_query_vector
             )
 
+    @pytest.mark.asyncio
     async def test_hybrid_search_timeout(
         self, search_service, mock_client, sample_query_vector
     ):
@@ -176,6 +182,7 @@ class TestQdrantSearch:
                 collection_name="test_collection", query_vector=sample_query_vector
             )
 
+    @pytest.mark.asyncio
     async def test_hybrid_search_generic_error(
         self, search_service, mock_client, sample_query_vector
     ):
@@ -187,6 +194,7 @@ class TestQdrantSearch:
                 collection_name="test_collection", query_vector=sample_query_vector
             )
 
+    @pytest.mark.asyncio
     async def test_multi_stage_search_success(
         self, search_service, mock_client, mock_search_results
     ):
@@ -221,6 +229,7 @@ class TestQdrantSearch:
         assert result[0]["id"] == "point1"
         mock_client.query_points.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_multi_stage_search_empty_stages(self, search_service, _mock_client):
         """Test multi-stage search with empty stages."""
         with pytest.raises(ValueError, match="Stages list cannot be empty"):
@@ -228,6 +237,7 @@ class TestQdrantSearch:
                 collection_name="test_collection", stages=[], limit=10
             )
 
+    @pytest.mark.asyncio
     async def test_multi_stage_search_invalid_stages(
         self, search_service, _mock_client
     ):
@@ -252,6 +262,7 @@ class TestQdrantSearch:
                 limit=10,
             )
 
+    @pytest.mark.asyncio
     async def test_multi_stage_search_missing_vector_name(
         self, search_service, _mock_client
     ):
@@ -263,6 +274,7 @@ class TestQdrantSearch:
                 collection_name="test_collection", stages=stages, limit=10
             )
 
+    @pytest.mark.asyncio
     async def test_multi_stage_search_missing_limit(self, search_service, _mock_client):
         """Test multi-stage search with missing limit."""
         stages = [{"query_vector": [0.1, 0.2], "vector_name": "dense"}]
@@ -272,6 +284,7 @@ class TestQdrantSearch:
                 collection_name="test_collection", stages=stages, limit=10
             )
 
+    @pytest.mark.asyncio
     async def test_multi_stage_search_error(self, search_service, mock_client):
         """Test multi-stage search with error."""
         mock_client.query_points.side_effect = Exception("Search failed")
@@ -283,6 +296,7 @@ class TestQdrantSearch:
                 collection_name="test_collection", stages=stages, limit=10
             )
 
+    @pytest.mark.asyncio
     async def test_hyde_search_success(
         self, search_service, mock_client, mock_search_results
     ):
@@ -305,6 +319,7 @@ class TestQdrantSearch:
         assert result[0]["id"] == "point1"
         mock_client.query_points.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_hyde_search_error(self, search_service, mock_client):
         """Test HyDE search with error."""
         mock_client.query_points.side_effect = Exception("HyDE search failed")
@@ -317,6 +332,7 @@ class TestQdrantSearch:
                 hypothetical_embeddings=[[0.2, 0.3]],
             )
 
+    @pytest.mark.asyncio
     async def test_filtered_search_success(
         self, search_service, mock_client, mock_search_results
     ):
@@ -336,6 +352,7 @@ class TestQdrantSearch:
         assert len(result) == 3
         assert result[0]["id"] == "point1"
 
+    @pytest.mark.asyncio
     async def test_filtered_search_invalid_vector(self, search_service, _mock_client):
         """Test filtered search with invalid query vector."""
         # Test non-list vector
@@ -360,6 +377,7 @@ class TestQdrantSearch:
                 filters={},
             )
 
+    @pytest.mark.asyncio
     async def test_filtered_search_invalid_filters(self, search_service, _mock_client):
         """Test filtered search with invalid filters."""
         query_vector = [0.1] * 1536
@@ -371,6 +389,7 @@ class TestQdrantSearch:
                 filters="invalid",
             )
 
+    @pytest.mark.asyncio
     async def test_filtered_search_error(self, search_service, mock_client):
         """Test filtered search with error."""
         mock_client.query_points.side_effect = Exception("Search failed")
@@ -382,6 +401,7 @@ class TestQdrantSearch:
                 collection_name="test_collection", query_vector=query_vector, filters={}
             )
 
+    @pytest.mark.asyncio
     async def test_calculate_prefetch_limit(self, search_service):
         """Test prefetch limit calculation."""
         # Test with mocked prefetch config
@@ -395,6 +415,7 @@ class TestQdrantSearch:
             VectorType.DENSE, 10
         )
 
+    @pytest.mark.asyncio
     async def test_get_search_params(self, search_service):
         """Test search parameter generation."""
         # Test different accuracy levels
@@ -413,6 +434,7 @@ class TestQdrantSearch:
         params_exact = search_service._get_search_params(SearchAccuracy.EXACT)
         assert params_exact.exact is True
 
+    @pytest.mark.asyncio
     async def test_initialization_and_config(
         self, search_service, mock_client, mock_config
     ):
@@ -421,6 +443,7 @@ class TestQdrantSearch:
         assert search_service.config is mock_config
         assert isinstance(search_service.prefetch_config, PrefetchConfig)
 
+    @pytest.mark.asyncio
     async def test_hyde_search_vector_averaging(
         self, search_service, mock_client, mock_search_results
     ):
@@ -444,6 +467,7 @@ class TestQdrantSearch:
         # Should have two prefetch queries (HyDE + original)
         assert len(prefetch_queries) == 2
 
+    @pytest.mark.asyncio
     async def test_search_accuracy_enum_handling(
         self, search_service, mock_client, sample_query_vector, mock_search_results
     ):
@@ -461,6 +485,7 @@ class TestQdrantSearch:
         params = call_args._kwargs.get("params")
         assert params.hnsw_ef == 50  # Should match FAST accuracy
 
+    @pytest.mark.asyncio
     async def test_vector_type_enum_handling(
         self, search_service, mock_client, mock_search_results
     ):
@@ -482,6 +507,7 @@ class TestQdrantSearch:
 
         # Should complete without error, validating enum conversion works
 
+    @pytest.mark.asyncio
     async def test_result_formatting_consistency(
         self, search_service, mock_client, sample_query_vector
     ):

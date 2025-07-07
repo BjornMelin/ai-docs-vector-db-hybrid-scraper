@@ -225,7 +225,7 @@ class QueryPreprocessor:
         normalized = re.sub(r"\s+", " ", normalized)
 
         # Normalize quotation marks
-        normalized = re.sub(r'[""' ",„]", '"', normalized)
+        normalized = re.sub(r"[\u201c\u201d\u2018\u2019\u201e]", '"', normalized)
 
         # Normalize hyphens and dashes
         normalized = re.sub(r"[-—]", "-", normalized)

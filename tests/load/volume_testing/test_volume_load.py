@@ -11,13 +11,19 @@ import time
 
 import pytest
 
-from ..base_load_test import create_load_test_runner
-from ..conftest import LoadTestConfig, LoadTestType
-from ..load_profiles import SteadyLoadProfile
+from tests.load.base_load_test import create_load_test_runner
+from tests.load.conftest import LoadTestConfig, LoadTestType
+from tests.load.load_profiles import SteadyLoadProfile
 
 
 class TestError(Exception):
     """Custom exception for this module."""
+
+
+def _raise_processing_error(doc_url: str) -> None:
+    """Raise a processing error for the given document URL."""
+    error_msg = f"Processing failed for {doc_url}"
+    raise TestError(error_msg)
 
 
 logger = logging.getLogger(__name__)
@@ -103,7 +109,8 @@ class TestVolumeLoad:
         )
 
     @pytest.mark.volume
-    def test_bulk_embedding_generation(self, load_test_runner, _mock_load_test_service):
+    @pytest.mark.usefixtures("_mock_load_test_service")
+    def test_bulk_embedding_generation(self, load_test_runner):
         """Test bulk embedding generation for large text batches."""
 
         # Simulate bulk embedding service
@@ -397,8 +404,7 @@ class TestVolumeLoad:
 
                         # Simulate potential failures
                         if random.random() < 0.01:  # 1% failure rate
-                            error_msg = f"Processing failed for {doc['url']}"
-                            raise TestError(error_msg)
+                            _raise_processing_error(doc["url"])
 
                         processed_doc = {
                             "id": f"doc_{len(processed_docs)}",
@@ -411,7 +417,7 @@ class TestVolumeLoad:
                         }
                         processed_docs.append(processed_doc)
 
-                    except Exception as e:
+                    except TestError as e:
                         failed_doc = {"url": doc["url"], "error": str(e)}
                         failed_docs.append(failed_doc)
                         self.failed_documents.append(failed_doc)

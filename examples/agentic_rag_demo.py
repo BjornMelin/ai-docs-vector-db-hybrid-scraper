@@ -8,16 +8,16 @@ multi-agent coordination.
 
 import asyncio
 import logging
-from typing import Any, Dict
+from collections import Counter
 from uuid import uuid4
 
-from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
 from src.services.agents import (
     QueryOrchestrator,
     ToolCompositionEngine,
     create_agent_dependencies,
 )
+from src.services.agents.tool_composition import ToolCategory
 
 
 # Configure logging
@@ -54,13 +54,21 @@ async def demo_query_orchestration():
                 "description": "Simple factual query",
             },
             {
-                "query": "How do I implement a scalable RAG system with multiple embedding models?",
+                "query": (
+                    "How do I implement a scalable RAG system with multiple "
+                    "embedding models?"
+                ),
                 "collection": "documentation",
                 "expected_complexity": "complex",
-                "description": "Complex technical query requiring multi-step processing",
+                "description": (
+                    "Complex technical query requiring multi-step processing"
+                ),
             },
             {
-                "query": "Compare the performance of different search strategies for code documentation",
+                "query": (
+                    "Compare the performance of different search strategies for "
+                    "code documentation"
+                ),
                 "collection": "documentation",
                 "expected_complexity": "moderate",
                 "description": "Analytical query requiring comparison",
@@ -87,9 +95,10 @@ async def demo_query_orchestration():
                 if "result" in result:
                     result_data = result["result"]
                     print(f"Analysis: {result_data.get('analysis', {})}")
-                    print(
-                        f"Plan: {result_data.get('orchestration_plan', 'No plan available')}"
+                    orchestration_plan = result_data.get(
+                        "orchestration_plan", "No plan available"
                     )
+                    print(f"Plan: {orchestration_plan}")
             else:
                 print(f"Error: {result.get('error')}")
 
@@ -97,7 +106,7 @@ async def demo_query_orchestration():
         await client_manager.cleanup()
 
     except Exception as e:
-        logger.error(f"Query orchestration demo failed: {e}")
+        logger.exception("Query orchestration demo failed")
         print(f"Demo failed: {e}")
 
 
@@ -116,13 +125,11 @@ async def demo_tool_composition():
         engine = ToolCompositionEngine(client_manager)
         await engine.initialize()
 
-        print(
-            f"Initialized tool composition engine with {len(engine.tool_registry)} tools"
-        )
+        tool_count = len(engine.tool_registry)
+        print(f"Initialized tool composition engine with {tool_count} tools")
 
         # Demonstrate tool discovery
         print("\n--- Available Tools by Category ---")
-        from src.services.agents.tool_composition import ToolCategory
 
         for category in ToolCategory:
             tools = engine.list_tools_by_category(category)
@@ -165,9 +172,11 @@ async def demo_tool_composition():
 
             print(f"Composed chain with {len(tool_chain)} steps:")
             for j, step in enumerate(tool_chain):
-                print(
-                    f"  {j + 1}. {step.tool_name} (parallel: {step.parallel}, optional: {step.optional})"
+                step_info = (
+                    f"  {j + 1}. {step.tool_name} "
+                    f"(parallel: {step.parallel}, optional: {step.optional})"
                 )
+                print(step_info)
 
             # Execute tool chain with mock data
             input_data = {
@@ -183,9 +192,11 @@ async def demo_tool_composition():
             if result["success"]:
                 metadata = result["metadata"]
                 print(f"Total time: {metadata['total_execution_time_ms']:.1f}ms")
-                print(
-                    f"Steps executed: {metadata['steps_executed']}/{metadata['chain_length']}"
+                steps_info = (
+                    f"Steps executed: {metadata['steps_executed']}/"
+                    f"{metadata['chain_length']}"
                 )
+                print(steps_info)
             else:
                 print(f"Execution error: {result.get('error')}")
 
@@ -203,7 +214,7 @@ async def demo_tool_composition():
         await client_manager.cleanup()
 
     except Exception as e:
-        logger.error(f"Tool composition demo failed: {e}")
+        logger.exception("Tool composition demo failed")
         print(f"Demo failed: {e}")
 
 
@@ -255,12 +266,11 @@ async def demo_agent_learning():
                 print("✓ Query processed successfully")
 
                 # Show session state evolution
-                print(
-                    f"  Conversation history length: {len(deps.session_state.conversation_history)}"
-                )
-                print(
-                    f"  Performance metrics count: {len(deps.session_state.performance_metrics)}"
-                )
+                history_count = len(deps.session_state.conversation_history)
+                print(f"  Conversation history length: {history_count}")
+
+                metrics_count = len(deps.session_state.performance_metrics)
+                print(f"  Performance metrics count: {metrics_count}")
                 print(f"  Tool usage stats: {deps.session_state.tool_usage_stats}")
             else:
                 print(f"✗ Query failed: {result.get('error')}")
@@ -293,7 +303,7 @@ async def demo_agent_learning():
         await client_manager.cleanup()
 
     except Exception as e:
-        logger.error(f"Agent learning demo failed: {e}")
+        logger.exception("Agent learning demo failed")
         print(f"Demo failed: {e}")
 
 
@@ -402,8 +412,6 @@ async def demo_performance_optimization():
         for result in performance_results:
             all_tools.extend(result["tools_used"])
 
-        from collections import Counter
-
         tool_usage = Counter(all_tools)
         print("\nTool usage patterns:")
         for tool, count in tool_usage.most_common():
@@ -413,7 +421,7 @@ async def demo_performance_optimization():
         await client_manager.cleanup()
 
     except Exception as e:
-        logger.error(f"Performance optimization demo failed: {e}")
+        logger.exception("Performance optimization demo failed")
         print(f"Demo failed: {e}")
 
 
@@ -425,8 +433,7 @@ async def main():
     try:
         # Check if Pydantic-AI is available
         try:
-            import pydantic_ai
-
+            # Import check - pydantic_ai already imported at top
             print("✓ Pydantic-AI available - running full demonstrations")
             full_demo = True
         except ImportError:
@@ -452,7 +459,7 @@ async def main():
     except KeyboardInterrupt:
         print("\nDemo interrupted by user")
     except Exception as e:
-        logger.error(f"Demo failed: {e}")
+        logger.exception("Demo failed")
         print(f"\nDemo failed with error: {e}")
 
 

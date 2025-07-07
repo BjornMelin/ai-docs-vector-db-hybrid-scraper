@@ -220,7 +220,7 @@ def create_mock_vector_db(
     return mock_db
 
 
-def create__mock_embedding_service(
+def create_mock_embedding_service(
     model_name: str = "test-model", dimension: int = 384, processing_delay: float = 0.1
 ) -> AsyncMock:
     """Create a mock embedding service.
@@ -318,7 +318,7 @@ def create_mock_web_scraper(
             try:
                 result = await mock_scrape_url(url, **_kwargs)
                 results.append(result)
-            except Exception as e:
+            except (TimeoutError, CustomError, ValueError) as e:
                 results.append({"url": url, "error": str(e), "success": False})
         return results
 

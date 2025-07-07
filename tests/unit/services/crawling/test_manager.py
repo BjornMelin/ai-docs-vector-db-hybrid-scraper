@@ -1,7 +1,3 @@
-class TestError(Exception):
-    """Custom exception for this module."""
-
-
 """Tests for crawling manager module."""
 
 from typing import Any
@@ -13,6 +9,10 @@ from src.config import Config
 from src.services.crawling.base import CrawlProvider
 from src.services.crawling.manager import CrawlManager
 from src.services.errors import CrawlServiceError
+
+
+class TestError(Exception):
+    """Custom exception for this module."""
 
 
 class MockCrawlProvider(CrawlProvider):

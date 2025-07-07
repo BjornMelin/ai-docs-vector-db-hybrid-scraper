@@ -187,9 +187,7 @@ class SecurityValidator:
             raise SecurityError(msg)
 
         # Remove potentially dangerous characters
-        query = re.sub(r'[<>"\']', "", query)
-
-        return query
+        return re.sub(r'[<>"\']', "", query)
 
     def sanitize_filename(self, filename: str) -> str:
         """Sanitize filename for safe file operations.

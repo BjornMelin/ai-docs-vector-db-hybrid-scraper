@@ -22,6 +22,7 @@ class TestError(Exception):
 class TestBreakingPointAnalysis:
     """Identify system breaking points under various stress conditions."""
 
+    @pytest.mark.asyncio
     async def test_throughput_breaking_point(
         self, load_test_runner, mock_load_test_service
     ):
@@ -62,7 +63,7 @@ class TestBreakingPointAnalysis:
                     # Calculate key metrics
                     success_rate = (
                         result.metrics.successful_requests
-                        / max(result.metrics._total_requests, 1)
+                        / max(result.metrics.total_requests, 1)
                     ) * 100
                     actual_rps = result.metrics.throughput_rps
                     avg_response_time = (
@@ -78,7 +79,7 @@ class TestBreakingPointAnalysis:
                         "users": users,
                         "success_rate": success_rate,
                         "avg_response_time_ms": avg_response_time * 1000,
-                        "_total_requests": result.metrics._total_requests,
+                        "_total_requests": result.metrics.total_requests,
                         "successful_requests": result.metrics.successful_requests,
                         "failed_requests": result.metrics.failed_requests,
                         "system_stable": success_rate >= 80.0
@@ -90,7 +91,8 @@ class TestBreakingPointAnalysis:
                     # Early break if system is clearly broken
                     if success_rate < 50.0:
                         print(
-                            f"System breaking detected at {target_rps} RPS (success rate: {success_rate:.1f}%)"
+                            f"System breaking detected at {target_rps} RPS "
+                            f"(success rate: {success_rate:.1f}%)"
                         )
                         break
 
@@ -126,7 +128,8 @@ class TestBreakingPointAnalysis:
         if analysis["breaking_point"]:
             bp = analysis["breaking_point"]
             print(
-                f"Breaking point: {bp['target_rps']} RPS target ({bp['actual_rps']:.2f} actual)"
+                f"Breaking point: {bp['target_rps']} RPS target "
+                f"({bp['actual_rps']:.2f} actual)"
             )
             print(f"  Success rate: {bp['success_rate']:.1f}%")
             print(f"  Avg response time: {bp['avg_response_time_ms']:.1f}ms")
@@ -134,6 +137,7 @@ class TestBreakingPointAnalysis:
         # Validate that we found meaningful results
         assert analysis["max_stable_rps"] > 0, "No stable throughput level found"
 
+    @pytest.mark.asyncio
     async def test_concurrent_users_breaking_point(
         self, load_test_runner, mock_load_test_service
     ):
@@ -171,7 +175,7 @@ class TestBreakingPointAnalysis:
 
                     success_rate = (
                         result.metrics.successful_requests
-                        / max(result.metrics._total_requests, 1)
+                        / max(result.metrics.total_requests, 1)
                     ) * 100
                     avg_response_time = (
                         sum(result.metrics.response_times)
@@ -197,7 +201,7 @@ class TestBreakingPointAnalysis:
                         "avg_response_time_ms": avg_response_time * 1000,
                         "p95_response_time_ms": p95_response_time * 1000,
                         "p99_response_time_ms": p99_response_time * 1000,
-                        "_total_requests": result.metrics._total_requests,
+                        "_total_requests": result.metrics.total_requests,
                         "peak_concurrent": result.metrics.peak_concurrent_users,
                         "system_stable": success_rate >= 75.0
                         and avg_response_time < 3.0,
@@ -208,14 +212,16 @@ class TestBreakingPointAnalysis:
                     # Stop if system is completely broken
                     if success_rate < 30.0:
                         print(
-                            f"System failure at {target_users} users (success rate: {success_rate:.1f}%)"
+                            f"System failure at {target_users} users "
+                            f"(success rate: {success_rate:.1f}%)"
                         )
                         break
 
                     # Stop if response times are extremely high
                     if avg_response_time > 10.0:  # 10 second average
                         print(
-                            f"Unacceptable response times at {target_users} users ({avg_response_time:.2f}s avg)"
+                            f"Unacceptable response times at {target_users} users "
+                            f"({avg_response_time:.2f}s avg)"
                         )
                         break
 
@@ -261,9 +267,12 @@ class TestBreakingPointAnalysis:
         for result in analysis["all_results"]:
             stability = "✓ STABLE" if result["system_stable"] else "✗ UNSTABLE"
             print(
-                f"  {result['concurrent_users']:3d} users: {result['success_rate']:5.1f}% success, {result['avg_response_time_ms']:6.1f}ms avg - {stability}"
+                f"  {result['concurrent_users']:3d} users: "
+                f"{result['success_rate']:5.1f}% success, "
+                f"{result['avg_response_time_ms']:6.1f}ms avg - {stability}"
             )
 
+    @pytest.mark.asyncio
     async def test_response_time_degradation_point(
         self, load_test_runner, mock_load_test_service
     ):
@@ -301,7 +310,8 @@ class TestBreakingPointAnalysis:
                     )
 
                     print(
-                        f"Testing {load_level['name']}: {load_level['users']} users, {load_level['rps']} RPS"
+                        f"Testing {load_level['name']}: {load_level['users']} users, "
+                        f"{load_level['rps']} RPS"
                     )
 
                     result = await load_test_runner.run_load_test(
@@ -341,7 +351,7 @@ class TestBreakingPointAnalysis:
 
                     success_rate = (
                         result.metrics.successful_requests
-                        / max(result.metrics._total_requests, 1)
+                        / max(result.metrics.total_requests, 1)
                     ) * 100
 
                     # Set baseline for comparison
@@ -368,7 +378,7 @@ class TestBreakingPointAnalysis:
                         "response_time_cv": cv,
                         "degradation_factor": degradation_factor,
                         "success_rate": success_rate,
-                        "_total_requests": result.metrics._total_requests,
+                        "_total_requests": result.metrics.total_requests,
                         "acceptable_performance": avg_response_time < 2.0
                         and success_rate >= 90.0,
                     }
@@ -442,6 +452,7 @@ class TestBreakingPointAnalysis:
                 f"p95={result['p95_response_time_ms']:6.1f}ms, degradation={result['degradation_factor']:4.1f}x - {performance}"
             )
 
+    @pytest.mark.asyncio
     async def test_error_cascade_breaking_point(
         self, load_test_runner, mock_load_test_service
     ):
@@ -512,18 +523,18 @@ class TestBreakingPointAnalysis:
                     final_cascade = self.error_cascade_level
                     success_rate = (
                         result.metrics.successful_requests
-                        / max(result.metrics._total_requests, 1)
+                        / max(result.metrics.total_requests, 1)
                     ) * 100
                     error_rate = (
                         result.metrics.failed_requests
-                        / max(result.metrics._total_requests, 1)
+                        / max(result.metrics.total_requests, 1)
                     ) * 100
 
                     cascade_result = {
                         "level": level["name"],
                         "users": level["users"],
                         "rps": level["rps"],
-                        "_total_requests": result.metrics._total_requests,
+                        "_total_requests": result.metrics.total_requests,
                         "success_rate": success_rate,
                         "error_rate": error_rate,
                         "initial_cascade_level": initial_cascade,

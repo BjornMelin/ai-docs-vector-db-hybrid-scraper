@@ -68,6 +68,7 @@ class TestFilteringTools:
         )
         return orchestrator
 
+    @pytest.mark.asyncio
     async def test_temporal_filter_tool(self, mock_context, mock_orchestrator):
         """Test temporal filter tool."""
         request = TemporalFilterRequest(
@@ -87,6 +88,7 @@ class TestFilteringTools:
         assert results[0].id == "doc1"
         mock_orchestrator.search.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_content_type_filter_tool(self, mock_context, mock_orchestrator):
         """Test content type filter tool."""
         request = ContentTypeFilterRequest(
@@ -106,6 +108,7 @@ class TestFilteringTools:
         assert len(results) == 1
         mock_orchestrator.search.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_metadata_filter_tool(self, mock_context, mock_orchestrator):
         """Test metadata filter tool."""
         request = MetadataFilterRequest(
@@ -124,6 +127,7 @@ class TestFilteringTools:
         assert len(results) == 1
         mock_orchestrator.search.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_similarity_filter_tool(self, mock_context, mock_orchestrator):
         """Test similarity filter tool."""
         request = SimilarityFilterRequest(
@@ -143,6 +147,7 @@ class TestFilteringTools:
         assert len(results) == 1
         mock_orchestrator.search.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_composite_filter_tool(self, mock_context, mock_orchestrator):
         """Test composite filter tool."""
         request = CompositeFilterRequest(
@@ -173,6 +178,7 @@ class TestFilteringTools:
         assert len(results) == 1
         mock_orchestrator.search.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_create_orchestrator(self):
         """Test orchestrator creation."""
         orchestrator = create_orchestrator()
@@ -180,6 +186,7 @@ class TestFilteringTools:
         assert orchestrator is not None
         assert orchestrator.enable_performance_optimization is True
 
+    @pytest.mark.asyncio
     async def test_temporal_filter_error_handling(self, mock_context):
         """Test error handling in temporal filter."""
         # Create an orchestrator that will fail
@@ -195,6 +202,7 @@ class TestFilteringTools:
         with pytest.raises(Exception, match="Search failed"):
             await temporal_filter_tool(request, mock_context, orchestrator)
 
+    @pytest.mark.asyncio
     async def test_content_type_filter_with_empty_types(
         self, mock_context, mock_orchestrator
     ):
@@ -213,6 +221,7 @@ class TestFilteringTools:
         assert isinstance(results, list)
         mock_orchestrator.search.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_metadata_filter_or_operator(self, mock_context, mock_orchestrator):
         """Test metadata filter with OR operator."""
         request = MetadataFilterRequest(
@@ -228,6 +237,7 @@ class TestFilteringTools:
         assert isinstance(results, list)
         mock_orchestrator.search.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_similarity_filter_with_adaptive_threshold(
         self, mock_context, mock_orchestrator
     ):
@@ -246,6 +256,7 @@ class TestFilteringTools:
         assert isinstance(results, list)
         mock_orchestrator.search.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_composite_filter_or_operator(self, mock_context, mock_orchestrator):
         """Test composite filter with OR operator."""
         request = CompositeFilterRequest(
@@ -262,6 +273,7 @@ class TestFilteringTools:
         assert isinstance(results, list)
         mock_orchestrator.search.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_composite_filter_minimal_config(
         self, mock_context, mock_orchestrator
     ):
@@ -278,6 +290,7 @@ class TestFilteringTools:
         assert isinstance(results, list)
         mock_orchestrator.search.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_filter_request_validation(self):
         """Test filter request model validation."""
         # Test valid temporal filter request
@@ -297,6 +310,7 @@ class TestFilteringTools:
                 limit=0,  # Should be >= 1
             )
 
+    @pytest.mark.asyncio
     async def test_search_result_conversion(self, mock_context, mock_orchestrator):
         """Test conversion from AdvancedSearchResult to SearchResult list."""
         # Configure mock to return specific results
@@ -338,6 +352,7 @@ class TestFilteringTools:
         assert results[1].id == "doc2"
         assert results[1].score == 0.85
 
+    @pytest.mark.asyncio
     async def test_temporal_filter_error_with_exception(self):
         """Test temporal filter error handling with exception."""
         mock_context = MockContext()
@@ -354,6 +369,7 @@ class TestFilteringTools:
         with pytest.raises(Exception, match="Search failed"):
             await temporal_filter_tool(request, mock_context, error_orchestrator)
 
+    @pytest.mark.asyncio
     async def test_content_type_filter_error_with_exception(self):
         """Test content type filter error handling with exception."""
         mock_context = MockContext()
@@ -370,6 +386,7 @@ class TestFilteringTools:
         with pytest.raises(Exception, match="Search failed"):
             await content_type_filter_tool(request, mock_context, error_orchestrator)
 
+    @pytest.mark.asyncio
     async def test_metadata_filter_error_with_exception(self):
         """Test metadata filter error handling with exception."""
         mock_context = MockContext()
@@ -386,6 +403,7 @@ class TestFilteringTools:
         with pytest.raises(Exception, match="Search failed"):
             await metadata_filter_tool(request, mock_context, error_orchestrator)
 
+    @pytest.mark.asyncio
     async def test_similarity_filter_error_with_exception(self):
         """Test similarity filter error handling with exception."""
         mock_context = MockContext()
@@ -402,6 +420,7 @@ class TestFilteringTools:
         with pytest.raises(Exception, match="Search failed"):
             await similarity_filter_tool(request, mock_context, error_orchestrator)
 
+    @pytest.mark.asyncio
     async def test_composite_filter_error_with_exception(self):
         """Test composite filter error handling with exception."""
         mock_context = MockContext()

@@ -139,7 +139,7 @@ class TestQueryProcessingRegistration:
 
 
 class TestAdvancedQueryProcessingTool:
-    """Test the advanced query processing tool."""
+    """Test the  query processing tool."""
 
     @pytest.fixture(autouse=True)
     def setup_mocks(self, mock_mcp, mock_client_manager):
@@ -226,6 +226,7 @@ class TestAdvancedQueryProcessingTool:
         self.mock_pipeline.process_advanced = AsyncMock(return_value=self.mock_response)
         self.mock_pipeline.initialize = AsyncMock()
 
+    @pytest.mark.asyncio
     async def test_successful_query_processing(
         self, sample_query_request, mock_context
     ):
@@ -291,6 +292,7 @@ class TestAdvancedQueryProcessingTool:
                 "completed successfully" in msg for msg in mock_context.logs["info"]
             )
 
+    @pytest.mark.asyncio
     async def test_force_strategy_and_dimension(self, mock_context):
         """Test force strategy and dimension options."""
         request = AdvancedQueryProcessingRequest(
@@ -328,6 +330,7 @@ class TestAdvancedQueryProcessingTool:
             assert call_args.force_strategy == SearchStrategy.SEMANTIC
             assert call_args.force_dimension == MatryoshkaDimension.LARGE
 
+    @pytest.mark.asyncio
     async def test_invalid_force_options(self, mock_context):
         """Test handling of invalid force options."""
         request = AdvancedQueryProcessingRequest(
@@ -373,6 +376,7 @@ class TestAdvancedQueryProcessingTool:
             assert call_args.force_strategy is None
             assert call_args.force_dimension is None
 
+    @pytest.mark.asyncio
     async def test_error_handling(self, sample_query_request, mock_context):
         """Test error handling in query processing."""
         with (
@@ -468,6 +472,7 @@ class TestQueryAnalysisTool:
         self.mock_pipeline.analyze_query = AsyncMock(return_value=self.mock_analysis)
         self.mock_pipeline.initialize = AsyncMock()
 
+    @pytest.mark.asyncio
     async def test_successful_query_analysis(
         self, sample_analysis_request, mock_context
     ):
@@ -546,6 +551,7 @@ class TestPipelineHealthTool:
         )
         self.mock_pipeline.initialize = AsyncMock()
 
+    @pytest.mark.asyncio
     async def test_successful_health_check(self, mock_context):
         """Test successful health check."""
         with patch(
@@ -572,6 +578,7 @@ class TestPipelineHealthTool:
             )
             assert any("status=healthy" in msg for msg in mock_context.logs["info"])
 
+    @pytest.mark.asyncio
     async def test_health_check_error(self, mock_context):
         """Test health check error handling."""
         with patch(
@@ -624,6 +631,7 @@ class TestPipelineMetricsTool:
         )
         self.mock_pipeline.initialize = AsyncMock()
 
+    @pytest.mark.asyncio
     async def test_successful_metrics_collection(self, mock_context):
         """Test successful metrics collection."""
         with patch(
@@ -667,6 +675,7 @@ class TestPipelineWarmupTool:
         self.mock_pipeline.warm_up = AsyncMock()
         self.mock_pipeline.initialize = AsyncMock()
 
+    @pytest.mark.asyncio
     async def test_successful_warmup(self, mock_context):
         """Test successful pipeline warm-up."""
         with patch(
@@ -696,6 +705,7 @@ class TestPipelineWarmupTool:
                 "completed successfully" in msg for msg in mock_context.logs["info"]
             )
 
+    @pytest.mark.asyncio
     async def test_warmup_with_issues(self, mock_context):
         """Test warm-up with issues."""
         with patch(

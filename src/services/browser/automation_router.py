@@ -100,14 +100,12 @@ class AutomationRouter(BaseService):
                 with config_file.open() as f:
                     config = json.load(f)
                     routing_rules = config.get("routing_rules", {})
-                    logger.info(
-                        f"Loaded routing rules from {config_file}"
-                    )  # TODO: Convert f-string to logging format
+                    logger.info("Loaded routing rules from %s", config_file)
                     return routing_rules
             else:
                 logger.warning("Routing rules file not found")
 
-        except Exception:
+        except (AttributeError, FileNotFoundError, OSError):
             logger.exception("Failed to load routing rules")
 
         # Fallback to default rules if loading fails
@@ -154,7 +152,7 @@ class AutomationRouter(BaseService):
             self._adapters["lightweight"] = adapter
             self.logger.info("Initialized Lightweight HTTP adapter")
 
-        except Exception:
+        except (AttributeError, ConnectionError, ImportError, RuntimeError):
             self.logger.warning("Failed to initialize Lightweight adapter")
 
         # Initialize Tier 1: Crawl4AI Basic
@@ -164,7 +162,7 @@ class AutomationRouter(BaseService):
             self._adapters["crawl4ai"] = adapter
             self.logger.info("Initialized Crawl4AI adapter")
 
-        except Exception:
+        except (AttributeError, ImportError, RuntimeError, ValueError):
             self.logger.warning("Failed to initialize Crawl4AI adapter")
 
         # Initialize Tier 2: BrowserUse (Enhanced)
@@ -174,7 +172,7 @@ class AutomationRouter(BaseService):
             self._adapters["browser_use"] = adapter
             self.logger.info("Initialized BrowserUse adapter")
 
-        except Exception:
+        except (AttributeError, ImportError, RuntimeError, ValueError):
             self.logger.warning("Failed to initialize BrowserUse adapter")
 
         # Initialize Tier 3: Playwright
@@ -184,7 +182,7 @@ class AutomationRouter(BaseService):
             self._adapters["playwright"] = adapter
             self.logger.info("Initialized Playwright adapter")
 
-        except Exception:
+        except (AttributeError, ImportError, ModuleNotFoundError, RuntimeError):
             self.logger.warning("Failed to initialize Playwright adapter")
 
         # TODO: Initialize Tier 4: Firecrawl adapter when available
@@ -203,7 +201,7 @@ class AutomationRouter(BaseService):
 
         self._initialized = True
         self.logger.info(
-            f"5-tier automation router initialized with {len(self._adapters)} adapters"
+            "5-tier automation router initialized with %d adapters", len(self._adapters)
         )
 
     async def cleanup(self) -> None:
@@ -211,11 +209,9 @@ class AutomationRouter(BaseService):
         for name, adapter in self._adapters.items():
             try:
                 await adapter.cleanup()
-                self.logger.info(
-                    f"Cleaned up {name} adapter"
-                )  # TODO: Convert f-string to logging format
-            except Exception:
-                self.logger.exception(f"Error cleaning up {name} adapter")
+                self.logger.info("Cleaned up %s adapter", name)
+            except (OSError, AttributeError, ConnectionError, ImportError):
+                self.logger.exception("Error cleaning up %s adapter", name)
 
         self._adapters.clear()
         self._initialized = False
@@ -269,9 +265,7 @@ class AutomationRouter(BaseService):
         else:
             tool = await self._select_tool(url, interaction_required, custom_actions)
 
-        self.logger.info(
-            f"Using {tool} for {url}"
-        )  # TODO: Convert f-string to logging format
+        self.logger.info("Using %s for %s", tool, url)
 
         # Execute with selected tool
         start_time = time.time()
@@ -296,15 +290,17 @@ class AutomationRouter(BaseService):
 
             result["provider"] = tool
             result["automation_time_ms"] = elapsed * 1000
-            return result
 
-        except Exception:
-            self.logger.exception(f"{tool} failed for {url}")
+        except (OSError, PermissionError):
+            self.logger.exception("%s failed for %s", tool, url)
             elapsed = time.time() - start_time
             self._update_metrics(tool, False, elapsed)
 
             # Try fallback
             return await self._fallback_scrape(url, tool, custom_actions, timeout)
+
+        else:
+            return result
 
     async def _select_tool(
         self,
@@ -340,7 +336,7 @@ class AutomationRouter(BaseService):
                 can_handle = await self._adapters["lightweight"].can_handle(url)
                 if can_handle:
                     return "lightweight"
-            except Exception:
+            except TimeoutError:
                 self.logger.debug("Lightweight adapter can_handle check failed")
 
         # Check for JavaScript-heavy patterns that need higher tiers
@@ -534,9 +530,7 @@ class AutomationRouter(BaseService):
 
         for fallback_tool in fallback_tools:
             try:
-                self.logger.info(
-                    f"Falling back to {fallback_tool} for {url}"
-                )  # TODO: Convert f-string to logging format
+                self.logger.info("Falling back to %s for %s", fallback_tool, url)
 
                 start_time = time.time()
 
@@ -554,14 +548,15 @@ class AutomationRouter(BaseService):
                 result["provider"] = fallback_tool
                 result["fallback_from"] = failed_tool
                 result["automation_time_ms"] = elapsed * 1000
-                return result
 
-            except Exception:
-                self.logger.exception(f"Fallback {fallback_tool} also failed")
+            except (OSError, PermissionError):
+                self.logger.exception("Fallback %s also failed", fallback_tool)
                 elapsed = time.time() - start_time
                 self._update_metrics(fallback_tool, False, elapsed)
                 continue
 
+            else:
+                return result
         # All tools failed
         return {
             "success": False,

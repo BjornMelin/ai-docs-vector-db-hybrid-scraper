@@ -1,6 +1,7 @@
 """Embedding manager service coordinator."""
 
 import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Optional
 
 from dependency_injector.wiring import Provide, inject
@@ -9,12 +10,48 @@ from src.infrastructure.container import ApplicationContainer
 from src.services.errors import EmbeddingServiceError
 
 
+@dataclass
+class EmbeddingOptions:
+    """Configuration options for embedding generation."""
+
+    quality_tier: str | None = None
+    provider_name: str | None = None
+    max_cost: float | None = None
+    speed_priority: bool = False
+    auto_select: bool = True
+    generate_sparse: bool = False
+
+
 if TYPE_CHECKING:
     from src.config import Config
     from src.infrastructure.client_manager import ClientManager
     from src.services.embeddings.manager import EmbeddingManager as CoreEmbeddingManager
 
+# Imports to avoid circular dependencies
+try:
+    from src.services.embeddings.manager import (
+        EmbeddingManager as CoreManager,
+        QualityTier,
+        TextAnalysis,
+    )
+except ImportError:
+    CoreManager = None
+    QualityTier = None
+    TextAnalysis = None
+
 logger = logging.getLogger(__name__)
+
+
+def _raise_core_manager_not_available() -> None:
+    """Raise ImportError for CoreManager not available."""
+    msg = "CoreManager not available"
+    raise ImportError(msg)
+
+
+def _raise_quality_tier_not_available() -> None:
+    """Raise ImportError for QualityTier not available."""
+    msg = "QualityTier not available"
+    raise ImportError(msg)
 
 
 class EmbeddingManager:
@@ -45,7 +82,8 @@ class EmbeddingManager:
             return
 
         try:
-            from src.services.embeddings.manager import EmbeddingManager as CoreManager
+            if CoreManager is None:
+                _raise_core_manager_not_available()
 
             self._core_manager = CoreManager(
                 config=config,
@@ -57,12 +95,11 @@ class EmbeddingManager:
             logger.info("EmbeddingManager service initialized")
 
         except Exception as e:
-            logger.error(
-                f"Failed to initialize EmbeddingManager: {e}"
+            logger.exception(
+                "Failed to initialize EmbeddingManager: ",
             )  # TODO: Convert f-string to logging format
-            raise EmbeddingServiceError(
-                f"Failed to initialize embedding manager: {e}"
-            ) from e
+            msg = f"Failed to initialize embedding manager: {e}"
+            raise EmbeddingServiceError(msg) from e
 
     async def cleanup(self) -> None:
         """Cleanup embedding manager resources."""
@@ -76,23 +113,13 @@ class EmbeddingManager:
     async def generate_embeddings(
         self,
         texts: list[str],
-        quality_tier: str | None = None,
-        provider_name: str | None = None,
-        max_cost: float | None = None,
-        speed_priority: bool = False,
-        auto_select: bool = True,
-        generate_sparse: bool = False,
+        options: EmbeddingOptions | None = None,
     ) -> dict[str, Any]:
         """Generate embeddings with smart provider selection.
 
         Args:
             texts: Text strings to embed
-            quality_tier: Quality tier (FAST, BALANCED, BEST)
-            provider_name: Explicit provider (openai or fastembed)
-            max_cost: Optional maximum cost constraint
-            speed_priority: Whether to prioritize speed over quality
-            auto_select: Use smart selection or legacy logic
-            generate_sparse: Whether to generate sparse embeddings
+            options: Configuration options for embedding generation
 
         Returns:
             Dictionary containing embeddings and metadata
@@ -101,38 +128,47 @@ class EmbeddingManager:
             EmbeddingServiceError: If manager not initialized or generation fails
         """
         if not self._initialized or not self._core_manager:
-            raise EmbeddingServiceError("Embedding manager not initialized")
+            msg = "Embedding manager not initialized"
+            raise EmbeddingServiceError(msg)
+
+        # Use default options if none provided
+        if options is None:
+            options = EmbeddingOptions()
 
         try:
             # Convert quality tier string to enum if provided
             tier = None
-            if quality_tier:
-                from src.services.embeddings.manager import QualityTier
+            if options.quality_tier:
+                if QualityTier is None:
+                    _raise_quality_tier_not_available()
 
                 tier_map = {
                     "FAST": QualityTier.FAST,
                     "BALANCED": QualityTier.BALANCED,
                     "BEST": QualityTier.BEST,
                 }
-                tier = tier_map.get(quality_tier.upper())
+                tier = tier_map.get(options.quality_tier.upper())
 
             return await self._core_manager.generate_embeddings(
                 texts=texts,
                 quality_tier=tier,
-                provider_name=provider_name,
-                max_cost=max_cost,
-                speed_priority=speed_priority,
-                auto_select=auto_select,
-                generate_sparse=generate_sparse,
+                provider_name=options.provider_name,
+                max_cost=options.max_cost,
+                speed_priority=options.speed_priority,
+                auto_select=options.auto_select,
+                generate_sparse=options.generate_sparse,
             )
         except Exception as e:
-            logger.error(
-                f"Embedding generation failed: {e}"
+            logger.exception(
+                "Embedding generation failed: ",
             )  # TODO: Convert f-string to logging format
-            raise EmbeddingServiceError(f"Embedding generation failed: {e}") from e
+            msg = f"Embedding generation failed: {e}"
+            raise EmbeddingServiceError(msg) from e
 
     async def rerank_results(
-        self, query: str, results: list[dict[str, Any]]
+        self,
+        query: str,
+        results: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
         """Rerank search results using BGE reranker.
 
@@ -147,13 +183,14 @@ class EmbeddingManager:
             EmbeddingServiceError: If manager not initialized
         """
         if not self._initialized or not self._core_manager:
-            raise EmbeddingServiceError("Embedding manager not initialized")
+            msg = "Embedding manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         try:
             return await self._core_manager.rerank_results(query, results)
-        except Exception as e:
-            logger.error(
-                f"Result reranking failed: {e}"
+        except Exception:
+            logger.exception(
+                "Result reranking failed: ",
             )  # TODO: Convert f-string to logging format
             # Return original results on failure
             return results
@@ -176,7 +213,8 @@ class EmbeddingManager:
             EmbeddingServiceError: If manager not initialized
         """
         if not self._initialized or not self._core_manager:
-            raise EmbeddingServiceError("Embedding manager not initialized")
+            msg = "Embedding manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         return self._core_manager.estimate_cost(texts, provider_name)
 
@@ -190,7 +228,8 @@ class EmbeddingManager:
             EmbeddingServiceError: If manager not initialized
         """
         if not self._initialized or not self._core_manager:
-            raise EmbeddingServiceError("Embedding manager not initialized")
+            msg = "Embedding manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         return self._core_manager.get_provider_info()
 
@@ -211,13 +250,17 @@ class EmbeddingManager:
             Optimal provider name
 
         Raises:
-            EmbeddingServiceError: If manager not initialized or no provider meets constraints
+            EmbeddingServiceError: If manager not initialized or no provider meets
+                constraints
         """
         if not self._initialized or not self._core_manager:
-            raise EmbeddingServiceError("Embedding manager not initialized")
+            msg = "Embedding manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         return await self._core_manager.get_optimal_provider(
-            text_length, quality_required, budget_limit
+            text_length,
+            quality_required,
+            budget_limit,
         )
 
     def analyze_text_characteristics(self, texts: list[str]) -> dict[str, Any]:
@@ -233,7 +276,8 @@ class EmbeddingManager:
             EmbeddingServiceError: If manager not initialized
         """
         if not self._initialized or not self._core_manager:
-            raise EmbeddingServiceError("Embedding manager not initialized")
+            msg = "Embedding manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         analysis = self._core_manager.analyze_text_characteristics(texts)
 
@@ -269,10 +313,13 @@ class EmbeddingManager:
             EmbeddingServiceError: If manager not initialized
         """
         if not self._initialized or not self._core_manager:
-            raise EmbeddingServiceError("Embedding manager not initialized")
+            msg = "Embedding manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         # Convert dict back to TextAnalysis for core manager
-        from src.services.embeddings.manager import QualityTier, TextAnalysis
+        if QualityTier is None or TextAnalysis is None:
+            msg = "Required classes not available"
+            raise ImportError(msg)
 
         analysis = TextAnalysis(
             total_length=text_analysis["total_length"],
@@ -293,7 +340,10 @@ class EmbeddingManager:
             tier = tier_map.get(quality_tier.upper())
 
         return self._core_manager.get_smart_provider_recommendation(
-            analysis, tier, max_cost, speed_priority
+            analysis,
+            tier,
+            max_cost,
+            speed_priority,
         )
 
     def get_usage_report(self) -> dict[str, Any]:
@@ -306,7 +356,8 @@ class EmbeddingManager:
             EmbeddingServiceError: If manager not initialized
         """
         if not self._initialized or not self._core_manager:
-            raise EmbeddingServiceError("Embedding manager not initialized")
+            msg = "Embedding manager not initialized"
+            raise EmbeddingServiceError(msg)
 
         return self._core_manager.get_usage_report()
 
@@ -326,9 +377,9 @@ class EmbeddingManager:
             try:
                 status["providers"] = self.get_provider_info()
                 status["usage"] = self.get_usage_report()
-            except Exception as e:
+            except (ValueError, TypeError, UnicodeDecodeError) as e:
                 logger.warning(
-                    f"Failed to get embedding status: {e}"
+                    f"Failed to get embedding status: {e}",
                 )  # TODO: Convert f-string to logging format
                 status["error"] = str(e)
 

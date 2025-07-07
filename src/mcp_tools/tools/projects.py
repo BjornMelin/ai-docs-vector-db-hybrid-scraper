@@ -3,6 +3,7 @@
 import contextlib
 import json
 import logging
+import subprocess
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -45,11 +46,11 @@ def register_tools(mcp, client_manager: ClientManager):
         msg = f"Project {project_id} not found"
         raise ValueError(msg)
 
-    async def _raise_unsupported_format(format: str, ctx: Context = None) -> None:
+    async def _raise_unsupported_format(format_type: str, ctx: Context = None) -> None:
         """Raise ValueError for unsupported format."""
         if ctx:
-            await ctx.error(f"Unsupported format: {format}")
-        msg = f"Unsupported format: {format}. Use 'json' or 'yaml'"
+            await ctx.error(f"Unsupported format: {format_type}")
+        msg = f"Unsupported format: {format_type}. Use 'json' or 'yaml'"
         raise ValueError(msg)
 
     @mcp.tool()
@@ -101,7 +102,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     sparse_vector_name="sparse" if enable_hybrid else None,
                     enable_quantization=request.quality_tier != "premium",
                 )
-            except Exception:
+            except (AttributeError, ConnectionError, OSError):
                 # Clean up the project if collection creation fails
                 with contextlib.suppress(Exception):
                     await project_storage.delete_project(project_id)
@@ -125,7 +126,7 @@ def register_tools(mcp, client_manager: ClientManager):
                             and crawl_result.get("content")
                         ):
                             successful_count += 1
-                    except Exception as e:
+                    except (subprocess.SubprocessError, OSError, TimeoutError) as e:
                         if ctx:
                             await ctx.warning(f"Failed to process URL {url}: {e}")
                         logger.warning(
@@ -192,7 +193,7 @@ def register_tools(mcp, client_manager: ClientManager):
                         await ctx.debug(
                             f"Project {project['name']}: {info.vectors_count} vectors"
                         )
-                except Exception as e:
+                except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
                     project["vector_count"] = 0
                     project["indexed_count"] = 0
                     if ctx:
@@ -381,7 +382,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     )
                     if ctx:
                         await ctx.debug(f"Deleted collection: {project['collection']}")
-                except Exception as e:
+                except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
                     if ctx:
                         await ctx.warning(
                             f"Failed to delete collection {project['collection']}: {e}"
@@ -414,25 +415,25 @@ def register_tools(mcp, client_manager: ClientManager):
 
     @mcp.tool()
     async def export_project(
-        project_id: str, format: str = "json", ctx: Context = None
+        project_id: str, format_type: str = "json", ctx: Context = None
     ) -> dict:
         """Export project data in the specified format.
 
         Args:
             project_id: Project ID to export
-            format: Export format ('json' or 'yaml')
+            format_type: Export format ('json' or 'yaml')
 
         Returns:
             Dictionary containing status, format, and exported data
 
         """
         if ctx:
-            await ctx.info(f"Exporting project {project_id} in {format} format")
+            await ctx.info(f"Exporting project {project_id} in {format_type} format")
 
         try:
             # Validate format
-            if format not in ["json", "yaml"]:
-                await _raise_unsupported_format(format, ctx)
+            if format_type not in ["json", "yaml"]:
+                await _raise_unsupported_format(format_type, ctx)
 
             # Get project data
             project_storage = await client_manager.get_project_storage()
@@ -453,7 +454,7 @@ def register_tools(mcp, client_manager: ClientManager):
             }
 
             # Format the data
-            if format == "json":
+            if format_type == "json":
                 formatted_data = json.dumps(export_data, indent=2)
                 if ctx:
                     await ctx.debug("Exported project data as JSON")
@@ -473,7 +474,7 @@ def register_tools(mcp, client_manager: ClientManager):
         else:
             return {
                 "status": "exported",
-                "format": format,
+                "format": format_type,
                 "data": formatted_data,
             }
 
@@ -533,7 +534,7 @@ def register_tools(mcp, client_manager: ClientManager):
                         urls_added += 1
                         if ctx:
                             await ctx.debug(f"Successfully added URL: {url}")
-                except Exception as e:
+                except (subprocess.SubprocessError, OSError, TimeoutError) as e:
                     if ctx:
                         await ctx.warning(f"Failed to process URL {url}: {e}")
                     logger.warning(
@@ -597,7 +598,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     await ctx.debug(
                         f"Project {project.get('name', project_id)}: {info.vectors_count} vectors"
                     )
-            except Exception as e:
+            except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
                 project["vector_count"] = 0
                 project["indexed_count"] = 0
                 if ctx:

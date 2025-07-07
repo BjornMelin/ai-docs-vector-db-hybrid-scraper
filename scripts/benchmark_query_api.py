@@ -9,7 +9,7 @@ implemented in issue #55.
 import asyncio  # noqa: PLC0415
 
 from src.config import get_config
-from src.config.enums import FusionAlgorithm
+from src.config import FusionAlgorithm
 from src.services.vector_db.service import QdrantService
 
 

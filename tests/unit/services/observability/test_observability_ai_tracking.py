@@ -139,16 +139,16 @@ class TestEmbeddingTracking:
         """Test embedding tracking with exceptions."""
         tracker = AIOperationTracker()
 
+        error_msg = "API rate limit exceeded"
         with (
-            pytest.raises(ValueError),
             tracker.track_embedding_generation(
                 provider="openai",
                 model="text-embedding-ada-002",
                 input_texts="Test text",
             ),
+            pytest.raises(ValueError, match="API rate limit exceeded"),
         ):
-            msg = "API rate limit exceeded"
-            raise ValueError(msg)
+            raise ValueError(error_msg)
 
     def test_track_embedding_generation_cache_hit(self):
         """Test tracking embedding generation with cache hit."""
@@ -212,14 +212,14 @@ class TestLLMTracking:
         """Test LLM call tracking with exceptions."""
         tracker = AIOperationTracker()
 
+        error_msg = "API service unavailable"
         with (
-            pytest.raises(ConnectionError),
             tracker.track_llm_call(
                 provider="openai", model="gpt-4", operation="completion"
             ),
+            pytest.raises(ConnectionError, match="API service unavailable"),
         ):
-            msg = "API service unavailable"
-            raise ConnectionError(msg)
+            raise ConnectionError(error_msg)
 
     def test_track_llm_call_multiple_choices(self):
         """Test LLM call tracking with multiple response choices."""
@@ -272,14 +272,14 @@ class TestVectorSearchTracking:
         """Test vector search tracking with exceptions."""
         tracker = AIOperationTracker()
 
+        error_msg = "Qdrant connection failed"
         with (
-            pytest.raises(ConnectionError),
             tracker.track_vector_search(
                 collection_name="documents", query_type="semantic"
             ),
+            pytest.raises(ConnectionError, match="Qdrant connection failed"),
         ):
-            msg = "Qdrant connection failed"
-            raise ConnectionError(msg)
+            raise ConnectionError(error_msg)
 
     def test_track_vector_search_empty_results(self):
         """Test vector search tracking with empty results."""
@@ -334,14 +334,14 @@ class TestRAGPipelineTracking:
         """Test RAG pipeline tracking with exceptions."""
         tracker = AIOperationTracker()
 
+        error_msg = "Generation model failed"
         with (
-            pytest.raises(ValueError),
             tracker.track_rag_pipeline(
                 query="Test query", retrieval_method="hybrid", generation_model="gpt-4"
             ),
+            pytest.raises(ValueError, match="Generation model failed"),
         ):
-            msg = "Generation model failed"
-            raise ValueError(msg)
+            raise ValueError(error_msg)
 
     def test_track_rag_pipeline_with_timing_breakdown(self):
         """Test RAG pipeline with detailed timing breakdown."""

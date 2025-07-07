@@ -8,16 +8,29 @@ import asyncio
 import hashlib
 import logging
 import time
-from typing import Any
+from typing import Any, Protocol
 
-from src.infrastructure.client_manager import ClientManager
 from src.services.base import BaseService
 from src.services.errors import EmbeddingServiceError
 
 from .models import AnswerMetrics, RAGConfig, RAGRequest, RAGResult, SourceAttribution
 
 
+class OpenAIClientProtocol(Protocol):
+    """Protocol for OpenAI client."""
+
+    async def chat_completions_create(self, **kwargs) -> Any:
+        """Create chat completion."""
+        ...
+
+
 logger = logging.getLogger(__name__)
+
+
+def _raise_openai_client_unavailable() -> None:
+    """Raise EmbeddingServiceError for unavailable OpenAI client."""
+    msg = "OpenAI client not available for RAG"
+    raise EmbeddingServiceError(msg)
 
 
 class RAGGenerator(BaseService):
@@ -34,19 +47,18 @@ class RAGGenerator(BaseService):
     def __init__(
         self,
         config: RAGConfig,
-        client_manager: ClientManager | None = None,
+        openai_client: OpenAIClientProtocol | None = None,
     ):
         """Initialize RAG generator.
 
         Args:
             config: RAG configuration
-            client_manager: Optional client manager (will create one if not provided)
+            openai_client: Optional OpenAI client for LLM operations
 
         """
         super().__init__(config)
         self.config = config
-        self.client_manager = client_manager or ClientManager.from_unified_config()
-        self._llm_client = None
+        self._llm_client = openai_client
 
         # Performance tracking
         self.generation_count = 0
@@ -73,13 +85,8 @@ class RAGGenerator(BaseService):
             return
 
         try:
-            # Initialize client manager and get OpenAI client
-            await self.client_manager.initialize()
-            self._llm_client = await self.client_manager.get_openai_client()
-
             if not self._llm_client:
-                msg = "OpenAI client not available for RAG"
-                raise EmbeddingServiceError(msg)
+                _raise_openai_client_unavailable()
 
             # Test LLM connection
             await self._llm_client.models.list()
@@ -180,14 +187,15 @@ class RAGGenerator(BaseService):
             # Update tracking
             self._update_metrics(metrics)
 
-            return result
-
         except Exception as e:
-            logger.error(
-                f"Failed to generate RAG answer: {e}", exc_info=True
+            logger.exception(
+                "Failed to generate RAG answer: "
             )  # TODO: Convert f-string to logging format
             msg = f"RAG generation failed: {e}"
             raise EmbeddingServiceError(msg) from e
+
+        else:
+            return result
 
     def _process_search_results(self, request: RAGRequest) -> list[dict[str, Any]]:
         """Process and filter search results for context building."""
@@ -220,23 +228,35 @@ class RAGGenerator(BaseService):
     def _build_context(
         self, request: RAGRequest, results: list[dict[str, Any]]
     ) -> dict[str, Any]:
-        """Build context string from search results with token management."""
+        """Build context string from search results with intelligent token management."""
         context_parts = []
         token_count = 0
         max_tokens = self.config.max_context_length
         truncated = False
 
-        # Add query context
-        query_context = f"User Query: {request.query}\n\nRelevant Information:\n\n"
+        # Add query context to help LLM understand the user's intent
+        # This primes the model with the specific question being asked
+        query_context = (
+            "User Query: "
+            + request.query
+            + """
+
+Relevant Information:
+
+"""
+        )
         context_parts.append(query_context)
         token_count += len(query_context.split()) * 1.3  # Rough token estimate
 
+        # Process search results in relevance order (pre-sorted by score)
+        # Each result is formatted with metadata to help LLM understand context
         for i, result in enumerate(results):
-            # Build result context
+            # Format result with title, URL, relevance score, and content
             result_text = self._format_result_for_context(result, i + 1)
             result_tokens = len(result_text.split()) * 1.3
 
-            # Check if adding this result would exceed token limit
+            # Token budget management: prevent context window overflow
+            # Critical for maintaining LLM performance and avoiding truncation errors
             if token_count + result_tokens > max_tokens:
                 truncated = True
                 break
@@ -321,7 +341,17 @@ class RAGGenerator(BaseService):
                 ),
                 timeout=self.config.timeout_seconds,
             )
-
+        except TimeoutError:
+            logger.warning("RAG answer generation timed out")
+            msg = "Answer generation timed out"
+            raise EmbeddingServiceError(msg) from None
+        except Exception as e:
+            logger.warning(
+                f"Failed to generate answer: {e}"
+            )  # TODO: Convert f-string to logging format
+            msg = f"Answer generation failed: {e}"
+            raise EmbeddingServiceError(msg) from e
+        else:
             answer = response.choices[0].message.content.strip()
 
             # Extract reasoning if answer includes it
@@ -333,17 +363,6 @@ class RAGGenerator(BaseService):
                     reasoning_trace = [parts[1].strip()]
 
             return answer, reasoning_trace
-
-        except TimeoutError:
-            logger.warning("RAG answer generation timed out")
-            msg = "Answer generation timed out"
-            raise EmbeddingServiceError(msg) from None
-        except Exception as e:
-            logger.warning(
-                f"Failed to generate answer: {e}"
-            )  # TODO: Convert f-string to logging format
-            msg = f"Answer generation failed: {e}"
-            raise EmbeddingServiceError(msg) from e
 
     def _build_system_prompt(self, request: RAGRequest) -> str:
         """Build system prompt for RAG answer generation."""
@@ -456,11 +475,9 @@ Provide a clear, accurate answer based solely on the information provided above.
             {"input": 0.002, "output": 0.002},  # Default fallback
         )
 
-        cost = (input_tokens / 1000) * model_costs["input"] + (
+        return (input_tokens / 1000) * model_costs["input"] + (
             output_tokens / 1000
         ) * model_costs["output"]
-
-        return cost
 
     def _generate_follow_up_questions(self, answer: str, _query: str) -> list[str]:
         """Generate relevant follow-up questions based on the answer."""
@@ -576,3 +593,12 @@ Provide a clear, accurate answer based solely on the information provided above.
         """Clear the answer cache."""
         self._answer_cache.clear()
         logger.info("RAG answer cache cleared")
+
+    @property
+    def llm_client_available(self) -> bool:
+        """Check if LLM client is available.
+
+        Returns:
+            bool: True if LLM client is initialized and available
+        """
+        return self._llm_client is not None

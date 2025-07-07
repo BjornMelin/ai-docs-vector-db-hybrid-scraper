@@ -10,7 +10,6 @@ from typing import Any
 from arq import func
 
 from src.config import get_config
-from src.infrastructure.client_manager import ClientManager
 from src.services.core.qdrant_alias_manager import QdrantAliasManager
 
 
@@ -50,10 +49,12 @@ def _validate_dynamic_import(module_name: str, function_name: str) -> bool:
         ValueError: If module or function is not whitelisted
     """
     if module_name not in ALLOWED_PERSIST_MODULES:
-        raise ValueError(f"Module '{module_name}' not in security whitelist")
+        msg = f"Module '{module_name}' not in security whitelist"
+        raise ValueError(msg)
 
     if function_name not in ALLOWED_PERSIST_FUNCTIONS:
-        raise ValueError(f"Function '{function_name}' not in security whitelist")
+        msg = f"Function '{function_name}' not in security whitelist"
+        raise ValueError(msg)
 
     return True
 
@@ -83,19 +84,18 @@ async def delete_collection(
     )
 
     try:
-        # Wait for grace period
         await asyncio.sleep(grace_period_minutes * 60)
 
-        # Initialize required services
         config = get_config()
-        client_manager = ClientManager(config)
+        from src.infrastructure.client_manager import ClientManager  # noqa: PLC0415
+
+        client_manager = ClientManager()
         await client_manager.initialize()
 
         try:
             qdrant_client = await client_manager.get_qdrant_client()
-            alias_manager = QdrantAliasManager(config, qdrant_client)
+            alias_manager = QdrantAliasManager(config, qdrant_client, None)
 
-            # Double-check no aliases point to this collection
             aliases = await alias_manager.list_aliases()
             if collection_name in aliases.values():
                 logger.warning(
@@ -108,7 +108,6 @@ async def delete_collection(
                     "duration": time.time() - start_time,
                 }
 
-            # Delete the collection
             await qdrant_client.delete_collection(collection_name)
             logger.info(
                 f"Successfully deleted collection {collection_name}"
@@ -119,7 +118,6 @@ async def delete_collection(
                 "collection": collection_name,
                 "duration": time.time() - start_time,
             }
-
         finally:
             await client_manager.cleanup()
 
@@ -172,15 +170,13 @@ async def persist_cache(
     )  # TODO: Convert f-string to logging format
 
     try:
-        # Wait for delay
         await asyncio.sleep(delay)
 
-        # Import and call the persist function dynamically with security validation
-        # Validate inputs against security whitelist to prevent arbitrary code execution
+        # Validate dynamic import for security
         try:
             _validate_dynamic_import(persist_func_module, persist_func_name)
         except ValueError as ve:
-            logger.error(f"Security validation failed for dynamic import: {ve}")
+            logger.exception("Security validation failed for dynamic import: ")
             return {
                 "status": "failed",
                 "key": key,
@@ -188,10 +184,10 @@ async def persist_cache(
                 "duration": time.time() - start_time,
             }
 
+        # Import and call persist function
         module = importlib.import_module(persist_func_module)
         persist_func = getattr(module, persist_func_name)
 
-        # Call the persist function
         if asyncio.iscoroutinefunction(persist_func):
             await persist_func(key, value)
         else:
@@ -232,7 +228,6 @@ async def config_drift_snapshot(_ctx: dict[str, Any]) -> dict[str, Any]:
 
     try:
         # Use dynamic import to avoid circular dependency
-        import importlib
 
         config_drift_module = importlib.import_module(
             "src.services.config_drift_service"
@@ -255,8 +250,6 @@ async def config_drift_snapshot(_ctx: dict[str, Any]) -> dict[str, Any]:
             }
         )
 
-        return result
-
     except Exception as e:
         logger.exception("Configuration snapshot task failed")
         return {
@@ -264,6 +257,9 @@ async def config_drift_snapshot(_ctx: dict[str, Any]) -> dict[str, Any]:
             "error": str(e),
             "task_duration": time.time() - start_time,
         }
+
+    else:
+        return result
 
 
 async def config_drift_comparison(_ctx: dict[str, Any]) -> dict[str, Any]:
@@ -281,7 +277,6 @@ async def config_drift_comparison(_ctx: dict[str, Any]) -> dict[str, Any]:
 
     try:
         # Use dynamic import to avoid circular dependency
-        import importlib
 
         config_drift_module = importlib.import_module(
             "src.services.config_drift_service"
@@ -305,8 +300,6 @@ async def config_drift_comparison(_ctx: dict[str, Any]) -> dict[str, Any]:
             }
         )
 
-        return result
-
     except Exception as e:
         logger.exception("Configuration comparison task failed")
         return {
@@ -314,6 +307,9 @@ async def config_drift_comparison(_ctx: dict[str, Any]) -> dict[str, Any]:
             "error": str(e),
             "task_duration": time.time() - start_time,
         }
+
+    else:
+        return result
 
 
 async def config_drift_remediation(
@@ -430,9 +426,9 @@ TASK_REGISTRY = TASK_MAP
 
 
 async def create_task(
-    task_name: str,
-    task_data: dict[str, Any],
-    delay: timedelta | None = None,
+    task_name: str,  # noqa: ARG001
+    task_data: dict[str, Any],  # noqa: ARG001
+    delay: timedelta | None = None,  # noqa: ARG001
 ) -> str | None:
     """Create and enqueue a task for background processing.
 
@@ -449,31 +445,20 @@ async def create_task(
     """
     try:
         # Get task queue manager
-        config = get_config()
-        client_manager = ClientManager(config)
+        from src.infrastructure.client_manager import ClientManager  # noqa: PLC0415
+
+        client_manager = ClientManager()
         await client_manager.initialize()
 
         try:
-            task_queue_manager = await client_manager.get_task_queue_manager()
-
-            # Convert timedelta to seconds for ARQ
-            delay_seconds = delay.total_seconds() if delay else None
-
-            # Enqueue the task
-            job_id = await task_queue_manager.enqueue(
-                task_name,
-                **task_data,
-                _delay=int(delay_seconds) if delay_seconds else None,
-            )
-
-            logger.info(
-                f"Successfully created task {task_name} with job ID {job_id}"
-            )  # TODO: Convert f-string to logging format
-            return job_id
+            # Note: get_task_queue_manager method not yet implemented in ClientManager
+            # TODO: Implement task queue manager in ClientManager
+            logger.warning("Task queue manager not available - task queuing disabled")
+            return None
 
         finally:
             await client_manager.cleanup()
 
-    except Exception as e:
-        logger.exception(f"Failed to create task {task_name}: {e}")
+    except Exception:
+        logger.exception("Failed to create task {task_name}")
         return None

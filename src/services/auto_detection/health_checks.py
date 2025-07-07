@@ -9,6 +9,7 @@ Provides comprehensive health monitoring for:
 
 import asyncio
 import contextlib
+import json
 import logging
 import time
 from typing import Any
@@ -24,13 +25,30 @@ try:
 except ImportError:
     redis = None
 
+try:
+    import asyncpg
+except ImportError:
+    asyncpg = None
+
 from pydantic import BaseModel
 
-from src.config.auto_detect import AutoDetectionConfig, DetectedService
+from src.config import AutoDetectionConfig, DetectedService
 from src.services.errors import circuit_breaker
 
 
 logger = logging.getLogger(__name__)
+
+
+def _raise_redis_unavailable() -> None:
+    """Raise ImportError for unavailable redis package."""
+    msg = "redis not available"
+    raise ImportError(msg)
+
+
+def _raise_httpx_unavailable() -> None:
+    """Raise ImportError for unavailable httpx package."""
+    msg = "httpx package not available"
+    raise ImportError(msg)
 
 
 class HealthCheckResult(BaseModel):
@@ -181,6 +199,13 @@ class HealthChecker:
             return await self._check_generic_health(service, start_time)
 
         except Exception as e:
+            # Check if this is a handled exception type
+            is_handled_exception = isinstance(e, ConnectionError | TimeoutError) or (
+                asyncpg and isinstance(e, asyncpg.PostgresError)
+            )
+
+            if not is_handled_exception:
+                raise
             response_time_ms = (time.time() - start_time) * 1000
 
             self.logger.warning("Health check failed for {service.service_name}")
@@ -200,8 +225,7 @@ class HealthChecker:
         """Check Redis service health."""
         try:
             if redis is None:
-                msg = "redis not available"
-                raise ImportError(msg)
+                _raise_redis_unavailable()
 
             client = redis.Redis(host=service.host, port=service.port, socket_timeout=5)
 
@@ -241,8 +265,7 @@ class HealthChecker:
         """Check Qdrant service health."""
         try:
             if httpx is None:
-                msg = "httpx package not available"
-                raise ImportError(msg)
+                _raise_httpx_unavailable()
 
             async with httpx.AsyncClient(timeout=5.0) as client:
                 # Use HTTP health endpoint
@@ -264,7 +287,12 @@ class HealthChecker:
                     try:
                         health_data = response.json()
                         metadata.update(health_data)
-                    except Exception:
+                    except (
+                        AttributeError,
+                        TypeError,
+                        ValueError,
+                        json.JSONDecodeError,
+                    ):
                         logger.debug(
                             "Failed to parse health data from {service.service_name}"
                         )
@@ -320,8 +348,7 @@ class HealthChecker:
             if service.health_check_url:
                 # HTTP health check
                 if httpx is None:
-                    msg = "httpx package not available"
-                    raise ImportError(msg)
+                    _raise_httpx_unavailable()
 
                 async with httpx.AsyncClient(timeout=5.0) as client:
                     response = await client.get(service.health_check_url)
@@ -373,8 +400,9 @@ class HealthChecker:
                 # Log health status
                 if summary.overall_health_score < 0.8:
                     self.logger.warning(
-                        f"Health degraded: {summary.healthy_services}/{summary.total_services} "
-                        f"services healthy (score: {summary.overall_health_score:.2f})"
+                        f"Health degraded: {summary.healthy_services}/"
+                        f"{summary.total_services} services healthy "
+                        f"(score: {summary.overall_health_score:.2f})"
                     )
 
                 # Wait for next check interval
@@ -382,7 +410,7 @@ class HealthChecker:
 
             except asyncio.CancelledError:
                 break
-            except Exception:
+            except (TimeoutError, OSError, PermissionError):
                 self.logger.exception("Health monitoring error")
                 await asyncio.sleep(60)  # Wait longer on error
 
