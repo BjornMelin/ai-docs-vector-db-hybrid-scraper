@@ -21,7 +21,7 @@ class FixtureCache:
 
     @classmethod
     def get(cls, key: str, factory, ttl: float = 300.0):
-        """Get cached fixture or create new one."""
+        """Get cached fixture or create  one."""
         current_time = time.time()
 
         # Check if cached version is still valid
@@ -30,7 +30,7 @@ class FixtureCache:
             if current_time - creation_time < ttl:
                 return cls._cache[key]
 
-        # Create new fixture
+        # Create  fixture
         fixture = factory()
         cls._cache[key] = fixture
         cls._creation_times[key] = current_time
@@ -44,7 +44,7 @@ class FixtureCache:
 
 
 @pytest.fixture(scope="session")
-def optimized_async_loop():
+def async_loop():
     """Optimized async event loop for test performance."""
     # Create high-performance event loop
     # Use pytest-asyncio's event loop management
@@ -77,7 +77,7 @@ def optimized_async_loop():
 
 @pytest.fixture(scope="session")
 def fast_mock_factory():
-    """Factory for creating optimized mock objects."""
+    """Factory for creating  mock objects."""
 
     def create_async_mock(**_kwargs):
         """Create fast async mock with pre-configured methods."""
@@ -248,7 +248,7 @@ def performance_monitor():
                 }
             )
 
-        def get__total_time(self) -> float:
+        def get_total_time(self) -> float:
             """Get _total elapsed time."""
             if self.start_time is None:
                 return 0.0
@@ -404,7 +404,7 @@ def performance_assertions():
 
 # Pre-configured test markers for performance optimization
 def pytest_configure(config):
-    """Configure performance-optimized test markers."""
+    """Configure performance- test markers."""
     config.addinivalue_line(
         "markers", "fast_unit: marks test as fast unit test (< 0.1s)"
     )

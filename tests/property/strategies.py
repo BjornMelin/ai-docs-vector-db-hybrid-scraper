@@ -15,7 +15,7 @@ from src.config import (
     CrawlProvider,
     EmbeddingProvider,
     Environment,
-    LogLevel
+    LogLevel,
 )
 
 

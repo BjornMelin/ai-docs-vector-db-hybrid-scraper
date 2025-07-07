@@ -436,8 +436,8 @@ class TestBrowserContentIntelligenceIntegration:
         }
 
     @pytest.mark.asyncio
-    async def test_intelligent_content_extraction(self, browser_content_services):
-        """Test intelligent content extraction pipeline."""
+    async def test_content_extraction(self, browser_content_services):
+        """Test  content extraction pipeline."""
         browser_manager = browser_content_services["browser"]
         content_ai = browser_content_services["content_ai"]
 

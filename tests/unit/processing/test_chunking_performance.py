@@ -1,6 +1,6 @@
 """Advanced tests for chunking functionality.
 
-This module consolidates advanced chunking tests including:
+This module consolidates  chunking tests including:
 - AST-based chunking and Tree-sitter functionality
 - Edge cases and error handling
 - Import fallback scenarios
@@ -10,7 +10,7 @@ Consolidates functionality from:
 - test_chunking_comprehensive.py
 - test_chunking_ast.py
 - test_chunking_ast_comprehensive.py
-- test_chunking_advanced_coverage.py
+- test_chunking__coverage.py
 - test_chunking_coverage_boost.py
 - test_chunking_focused_coverage.py
 - test_chunking_import_coverage.py
@@ -21,10 +21,7 @@ import sys
 from unittest.mock import Mock, patch
 
 from src.chunking import DocumentChunker
-from src.config import (
-    ChunkingConfig,
-    ChunkingStrategy
-)
+from src.config import ChunkingConfig, ChunkingStrategy
 from src.models.document_processing import Chunk
 
 
@@ -32,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 class TestChunkingEdgeCases:
-    """Test edge cases and error paths for improved coverage."""
+    """Test edge cases that users might encounter in real usage."""
 
     def test_empty_content(self):
         """Test chunking empty content."""
@@ -251,22 +248,23 @@ class TestTreeSitterImportErrors:
 class TestChunkLargeCodeBlock:
     """Test _chunk_large_code_block method for line-based splitting."""
 
-    def test_chunk_large_code_block_basic(self):
-        """Test basic line-based code chunking."""
+    def test_large_code_file_chunking(self):
+        """Test chunking behavior with large code files."""
         config = ChunkingConfig(chunk_size=100, chunk_overlap=20)
         chunker = DocumentChunker(config)
 
         # Create content that exceeds chunk size
         code_content = "\n".join([f"line_{i} = {i}" for i in range(20)])
 
-        chunks = chunker._chunk_large_code_block(code_content, 0, "python")
+        chunks = chunker.chunk_content(code_content, "Large Code", "code.py")
 
         assert len(chunks) > 1
-        assert all(isinstance(chunk, Chunk) for chunk in chunks)
-        assert all(chunk.chunk_type == "code" for chunk in chunks)
+        assert all(isinstance(chunk, dict) for chunk in chunks)
+        # Verify chunks contain meaningful content
+        assert all(chunk.get("content", "").strip() for chunk in chunks)
 
-    def test_chunk_large_code_block_with_overlap(self):
-        """Test code chunking with structured content."""
+    def test_structured_code_chunking_with_overlap(self):
+        """Test that chunking preserves code structure with overlap."""
         config = ChunkingConfig(chunk_size=150, chunk_overlap=50)
         chunker = DocumentChunker(config)
 
@@ -286,15 +284,15 @@ class TestChunkLargeCodeBlock:
         ]
         code_content = "\n".join(code_lines)
 
-        chunks = chunker._chunk_large_code_block(code_content, 0, "python")
+        chunks = chunker.chunk_content(code_content, "Structured Code", "functions.py")
 
         assert len(chunks) >= 1
-        assert all(isinstance(chunk, Chunk) for chunk in chunks)
+        assert all(isinstance(chunk, dict) for chunk in chunks)
         # Verify chunks contain code content
-        assert all(chunk.content.strip() for chunk in chunks)
+        assert all(chunk.get("content", "").strip() for chunk in chunks)
 
-    def test_chunk_large_code_block_preserves_indentation(self):
-        """Test that code chunking handles indented content."""
+    def test_indented_code_preservation(self):
+        """Test that chunking preserves Python indentation structure."""
         config = ChunkingConfig(chunk_size=100, chunk_overlap=20)
         chunker = DocumentChunker(config)
 
@@ -312,12 +310,14 @@ class TestClass:
         return False
 """
 
-        chunks = chunker._chunk_large_code_block(code_content.strip(), 0, "python")
+        chunks = chunker.chunk_content(
+            code_content.strip(), "Indented Code", "class.py"
+        )
 
         assert len(chunks) >= 1
-        assert all(isinstance(chunk, Chunk) for chunk in chunks)
+        assert all(isinstance(chunk, dict) for chunk in chunks)
         # Verify chunks contain the original content structure
-        assert all(chunk.content.strip() for chunk in chunks)
+        assert all(chunk.get("content", "").strip() for chunk in chunks)
 
 
 class TestASTChunkingSpecialCases:

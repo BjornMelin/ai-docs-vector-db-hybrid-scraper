@@ -123,6 +123,7 @@ class TestGetObservabilityConfig:
 
         # Test with environment variables set
         import os
+
         os.environ["AI_DOCS_MONITORING__ENABLE_METRICS"] = "true"
         os.environ["AI_DOCS_ENVIRONMENT"] = "staging"
         os.environ["AI_DOCS_APP_NAME"] = "AI Documentation System"
@@ -135,7 +136,11 @@ class TestGetObservabilityConfig:
             assert isinstance(config, ObservabilityConfig)
             # The deployment environment should be set based on the environment
             if hasattr(config, "deployment_environment"):
-                assert config.deployment_environment in ["development", "staging", "production"]
+                assert config.deployment_environment in [
+                    "development",
+                    "staging",
+                    "production",
+                ]
         finally:
             # Clean up environment variables
             os.environ.pop("AI_DOCS_MONITORING__ENABLE_METRICS", None)
@@ -163,6 +168,7 @@ class TestGetObservabilityConfig:
 
         # Set only some environment variables
         import os
+
         os.environ["AI_DOCS_APP_NAME"] = "Test App"
         os.environ["AI_DOCS_ENVIRONMENT"] = "staging"
 
@@ -182,7 +188,7 @@ class TestGetObservabilityConfig:
         """Test graceful handling when config loading works normally."""
         # Clear cache
         get_observability_config.cache_clear()
-        
+
         config = get_observability_config()
 
         # Should return valid config

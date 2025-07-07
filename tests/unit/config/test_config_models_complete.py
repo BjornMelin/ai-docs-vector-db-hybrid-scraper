@@ -21,7 +21,7 @@ from src.config import (
     PlaywrightConfig,
     SearchStrategy,
     SecurityConfig,
-    TaskQueueConfig
+    TaskQueueConfig,
 )
 
 

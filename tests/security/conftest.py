@@ -515,7 +515,7 @@ def input_validator(input_sanitizer):
         def __init__(self, sanitizer):
             self._sanitizer = sanitizer
 
-        def validate__user_input(self, _user_input: str) -> dict[str, Any]:
+        def validate_user_input(self, _user_input: str) -> dict[str, Any]:
             """Validate user input for security threats."""
             dangerous_patterns = [
                 r"(?i)<script.*?>.*?</script>",

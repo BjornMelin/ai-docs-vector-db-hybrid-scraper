@@ -97,7 +97,7 @@ class MockLightweightScraper:
 
 
 class TestModernHTTPMocking:
-    """Test modern HTTP mocking patterns with respx."""
+    """Test  HTTP mocking patterns with respx."""
 
     @pytest.fixture
     def config(self) -> Config:
@@ -311,7 +311,7 @@ class TestModernHTTPMocking:
 
 
 class TestAsyncTestPatterns:
-    """Demonstrate modern async test patterns."""
+    """Demonstrate  async test patterns."""
 
     @pytest.mark.asyncio
     async def test_async_context_manager_pattern(self):

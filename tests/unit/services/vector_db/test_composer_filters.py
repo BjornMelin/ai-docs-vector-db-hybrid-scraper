@@ -573,7 +573,7 @@ class TestFilterComposer:
 
     @pytest.mark.asyncio
     async def test_execute_optimized_strategy(self, composer, mock_filters):
-        """Test optimized execution strategy."""
+        """Test  execution strategy."""
         # Set different priorities
         mock_filters["temporal"].priority = 200  # High priority
         mock_filters["content"].priority = 100  # Low priority

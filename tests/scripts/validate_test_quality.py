@@ -2,7 +2,7 @@
 """Automated test quality validation script.
 
 Checks for anti-patterns and quality issues in test files:
-- Forbidden naming patterns (enhanced, modern, advanced)
+- Forbidden naming patterns (, , )
 - Excessive mocking complexity
 - File size violations
 - Directory depth violations

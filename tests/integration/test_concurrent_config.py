@@ -13,10 +13,7 @@ import time
 import pytest
 from hypothesis import given, strategies as st
 
-from src.config import (
-    Config,
-    SecurityConfig
-)
+from src.config import Config, SecurityConfig
 
 
 # Mock classes for testing concurrent config operations

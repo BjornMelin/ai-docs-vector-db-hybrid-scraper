@@ -479,6 +479,7 @@ class TestSystemMonitoring:
     """Test suite for system monitoring during stress tests."""
 
     @pytest.mark.stress
+    @pytest.mark.asyncio
     async def test_comprehensive_system_monitoring(self, load_test_runner):
         """Test comprehensive monitoring of system resources during stress."""
 
@@ -716,6 +717,7 @@ class TestSystemMonitoring:
             gc.collect()
 
     @pytest.mark.stress
+    @pytest.mark.asyncio
     async def test_performance_degradation_detection(self, load_test_runner):
         """Test detection of performance degradation patterns."""
 

@@ -1,4 +1,4 @@
-"""Tests for the advanced hybrid search service.
+"""Tests for the  hybrid search service.
 
 This module contains comprehensive tests for the AdvancedHybridSearchService
 including query classification, model selection, adaptive fusion, and A/B testing.
@@ -9,13 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.config import (
-    ABTestVariant,
-    Config,
-    ModelType,
-    OptimizationStrategy,
-    QueryType
-)
+from src.config import ABTestVariant, Config, ModelType, OptimizationStrategy, QueryType
 from src.models.vector_search import (
     ABTestConfig,
     FusionConfig,
@@ -74,7 +68,7 @@ class TestAdvancedHybridSearchService:
 
     @pytest.fixture
     def sample_request(self):
-        """Create sample advanced hybrid search request."""
+        """Create sample  hybrid search request."""
         return HybridSearchRequest(
             query="How to implement async functions in Python?",
             collection_name="test_collection",
@@ -127,7 +121,7 @@ class TestAdvancedHybridSearchService:
 
     @pytest.mark.asyncio
     async def test_basic_hybrid_search(self, service, sample_request):
-        """Test basic advanced hybrid search functionality."""
+        """Test basic  hybrid search functionality."""
 
         # Mock all components including the orchestrator
         with (

@@ -15,7 +15,7 @@ from src.config import (
     LogLevel,
     PerformanceConfig,
     SearchAccuracy,
-    VectorType
+    VectorType,
 )
 from src.core import constants
 
@@ -336,7 +336,7 @@ class TestConfigurationIntegrity:
         assert config.chunk_overlap == 320
 
     def test_backwards_compatibility_values(self):
-        """Test that new config values match expected constant values."""
+        """Test that  config values match expected constant values."""
         # Cache configuration
         cache_config = CacheConfig()
         assert cache_config.cache_ttl_seconds["embeddings"] == 86400

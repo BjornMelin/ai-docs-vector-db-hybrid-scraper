@@ -483,7 +483,7 @@ class TestSimilarityThresholdManager:
 
     @pytest.mark.asyncio
     async def test_ml_optimized_threshold(self, manager):
-        """Test ML-optimized threshold calculation."""
+        """Test ML- threshold calculation."""
         criteria = SimilarityThresholdCriteria(base_threshold=0.7)
 
         # Create sufficient historical data for ML optimization

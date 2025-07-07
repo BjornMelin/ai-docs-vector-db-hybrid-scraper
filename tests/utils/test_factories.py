@@ -1,7 +1,7 @@
 """Standardized test data factories following 2025 patterns.
 
 This module provides factory classes and functions for generating consistent
-test data across all test categories. Uses modern patterns like dataclasses,
+test data across all test categories. Uses  patterns like dataclasses,
 type hints, and builder patterns.
 """
 

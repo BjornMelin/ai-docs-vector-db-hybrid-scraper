@@ -1,7 +1,7 @@
 """Integration tests for multi-agent performance optimization.
 
 Tests performance optimization scenarios that demonstrate 3-10x performance
-improvements through autonomous agent coordination and intelligent orchestration.
+improvements through autonomous agent coordination and  orchestration.
 """
 
 import asyncio
@@ -121,7 +121,7 @@ class PerformanceOptimizer:
         dependencies: BaseAgentDependencies,
         optimization_strategy: str = "parallel_with_coordination",
     ) -> PerformanceMetrics:
-        """Run optimized benchmark using multi-agent coordination."""
+        """Run  benchmark using multi-agent coordination."""
         start_time = datetime.now(tz=UTC)
 
         if optimization_strategy == "parallel_with_coordination":

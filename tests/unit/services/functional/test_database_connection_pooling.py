@@ -355,7 +355,7 @@ class TestDatabaseConnectionPooling:
 
 @pytest.mark.database_pooling
 class TestAdvancedPoolingFeatures:
-    """Test advanced pooling features."""
+    """Test  pooling features."""
 
     def test_connection_health_monitoring(self):
         """Test connection health monitoring."""

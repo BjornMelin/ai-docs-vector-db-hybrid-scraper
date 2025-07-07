@@ -16,7 +16,7 @@ import pytest
 def sample_documents():
     """Generate sample documents for testing."""
     base_time = datetime(2024, 1, 1)
-    
+
     return [
         {
             "id": "doc1",
@@ -28,8 +28,8 @@ def sample_documents():
                 "version": "1.0",
                 "category": "tutorial",
                 "tags": ["intro", "beginner", "guide"],
-                "last_updated": (base_time + timedelta(days=0)).isoformat()
-            }
+                "last_updated": (base_time + timedelta(days=0)).isoformat(),
+            },
         },
         {
             "id": "doc2",
@@ -41,8 +41,8 @@ def sample_documents():
                 "version": "2.0",
                 "category": "reference",
                 "tags": ["api", "reference", "advanced"],
-                "last_updated": (base_time + timedelta(days=7)).isoformat()
-            }
+                "last_updated": (base_time + timedelta(days=7)).isoformat(),
+            },
         },
         {
             "id": "doc3",
@@ -54,9 +54,9 @@ def sample_documents():
                 "version": "1.5",
                 "category": "examples",
                 "tags": ["examples", "advanced", "patterns"],
-                "last_updated": (base_time + timedelta(days=14)).isoformat()
-            }
-        }
+                "last_updated": (base_time + timedelta(days=14)).isoformat(),
+            },
+        },
     ]
 
 
@@ -72,21 +72,23 @@ def sample_chunks():
     data, machine learning allows computers to find hidden insights without
     being explicitly programmed where to look.
     """
-    
+
     chunks = []
     chunk_size = 100
     overlap = 20
-    
+
     words = text.split()
     for i in range(0, len(words), chunk_size - overlap):
-        chunk = " ".join(words[i:i + chunk_size])
-        chunks.append({
-            "text": chunk,
-            "start_index": i,
-            "end_index": min(i + chunk_size, len(words)),
-            "chunk_index": len(chunks)
-        })
-    
+        chunk = " ".join(words[i : i + chunk_size])
+        chunks.append(
+            {
+                "text": chunk,
+                "start_index": i,
+                "end_index": min(i + chunk_size, len(words)),
+                "chunk_index": len(chunks),
+            }
+        )
+
     return chunks
 
 
@@ -103,25 +105,16 @@ def config_templates():
                     "host": "localhost",
                     "port": 6333,
                     "https": False,
-                    "api_key": None
+                    "api_key": None,
                 },
-                "redis": {
-                    "host": "localhost",
-                    "port": 6379,
-                    "db": 0,
-                    "password": None
-                },
+                "redis": {"host": "localhost", "port": 6379, "db": 0, "password": None},
                 "openai": {
                     "api_key": "${OPENAI_API_KEY}",
                     "model": "text-embedding-3-small",
-                    "max_retries": 3
-                }
+                    "max_retries": 3,
+                },
             },
-            "features": {
-                "rate_limiting": False,
-                "caching": True,
-                "monitoring": False
-            }
+            "features": {"rate_limiting": False, "caching": True, "monitoring": False},
         },
         "production": {
             "environment": "production",
@@ -132,27 +125,23 @@ def config_templates():
                     "host": "${QDRANT_HOST}",
                     "port": 6333,
                     "https": True,
-                    "api_key": "${QDRANT_API_KEY}"
+                    "api_key": "${QDRANT_API_KEY}",
                 },
                 "redis": {
                     "host": "${REDIS_HOST}",
                     "port": 6379,
                     "db": 0,
                     "password": "${REDIS_PASSWORD}",
-                    "ssl": True
+                    "ssl": True,
                 },
                 "openai": {
                     "api_key": "${OPENAI_API_KEY}",
                     "model": "text-embedding-3-large",
-                    "max_retries": 5
-                }
+                    "max_retries": 5,
+                },
             },
-            "features": {
-                "rate_limiting": True,
-                "caching": True,
-                "monitoring": True
-            }
-        }
+            "features": {"rate_limiting": True, "caching": True, "monitoring": True},
+        },
     }
 
 
@@ -163,20 +152,20 @@ def embedding_test_cases():
         "similar_texts": [
             "Machine learning is a type of artificial intelligence",
             "AI and machine learning are closely related fields",
-            "Artificial intelligence includes machine learning"
+            "Artificial intelligence includes machine learning",
         ],
         "dissimilar_texts": [
             "The weather today is sunny and warm",
             "Pizza is a popular Italian dish",
-            "Swimming is a great form of exercise"
+            "Swimming is a great form of exercise",
         ],
         "edge_cases": [
             "",  # Empty string
             "a",  # Single character
             "🚀🌟✨",  # Only emojis
             " " * 1000,  # Only spaces
-            "test" * 500  # Very long repetitive text
-        ]
+            "test" * 500,  # Very long repetitive text
+        ],
     }
 
 
@@ -187,20 +176,20 @@ def query_test_suite():
         "simple_queries": [
             "What is machine learning?",
             "How to install the framework?",
-            "API authentication"
+            "API authentication",
         ],
         "complex_queries": [
             "Explain the difference between supervised and unsupervised learning with examples",
             "What are the performance implications of using batch processing vs stream processing?",
-            "How to implement OAuth2 authentication with refresh tokens?"
+            "How to implement OAuth2 authentication with refresh tokens?",
         ],
         "edge_queries": [
             "?",
             "!!!",
             "a" * 1000,
             "SELECT * FROM users WHERE 1=1",  # SQL injection attempt
-            "<script>alert('test')</script>"  # XSS attempt
-        ]
+            "<script>alert('test')</script>",  # XSS attempt
+        ],
     }
 
 
@@ -208,22 +197,8 @@ def query_test_suite():
 def performance_baselines():
     """Performance baseline metrics for comparison."""
     return {
-        "embedding_generation": {
-            "p50_ms": 50,
-            "p95_ms": 100,
-            "p99_ms": 200
-        },
-        "vector_search": {
-            "p50_ms": 10,
-            "p95_ms": 25,
-            "p99_ms": 50
-        },
-        "document_processing": {
-            "docs_per_second": 10,
-            "mb_per_second": 5
-        },
-        "api_latency": {
-            "search_p95_ms": 150,
-            "index_p95_ms": 300
-        }
+        "embedding_generation": {"p50_ms": 50, "p95_ms": 100, "p99_ms": 200},
+        "vector_search": {"p50_ms": 10, "p95_ms": 25, "p99_ms": 50},
+        "document_processing": {"docs_per_second": 10, "mb_per_second": 5},
+        "api_latency": {"search_p95_ms": 150, "index_p95_ms": 300},
     }

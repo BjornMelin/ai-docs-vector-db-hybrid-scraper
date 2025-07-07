@@ -97,6 +97,7 @@ def real_starlette_app():
     async def health_endpoint(request):
         return JSONResponse({"status": "healthy"})
 
+    @pytest.mark.asyncio
     async def test_endpoint(request):
         return JSONResponse({"message": "success", "client_ip": request.client.host})
 

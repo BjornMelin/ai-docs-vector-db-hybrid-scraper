@@ -4,10 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.config import (
-    get_config,
-    reset_config
-)
+from src.config import get_config, reset_config
 from src.services.observability.config import (
     ObservabilityConfig,
     get_observability_config,

@@ -241,6 +241,7 @@ class TestCircuitBreakers:
     """Test suite for circuit breaker behavior under stress."""
 
     @pytest.mark.stress
+    @pytest.mark.asyncio
     async def test_circuit_breaker_trigger_points(self, load_test_runner):
         """Test circuit breaker trigger points under increasing failure rates."""
 
@@ -386,6 +387,7 @@ class TestCircuitBreakers:
         )
 
     @pytest.mark.stress
+    @pytest.mark.asyncio
     async def test_circuit_breaker_recovery_behavior(self, load_test_runner):
         """Test circuit breaker recovery behavior after service restoration."""
 
@@ -572,6 +574,7 @@ class TestRateLimiters:
     """Test suite for rate limiter behavior under stress."""
 
     @pytest.mark.stress
+    @pytest.mark.asyncio
     async def test_rate_limiter_effectiveness(self, load_test_runner):
         """Test rate limiter effectiveness under various load patterns."""
 
@@ -705,6 +708,7 @@ class TestRateLimiters:
                 )
 
     @pytest.mark.stress
+    @pytest.mark.asyncio
     async def test_thundering_herd_protection(self, load_test_runner):
         """Test protection against thundering herd scenarios."""
 

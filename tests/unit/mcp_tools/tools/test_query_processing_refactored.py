@@ -139,7 +139,7 @@ class TestQueryProcessingRegistration:
 
 
 class TestAdvancedQueryProcessingTool:
-    """Test the advanced query processing tool."""
+    """Test the  query processing tool."""
 
     @pytest.fixture(autouse=True)
     def setup_mocks(self, mock_mcp, mock_client_manager):

@@ -7,10 +7,10 @@
 """
 
 from unittest.mock import AsyncMock, Mock, patch
-import respx
-import httpx
 
+import httpx
 import pytest
+import respx
 
 from src.config import ChunkingStrategy
 from src.infrastructure.client_manager import ClientManager
@@ -45,7 +45,9 @@ def mock_client_manager():
 
     # Mock cache manager
     mock_cache = AsyncMock()
-    respx.get('https://api.example.com/').mock(return_value=httpx.Response(200, json=None))
+    respx.get("https://api.example.com/").mock(
+        return_value=httpx.Response(200, json=None)
+    )
     manager.get_cache_manager = AsyncMock(return_value=mock_cache)
 
     # Mock crawl manager (browser manager)

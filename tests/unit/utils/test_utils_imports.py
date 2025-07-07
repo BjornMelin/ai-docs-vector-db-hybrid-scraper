@@ -233,7 +233,7 @@ class TestResolveImports:
         with pytest.raises(ValueError, match="Test error"):
             failing_function()
 
-    def test_decorator_with_args_and__kwargs(self):
+    def test_decorator_with_args_and_kwargs(self):
         """Test decorator with various argument patterns."""
 
         @resolve_imports()

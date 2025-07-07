@@ -412,10 +412,8 @@ class TestMCPServicesRealWorldScenarios:
     """Test real-world scenarios and use cases."""
 
     @pytest.mark.asyncio
-    async def test_intelligent_document_processing_workflow(
-        self, e2e_services_environment
-    ):
-        """Test intelligent document processing workflow scenario."""
+    async def test_document_processing_workflow(self, e2e_services_environment):
+        """Test  document processing workflow scenario."""
         services = e2e_services_environment
 
         # Simulate real-world document processing workflow

@@ -120,7 +120,7 @@ class TestMCPPerformanceBenchmarks:
 
     @pytest.fixture
     async def benchmark_client_manager(self):
-        """Create optimized mock client manager for benchmarking."""
+        """Create  mock client manager for benchmarking."""
         client_manager = MagicMock(spec=ClientManager)
 
         # Ultra-fast mock services for benchmarking
@@ -764,7 +764,7 @@ class TestMCPResourceOptimization:
 
     @pytest.fixture
     async def benchmark_client_manager(self):
-        """Create optimized mock client manager for benchmarking."""
+        """Create  mock client manager for benchmarking."""
         client_manager = MagicMock(spec=ClientManager)
 
         # Ultra-fast mock services for benchmarking

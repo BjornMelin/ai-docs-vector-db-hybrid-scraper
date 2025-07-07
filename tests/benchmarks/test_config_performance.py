@@ -1,7 +1,7 @@
 """Configuration performance benchmarks with sub-100ms latency targets.
 
 Comprehensive benchmarking suite for configuration loading, validation, and caching.
-Implements advanced optimization techniques for Pydantic v2 and async operations.
+Implements  optimization techniques for Pydantic v2 and async operations.
 
 Performance Targets:
 - Config loading: <100ms (95th percentile)
@@ -29,7 +29,7 @@ from src.config import (
     create_settings_from_env,
     get_settings,
     reset_settings,
-    set_settings
+    set_settings,
 )
 
 
@@ -58,8 +58,8 @@ class CachedConfigModel(BaseModel):
         return cls(**_kwargs)
 
 
-class OptimizedConfig(BaseSettings):
-    """Performance-optimized configuration for benchmarking."""
+class Config(BaseSettings):
+    """Performance- configuration for benchmarking."""
 
     model_config = {
         "env_file": ".env",
@@ -500,7 +500,7 @@ class TestConfigurationCaching:
     def test_config_serialization_performance(self, benchmark):
         """Benchmark config serialization and deserialization."""
 
-        config = OptimizedConfig(
+        config = Config(
             app_name="serialization-test",
             debug=False,
             max_memory_mb=1024,
@@ -511,7 +511,7 @@ class TestConfigurationCaching:
             # Serialize to dict
             config_dict = config.model_dump()
             # Deserialize back to model
-            return OptimizedConfig(**config_dict)
+            return Config(**config_dict)
 
         result = benchmark(serialize_deserialize)
         assert result.app_name == "serialization-test"
@@ -728,7 +728,7 @@ class TestRealWorldScenarios:
     def test_configuration_hot_reload_simulation(self, benchmark):
         """Benchmark configuration hot reload performance."""
 
-        # Initial config with valid OptimizedConfig fields
+        # Initial config with valid Config fields
         config_v1 = {
             "app_name": "hot-reload-test",
             "debug": False,
@@ -752,8 +752,8 @@ class TestRealWorldScenarios:
 
         def hot_reload_cycle():
             # Simulate hot reload: load v1, then v2
-            config1 = OptimizedConfig(**config_v1)
-            config2 = OptimizedConfig(**config_v2)
+            config1 = Config(**config_v1)
+            config2 = Config(**config_v2)
             return config1, config2
 
         result = benchmark(hot_reload_cycle)
@@ -805,13 +805,13 @@ def test_performance_benchmark_summary(benchmark):
         configs.append(Config())
 
         # Optimized config
-        configs.append(OptimizedConfig())
+        configs.append(Config())
 
         # Cached config
         configs.append(CachedConfigModel.create_cached(app_name="summary"))
 
         # Config from dict
-        configs.append(OptimizedConfig(app_name="dict-test", debug=True))
+        configs.append(Config(app_name="dict-test", debug=True))
 
         return len(configs)
 

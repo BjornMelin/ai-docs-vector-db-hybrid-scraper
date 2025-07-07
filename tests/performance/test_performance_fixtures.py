@@ -51,6 +51,7 @@ class TestPerformanceFixtures:
         assert len(mock_performance_service._internal_cache) == 0
         assert mock_performance_service._stats.request_count == 0
 
+    @pytest.mark.asyncio
     async def test_mock_performance_service_processing(self, mock_performance_service):
         """Test performance service request processing with internal state verification."""
         # Process some requests

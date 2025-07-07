@@ -202,7 +202,7 @@ class TestPerformanceTargets:
     async def test_batch_processing_optimization(self):
         """Verify batch processing optimization improves throughput.
 
-        This test validates that batch processing provides better throughput
+        This test validates that batch processing provides  throughput
         than individual processing while maintaining low latency.
         """
 

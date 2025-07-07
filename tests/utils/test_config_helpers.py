@@ -461,7 +461,7 @@ def create_test_file(
     return file_path
 
 
-def setup__mock_services(environment_name: str = "unit") -> dict[str, Any]:
+def setup_mock_services(environment_name: str = "unit") -> dict[str, Any]:
     """Setup mock services for testing.
 
     Args:

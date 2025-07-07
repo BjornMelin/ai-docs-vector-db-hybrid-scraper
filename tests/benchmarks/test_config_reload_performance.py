@@ -733,7 +733,7 @@ class TestWatchdogOptimization:
     """File watching optimization benchmarks."""
 
     def test_file_watch_performance(self, benchmark):
-        """Benchmark optimized file watching performance."""
+        """Benchmark  file watching performance."""
         watched_files = []
 
         # Create test files to watch
@@ -793,7 +793,7 @@ class TestWatchdogOptimization:
                 noise_file = temp_path / f"noise_{i}.txt"
                 noise_file.write_text(f"noise content {i}")
 
-            def optimized_file_watch():
+            def file_watch():
                 # Watch only specific config files
                 checks = 0
                 for file in config_files:

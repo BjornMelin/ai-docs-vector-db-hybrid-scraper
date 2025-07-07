@@ -208,9 +208,7 @@ class TestPerformanceMonitor:
         with monitor.monitor_operation("no_alert_operation", alert_on_threshold=False):
             time.sleep(0.001)
 
-
     @pytest.mark.asyncio
-
     async def test_monitor_async_operation(self):
         """Test async operation monitoring."""
         monitor = PerformanceMonitor()
@@ -224,9 +222,7 @@ class TestPerformanceMonitor:
 
         await async_test()
 
-
     @pytest.mark.asyncio
-
     async def test_monitor_async_operation_with_exception(self):
         """Test async operation monitoring with exceptions."""
         monitor = PerformanceMonitor()
@@ -532,9 +528,7 @@ class TestGlobalMonitorInstance:
         with pytest.raises(RuntimeError, match="Performance monitor not initialized"):
             get_performance_monitor()
 
-
     @pytest.mark.asyncio
-
     async def test_convenience_functions(self):
         """Test convenience functions."""
         initialize_performance_monitor()
@@ -670,9 +664,7 @@ class TestPerformanceEdgeCases:
         ):
             time.sleep(0.001)
 
-
     @pytest.mark.asyncio
-
     async def test_concurrent_operation_monitoring(self):
         """Test concurrent operation monitoring."""
         monitor = PerformanceMonitor()

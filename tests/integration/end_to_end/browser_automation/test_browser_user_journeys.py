@@ -534,7 +534,7 @@ class TestBrowserUserJourneys:
                     const form = document.querySelector('form');
                     if (!form) return null;
 
-                    const formData = new FormData(form);
+                    const formData =  FormData(form);
                     const data = {};
                     for (let [key, value] of formData.entries()) {
                         data[key] = value;

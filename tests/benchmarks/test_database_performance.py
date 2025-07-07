@@ -28,10 +28,7 @@ from qdrant_client.models import (
     VectorParams,
 )
 
-from src.config import (
-    Config,
-    get_config
-)
+from src.config import Config, get_config
 from src.services.vector_db.collections import QdrantCollections
 from src.services.vector_db.documents import QdrantDocuments
 from src.services.vector_db.indexing import QdrantIndexing
@@ -341,6 +338,7 @@ class RealDatabaseManager:
         """Cleanup database resources."""
         await self.qdrant_fixture.stop_qdrant_container()
 
+    @pytest.mark.asyncio
     async def test_connection(self):
         """Test real database connection."""
         try:
@@ -602,9 +600,7 @@ class TestDatabasePerformance:
             )
         return vectors
 
-
     @pytest.mark.asyncio
-
     async def test_real_collection_operations_performance(
         self, benchmark, real_qdrant_service
     ):
@@ -661,9 +657,7 @@ class TestDatabasePerformance:
         )
         assert result["info_time"] < 1.0, "Collection info retrieval should be fast"
 
-
     @pytest.mark.asyncio
-
     async def test_real_vector_upsert_performance(
         self, benchmark, real_qdrant_service, sample_vectors
     ):
@@ -736,9 +730,7 @@ class TestDatabasePerformance:
             f"\n📊 Vector Upsert: {result['throughput_vectors_per_second']:.1f} vectors/sec"
         )
 
-
     @pytest.mark.asyncio
-
     async def test_real_search_performance(
         self, benchmark, real_qdrant_service, sample_vectors
     ):
@@ -823,7 +815,6 @@ class TestDatabasePerformance:
         )
 
     @pytest.mark.slow
-
     @pytest.mark.asyncio
     async def test_real_concurrent_database_operations(
         self, benchmark, real_qdrant_service, sample_vectors
@@ -921,9 +912,7 @@ class TestDatabasePerformance:
             f"\n⚡ Concurrent DB: {result['operations_per_second']:.1f} ops/sec, {result['success_rate']:.1%} success"
         )
 
-
     @pytest.mark.asyncio
-
     async def test_real_payload_indexing_performance(
         self, benchmark, real_qdrant_service, sample_vectors
     ):
@@ -1038,12 +1027,11 @@ class TestEnterpriseFeatures:
     ):
         """Test connection affinity hit rate performance."""
 
-
         @pytest.mark.asyncio
-
         async def test_affinity_sync():
             """Test connection affinity management synchronously."""
 
+            @pytest.mark.asyncio
             async def test_affinity():
                 # Simulate query patterns for affinity testing
                 patterns = [
@@ -1079,9 +1067,7 @@ class TestEnterpriseFeatures:
             f"\n🎯 Connection affinity hit rate: {affinity_rate:.1%} (target: >{min_affinity:.1%})"
         )
 
-
     @pytest.mark.asyncio
-
     async def test_enterprise_monitoring_overhead(self, benchmark, database_manager):
         """Test that enterprise monitoring adds minimal overhead."""
 
@@ -1105,10 +1091,7 @@ class TestEnterpriseFeatures:
         # pytest-benchmark automatically handles performance tracking and comparison
 
 
-
 @pytest.mark.asyncio
-
-
 async def test_benchmark_performance_targets(database_manager, expected_performance):
     """Validate that our database meets all BJO-134 performance targets."""
 

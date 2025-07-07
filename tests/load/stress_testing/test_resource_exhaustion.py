@@ -190,6 +190,7 @@ class TestResourceExhaustion:
 
     @pytest.mark.stress
     @pytest.mark.slow
+    @pytest.mark.asyncio
     async def test_memory_exhaustion_large_documents(self, load_test_runner):
         """Test system behavior when processing large documents that exhaust memory."""
         monitor = ResourceMonitor(interval=0.5)
@@ -282,6 +283,7 @@ class TestResourceExhaustion:
             gc.collect()
 
     @pytest.mark.stress
+    @pytest.mark.asyncio
     async def test_cpu_saturation_parallel_embeddings(self, load_test_runner):
         """Test system behavior under CPU saturation from parallel embedding generation."""
         monitor = ResourceMonitor(interval=0.5)
@@ -365,6 +367,7 @@ class TestResourceExhaustion:
             monitor.stop_monitoring()
 
     @pytest.mark.stress
+    @pytest.mark.asyncio
     async def test_network_bandwidth_stress(self, load_test_runner):
         """Test system behavior under network bandwidth saturation."""
         monitor = ResourceMonitor(interval=1.0)
@@ -448,6 +451,7 @@ class TestResourceExhaustion:
             gc.collect()
 
     @pytest.mark.stress
+    @pytest.mark.asyncio
     async def test_database_connection_pool_exhaustion(self, load_test_runner):
         """Test behavior when database connection pool is exhausted."""
         monitor = ResourceMonitor(interval=0.5)
@@ -552,6 +556,7 @@ class TestResourceExhaustion:
             monitor.stop_monitoring()
 
     @pytest.mark.stress
+    @pytest.mark.asyncio
     async def test_file_descriptor_exhaustion(self, load_test_runner):
         """Test behavior when file descriptor limits are reached."""
         monitor = ResourceMonitor(interval=0.5)
@@ -652,6 +657,7 @@ class TestResourceExhaustion:
             monitor.stop_monitoring()
 
     @pytest.mark.stress
+    @pytest.mark.asyncio
     async def test_cascading_resource_failure(self, load_test_runner):
         """Test behavior when multiple resources fail simultaneously."""
         monitor = ResourceMonitor(interval=0.5)

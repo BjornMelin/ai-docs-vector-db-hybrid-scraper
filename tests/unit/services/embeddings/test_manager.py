@@ -581,10 +581,10 @@ class TestEmbeddingManagerUsageStats:
 
 
 class TestEmbeddingManagerSmartSelection:
-    """Test smart provider selection and model scoring functionality."""
+    """Test  provider selection and model scoring functionality."""
 
     def test_get_smart_provider_recommendation(self, embedding_manager):
-        """Test smart provider recommendation."""
+        """Test  provider recommendation."""
         embedding_manager._initialized = True
 
         # Create mock text analysis
@@ -774,7 +774,7 @@ class TestEmbeddingManagerReranking:
 
 
 class TestEmbeddingManagerAdvancedFeatures:
-    """Test advanced embedding generation features."""
+    """Test  embedding generation features."""
 
     @pytest.mark.asyncio
     async def test_generate_embeddings_with_caching(self, embedding_manager):

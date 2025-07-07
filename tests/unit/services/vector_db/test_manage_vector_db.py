@@ -120,7 +120,7 @@ class TestVectorDBManagerInitialization:
         await manager.initialize()
 
         assert manager._initialized
-        # Should not create new ClientManager
+        # Should not create  ClientManager
         assert manager.client_manager == mock_client_manager
 
     @pytest.mark.asyncio

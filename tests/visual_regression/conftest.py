@@ -281,7 +281,7 @@ def screenshot_manager():
             return self.load_screenshot(test_name, self.baseline_dir)
 
         def save_as_baseline(self, screenshot: Screenshot) -> Path:
-            """Save screenshot as new baseline."""
+            """Save screenshot as  baseline."""
             return self.save_screenshot(screenshot, self.baseline_dir)
 
         def cleanup_current_screenshots(self):

@@ -203,7 +203,7 @@ class TestRateLimitManager:
         assert manager.default_limits == mock_config.performance.default_rate_limits
 
     def test_get_limiter_new_provider(self, mock_config):
-        """Test getting limiter for new provider."""
+        """Test getting limiter for  provider."""
         manager = RateLimitManager(mock_config)
 
         limiter = manager.get_limiter("openai")

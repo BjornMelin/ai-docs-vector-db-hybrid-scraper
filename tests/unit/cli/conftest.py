@@ -1,8 +1,8 @@
-"""Enhanced fixtures for modern CLI testing.
+"""Enhanced fixtures for  CLI testing.
 
 This module provides comprehensive fixtures for testing CLI components including
 mocked dependencies, Rich console capturing, questionary mocking, and async testing support.
-Now includes modern Rich CLI testing patterns and interactive flow simulation.
+Now includes  Rich CLI testing patterns and interactive flow simulation.
 """
 
 import asyncio
@@ -225,7 +225,7 @@ def event_loop():
 
 @pytest.fixture
 def rich_output_capturer():
-    """Enhanced fixture to capture and analyze Rich console output with better debugging."""
+    """Enhanced fixture to capture and analyze Rich console output with  debugging."""
 
     class RichOutputCapturer:
         def __init__(self):

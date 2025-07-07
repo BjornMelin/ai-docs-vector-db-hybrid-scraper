@@ -1,14 +1,11 @@
 """Unit tests for chunking module following 2025 standardized patterns.
 
-This module tests the enhanced chunking functionality with proper type annotations,
-standardized assertions, and modern test patterns.
+This module tests the  chunking functionality with proper type annotations,
+standardized assertions, and  test patterns.
 """
 
 from src.chunking import DocumentChunker
-from src.config import (
-    ChunkingConfig,
-    ChunkingStrategy
-)
+from src.config import ChunkingConfig, ChunkingStrategy
 from src.models.document_processing import Chunk, CodeBlock
 
 
@@ -286,8 +283,8 @@ End text.
         assert chunks[0].chunk_type == "text"
         assert len(chunks[0].content) <= config.chunk_size
 
-    def test_enhanced_chunking_preserves_code_blocks(self):
-        """Test that enhanced chunking preserves code blocks."""
+    def test_chunking_preserves_code_blocks(self):
+        """Test that  chunking preserves code blocks."""
         config = ChunkingConfig(
             chunk_size=100,
             chunk_overlap=20,
@@ -359,8 +356,8 @@ Functions are reusable blocks of code.
             assert chunk["title"] == "Python Tutorial" or "Part" in chunk["title"]
             assert chunk["url"] == "https://example.com/tutorial.py"
 
-    def test_enhanced_boundary_behavior(self):
-        """Test that enhanced chunking respects logical boundaries."""
+    def test_boundary_behavior(self):
+        """Test that  chunking respects logical boundaries."""
         config = ChunkingConfig(
             chunk_size=200,  # Large enough to satisfy validation
             chunk_overlap=20,

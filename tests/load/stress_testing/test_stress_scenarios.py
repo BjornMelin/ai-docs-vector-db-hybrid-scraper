@@ -23,6 +23,7 @@ class TestError(Exception):
 class TestStressScenarios:
     """Test various stress scenarios to find system limits."""
 
+    @pytest.mark.asyncio
     async def test_cpu_intensive_stress(self, load_test_runner, mock_load_test_service):
         """Test CPU-intensive stress scenarios."""
 
@@ -127,6 +128,7 @@ class TestStressScenarios:
                 f"Breaking point identified at: {breaking_point['level']} ({breaking_point['cpu_factor']}x CPU load)"
             )
 
+    @pytest.mark.asyncio
     async def test_memory_pressure_stress(
         self, load_test_runner, mock_load_test_service
     ):
@@ -233,6 +235,7 @@ class TestStressScenarios:
                 f"  {result['level']}: {result['success_rate']:.1f}% success, {result['simulated_memory_objects']} memory objects"
             )
 
+    @pytest.mark.asyncio
     async def test_connection_exhaustion_stress(
         self, load_test_runner, mock_load_test_service
     ):
@@ -334,6 +337,7 @@ class TestStressScenarios:
                 f"  {result['test']}: {result['success_rate']:.1f}% success, {result['connection_failures']} connection failures"
             )
 
+    @pytest.mark.asyncio
     async def test_cascading_failure_stress(
         self, load_test_runner, mock_load_test_service
     ):
@@ -454,6 +458,7 @@ class TestStressScenarios:
                 f"  {result['test']}: {result['success_rate']:.1f}% success, cascade level: {result['initial_cascade_level']:.1f} → {result['final_cascade_level']:.1f}"
             )
 
+    @pytest.mark.asyncio
     async def test_resource_exhaustion_recovery(
         self, load_test_runner, mock_load_test_service
     ):

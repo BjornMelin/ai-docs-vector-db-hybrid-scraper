@@ -550,7 +550,7 @@ class TestPipelineExecution:
         assert response.success
 
     @pytest.mark.asyncio
-    async def test_process_with_string_query_and__kwargs(self, initialized_pipeline):
+    async def test_process_with_string_query_and_kwargs(self, initialized_pipeline):
         """Test processing with string query and additional _kwargs."""
         response = await initialized_pipeline.process(
             "Python best practices",
@@ -595,7 +595,7 @@ class TestPipelineExecution:
 
 
 class TestAdvancedProcessing:
-    """Test advanced processing methods."""
+    """Test  processing methods."""
 
     @pytest.mark.asyncio
     async def test_process_advanced_with_full_request(self, initialized_pipeline):

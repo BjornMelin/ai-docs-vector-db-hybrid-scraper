@@ -1,4 +1,4 @@
-"""Tests for advanced OpenTelemetry instrumentation module."""
+"""Tests for  OpenTelemetry instrumentation module."""
 
 import asyncio
 import time

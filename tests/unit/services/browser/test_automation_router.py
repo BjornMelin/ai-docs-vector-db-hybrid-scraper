@@ -5,12 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
 
-from src.config import (
-    BrowserUseConfig,
-    Config,
-    Crawl4AIConfig,
-    PlaywrightConfig
-)
+from src.config import BrowserUseConfig, Config, Crawl4AIConfig, PlaywrightConfig
 from src.services.browser.automation_router import AutomationRouter
 from src.services.errors import CrawlServiceError
 

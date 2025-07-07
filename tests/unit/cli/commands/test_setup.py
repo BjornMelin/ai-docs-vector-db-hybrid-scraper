@@ -1,6 +1,6 @@
 """Tests for the setup command module.
 
-This module tests the modern template-driven configuration wizard including
+This module tests the  template-driven configuration wizard including
 profile selection, template customization, and Rich console output.
 """
 

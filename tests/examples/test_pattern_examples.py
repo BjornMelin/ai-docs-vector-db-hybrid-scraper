@@ -85,6 +85,7 @@ class TestStandardizedPatterns:
             ),
         ],
     )
+    @pytest.mark.asyncio
     async def test_parametrized_search_standard_pattern(
         self,
         input_data: dict[str, Any],
@@ -146,6 +147,7 @@ class TestStandardizedPatterns:
         assert result[0]["title"] == "Factory Test Document"
 
     @pytest.mark.performance
+    @pytest.mark.asyncio
     async def test_performance_requirement_standard_pattern(
         self, mock_vector_service: AsyncMock
     ) -> None:
@@ -200,6 +202,7 @@ class TestStandardizedPatterns:
         assert "Network failed" in str(exc_info.value)
         assert exc_info.value.error_code == "CONNECTION_ERROR"
 
+    @pytest.mark.asyncio
     async def test_mock_call_pattern_validation(
         self, mock_api_client: AsyncMock
     ) -> None:
@@ -250,6 +253,7 @@ class TestStandardizedPatterns:
 
     @pytest.mark.integration
     @pytest.mark.database
+    @pytest.mark.asyncio
     async def test_database_integration_pattern(
         self, test_database_session: Any, sample_document_data: dict[str, Any]
     ) -> None:
@@ -309,6 +313,7 @@ class TestStandardizedPatterns:
         assert result["metadata"]["complexity"] == "high"
 
     @pytest.mark.security
+    @pytest.mark.asyncio
     async def test_security_validation_pattern(
         self, mock_auth_service: AsyncMock, security_test_data: dict[str, Any]
     ) -> None:
@@ -520,7 +525,7 @@ def process_complex_data(data: dict[str, Any]) -> dict[str, Any]:
     return {"processed": True, "metadata": data.get("metadata", {})}
 
 
-async def validate__user_input(_user_input: str) -> dict[str, Any]:
+async def validate_user_input(_user_input: str) -> dict[str, Any]:
     """Example input validation function."""
     if "malicious" in _user_input.lower():
         return ResponseFactory.create_error_response(

@@ -1,7 +1,7 @@
 """Integration Tests for RAG Pipeline with Service Mocking.
 
 This module provides comprehensive integration tests for the RAG pipeline,
-demonstrating modern testing patterns with realistic service mocking and
+demonstrating  testing patterns with realistic service mocking and
 end-to-end workflow validation.
 """
 

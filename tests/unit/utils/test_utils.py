@@ -246,7 +246,7 @@ class TestAsyncCommand:
         assert documented_func.__name__ == "documented_func"
         assert documented_func.__doc__ == "This is a documented function."
 
-    def test_async_command_with_args_and__kwargs(self):
+    def test_async_command_with_args_and_kwargs(self):
         """Test async_command with mixed arguments."""
 
         @async_command

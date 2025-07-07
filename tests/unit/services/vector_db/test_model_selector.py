@@ -14,7 +14,7 @@ from src.config import (
     ModelType,
     OptimizationStrategy,
     QueryComplexity,
-    QueryType
+    QueryType,
 )
 from src.models.vector_search import ModelSelectionStrategy, QueryClassification
 from src.services.vector_db.model_selector import ModelSelector
@@ -227,8 +227,8 @@ class TestModelSelector:
             OptimizationStrategy.SPEED_OPTIMIZED,
         )
 
-        # Quality-optimized should weight quality more heavily when quality is high
-        # Speed-optimized should weight speed more when considering the same scores
+        # Quality- should weight quality more heavily when quality is high
+        # Speed- should weight speed more when considering the same scores
         assert quality_weighted != speed_weighted
 
     @pytest.mark.asyncio
@@ -275,7 +275,7 @@ class TestModelSelector:
 
     @pytest.mark.asyncio
     async def test_cost_optimized_recommendations(self, selector):
-        """Test cost-optimized model recommendations."""
+        """Test cost- model recommendations."""
         monthly_budget = 50.0
         estimated_queries = 10000
 

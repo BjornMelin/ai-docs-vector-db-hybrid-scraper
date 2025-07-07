@@ -26,7 +26,7 @@ from src.config import (
     LogLevel,
     OpenAIConfig,
     QdrantConfig,
-    RAGConfig
+    RAGConfig,
 )
 
 from .strategies import (

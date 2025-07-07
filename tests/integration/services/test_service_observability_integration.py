@@ -101,7 +101,7 @@ class TestDistributedTracing:
                 operation_name: str,
                 parent_span_id: str | None = None,
             ) -> TraceSpan:
-                """Start a new span in the trace."""
+                """Start a  span in the trace."""
                 span_id = str(uuid.uuid4())
                 span = TraceSpan(
                     trace_id=self.trace_id,
@@ -699,11 +699,11 @@ class TestMetricsCollection:
                 recent_metrics.sort(key=lambda x: x.timestamp)
 
                 # Calculate rate (simple difference)
-                latest = recent_metrics[-1]
+                 = recent_metrics[-1]
                 earliest = recent_metrics[0]
 
-                time_diff = latest.timestamp - earliest.timestamp
-                value_diff = latest.value - earliest.value
+                time_diff = .timestamp - earliest.timestamp
+                value_diff = .value - earliest.value
 
                 return value_diff / time_diff if time_diff > 0 else 0.0
 

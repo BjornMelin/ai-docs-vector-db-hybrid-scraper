@@ -128,7 +128,7 @@ def assert_pagination_response(
 
 
 class AssertionHelpers:
-    """Collection of advanced assertion utilities for testing."""
+    """Collection of  assertion utilities for testing."""
 
     @staticmethod
     def assert_document_structure(document: dict[str, Any]) -> None:

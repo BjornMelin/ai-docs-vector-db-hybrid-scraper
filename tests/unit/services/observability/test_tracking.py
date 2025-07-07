@@ -80,6 +80,7 @@ class TestInstrumentFunction:
         mock_get_tracer.return_value = mock_tracer
 
         @instrument_function(operation_type="test_operation")
+        @pytest.mark.asyncio
         async def test_async_function(arg1, arg2=None):
             return f"result-{arg1}-{arg2}"
 
@@ -90,9 +91,7 @@ class TestInstrumentFunction:
 
         # Verify span attributes
         mock_span.set_attribute.assert_any_call("operation.type", "test_operation")
-        mock_span.set_attribute.assert_any_call(
-            "function.name", "test_async_function"
-        )
+        mock_span.set_attribute.assert_any_call("function.name", "test_async_function")
         mock_span.set_attribute.assert_any_call("function.success", True)
 
     @patch("src.services.observability.tracking.get_tracer")

@@ -137,8 +137,8 @@ class TestSearchStrategySelector:
         assert "reranking for relevance" in selection.reasoning.lower()
 
     @pytest.mark.asyncio
-    async def test_advanced_intent_strategies(self, initialized_selector):
-        """Test strategy selection for advanced intent categories."""
+    async def test_intent_strategies(self, initialized_selector):
+        """Test strategy selection for  intent categories."""
         test_cases = [
             (QueryIntent.COMPARATIVE, SearchStrategy.MULTI_STAGE),
             (QueryIntent.ARCHITECTURAL, SearchStrategy.HYDE),

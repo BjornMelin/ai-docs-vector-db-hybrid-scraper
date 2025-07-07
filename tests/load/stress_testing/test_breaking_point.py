@@ -22,6 +22,7 @@ class TestError(Exception):
 class TestBreakingPointAnalysis:
     """Identify system breaking points under various stress conditions."""
 
+    @pytest.mark.asyncio
     async def test_throughput_breaking_point(
         self, load_test_runner, mock_load_test_service
     ):
@@ -136,6 +137,7 @@ class TestBreakingPointAnalysis:
         # Validate that we found meaningful results
         assert analysis["max_stable_rps"] > 0, "No stable throughput level found"
 
+    @pytest.mark.asyncio
     async def test_concurrent_users_breaking_point(
         self, load_test_runner, mock_load_test_service
     ):
@@ -270,6 +272,7 @@ class TestBreakingPointAnalysis:
                 f"{result['avg_response_time_ms']:6.1f}ms avg - {stability}"
             )
 
+    @pytest.mark.asyncio
     async def test_response_time_degradation_point(
         self, load_test_runner, mock_load_test_service
     ):
@@ -449,6 +452,7 @@ class TestBreakingPointAnalysis:
                 f"p95={result['p95_response_time_ms']:6.1f}ms, degradation={result['degradation_factor']:4.1f}x - {performance}"
             )
 
+    @pytest.mark.asyncio
     async def test_error_cascade_breaking_point(
         self, load_test_runner, mock_load_test_service
     ):

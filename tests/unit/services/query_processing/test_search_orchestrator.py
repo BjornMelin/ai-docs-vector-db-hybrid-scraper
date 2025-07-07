@@ -296,7 +296,7 @@ class TestCoreSearchFunctionality:
 
     @pytest.mark.asyncio
     async def test_basic_search(self, orchestrator, basic_request):
-        """Test basic search without advanced features."""
+        """Test basic search without  features."""
         result = await orchestrator.search(basic_request)
 
         assert isinstance(result, SearchResult)

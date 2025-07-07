@@ -222,7 +222,7 @@ class TestAgenticOrchestratorInitialization:
 
 
 class TestToolDiscoveryAndSelection:
-    """Test tool discovery and intelligent selection logic."""
+    """Test tool discovery and  selection logic."""
 
     @pytest.mark.asyncio
     async def test_discover_tools(self):
@@ -907,7 +907,7 @@ class TestSingletonPattern:
         assert isinstance(orchestrator1, AgenticOrchestrator)
 
     def test_get_orchestrator_creates_new_when_none(self):
-        """Test get_orchestrator creates new instance when none exists."""
+        """Test get_orchestrator creates  instance when none exists."""
 
         orchestrator_module._orchestrator_instance = None
 

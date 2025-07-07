@@ -597,7 +597,7 @@ class TestErrorHandlingAndRecovery:
 
 
 class TestAdvancedIntegrationScenarios:
-    """Test advanced integration scenarios and edge cases."""
+    """Test  integration scenarios and edge cases."""
 
     @pytest.mark.asyncio
     async def test_complex_multi_stage_workflow(self, unified_system):

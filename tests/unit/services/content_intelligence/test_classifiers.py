@@ -173,7 +173,7 @@ class TestContentClassifier:
 
         First, make sure you have Node.js installed on your computer.
 
-        ## Step 2: Create a new React project
+        ## Step 2: Create a  React project
 
         Run the following command in your terminal:
         ```
@@ -217,7 +217,7 @@ class TestContentClassifier:
         From diagnostic imaging to drug discovery, AI is making healthcare more
         precise, efficient, and accessible.
 
-        In this post, I'll explore the latest developments and share my thoughts on
+        In this post, I'll explore the  developments and share my thoughts on
         what lies ahead.
 
         ## Current Applications
@@ -419,7 +419,7 @@ class TestContentClassifier:
             }
         }
 
-        const calc = new Calculator();
+        const calc =  Calculator();
         console.log(calc.add(2, 3));
         """
 

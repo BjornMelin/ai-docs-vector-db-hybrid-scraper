@@ -14,7 +14,7 @@ from src.config import (
     ConfigLoadError,
     ConfigManager,
     ConfigReloader,
-    get_degradation_handler
+    get_degradation_handler,
 )
 
 

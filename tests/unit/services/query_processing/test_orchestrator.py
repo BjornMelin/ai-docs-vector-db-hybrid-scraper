@@ -102,8 +102,8 @@ def sample_request():
 
 
 @pytest.fixture
-def advanced_sample_request():
-    """Create a sample advanced search request."""
+def sample_request():
+    """Create a sample  search request."""
     return AdvancedSearchRequest(
         query="What is machine learning?",
         collection_name="documentation",
@@ -134,7 +134,7 @@ class TestAdvancedSearchOrchestrator:
     async def test_initialize(self, orchestrator):
         """Test orchestrator initialization."""
         await orchestrator.initialize()
-        # The new orchestrator doesn't use _initialized flag the same way
+        # The  orchestrator doesn't use _initialized flag the same way
         # but initialization should complete without error
 
     @pytest.mark.asyncio
@@ -142,7 +142,7 @@ class TestAdvancedSearchOrchestrator:
         self, initialized_orchestrator, advanced_sample_request
     ):
         """Test basic query processing flow."""
-        # Use the new search method with AdvancedSearchRequest
+        # Use the  search method with AdvancedSearchRequest
         response = await initialized_orchestrator.search(advanced_sample_request)
 
         assert isinstance(response, AdvancedSearchResult)
@@ -150,10 +150,8 @@ class TestAdvancedSearchOrchestrator:
         assert response.processing_time_ms > 0
 
     @pytest.mark.asyncio
-    async def test_advanced_search(
-        self, initialized_orchestrator, advanced_sample_request
-    ):
-        """Test advanced search flow."""
+    async def test_search(self, initialized_orchestrator, advanced_sample_request):
+        """Test  search flow."""
         response = await initialized_orchestrator.search(advanced_sample_request)
 
         assert isinstance(response, AdvancedSearchResult)
@@ -396,7 +394,7 @@ class TestAdvancedSearchOrchestrator:
         self, orchestrator, advanced_sample_request
     ):
         """Test using uninitialized orchestrator."""
-        # The new orchestrator doesn't require explicit initialization
+        # The  orchestrator doesn't require explicit initialization
         response = await orchestrator.search(advanced_sample_request)
 
         assert isinstance(response, AdvancedSearchResult)

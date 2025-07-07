@@ -202,6 +202,7 @@ class TestStressLoad:
 
         services = DependentServices()
 
+        @pytest.mark.asyncio
         async def test_with_dependencies(**__kwargs):
             """Test operation with service dependencies."""
             try:

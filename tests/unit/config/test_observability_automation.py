@@ -3,11 +3,7 @@
 Tests the observability configuration and monitoring capabilities.
 """
 
-from src.config import (
-    Environment,
-    ObservabilityConfig,
-    Settings
-)
+from src.config import Environment, ObservabilityConfig, Settings
 
 
 class TestObservabilityConfig:

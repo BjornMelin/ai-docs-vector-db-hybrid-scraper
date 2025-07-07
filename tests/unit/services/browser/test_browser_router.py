@@ -53,7 +53,7 @@ def tier_config():
 
 
 @pytest.fixture
-async def enhanced_router(mock_config):
+async def router(mock_config):
     """Create EnhancedAutomationRouter instance for testing."""
     return EnhancedAutomationRouter(mock_config)
 
@@ -163,11 +163,11 @@ class TestDomainPreferences:
 
 
 class TestEnhancedRouterInitialization:
-    """Test enhanced router initialization."""
+    """Test  router initialization."""
 
     @pytest.mark.asyncio
     async def test_initialization(self, enhanced_router):
-        """Test router initializes with enhanced features."""
+        """Test router initializes with  features."""
         assert enhanced_router.routing_config is not None
         assert isinstance(enhanced_router.performance_history, deque)
         assert enhanced_router.circuit_breakers is not None
@@ -193,7 +193,7 @@ class TestEnhancedRouterInitialization:
 
 
 class TestEnhancedTierSelection:
-    """Test enhanced tier selection logic."""
+    """Test  tier selection logic."""
 
     @pytest.mark.asyncio
     async def test_domain_preference_selection(self, enhanced_router):
@@ -343,7 +343,7 @@ class TestPerformanceTracking:
 
 
 class TestIntelligentFallback:
-    """Test intelligent fallback strategies."""
+    """Test  fallback strategies."""
 
     @pytest.mark.asyncio
     async def test_fallback_order_with_performance(self, enhanced_router):
@@ -454,7 +454,7 @@ class TestCircuitBreakerIntegration:
 
 
 class TestEnhancedMetrics:
-    """Test enhanced metrics and reporting."""
+    """Test  metrics and reporting."""
 
     @pytest.mark.asyncio
     async def test_get_performance_report(self, enhanced_router):
@@ -495,12 +495,12 @@ class TestEnhancedMetrics:
 
 
 class TestScrapeWithEnhancements:
-    """Test enhanced scraping functionality."""
+    """Test  scraping functionality."""
 
     @patch("src.services.browser.enhanced_router.logger")
     @pytest.mark.asyncio
     async def test_scrape_with_all_enhancements(self, _mock_logger, enhanced_router):
-        """Test scraping uses all enhanced features."""
+        """Test scraping uses all  features."""
         # Initialize router
         enhanced_router._initialized = True
         enhanced_router._adapters = {"crawl4ai": Mock()}

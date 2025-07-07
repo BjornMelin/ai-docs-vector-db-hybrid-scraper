@@ -19,10 +19,7 @@ import psutil
 import pytest
 
 # Mock imports - these modules might not exist, so we'll create mocks
-from src.config import (
-    CacheConfig,
-    get_settings
-)
+from src.config import CacheConfig, get_settings
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.vector_db.service import QdrantService
 
@@ -48,7 +45,7 @@ class EmbeddingCache:
         }
 
 
-class IntelligentCache:
+class Cache:
     def __init__(self, config):
         self.config = config
 
@@ -95,7 +92,7 @@ class ParallelProcessor:
         return results, metrics
 
 
-class OptimizedTextAnalyzer:
+class Textanalyzer:
     def __init__(self):
         self._cache = {}
         # Add cache_info method to analyze_text_optimized
@@ -157,7 +154,7 @@ class PerformanceBenchmark:
     def __init__(self):
         """Initialize performance benchmark framework."""
         self.results: list[BenchmarkResult] = []
-        self.text_analyzer = OptimizedTextAnalyzer()
+        self.text_analyzer = Textanalyzer()
 
         # Sample data for benchmarks
         self.sample_texts = self._generate_sample_texts()
@@ -202,7 +199,7 @@ class PerformanceBenchmark:
         # Code samples
         for i in range(30):
             code_text = f"""
-def sample_function_{i}(param1, param2):
+def sample_function{i}(param1, param2):
     '''Sample function for code analysis testing.'''
     result = param1 + param2
     if result > 100:
@@ -210,7 +207,7 @@ def sample_function_{i}(param1, param2):
     else:
         return result
 
-class SampleClass_{i}:
+class Sampleclass{i}:
     def __init__(self, value):
         self.value = value
 
@@ -354,7 +351,7 @@ class SampleClass_{i}:
         )
 
     async def benchmark_intelligent_caching(self) -> BenchmarkResult:
-        """Benchmark intelligent caching system performance."""
+        """Benchmark  caching system performance."""
         cache_config = CacheConfig(
             max_memory_mb=64,
             max_items=1000,
@@ -362,7 +359,7 @@ class SampleClass_{i}:
             enable_cache_warming=True,
         )
 
-        cache = IntelligentCache[str, dict[str, Any]](cache_config)
+        cache = Cache[str, dict[str, Any]](cache_config)
 
         # Generate test data
         test_data = []
@@ -501,7 +498,7 @@ class SampleClass_{i}:
             memory_pressure_threshold=0.8,
         )
 
-        cache = IntelligentCache[str, dict[str, Any]](config)
+        cache = Cache[str, dict[str, Any]](config)
 
         # Generate data that will exceed memory limit
         large_items = []
@@ -760,9 +757,7 @@ class VectorSearch:
 
         return documents
 
-
     @pytest.mark.asyncio
-
     async def test_real_embedding_generation_performance(
         self, benchmark, real_embedding_manager, realistic_documents
     ):
@@ -803,7 +798,6 @@ class VectorSearch:
         )
 
     @pytest.mark.slow
-
     @pytest.mark.asyncio
     async def test_real_vector_search_performance(
         self,
@@ -886,9 +880,7 @@ class VectorSearch:
             "Results should have similarity scores"
         )
 
-
     @pytest.mark.asyncio
-
     async def test_real_cache_performance(
         self, benchmark, real_embedding_manager, realistic_documents
     ):
@@ -946,7 +938,6 @@ class VectorSearch:
         print(f"   Warm cache: {results['warm_time']:.3f}s")
 
     @pytest.mark.slow
-
     @pytest.mark.asyncio
     async def test_real_concurrent_operations_performance(
         self, benchmark, real_embedding_manager, realistic_documents
@@ -1000,9 +991,7 @@ class VectorSearch:
         print(f"   Sequential: {results['sequential_time']:.3f}s")
         print(f"   Concurrent: {results['concurrent_time']:.3f}s")
 
-
     @pytest.mark.asyncio
-
     async def test_real_memory_usage_optimization(
         self, benchmark, real_embedding_manager, realistic_documents
     ):

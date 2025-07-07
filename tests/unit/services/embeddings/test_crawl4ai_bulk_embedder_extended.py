@@ -1,10 +1,10 @@
 """Extended tests for crawl4ai_bulk_embedder to improve coverage."""
 
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
-import respx
 
 import httpx
 import pytest
+import respx
 
 from src.config import Config
 from src.crawl4ai_bulk_embedder import BulkEmbedder, ProcessingState, _async_main
@@ -86,7 +86,7 @@ class TestBulkEmbedderExtended:
     </url>
 </urlset>"""
 
-        with patch("httpx.AsyncClient") as mock_client:
+        with respx.mock:
             # Setup responses
             async def mock_get(url):
                 response = AsyncMock()
@@ -116,7 +116,7 @@ class TestBulkEmbedderExtended:
             client_manager=mock_client_manager,
         )
 
-        with patch("httpx.AsyncClient") as mock_client:
+        with respx.mock:
             # Create a proper mock request for the error
             mock_request = Mock()
             mock_request.url = "https://example.com/missing.xml"

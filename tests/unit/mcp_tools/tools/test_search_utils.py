@@ -7,10 +7,10 @@
 """
 
 from unittest.mock import AsyncMock, Mock
-import respx
-import httpx
 
+import httpx
 import pytest
+import respx
 
 from src.config import SearchStrategy
 from src.infrastructure.client_manager import ClientManager
@@ -45,7 +45,9 @@ def mock_client_manager():
 
     # Mock cache manager
     mock_cache = AsyncMock()
-    respx.get('https://api.example.com/').mock(return_value=httpx.Response(200, json=None))
+    respx.get("https://api.example.com/").mock(
+        return_value=httpx.Response(200, json=None)
+    )
     mock_cache.set = AsyncMock()
     manager.get_cache_manager = AsyncMock(return_value=mock_cache)
 
@@ -261,7 +263,9 @@ class TestSearchDocumentsCore:
             }
         ]
         mock_cache = mock_client_manager.get_cache_manager.return_value
-        respx.get('https://api.example.com/').mock(return_value=httpx.Response(200, json=cached_results))
+        respx.get("https://api.example.com/").mock(
+            return_value=httpx.Response(200, json=cached_results)
+        )
         results = await search_documents_core(
             sample_search_request, mock_client_manager, mock_context
         )

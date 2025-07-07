@@ -33,7 +33,7 @@ def mock_adapters():
 
 
 @pytest.fixture
-async def enhanced_router_with_rate_limiting(mock_config, mock_adapters):
+async def router_with_rate_limiting(mock_config, mock_adapters):
     """Create EnhancedAutomationRouter with rate limiting enabled."""
     router = EnhancedAutomationRouter(mock_config)
 

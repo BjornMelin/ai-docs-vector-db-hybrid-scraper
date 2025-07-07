@@ -1,4 +1,6 @@
 import pytest
+
+
 """Integration tests for the complete observability system."""
 
 import asyncio
@@ -246,7 +248,6 @@ class TestObservabilitySystemIntegration:
                 assert len(error_id) == 36  # UUID format
 
     @patch("src.services.observability.instrumentation.trace")
-
     @pytest.mark.asyncio
     async def test_async_operations_observability(self, mock_trace):
         """Test observability with async operations."""

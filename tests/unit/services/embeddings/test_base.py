@@ -118,7 +118,7 @@ class TestConcreteEmbeddingProvider:
         assert provider.model_name == "test-model"
         assert provider.dimensions == 3
 
-    def test_concrete_provider_with__kwargs(self):
+    def test_concrete_provider_with_kwargs(self):
         """Test concrete provider initialization with additional _kwargs."""
         provider = ConcreteEmbeddingProvider(
             "custom-model", custom_param="test_value", another_param=42

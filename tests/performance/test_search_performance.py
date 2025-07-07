@@ -75,6 +75,7 @@ class TestSearchPerformance:
         ]
 
     @performance_critical_test(p95_threshold_ms=100.0)
+    @pytest.mark.asyncio
     async def test_search_latency_p95_validation(
         self, performance_framework, mock_search_service, test_queries
     ):
@@ -120,6 +121,7 @@ class TestSearchPerformance:
         print(f"  Success Rate: {metrics['success_rate']:.3f}")
 
     @performance_critical_test(p95_threshold_ms=200.0)
+    @pytest.mark.asyncio
     async def test_concurrent_search_throughput(
         self, performance_framework, mock_search_service, test_queries
     ):
@@ -191,6 +193,7 @@ class TestSearchPerformance:
             )
 
     @pytest.mark.performance
+    @pytest.mark.asyncio
     async def test_memory_usage_under_load(self, mock_search_service, test_queries):
         """Test memory usage characteristics under sustained load."""
         tracker = PerformanceTracker()
@@ -236,6 +239,7 @@ class TestSearchPerformance:
         print(f"  Execution Time: {stats['execution_time']['mean']:.2f}s")
 
     @pytest.mark.performance
+    @pytest.mark.asyncio
     async def test_search_scalability_characteristics(
         self, mock_search_service, test_queries
     ):
@@ -298,6 +302,7 @@ class TestSearchPerformance:
         print(f"  Growth Factor: {latency_growth_factor:.2f}x")
 
     @pytest.mark.performance
+    @pytest.mark.asyncio
     async def test_search_cache_performance_impact(
         self, mock_search_service, test_queries
     ):

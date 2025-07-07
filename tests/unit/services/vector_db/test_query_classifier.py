@@ -8,11 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.config import (
-    Config,
-    QueryComplexity,
-    QueryType
-)
+from src.config import Config, QueryComplexity, QueryType
 from src.models.vector_search import QueryClassification, QueryFeatures
 from src.services.vector_db.query_classifier import QueryClassifier
 

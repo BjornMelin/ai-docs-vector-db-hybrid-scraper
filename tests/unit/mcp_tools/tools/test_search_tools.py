@@ -1,14 +1,10 @@
-"""Tests for MCP advanced search tools."""
+"""Tests for MCP  search tools."""
 
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from src.config import (
-    FusionAlgorithm,
-    SearchAccuracy,
-    SearchStrategy
-)
+from src.config import FusionAlgorithm, SearchAccuracy, SearchStrategy
 from src.mcp_tools.models.requests import (
     FilteredSearchRequest,
     HyDESearchRequest,
@@ -68,8 +64,8 @@ def mock_security_validator():
 
 
 @pytest.mark.asyncio
-async def test_advanced_search_tools_registration(mock_client_manager, _mock_context):
-    """Test that advanced search tools are properly registered."""
+async def test_search_tools_registration(mock_client_manager, _mock_context):
+    """Test that  search tools are properly registered."""
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -433,7 +429,7 @@ async def test_hyde_search_qdrant_point_format(mock_client_manager, mock_context
 
 @pytest.mark.asyncio
 async def test_hyde_search_advanced_success(mock_client_manager, mock_context):
-    """Test successful advanced HyDE search."""
+    """Test successful  HyDE search."""
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -515,7 +511,7 @@ async def test_hyde_search_advanced_success(mock_client_manager, mock_context):
 
 @pytest.mark.asyncio
 async def test_hyde_search_advanced_with_ab_testing(mock_client_manager, mock_context):
-    """Test advanced HyDE search with A/B testing."""
+    """Test  HyDE search with A/B testing."""
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -567,7 +563,7 @@ async def test_hyde_search_advanced_with_ab_testing(mock_client_manager, mock_co
 async def test_hyde_search_advanced_engine_unavailable(
     mock_client_manager, mock_context
 ):
-    """Test advanced HyDE search when engine is unavailable."""
+    """Test  HyDE search when engine is unavailable."""
     mock_mcp = MagicMock()
     registered_tools = {}
 
@@ -843,7 +839,7 @@ async def test_perform_ab_test_search_with_exceptions(
 
 @pytest.mark.asyncio
 async def test_hyde_search_advanced_without_context(mock_client_manager):
-    """Test advanced HyDE search without context parameter."""
+    """Test  HyDE search without context parameter."""
     mock_mcp = MagicMock()
     registered_tools = {}
 

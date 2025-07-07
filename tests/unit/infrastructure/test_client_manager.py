@@ -1,7 +1,7 @@
 """Unit tests for ClientManager with proper dependency injection patterns.
 
-This test module demonstrates modern testing patterns including:
-- Dependency injection for better testability
+This test module demonstrates  testing patterns including:
+- Dependency injection for  testability
 - Test doubles (fakes, stubs, mocks) for isolation
 - Comprehensive coverage of functionality
 - Clear test organization and naming
@@ -16,10 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from src.config import (
-    Config,
-    DatabaseConfig
-)
+from src.config import Config, DatabaseConfig
 from src.infrastructure.client_manager import ClientManager
 from src.infrastructure.shared import CircuitBreaker, ClientHealth, ClientState
 from src.services.errors import APIError
@@ -29,7 +26,7 @@ class TestError(Exception):
     """Custom exception for this module."""
 
 
-# Abstract interfaces for better testability
+# Abstract interfaces for  testability
 class ClientFactoryInterface(ABC):
     """Abstract interface for creating API clients."""
 
@@ -732,7 +729,7 @@ class TestClientManagerDatabaseIntegration:
 
 
 class TestClientManagerAdvancedCoverage:
-    """Test advanced coverage scenarios for AB testing and service getters."""
+    """Test  coverage scenarios for AB testing and service getters."""
 
     @pytest.mark.asyncio
     async def test_get_ab_testing_manager_creation(self):

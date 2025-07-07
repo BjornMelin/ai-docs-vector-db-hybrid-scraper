@@ -1,6 +1,6 @@
 """Configuration caching performance benchmarks.
 
-Tests for advanced caching strategies, memory optimization, and real-world scenarios.
+Tests for  caching strategies, memory optimization, and real-world scenarios.
 Validates sub-100ms performance targets with various caching patterns.
 
 Performance Areas:

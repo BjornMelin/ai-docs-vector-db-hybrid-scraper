@@ -193,6 +193,7 @@ class TestBreakingPoints:
     """Test suite for identifying system breaking points."""
 
     @pytest.mark.stress
+    @pytest.mark.asyncio
     async def test_gradual_load_increase_breaking_point(self, load_test_runner):
         """Identify breaking point through gradual load increase."""
         analyzer = BreakingPointAnalyzer()
@@ -361,6 +362,7 @@ class TestBreakingPoints:
         logger.info("Graceful degradation")
 
     @pytest.mark.stress
+    @pytest.mark.asyncio
     async def test_sudden_spike_breaking_point(self, load_test_runner):
         """Test breaking point identification through sudden traffic spikes."""
         analyzer = BreakingPointAnalyzer()
@@ -543,6 +545,7 @@ class TestBreakingPoints:
         logger.info("Spike success rate")
 
     @pytest.mark.stress
+    @pytest.mark.asyncio
     async def test_recovery_time_measurement(self, load_test_runner):
         """Measure system recovery time after hitting breaking point."""
 

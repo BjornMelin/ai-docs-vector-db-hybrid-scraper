@@ -298,13 +298,13 @@ class TestAnalyticsService:
 
 
 class TestAnalyticsServiceEnhancedObservabilityTools:
-    """Test AnalyticsService enhanced observability tools with enterprise integration."""
+    """Test AnalyticsService  observability tools with enterprise integration."""
 
     @pytest.mark.asyncio
     async def test_register_enhanced_observability_tools_creates_mcp_tools(
         self, mock_client_manager
     ):
-        """Test that enhanced observability tools are registered as MCP tools."""
+        """Test that  observability tools are registered as MCP tools."""
         service = AnalyticsService()
         service.client_manager = mock_client_manager
 
@@ -499,10 +499,8 @@ class TestAnalyticsServiceEnhancedObservabilityTools:
         assert enterprise_integration["cost_attribution_enabled"] is True
 
     @pytest.mark.asyncio
-    async def test_enhanced_tools_log_success_message(
-        self, mock_client_manager, caplog
-    ):
-        """Test that enhanced observability tools registration logs success message."""
+    async def test_tools_log_success_message(self, mock_client_manager, caplog):
+        """Test that  observability tools registration logs success message."""
         service = AnalyticsService()
         service.client_manager = mock_client_manager
 
@@ -655,10 +653,10 @@ class TestAnalyticsServiceErrorHandling:
         assert service_info["status"] == "active"
 
     @pytest.mark.asyncio
-    async def test_enhanced_tools_handle_missing_observability_components(
+    async def test_tools_handle_missing_observability_components(
         self, mock_client_manager
     ):
-        """Test that enhanced tools handle missing observability components gracefully."""
+        """Test that  tools handle missing observability components gracefully."""
         service = AnalyticsService()
         service.client_manager = mock_client_manager
 

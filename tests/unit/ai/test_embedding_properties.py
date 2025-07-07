@@ -1,6 +1,6 @@
 """Fixed Property-Based Tests for Embedding Operations.
 
-This module demonstrates modern property-based testing for AI/ML systems using
+This module demonstrates  property-based testing for AI/ML systems using
 Hypothesis with realistic constraints and proper test configuration.
 """
 

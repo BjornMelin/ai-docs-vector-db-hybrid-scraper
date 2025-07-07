@@ -106,7 +106,7 @@ class VectorDBSearchBehavior(TaskSet):
                 response.failure("Similar search failed")
 
     @task(1)
-    def advanced_search(self):
+    def search(self):
         """Advanced search with complex filters."""
         with self.client.post(
             "/search_advanced",

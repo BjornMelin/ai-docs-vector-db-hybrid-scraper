@@ -65,7 +65,7 @@ class TestCommandInjectionPrevention:
         ]
 
     @pytest.fixture
-    def advanced_command_payloads(self):
+    def command_payloads(self):
         """Advanced command injection payloads."""
         return [
             # Encoded payloads
@@ -140,10 +140,10 @@ class TestCommandInjectionPrevention:
                 security_validator.validate_query_string(payload)
 
     @pytest.mark.asyncio
-    async def test_advanced_command_injection_prevention(
+    async def test_command_injection_prevention(
         self, security_validator, advanced_command_payloads
     ):
-        """Test advanced command injection prevention."""
+        """Test  command injection prevention."""
         for payload in advanced_command_payloads:
             with pytest.raises(SecurityError):
                 security_validator.validate_query_string(payload)

@@ -17,6 +17,7 @@ from tests.load.conftest import LoadTestConfig, LoadTestType
 class TestConcurrentUsersLoad:
     """Test concurrent user scenarios."""
 
+    @pytest.mark.asyncio
     async def test_low_concurrency_baseline(
         self, load_test_runner, mock_load_test_service
     ):
@@ -48,6 +49,7 @@ class TestConcurrentUsersLoad:
             result.metrics.successful_requests >= result.metrics.total_requests * 0.98
         )
 
+    @pytest.mark.asyncio
     async def test_moderate_concurrency(self, load_test_runner, mock_load_test_service):
         """Test performance with moderate concurrency."""
         config = LoadTestConfig(
@@ -69,6 +71,7 @@ class TestConcurrentUsersLoad:
         assert result.metrics.total_requests > 0
         assert result.metrics.peak_concurrent_users <= config.concurrent_users
 
+    @pytest.mark.asyncio
     async def test_high_concurrency_scaling(
         self, load_test_runner, mock_load_test_service
     ):
@@ -96,6 +99,7 @@ class TestConcurrentUsersLoad:
         assert result.metrics.total_requests > 0
         assert result.metrics.successful_requests > 0
 
+    @pytest.mark.asyncio
     async def test_concurrent_user_ramp_up(
         self, load_test_runner, mock_load_test_service
     ):
@@ -173,6 +177,7 @@ class TestConcurrentUsersLoad:
             assert current["concurrent_users"] > previous["concurrent_users"]
             assert current["_total_requests"] >= 0  # Should have some requests
 
+    @pytest.mark.asyncio
     async def test_concurrent_user_bursts(
         self, load_test_runner, mock_load_test_service
     ):
@@ -254,6 +259,7 @@ class TestConcurrentUsersLoad:
             recovery_1_success_rate >= burst_1_success_rate * 0.8
         )  # Recovery should improve
 
+    @pytest.mark.asyncio
     async def test_concurrent_user_steady_state(
         self, load_test_runner, mock_load_test_service
     ):
@@ -322,6 +328,7 @@ class TestConcurrentUsersLoad:
             assert "stability_grade" in stability
             print(f"Stability grade: {stability['stability_grade']}")
 
+    @pytest.mark.asyncio
     async def test_concurrent_mixed_workloads(
         self, load_test_runner, mock_load_test_service
     ):

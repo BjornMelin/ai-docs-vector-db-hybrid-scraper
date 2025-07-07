@@ -84,8 +84,8 @@ def browser_context():
             self.local_storage = {}
             self.session_storage = {}
 
-        async def new_page(self):
-            """Create a new page."""
+        async def page(self):
+            """Create a  page."""
             page = MockPage()
             self.pages.append(page)
             return page
@@ -274,8 +274,8 @@ async def mock_browser_setup(mock_browser_config):
             self.config = config
             self.contexts = []
 
-        async def new_context(self, **kwargs):
-            """Create new browser context."""
+        async def context(self, **kwargs):
+            """Create  browser context."""
             context = MockBrowserContext()
             self.contexts.append(context)
             return context
@@ -290,8 +290,8 @@ async def mock_browser_setup(mock_browser_config):
         def __init__(self):
             self.pages = []
 
-        async def new_page(self):
-            """Create new page."""
+        async def page(self):
+            """Create  page."""
             page = MockPage()
             self.pages.append(page)
             return page

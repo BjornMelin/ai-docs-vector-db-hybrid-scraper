@@ -220,7 +220,7 @@ def create_mock_vector_db(
     return mock_db
 
 
-def create__mock_embedding_service(
+def create_mock_embedding_service(
     model_name: str = "test-model", dimension: int = 384, processing_delay: float = 0.1
 ) -> AsyncMock:
     """Create a mock embedding service.

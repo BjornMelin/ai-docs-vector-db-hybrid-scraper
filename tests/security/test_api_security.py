@@ -105,6 +105,7 @@ class TestAPISecurityFramework:
                     "%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd",
                 ]
 
+            @pytest.mark.asyncio
             async def test_endpoint_against_attacks(
                 self, client, endpoint: str, method: str = "GET", **kwargs
             ) -> dict:
@@ -184,6 +185,7 @@ class TestAPISecurityFramework:
 
     @security_test
     @injection_test
+    @pytest.mark.asyncio
     async def test_real_sql_injection_prevention(
         self, real_api_client, real_input_validator
     ):
@@ -216,6 +218,7 @@ class TestAPISecurityFramework:
 
     @security_test
     @injection_test
+    @pytest.mark.asyncio
     async def test_real_xss_prevention(self, real_api_client, real_input_validator):
         """Test XSS prevention on real API endpoints."""
         test_results = await real_input_validator.test_endpoint_against_attacks(
@@ -232,6 +235,7 @@ class TestAPISecurityFramework:
         )
 
     @security_test
+    @pytest.mark.asyncio
     async def test_real_security_headers_validation(
         self, real_api_client, security_headers_validator
     ):
@@ -269,6 +273,7 @@ class TestAPISecurityFramework:
 
     @security_test
     @rate_limit_test
+    @pytest.mark.asyncio
     async def test_real_rate_limiting_effectiveness(self, real_api_client):
         """Test rate limiting on real API endpoints."""
 
@@ -321,6 +326,7 @@ class TestAPISecurityFramework:
         assert successful_count > 0, "All requests failed - API may be down"
 
     @security_test
+    @pytest.mark.asyncio
     async def test_real_input_validation_boundary_conditions(self, real_api_client):
         """Test input validation on real endpoints with boundary conditions."""
         boundary_tests = [
@@ -363,6 +369,7 @@ class TestAPISecurityFramework:
                 pass
 
     @security_test
+    @pytest.mark.asyncio
     async def test_real_authentication_security(self, real_api_client):
         """Test authentication security on real endpoints."""
         # Test endpoints that should require authentication
@@ -395,6 +402,7 @@ class TestAPISecurityFramework:
                 )
 
     @security_test
+    @pytest.mark.asyncio
     async def test_real_cors_configuration_security(self, real_api_client):
         """Test CORS configuration on real API."""
         malicious_origins = [
@@ -425,6 +433,7 @@ class TestAPISecurityFramework:
                 )
 
     @security_test
+    @pytest.mark.asyncio
     async def test_real_error_information_disclosure(self, real_api_client):
         """Test that real error responses don't disclose sensitive information."""
         # Trigger various error conditions on real endpoints
@@ -466,6 +475,7 @@ class TestAPISecurityFramework:
                 )
 
     @security_test
+    @pytest.mark.asyncio
     async def test_real_file_upload_security(self, real_api_client):
         """Test file upload security on real endpoints."""
         # Test document upload endpoint if it exists
@@ -504,6 +514,7 @@ class TestAPISecurityFramework:
                     print(f"Upload test failed for {filename} on {endpoint}: {e}")
 
     @security_test
+    @pytest.mark.asyncio
     async def test_real_api_documentation_security(self, real_api_client):
         """Test API documentation security exposure."""
         # Test access to API documentation
@@ -538,6 +549,7 @@ class TestAPISecurityFramework:
                     )
 
     @security_test
+    @pytest.mark.asyncio
     async def test_real_response_time_analysis(self, real_api_client):
         """Test response time patterns to detect timing attacks."""
         # Test authentication timing
@@ -578,6 +590,7 @@ class TestSecurityIntegration:
     """Integration tests for security system components."""
 
     @security_test
+    @pytest.mark.asyncio
     async def test_security_manager_integration(self):
         """Test integrated security manager functionality."""
 
@@ -594,6 +607,7 @@ class TestSecurityIntegration:
         assert not is_safe, "Security manager should detect malicious request"
 
     @security_test
+    @pytest.mark.asyncio
     async def test_security_monitoring_integration(self):
         """Test security monitoring and alerting."""
 

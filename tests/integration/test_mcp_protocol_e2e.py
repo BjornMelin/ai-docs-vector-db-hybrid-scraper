@@ -617,7 +617,7 @@ class TestMCPPerformance:
 
     @pytest.fixture
     async def performance_server(self):
-        """Create server optimized for performance testing."""
+        """Create server  for performance testing."""
         mcp = MockMCPServer("performance-test-server")
 
         # Mock optimized client manager

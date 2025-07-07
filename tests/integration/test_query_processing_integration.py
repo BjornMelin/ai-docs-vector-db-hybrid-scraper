@@ -550,8 +550,8 @@ class TestQueryProcessingIntegration:
         assert all(isinstance(resp, type(responses[0])) for resp in responses)
 
     @pytest.mark.asyncio
-    async def test_advanced_intent_detection_integration(self, complete_pipeline):
-        """Test detection of advanced intent categories."""
+    async def test_intent_detection_integration(self, complete_pipeline):
+        """Test detection of  intent categories."""
         advanced_queries = [
             (
                 "How to design scalable microservices architecture?",

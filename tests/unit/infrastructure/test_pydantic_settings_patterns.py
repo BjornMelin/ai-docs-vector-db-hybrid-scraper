@@ -38,7 +38,7 @@ def test_password():
 
 
 class TestPydanticSettingsPatterns:
-    """Test modern pydantic-settings patterns."""
+    """Test  pydantic-settings patterns."""
 
     def test_environment_variable_loading(self):
         """Test loading configuration from environment variables.
@@ -500,7 +500,7 @@ class TestConfigurationIntegrationPatterns:
                 self._reload_callbacks.append(callback)
 
             def reload(self, new_settings: BaseSettings):
-                """Reload configuration with new settings."""
+                """Reload configuration with  settings."""
                 old_settings = self._settings
                 self._settings = new_settings
 

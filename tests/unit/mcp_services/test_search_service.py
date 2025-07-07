@@ -3,7 +3,7 @@
 Tests cover:
 - Service initialization and client manager integration
 - Search tool registration and autonomous web search
-- Multi-provider orchestration and intelligent result fusion
+- Multi-provider orchestration and  result fusion
 - Service discovery and capability reporting
 - Error handling and service recovery
 """
@@ -195,7 +195,7 @@ class TestSearchService:
 
 
 class TestSearchServiceAdvancedFeatures:
-    """Test advanced SearchService features and integration scenarios."""
+    """Test  SearchService features and integration scenarios."""
 
     @pytest.mark.asyncio
     async def test_service_handles_initialization_with_complex_client_manager(
@@ -337,7 +337,7 @@ class TestSearchServiceAdvancedFeatures:
 
     @pytest.mark.asyncio
     async def test_service_supports_intelligent_result_fusion(self):
-        """Test that service supports intelligent result fusion."""
+        """Test that service supports  result fusion."""
         service = SearchService()
 
         service_info = await service.get_service_info()

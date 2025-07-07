@@ -313,7 +313,7 @@ class TestWatchdogIntegration:
 
 
 class TestConfigurationReloadPatterns:
-    """Test modern configuration reload patterns."""
+    """Test  configuration reload patterns."""
 
     @pytest.mark.asyncio
     async def test_atomic_config_updates(self):

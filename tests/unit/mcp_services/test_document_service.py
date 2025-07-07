@@ -1,7 +1,7 @@
 """Unit tests for DocumentService - I3 5-tier crawling enhancements.
 
 Tests cover:
-- Service initialization and intelligent processing capabilities
+- Service initialization and  processing capabilities
 - 5-tier crawling with ML-powered tier selection
 - Content intelligence and quality assessment
 - Document management and project organization
@@ -220,7 +220,7 @@ class TestDocumentService:
 
 
 class TestDocumentServiceCrawlingCapabilities:
-    """Test DocumentService 5-tier crawling and intelligent processing capabilities."""
+    """Test DocumentService 5-tier crawling and  processing capabilities."""
 
     @pytest.mark.asyncio
     async def test_5_tier_crawling_tool_registration(self, mock_client_manager):
@@ -524,7 +524,7 @@ class TestDocumentServiceErrorHandling:
 
 
 class TestDocumentServiceIntegrationScenarios:
-    """Test DocumentService integration scenarios and advanced use cases."""
+    """Test DocumentService integration scenarios and  use cases."""
 
     @pytest.mark.asyncio
     async def test_service_handles_initialization_with_complex_client_manager(

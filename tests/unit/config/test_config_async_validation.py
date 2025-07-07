@@ -8,11 +8,7 @@ import json
 
 import pytest
 
-from src.config import (
-    Config,
-    get_config,
-    reset_config
-)
+from src.config import Config, get_config, reset_config
 
 
 class TestAsyncConfigurationLoading:

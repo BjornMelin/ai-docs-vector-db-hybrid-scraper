@@ -122,7 +122,7 @@ class SecurityFrameworkValidator:
             self.results["tests_failed"] += 1
 
     def _validate_penetration_tests(self):
-        """Validate enhanced penetration testing suite."""
+        """Validate  penetration testing suite."""
         logger.info("🎯 Validating Penetration Testing Suite")
 
         # Test subprocess security test class

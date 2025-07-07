@@ -2,14 +2,17 @@
 
 This module provides the core testing infrastructure with standardized fixtures,
 configuration, and utilities that follow 2025 testing best practices.
+Implements session-scoped fixtures, parallel execution support, and boundary-only mocking.
 """
 
 import asyncio
+import gc
 import math
 import os
 import random
 import sys
 import tempfile
+import time
 from collections.abc import AsyncGenerator, Generator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -20,6 +23,17 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import pytest
 import pytest_asyncio
 from _pytest.monkeypatch import MonkeyPatch
+
+
+try:
+    import psutil
+except ImportError:  # pragma: no cover
+    psutil = None
+
+try:
+    import respx
+except ImportError:  # pragma: no cover
+    respx = None
 
 
 # Add project root to path for src imports
@@ -42,7 +56,7 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for offline envs
 
 
 try:
-    from qdrant_client.models import PointStruct, Distance, VectorParams
+    from qdrant_client.models import Distance, PointStruct, VectorParams
     from qdrant_client.models.models import CollectionInfo, CollectionStatus
 except ModuleNotFoundError:  # pragma: no cover - basic fallback
     from dataclasses import dataclass
@@ -50,6 +64,7 @@ except ModuleNotFoundError:  # pragma: no cover - basic fallback
 
     class Distance(Enum):
         """Fallback Distance enum."""
+
         COSINE = "Cosine"
         EUCLID = "Euclid"
         DOT = "Dot"
@@ -57,6 +72,7 @@ except ModuleNotFoundError:  # pragma: no cover - basic fallback
     @dataclass
     class VectorParams:
         """Fallback VectorParams."""
+
         size: int
         distance: Distance
 
@@ -71,11 +87,13 @@ except ModuleNotFoundError:  # pragma: no cover - basic fallback
     @dataclass
     class CollectionStatus:
         """Fallback CollectionStatus."""
+
         status: str = "green"
 
     @dataclass
     class CollectionInfo:
         """Fallback CollectionInfo."""
+
         status: CollectionStatus
         vectors_count: int = 0
         points_count: int = 0
@@ -112,39 +130,70 @@ def get_playwright_browser_path():
 
 
 @pytest.fixture(scope="session", autouse=True)
-def setup_browser_environment():
-    """Set up browser automation environment for CI and local testing."""
+def app_config():
+    """Shared configuration for entire test session.
+
+    Session-scoped fixture that provides application configuration
+    and sets up test environment with proper cleanup.
+    """
     original_env = os.environ.copy()
 
+    # Test configuration
+    config = {
+        "test_mode": True,
+        "ci_environment": is_ci_environment(),
+        "parallel_workers": get_parallel_worker_count(),
+        "timeouts": {"default": 30, "browser": 60, "network": 15, "database": 10},
+        "test_dirs": [
+            "tests/fixtures/cache",
+            "tests/fixtures/data",
+            "tests/fixtures/logs",
+            "logs",
+            "cache",
+            "data",
+        ],
+    }
+
     try:
+        # Set test environment variables
         env_defaults = set_platform_environment_defaults()
         for key, value in env_defaults.items():
             if key not in os.environ:
                 os.environ[key] = value
 
-        if is_ci_environment():
-            os.environ["CRAWL4AI_HEADLESS"] = "true"
-            os.environ["CRAWL4AI_SKIP_BROWSER_DOWNLOAD"] = "false"
-            os.environ["PLAYWRIGHT_CHROMIUM_SANDBOX"] = "false"
+        # CI-specific configuration
+        if config["ci_environment"]:
+            os.environ.update(
+                {
+                    "CRAWL4AI_HEADLESS": "true",
+                    "CRAWL4AI_SKIP_BROWSER_DOWNLOAD": "false",
+                    "PLAYWRIGHT_CHROMIUM_SANDBOX": "false",
+                    "PYTEST_TIMEOUT": "300",
+                    "PYTEST_XDIST_WORKER_COUNT": str(config["parallel_workers"]),
+                }
+            )
 
+        # Create test directories
         project_root = Path(__file__).parent.parent
-        test_dirs = [
-            project_root / "tests" / "fixtures" / "cache",
-            project_root / "tests" / "fixtures" / "data",
-            project_root / "tests" / "fixtures" / "logs",
-            project_root / "logs",
-            project_root / "cache",
-            project_root / "data",
-        ]
+        for test_dir in config["test_dirs"]:
+            (project_root / test_dir).mkdir(parents=True, exist_ok=True)
 
-        for test_dir in test_dirs:
-            test_dir.mkdir(parents=True, exist_ok=True)
-
-        yield
+        yield config
 
     finally:
+        # Restore environment
         os.environ.clear()
         os.environ.update(original_env)
+
+
+def get_parallel_worker_count() -> int:
+    """Calculate optimal worker count for parallel test execution."""
+    if is_ci_environment():
+        # CI environments - be conservative with resources
+        cpu_count = os.cpu_count() or 1
+        return min(4, max(1, cpu_count // 2))
+    # Local development - use fewer workers
+    return min(2, os.cpu_count() or 1)
 
 
 @pytest.fixture
@@ -178,7 +227,7 @@ def mock_env_vars() -> Generator[None]:
 def mock_qdrant_client() -> MagicMock:
     """Mock Qdrant client for testing with comprehensive method mocking."""
     client = MagicMock()
-    
+
     # Collection operations
     client.create_collection = AsyncMock()
     client.delete_collection = AsyncMock()
@@ -186,14 +235,12 @@ def mock_qdrant_client() -> MagicMock:
     client.update_collection = AsyncMock()
     client.get_collection = AsyncMock(
         return_value=CollectionInfo(
-            status=CollectionStatus(status="green"),
-            vectors_count=0,
-            points_count=0
+            status=CollectionStatus(status="green"), vectors_count=0, points_count=0
         )
     )
     client.get_collections = AsyncMock(return_value=MagicMock(collections=[]))
     client.collection_exists = AsyncMock(return_value=False)
-    
+
     # Point operations
     client.upsert = AsyncMock()
     client.search = AsyncMock(return_value=[])
@@ -202,24 +249,24 @@ def mock_qdrant_client() -> MagicMock:
     client.retrieve = AsyncMock(return_value=[])
     client.count = AsyncMock(return_value=MagicMock(count=0))
     client.delete = AsyncMock()
-    
+
     # Alias operations
     client.update_collection_aliases = AsyncMock()
     client.get_collection_aliases = AsyncMock(return_value=MagicMock(aliases=[]))
-    
+
     # Snapshot operations
     client.create_snapshot = AsyncMock()
     client.list_snapshots = AsyncMock(return_value=[])
     client.delete_snapshot = AsyncMock()
-    
+
     # Connection
     client.close = AsyncMock()
-    
+
     return client
 
 
 @pytest_asyncio.fixture
-async def async_qdrant_client() -> AsyncGenerator[MagicMock, None]:
+async def async_qdrant_client() -> AsyncGenerator[MagicMock]:
     """Async Qdrant client fixture with proper cleanup."""
     client = mock_qdrant_client()
     yield client
@@ -230,40 +277,44 @@ async def async_qdrant_client() -> AsyncGenerator[MagicMock, None]:
 def mock_openai_client() -> MagicMock:
     """Mock OpenAI client for testing with comprehensive API coverage."""
     client = MagicMock()
-    
+
     # Embeddings API
     client.embeddings.create = AsyncMock(
         return_value=MagicMock(
             data=[MagicMock(embedding=[0.1] * 1536)],
             model="text-embedding-3-small",
-            usage=MagicMock(prompt_tokens=10, total_tokens=10)
+            usage=MagicMock(prompt_tokens=10, total_tokens=10),
         )
     )
-    
+
     # Chat API (for HyDE)
     client.chat.completions.create = AsyncMock(
         return_value=MagicMock(
-            choices=[MagicMock(
-                message=MagicMock(content="Generated hypothetical document"),
-                finish_reason="stop"
-            )],
-            usage=MagicMock(prompt_tokens=50, completion_tokens=20, total_tokens=70)
+            choices=[
+                MagicMock(
+                    message=MagicMock(content="Generated hypothetical document"),
+                    finish_reason="stop",
+                )
+            ],
+            usage=MagicMock(prompt_tokens=50, completion_tokens=20, total_tokens=70),
         )
     )
-    
+
     # Models API
     client.models.list = AsyncMock(
-        return_value=MagicMock(data=[
-            MagicMock(id="text-embedding-3-small"),
-            MagicMock(id="text-embedding-3-large")
-        ])
+        return_value=MagicMock(
+            data=[
+                MagicMock(id="text-embedding-3-small"),
+                MagicMock(id="text-embedding-3-large"),
+            ]
+        )
     )
-    
+
     return client
 
 
 @pytest_asyncio.fixture
-async def async_openai_client() -> AsyncGenerator[MagicMock, None]:
+async def async_openai_client() -> AsyncGenerator[MagicMock]:
     """Async OpenAI client fixture."""
     yield mock_openai_client()
 
@@ -272,7 +323,7 @@ async def async_openai_client() -> AsyncGenerator[MagicMock, None]:
 def mock_redis_client() -> MagicMock:
     """Mock Redis client for testing with async support."""
     client = MagicMock()
-    
+
     # Basic operations
     client.get = AsyncMock(return_value=None)
     client.set = AsyncMock(return_value=True)
@@ -280,36 +331,36 @@ def mock_redis_client() -> MagicMock:
     client.exists = AsyncMock(return_value=0)
     client.expire = AsyncMock(return_value=True)
     client.ttl = AsyncMock(return_value=-2)
-    
+
     # Hash operations
     client.hget = AsyncMock(return_value=None)
     client.hset = AsyncMock(return_value=1)
     client.hgetall = AsyncMock(return_value={})
     client.hdel = AsyncMock(return_value=1)
-    
+
     # List operations
     client.lpush = AsyncMock(return_value=1)
     client.rpop = AsyncMock(return_value=None)
     client.llen = AsyncMock(return_value=0)
-    
+
     # Set operations
     client.sadd = AsyncMock(return_value=1)
     client.srem = AsyncMock(return_value=1)
     client.smembers = AsyncMock(return_value=set())
-    
+
     # Pub/Sub
     client.publish = AsyncMock(return_value=0)
-    
+
     # Connection
     client.ping = AsyncMock(return_value=True)
     client.close = AsyncMock()
     client.aclose = AsyncMock()
-    
+
     return client
 
 
 @pytest_asyncio.fixture
-async def async_redis_client() -> AsyncGenerator[MagicMock, None]:
+async def async_redis_client() -> AsyncGenerator[MagicMock]:
     """Async Redis client fixture with proper cleanup."""
     client = mock_redis_client()
     yield client
@@ -320,7 +371,7 @@ async def async_redis_client() -> AsyncGenerator[MagicMock, None]:
 def mock_httpx_client() -> MagicMock:
     """Mock httpx async client for testing."""
     client = MagicMock()
-    
+
     # Response mock
     response = MagicMock()
     response.status_code = 200
@@ -328,22 +379,22 @@ def mock_httpx_client() -> MagicMock:
     response.json = MagicMock(return_value={"status": "ok"})
     response.headers = {"content-type": "text/html"}
     response.raise_for_status = MagicMock()
-    
+
     # Request methods
     client.get = AsyncMock(return_value=response)
     client.post = AsyncMock(return_value=response)
     client.put = AsyncMock(return_value=response)
     client.delete = AsyncMock(return_value=response)
     client.patch = AsyncMock(return_value=response)
-    
+
     # Connection
     client.aclose = AsyncMock()
-    
+
     return client
 
 
 @pytest_asyncio.fixture
-async def async_httpx_client() -> AsyncGenerator[MagicMock, None]:
+async def async_httpx_client() -> AsyncGenerator[MagicMock]:
     """Async httpx client fixture with proper cleanup."""
     client = mock_httpx_client()
     yield client
@@ -354,7 +405,7 @@ async def async_httpx_client() -> AsyncGenerator[MagicMock, None]:
 def mock_aiohttp_session() -> MagicMock:
     """Mock aiohttp client session for testing."""
     session = MagicMock()
-    
+
     # Response mock
     response = MagicMock()
     response.status = 200
@@ -362,27 +413,27 @@ def mock_aiohttp_session() -> MagicMock:
     response.json = AsyncMock(return_value={"status": "ok"})
     response.headers = {"content-type": "text/html"}
     response.raise_for_status = MagicMock()
-    
+
     # Context manager for requests
     @asynccontextmanager
     async def mock_request(*args, **kwargs):
         yield response
-    
+
     # Request methods
     session.get = mock_request
     session.post = mock_request
     session.put = mock_request
     session.delete = mock_request
     session.patch = mock_request
-    
+
     # Connection
     session.close = AsyncMock()
-    
+
     return session
 
 
 @pytest_asyncio.fixture
-async def async_aiohttp_session() -> AsyncGenerator[MagicMock, None]:
+async def async_aiohttp_session() -> AsyncGenerator[MagicMock]:
     """Async aiohttp session fixture with proper cleanup."""
     session = mock_aiohttp_session()
     yield session
@@ -401,10 +452,7 @@ def sample_vector_points() -> list[PointStruct]:
                 "title": "Test Page 1",
                 "content": "Test content 1",
                 "chunk_index": 0,
-                "metadata": {
-                    "source": "test",
-                    "timestamp": "2024-01-01T00:00:00Z"
-                }
+                "metadata": {"source": "test", "timestamp": "2024-01-01T00:00:00Z"},
             },
         ),
         PointStruct(
@@ -415,12 +463,9 @@ def sample_vector_points() -> list[PointStruct]:
                 "title": "Test Page 2",
                 "content": "Test content 2",
                 "chunk_index": 0,
-                "metadata": {
-                    "source": "test",
-                    "timestamp": "2024-01-02T00:00:00Z"
-                }
+                "metadata": {"source": "test", "timestamp": "2024-01-02T00:00:00Z"},
             },
-        )
+        ),
     ]
 
 
@@ -433,51 +478,45 @@ def mock_config() -> dict[str, Any]:
             "port": 6333,
             "collection_name": "test_docs",
             "vector_size": 1536,
-            "distance": "Cosine"
+            "distance": "Cosine",
         },
         "openai": {
             "api_key": "test-key",
             "model": "text-embedding-3-small",
             "batch_size": 100,
-            "max_retries": 3
+            "max_retries": 3,
         },
-        "redis": {
-            "host": "localhost",
-            "port": 6379,
-            "db": 0,
-            "decode_responses": True
-        },
-        "crawler": {
-            "max_concurrent": 5,
-            "timeout": 30,
-            "user_agent": "TestBot/1.0"
-        },
-        "processing": {
-            "chunk_size": 1000,
-            "chunk_overlap": 200,
-            "min_chunk_size": 100
-        }
+        "redis": {"host": "localhost", "port": 6379, "db": 0, "decode_responses": True},
+        "crawler": {"max_concurrent": 5, "timeout": 30, "user_agent": "TestBot/1.0"},
+        "processing": {"chunk_size": 1000, "chunk_overlap": 200, "min_chunk_size": 100},
     }
 
 
 @pytest.fixture
-def isolated_database_session():
-    """Database session with transaction isolation for tests."""
-    # This is a placeholder - implement based on your DB choice
+def isolated_db_session():
+    """Per-test database isolation with automatic rollback.
+
+    Provides database session isolation for tests by ensuring
+    all changes are rolled back after each test.
+    """
     session = MagicMock()
-    session.begin = MagicMock()
+    transaction = MagicMock()
+
+    # Setup transaction methods
+    session.begin = MagicMock(return_value=transaction)
     session.commit = MagicMock()
     session.rollback = MagicMock()
     session.close = MagicMock()
-    
-    # Start transaction
-    session.begin()
-    
-    yield session
-    
-    # Always rollback to ensure test isolation
-    session.rollback()
-    session.close()
+
+    # Start transaction for isolation
+    transaction_context = session.begin()
+
+    try:
+        yield session
+    finally:
+        # Always rollback to ensure test isolation
+        session.rollback()
+        session.close()
 
 
 try:
@@ -664,7 +703,7 @@ def ai_test_utilities():
 def reset_singletons():
     """Reset singleton instances between tests."""
     # Add any singleton resets here
-    yield
+    return
     # Cleanup after test
 
 
@@ -681,45 +720,72 @@ def mock_crawl4ai_response():
             "title": "Test Page",
             "description": "Test description",
             "keywords": ["test", "example"],
-            "language": "en"
+            "language": "en",
         },
         "links": ["https://test.example.com/link1", "https://test.example.com/link2"],
         "images": [],
         "status_code": 200,
-        "error": None
+        "error": None,
     }
 
 
 @pytest.fixture
-def mock_respx_router():
-    """Mock HTTP responses using respx for httpx testing."""
-    import respx
-    
-    with respx.mock(assert_all_called=False) as router:
-        # Add common mock routes
-        router.get("https://test.example.com").mock(
-            return_value=respx.MockResponse(
-                status_code=200,
-                html="<html><body>Test</body></html>"
-            )
-        )
-        router.get("https://api.openai.com/v1/embeddings").mock(
+def respx_mock():
+    """Modern respx router for boundary HTTP mocking.
+
+    Provides respx router with common API mocks pre-configured.
+    Follows boundary-only mocking principle for external HTTP calls.
+    """
+    if respx is None:
+        pytest.skip("respx not available")
+
+    with respx.mock(assert_all_called=False, assert_all_mocked=True) as router:
+        # OpenAI API mocks
+        router.post("https://api.openai.com/v1/embeddings").mock(
             return_value=respx.MockResponse(
                 status_code=200,
                 json={
                     "data": [{"embedding": [0.1] * 1536}],
                     "model": "text-embedding-3-small",
-                    "usage": {"prompt_tokens": 10, "total_tokens": 10}
-                }
+                    "usage": {"prompt_tokens": 10, "total_tokens": 10},
+                },
+                headers={
+                    "x-ratelimit-limit-requests": "10000",
+                    "x-ratelimit-remaining-requests": "9999",
+                },
             )
         )
+
+        # Generic test endpoints
+        router.get("https://test.example.com").mock(
+            return_value=respx.MockResponse(
+                status_code=200,
+                html="<html><body>Test content</body></html>",
+                headers={"content-type": "text/html"},
+            )
+        )
+
+        # API error simulation
+        router.get("https://api.error.com/500").mock(
+            return_value=respx.MockResponse(status_code=500)
+        )
+
+        # Rate limit simulation
+        router.get("https://api.ratelimit.com/test").mock(
+            return_value=respx.MockResponse(
+                status_code=429,
+                json={"error": "Rate limit exceeded"},
+                headers={"retry-after": "60"},
+            )
+        )
+
         yield router
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def event_loop():
     """Create an instance of the default event loop for the test session."""
-    loop = event_loop
+    loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     yield loop
     loop.close()
@@ -742,34 +808,99 @@ def mock_mcp_context():
 
 @pytest.fixture
 def performance_monitor():
-    """Monitor test performance metrics."""
-    import time
-    import psutil
-    import gc
-    
+    """Advanced performance monitoring for tests.
+
+    Provides comprehensive performance metrics including
+    memory usage, execution time, and resource monitoring.
+    """
+
     class PerformanceMonitor:
         def __init__(self):
             self.start_time = None
             self.start_memory = None
+            self.start_cpu = None
             self.metrics = {}
-        
+            self.checkpoints = []
+
         def start(self):
-            gc.collect()
+            """Start performance monitoring."""
+            gc.collect()  # Ensure clean baseline
             self.start_time = time.perf_counter()
-            self.start_memory = psutil.Process().memory_info().rss / 1024 / 1024  # MB
-        
+
+            if psutil is not None:
+                process = psutil.Process()
+                self.start_memory = process.memory_info().rss / 1024 / 1024  # MB
+                self.start_cpu = process.cpu_percent()
+            else:
+                self.start_memory = 0
+                self.start_cpu = 0
+
+        def checkpoint(self, name: str):
+            """Record a checkpoint during test execution."""
+            current_time = time.perf_counter()
+            checkpoint = {
+                "name": name,
+                "elapsed_seconds": current_time - self.start_time
+                if self.start_time
+                else 0,
+                "timestamp": current_time,
+            }
+
+            if psutil is not None:
+                process = psutil.Process()
+                checkpoint.update(
+                    {
+                        "memory_mb": process.memory_info().rss / 1024 / 1024,
+                        "cpu_percent": process.cpu_percent(),
+                    }
+                )
+
+            self.checkpoints.append(checkpoint)
+            return checkpoint
+
         def stop(self):
+            """Stop monitoring and return metrics."""
+            if self.start_time is None:
+                return {"error": "Monitoring not started"}
+
             end_time = time.perf_counter()
-            end_memory = psutil.Process().memory_info().rss / 1024 / 1024  # MB
-            
+
             self.metrics = {
                 "duration_seconds": end_time - self.start_time,
-                "memory_start_mb": self.start_memory,
-                "memory_end_mb": end_memory,
-                "memory_delta_mb": end_memory - self.start_memory
+                "checkpoints": self.checkpoints,
             }
+
+            if psutil is not None:
+                process = psutil.Process()
+                end_memory = process.memory_info().rss / 1024 / 1024
+                end_cpu = process.cpu_percent()
+
+                self.metrics.update(
+                    {
+                        "memory_start_mb": self.start_memory,
+                        "memory_end_mb": end_memory,
+                        "memory_delta_mb": end_memory - self.start_memory,
+                        "cpu_start_percent": self.start_cpu,
+                        "cpu_end_percent": end_cpu,
+                    }
+                )
+
             return self.metrics
-    
+
+        def assert_performance(
+            self, max_duration: float = None, max_memory_mb: float = None
+        ):
+            """Assert performance constraints."""
+            if max_duration and self.metrics.get("duration_seconds", 0) > max_duration:
+                raise AssertionError(
+                    f"Test exceeded max duration: {self.metrics['duration_seconds']:.2f}s > {max_duration}s"
+                )
+
+            if max_memory_mb and self.metrics.get("memory_delta_mb", 0) > max_memory_mb:
+                raise AssertionError(
+                    f"Test exceeded max memory usage: {self.metrics['memory_delta_mb']:.2f}MB > {max_memory_mb}MB"
+                )
+
     return PerformanceMonitor()
 
 
@@ -777,7 +908,7 @@ def performance_monitor():
 def mock_browser_context():
     """Mock browser context for Playwright/Crawl4AI testing."""
     context = MagicMock()
-    
+
     # Page mock
     page = MagicMock()
     page.goto = AsyncMock()
@@ -788,62 +919,187 @@ def mock_browser_context():
     page.click = AsyncMock()
     page.fill = AsyncMock()
     page.close = AsyncMock()
-    
+
     # Browser mock
     browser = MagicMock()
     browser.new_context = AsyncMock(return_value=context)
     browser.new_page = AsyncMock(return_value=page)
     browser.close = AsyncMock()
-    
+
     context.new_page = AsyncMock(return_value=page)
     context.close = AsyncMock()
-    
-    return {
-        "browser": browser,
-        "context": context,
-        "page": page
-    }
+
+    return {"browser": browser, "context": context, "page": page}
 
 
-@pytest.fixture
-def ci_environment_check():
-    """Check and configure CI environment settings."""
+@pytest.fixture(scope="session")
+def ci_environment_config(app_config):
+    """Enhanced CI environment detection and configuration.
+
+    Session-scoped fixture providing CI environment detection
+    and  configuration for different CI platforms.
+    """
     is_ci = is_ci_environment()
-    
-    if is_ci:
-        # CI-specific settings
-        os.environ["PYTEST_TIMEOUT"] = "300"  # 5 minutes max per test
-        os.environ["PYTEST_XDIST_WORKER_COUNT"] = "auto"
-        
-    return {
+
+    ci_config = {
         "is_ci": is_ci,
         "is_github_actions": bool(os.getenv("GITHUB_ACTIONS")),
         "is_gitlab_ci": bool(os.getenv("GITLAB_CI")),
+        "is_jenkins": bool(os.getenv("JENKINS_URL")),
+        "is_azure_devops": bool(os.getenv("SYSTEM_TEAMFOUNDATIONCOLLECTIONURI")),
         "cpu_count": os.cpu_count() or 1,
-        "parallel_workers": min(4, os.cpu_count() or 1) if is_ci else 1
+        "parallel_workers": app_config["parallel_workers"],
+        "worker_id": os.getenv("PYTEST_XDIST_WORKER", "master"),
+        "platform": {
+            "os": sys.platform,
+            "is_windows": is_windows(),
+            "is_macos": is_macos(),
+            "is_linux": is_linux(),
+        },
     }
+
+    # Platform-specific CI optimizations
+    if is_ci:
+        if ci_config["is_github_actions"]:
+            # GitHub Actions specific optimizations
+            ci_config["max_workers"] = min(4, ci_config["cpu_count"])
+            ci_config["timeout_multiplier"] = 1.5
+        elif ci_config["is_gitlab_ci"]:
+            # GitLab CI specific optimizations
+            ci_config["max_workers"] = min(2, ci_config["cpu_count"])
+            ci_config["timeout_multiplier"] = 2.0
+        else:
+            # Generic CI optimizations
+            ci_config["max_workers"] = min(3, ci_config["cpu_count"])
+            ci_config["timeout_multiplier"] = 1.2
+
+        # Set CI-specific environment variables
+        os.environ.setdefault("PYTEST_TIMEOUT", "300")
+        os.environ.setdefault("PYTEST_MAXFAIL", "5")
+
+    return ci_config
 
 
 def pytest_configure(config):
-    """Configure pytest with custom markers."""
-    config.addinivalue_line(
-        "markers", "browser: mark test as requiring browser automation"
-    )
-    config.addinivalue_line("markers", "slow: mark test as slow running")
-    config.addinivalue_line("markers", "integration: mark test as integration test")
-    config.addinivalue_line("markers", "unit: mark test as unit test")
-    config.addinivalue_line("markers", "performance: mark test as performance test")
-    config.addinivalue_line("markers", "ai: AI/ML specific tests")
-    config.addinivalue_line("markers", "embedding: Embedding-related tests")
-    config.addinivalue_line("markers", "vector_db: Vector database tests")
-    config.addinivalue_line("markers", "rag: RAG system tests")
-    config.addinivalue_line("markers", "fast: Fast unit tests (<100ms each)")
-    config.addinivalue_line("markers", "e2e: End-to-end tests (full pipeline)")
-    config.addinivalue_line("markers", "asyncio: marks tests as async tests")
-    config.addinivalue_line("markers", "benchmark: marks tests as benchmark tests")
-    config.addinivalue_line(
-        "markers", "property: Property-based tests using Hypothesis"
-    )
-    config.addinivalue_line(
-        "markers", "hypothesis: Property-based tests using Hypothesis"
-    )
+    """Configure pytest with  settings for  testing."""
+    # Core test markers
+    markers = [
+        "browser: mark test as requiring browser automation",
+        "slow: mark test as slow running (>5s)",
+        "fast: mark test as fast running (<1s)",
+        "integration: mark test as integration test",
+        "unit: mark test as unit test",
+        "e2e: mark test as end-to-end test",
+        "performance: mark test as performance test",
+        "benchmark: mark test as benchmark test",
+        # AI/ML markers
+        "ai: mark test as AI/ML specific",
+        "embedding: mark test as embedding-related",
+        "vector_db: mark test as vector database related",
+        "rag: mark test as RAG system related",
+        # Infrastructure markers
+        "database: mark test as requiring database",
+        "network: mark test as requiring network access",
+        "redis: mark test as requiring Redis",
+        "async_test: mark test as async test",
+        # Test framework markers
+        "hypothesis: mark test as property-based test using Hypothesis",
+        "property: mark test as property-based test",
+        "respx: mark test as using respx HTTP mocking",
+        # CI/Platform markers
+        "ci_only: mark test to run only in CI",
+        "local_only: mark test to run only locally",
+        "parallel_safe: mark test as safe for parallel execution",
+        "isolation_required: mark test as requiring complete isolation",
+    ]
+
+    for marker in markers:
+        config.addinivalue_line("markers", marker)
+
+    # Configure parallel execution
+    if config.getoption("--numprocesses", default="auto") == "auto":
+        import os
+
+        worker_count = min(4, max(1, (os.cpu_count() or 1) // 2))
+        config.option.numprocesses = worker_count
+
+
+def pytest_collection_modifyitems(config, items):
+    """Modify test collection for  organization and parallel execution."""
+    for item in items:
+        # Auto-mark based on file path
+        if "/integration/" in str(item.fspath):
+            item.add_marker(pytest.mark.integration)
+        elif "/unit/" in str(item.fspath):
+            item.add_marker(pytest.mark.unit)
+        elif "/e2e/" in str(item.fspath):
+            item.add_marker(pytest.mark.e2e)
+
+        # Auto-mark async tests
+        if asyncio.iscoroutinefunction(item.function):
+            item.add_marker(pytest.mark.async_test)
+
+        # Auto-mark based on fixtures used
+        if hasattr(item, "fixturenames"):
+            fixture_names = item.fixturenames
+
+            if "respx_mock" in fixture_names:
+                item.add_marker(pytest.mark.respx)
+            if any(name.startswith("mock_") for name in fixture_names):
+                item.add_marker(pytest.mark.parallel_safe)
+            if "isolated_db_session" in fixture_names:
+                item.add_marker(pytest.mark.isolation_required)
+            if "performance_monitor" in fixture_names:
+                item.add_marker(pytest.mark.performance)
+
+
+def pytest_runtest_setup(item):
+    """Setup for individual test runs with environment checks."""
+    # Skip tests based on environment
+    if item.get_closest_marker("ci_only") and not is_ci_environment():
+        pytest.skip("Test only runs in CI environment")
+
+    if item.get_closest_marker("local_only") and is_ci_environment():
+        pytest.skip("Test only runs in local environment")
+
+    # Check for required external services
+    if item.get_closest_marker("network"):
+        # Could add network connectivity check here
+        pass
+
+    if item.get_closest_marker("database"):
+        # Could add database connectivity check here
+        pass
+
+
+def pytest_runtest_call(item):
+    """Hook for test execution monitoring."""
+    # Could add test execution monitoring here
+
+
+def pytest_sessionstart(session):
+    """Session start hook for global setup."""
+    # Print test session info
+    worker_id = os.getenv("PYTEST_XDIST_WORKER")
+    if worker_id:
+        print(f"\nStarting test session on worker: {worker_id}")
+    else:
+        print(
+            f"\nStarting test session with {session.config.option.numprocesses} workers"
+        )
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Session finish hook for cleanup and reporting."""
+    # Could add session-level cleanup or reporting here
+
+
+# Import all fixtures from fixture modules
+pytest_plugins = [
+    "tests.fixtures.mock_factories",
+    "tests.fixtures.async_isolation",
+    "tests.fixtures.parallel_config",
+    "tests.fixtures.async_fixtures",
+    "tests.fixtures.external_services",
+    "tests.fixtures.test_data",
+]

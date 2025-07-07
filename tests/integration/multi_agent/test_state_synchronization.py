@@ -71,7 +71,7 @@ class DistributedStateManager:
     async def create_shared_state(
         self, state_id: str, initial_data: dict[str, Any]
     ) -> SharedState:
-        """Create a new shared state."""
+        """Create a  shared state."""
         shared_state = SharedState(
             state_id=state_id,
             data=initial_data.copy(),

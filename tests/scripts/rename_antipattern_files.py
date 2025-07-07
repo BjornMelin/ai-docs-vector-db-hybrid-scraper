@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Automated file renaming script for removing anti-pattern names.
 
-Renames files containing forbidden patterns (enhanced, modern, advanced)
+Renames files containing forbidden patterns (, , )
 to more descriptive names based on their actual functionality.
 """
 
@@ -34,7 +34,7 @@ class FileRenamer:
         self.skipped_files: List[Tuple[Path, str]] = []
 
     def suggest_new_name(self, old_path: Path) -> Path:
-        """Suggest a new name for a file by removing anti-patterns."""
+        """Suggest a  name for a file by removing anti-patterns."""
         old_name = old_path.stem
         new_name = old_name
         

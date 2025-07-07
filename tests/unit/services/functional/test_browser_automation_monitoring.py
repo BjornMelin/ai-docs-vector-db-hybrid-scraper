@@ -487,7 +487,7 @@ class TestBrowserAutomationMonitoring:
 
 @pytest.mark.browser_monitoring
 class TestAdvancedMonitoringFeatures:
-    """Test advanced monitoring features."""
+    """Test  monitoring features."""
 
     def test_tier_health_scoring(self):
         """Test tier health scoring algorithm."""
