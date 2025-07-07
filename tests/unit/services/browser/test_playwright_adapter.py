@@ -94,6 +94,7 @@ class TestPlaywrightAdapterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_initialize_success(self, basic_config):
         """Test successful initialization."""
         adapter = PlaywrightAdapter(basic_config)
@@ -127,6 +128,7 @@ class TestPlaywrightAdapterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", False)
+    @pytest.mark.asyncio
     async def test_initialize_playwright_unavailable(self, basic_config):
         """Test initialization when Playwright is unavailable."""
         adapter = PlaywrightAdapter(basic_config)
@@ -136,6 +138,7 @@ class TestPlaywrightAdapterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_initialize_already_initialized(self, basic_config):
         """Test re-initialization is skipped."""
         adapter = PlaywrightAdapter(basic_config)
@@ -148,6 +151,7 @@ class TestPlaywrightAdapterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_initialize_browser_launch_failure(self, basic_config):
         """Test initialization failure during browser launch."""
         adapter = PlaywrightAdapter(basic_config)
@@ -171,6 +175,7 @@ class TestPlaywrightAdapterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_initialize_different_browsers(self):
         """Test initialization with different browser types."""
         browsers = ["chromium", "firefox", "webkit"]
@@ -208,6 +213,7 @@ class TestPlaywrightAdapterCleanup:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_cleanup_success(self, basic_config):
         """Test successful cleanup."""
         adapter = PlaywrightAdapter(basic_config)
@@ -229,6 +235,7 @@ class TestPlaywrightAdapterCleanup:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_cleanup_browser_close_error(self, basic_config):
         """Test cleanup when browser close fails."""
         adapter = PlaywrightAdapter(basic_config)
@@ -251,6 +258,7 @@ class TestPlaywrightAdapterCleanup:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_cleanup_playwright_stop_error(self, basic_config):
         """Test cleanup when playwright stop fails."""
         adapter = PlaywrightAdapter(basic_config)
@@ -273,6 +281,7 @@ class TestPlaywrightAdapterCleanup:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_cleanup_not_initialized(self, basic_config):
         """Test cleanup when not initialized."""
         adapter = PlaywrightAdapter(basic_config)
@@ -290,6 +299,7 @@ class TestPlaywrightAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", False)
+    @pytest.mark.asyncio
     async def test_scrape_playwright_unavailable(self, basic_config):
         """Test scraping when Playwright is unavailable."""
         adapter = PlaywrightAdapter(basic_config)
@@ -299,6 +309,7 @@ class TestPlaywrightAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_scrape_not_initialized(self, basic_config):
         """Test scraping when adapter is not initialized."""
         adapter = PlaywrightAdapter(basic_config)
@@ -308,6 +319,7 @@ class TestPlaywrightAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_scrape_success_basic(self, basic_config):
         """Test successful basic scraping."""
         adapter = PlaywrightAdapter(basic_config)
@@ -347,6 +359,7 @@ class TestPlaywrightAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_scrape_with_actions(self, basic_config):
         """Test scraping with actions."""
         adapter = PlaywrightAdapter(basic_config)
@@ -393,6 +406,7 @@ class TestPlaywrightAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_scrape_invalid_actions(self, basic_config):
         """Test scraping with invalid actions."""
         adapter = PlaywrightAdapter(basic_config)
@@ -425,6 +439,7 @@ class TestPlaywrightAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_scrape_navigation_failure(self, basic_config):
         """Test scraping when navigation fails."""
         adapter = PlaywrightAdapter(basic_config)
@@ -450,6 +465,7 @@ class TestPlaywrightAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_scrape_action_failure_continues(self, basic_config):
         """Test that scraping continues when individual actions fail."""
         adapter = PlaywrightAdapter(basic_config)
@@ -521,6 +537,7 @@ class TestCapabilitiesAndHealth:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", False)
+    @pytest.mark.asyncio
     async def test_health_check_unavailable(self, basic_config):
         """Test health check when Playwright unavailable."""
         adapter = PlaywrightAdapter(basic_config)
@@ -533,6 +550,7 @@ class TestCapabilitiesAndHealth:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_health_check_not_initialized(self, basic_config):
         """Test health check when not initialized."""
         adapter = PlaywrightAdapter(basic_config)
@@ -545,6 +563,7 @@ class TestCapabilitiesAndHealth:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_health_check_success(self, basic_config):
         """Test successful health check."""
         adapter = PlaywrightAdapter(basic_config)
@@ -564,6 +583,7 @@ class TestCapabilitiesAndHealth:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_health_check_timeout(self, basic_config):
         """Test health check timeout."""
         adapter = PlaywrightAdapter(basic_config)
@@ -582,6 +602,7 @@ class TestCapabilitiesAndHealth:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_health_check_error(self, basic_config):
         """Test health check error handling."""
         adapter = PlaywrightAdapter(basic_config)
@@ -601,6 +622,7 @@ class TestComplexInteractionTesting:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_test_complex_interaction_success(self, basic_config):
         """Test successful complex interaction test."""
         adapter = PlaywrightAdapter(basic_config)
@@ -626,6 +648,7 @@ class TestComplexInteractionTesting:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_test_complex_interaction_not_available(self, basic_config):
         """Test complex interaction when adapter not available."""
         adapter = PlaywrightAdapter(basic_config)
@@ -638,6 +661,7 @@ class TestComplexInteractionTesting:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_test_complex_interaction_error(self, basic_config):
         """Test complex interaction error handling."""
         adapter = PlaywrightAdapter(basic_config)
@@ -657,6 +681,7 @@ class TestIntegration:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_full_workflow(self, basic_config):
         """Test complete workflow from initialization to cleanup."""
         adapter = PlaywrightAdapter(basic_config)
@@ -725,6 +750,7 @@ class TestIntegration:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.playwright_adapter.PLAYWRIGHT_AVAILABLE", True)
+    @pytest.mark.asyncio
     async def test_error_resilience(self, basic_config):
         """Test adapter resilience to various errors."""
         adapter = PlaywrightAdapter(basic_config)

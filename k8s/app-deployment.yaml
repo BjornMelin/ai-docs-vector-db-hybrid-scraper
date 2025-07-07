@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-docs-app
+  namespace: ai-docs-system
+  labels:
+    app.kubernetes.io/name: ai-docs-app
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: ai-docs-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ai-docs-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ai-docs-app
+        app.kubernetes.io/component: api
+    spec:
+      containers:
+      - name: ai-docs-app
+        image: ai-docs-app:latest  # Replace with your registry URL
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: AI_DOCS_VECTOR_DB__QDRANT_URL
+          value: "http://qdrant:6333"
+        - name: AI_DOCS_CACHE__REDIS_URL
+          value: "redis://dragonfly:6379"
+        - name: AI_DOCS_CACHE__REDIS_DATABASE
+          value: "0"
+        - name: AI_DOCS_LOG_LEVEL
+          value: "INFO"
+        - name: PYTHONPATH
+          value: "/app/src"
+        - name: AI_DOCS_MODE
+          value: "simple"  # Can be changed to 'enterprise'
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/config/status
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/v1/config/status
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false  # FastAPI needs write access for temp files
+          capabilities:
+            drop:
+            - ALL
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-docs-app
+  namespace: ai-docs-system
+  labels:
+    app.kubernetes.io/name: ai-docs-app
+    app.kubernetes.io/component: api
+spec:
+  selector:
+    app.kubernetes.io/name: ai-docs-app
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ai-docs-app-ingress
+  namespace: ai-docs-system
+  labels:
+    app.kubernetes.io/name: ai-docs-app
+    app.kubernetes.io/component: api
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"  # Optional: For SSL certificates
+spec:
+  tls:
+  - hosts:
+    - ai-docs.yourdomain.com  # Replace with your domain
+    secretName: ai-docs-tls
+  rules:
+  - host: ai-docs.yourdomain.com  # Replace with your domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ai-docs-app
+            port:
+              number: 8000

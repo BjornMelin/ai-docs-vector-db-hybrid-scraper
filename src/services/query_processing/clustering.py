@@ -32,7 +32,6 @@ try:
     )
     from sklearn.mixture import GaussianMixture
     from sklearn.neighbors import NearestNeighbors
-    from sklearn.preprocessing import StandardScaler
 except ImportError:
     DBSCAN = None
     KMeans = None
@@ -42,7 +41,6 @@ except ImportError:
     silhouette_score = None
     calinski_harabasz_score = None
     davies_bouldin_score = None
-    StandardScaler = None
     NearestNeighbors = None
     sklearn = None
 
@@ -378,8 +376,8 @@ class ResultClusteringService:
 
         except Exception as e:
             processing_time_ms = (time.time() - start_time) * 1000
-            self._logger.error(
-                f"Result clustering failed: {e}", exc_info=True
+            self._logger.exception(
+                "Result clustering failed: "
             )  # TODO: Convert f-string to logging format
 
             # Return fallback result
@@ -458,9 +456,7 @@ class ResultClusteringService:
         # Normalize embeddings for cosine similarity
         norms = np.linalg.norm(embedding_array, axis=1, keepdims=True)
         norms[norms == 0] = 1  # Avoid division by zero
-        embedding_array = embedding_array / norms
-
-        return embedding_array
+        return embedding_array / norms
 
     def _select_clustering_method(
         self, request: ResultClusteringRequest, embeddings: np.ndarray
@@ -920,7 +916,7 @@ class ResultClusteringService:
                             valid_embeddings, valid_labels
                         )
 
-                except Exception as e:
+                except (ValueError, TypeError, UnicodeDecodeError) as e:
                     self._logger.warning(
                         f"Failed to calculate quality metrics: {e}"
                     )  # TODO: Convert f-string to logging format

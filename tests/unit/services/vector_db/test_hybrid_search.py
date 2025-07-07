@@ -1,4 +1,4 @@
-"""Tests for the advanced hybrid search service.
+"""Tests for the  hybrid search service.
 
 This module contains comprehensive tests for the AdvancedHybridSearchService
 including query classification, model selection, adaptive fusion, and A/B testing.
@@ -9,13 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.config import Config
-from src.config.enums import (
-    ABTestVariant,
-    ModelType,
-    OptimizationStrategy,
-    QueryType,
-)
+from src.config import ABTestVariant, Config, ModelType, OptimizationStrategy, QueryType
 from src.models.vector_search import (
     ABTestConfig,
     FusionConfig,
@@ -24,7 +18,7 @@ from src.models.vector_search import (
     ModelSelectionStrategy,
     QueryClassification,
     SearchAccuracy,
-    SearchParams,
+    SecureSearchParamsModel,
 )
 from src.services.errors import QdrantServiceError
 from src.services.query_processing.models import (
@@ -33,7 +27,6 @@ from src.services.query_processing.models import (
 from src.services.query_processing.orchestrator import (
     SearchMode,
     SearchPipeline,
-    SearchRequest as AdvancedSearchRequest,
     SearchResult as AdvancedSearchResult,
 )
 from src.services.vector_db.hybrid_search import HybridSearchService
@@ -75,12 +68,12 @@ class TestAdvancedHybridSearchService:
 
     @pytest.fixture
     def sample_request(self):
-        """Create sample advanced hybrid search request."""
+        """Create sample  hybrid search request."""
         return HybridSearchRequest(
             query="How to implement async functions in Python?",
             collection_name="test_collection",
             limit=5,
-            search_params=SearchParams(
+            search_params=SecureSearchParamsModel(
                 accuracy_level=SearchAccuracy.BALANCED, hnsw_ef=64
             ),
             fusion_config=FusionConfig(algorithm="rrf"),
@@ -105,6 +98,7 @@ class TestAdvancedHybridSearchService:
             features={"has_code_keywords": True, "query_length": 8},
         )
 
+    @pytest.mark.asyncio
     async def test_initialization(self, service):
         """Test service initialization."""
         assert service.client is not None
@@ -117,6 +111,7 @@ class TestAdvancedHybridSearchService:
         assert service.enable_fallback is True
         assert service.fallback_timeout_ms == 5000
 
+    @pytest.mark.asyncio
     async def test_service_initialization_process(self, service):
         """Test service initialization process."""
         with patch.object(service.splade_provider, "initialize") as mock_init:
@@ -124,8 +119,9 @@ class TestAdvancedHybridSearchService:
             await service.initialize()
             mock_init.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_basic_hybrid_search(self, service, sample_request):
-        """Test basic advanced hybrid search functionality."""
+        """Test basic  hybrid search functionality."""
 
         # Mock all components including the orchestrator
         with (
@@ -176,7 +172,8 @@ class TestAdvancedHybridSearchService:
                         "payload": {
                             "id": f"result_{i}",
                             "title": f"Search Result {i}",
-                            "content": f"Content for result {i} matching query: {sample_request.query}",
+                            "content": f"Content for result {i} matching query: "
+                            f"{sample_request.query}",
                             "score": 0.9 - i * 0.1,
                             "content_type": "documentation" if i % 2 == 0 else "code",
                             "published_date": "2024-01-01T00:00:00Z",
@@ -222,6 +219,7 @@ class TestAdvancedHybridSearchService:
             assert response.optimization_applied is True
             assert response.retrieval_metrics is not None
 
+    @pytest.mark.asyncio
     async def test_search_with_query_classification_disabled(
         self, service, sample_request
     ):
@@ -234,6 +232,7 @@ class TestAdvancedHybridSearchService:
         assert response.query_classification is None
         assert len(response.results) > 0
 
+    @pytest.mark.asyncio
     async def test_search_with_model_selection_disabled(self, service, sample_request):
         """Test search with model selection disabled."""
         sample_request.enable_model_selection = False
@@ -243,6 +242,7 @@ class TestAdvancedHybridSearchService:
         assert isinstance(response, HybridSearchResponse)
         assert response.model_selection is None
 
+    @pytest.mark.asyncio
     async def test_search_with_splade_disabled(self, service, sample_request):
         """Test search with SPLADE disabled."""
         sample_request.enable_splade = False
@@ -252,6 +252,7 @@ class TestAdvancedHybridSearchService:
         assert isinstance(response, HybridSearchResponse)
         assert len(response.results) > 0
 
+    @pytest.mark.asyncio
     async def test_search_with_adaptive_fusion_disabled(self, service, sample_request):
         """Test search with adaptive fusion disabled."""
         sample_request.enable_adaptive_fusion = False
@@ -260,9 +261,11 @@ class TestAdvancedHybridSearchService:
 
         assert isinstance(response, HybridSearchResponse)
         assert response.fusion_weights is None
-        # Other optimizations (query classification, model selection) may still be applied
+        # Other optimizations (query classification, model selection) may still be
+        # applied
         # so optimization_applied can be True even when adaptive fusion is disabled
 
+    @pytest.mark.asyncio
     async def test_ab_test_assignment(self, service, sample_request):
         """Test A/B test variant assignment."""
         sample_request.ab_test_config = ABTestConfig(
@@ -278,6 +281,7 @@ class TestAdvancedHybridSearchService:
             ABTestVariant.RRF_OPTIMIZED,
         ]
 
+    @pytest.mark.asyncio
     async def test_ab_test_consistent_assignment(self, service, sample_request):
         """Test that A/B test assignment is consistent for same user."""
         sample_request.ab_test_config = ABTestConfig(
@@ -295,6 +299,7 @@ class TestAdvancedHybridSearchService:
         # All variants should be the same for consistent user experience
         assert len(set(variants)) == 1
 
+    @pytest.mark.asyncio
     async def test_query_classification_timeout(self, service, sample_request):
         """Test query classification timeout handling."""
         with patch.object(service.query_classifier, "classify_query") as mock_classify:
@@ -307,6 +312,7 @@ class TestAdvancedHybridSearchService:
             assert response.query_classification is None
             assert len(response.results) > 0  # Should fallback gracefully
 
+    @pytest.mark.asyncio
     async def test_model_selection_timeout(self, service, sample_request):
         """Test model selection timeout handling."""
         with (
@@ -322,6 +328,7 @@ class TestAdvancedHybridSearchService:
             assert response.model_selection is None
             assert len(response.results) > 0
 
+    @pytest.mark.asyncio
     async def test_splade_generation_timeout(self, service, sample_request):
         """Test SPLADE generation timeout handling."""
         with patch.object(
@@ -334,6 +341,7 @@ class TestAdvancedHybridSearchService:
             assert isinstance(response, HybridSearchResponse)
             assert len(response.results) > 0
 
+    @pytest.mark.asyncio
     async def test_adaptive_fusion_error_handling(self, service, sample_request):
         """Test adaptive fusion error handling."""
         with (
@@ -352,6 +360,7 @@ class TestAdvancedHybridSearchService:
             assert response.effectiveness_score is None
             assert len(response.results) > 0
 
+    @pytest.mark.asyncio
     async def test_fallback_search_on_error(self, service, sample_request):
         """Test fallback search when the orchestrator fails."""
         with patch.object(service.orchestrator, "search") as mock_orchestrator:
@@ -369,6 +378,7 @@ class TestAdvancedHybridSearchService:
             # When all search attempts fail, results may be empty
             assert isinstance(response.results, list)
 
+    @pytest.mark.asyncio
     async def test_fallback_disabled_error_propagation(self, service, sample_request):
         """Test error propagation when fallback is disabled."""
         service.enable_fallback = False
@@ -381,6 +391,7 @@ class TestAdvancedHybridSearchService:
             ):
                 await service.hybrid_search(sample_request)
 
+    @pytest.mark.asyncio
     async def test_search_metrics_calculation(self, service, sample_request):
         """Test search metrics calculation."""
         response = await service.hybrid_search(sample_request)
@@ -401,6 +412,7 @@ class TestAdvancedHybridSearchService:
     # was refactored to use the AdvancedSearchOrchestrator.
     # Weighted fusion is now handled by the orchestrator's fusion algorithms.
 
+    @pytest.mark.asyncio
     async def test_performance_statistics(self, service):
         """Test performance statistics retrieval."""
         # Add some mock metrics
@@ -423,6 +435,7 @@ class TestAdvancedHybridSearchService:
             assert "fusion_tuner_stats" in stats
             assert "splade_cache_stats" in stats
 
+    @pytest.mark.asyncio
     async def test_user_feedback_processing(self, service):
         """Test user feedback processing."""
         query_id = str(uuid.uuid4())
@@ -431,6 +444,7 @@ class TestAdvancedHybridSearchService:
         # This should not raise an exception
         await service.update_with_user_feedback(query_id, feedback)
 
+    @pytest.mark.asyncio
     async def test_search_for_learning_storage(self, service, sample_request):
         """Test storage of search results for learning."""
         query_id = str(uuid.uuid4())
@@ -452,6 +466,7 @@ class TestAdvancedHybridSearchService:
 
             assert query_id in service.search_metrics
 
+    @pytest.mark.asyncio
     async def test_format_search_results(self, service):
         """Test search results formatting."""
         raw_results = [
@@ -472,6 +487,7 @@ class TestAdvancedHybridSearchService:
         assert formatted[0].payload == {"title": "Doc 1"}
         assert formatted[0].vector == [0.1, 0.2]
 
+    @pytest.mark.asyncio
     async def test_empty_results_handling(self, service, sample_request):
         """Test handling of empty search results."""
 
@@ -499,6 +515,7 @@ class TestAdvancedHybridSearchService:
             assert len(response.results) == 0
             assert response.retrieval_metrics.results_count == 0
 
+    @pytest.mark.asyncio
     async def test_large_result_set_handling(self, service, sample_request):
         """Test handling of large result sets."""
 
@@ -549,6 +566,7 @@ class TestAdvancedHybridSearchService:
             QueryType.MULTIMODAL,
         ],
     )
+    @pytest.mark.asyncio
     async def test_different_query_types(self, service, sample_request, query_type):
         """Test search with different query types."""
         with patch.object(service.query_classifier, "classify_query") as mock_classify:
@@ -576,6 +594,7 @@ class TestAdvancedHybridSearchService:
             OptimizationStrategy.BALANCED,
         ],
     )
+    @pytest.mark.asyncio
     async def test_different_optimization_strategies(
         self, service, sample_request, optimization_strategy
     ):

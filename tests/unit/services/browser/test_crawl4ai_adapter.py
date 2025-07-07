@@ -69,6 +69,7 @@ class TestCrawl4AIAdapterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_initialize_success(self, mock_provider_class, basic_crawl4ai_config):
         """Test successful initialization."""
         mock_provider = AsyncMock()
@@ -84,6 +85,7 @@ class TestCrawl4AIAdapterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_initialize_already_initialized(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -101,6 +103,7 @@ class TestCrawl4AIAdapterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_initialize_provider_failure(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -120,6 +123,7 @@ class TestCrawl4AIAdapterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_cleanup_success(self, mock_provider_class, basic_crawl4ai_config):
         """Test successful cleanup."""
         mock_provider = AsyncMock()
@@ -136,6 +140,7 @@ class TestCrawl4AIAdapterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_cleanup_with_error(self, mock_provider_class, basic_crawl4ai_config):
         """Test cleanup continues even if provider cleanup fails."""
         mock_provider = AsyncMock()
@@ -152,6 +157,7 @@ class TestCrawl4AIAdapterInitialization:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_cleanup_no_provider(
         self, _mock_provider_class, basic_crawl4ai_config
     ):
@@ -168,6 +174,7 @@ class TestCrawl4AIAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_scrape_not_initialized(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -182,6 +189,7 @@ class TestCrawl4AIAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_scrape_success_basic(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -224,6 +232,7 @@ class TestCrawl4AIAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_scrape_with_wait_selector(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -250,6 +259,7 @@ class TestCrawl4AIAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_scrape_with_js_code(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -278,6 +288,7 @@ class TestCrawl4AIAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_scrape_with_timeout(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -299,6 +310,7 @@ class TestCrawl4AIAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_scrape_provider_failure(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -323,6 +335,7 @@ class TestCrawl4AIAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_scrape_provider_exception(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -343,6 +356,7 @@ class TestCrawl4AIAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_scrape_partial_provider_response(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -369,6 +383,7 @@ class TestCrawl4AIAdapterScraping:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_scrape_metadata_enrichment(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -403,6 +418,7 @@ class TestCrawl4AIAdapterBulkCrawling:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_crawl_bulk_not_initialized(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -417,6 +433,7 @@ class TestCrawl4AIAdapterBulkCrawling:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_crawl_bulk_success(self, mock_provider_class, basic_crawl4ai_config):
         """Test successful bulk crawling."""
         mock_provider = AsyncMock()
@@ -462,6 +479,7 @@ class TestCrawl4AIAdapterBulkCrawling:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_crawl_bulk_with_failures(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -496,6 +514,7 @@ class TestCrawl4AIAdapterBulkCrawling:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_crawl_bulk_custom_extraction_type(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -572,6 +591,7 @@ class TestCrawl4AIAdapterHealthCheck:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_health_check_not_initialized(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -589,6 +609,7 @@ class TestCrawl4AIAdapterHealthCheck:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_health_check_success(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -614,6 +635,7 @@ class TestCrawl4AIAdapterHealthCheck:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_health_check_failure(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -636,6 +658,7 @@ class TestCrawl4AIAdapterHealthCheck:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_health_check_timeout(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -659,6 +682,7 @@ class TestCrawl4AIAdapterHealthCheck:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_health_check_exception(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -683,6 +707,7 @@ class TestCrawl4AIAdapterPerformanceMetrics:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_get_performance_metrics_with_provider_metrics(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -709,6 +734,7 @@ class TestCrawl4AIAdapterPerformanceMetrics:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_get_performance_metrics_without_provider_metrics(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -739,6 +765,7 @@ class TestCrawl4AIAdapterTimeTracking:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_scrape_time_tracking(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -772,6 +799,7 @@ class TestCrawl4AIAdapterTimeTracking:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_scrape_time_tracking_on_error(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -803,6 +831,7 @@ class TestCrawl4AIAdapterEdgeCases:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_scrape_empty_url(self, mock_provider_class, basic_crawl4ai_config):
         """Test scraping with empty URL."""
         mock_provider = AsyncMock()
@@ -819,6 +848,7 @@ class TestCrawl4AIAdapterEdgeCases:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_scrape_none_values(self, mock_provider_class, basic_crawl4ai_config):
         """Test scraping with None values for optional parameters."""
         mock_provider = AsyncMock()
@@ -843,6 +873,7 @@ class TestCrawl4AIAdapterEdgeCases:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_crawl_bulk_empty_urls(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -861,6 +892,7 @@ class TestCrawl4AIAdapterEdgeCases:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_provider_returns_none(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -884,6 +916,7 @@ class TestCrawl4AIAdapterIntegration:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_full_workflow(self, mock_provider_class, basic_crawl4ai_config):
         """Test complete workflow from initialization to cleanup."""
         mock_provider = AsyncMock()
@@ -945,6 +978,7 @@ class TestCrawl4AIAdapterIntegration:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_error_recovery_scenarios(
         self, mock_provider_class, basic_crawl4ai_config
     ):
@@ -979,6 +1013,7 @@ class TestCrawl4AIAdapterIntegration:
 
     @pytest.mark.asyncio
     @patch("src.services.browser.crawl4ai_adapter.Crawl4AIProvider")
+    @pytest.mark.asyncio
     async def test_concurrent_operations(
         self, mock_provider_class, basic_crawl4ai_config
     ):

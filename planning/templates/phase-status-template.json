@@ -1,0 +1,41 @@
+{
+  "phase_id": "PX",
+  "phase_name": "[Phase Name]",
+  "status": "pending|in_progress|completed|blocked",
+  "start_date": "YYYY-MM-DD",
+  "completion_date": "YYYY-MM-DD",
+  "progress_percentage": 0,
+  "agents": [
+    {
+      "agent_id": "XX_AGENT_NAME",
+      "status": "pending|in_progress|completed|failed",
+      "start_date": "YYYY-MM-DD",
+      "completion_date": "YYYY-MM-DD",
+      "confidence_level": "high|medium|low",
+      "key_findings": ["Finding 1", "Finding 2"],
+      "dependencies": ["Previous agent IDs"],
+      "blockers": ["Any current blockers"],
+      "next_actions": ["Required next steps"]
+    }
+  ],
+  "dependencies": ["List of phase dependencies"],
+  "deliverables": [
+    {
+      "name": "Deliverable Name",
+      "status": "pending|in_progress|completed",
+      "file_path": "path/to/deliverable.md"
+    }
+  ],
+  "risks": [
+    {
+      "description": "Risk description",
+      "impact": "high|medium|low",
+      "mitigation": "Mitigation strategy"
+    }
+  ],
+  "success_criteria": [
+    "Criterion 1",
+    "Criterion 2"
+  ],
+  "retrospective_notes": "Post-completion lessons learned"
+}

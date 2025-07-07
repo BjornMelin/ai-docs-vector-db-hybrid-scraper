@@ -11,7 +11,6 @@ import signal
 import sys
 from contextlib import asynccontextmanager
 
-from fastmcp import FastMCP
 from starlette.applications import Starlette
 
 
@@ -19,12 +18,18 @@ try:
     import uvicorn
 except ImportError:
     uvicorn = None
+from typing import TYPE_CHECKING
+
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from src.config import get_config
 from src.services.fastapi.middleware.manager import get_middleware_manager
 from src.services.logging_config import configure_logging
+
+
+if TYPE_CHECKING:
+    from fastmcp import FastMCP
 
 
 logger = logging.getLogger(__name__)
@@ -68,7 +73,7 @@ class ProductionMCPServer:
             await self.startup()
             yield
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError):
             logger.exception("Startup failed")
             raise
 
@@ -96,7 +101,7 @@ class ProductionMCPServer:
                 # FastMCP cleanup would go here if it had cleanup methods
                 logger.info("FastMCP server cleanup complete")
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError):
             logger.exception("Error during shutdown")
 
         logger.info("Production MCP server shutdown complete")
@@ -157,7 +162,7 @@ class ProductionMCPServer:
             server = uvicorn.Server(config)
             await server.serve()
 
-        except Exception:
+        except (OSError, PermissionError, RuntimeError):
             logger.exception("Server error")
             raise
 
@@ -191,7 +196,7 @@ def main() -> None:
         asyncio.run(run_production_server_async(config, host, port))
     except KeyboardInterrupt:
         logger.info("Server interrupted by user")
-    except Exception:
+    except (OSError, PermissionError, RuntimeError):
         logger.exception("Server error")
         sys.exit(1)
 

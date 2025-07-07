@@ -103,11 +103,13 @@ class TestQueryProcessingPipeline:
         assert pipeline.orchestrator is not None
         assert pipeline._initialized is False
 
+    @pytest.mark.asyncio
     async def test_initialize(self, pipeline):
         """Test pipeline initialization."""
         await pipeline.initialize()
         assert pipeline._initialized is True
 
+    @pytest.mark.asyncio
     async def test_basic_query_processing(self, initialized_pipeline, sample_request):
         """Test basic query processing."""
         response = await initialized_pipeline.process(sample_request)
@@ -117,6 +119,7 @@ class TestQueryProcessingPipeline:
         assert len(response.results) > 0
         assert response._total_processing_time_ms > 0
 
+    @pytest.mark.asyncio
     async def test_string_query_processing(self, initialized_pipeline):
         """Test processing with string query input."""
         response = await initialized_pipeline.process(
@@ -126,6 +129,7 @@ class TestQueryProcessingPipeline:
         assert response.success is True
         # Should have called orchestrator with proper request object
 
+    @pytest.mark.asyncio
     async def test_analyze_query(self, initialized_pipeline):
         """Test query analysis functionality."""
         analysis = await initialized_pipeline.analyze_query(
@@ -137,6 +141,7 @@ class TestQueryProcessingPipeline:
         assert "preprocessing" in analysis
         assert "strategy" in analysis
 
+    @pytest.mark.asyncio
     async def test_batch_processing(self, initialized_pipeline):
         """Test batch query processing."""
         requests = [
@@ -150,6 +155,7 @@ class TestQueryProcessingPipeline:
         assert all(isinstance(resp, QueryProcessingResponse) for resp in responses)
         assert all(resp.success is True for resp in responses)
 
+    @pytest.mark.asyncio
     async def test_batch_processing_with_failures(
         self, initialized_pipeline, mock_orchestrator
     ):
@@ -184,6 +190,7 @@ class TestQueryProcessingPipeline:
         assert responses[1].success is False
         assert responses[2].success is True
 
+    @pytest.mark.asyncio
     async def test_health_check(self, initialized_pipeline):
         """Test health check functionality."""
         health = await initialized_pipeline.health_check()
@@ -193,6 +200,7 @@ class TestQueryProcessingPipeline:
         assert "performance" in health
         assert health["status"] == "healthy"
 
+    @pytest.mark.asyncio
     async def test_get_metrics(self, initialized_pipeline):
         """Test metrics retrieval."""
         metrics = await initialized_pipeline.get_metrics()
@@ -202,6 +210,7 @@ class TestQueryProcessingPipeline:
         assert "average_processing_time" in metrics
         assert "strategy_usage" in metrics
 
+    @pytest.mark.asyncio
     async def test_warm_up(self, initialized_pipeline):
         """Test pipeline warm-up."""
         result = await initialized_pipeline.warm_up()
@@ -210,11 +219,13 @@ class TestQueryProcessingPipeline:
         assert "warmup_time_ms" in result
         assert result["warmup_time_ms"] >= 0
 
+    @pytest.mark.asyncio
     async def test_uninitialized_pipeline_error(self, pipeline, sample_request):
         """Test error when using uninitialized pipeline."""
         with pytest.raises(RuntimeError, match="not initialized"):
             await pipeline.process(sample_request)
 
+    @pytest.mark.asyncio
     async def test_invalid_request_handling(self, initialized_pipeline):
         """Test handling of invalid requests."""
         # Empty query should be handled gracefully
@@ -225,6 +236,7 @@ class TestQueryProcessingPipeline:
         # Should either reject or handle gracefully
         assert isinstance(response, QueryProcessingResponse)
 
+    @pytest.mark.asyncio
     async def test_context_manager_usage(self, mock_orchestrator):
         """Test using pipeline as a context manager."""
         async with QueryProcessingPipeline(orchestrator=mock_orchestrator) as pipeline:
@@ -236,6 +248,7 @@ class TestQueryProcessingPipeline:
         # Should have called cleanup
         mock_orchestrator.cleanup.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_request_validation(self, initialized_pipeline):
         """Test request validation."""
         # Test with various request configurations
@@ -261,6 +274,7 @@ class TestQueryProcessingPipeline:
             response = await initialized_pipeline.process(request)
             assert response.success is True
 
+    @pytest.mark.asyncio
     async def test_performance_monitoring(self, initialized_pipeline, sample_request):
         """Test performance monitoring."""
         # Process some queries
@@ -273,6 +287,7 @@ class TestQueryProcessingPipeline:
         assert metrics["_total_queries"] >= 3
         assert metrics["average_processing_time"] > 0
 
+    @pytest.mark.asyncio
     async def test_strategy_usage_tracking(self, initialized_pipeline):
         """Test strategy usage tracking."""
         # Process queries with different strategies
@@ -296,6 +311,7 @@ class TestQueryProcessingPipeline:
         # Should track strategy usage
         assert "strategy_usage" in metrics
 
+    @pytest.mark.asyncio
     async def test_error_recovery(self, initialized_pipeline, mock_orchestrator):
         """Test error recovery mechanisms."""
 
@@ -316,6 +332,7 @@ class TestQueryProcessingPipeline:
         with pytest.raises(Exception, match="Temporary failure"):
             await initialized_pipeline.process(request)
 
+    @pytest.mark.asyncio
     async def test_concurrent_processing(self, initialized_pipeline):
         """Test concurrent query processing."""
 
@@ -335,17 +352,20 @@ class TestQueryProcessingPipeline:
         assert len(responses) == 5
         assert all(isinstance(resp, QueryProcessingResponse) for resp in responses)
 
+    @pytest.mark.asyncio
     async def test_resource_cleanup(self, initialized_pipeline):
         """Test proper resource cleanup."""
         await initialized_pipeline.cleanup()
         assert initialized_pipeline._initialized is False
 
+    @pytest.mark.asyncio
     async def test_configuration_validation(self, _mock_orchestrator):
         """Test pipeline configuration validation."""
         # Test with None orchestrator
         with pytest.raises(ValueError):
             QueryProcessingPipeline(orchestrator=None)
 
+    @pytest.mark.asyncio
     async def test_processing_timeout_handling(
         self, initialized_pipeline, mock_orchestrator
     ):
@@ -375,6 +395,7 @@ class TestQueryProcessingPipeline:
         # Should handle timeout appropriately
         assert isinstance(response, QueryProcessingResponse)
 
+    @pytest.mark.asyncio
     async def test_query_preprocessing_integration(self, initialized_pipeline):
         """Test integration with query preprocessing."""
         request = QueryProcessingRequest(
@@ -389,6 +410,7 @@ class TestQueryProcessingPipeline:
         assert response.success is True
         # Should have preprocessing results if orchestrator supports it
 
+    @pytest.mark.asyncio
     async def test_intent_classification_integration(self, initialized_pipeline):
         """Test integration with intent classification."""
         request = QueryProcessingRequest(
@@ -403,6 +425,7 @@ class TestQueryProcessingPipeline:
         assert response.success is True
         # Should have intent classification if orchestrator supports it
 
+    @pytest.mark.asyncio
     async def test_strategy_selection_integration(self, initialized_pipeline):
         """Test integration with strategy selection."""
         request = QueryProcessingRequest(
@@ -418,6 +441,7 @@ class TestQueryProcessingPipeline:
         assert response.success is True
         # Should have strategy selection if orchestrator supports it
 
+    @pytest.mark.asyncio
     async def test_comprehensive_pipeline_flow(self, initialized_pipeline):
         """Test comprehensive pipeline flow with all features."""
         request = QueryProcessingRequest(
@@ -463,6 +487,7 @@ class TestPipelineInitialization:
         assert pipeline.orchestrator is orchestrator
         assert pipeline.config is None
 
+    @pytest.mark.asyncio
     async def test_initialize_success(self, mock_orchestrator):
         """Test successful initialization."""
         pipeline = QueryProcessingPipeline(mock_orchestrator)
@@ -473,6 +498,7 @@ class TestPipelineInitialization:
         assert pipeline._initialized
         mock_orchestrator.initialize.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_initialize_already_initialized(
         self, initialized_pipeline, mock_orchestrator
     ):
@@ -487,6 +513,7 @@ class TestPipelineInitialization:
         mock_orchestrator.initialize.assert_not_called()
         assert initialized_pipeline._initialized
 
+    @pytest.mark.asyncio
     async def test_initialize_orchestrator_failure(self, mock_orchestrator):
         """Test initialization failure when orchestrator fails."""
         mock_orchestrator.initialize.side_effect = Exception("Orchestrator init failed")
@@ -501,6 +528,7 @@ class TestPipelineInitialization:
 class TestPipelineExecution:
     """Test pipeline execution with different query types and scenarios."""
 
+    @pytest.mark.asyncio
     async def test_process_with_query_processing_request(
         self, initialized_pipeline, sample_request
     ):
@@ -511,6 +539,7 @@ class TestPipelineExecution:
         assert response.success
         assert len(response.results) > 0
 
+    @pytest.mark.asyncio
     async def test_process_with_string_query(self, initialized_pipeline):
         """Test processing with string query."""
         response = await initialized_pipeline.process(
@@ -520,7 +549,8 @@ class TestPipelineExecution:
         assert isinstance(response, QueryProcessingResponse)
         assert response.success
 
-    async def test_process_with_string_query_and__kwargs(self, initialized_pipeline):
+    @pytest.mark.asyncio
+    async def test_process_with_string_query_and_kwargs(self, initialized_pipeline):
         """Test processing with string query and additional _kwargs."""
         response = await initialized_pipeline.process(
             "Python best practices",
@@ -534,6 +564,7 @@ class TestPipelineExecution:
         assert isinstance(response, QueryProcessingResponse)
         assert response.success
 
+    @pytest.mark.asyncio
     async def test_process_empty_query_string(self, initialized_pipeline):
         """Test processing with empty query string."""
         response = await initialized_pipeline.process("")
@@ -543,6 +574,7 @@ class TestPipelineExecution:
         assert response.error == "Empty query provided"
         assert response._total_results == 0
 
+    @pytest.mark.asyncio
     async def test_process_whitespace_only_query(self, initialized_pipeline):
         """Test processing with whitespace-only query."""
         response = await initialized_pipeline.process("   \n\t   ")
@@ -551,6 +583,7 @@ class TestPipelineExecution:
         assert not response.success
         assert response.error == "Empty query provided"
 
+    @pytest.mark.asyncio
     async def test_process_uninitialized_pipeline_raises_error(
         self, pipeline, sample_request
     ):
@@ -562,8 +595,9 @@ class TestPipelineExecution:
 
 
 class TestAdvancedProcessing:
-    """Test advanced processing methods."""
+    """Test  processing methods."""
 
+    @pytest.mark.asyncio
     async def test_process_advanced_with_full_request(self, initialized_pipeline):
         """Test process_advanced with complete request."""
         request = QueryProcessingRequest(
@@ -586,6 +620,7 @@ class TestAdvancedProcessing:
         assert isinstance(response, QueryProcessingResponse)
         assert response.success
 
+    @pytest.mark.asyncio
     async def test_process_advanced_uninitialized_raises_error(self, pipeline):
         """Test process_advanced with uninitialized pipeline."""
 
@@ -598,6 +633,7 @@ class TestAdvancedProcessing:
 class TestBatchProcessing:
     """Test batch processing functionality."""
 
+    @pytest.mark.asyncio
     async def test_batch_processing_multiple_requests(self, initialized_pipeline):
         """Test batch processing with multiple valid requests."""
         requests = [
@@ -610,12 +646,14 @@ class TestBatchProcessing:
         assert all(isinstance(resp, QueryProcessingResponse) for resp in responses)
         assert all(resp.success for resp in responses)
 
+    @pytest.mark.asyncio
     async def test_batch_processing_empty_list(self, initialized_pipeline):
         """Test batch processing with empty request list."""
         responses = await initialized_pipeline.process_batch([])
 
         assert responses == []
 
+    @pytest.mark.asyncio
     async def test_batch_processing_single_request(self, initialized_pipeline):
         """Test batch processing with single request."""
         requests = [QueryProcessingRequest(query="Single query")]
@@ -625,6 +663,7 @@ class TestBatchProcessing:
         assert len(responses) == 1
         assert responses[0].success
 
+    @pytest.mark.asyncio
     async def test_batch_processing_with_orchestrator_failures(
         self, initialized_pipeline, mock_orchestrator
     ):
@@ -653,6 +692,7 @@ class TestBatchProcessing:
         assert "Processing error" in responses[1].error
         assert responses[2].success
 
+    @pytest.mark.asyncio
     async def test_batch_processing_concurrency_control(self, initialized_pipeline):
         """Test batch processing with different concurrency limits."""
         requests = [
@@ -668,6 +708,7 @@ class TestBatchProcessing:
         # With concurrency limit, should take more time than unlimited
         assert end_time - start_time >= 0  # Basic timing check
 
+    @pytest.mark.asyncio
     async def test_batch_processing_uninitialized_raises_error(self, pipeline):
         """Test batch processing with uninitialized pipeline."""
 
@@ -680,6 +721,7 @@ class TestBatchProcessing:
 class TestQueryAnalysis:
     """Test query analysis functionality."""
 
+    @pytest.mark.asyncio
     async def test_analyze_query_basic(self, initialized_pipeline):
         """Test basic query analysis."""
         analysis = await initialized_pipeline.analyze_query("How to debug Python code?")
@@ -693,6 +735,7 @@ class TestQueryAnalysis:
         assert "processing_time_ms" in analysis
         assert analysis["query"] == "How to debug Python code?"
 
+    @pytest.mark.asyncio
     async def test_analyze_query_with_preprocessing_disabled(
         self, initialized_pipeline
     ):
@@ -707,6 +750,7 @@ class TestQueryAnalysis:
         assert "preprocessing" in analysis
         assert "intent_classification" in analysis
 
+    @pytest.mark.asyncio
     async def test_analyze_query_with_intent_classification_disabled(
         self, initialized_pipeline
     ):
@@ -721,6 +765,7 @@ class TestQueryAnalysis:
         assert "preprocessing" in analysis
         assert "intent_classification" in analysis
 
+    @pytest.mark.asyncio
     async def test_analyze_query_both_features_disabled(self, initialized_pipeline):
         """Test query analysis with both preprocessing and intent classification disabled."""
         analysis = await initialized_pipeline.analyze_query(
@@ -732,6 +777,7 @@ class TestQueryAnalysis:
         assert isinstance(analysis, dict)
         assert "query" in analysis
 
+    @pytest.mark.asyncio
     async def test_analyze_query_uninitialized_raises_error(self, pipeline):
         """Test query analysis with uninitialized pipeline."""
 
@@ -742,6 +788,7 @@ class TestQueryAnalysis:
 class TestMetricsAndPerformance:
     """Test performance metrics tracking."""
 
+    @pytest.mark.asyncio
     async def test_get_metrics_initialized_pipeline(self, initialized_pipeline):
         """Test getting metrics from initialized pipeline."""
         metrics = await initialized_pipeline.get_metrics()
@@ -754,6 +801,7 @@ class TestMetricsAndPerformance:
         assert "pipeline_initialized" in metrics
         assert metrics["pipeline_initialized"] is True
 
+    @pytest.mark.asyncio
     async def test_get_metrics_uninitialized_pipeline(self, pipeline):
         """Test getting metrics from uninitialized pipeline."""
         metrics = await pipeline.get_metrics()
@@ -764,6 +812,7 @@ class TestMetricsAndPerformance:
         assert metrics["average_processing_time"] == 0.0
         assert metrics["strategy_usage"] == {}
 
+    @pytest.mark.asyncio
     async def test_metrics_after_processing_queries(
         self, initialized_pipeline, _mock_orchestrator
     ):
@@ -781,6 +830,7 @@ class TestMetricsAndPerformance:
 class TestHealthCheck:
     """Test health check functionality."""
 
+    @pytest.mark.asyncio
     async def test_health_check_healthy_pipeline(self, initialized_pipeline):
         """Test health check on healthy pipeline."""
         health = await initialized_pipeline.health_check()
@@ -795,6 +845,7 @@ class TestHealthCheck:
         assert health["pipeline_healthy"] is True
         assert health["performance"]["initialized"] is True
 
+    @pytest.mark.asyncio
     async def test_health_check_uninitialized_pipeline(self, pipeline):
         """Test health check on uninitialized pipeline."""
         health = await pipeline.health_check()
@@ -803,6 +854,7 @@ class TestHealthCheck:
         assert health["pipeline_healthy"] is False
         assert health["performance"]["initialized"] is False
 
+    @pytest.mark.asyncio
     async def test_health_check_component_analysis(self, initialized_pipeline):
         """Test health check component analysis."""
         health = await initialized_pipeline.health_check()
@@ -818,6 +870,7 @@ class TestHealthCheck:
                 assert "status" in component
                 assert "message" in component
 
+    @pytest.mark.asyncio
     async def test_health_check_with_analysis_failure(
         self, initialized_pipeline, mock_orchestrator
     ):
@@ -838,6 +891,7 @@ class TestHealthCheck:
 class TestWarmUp:
     """Test pipeline warm-up functionality."""
 
+    @pytest.mark.asyncio
     async def test_warm_up_success(self, initialized_pipeline):
         """Test successful pipeline warm-up."""
         result = await initialized_pipeline.warm_up()
@@ -854,6 +908,7 @@ class TestWarmUp:
         assert result["successful_queries"] >= 0
         assert len(result["components_warmed"]) > 0
 
+    @pytest.mark.asyncio
     async def test_warm_up_with_failures(self, initialized_pipeline, mock_orchestrator):
         """Test warm-up with some processing failures."""
         call_count = 0
@@ -875,6 +930,7 @@ class TestWarmUp:
         assert result["queries_processed"] == 3
         assert result["successful_queries"] < 3
 
+    @pytest.mark.asyncio
     async def test_warm_up_complete_failure(
         self, initialized_pipeline, _mock_orchestrator
     ):
@@ -899,6 +955,7 @@ class TestWarmUp:
         # Restore original method
         initialized_pipeline.process_batch = original_process_batch
 
+    @pytest.mark.asyncio
     async def test_warm_up_uninitialized_raises_error(self, pipeline):
         """Test warm-up with uninitialized pipeline."""
 
@@ -909,6 +966,7 @@ class TestWarmUp:
 class TestCleanup:
     """Test cleanup functionality."""
 
+    @pytest.mark.asyncio
     async def test_cleanup_initialized_pipeline(
         self, initialized_pipeline, mock_orchestrator
     ):
@@ -920,6 +978,7 @@ class TestCleanup:
         assert not initialized_pipeline._initialized
         mock_orchestrator.cleanup.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_cleanup_uninitialized_pipeline(self, pipeline, mock_orchestrator):
         """Test cleaning up uninitialized pipeline."""
         assert not pipeline._initialized
@@ -933,6 +992,7 @@ class TestCleanup:
 class TestContextManager:
     """Test async context manager functionality."""
 
+    @pytest.mark.asyncio
     async def test_context_manager_success(self, mock_orchestrator):
         """Test successful context manager usage."""
         async with QueryProcessingPipeline(mock_orchestrator) as pipeline:
@@ -943,6 +1003,7 @@ class TestContextManager:
         # Should have cleaned up
         mock_orchestrator.cleanup.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_context_manager_with_exception(self, mock_orchestrator):
         """Test context manager with exception in context."""
         mock_orchestrator.process_query.side_effect = Exception("Processing error")
@@ -954,6 +1015,7 @@ class TestContextManager:
         # Should still clean up
         mock_orchestrator.cleanup.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_context_manager_initialization_failure(self, mock_orchestrator):
         """Test context manager when initialization fails."""
         mock_orchestrator.initialize.side_effect = Exception("Init failed")
@@ -969,6 +1031,7 @@ class TestContextManager:
 class TestEdgeCasesAndErrorHandling:
     """Test edge cases and error handling scenarios."""
 
+    @pytest.mark.asyncio
     async def test_process_with_orchestrator_timeout(
         self, initialized_pipeline, mock_orchestrator
     ):
@@ -984,6 +1047,7 @@ class TestEdgeCasesAndErrorHandling:
         response = await initialized_pipeline.process("slow query")
         assert isinstance(response, QueryProcessingResponse)
 
+    @pytest.mark.asyncio
     async def test_process_with_malformed_orchestrator_response(
         self, initialized_pipeline, mock_orchestrator
     ):
@@ -996,6 +1060,7 @@ class TestEdgeCasesAndErrorHandling:
         # The response should be the malformed response or an error should be raised
         assert response == "invalid response" or hasattr(response, "success")
 
+    @pytest.mark.asyncio
     async def test_concurrent_initialization_attempts(self, mock_orchestrator):
         """Test concurrent initialization attempts."""
         pipeline = QueryProcessingPipeline(mock_orchestrator)
@@ -1008,6 +1073,7 @@ class TestEdgeCasesAndErrorHandling:
         assert pipeline._initialized
         mock_orchestrator.initialize.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_process_with_very_large_request(self, initialized_pipeline):
         """Test processing with very large request parameters."""
         request = QueryProcessingRequest(
@@ -1023,6 +1089,7 @@ class TestEdgeCasesAndErrorHandling:
         response = await initialized_pipeline.process(request)
         assert isinstance(response, QueryProcessingResponse)
 
+    @pytest.mark.asyncio
     async def test_nested_context_managers(self, mock_orchestrator):
         """Test nested context manager usage."""
         async with (
@@ -1035,6 +1102,7 @@ class TestEdgeCasesAndErrorHandling:
             assert response1.success
             assert response2.success
 
+    @pytest.mark.asyncio
     async def test_pipeline_reuse_after_cleanup(self, initialized_pipeline):
         """Test using pipeline after cleanup and re-initialization."""
         # Use pipeline
@@ -1054,6 +1122,7 @@ class TestEdgeCasesAndErrorHandling:
 class TestCachingBehavior:
     """Test caching behavior and cache integration."""
 
+    @pytest.mark.asyncio
     async def test_cache_hit_tracking(self, initialized_pipeline, mock_orchestrator):
         """Test cache hit tracking in responses."""
 
@@ -1072,6 +1141,7 @@ class TestCachingBehavior:
 
         assert response.cache_hit is True
 
+    @pytest.mark.asyncio
     async def test_cache_miss_tracking(self, initialized_pipeline, mock_orchestrator):
         """Test cache miss tracking in responses."""
 
@@ -1094,6 +1164,7 @@ class TestCachingBehavior:
 class TestPipelineCustomization:
     """Test pipeline customization features."""
 
+    @pytest.mark.asyncio
     async def test_force_strategy_override(self, initialized_pipeline):
         """Test forcing specific search strategy."""
         request = QueryProcessingRequest(
@@ -1105,6 +1176,7 @@ class TestPipelineCustomization:
         response = await initialized_pipeline.process(request)
         assert response.success
 
+    @pytest.mark.asyncio
     async def test_force_dimension_override(self, initialized_pipeline):
         """Test forcing specific embedding dimension."""
         request = QueryProcessingRequest(
@@ -1116,6 +1188,7 @@ class TestPipelineCustomization:
         response = await initialized_pipeline.process(request)
         assert response.success
 
+    @pytest.mark.asyncio
     async def test_custom_search_accuracy(self, initialized_pipeline):
         """Test custom search accuracy settings."""
         for accuracy in ["fast", "balanced", "high"]:
@@ -1126,6 +1199,7 @@ class TestPipelineCustomization:
             response = await initialized_pipeline.process(request)
             assert response.success
 
+    @pytest.mark.asyncio
     async def test_custom_processing_timeout(self, initialized_pipeline):
         """Test custom processing timeout settings."""
         request = QueryProcessingRequest(
@@ -1139,6 +1213,7 @@ class TestPipelineCustomization:
 class TestIntegrationBetweenStages:
     """Test integration and data flow between pipeline stages."""
 
+    @pytest.mark.asyncio
     async def test_stage_orchestration_data_flow(
         self, initialized_pipeline, mock_orchestrator
     ):
@@ -1205,6 +1280,7 @@ class TestIntegrationBetweenStages:
         assert response.preprocessing_result.corrections_applied == ["memry -> memory"]
         assert response.strategy_selection.primary_strategy == SearchStrategy.HYBRID
 
+    @pytest.mark.asyncio
     async def test_stage_dependency_handling(self, initialized_pipeline):
         """Test handling of stage dependencies."""
         # Strategy selection typically depends on intent classification
@@ -1218,6 +1294,7 @@ class TestIntegrationBetweenStages:
         response = await initialized_pipeline.process(request)
         assert response.success
 
+    @pytest.mark.asyncio
     async def test_stage_error_propagation(
         self, initialized_pipeline, mock_orchestrator
     ):
@@ -1248,6 +1325,7 @@ class TestIntegrationBetweenStages:
 class TestAdditionalEdgeCases:
     """Additional edge case tests for comprehensive coverage."""
 
+    @pytest.mark.asyncio
     async def test_analyze_query_with_null_classification(
         self, initialized_pipeline, mock_orchestrator
     ):
@@ -1276,6 +1354,7 @@ class TestAdditionalEdgeCases:
         assert analysis["complexity"] is None
         assert "intent_classification" in analysis
 
+    @pytest.mark.asyncio
     async def test_process_with_none_collection_name(self, initialized_pipeline):
         """Test processing with None collection name in string query."""
         # This should use default collection name when None is passed
@@ -1285,6 +1364,7 @@ class TestAdditionalEdgeCases:
 
         assert isinstance(response, QueryProcessingResponse)
 
+    @pytest.mark.asyncio
     async def test_context_manager_double_entry(self, mock_orchestrator):
         """Test context manager being used twice on same instance."""
         pipeline = QueryProcessingPipeline(mock_orchestrator)
@@ -1296,6 +1376,7 @@ class TestAdditionalEdgeCases:
                 assert p2._initialized
                 assert p1 is p2  # Same instance
 
+    @pytest.mark.asyncio
     async def test_analyze_query_request_creation(
         self, initialized_pipeline, mock_orchestrator
     ):
@@ -1329,6 +1410,7 @@ class TestAdditionalEdgeCases:
         assert captured_request.enable_intent_classification is True
         assert captured_request.enable_strategy_selection is True
 
+    @pytest.mark.asyncio
     async def test_health_check_component_status_variations(
         self, initialized_pipeline, mock_orchestrator
     ):
@@ -1363,6 +1445,7 @@ class TestAdditionalEdgeCases:
         assert components["preprocessor"]["status"] == "degraded"
         assert components["strategy_selector"]["status"] == "healthy"
 
+    @pytest.mark.asyncio
     async def test_warmup_timing_measurement(self, initialized_pipeline):
         """Test that warmup properly measures timing."""
 
@@ -1376,6 +1459,7 @@ class TestAdditionalEdgeCases:
         actual_time_ms = (end_time - start_time) * 1000
         assert abs(result["warmup_time_ms"] - actual_time_ms) < 1000  # Within 1 second
 
+    @pytest.mark.asyncio
     async def test_process_with_all_request_options(self, initialized_pipeline):
         """Test processing with all possible request options set."""
         request = QueryProcessingRequest(
@@ -1407,6 +1491,7 @@ class TestAdditionalEdgeCases:
         assert isinstance(response, QueryProcessingResponse)
         assert response.success
 
+    @pytest.mark.asyncio
     async def test_get_metrics_edge_case_values(
         self, initialized_pipeline, mock_orchestrator
     ):
@@ -1436,6 +1521,7 @@ class TestAdditionalEdgeCases:
             metrics["strategy_usage"], dict
         )
 
+    @pytest.mark.asyncio
     async def test_batch_processing_max_concurrent_edge_cases(
         self, initialized_pipeline
     ):

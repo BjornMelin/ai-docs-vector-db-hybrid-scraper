@@ -1,0 +1,461 @@
+name: Extended Validation Suite
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/benchmarks/**'
+      - 'tests/performance/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/benchmarks/**'
+      - 'tests/performance/**'
+  schedule:
+    # Run daily at 2 AM UTC for performance monitoring
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      run-performance:
+        description: 'Run performance benchmarks'
+        required: false
+        default: 'true'
+        type: boolean
+      run-security:
+        description: 'Run extended security scan'
+        required: false
+        default: 'true'
+        type: boolean
+
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+
+env:
+  PYTHONUNBUFFERED: 1
+  PYTHONDONTWRITEBYTECODE: 1
+
+concurrency:
+  group: extended-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  performance-benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event.inputs.run-performance == 'true' || contains(github.event.pull_request.labels.*.name, 'performance')
+    timeout-minutes: 30
+    
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+        benchmark-suite: ['config', 'core', 'integration']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for performance comparisons
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-environment
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache-suffix: '-perf-${{ matrix.benchmark-suite }}'
+
+      - name: Install benchmark dependencies
+        run: |
+          uv pip install pytest-benchmark matplotlib pandas
+
+      - name: Setup benchmark environment
+        run: |
+          # Create necessary directories for benchmarks
+          mkdir -p tests/fixtures/{cache,data,logs,vectors,embeddings}
+          mkdir -p tests/benchmarks/{cache,data,logs,.benchmarks}
+          mkdir -p logs cache data
+          
+          # Set environment variables for CI
+          echo "CI=true" >> $GITHUB_ENV
+          echo "TESTING=true" >> $GITHUB_ENV
+          echo "SKIP_BROWSER_TESTS=1" >> $GITHUB_ENV
+          echo "SKIP_DOCKER_TESTS=1" >> $GITHUB_ENV
+
+      - name: Run performance benchmarks
+        run: |
+          echo "⚡ Running ${{ matrix.benchmark-suite }} performance benchmarks..."
+          
+          # Use the benchmark runner script for better control and error handling
+          uv run python scripts/run_benchmarks.py \
+            --suite="${{ matrix.benchmark-suite }}" \
+            --output-dir="."
+          
+          # Ensure output file exists even on failure
+          OUTPUT_FILE="${{ matrix.benchmark-suite }}_benchmark_results.json"
+          if [ ! -f "$OUTPUT_FILE" ]; then
+            echo '{"benchmarks": [], "error": "No results generated"}' > "$OUTPUT_FILE"
+          fi
+
+      - name: Generate performance report
+        run: |
+          echo "📊 Generating performance report..."
+          python - << 'EOF'
+          import json
+          import glob
+          import os
+          from datetime import datetime
+          
+          # Find benchmark results
+          result_files = glob.glob("*_benchmark_results.json")
+          
+          if not result_files:
+              print("No benchmark results found")
+              exit(0)
+          
+          report = {
+              "timestamp": datetime.now().isoformat(),
+              "python_version": "${{ matrix.python-version }}",
+              "benchmark_suite": "${{ matrix.benchmark-suite }}",
+              "results": {}
+          }
+          
+          for file in result_files:
+              try:
+                  with open(file) as f:
+                      data = json.load(f)
+                      if "benchmarks" in data:
+                          for benchmark in data["benchmarks"]:
+                              name = benchmark.get("name", "unknown")
+                              stats = benchmark.get("stats", {})
+                              report["results"][name] = {
+                                  "mean": stats.get("mean", 0),
+                                  "min": stats.get("min", 0),
+                                  "max": stats.get("max", 0),
+                                  "stddev": stats.get("stddev", 0)
+                              }
+              except Exception as e:
+                  print(f"Error processing {file}: {e}")
+          
+          # Save report
+          report_file = f"performance_report_{report['benchmark_suite']}_{report['python_version']}.json"
+          with open(report_file, "w") as f:
+              json.dump(report, f, indent=2)
+          
+          print(f"Performance report saved to {report_file}")
+          EOF
+
+      - name: Check performance targets
+        run: |
+          echo "🎯 Checking performance targets..."
+          python - << 'EOF'
+          import json
+          import glob
+          
+          # Performance targets (in seconds)
+          TARGETS = {
+              "config_loading": 0.1,      # Config loading should be < 100ms
+              "hot_reload": 0.1,          # Hot reload should be < 100ms  
+              "validation": 0.05,         # Validation should be < 50ms
+              "core_operations": 1.0,     # Core operations should be < 1s
+          }
+          
+          violations = []
+          report_files = glob.glob("performance_report_*.json")
+          
+          for file in report_files:
+              try:
+                  with open(file) as f:
+                      report = json.load(f)
+                      
+                  for test_name, stats in report.get("results", {}).items():
+                      mean_time = stats.get("mean", 0)
+                      
+                      for target_name, target_time in TARGETS.items():
+                          if target_name in test_name.lower() and mean_time > target_time:
+                              violations.append(f"{test_name}: {mean_time:.3f}s > {target_time}s")
+              except Exception as e:
+                  print(f"Error checking targets in {file}: {e}")
+          
+          if violations:
+              print("❌ Performance targets violated:")
+              for violation in violations:
+                  print(f"  - {violation}")
+              exit(1)
+          else:
+              print("✅ All performance targets met")
+          EOF
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ matrix.python-version }}-${{ matrix.benchmark-suite }}
+          path: |
+            *_benchmark_results.json
+            performance_report_*.json
+          retention-days: 30
+
+  extended-security-scan:
+    name: Extended Security Analysis
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event.inputs.run-security == 'true' || github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-environment
+        with:
+          cache-suffix: '-security-extended'
+
+      - name: Run comprehensive security scan
+        run: |
+          echo "🔒 Running comprehensive security analysis..."
+          
+          # Advanced dependency analysis
+          uv tool install pip-audit
+          uv tool run pip-audit --format=json --output=advanced-audit.json --desc --vulnerability-service=all || true
+          
+          # Code security analysis with detailed output
+          uv tool install bandit
+          uv tool run bandit -r src/ -f json -o bandit-detailed.json -v || true
+          
+          # License compliance check
+          uv tool install pip-licenses
+          uv tool run pip-licenses --format=json --output-file=licenses.json --with-urls --with-description || true
+          
+          # SAST analysis (if available)
+          if command -v semgrep &> /dev/null; then
+            semgrep --config=auto --json --output=semgrep-results.json src/ || true
+          fi
+
+      - name: Generate security report
+        run: |
+          echo "📋 Generating security report..."
+          python - << 'EOF'
+          import json
+          import os
+          from datetime import datetime
+          
+          report = {
+              "timestamp": datetime.now().isoformat(),
+              "vulnerabilities": [],
+              "code_issues": [],
+              "license_issues": [],
+              "summary": {
+                  "total_vulnerabilities": 0,
+                  "critical_vulnerabilities": 0,
+                  "high_severity_issues": 0,
+                  "license_concerns": 0
+              }
+          }
+          
+          # Process pip-audit results
+          if os.path.exists("advanced-audit.json"):
+              try:
+                  with open("advanced-audit.json") as f:
+                      audit_data = json.load(f)
+                      report["vulnerabilities"] = audit_data
+                      report["summary"]["total_vulnerabilities"] = len(audit_data)
+                      
+                      # Count critical vulnerabilities
+                      for vuln in audit_data:
+                          if vuln.get("severity", "").lower() in ["critical", "high"]:
+                              report["summary"]["critical_vulnerabilities"] += 1
+              except Exception as e:
+                  print(f"Error processing audit results: {e}")
+          
+          # Process bandit results
+          if os.path.exists("bandit-detailed.json"):
+              try:
+                  with open("bandit-detailed.json") as f:
+                      bandit_data = json.load(f)
+                      report["code_issues"] = bandit_data.get("results", [])
+                      
+                      # Count high severity issues
+                      for issue in report["code_issues"]:
+                          if issue.get("issue_severity", "").lower() in ["high", "medium"]:
+                              report["summary"]["high_severity_issues"] += 1
+              except Exception as e:
+                  print(f"Error processing bandit results: {e}")
+          
+          # Process license results
+          if os.path.exists("licenses.json"):
+              try:
+                  with open("licenses.json") as f:
+                      license_data = json.load(f)
+                      
+                      # Check for problematic licenses
+                      problematic_licenses = ["GPL", "AGPL", "LGPL", "Copyleft"]
+                      for pkg in license_data:
+                          license_name = pkg.get("License", "")
+                          if any(prob in license_name for prob in problematic_licenses):
+                              report["license_issues"].append(pkg)
+                              report["summary"]["license_concerns"] += 1
+              except Exception as e:
+                  print(f"Error processing license results: {e}")
+          
+          # Save comprehensive report
+          with open("security-comprehensive-report.json", "w") as f:
+              json.dump(report, f, indent=2)
+          
+          # Print summary
+          print("Security Analysis Summary:")
+          print(f"  Vulnerabilities: {report['summary']['total_vulnerabilities']}")
+          print(f"  Critical/High: {report['summary']['critical_vulnerabilities']}")
+          print(f"  Code Issues: {report['summary']['high_severity_issues']}")
+          print(f"  License Concerns: {report['summary']['license_concerns']}")
+          EOF
+
+      - name: Upload security artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: extended-security-results
+          path: |
+            advanced-audit.json
+            bandit-detailed.json
+            licenses.json
+            semgrep-results.json
+            security-comprehensive-report.json
+          retention-days: 90
+
+  docker-optimization:
+    name: Docker Build Optimization
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'docker')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and analyze Docker images
+        run: |
+          echo "🐳 Building and analyzing Docker images..."
+          
+          if [ -f "Dockerfile" ]; then
+            # Build with cache and analyze
+            docker buildx build \
+              --target builder \
+              --cache-from type=gha \
+              --cache-to type=gha,mode=max \
+              -t ai-docs-app:builder .
+            
+            docker buildx build \
+              --cache-from type=gha \
+              --cache-to type=gha,mode=max \
+              -t ai-docs-app:latest .
+            
+            # Analyze image size and layers
+            docker images ai-docs-app:latest --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}"
+            docker history --no-trunc ai-docs-app:latest
+          fi
+
+      - name: Security scan Docker images
+        run: |
+          if command -v trivy &> /dev/null; then
+            echo "🔍 Scanning Docker images for vulnerabilities..."
+            trivy image --format json --output docker-security.json ai-docs-app:latest || true
+          else
+            echo "Trivy not available - skipping Docker security scan"
+          fi
+
+  consolidate-results:
+    name: Consolidate Extended Validation
+    runs-on: ubuntu-latest
+    needs: [performance-benchmarks, extended-security-scan, docker-optimization]
+    if: always()
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Generate consolidated report
+        run: |
+          echo "📊 Generating consolidated validation report..."
+          python - << 'EOF'
+          import json
+          import glob
+          import os
+          from datetime import datetime
+          
+          report = {
+              "timestamp": datetime.now().isoformat(),
+              "validation_type": "extended",
+              "performance": {"status": "not_run", "details": {}},
+              "security": {"status": "not_run", "details": {}},
+              "docker": {"status": "not_run", "details": {}},
+              "overall_status": "unknown"
+          }
+          
+          # Aggregate performance results
+          perf_files = glob.glob("**/performance_report_*.json", recursive=True)
+          if perf_files:
+              report["performance"]["status"] = "completed"
+              report["performance"]["details"]["reports_found"] = len(perf_files)
+          
+          # Aggregate security results  
+          sec_files = glob.glob("**/security-comprehensive-report.json", recursive=True)
+          if sec_files:
+              report["security"]["status"] = "completed"
+              try:
+                  with open(sec_files[0]) as f:
+                      sec_data = json.load(f)
+                      report["security"]["details"] = sec_data.get("summary", {})
+              except Exception as e:
+                  print(f"Error reading security report: {e}")
+          
+          # Check Docker results
+          docker_files = glob.glob("**/docker-security.json", recursive=True)
+          if docker_files:
+              report["docker"]["status"] = "completed"
+          
+          # Determine overall status
+          all_statuses = [
+              report["performance"]["status"],
+              report["security"]["status"],
+              report["docker"]["status"]
+          ]
+          
+          if "completed" in all_statuses:
+              report["overall_status"] = "success"
+          else:
+              report["overall_status"] = "partial"
+          
+          with open("extended-validation-report.json", "w") as f:
+              json.dump(report, f, indent=2)
+          
+          print("Extended validation consolidated report generated")
+          EOF
+
+      - name: Comment results on PR
+        if: github.event_name == 'pull_request'
+        uses: ./.github/actions/pr-comment
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          comment-id: "extended-validation-results"
+          title: "🔬 Extended Validation Results"
+          body: |
+            ### Performance Benchmarks
+            - ${{ needs.performance-benchmarks.result == 'success' && '✅ Passed' || (needs.performance-benchmarks.result == 'failure' && '❌ Failed' || '⏭️ Skipped') }}
+            
+            ### Extended Security Scan  
+            - ${{ needs.extended-security-scan.result == 'success' && '✅ Passed' || (needs.extended-security-scan.result == 'failure' && '❌ Failed' || '⏭️ Skipped') }}
+            
+            ### Docker Optimization
+            - ${{ needs.docker-optimization.result == 'success' && '✅ Passed' || (needs.docker-optimization.result == 'failure' && '❌ Failed' || '⏭️ Skipped') }}
+            
+            **Status**: Extended validation provides deep analysis of performance, security, and infrastructure concerns.
+            
+            *This comprehensive validation suite runs automatically for main branch changes and can be triggered manually for PRs.*
+
+      - name: Upload consolidated report
+        uses: actions/upload-artifact@v4
+        with:
+          name: extended-validation-consolidated
+          path: extended-validation-report.json
+          retention-days: 90

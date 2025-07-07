@@ -11,9 +11,9 @@ import time
 
 import pytest
 
-from ..base_load_test import create_load_test_runner
-from ..conftest import LoadTestConfig, LoadTestType
-from ..load_profiles import DoubleSpike, SpikeLoadProfile
+from tests.load.base_load_test import create_load_test_runner
+from tests.load.conftest import LoadTestConfig, LoadTestType
+from tests.load.load_profiles import DoubleSpike, SpikeLoadProfile
 
 
 class TestError(Exception):
@@ -106,15 +106,15 @@ class TestSpikeLoad:
         def track_inter_spike_performance(**__kwargs):
             """Track performance between spikes."""
             stats = env.stats
-            if stats and stats._total.num_requests > 0:
+            if stats and stats.total.num_requests > 0:
                 inter_spike_metrics.append(
                     {
                         "timestamp": time.time(),
                         "users": env.runner.user_count if env.runner else 0,
-                        "rps": stats._total.current_rps,
-                        "avg_response_time": stats._total.avg_response_time,
+                        "rps": stats.total.current_rps,
+                        "avg_response_time": stats.total.avg_response_time,
                         "error_rate": (
-                            stats._total.num_failures / stats._total.num_requests
+                            stats.total.num_failures / stats.total.num_requests
                         )
                         * 100,
                     }
@@ -184,7 +184,7 @@ class TestSpikeLoad:
                     self.current_capacity * 1.5, self.max_capacity
                 )
                 logger.info(
-                    f"Scaled up from {old_capacity} to {self.current_capacity}"
+                    "Scaled up from %s to %s", old_capacity, self.current_capacity
                 )  # TODO: Convert f-string to logging format
 
             def scale_down(self):
@@ -192,7 +192,7 @@ class TestSpikeLoad:
                 old_capacity = self.current_capacity
                 self.current_capacity = max(self.current_capacity * 0.8, 100)
                 logger.info(
-                    f"Scaled down from {old_capacity} to {self.current_capacity}"
+                    "Scaled down from %s to %s", old_capacity, self.current_capacity
                 )
 
         auto_scaler = AutoScalingSimulator()
@@ -259,24 +259,38 @@ class TestSpikeLoad:
                 """Simulate service call through circuit breaker."""
                 current_time = time.time()
 
-                if self.state == "OPEN":
-                    if current_time - self.last_failure_time > self.timeout_duration:
-                        self.state = "HALF_OPEN"
-                        self.events.append(
-                            {"timestamp": current_time, "event": "HALF_OPEN"}
-                        )
-                        msg = "Circuit breaker is OPEN"
-                        raise TestError(msg)
-                        msg = "Circuit breaker is OPEN"
-                        raise TestError(msg)
+                if (
+                    self.state == "OPEN"
+                    and current_time - self.last_failure_time > self.timeout_duration
+                ):
+                    self.state = "HALF_OPEN"
+                    self.events.append(
+                        {"timestamp": current_time, "event": "HALF_OPEN"}
+                    )
+                    msg = "Circuit breaker is OPEN"
+                    raise TestError(msg)
+                    msg = "Circuit breaker is OPEN"
+                    raise TestError(msg)
 
                 try:
                     # Simulate higher failure rate during spikes
                     failure_rate = _kwargs.get("spike_intensity", 0.1)
                     if current_time % 1.0 < failure_rate:
-                        msg = "Service temporarily unavailable"
-                        raise TestError(msg)
+                        self._raise_service_unavailable()
+                except Exception:
+                    self.failure_count += 1
+                    self.last_failure_time = current_time
 
+                    if (
+                        self.state in ["CLOSED", "HALF_OPEN"]
+                        and self.failure_count >= self.failure_threshold
+                    ):
+                        self.state = "OPEN"
+                        self.success_count = 0
+                        self.events.append({"timestamp": current_time, "event": "OPEN"})
+
+                    raise
+                else:
                     # Success
                     if self.state == "HALF_OPEN":
                         self.success_count += 1
@@ -291,19 +305,10 @@ class TestSpikeLoad:
                     await asyncio.sleep(0.05)  # Simulate processing time
                     return {"status": "success", "circuit_state": self.state}
 
-                except Exception:
-                    self.failure_count += 1
-                    self.last_failure_time = current_time
-
-                    if (
-                        self.state in ["CLOSED", "HALF_OPEN"]
-                        and self.failure_count >= self.failure_threshold
-                    ):
-                        self.state = "OPEN"
-                        self.success_count = 0
-                        self.events.append({"timestamp": current_time, "event": "OPEN"})
-
-                    raise
+            def _raise_service_unavailable(self) -> None:
+                """Raise a service unavailable error."""
+                msg = "Service temporarily unavailable"
+                raise TestError(msg)
 
         circuit_breaker = CircuitBreakerSimulator()
 

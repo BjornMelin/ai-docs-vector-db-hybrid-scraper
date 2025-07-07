@@ -120,16 +120,12 @@ def validate_configuration():
 
     # Log warnings
     for warning in warnings:
-        logger.warning(
-            f"Configuration warning: {warning}"
-        )  # TODO: Convert f-string to logging format
+        logger.warning("Configuration warning: %s", warning)
 
     # Raise on errors
     if errors:
         for error in errors:
-            logger.error(
-                f"Configuration error: {error}"
-            )  # TODO: Convert f-string to logging format
+            logger.error("Configuration error: %s", error)
         msg = f"Configuration validation failed: {'; '.join(errors)}"
         raise ValueError(msg)
 
@@ -148,7 +144,7 @@ async def lifespan():
         logger.info("Initializing AI Documentation Vector DB MCP Server...")
 
         config = get_config()
-        lifespan.client_manager = ClientManager(config)
+        lifespan.client_manager = ClientManager()
         await lifespan.client_manager.initialize()
 
         # Initialize monitoring system
@@ -194,11 +190,11 @@ async def lifespan():
                     or config.cache.enable_dragonfly_cache
                 ):
                     # Initialize cache manager first to ensure it's available for monitoring
-                    await lifespan.client_manager.get_cache_manager()
+                    cache_manager = await lifespan.client_manager.get_cache_manager()
                     cache_metrics_task = asyncio.create_task(
                         update_cache_metrics_periodically(
                             lifespan.metrics_registry,
-                            lifespan.client_manager._cache_manager,
+                            cache_manager,
                             interval_seconds=30.0,
                         )
                     )
@@ -237,18 +233,14 @@ if __name__ == "__main__":
     # Default to streamable-http for better performance and streaming capabilities
     transport = os.getenv("FASTMCP_TRANSPORT", "streamable-http")
 
-    logger.info(
-        f"Starting MCP server with transport: {transport}"
-    )  # TODO: Convert f-string to logging format
+    logger.info("Starting MCP server with transport: %s", transport)
 
     if transport == "streamable-http":
         # Enhanced streaming configuration
         host = os.getenv("FASTMCP_HOST", "127.0.0.1")
         port = int(os.getenv("FASTMCP_PORT", "8000"))
 
-        logger.info(
-            f"Starting streamable HTTP server on {host}:{port}"
-        )  # TODO: Convert f-string to logging format
+        logger.info("Starting streamable HTTP server on %s:%s", host, port)
         logger.info("Enhanced streaming support enabled for large search results")
 
         mcp.run(
@@ -262,7 +254,5 @@ if __name__ == "__main__":
         mcp.run(transport="stdio")
     else:
         # Support for other transport types
-        logger.info(
-            f"Using {transport} transport"
-        )  # TODO: Convert f-string to logging format
+        logger.info("Using %s transport", transport)
         mcp.run(transport=transport)

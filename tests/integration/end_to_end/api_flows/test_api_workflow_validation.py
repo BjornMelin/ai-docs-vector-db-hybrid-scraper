@@ -184,17 +184,16 @@ class TestAPIWorkflowValidation:
                     limit = int(query_params.get("limit", 10))
 
                     # Generate mock search results
-                    results = []
-                    for i in range(min(limit, 5)):
-                        results.append(
-                            {
-                                "id": f"result_{i}",
-                                "title": f"Search Result {i + 1} for '{query}'",
-                                "content": f"Content snippet for {query} result {i + 1}",
-                                "score": 0.95 - (i * 0.1),
-                                "source_url": f"https://example.com/result_{i}",
-                            }
-                        )
+                    results = [
+                        {
+                            "id": f"result_{i}",
+                            "title": f"Search Result {i + 1} for '{query}'",
+                            "content": f"Content snippet for {query} result {i + 1}",
+                            "score": 0.95 - (i * 0.1),
+                            "source_url": f"https://example.com/result_{i}",
+                        }
+                        for i in range(min(limit, 5))
+                    ]
 
                     return {
                         **base_response,
@@ -265,6 +264,7 @@ class TestAPIWorkflowValidation:
 
         return MockAPIClient()
 
+    @pytest.mark.asyncio
     async def test_authentication_workflow(self, mock_api_client, journey_data_manager):
         """Test complete authentication workflow."""
         auth_steps = []
@@ -298,7 +298,7 @@ class TestAPIWorkflowValidation:
             )
 
             assert "access_token" in login_response, "Login should return access token"
-            assert login_response["token_type"] == "bearer", (
+            assert login_response["token_type"] == "bearer", (  # noqa: S105
                 "Token type should be bearer"
             )
 
@@ -353,6 +353,7 @@ class TestAPIWorkflowValidation:
             f"Authentication took too long: {_total_duration}s"
         )
 
+    @pytest.mark.asyncio
     async def test_document_management_workflow(
         self, mock_api_client, journey_data_manager
     ):
@@ -504,6 +505,7 @@ class TestAPIWorkflowValidation:
             f"Document management took too long: {_total_duration}s"
         )
 
+    @pytest.mark.asyncio
     async def test_search_workflow(self, mock_api_client, journey_data_manager):
         """Test complete search workflow."""
         search_steps = []
@@ -644,6 +646,7 @@ class TestAPIWorkflowValidation:
             f"Search workflow took too long: {_total_duration}s"
         )
 
+    @pytest.mark.asyncio
     async def test_error_handling_workflow(self, mock_api_client, journey_data_manager):
         """Test API error handling and recovery workflows."""
         error_handling_steps = []
@@ -703,7 +706,7 @@ class TestAPIWorkflowValidation:
                         }
                     )
 
-                except Exception as e:
+                except (httpx.HTTPError, ValueError, KeyError) as e:
                     # Request failed
                     error_test_results.append(
                         {
@@ -827,6 +830,7 @@ class TestAPIWorkflowValidation:
             )
 
     @pytest.mark.performance
+    @pytest.mark.asyncio
     async def test_api_performance_workflow(
         self, mock_api_client, journey_data_manager
     ):
@@ -930,7 +934,7 @@ class TestAPIWorkflowValidation:
                             "success": True,
                         }
                     )
-                except Exception as e:
+                except (httpx.HTTPError, ValueError, KeyError) as e:
                     rate_test_results.append(
                         {
                             "request_index": i,
@@ -1011,6 +1015,7 @@ class TestAPIWorkflowValidation:
                     f"Throughput too low: {step['throughput_rps']:.2f} RPS"
                 )
 
+    @pytest.mark.asyncio
     async def test_complete_api_integration_workflow(
         self, mock_api_client, journey_data_manager
     ):

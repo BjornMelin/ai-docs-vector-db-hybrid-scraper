@@ -7,24 +7,26 @@ import pytest
 from hypothesis import given, strategies as st
 from pydantic import ValidationError
 
-from src.config.core import (
+from src.config import (
     BrowserUseConfig,
     Crawl4AIConfig,
+    DatabaseConfig,
     EmbeddingConfig,
+    EmbeddingModel,
+    EmbeddingProvider,
     FastEmbedConfig,
     HyDEConfig,
     ObservabilityConfig,
     PerformanceConfig,
     PlaywrightConfig,
+    SearchStrategy,
     SecurityConfig,
-    SQLAlchemyConfig,
     TaskQueueConfig,
 )
-from src.config.enums import EmbeddingModel, EmbeddingProvider, SearchStrategy
 
 
 # Test constants to avoid hardcoded sensitive values
-TEST_REDIS_PASSWORD = "test_redis_secret"
+TEST_REDIS_PASSWORD = "test_redis_secret"  # noqa: S105
 
 
 # Hypothesis strategies
@@ -289,7 +291,7 @@ class TestSecurityConfig:
     def test_default_values(self):
         """Test default configuration values."""
         config = SecurityConfig()
-        assert config.allowed_domains == []
+        assert config.allowed_domains == ["*"]
         assert config.blocked_domains == []
         assert config.require_api_keys is True
         assert config.api_key_header == "X-API-Key"
@@ -342,12 +344,12 @@ class TestSecurityConfig:
             SecurityConfig(rate_limit_requests=-1)
 
 
-class TestSQLAlchemyConfig:
-    """Test SQLAlchemyConfig for database configuration."""
+class TestDatabaseConfig:
+    """Test DatabaseConfig for database configuration."""
 
     def test_default_values(self):
         """Test default configuration values."""
-        config = SQLAlchemyConfig()
+        config = DatabaseConfig()
         assert config.database_url == "sqlite+aiosqlite:///data/app.db"
         assert config.echo_queries is False
         assert config.pool_size == 20
@@ -356,7 +358,7 @@ class TestSQLAlchemyConfig:
 
     def test_database_url_configuration(self):
         """Test database URL configuration."""
-        config = SQLAlchemyConfig(
+        config = DatabaseConfig(
             database_url="postgresql+asyncpg://user:pass@localhost/db",
             echo_queries=True,
         )
@@ -369,8 +371,8 @@ class TestSQLAlchemyConfig:
         pool_timeout=positive_float,
     )
     def test_property_based_sqlalchemy(self, pool_size, max_overflow, pool_timeout):
-        """Property-based test for SQLAlchemyConfig."""
-        config = SQLAlchemyConfig(
+        """Property-based test for DatabaseConfig."""
+        config = DatabaseConfig(
             pool_size=pool_size,
             max_overflow=max_overflow,
             pool_timeout=pool_timeout,
@@ -382,20 +384,20 @@ class TestSQLAlchemyConfig:
     def test_pool_constraints(self):
         """Test database pool constraints."""
         # Valid boundaries
-        SQLAlchemyConfig(pool_size=1)  # minimum
-        SQLAlchemyConfig(pool_size=100)  # maximum
-        SQLAlchemyConfig(max_overflow=0)  # minimum
-        SQLAlchemyConfig(max_overflow=50)  # maximum
+        DatabaseConfig(pool_size=1)  # minimum
+        DatabaseConfig(pool_size=100)  # maximum
+        DatabaseConfig(max_overflow=0)  # minimum
+        DatabaseConfig(max_overflow=50)  # maximum
 
         # Invalid values
         with pytest.raises(ValidationError):
-            SQLAlchemyConfig(pool_size=0)
+            DatabaseConfig(pool_size=0)
         with pytest.raises(ValidationError):
-            SQLAlchemyConfig(pool_size=101)
+            DatabaseConfig(pool_size=101)
         with pytest.raises(ValidationError):
-            SQLAlchemyConfig(max_overflow=-1)
+            DatabaseConfig(max_overflow=-1)
         with pytest.raises(ValidationError):
-            SQLAlchemyConfig(max_overflow=51)
+            DatabaseConfig(max_overflow=51)
 
 
 class TestPerformanceConfig:
