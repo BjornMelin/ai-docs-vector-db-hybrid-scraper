@@ -75,6 +75,7 @@ class TestOpenAIProviderInitialization:
                 client_manager=mock_client_manager,
             )
 
+    @pytest.mark.asyncio
     async def test_initialization_with_client_manager(
         self, mock_client_manager, mock_openai_client
     ):
@@ -91,6 +92,7 @@ class TestOpenAIProviderInitialization:
         assert provider._client == mock_openai_client
         mock_client_manager.get_openai_client.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_initialization_client_manager_fallback(self, mock_client_manager):
         """Test initialization when ClientManager returns None (fallback to direct client)."""
         # ClientManager returns None, so provider should fail since it requires ClientManager
@@ -105,6 +107,7 @@ class TestOpenAIProviderInitialization:
         ):
             await provider.initialize()
 
+    @pytest.mark.asyncio
     async def test_initialization_no_api_key_with_client_manager(
         self, mock_client_manager
     ):
@@ -120,6 +123,7 @@ class TestOpenAIProviderInitialization:
         ):
             await provider.initialize()
 
+    @pytest.mark.asyncio
     async def test_initialization_failure(self, mock_client_manager):
         """Test initialization failure handling."""
         mock_client_manager.get_openai_client.side_effect = Exception(
@@ -135,6 +139,7 @@ class TestOpenAIProviderInitialization:
         ):
             await provider.initialize()
 
+    @pytest.mark.asyncio
     async def test_double_initialization(self, mock_client_manager, mock_openai_client):
         """Test that double initialization is safe."""
         mock_client_manager.get_openai_client.return_value = mock_openai_client
@@ -148,6 +153,7 @@ class TestOpenAIProviderInitialization:
 
         assert provider._initialized
 
+    @pytest.mark.asyncio
     async def test_cleanup(self, mock_client_manager, mock_openai_client):
         """Test provider cleanup."""
         mock_client_manager.get_openai_client.return_value = mock_openai_client
@@ -166,6 +172,7 @@ class TestOpenAIProviderInitialization:
 class TestOpenAIProviderEmbeddingGeneration:
     """Test embedding generation functionality."""
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_not_initialized(self, mock_client_manager):
         """Test embedding generation when not initialized."""
         provider = OpenAIEmbeddingProvider(
@@ -175,6 +182,7 @@ class TestOpenAIProviderEmbeddingGeneration:
         with pytest.raises(EmbeddingServiceError, match="Provider not initialized"):
             await provider.generate_embeddings(["test"])
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_empty_input(
         self, mock_client_manager, mock_openai_client
     ):
@@ -190,6 +198,7 @@ class TestOpenAIProviderEmbeddingGeneration:
 
         assert result == []
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_single_text(
         self, mock_client_manager, mock_openai_client
     ):
@@ -207,6 +216,7 @@ class TestOpenAIProviderEmbeddingGeneration:
         assert result[0] == [0.1, 0.2, 0.3]
         mock_openai_client.embeddings.create.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_batch(
         self, mock_client_manager, mock_openai_client
     ):
@@ -234,6 +244,7 @@ class TestOpenAIProviderEmbeddingGeneration:
         assert result[1] == [0.4, 0.5, 0.6]
         assert result[2] == [0.7, 0.8, 0.9]
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_large_batch(
         self, mock_client_manager, mock_openai_client
     ):
@@ -267,6 +278,7 @@ class TestOpenAIProviderEmbeddingGeneration:
         # Should make 2 API calls (100 + 50)
         assert mock_openai_client.embeddings.create.call_count == 2
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_with_dimensions(
         self, mock_client_manager, mock_openai_client
     ):
@@ -287,6 +299,7 @@ class TestOpenAIProviderEmbeddingGeneration:
         call_args = mock_openai_client.embeddings.create.call_args
         assert call_args[1]["dimensions"] == 512
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_no_dimensions_for_old_model(
         self, mock_client_manager, mock_openai_client
     ):
@@ -306,6 +319,7 @@ class TestOpenAIProviderEmbeddingGeneration:
         call_args = mock_openai_client.embeddings.create.call_args
         assert "dimensions" not in call_args[1]
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_with_rate_limiter(
         self, mock_client_manager, mock_openai_client
     ):
@@ -324,6 +338,7 @@ class TestOpenAIProviderEmbeddingGeneration:
 
         mock_rate_limiter.acquire.assert_called_once_with("openai")
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_api_error_rate_limit(
         self, mock_client_manager, mock_openai_client
     ):
@@ -341,6 +356,7 @@ class TestOpenAIProviderEmbeddingGeneration:
         with pytest.raises(EmbeddingServiceError, match="OpenAI rate limit exceeded"):
             await provider.generate_embeddings(["test"])
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_api_error_quota(
         self, mock_client_manager, mock_openai_client
     ):
@@ -358,6 +374,7 @@ class TestOpenAIProviderEmbeddingGeneration:
         with pytest.raises(EmbeddingServiceError, match="OpenAI API quota exceeded"):
             await provider.generate_embeddings(["test"])
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_api_error_invalid_key(
         self, mock_client_manager, mock_openai_client
     ):
@@ -373,6 +390,7 @@ class TestOpenAIProviderEmbeddingGeneration:
         with pytest.raises(EmbeddingServiceError, match="Invalid OpenAI API key"):
             await provider.generate_embeddings(["test"])
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_api_error_context_length(
         self, mock_client_manager, mock_openai_client
     ):
@@ -390,6 +408,7 @@ class TestOpenAIProviderEmbeddingGeneration:
         with pytest.raises(EmbeddingServiceError, match="Text too long for model"):
             await provider.generate_embeddings(["test"])
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_generic_error(
         self, mock_client_manager, mock_openai_client
     ):
@@ -447,6 +466,7 @@ class TestOpenAIProviderProperties:
 class TestOpenAIProviderBatchAPI:
     """Test batch API functionality."""
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_batch_api_not_initialized(
         self, mock_client_manager
     ):
@@ -458,6 +478,7 @@ class TestOpenAIProviderBatchAPI:
         with pytest.raises(EmbeddingServiceError, match="Provider not initialized"):
             await provider.generate_embeddings_batch_api(["test"])
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_batch_api_success(
         self, mock_client_manager, mock_openai_client
     ):
@@ -483,6 +504,7 @@ class TestOpenAIProviderBatchAPI:
         mock_openai_client.files.create.assert_called_once()
         mock_openai_client.batches.create.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_batch_api_with_custom_ids(
         self, mock_client_manager, mock_openai_client
     ):
@@ -508,6 +530,7 @@ class TestOpenAIProviderBatchAPI:
 
         assert result == "batch-456"
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_batch_api_with_dimensions(
         self, mock_client_manager, mock_openai_client
     ):
@@ -533,6 +556,7 @@ class TestOpenAIProviderBatchAPI:
 
         assert result == "batch-456"
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_batch_api_error_handling(
         self, mock_client_manager, mock_openai_client
     ):
@@ -548,6 +572,7 @@ class TestOpenAIProviderBatchAPI:
         with pytest.raises(EmbeddingServiceError, match="Failed to create batch job"):
             await provider.generate_embeddings_batch_api(["test"])
 
+    @pytest.mark.asyncio
     async def test_generate_embeddings_batch_api_with_rate_limiter(
         self, mock_client_manager, mock_openai_client
     ):

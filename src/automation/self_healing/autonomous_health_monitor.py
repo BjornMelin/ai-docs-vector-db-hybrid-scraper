@@ -7,14 +7,12 @@ deployment modes with predictive failure detection capabilities.
 
 import asyncio
 import logging
-import time
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import psutil
-from pydantic import BaseModel, Field
 
 from src.services.circuit_breaker.modern import ModernCircuitBreakerManager
 from src.services.monitoring.health import HealthCheckManager, HealthStatus
@@ -88,7 +86,8 @@ class HealthTrend:
 
 
 class FailurePredictionEngine:
-    """ML-based failure prediction using time-series analysis and pattern recognition."""
+    """ML-based failure prediction using time-series analysis and pattern
+    recognition."""
 
     def __init__(self):
         self.metric_history: dict[str, list[float]] = {}
@@ -112,7 +111,7 @@ class FailurePredictionEngine:
                 prediction = await predictor(metrics)
                 if prediction and prediction.risk_level != FailureRiskLevel.MINIMAL:
                     predictions.append(prediction)
-            except Exception as e:
+            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
                 logger.warning(f"Failed to generate prediction for {failure_type}: {e}")
 
         return sorted(
@@ -405,8 +404,7 @@ class FailurePredictionEngine:
         if n * x2_sum - x_sum * x_sum == 0:
             return 0.0
 
-        slope = (n * xy_sum - x_sum * y_sum) / (n * x2_sum - x_sum * x_sum)
-        return slope
+        return (n * xy_sum - x_sum * y_sum) / (n * x2_sum - x_sum * x_sum)
 
     def _estimate_time_to_threshold(
         self, history: list[float], current: float, threshold: float
@@ -449,7 +447,7 @@ class FailurePredictionEngine:
         return 60  # 1 hour
 
     def _calculate_risk_level(
-        self, current_value: float, trend: float, time_to_failure: int | None
+        self, current_value: float, _trend: float, time_to_failure: int | None
     ) -> FailureRiskLevel:
         """Calculate risk level based on current value, trend, and time to failure."""
         if current_value > 95 or (time_to_failure and time_to_failure < 5):
@@ -585,7 +583,8 @@ class FailurePredictionEngine:
 
 
 class AutonomousHealthMonitor:
-    """AI-driven health monitoring with predictive failure detection and autonomous remediation."""
+    """AI-driven health monitoring with predictive failure detection and autonomous
+    remediation."""
 
     def __init__(
         self,
@@ -625,8 +624,8 @@ class AutonomousHealthMonitor:
 
         try:
             await self.continuous_monitoring_loop()
-        except Exception as e:
-            logger.exception(f"Health monitoring loop failed: {e}")
+        except (TimeoutError, OSError, PermissionError):
+            logger.exception("Health monitoring loop failed")
             self.monitoring_active = False
             raise
 
@@ -669,8 +668,8 @@ class AutonomousHealthMonitor:
                     health_metrics, predictions, insights
                 )
 
-            except Exception as e:
-                logger.exception(f"Error in monitoring loop: {e}")
+            except Exception:
+                logger.exception("Error in monitoring loop")
 
             # Wait for next monitoring cycle
             await asyncio.sleep(self.monitoring_interval)
@@ -705,7 +704,7 @@ class AutonomousHealthMonitor:
             system_performance = performance_monitor.get_system_performance_summary()
 
             return SystemMetrics(
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(tz=datetime.UTC),
                 cpu_percent=cpu_percent,
                 memory_percent=memory.percent,
                 disk_percent=(disk.used / disk.total) * 100,
@@ -724,11 +723,11 @@ class AutonomousHealthMonitor:
                 service_health_scores=service_health_scores,
             )
 
-        except Exception as e:
-            logger.exception(f"Failed to collect health metrics: {e}")
+        except Exception:
+            logger.exception("Failed to collect health metrics")
             # Return minimal metrics on failure
             return SystemMetrics(
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(tz=datetime.UTC),
                 cpu_percent=0.0,
                 memory_percent=0.0,
                 disk_percent=0.0,
@@ -780,7 +779,7 @@ class AutonomousHealthMonitor:
             # Record in remediation history
             self.remediation_history.append(
                 {
-                    "timestamp": datetime.utcnow(),
+                    "timestamp": datetime.now(tz=datetime.UTC),
                     "type": "current_issues",
                     "issues": issues_detected,
                     "metrics_snapshot": metrics,
@@ -800,7 +799,8 @@ class AutonomousHealthMonitor:
             return
 
         logger.warning(
-            f"High-risk failure predictions detected: {len(high_risk_predictions)} predictions"
+            f"High-risk failure predictions detected: "
+            f"{len(high_risk_predictions)} predictions"
         )
 
         for prediction in high_risk_predictions:
@@ -809,14 +809,16 @@ class AutonomousHealthMonitor:
     async def handle_prediction(self, prediction: FailurePrediction):
         """Handle individual failure prediction."""
         logger.warning(
-            f"Prediction: {prediction.failure_type} - Risk: {prediction.risk_level.value} - "
+            f"Prediction: {prediction.failure_type} - "
+            f"Risk: {prediction.risk_level.value} - "
             f"Confidence: {prediction.confidence.value} - "
             f"Time to failure: {prediction.time_to_failure_minutes} minutes"
         )
 
         # Log recommended actions
         logger.info(
-            f"Recommended actions for {prediction.failure_type}: {', '.join(prediction.recommended_actions)}"
+            f"Recommended actions for {prediction.failure_type}: "
+            f"{', '.join(prediction.recommended_actions)}"
         )
 
         # For now, we log the prediction and recommendations
@@ -825,7 +827,7 @@ class AutonomousHealthMonitor:
 
         self.remediation_history.append(
             {
-                "timestamp": datetime.utcnow(),
+                "timestamp": datetime.now(tz=datetime.UTC),
                 "type": "prediction",
                 "prediction": prediction,
                 "action_taken": "logged_recommendations",
@@ -856,22 +858,21 @@ class AutonomousHealthMonitor:
         # Log circuit breaker optimization recommendations
         if stressed_services:
             logger.info(
-                f"Recommend reviewing circuit breaker configurations for: {', '.join(set(stressed_services))}"
+                f"Recommend reviewing circuit breaker configurations for: "
+                f"{', '.join(set(stressed_services))}"
             )
 
     async def generate_health_insights(
         self, metrics: SystemMetrics, predictions: list[FailurePrediction]
     ) -> dict[str, Any]:
         """Generate health insights and recommendations."""
-        insights = {
+        return {
             "overall_health_score": self._calculate_overall_health_score(metrics),
             "critical_metrics": self._identify_critical_metrics(metrics),
             "trending_issues": self._identify_trending_issues(predictions),
             "recommendations": self._generate_recommendations(metrics, predictions),
             "system_stability": self._assess_system_stability(metrics, predictions),
         }
-
-        return insights
 
     async def log_health_status_summary(
         self,
@@ -883,10 +884,19 @@ class AutonomousHealthMonitor:
         summary_lines = [
             "=== Health Status Summary ===",
             f"Overall Health Score: {insights['overall_health_score']:.2f}/1.0",
-            f"CPU: {metrics.cpu_percent:.1f}% | Memory: {metrics.memory_percent:.1f}% | Disk: {metrics.disk_percent:.1f}%",
-            f"Response Time P95: {metrics.response_time_p95:.0f}ms | Error Rate: {metrics.error_rate:.3f}",
-            f"Cache Hit Ratio: {metrics.cache_hit_ratio:.2f} | DB Connections: {metrics.database_connections}",
-            f"Active Predictions: {len(predictions)} | High Risk: {len([p for p in predictions if p.risk_level == FailureRiskLevel.HIGH])}",
+            (
+                f"CPU: {metrics.cpu_percent:.1f}% | "
+                f"Memory: {metrics.memory_percent:.1f}% | "
+                f"Disk: {metrics.disk_percent:.1f}%"
+            ),
+            f"Response Time P95: {metrics.response_time_p95:.0f}ms | "
+            f"Error Rate: {metrics.error_rate:.3f}",
+            f"Cache Hit Ratio: {metrics.cache_hit_ratio:.2f} | "
+            f"DB Connections: {metrics.database_connections}",
+            (
+                f"Active Predictions: {len(predictions)} | "
+                f"High Risk: {len([p for p in predictions if p.risk_level == FailureRiskLevel.HIGH])}"
+            ),
             f"System Stability: {insights['system_stability']}",
             "=== End Summary ===",
         ]
@@ -993,10 +1003,10 @@ class AutonomousHealthMonitor:
             if p.risk_level in [FailureRiskLevel.HIGH, FailureRiskLevel.CRITICAL]
         ]
 
-        for prediction in high_risk_predictions:
-            trending.append(
-                f"{prediction.failure_type} ({prediction.risk_level.value})"
-            )
+        trending.extend(
+            f"{prediction.failure_type} ({prediction.risk_level.value})"
+            for prediction in high_risk_predictions
+        )
 
         return trending
 
@@ -1081,7 +1091,10 @@ class AutonomousHealthMonitor:
                 [
                     p
                     for p in self.prediction_history
-                    if (datetime.utcnow() - datetime.utcnow()).total_seconds() < 3600
+                    if (
+                        datetime.now(tz=datetime.UTC) - datetime.now(tz=datetime.UTC)
+                    ).total_seconds()
+                    < 3600
                 ]
             ),
             "high_risk_predictions_last_hour": len(
@@ -1090,7 +1103,10 @@ class AutonomousHealthMonitor:
                     for p in self.prediction_history
                     if p.risk_level
                     in [FailureRiskLevel.HIGH, FailureRiskLevel.CRITICAL]
-                    and (datetime.utcnow() - datetime.utcnow()).total_seconds() < 3600
+                    and (
+                        datetime.now(tz=datetime.UTC) - datetime.now(tz=datetime.UTC)
+                    ).total_seconds()
+                    < 3600
                 ]
             ),
         }

@@ -59,6 +59,7 @@ class TestHyDECache:
         assert cache.documents_prefix == "test_hyde:documents"
         assert cache.results_prefix == "test_hyde:results"
 
+    @pytest.mark.asyncio
     async def test_initialize_success(self, cache, mock_cache_manager):
         """Test successful cache initialization."""
         # Mock successful test
@@ -72,6 +73,7 @@ class TestHyDECache:
         mock_cache_manager.get.assert_called_once()
         mock_cache_manager.delete.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_initialize_no_cache_manager_initialize(
         self, cache, mock_cache_manager
     ):
@@ -84,6 +86,7 @@ class TestHyDECache:
 
         assert cache._initialized is True
 
+    @pytest.mark.asyncio
     async def test_initialize_test_failure(self, cache, mock_cache_manager):
         """Test initialization failure when cache test fails."""
         mock_cache_manager.get.return_value = "wrong_value"
@@ -94,6 +97,7 @@ class TestHyDECache:
         assert "Cache test failed" in str(exc_info.value)
         assert cache._initialized is False
 
+    @pytest.mark.asyncio
     async def test_initialize_already_initialized(self, cache, mock_cache_manager):
         """Test initialization when already initialized."""
         cache._initialized = True
@@ -104,6 +108,7 @@ class TestHyDECache:
         mock_cache_manager.initialize.assert_not_called()
         mock_cache_manager.set.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_initialize_error(self, cache, mock_cache_manager):
         """Test initialization error handling."""
         mock_cache_manager.initialize.side_effect = Exception("Cache error")
@@ -114,6 +119,7 @@ class TestHyDECache:
         assert "Failed to initialize HyDE cache" in str(exc_info.value)
         assert cache._initialized is False
 
+    @pytest.mark.asyncio
     async def test_cleanup(self, cache, mock_cache_manager):
         """Test cache cleanup."""
         cache._initialized = True
@@ -123,6 +129,7 @@ class TestHyDECache:
         assert cache._initialized is False
         mock_cache_manager.cleanup.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_cleanup_no_cleanup_method(self, cache, mock_cache_manager):
         """Test cleanup when cache manager has no cleanup method."""
         cache._initialized = True
@@ -132,6 +139,7 @@ class TestHyDECache:
 
         assert cache._initialized is False
 
+    @pytest.mark.asyncio
     async def test_get_hyde_embedding_cache_hit_dict_format(
         self, cache, mock_cache_manager
     ):
@@ -152,6 +160,7 @@ class TestHyDECache:
         assert cache.cache_hits == 1
         assert cache.cache_misses == 0
 
+    @pytest.mark.asyncio
     async def test_get_hyde_embedding_cache_hit_binary_format(
         self, cache, mock_cache_manager
     ):
@@ -175,6 +184,7 @@ class TestHyDECache:
         assert abs(result[2] - 0.3) < 0.001
         assert cache.cache_hits == 1
 
+    @pytest.mark.asyncio
     async def test_get_hyde_embedding_cache_hit_list_format(
         self, cache, mock_cache_manager
     ):
@@ -189,6 +199,7 @@ class TestHyDECache:
         assert result == [0.1, 0.2, 0.3]
         assert cache.cache_hits == 1
 
+    @pytest.mark.asyncio
     async def test_get_hyde_embedding_cache_miss(self, cache, mock_cache_manager):
         """Test getting HyDE embedding - cache miss."""
         cache._initialized = True
@@ -200,6 +211,7 @@ class TestHyDECache:
         assert cache.cache_hits == 0
         assert cache.cache_misses == 1
 
+    @pytest.mark.asyncio
     async def test_get_hyde_embedding_invalid_format(self, cache, mock_cache_manager):
         """Test getting HyDE embedding with invalid cache format."""
         cache._initialized = True
@@ -210,6 +222,7 @@ class TestHyDECache:
         assert result is None
         assert cache.cache_misses == 1
 
+    @pytest.mark.asyncio
     async def test_get_hyde_embedding_error(self, cache, mock_cache_manager):
         """Test getting HyDE embedding with cache error."""
         cache._initialized = True
@@ -220,12 +233,14 @@ class TestHyDECache:
         assert result is None
         assert cache.cache_errors == 1
 
+    @pytest.mark.asyncio
     async def test_get_hyde_embedding_not_initialized(self, cache):
         """Test getting HyDE embedding when not initialized."""
 
         with pytest.raises(APIError):
             await cache.get_hyde_embedding("test query")
 
+    @pytest.mark.asyncio
     async def test_set_hyde_embedding_success(self, cache, mock_cache_manager):
         """Test setting HyDE embedding successfully."""
         cache._initialized = True
@@ -259,6 +274,7 @@ class TestHyDECache:
         assert cache_data["metadata"] == metadata
         assert ttl == cache.config.cache_ttl_seconds
 
+    @pytest.mark.asyncio
     async def test_set_hyde_embedding_no_hypothetical_docs(
         self, cache, mock_cache_manager
     ):
@@ -282,6 +298,7 @@ class TestHyDECache:
         cache_data = call_args[0][1]
         assert cache_data["hypothetical_docs"] == []
 
+    @pytest.mark.asyncio
     async def test_set_hyde_embedding_error(self, cache, mock_cache_manager):
         """Test setting HyDE embedding with cache error."""
         cache._initialized = True
@@ -296,6 +313,7 @@ class TestHyDECache:
         assert result is False
         assert cache.cache_errors == 1
 
+    @pytest.mark.asyncio
     async def test_get_hypothetical_documents_success(self, cache, mock_cache_manager):
         """Test getting hypothetical documents successfully."""
         cache._initialized = True
@@ -308,6 +326,7 @@ class TestHyDECache:
         assert result == cached_docs
         assert cache.cache_hits == 1
 
+    @pytest.mark.asyncio
     async def test_get_hypothetical_documents_disabled(self, cache, mock_cache_manager):
         """Test getting hypothetical documents when caching disabled."""
         cache.config.cache_hypothetical_docs = False
@@ -317,6 +336,7 @@ class TestHyDECache:
         assert result is None
         mock_cache_manager.get.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_get_hypothetical_documents_miss(self, cache, mock_cache_manager):
         """Test getting hypothetical documents - cache miss."""
         cache._initialized = True
@@ -327,6 +347,7 @@ class TestHyDECache:
         assert result is None
         assert cache.cache_misses == 1
 
+    @pytest.mark.asyncio
     async def test_get_hypothetical_documents_error(self, cache, mock_cache_manager):
         """Test getting hypothetical documents with error."""
         cache._initialized = True
@@ -337,6 +358,7 @@ class TestHyDECache:
         assert result is None
         assert cache.cache_errors == 1
 
+    @pytest.mark.asyncio
     async def test_set_hypothetical_documents_success(self, cache, mock_cache_manager):
         """Test setting hypothetical documents successfully."""
         cache._initialized = True
@@ -368,6 +390,7 @@ class TestHyDECache:
         assert cache_data["tokens_used"] == 100
         assert cache_data["diversity_score"] == 0.8
 
+    @pytest.mark.asyncio
     async def test_set_hypothetical_documents_disabled(self, cache, mock_cache_manager):
         """Test setting hypothetical documents when caching disabled."""
         cache.config.cache_hypothetical_docs = False
@@ -389,6 +412,7 @@ class TestHyDECache:
         assert result is True  # Returns True even when disabled
         mock_cache_manager.set.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_set_hypothetical_documents_error(self, cache, mock_cache_manager):
         """Test setting hypothetical documents with error."""
         cache._initialized = True
@@ -411,6 +435,7 @@ class TestHyDECache:
         assert result is False
         assert cache.cache_errors == 1
 
+    @pytest.mark.asyncio
     async def test_get_search_results_success(self, cache, mock_cache_manager):
         """Test getting search results successfully."""
         cache._initialized = True
@@ -426,6 +451,7 @@ class TestHyDECache:
         assert result == cached_results
         assert cache.cache_hits == 1
 
+    @pytest.mark.asyncio
     async def test_get_search_results_miss(self, cache, mock_cache_manager):
         """Test getting search results - cache miss."""
         cache._initialized = True
@@ -439,6 +465,7 @@ class TestHyDECache:
         assert result is None
         assert cache.cache_misses == 1
 
+    @pytest.mark.asyncio
     async def test_get_search_results_error(self, cache, mock_cache_manager):
         """Test getting search results with error."""
         cache._initialized = True
@@ -452,6 +479,7 @@ class TestHyDECache:
         assert result is None
         assert cache.cache_errors == 1
 
+    @pytest.mark.asyncio
     async def test_set_search_results_success(self, cache, mock_cache_manager):
         """Test setting search results successfully."""
         cache._initialized = True
@@ -476,6 +504,7 @@ class TestHyDECache:
         ttl = call_args[1]["ttl"]
         assert ttl <= cache.config.cache_ttl_seconds // 2
 
+    @pytest.mark.asyncio
     async def test_set_search_results_error(self, cache, mock_cache_manager):
         """Test setting search results with error."""
         cache._initialized = True
@@ -491,6 +520,7 @@ class TestHyDECache:
         assert result is False
         assert cache.cache_errors == 1
 
+    @pytest.mark.asyncio
     async def test_warm_cache_success(self, cache, mock_cache_manager):
         """Test cache warming with some cached and some missing queries."""
         cache._initialized = True
@@ -505,6 +535,7 @@ class TestHyDECache:
         assert results["uncached query"] is False
         assert len(results) == 2
 
+    @pytest.mark.asyncio
     async def test_warm_cache_error(self, cache, mock_cache_manager):
         """Test cache warming with errors."""
         cache._initialized = True
@@ -516,6 +547,7 @@ class TestHyDECache:
         assert results["query1"] is False
         assert results["query2"] is False
 
+    @pytest.mark.asyncio
     async def test_invalidate_query_success(self, cache, mock_cache_manager):
         """Test query invalidation successfully."""
         cache._initialized = True
@@ -525,6 +557,7 @@ class TestHyDECache:
         assert result is True
         assert mock_cache_manager.delete.call_count == 2  # embedding + documents
 
+    @pytest.mark.asyncio
     async def test_invalidate_query_partial_success(self, cache, mock_cache_manager):
         """Test query invalidation with partial success."""
         cache._initialized = True
@@ -537,6 +570,7 @@ class TestHyDECache:
 
         assert result is True  # At least one succeeded
 
+    @pytest.mark.asyncio
     async def test_invalidate_query_error(self, cache, mock_cache_manager):
         """Test query invalidation with error."""
         cache._initialized = True
@@ -642,6 +676,7 @@ class TestHyDECache:
         assert cache.cache_sets == 0
         assert cache.cache_errors == 0
 
+    @pytest.mark.asyncio
     async def test_embedding_cache_key_with_none_domain(
         self, cache, mock_cache_manager
     ):
@@ -656,6 +691,7 @@ class TestHyDECache:
         cache_key = call_args[0][0]
         assert "test_hyde:embedding:" in cache_key
 
+    @pytest.mark.asyncio
     async def test_binary_embedding_storage_and_retrieval(
         self, cache, mock_cache_manager
     ):

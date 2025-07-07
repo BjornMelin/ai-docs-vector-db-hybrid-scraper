@@ -44,7 +44,7 @@ def complete_collection_name(
             return []
 
         # Create client manager and get collections
-        client_manager = ClientManager(config)
+        client_manager = ClientManager()
         db_manager = VectorDBManager(client_manager)
 
         # Get collection names (synchronously for completion)
@@ -61,7 +61,7 @@ def complete_collection_name(
             CompletionItem(name, help=f"Collection: {name}")
             for name in matching_collections
         ]
-    except Exception:
+    except (ValueError, RuntimeError, OSError):
         # If anything fails, return empty list
         return []
 
@@ -86,7 +86,6 @@ def database():
 @click.pass_context
 def list_collections(ctx: click.Context, output_format: str):
     """List all vector database collections."""
-    config = ctx.obj["config"]
     rich_cli = ctx.obj["rich_cli"]
 
     with Progress(
@@ -99,7 +98,7 @@ def list_collections(ctx: click.Context, output_format: str):
 
         try:
             # Use the existing VectorDBManager pattern
-            client_manager = ClientManager(config)
+            client_manager = ClientManager()
             db_manager = VectorDBManager(client_manager)
 
             # Use asyncio to run the async operation
@@ -124,9 +123,9 @@ def list_collections(ctx: click.Context, output_format: str):
 
             asyncio.run(db_manager.cleanup())
 
-        except Exception as e:
+        except (ValueError, RuntimeError, OSError) as e:
             rich_cli.show_error("Failed to list collections", str(e))
-            raise click.Abort() from e
+            raise click.Abort from e
 
     if output_format == "table":
         _display_collections_table(collections, rich_cli)
@@ -193,7 +192,7 @@ def _abort_collection_exists(collection_name: str, rich_cli) -> None:
         f"Collection '{collection_name}' already exists",
         "Use --force to overwrite",
     )
-    raise click.Abort() from None
+    raise click.Abort from None
 
 
 def _abort_collection_creation_failed() -> None:
@@ -211,7 +210,7 @@ def _abort_collection_deletion_failed() -> None:
 def _abort_collection_not_found(collection_name: str, rich_cli) -> None:
     """Helper function to abort when collection is not found."""
     rich_cli.show_error(f"Collection '{collection_name}' not found")
-    raise click.Abort() from None
+    raise click.Abort from None
 
 
 @database.command("create")
@@ -237,7 +236,6 @@ def create_collection(
     ctx: click.Context, collection_name: str, dimension: int, distance: str, force: bool
 ):
     """Create a new vector database collection."""
-    config = ctx.obj["config"]
     rich_cli = ctx.obj["rich_cli"]
 
     # Confirmation for force creation
@@ -258,7 +256,7 @@ def create_collection(
         )
 
         try:
-            client_manager = ClientManager(config)
+            client_manager = ClientManager()
             db_manager = VectorDBManager(client_manager)
 
             # Check if collection exists (if not force)
@@ -287,9 +285,9 @@ def create_collection(
             if not success:
                 _abort_collection_creation_failed()
 
-        except Exception as e:
+        except (ValueError, RuntimeError, OSError) as e:
             rich_cli.show_error("Failed to create collection", str(e))
-            raise click.Abort() from e
+            raise click.Abort from e
 
     # Success message
     success_text = Text()
@@ -313,7 +311,6 @@ def create_collection(
 @click.pass_context
 def delete_collection(ctx: click.Context, collection_name: str, yes: bool):
     """Delete a vector database collection."""
-    config = ctx.obj["config"]
     rich_cli = ctx.obj["rich_cli"]
 
     # Confirmation prompt
@@ -332,7 +329,7 @@ def delete_collection(ctx: click.Context, collection_name: str, yes: bool):
         progress.add_task(f"Deleting collection '{collection_name}'...", total=None)
 
         try:
-            client_manager = ClientManager(config)
+            client_manager = ClientManager()
             db_manager = VectorDBManager(client_manager)
 
             success = asyncio.run(db_manager.delete_collection(collection_name))
@@ -341,9 +338,9 @@ def delete_collection(ctx: click.Context, collection_name: str, yes: bool):
             if not success:
                 _abort_collection_deletion_failed()
 
-        except Exception as e:
+        except (ValueError, RuntimeError, OSError) as e:
             rich_cli.show_error("Failed to delete collection", str(e))
-            raise click.Abort() from e
+            raise click.Abort from e
 
     rich_cli.console.print(f"✅ Collection '{collection_name}' deleted successfully.")
 
@@ -353,7 +350,6 @@ def delete_collection(ctx: click.Context, collection_name: str, yes: bool):
 @click.pass_context
 def collection_info(ctx: click.Context, collection_name: str):
     """Show detailed information about a collection."""
-    config = ctx.obj["config"]
     rich_cli = ctx.obj["rich_cli"]
 
     with Progress(
@@ -365,7 +361,7 @@ def collection_info(ctx: click.Context, collection_name: str):
         progress.add_task("Loading collection info...", total=None)
 
         try:
-            client_manager = ClientManager(config)
+            client_manager = ClientManager()
             db_manager = VectorDBManager(client_manager)
 
             info = asyncio.run(db_manager.get_collection_info(collection_name))
@@ -386,9 +382,9 @@ def collection_info(ctx: click.Context, collection_name: str):
                 },
             }
 
-        except Exception as e:
+        except (ValueError, RuntimeError, OSError) as e:
             rich_cli.show_error("Failed to get collection info", str(e))
-            raise click.Abort() from e
+            raise click.Abort from e
 
     # Display collection information
     info_table = Table(title=f"Collection: {collection_name}", show_header=True)
@@ -427,7 +423,6 @@ def search_collection(
     score_threshold: float | None,
 ):
     """Search a vector database collection."""
-    config = ctx.obj["config"]
     rich_cli = ctx.obj["rich_cli"]
 
     with Progress(
@@ -439,7 +434,7 @@ def search_collection(
         task = progress.add_task("Searching collection...", total=None)
 
         try:
-            client_manager = ClientManager(config)
+            client_manager = ClientManager()
             db_manager = VectorDBManager(client_manager)
             embedding_manager = asyncio.run(db_manager.get_embedding_manager())
 
@@ -460,9 +455,9 @@ def search_collection(
 
             asyncio.run(db_manager.cleanup())
 
-        except Exception as e:
+        except (ValueError, RuntimeError, OSError) as e:
             rich_cli.show_error("Search failed", str(e))
-            raise click.Abort() from e
+            raise click.Abort from e
 
     # Display search results
     if not results:
@@ -507,7 +502,7 @@ def database_stats(ctx: click.Context):
         progress.add_task("Gathering database statistics...", total=None)
 
         try:
-            client_manager = ClientManager(config)
+            client_manager = ClientManager()
             db_manager = VectorDBManager(client_manager)
 
             collections_names = asyncio.run(db_manager.list_collections())
@@ -536,9 +531,9 @@ def database_stats(ctx: click.Context):
             # Calculate totals
             total_collections = len(collections)
 
-        except Exception as e:
+        except (ValueError, RuntimeError, OSError) as e:
             rich_cli.show_error("Failed to get database stats", str(e))
-            raise click.Abort() from e
+            raise click.Abort from e
 
     # Database overview
     stats_table = Table(title="Database Statistics", show_header=True)

@@ -66,9 +66,9 @@ def register_tools(mcp, client_manager: ClientManager):
                 await ctx.debug(f"Retrieving source document {query_id}")
 
             # Get the document by ID
-            retrieved = await qdrant_service._client.retrieve(
+            retrieved = await qdrant_service.get_points(
                 collection_name=collection,
-                ids=[query_id],
+                point_ids=[query_id],
                 with_vectors=True,
                 with_payload=True,
             )
@@ -128,10 +128,11 @@ def register_tools(mcp, client_manager: ClientManager):
                 await ctx.info(
                     f"Found {len(final_results)} similar documents for {query_id}"
                 )
-            return final_results
 
-        except Exception:
+        except (TimeoutError, OSError, PermissionError):
             if ctx:
                 await ctx.error("Similar search failed")
             logger.exception("Similar search failed")
             raise
+        else:
+            return final_results

@@ -7,6 +7,7 @@ achieving 80% performance improvement through efficient algorithms and caching.
 import functools
 import logging
 import re
+import time
 from collections import Counter
 from dataclasses import dataclass
 from typing import Any
@@ -99,7 +100,7 @@ class OptimizedTextAnalyzer:
                 "that",
                 "these",
                 "those",
-            }
+            },
         )
 
         # Content type indicators
@@ -167,7 +168,6 @@ class OptimizedTextAnalyzer:
             ],
         }
 
-    @functools.lru_cache(maxsize=1000)
     def analyze_text_optimized(self, text: str) -> TextAnalysisResult:
         """Optimized O(n) text analysis replacing O(n²) implementation.
 
@@ -177,7 +177,6 @@ class OptimizedTextAnalyzer:
         Returns:
             Comprehensive analysis results
         """
-        import time
 
         start_time = time.time()
 
@@ -220,10 +219,7 @@ class OptimizedTextAnalyzer:
         paragraph_count = len([p for p in paragraphs if p.strip()])
 
         # Calculate average sentence length
-        if sentence_count > 0:
-            avg_sentence_length = word_count / sentence_count
-        else:
-            avg_sentence_length = 0.0
+        avg_sentence_length = word_count / sentence_count if sentence_count > 0 else 0.0
 
         # Complexity score based on vocabulary diversity
         if word_count > 0:
@@ -382,12 +378,12 @@ class OptimizedTextAnalyzer:
             elif len(word) > 8:
                 english_indicators += 0.5  # Longer words indicate complexity
 
-        confidence = min(1.0, english_indicators / total_words)
-        return confidence
+        return min(1.0, english_indicators / total_words)
 
-    @functools.lru_cache(maxsize=500)
     def calculate_document_similarity_optimized(
-        self, text_a: str, text_b: str
+        self,
+        text_a: str,
+        text_b: str,
     ) -> DocumentSimilarity:
         """Calculate document similarity with O(n+m) algorithm.
 
@@ -468,7 +464,6 @@ class OptimizedTextAnalyzer:
         Returns:
             Performance benchmark results
         """
-        import time
 
         results = {
             "algorithm_complexity": "O(n)",
@@ -494,7 +489,7 @@ class OptimizedTextAnalyzer:
                     "words_per_second": result.word_count
                     / max(processing_time / 1000, 0.001),
                     "cache_hit": processing_time < 1.0,  # Very fast indicates cache hit
-                }
+                },
             )
 
         return results
@@ -591,7 +586,7 @@ def classify_text_complexity_fast(text: str) -> dict[str, Any]:
 
     # Calculate metrics efficiently
     avg_word_length = sum(len(word) for word in words) / word_count
-    unique_words = len(set(word.lower() for word in words))
+    unique_words = len({word.lower() for word in words})
     vocabulary_ratio = unique_words / word_count
 
     # Sentence complexity

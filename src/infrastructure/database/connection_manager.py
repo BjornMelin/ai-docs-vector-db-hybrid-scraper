@@ -105,12 +105,12 @@ class DatabaseManager:
             await self.load_monitor.start_monitoring()
 
             logger.info(
-                f"Enterprise database manager initialized "
-                f"(pool_size: {self.config.database.pool_size}, "
-                f"ml_monitoring: enabled, circuit_breaker: enabled)"
+                "Enterprise database manager initialized "
+                "(pool_size: %s, ml_monitoring: enabled, circuit_breaker: enabled)",
+                self.config.database.pool_size,
             )
 
-        except Exception:
+        except (OSError, AttributeError, ConnectionError, ImportError):
             logger.exception("Failed to initialize enterprise database manager")
             raise
 
@@ -131,7 +131,7 @@ class DatabaseManager:
 
             logger.info("Enterprise database manager cleaned up")
 
-        except Exception:
+        except (ConnectionError, OSError, PermissionError):
             logger.exception("Error during database cleanup")
 
     @asynccontextmanager

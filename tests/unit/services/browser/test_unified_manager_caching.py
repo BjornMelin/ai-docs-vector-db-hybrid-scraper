@@ -55,6 +55,7 @@ class TestUnifiedManagerCaching:
 
     @patch("src.infrastructure.client_manager.ClientManager")
     @patch("src.services.cache.browser_cache.BrowserCache")
+    @pytest.mark.asyncio
     async def test_initialization_with_cache(
         self, mock_browser_cache_class, mock_client_manager_class, mock_config
     ):
@@ -90,6 +91,7 @@ class TestUnifiedManagerCaching:
         assert manager._cache_enabled is True
         assert manager._browser_cache is not None
 
+    @pytest.mark.asyncio
     async def test_scrape_checks_cache_first(
         self, unified_manager_with_cache, mock_browser_cache
     ):
@@ -129,6 +131,7 @@ class TestUnifiedManagerCaching:
         # Verify router was NOT called
         unified_manager_with_cache._automation_router.scrape.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_scrape_caches_successful_result(
         self, unified_manager_with_cache, mock_browser_cache
     ):
@@ -169,6 +172,7 @@ class TestUnifiedManagerCaching:
         assert cache_entry.content == "Fresh content"
         assert cache_entry.tier_used == "browser_use"
 
+    @pytest.mark.asyncio
     async def test_scrape_skips_cache_for_interaction(
         self, unified_manager_with_cache, mock_browser_cache
     ):
@@ -202,6 +206,7 @@ class TestUnifiedManagerCaching:
         # Verify router was called
         mock_router.scrape.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_scrape_does_not_cache_failures(
         self, unified_manager_with_cache, mock_browser_cache
     ):
@@ -227,6 +232,7 @@ class TestUnifiedManagerCaching:
         # Verify result was NOT cached
         mock_browser_cache.set.assert_not_called()
 
+    @pytest.mark.asyncio
     async def test_scrape_with_tier_specific_caching(
         self, unified_manager_with_cache, mock_browser_cache
     ):
@@ -257,6 +263,7 @@ class TestUnifiedManagerCaching:
             "https://example.com", "lightweight"
         )
 
+    @pytest.mark.asyncio
     async def test_get_system_status_includes_cache_stats(
         self, unified_manager_with_cache, mock_browser_cache
     ):
@@ -275,6 +282,7 @@ class TestUnifiedManagerCaching:
         assert status["cache_stats"]["misses"] == 3
         assert status["cache_stats"]["hit_rate"] == 0.625
 
+    @pytest.mark.asyncio
     async def test_cache_disabled_behavior(self, mock_config):
         """Test behavior when caching is disabled."""
         # Disable caching in config
@@ -306,6 +314,7 @@ class TestUnifiedManagerCaching:
         assert response.content == "Content"
         # No cache operations should have been attempted
 
+    @pytest.mark.asyncio
     async def test_cache_error_handling(
         self, unified_manager_with_cache, mock_browser_cache
     ):
@@ -336,6 +345,7 @@ class TestUnifiedManagerCaching:
         assert response.content == "Fresh content"
         mock_router.scrape.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_cache_metrics_update(
         self, unified_manager_with_cache, mock_browser_cache
     ):

@@ -21,8 +21,7 @@ class TestHNSWOptimizer:
     @pytest.fixture
     def mock_config(self):
         """Create mock unified config."""
-        config = MagicMock(spec=Config)
-        return config
+        return MagicMock(spec=Config)
 
     @pytest.fixture
     def _mock_qdrant_service(self):
@@ -51,12 +50,14 @@ class TestHNSWOptimizer:
         assert optimizer.adaptive_ef_cache == {}
         assert optimizer._initialized is False
 
+    @pytest.mark.asyncio
     async def test_initialize_success(self, optimizer, __mock_qdrant_service):
         """Test successful optimizer initialization."""
         await optimizer.initialize()
 
         assert optimizer._initialized is True
 
+    @pytest.mark.asyncio
     async def test_initialize_already_initialized(self, optimizer):
         """Test initialization when already initialized."""
         optimizer._initialized = True
@@ -66,6 +67,7 @@ class TestHNSWOptimizer:
         # Should remain initialized
         assert optimizer._initialized is True
 
+    @pytest.mark.asyncio
     async def test_initialize_qdrant_not_initialized(
         self, optimizer, _mock_qdrant_service
     ):
@@ -78,6 +80,7 @@ class TestHNSWOptimizer:
         assert "QdrantService must be initialized" in str(exc_info.value)
         assert optimizer._initialized is False
 
+    @pytest.mark.asyncio
     async def test_adaptive_ef_retrieve_success(self, optimizer, _mock_qdrant_service):
         """Test successful adaptive ef retrieval."""
         optimizer._initialized = True
@@ -105,6 +108,7 @@ class TestHNSWOptimizer:
         assert result["source"] == "adaptive"
         assert len(result["ef_progression"]) > 0
 
+    @pytest.mark.asyncio
     async def test_adaptive_ef_retrieve_with_cache_hit(
         self, optimizer, _mock_qdrant_service
     ):
@@ -137,6 +141,7 @@ class TestHNSWOptimizer:
         assert result["source"] == "cache"
         _mock_qdrant_service._client.query_points.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_adaptive_ef_retrieve_time_budget_exceeded(
         self, optimizer, _mock_qdrant_service
     ):
@@ -166,6 +171,7 @@ class TestHNSWOptimizer:
         assert result["ef_used"] == 50  # Should use minimum EF
         assert result["budget_utilized_percent"] > 80  # Should be close to budget
 
+    @pytest.mark.asyncio
     async def test_adaptive_ef_retrieve_query_error(
         self, optimizer, _mock_qdrant_service
     ):
@@ -186,6 +192,7 @@ class TestHNSWOptimizer:
         assert result["results"] == []
         assert "ef_used" in result
 
+    @pytest.mark.asyncio
     async def test_adaptive_ef_retrieve_cache_size_limit(
         self, optimizer, _mock_qdrant_service
     ):
@@ -271,6 +278,7 @@ class TestHNSWOptimizer:
         assert config["full_scan_threshold"] == 10000
         assert config["target_use_case"] == "General purpose documentation"
 
+    @pytest.mark.asyncio
     async def test_optimize_collection_hnsw_success(
         self, optimizer, _mock_qdrant_service
     ):
@@ -295,6 +303,7 @@ class TestHNSWOptimizer:
         assert "needs_update" in result
         assert "optimization_timestamp" in result
 
+    @pytest.mark.asyncio
     async def test_optimize_collection_hnsw_with_test_queries(
         self, optimizer, _mock_qdrant_service
     ):
@@ -305,7 +314,8 @@ class TestHNSWOptimizer:
         mock_collection_info = MagicMock()
         mock_collection_info.config.params.vectors.dense.hnsw_config.m = 16
         mock_collection_info.config.params.vectors.dense.hnsw_config.ef_construct = 200
-        mock_collection_info.config.params.vectors.dense.hnsw_config.full_scan_threshold = 10000
+        hnsw_config = mock_collection_info.config.params.vectors.dense.hnsw_config
+        hnsw_config.full_scan_threshold = 10000
         _mock_qdrant_service._client.get_collection.return_value = mock_collection_info
 
         # Mock test performance
@@ -327,6 +337,7 @@ class TestHNSWOptimizer:
             assert result["current_performance"]["avg_search_time_ms"] == 50.0
             mock_test.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_optimize_collection_hnsw_needs_update(
         self, optimizer, _mock_qdrant_service
     ):
@@ -352,6 +363,7 @@ class TestHNSWOptimizer:
         assert result["update_recommendation"]["action"] == "recreate_collection"
         assert "estimated_improvement" in result["update_recommendation"]
 
+    @pytest.mark.asyncio
     async def test_optimize_collection_hnsw_no_update_needed(
         self, optimizer, _mock_qdrant_service
     ):
@@ -377,7 +389,8 @@ class TestHNSWOptimizer:
         mock_collection_info = MagicMock()
         mock_collection_info.config.params.vectors.dense.hnsw_config.m = 18
         mock_collection_info.config.params.vectors.dense.hnsw_config.ef_construct = 250
-        mock_collection_info.config.params.vectors.dense.hnsw_config.full_scan_threshold = 8000
+        hnsw_config = mock_collection_info.config.params.vectors.dense.hnsw_config
+        hnsw_config.full_scan_threshold = 8000
 
         config = optimizer._extract_current_hnsw_config(mock_collection_info)
 
@@ -460,8 +473,10 @@ class TestHNSWOptimizer:
         improvement = optimizer._estimate_performance_improvement(current, recommended)
 
         assert improvement["estimated_recall_improvement_percent"] > 0
-        # Note: The test implementation shows latency can be negative due to better quality
-        # Higher m increases latency (+2% per m = +16%) but higher ef can reduce it slightly (-0.1% per ef = -17.2%)
+        # Note: The test implementation shows latency can be negative due to
+        # better quality
+        # Higher m increases latency (+2% per m = +16%) but higher ef can
+        # reduce it slightly (-0.1% per ef = -17.2%)
         # Net effect: +16% - 17.2% = -1.2%
         assert "estimated_latency_change_percent" in improvement
         assert (
@@ -483,6 +498,7 @@ class TestHNSWOptimizer:
         assert improvement["estimated_memory_change_percent"] == 0
         assert improvement["build_time_change_percent"] == 0
 
+    @pytest.mark.asyncio
     async def test_test_search_performance_success(
         self, optimizer, _mock_qdrant_service
     ):
@@ -510,6 +526,7 @@ class TestHNSWOptimizer:
         assert performance["queries_tested"] == 3
         assert performance["ef_used"] == 100
 
+    @pytest.mark.asyncio
     async def test_test_search_performance_with_errors(
         self, optimizer, _mock_qdrant_service
     ):
@@ -528,6 +545,7 @@ class TestHNSWOptimizer:
                 raise TestError(msg)
                 msg = "Query failed"
                 raise TestError(msg)
+            return None
 
         _mock_qdrant_service._client.query_points.side_effect = mock_query
 
@@ -547,6 +565,7 @@ class TestHNSWOptimizer:
         assert performance["queries_tested"] == 2  # Only 2 successful
         assert performance["ef_used"] == 100
 
+    @pytest.mark.asyncio
     async def test_test_search_performance_no_successful_queries(
         self, optimizer, _mock_qdrant_service
     ):
@@ -583,6 +602,7 @@ class TestHNSWOptimizer:
         assert "test1" in stats["cache_entries"]
         assert "test2" in stats["cache_entries"]
 
+    @pytest.mark.asyncio
     async def test_cleanup(self, optimizer):
         """Test optimizer cleanup."""
         optimizer._initialized = True
@@ -595,6 +615,7 @@ class TestHNSWOptimizer:
         assert len(optimizer.adaptive_ef_cache) == 0
         assert len(optimizer.performance_cache) == 0
 
+    @pytest.mark.asyncio
     async def test_adaptive_ef_retrieve_step_size_adjustment(
         self, optimizer, _mock_qdrant_service
     ):

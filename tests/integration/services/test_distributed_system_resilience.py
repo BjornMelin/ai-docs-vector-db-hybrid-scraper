@@ -286,38 +286,36 @@ class TestNetworkPartitionTolerance:
 
         async def perform_cache_operation_with_timeout(
             operation: str,
-            timeout: float = 1.0,  # noqa: ASYNC109
         ):
             """Perform cache operation with timeout."""
             try:
-                if operation == "get":
-                    result = await asyncio.wait_for(
-                        setup["cache_service"].get("test_key"), timeout=timeout
-                    )
-                elif operation == "set":
-                    result = await asyncio.wait_for(
-                        setup["cache_service"].set("test_key", "test_value"),
-                        timeout=timeout,
-                    )
+                async with asyncio.timeout(1.0):
+                    if operation == "get":
+                        result = await setup["cache_service"].get("test_key")
+                    elif operation == "set":
+                        result = await setup["cache_service"].set(
+                            "test_key", "test_value"
+                        )
 
-                cache_operations.append(
-                    {
-                        "operation": operation,
-                        "status": "success",
-                        "latency_ms": result["latency_ms"],
-                    }
-                )
-                return result
+                    cache_operations.append(
+                        {
+                            "operation": operation,
+                            "status": "success",
+                            "latency_ms": result["latency_ms"],
+                        }
+                    )
 
             except TimeoutError:
                 cache_operations.append(
                     {
                         "operation": operation,
                         "status": "timeout",
-                        "timeout_ms": timeout * 1000,
+                        "timeout_ms": 1000,
                     }
                 )
                 raise
+            else:
+                return result
 
         # Perform operations that should timeout
         timeout_operations = []
@@ -750,15 +748,16 @@ class TestServiceDiscoveryAndRegistration:
                 result = await primary_service_discovery.discover_services(service_name)
                 if result:
                     return {"source": "primary", "services": result}
-            except Exception:
+            except (TimeoutError, ConnectionError, RuntimeError, ValueError):
                 logger.debug("Exception suppressed during cleanup/testing")
 
             # Fallback to backup service discovery
             try:
                 backup_result = backup_registry.get(service_name, [])
-                return {"source": "backup", "services": backup_result}
-            except Exception:
+            except (TimeoutError, ConnectionError, RuntimeError, ValueError):
                 return {"source": "none", "services": []}
+            else:
+                return {"source": "backup", "services": backup_result}
 
         # Test normal operation (primary available)
         primary_service_discovery.discover_services.return_value = [
@@ -907,26 +906,30 @@ class TestDistributedConfigurationManagement:
                     "api_service",
                     "cache_service",
                 ]
-                for service in all_services:
-                    notified_services.append(
+                notified_services.extend(
+                    [
                         {
                             "service": service,
                             "change_id": change["change_id"],
                             "config_path": change["config_path"],
                             "notification_time": time.time(),
                         }
-                    )
+                        for service in all_services
+                    ]
+                )
             else:
                 # Notify specific services
-                for service in affected_services:
-                    notified_services.append(
+                notified_services.extend(
+                    [
                         {
                             "service": service,
                             "change_id": change["change_id"],
                             "config_path": change["config_path"],
                             "notification_time": time.time(),
                         }
-                    )
+                        for service in affected_services
+                    ]
+                )
 
         # Process configuration changes
         for change in config_changes:
@@ -1214,13 +1217,10 @@ class TestCrossServiceAuthentication:
                     role = self.roles[role_name]
 
                     # Check if role has permission for operation
-                    if operation in role["permissions"]:
-                        # Check if role can access target service
-                        if (
-                            "all" in role["services"]
-                            or service_name in role["services"]
-                        ):
-                            return True
+                    if operation in role["permissions"] and (
+                        "all" in role["services"] or service_name in role["services"]
+                    ):
+                        return True
 
                 return False
 

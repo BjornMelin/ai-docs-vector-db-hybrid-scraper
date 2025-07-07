@@ -360,7 +360,7 @@ class TestValidateModelBenchmarkConsistency:
         assert model_name in str(exc_info.value)
 
 
-class TestValidateCollectionName:
+class TestValidateCollectionNameField:
     """Test validate_collection_name function."""
 
     def test_valid_names(self):
@@ -475,34 +475,34 @@ class TestValidatorDecorators:
         """Test OpenAI API key validator."""
         # Valid key
         key = "sk-1234567890abcdefghijklmnop"
-        result = openai_api_key_validator(None, key)
+        result = openai_api_key_validator(key)
         assert result == key
 
         # Invalid prefix
         with pytest.raises(ValueError) as exc_info:
-            openai_api_key_validator(None, "fc-1234567890")
+            openai_api_key_validator("fc-1234567890")
         assert "OpenAI" in str(exc_info.value)
 
         # None value
-        assert openai_api_key_validator(None, None) is None
+        assert openai_api_key_validator(None) is None
 
     def test_firecrawl_api_key_validator(self):
         """Test Firecrawl API key validator."""
         # Valid key
         key = "fc-abc123_def-456"
-        result = firecrawl_api_key_validator(None, key)
+        result = firecrawl_api_key_validator(key)
         assert result == key
 
         # Invalid prefix
         with pytest.raises(ValueError) as exc_info:
-            firecrawl_api_key_validator(None, "sk-1234567890")
+            firecrawl_api_key_validator("sk-1234567890")
         assert "Firecrawl" in str(exc_info.value)
 
     def test_url_validator_decorator(self):
         """Test URL validator decorator."""
         url = "https://example.com"
-        result = url_validator(None, url)
+        result = url_validator(url)
         assert result == url
 
         with pytest.raises(ValueError):
-            url_validator(None, "not-a-url")
+            url_validator("not-a-url")

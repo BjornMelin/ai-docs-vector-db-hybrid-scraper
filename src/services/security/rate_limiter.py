@@ -16,7 +16,6 @@ Features:
 import asyncio
 import logging
 import time
-from typing import Dict
 
 
 try:
@@ -78,7 +77,7 @@ class DistributedRateLimiter:
                 logger.info(
                     f"Redis rate limiter initialized: {redis_url}"
                 )  # TODO: Convert f-string to logging format
-            except Exception as e:
+            except (ConnectionError, ValueError, AttributeError) as e:
                 logger.warning(
                     f"Failed to initialize Redis: {e}. Using local fallback only."
                 )
@@ -86,7 +85,7 @@ class DistributedRateLimiter:
         else:
             if not REDIS_AVAILABLE:
                 logger.warning(
-                    "Redis not available. Install redis package for distributed rate limiting."
+                    "Redis unavailable. Install redis for distributed limiting."
                 )
             logger.info("Rate limiter initialized with local cache fallback only")
 
@@ -112,17 +111,38 @@ class DistributedRateLimiter:
         # Try Redis first, fallback to local cache
         if self.redis_client:
             try:
-                return await self._check_rate_limit_redis(
+                return await self._attempt_redis_rate_limit_check(
                     identifier, limit, window, burst_limit, current_time
                 )
-            except Exception as e:
+            except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
                 logger.warning(
                     f"Redis rate limit check failed: {e}. Using local fallback."
                 )
 
         # Local fallback
         return await self._check_rate_limit_local(
-            identifier, limit, window, burst_limit, current_time
+            identifier,
+            limit,
+            window,
+            burst_limit=burst_limit,
+            current_time=current_time,
+        )
+
+    async def _attempt_redis_rate_limit_check(
+        self,
+        identifier: str,
+        limit: int,
+        window: int,
+        burst_limit: int,
+        current_time: float,
+    ) -> tuple[bool, dict]:
+        """Attempt rate limit check using Redis."""
+        return await self._check_rate_limit_redis(
+            identifier,
+            limit,
+            window,
+            burst_limit=burst_limit,
+            current_time=current_time,
         )
 
     async def _check_rate_limit_redis(
@@ -130,6 +150,7 @@ class DistributedRateLimiter:
         identifier: str,
         limit: int,
         window: int,
+        *,
         burst_limit: int,
         current_time: float,
     ) -> tuple[bool, dict]:
@@ -197,6 +218,7 @@ class DistributedRateLimiter:
         identifier: str,
         limit: int,
         window: int,
+        *,
         burst_limit: int,
         current_time: float,
     ) -> tuple[bool, dict]:
@@ -272,25 +294,10 @@ class DistributedRateLimiter:
 
         if self.redis_client:
             try:
-                key = f"rate_limit:{identifier}:{window}"
-                window_start = current_time - window
-
-                # Clean and count current requests
-                pipe = self.redis_client.pipeline()
-                pipe.zremrangebyscore(key, 0, window_start)
-                pipe.zcard(key)
-                results = await pipe.execute()
-
-                current_requests = results[1]
-
-                return {
-                    "identifier": identifier,
-                    "current_requests": current_requests,
-                    "window_seconds": window,
-                    "backend": "redis",
-                    "timestamp": current_time,
-                }
-            except Exception as e:
+                return await self._get_redis_rate_status(
+                    identifier, window, current_time
+                )
+            except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
                 logger.warning(
                     f"Failed to get Redis rate limit status: {e}"
                 )  # TODO: Convert f-string to logging format
@@ -316,6 +323,29 @@ class DistributedRateLimiter:
                 "timestamp": current_time,
             }
 
+    async def _get_redis_rate_status(
+        self, identifier: str, window: int, current_time: float
+    ) -> dict:
+        """Get rate limit status from Redis."""
+        key = f"rate_limit:{identifier}:{window}"
+        window_start = current_time - window
+
+        # Clean and count current requests
+        pipe = self.redis_client.pipeline()
+        pipe.zremrangebyscore(key, 0, window_start)
+        pipe.zcard(key)
+        results = await pipe.execute()
+
+        current_requests = results[1]
+
+        return {
+            "identifier": identifier,
+            "current_requests": current_requests,
+            "window_seconds": window,
+            "backend": "redis",
+            "timestamp": current_time,
+        }
+
     async def reset_rate_limit(self, identifier: str, window: int = 60) -> bool:
         """Reset rate limit for a specific identifier (admin function).
 
@@ -327,25 +357,37 @@ class DistributedRateLimiter:
             True if reset was successful
         """
         try:
-            if self.redis_client:
-                key = f"rate_limit:{identifier}:{window}"
-                await self.redis_client.delete(key)
-                logger.info(
-                    f"Reset Redis rate limit for {identifier}"
-                )  # TODO: Convert f-string to logging format
-
-            # Also reset local cache
-            async with self._cache_lock:
-                if identifier in self.local_cache:
-                    del self.local_cache[identifier]
-                    logger.info(
-                        f"Reset local rate limit for {identifier}"
-                    )  # TODO: Convert f-string to logging format
-
-            return True
-        except Exception as e:
-            logger.exception(f"Failed to reset rate limit for {identifier}: {e}")
+            await self._execute_rate_limit_reset(identifier, window)
+        except (ConnectionError, ValueError, AttributeError, RuntimeError):
+            logger.exception("Failed to reset rate limit for {identifier}")
             return False
+        else:
+            return True
+
+    async def _execute_rate_limit_reset(self, identifier: str, window: int) -> None:
+        """Execute rate limit reset operations."""
+        if self.redis_client:
+            await self._reset_redis_rate_limit(identifier, window)
+
+        # Also reset local cache
+        await self._reset_local_rate_limit(identifier)
+
+    async def _reset_redis_rate_limit(self, identifier: str, window: int) -> None:
+        """Reset Redis rate limit for identifier."""
+        key = f"rate_limit:{identifier}:{window}"
+        await self.redis_client.delete(key)
+        logger.info(
+            f"Reset Redis rate limit for {identifier}"
+        )  # TODO: Convert f-string to logging format
+
+    async def _reset_local_rate_limit(self, identifier: str) -> None:
+        """Reset local cache rate limit for identifier."""
+        async with self._cache_lock:
+            if identifier in self.local_cache:
+                del self.local_cache[identifier]
+                logger.info(
+                    f"Reset local rate limit for {identifier}"
+                )  # TODO: Convert f-string to logging format
 
     async def cleanup_expired_entries(self, max_age_hours: int = 24) -> int:
         """Clean up expired entries from local cache.
@@ -410,9 +452,8 @@ class DistributedRateLimiter:
 
         if self.redis_client:
             try:
-                await self.redis_client.ping()
-                status["redis_healthy"] = True
-            except Exception as e:
+                await self._check_redis_health(status)
+            except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
                 logger.warning(
                     f"Redis health check failed: {e}"
                 )  # TODO: Convert f-string to logging format
@@ -420,13 +461,22 @@ class DistributedRateLimiter:
 
         return status
 
+    async def _check_redis_health(self, status: dict) -> None:
+        """Check Redis connection health."""
+        await self.redis_client.ping()
+        status["redis_healthy"] = True
+
     async def close(self):
         """Close Redis connection if open."""
         if self.redis_client:
             try:
-                await self.redis_client.close()
-                logger.info("Redis connection closed")
-            except Exception as e:
+                await self._close_redis_connection()
+            except (ConnectionError, ValueError, AttributeError, RuntimeError) as e:
                 logger.warning(
                     f"Error closing Redis connection: {e}"
                 )  # TODO: Convert f-string to logging format
+
+    async def _close_redis_connection(self) -> None:
+        """Close Redis connection."""
+        await self.redis_client.close()
+        logger.info("Redis connection closed")

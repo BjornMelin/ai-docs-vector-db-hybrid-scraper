@@ -12,7 +12,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.config.enums import DeploymentTier
+from src.config import DeploymentTier
 
 
 # Optional dependency handling
@@ -27,6 +27,8 @@ logger = logging.getLogger(__name__)
 
 class FeatureFlagConfig(BaseModel):
     """Configuration for feature flag integration."""
+
+    model_config = {"arbitrary_types_allowed": True}
 
     enabled: bool = Field(default=False, description="Enable feature flag integration")
     provider: str = Field(default="flagsmith", description="Feature flag provider")
@@ -70,39 +72,48 @@ class FeatureFlagManager:
             return
 
         try:
-            if self.config.enabled and self.config.api_key:
-                # Initialize Flagsmith client (optional dependency)
-                if Flagsmith is None:
-                    logger.warning("Flagsmith not available - feature flags disabled")
-                    return
-
-                try:
-                    self._client = Flagsmith(
-                        environment_key=self.config.environment_key,
-                        api_url=self.config.api_url,
-                    )
-                    logger.info("Flagsmith client initialized successfully")
-                except ImportError:
-                    logger.warning(
-                        "Flagsmith not available. Install with: pip install flagsmith"
-                        " Using fallback tier: %s",
-                        self.config.fallback_tier,
-                    )
-                    self._client = None
-            else:
-                logger.info(
-                    "Feature flags disabled, using fallback tier: %s",
-                    self.config.fallback_tier,
-                )
-
-            # Determine current tier
+            await self._initialize_feature_flag_client()
             self._current_tier = await self._determine_tier()
             self._initialized = True
-
-        except Exception as e:
-            logger.exception("Failed to initialize feature flag manager: %s", e)
+        except Exception:
+            logger.exception("Failed to initialize feature flag manager: %s")
             self._current_tier = self.config.fallback_tier
             self._initialized = True
+
+    async def _initialize_feature_flag_client(self) -> None:
+        """Initialize the feature flag client if enabled."""
+        if not (self.config.enabled and self.config.api_key):
+            logger.info(
+                "Feature flags disabled, using fallback tier: %s",
+                self.config.fallback_tier,
+            )
+            return
+
+        if Flagsmith is None:
+            logger.warning("Flagsmith not available - feature flags disabled")
+            return
+
+        try:
+            self._create_flagsmith_client()
+        except ImportError:
+            self._handle_flagsmith_import_error()
+
+    def _create_flagsmith_client(self) -> None:
+        """Create and configure the Flagsmith client."""
+        self._client = Flagsmith(
+            environment_key=self.config.environment_key,
+            api_url=self.config.api_url,
+        )
+        logger.info("Flagsmith client initialized successfully")
+
+    def _handle_flagsmith_import_error(self) -> None:
+        """Handle Flagsmith import errors gracefully."""
+        logger.warning(
+            "Flagsmith not available. Install with: pip install flagsmith"
+            " Using fallback tier: %s",
+            self.config.fallback_tier,
+        )
+        self._client = None
 
     async def get_deployment_tier(self) -> DeploymentTier:
         """Get current deployment tier based on feature flags.
@@ -133,16 +144,19 @@ class FeatureFlagManager:
             await self.initialize()
 
         try:
-            if self._client:
-                # Use Flagsmith client
-                flags = await self._get_flags_from_client(user_id)
-                return flags.get(feature_name, False)
-            # Use tier-based fallback
+            return await self._check_feature_flag(feature_name, user_id)
+        except Exception:
+            logger.exception("Error checking feature flag %s", feature_name)
             return self._get_feature_by_tier(feature_name)
 
-        except Exception as e:
-            logger.exception("Error checking feature flag %s: %s", feature_name, e)
-            return self._get_feature_by_tier(feature_name)
+    async def _check_feature_flag(self, feature_name: str, user_id: str | None) -> bool:
+        """Check feature flag using client or tier fallback."""
+        if self._client:
+            # Use Flagsmith client
+            flags = await self._get_flags_from_client(user_id)
+            return flags.get(feature_name, False)
+        # Use tier-based fallback
+        return self._get_feature_by_tier(feature_name)
 
     async def get_config_value(
         self, config_key: str, default: Any = None, user_id: str | None = None
@@ -162,16 +176,21 @@ class FeatureFlagManager:
             await self.initialize()
 
         try:
-            if self._client:
-                # Use Flagsmith client for remote config
-                flags = await self._get_flags_from_client(user_id)
-                return flags.get(config_key, default)
-            # Use tier-based fallback
+            return await self._get_config_from_flags(config_key, default, user_id)
+        except Exception:
+            logger.exception("Error getting config value %s", config_key)
             return self._get_config_by_tier(config_key, default)
 
-        except Exception as e:
-            logger.exception("Error getting config value %s: %s", config_key, e)
-            return default
+    async def _get_config_from_flags(
+        self, config_key: str, default: Any, user_id: str | None
+    ) -> Any:
+        """Get configuration value from flags or tier fallback."""
+        if self._client:
+            # Use Flagsmith client for remote config
+            flags = await self._get_flags_from_client(user_id)
+            return flags.get(config_key, default)
+        # Use tier-based fallback
+        return self._get_config_by_tier(config_key, default)
 
     def _get_feature_by_tier(self, feature_name: str) -> bool:
         """Get feature availability based on current tier.
@@ -263,23 +282,29 @@ class FeatureFlagManager:
 
         """
         try:
-            if self._client:
-                # Check tier from feature flags
-                flags = await self._get_flags_from_client()
-
-                if flags.get("enterprise_features_enabled", False):
-                    return DeploymentTier.ENTERPRISE
-                if flags.get("professional_features_enabled", False):
-                    return DeploymentTier.PROFESSIONAL
-                return DeploymentTier.PERSONAL
-            # Fallback to environment-based detection
-
-            tier_env = os.getenv("DEPLOYMENT_TIER", "personal").lower()
-            return DeploymentTier(tier_env)
-
-        except Exception as e:
-            logger.exception("Error determining deployment tier: %s", e)
+            return await self._determine_tier_from_flags_or_env()
+        except Exception:
+            logger.exception("Error determining deployment tier: %s")
             return self.config.fallback_tier
+
+    async def _determine_tier_from_flags_or_env(self) -> DeploymentTier:
+        """Determine tier from feature flags or environment."""
+        if self._client:
+            return await self._determine_tier_from_flags()
+
+        # Fallback to environment-based detection
+        tier_env = os.getenv("DEPLOYMENT_TIER", "personal").lower()
+        return DeploymentTier(tier_env)
+
+    async def _determine_tier_from_flags(self) -> DeploymentTier:
+        """Determine tier from feature flags."""
+        flags = await self._get_flags_from_client()
+
+        if flags.get("enterprise_features_enabled", False):
+            return DeploymentTier.ENTERPRISE
+        if flags.get("professional_features_enabled", False):
+            return DeploymentTier.PROFESSIONAL
+        return DeploymentTier.PERSONAL
 
     async def _get_flags_from_client(
         self, user_id: str | None = None
@@ -297,51 +322,66 @@ class FeatureFlagManager:
             return {}
 
         try:
-            # Simple implementation - in production, you'd add proper caching
-            cache_key = f"flags_{user_id or 'anonymous'}"
-            current_time = time.time()
-
-            # Check cache
-            if (
-                cache_key in self._cache
-                and current_time - self._cache_timestamps.get(cache_key, 0)
-                < self.config.cache_ttl
-            ):
-                return self._cache[cache_key]
-
-            # Fetch from Flagsmith
-            if user_id:
-                identity = {"identifier": user_id}
-                flags_response = self._client.get_identity_flags(identity["identifier"])
-            else:
-                flags_response = self._client.get_environment_flags()
-
-            # Convert to simple dict format
-            flags = {}
-            for flag in flags_response:
-                flags[flag.feature.name] = flag.enabled
-                if flag.feature_state_value:
-                    try:
-                        # Try to parse as number or boolean
-                        value = flag.feature_state_value
-                        if value.lower() in ("true", "false"):
-                            flags[flag.feature.name] = value.lower() == "true"
-                        elif value.replace(".", "").isdigit():
-                            flags[flag.feature.name] = float(value)
-                        else:
-                            flags[flag.feature.name] = value
-                    except (AttributeError, ValueError):
-                        flags[flag.feature.name] = flag.feature_state_value
-
-            # Cache results
-            self._cache[cache_key] = flags
-            self._cache_timestamps[cache_key] = current_time
-
-            return flags
-
-        except Exception as e:
-            logger.exception("Error fetching flags from client: %s", e)
+            return await self._fetch_and_cache_flags(user_id)
+        except Exception:
+            logger.exception("Error fetching flags from client: %s")
             return {}
+
+    async def _fetch_and_cache_flags(self, user_id: str | None) -> dict[str, Any]:
+        """Fetch flags from client and handle caching."""
+        cache_key = f"flags_{user_id or 'anonymous'}"
+        current_time = time.time()
+
+        # Check cache first
+        if self._is_cache_valid(cache_key, current_time):
+            return self._cache[cache_key]
+
+        # Fetch from Flagsmith
+        flags_response = self._fetch_flags_from_flagsmith(user_id)
+        flags = self._convert_flags_to_dict(flags_response)
+
+        # Cache results
+        self._cache[cache_key] = flags
+        self._cache_timestamps[cache_key] = current_time
+        return flags
+
+    def _is_cache_valid(self, cache_key: str, current_time: float) -> bool:
+        """Check if cached flags are still valid."""
+        return (
+            cache_key in self._cache
+            and current_time - self._cache_timestamps.get(cache_key, 0)
+            < self.config.cache_ttl
+        )
+
+    def _fetch_flags_from_flagsmith(self, user_id: str | None) -> Any:
+        """Fetch flags from Flagsmith service."""
+        if user_id:
+            identity = {"identifier": user_id}
+            return self._client.get_identity_flags(identity["identifier"])
+        return self._client.get_environment_flags()
+
+    def _convert_flags_to_dict(self, flags_response: Any) -> dict[str, Any]:
+        """Convert Flagsmith response to simple dict format."""
+        flags = {}
+        for flag in flags_response:
+            flags[flag.feature.name] = flag.enabled
+            if flag.feature_state_value:
+                try:
+                    flags[flag.feature.name] = self._parse_flag_value(
+                        flag.feature_state_value
+                    )
+                except (AttributeError, ValueError):
+                    flags[flag.feature.name] = flag.feature_state_value
+        return flags
+
+    def _parse_flag_value(self, value: str) -> Any:
+        """Parse flag value to appropriate type."""
+        # Try to parse as number or boolean
+        if value.lower() in ("true", "false"):
+            return value.lower() == "true"
+        if value.replace(".", "").isdigit():
+            return float(value)
+        return value
 
     async def cleanup(self) -> None:
         """Cleanup feature flag manager resources."""

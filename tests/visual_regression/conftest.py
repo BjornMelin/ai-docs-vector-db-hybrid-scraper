@@ -281,7 +281,7 @@ def screenshot_manager():
             return self.load_screenshot(test_name, self.baseline_dir)
 
         def save_as_baseline(self, screenshot: Screenshot) -> Path:
-            """Save screenshot as new baseline."""
+            """Save screenshot as  baseline."""
             return self.save_screenshot(screenshot, self.baseline_dir)
 
         def cleanup_current_screenshots(self):
@@ -373,7 +373,7 @@ def visual_comparator():
 
         def analyze_differences(self, result: VisualComparisonResult) -> dict[str, Any]:
             """Analyze differences in detail."""
-            analysis = {
+            return {
                 "_total_changed_pixels": int(
                     result.difference_percentage * 1000000
                 ),  # Mock calculation
@@ -399,8 +399,6 @@ def visual_comparator():
                     "brightness_change": 0.03,
                 },
             }
-
-            return analysis
 
     return VisualComparator()
 

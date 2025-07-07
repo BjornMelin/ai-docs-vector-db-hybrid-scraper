@@ -15,11 +15,13 @@ def site_adapter():
 class TestSiteAdapter:
     """Test SiteAdapter functionality."""
 
+    @pytest.mark.asyncio
     async def test_initialize(self, site_adapter):
         """Test site adapter initialization."""
         await site_adapter.initialize()
         assert site_adapter._initialized is True
 
+    @pytest.mark.asyncio
     async def test_analyze_github_patterns(self, site_adapter):
         """Test pattern analysis for GitHub URLs."""
         url = "https://github.com/user/repo/blob/main/README.md"
@@ -47,6 +49,7 @@ class TestSiteAdapter:
         assert "known_site:github.com" in patterns
         # Should detect documentation patterns due to README content
 
+    @pytest.mark.asyncio
     async def test_analyze_stackoverflow_patterns(self, site_adapter):
         """Test pattern analysis for Stack Overflow URLs."""
         url = "https://stackoverflow.com/questions/12345/how-to-fix-error"
@@ -68,6 +71,7 @@ class TestSiteAdapter:
 
         assert "known_site:stackoverflow.com" in patterns
 
+    @pytest.mark.asyncio
     async def test_analyze_spa_patterns(self, site_adapter):
         """Test detection of Single Page Application patterns."""
         url = "https://app.example.com/dashboard"
@@ -91,6 +95,7 @@ class TestSiteAdapter:
         assert "react_app" in patterns
         assert "spa_content" in patterns or any("react" in p for p in patterns)
 
+    @pytest.mark.asyncio
     async def test_analyze_lazy_loading_patterns(self, site_adapter):
         """Test detection of lazy loading patterns."""
         url = "https://blog.example.com/article"
@@ -111,6 +116,7 @@ class TestSiteAdapter:
 
         assert "lazy_loading" in patterns
 
+    @pytest.mark.asyncio
     async def test_analyze_infinite_scroll_patterns(self, site_adapter):
         """Test detection of infinite scroll patterns."""
         url = "https://social.example.com/feed"
@@ -128,6 +134,7 @@ class TestSiteAdapter:
 
         assert "infinite_scroll" in patterns
 
+    @pytest.mark.asyncio
     async def test_analyze_paywall_patterns(self, site_adapter):
         """Test detection of paywall patterns."""
         url = "https://premium.example.com/article"
@@ -142,6 +149,7 @@ class TestSiteAdapter:
 
         assert "paywall_detected" in patterns
 
+    @pytest.mark.asyncio
     async def test_analyze_structured_data_patterns(self, site_adapter):
         """Test detection of structured data patterns."""
         url = "https://example.com/article"
@@ -170,6 +178,7 @@ class TestSiteAdapter:
         assert "structured_data" in patterns
         assert "microdata" in patterns
 
+    @pytest.mark.asyncio
     async def test_analyze_url_patterns(self, site_adapter):
         """Test detection of URL-based patterns."""
         await site_adapter.initialize()
@@ -198,6 +207,7 @@ class TestSiteAdapter:
         )
         assert "wiki_content" in wiki_patterns
 
+    @pytest.mark.asyncio
     async def test_get_github_recommendations(self, site_adapter):
         """Test site-specific recommendations for GitHub."""
         url = "https://github.com/user/repo"
@@ -215,6 +225,7 @@ class TestSiteAdapter:
         assert github_rec.strategy == AdaptationStrategy.EXTRACT_MAIN_CONTENT
         assert ".markdown-body" in github_rec.selector_patterns
 
+    @pytest.mark.asyncio
     async def test_get_stackoverflow_recommendations(self, site_adapter):
         """Test site-specific recommendations for Stack Overflow."""
         url = "https://stackoverflow.com/questions/12345"
@@ -234,6 +245,7 @@ class TestSiteAdapter:
             *list(so_rec.fallback_strategies or []),
         ]
 
+    @pytest.mark.asyncio
     async def test_get_medium_recommendations(self, site_adapter):
         """Test site-specific recommendations for Medium."""
         url = "https://medium.com/@author/article-title"
@@ -253,6 +265,7 @@ class TestSiteAdapter:
             AdaptationStrategy.HANDLE_DYNAMIC,
         ]
 
+    @pytest.mark.asyncio
     async def test_get_pattern_based_recommendations(self, site_adapter):
         """Test recommendations based on detected patterns."""
         url = "https://unknown-site.com/page"
@@ -271,6 +284,7 @@ class TestSiteAdapter:
         assert AdaptationStrategy.SCROLL_TO_LOAD in strategies  # For lazy loading
         assert AdaptationStrategy.FOLLOW_SCHEMA in strategies  # For structured data
 
+    @pytest.mark.asyncio
     async def test_get_quality_issue_recommendations(self, site_adapter):
         """Test recommendations based on quality issues."""
         url = "https://example.com/page"
@@ -295,6 +309,7 @@ class TestSiteAdapter:
         assert AdaptationStrategy.FOLLOW_SCHEMA in strategies  # For poor structure
         assert AdaptationStrategy.WAIT_FOR_LOAD in strategies  # For loading issues
 
+    @pytest.mark.asyncio
     async def test_recommendation_prioritization(self, site_adapter):
         """Test that recommendations are properly prioritized."""
         url = "https://github.com/user/repo"
@@ -323,6 +338,7 @@ class TestSiteAdapter:
             # Either same or lower priority
             assert curr_priority <= prev_priority
 
+    @pytest.mark.asyncio
     async def test_recommendation_confidence_scores(self, site_adapter):
         """Test that recommendations have appropriate confidence scores."""
         url = "https://docs.python.org/3/tutorial/"
@@ -338,6 +354,7 @@ class TestSiteAdapter:
             assert rec.reasoning is not None
             assert len(rec.reasoning) > 0
 
+    @pytest.mark.asyncio
     async def test_recommendation_implementation_notes(self, site_adapter):
         """Test that recommendations include implementation notes."""
         url = "https://github.com/user/repo/blob/main/README.md"
@@ -355,6 +372,7 @@ class TestSiteAdapter:
         assert github_rec.implementation_notes is not None
         assert len(github_rec.implementation_notes) > 0
 
+    @pytest.mark.asyncio
     async def test_extract_domain(self, site_adapter):
         """Test domain extraction from URLs."""
         assert (
@@ -371,6 +389,7 @@ class TestSiteAdapter:
         )
         assert site_adapter._extract_domain("invalid-url") == ""
 
+    @pytest.mark.asyncio
     async def test_detect_content_patterns(self, site_adapter):
         """Test content pattern detection methods."""
         # SPA content
@@ -393,6 +412,7 @@ class TestSiteAdapter:
         patterns = site_adapter._detect_content_patterns(short_content)
         assert "incomplete_content" in patterns
 
+    @pytest.mark.asyncio
     async def test_detect_html_patterns(self, site_adapter):
         """Test HTML pattern detection methods."""
         # React app
@@ -415,6 +435,7 @@ class TestSiteAdapter:
         patterns = site_adapter._detect_html_patterns(structured_html)
         assert "structured_data" in patterns
 
+    @pytest.mark.asyncio
     async def test_detect_url_patterns(self, site_adapter):
         """Test URL pattern detection methods."""
         # API endpoint
@@ -441,6 +462,7 @@ class TestSiteAdapter:
         )
         assert "dynamic_params" in param_patterns
 
+    @pytest.mark.asyncio
     async def test_fallback_strategies(self, site_adapter):
         """Test that recommendations include fallback strategies."""
         url = "https://complex-spa.example.com/app"
@@ -455,6 +477,7 @@ class TestSiteAdapter:
         fallback_found = any(rec.fallback_strategies for rec in recommendations)
         assert fallback_found
 
+    @pytest.mark.asyncio
     async def test_estimated_improvement(self, site_adapter):
         """Test that recommendations include estimated improvement scores."""
         url = "https://github.com/user/repo"
@@ -468,6 +491,7 @@ class TestSiteAdapter:
         for rec in recommendations:
             assert 0.0 <= rec.estimated_improvement <= 1.0
 
+    @pytest.mark.asyncio
     async def test_multiple_pattern_handling(self, site_adapter):
         """Test handling of multiple simultaneous patterns."""
         url = "https://modern-app.example.com/page"
@@ -495,6 +519,7 @@ class TestSiteAdapter:
         assert AdaptationStrategy.SCROLL_TO_LOAD in strategies
         assert AdaptationStrategy.FOLLOW_SCHEMA in strategies
 
+    @pytest.mark.asyncio
     async def test_cleanup(self, site_adapter):
         """Test site adapter cleanup."""
         await site_adapter.initialize()

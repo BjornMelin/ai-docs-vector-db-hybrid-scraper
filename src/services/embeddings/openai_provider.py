@@ -8,8 +8,6 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from openai import AsyncOpenAI
-
 from src.services.errors import EmbeddingServiceError
 from src.services.monitoring.metrics import get_metrics_registry
 from src.services.utilities.rate_limiter import RateLimitManager
@@ -18,9 +16,17 @@ from .base import EmbeddingProvider
 
 
 if TYPE_CHECKING:
+    from openai import AsyncOpenAI
+
     from src.infrastructure.client_manager import ClientManager
 
 logger = logging.getLogger(__name__)
+
+
+def _raise_openai_api_key_not_configured() -> None:
+    """Raise EmbeddingServiceError for missing OpenAI API key."""
+    msg = "OpenAI API key not configured"
+    raise EmbeddingServiceError(msg)
 
 
 class OpenAIEmbeddingProvider(EmbeddingProvider):
@@ -93,7 +99,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         # Initialize metrics if available
         try:
             self.metrics_registry = get_metrics_registry()
-        except Exception:
+        except (AttributeError, ImportError, OSError):
             logger.warning(
                 "Metrics registry not available - embedding monitoring disabled"
             )
@@ -109,8 +115,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             self._client = await self._client_manager.get_openai_client()
 
             if self._client is None:
-                msg = "OpenAI API key not configured"
-                raise EmbeddingServiceError(msg)
+                _raise_openai_api_key_not_configured()
 
             self._initialized = True
             logger.info(
@@ -207,13 +212,8 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                     f"({len(batch)} texts)"
                 )
 
-            return embeddings
-
         except Exception as e:
-            logger.error(
-                f"Failed to generate embeddings for {len(texts)} texts: {e}",
-                exc_info=True,
-            )
+            logger.exception("Failed to generate embeddings for %d texts", len(texts))
 
             # Provide specific error messages based on error type
             error_msg = str(e)
@@ -233,6 +233,9 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 raise EmbeddingServiceError(msg) from e
             msg = f"Failed to generate embeddings: {e}"
             raise EmbeddingServiceError(msg) from e
+
+        else:
+            return embeddings
 
     async def _generate_embeddings_with_rate_limit(self, params: dict[str, Any]) -> Any:
         """Generate embeddings with rate limiting.
@@ -344,11 +347,12 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             logger.info(
                 f"Created batch job {batch_response.id} for {len(texts)} texts"
             )  # TODO: Convert f-string to logging format
-            return batch_response.id
 
         except Exception as e:
             msg = f"Failed to create batch job: {e}"
             raise EmbeddingServiceError(msg) from e
+        else:
+            return batch_response.id
         finally:
             # Clean up temp file
             if "temp_file" in locals() and temp_file and Path(temp_file).exists():

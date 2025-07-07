@@ -69,11 +69,25 @@ class PerformanceMonitor:
         self._error_counts: dict[str, int] = defaultdict(int)
         self._success_counts: dict[str, int] = defaultdict(int)
 
+        # Operation statistics tracking
+        self.operation_stats: dict[str, Any] = {}
+
         # System resource monitoring
         self._last_cpu_check = time.time()
         self._last_memory_check = time.time()
         self._cpu_history = deque(maxlen=60)  # Last 60 readings
         self._memory_history = deque(maxlen=60)
+
+    async def initialize(self) -> None:
+        """Initialize the performance monitor."""
+        logger.info("Performance monitor initialized")
+
+    async def cleanup(self) -> None:
+        """Clean up performance monitor resources."""
+        self.operation_stats.clear()
+        self._cpu_history.clear()
+        self._memory_history.clear()
+        logger.info("Performance monitor cleaned up")
 
     def _get_system_metrics(self) -> dict[str, float]:
         """Get current system performance metrics.
@@ -101,6 +115,13 @@ class PerformanceMonitor:
             net_sent_mb = net_io.bytes_sent / (1024 * 1024) if net_io else 0
             net_recv_mb = net_io.bytes_recv / (1024 * 1024) if net_io else 0
 
+        except (ConnectionError, OSError, TimeoutError) as e:
+            logger.warning(
+                f"Failed to get system metrics: {e}"
+            )  # TODO: Convert f-string to logging format
+            return {}
+
+        else:
             return {
                 "cpu_percent": cpu_percent,
                 "memory_used_mb": memory_used_mb,
@@ -110,12 +131,6 @@ class PerformanceMonitor:
                 "network_sent_mb": net_sent_mb,
                 "network_recv_mb": net_recv_mb,
             }
-
-        except Exception as e:
-            logger.warning(
-                f"Failed to get system metrics: {e}"
-            )  # TODO: Convert f-string to logging format
-            return {}
 
     @contextmanager
     def monitor_operation(
@@ -321,7 +336,7 @@ class PerformanceMonitor:
                     }
                 )
 
-        except Exception as e:
+        except (ValueError, TypeError, UnicodeDecodeError) as e:
             logger.warning(
                 f"Failed to record performance metrics: {e}"
             )  # TODO: Convert f-string to logging format

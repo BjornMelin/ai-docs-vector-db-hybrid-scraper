@@ -1,8 +1,8 @@
-"""Enhanced fixtures for modern CLI testing.
+"""Enhanced fixtures for  CLI testing.
 
 This module provides comprehensive fixtures for testing CLI components including
 mocked dependencies, Rich console capturing, questionary mocking, and async testing support.
-Now includes modern Rich CLI testing patterns and interactive flow simulation.
+Now includes  Rich CLI testing patterns and interactive flow simulation.
 """
 
 import asyncio
@@ -215,17 +215,17 @@ def mock_completion_items():
     ]
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def event_loop():
     """Create an event loop for async testing."""
-    loop = asyncio.new_event_loop()
+    loop = event_loop
     yield loop
     loop.close()
 
 
 @pytest.fixture
 def rich_output_capturer():
-    """Enhanced fixture to capture and analyze Rich console output with better debugging."""
+    """Enhanced fixture to capture and analyze Rich console output with  debugging."""
 
     class RichOutputCapturer:
         def __init__(self):
@@ -398,7 +398,7 @@ def interactive_cli_runner():
 
     class InteractiveCLIRunner(CliRunner):
         def __init__(self):
-            super().__init__(mix_stderr=False)
+            super().__init__()
             self.input_responses = []
             self.current_response_index = 0
 

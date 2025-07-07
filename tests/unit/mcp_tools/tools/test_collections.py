@@ -214,7 +214,6 @@ class TestCollectionsTools:
 
     def test_tool_registration(self, mock_client_manager):
         """Test that collection tools are properly registered."""
-        from src.mcp_tools.tools.collections import register_tools
 
         mock_mcp = MagicMock()
         register_tools(mock_mcp, mock_client_manager)

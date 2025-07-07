@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import click
+import uvicorn
 
 
 @click.group()
@@ -17,11 +18,10 @@ def cli():
 @cli.command()
 @click.option("--mode", type=click.Choice(["simple", "enterprise"]), default="simple")
 @click.option("--reload/--no-reload", default=True)
-@click.option("--host", default="0.0.0.0")
+@click.option("--host", default="0.0.0.0")  # noqa: S104
 @click.option("--port", default=8000)
 def dev(mode: str, reload: bool, host: str, port: int):
     """Start development server"""
-    import uvicorn
 
     os.environ["AI_DOCS__MODE"] = mode
     click.echo(f"🚀 Starting development server in {mode} mode")
@@ -74,13 +74,17 @@ def setup():
     # Install pre-commit hooks
     click.echo("🪝 Installing pre-commit hooks...")
     subprocess.run(
-        ["uv", "run", "pre-commit", "install"], check=False, capture_output=True
+        ["uv", "run", "pre-commit", "install"],  # noqa: S607
+        check=False,
+        capture_output=True,
     )
 
     # Validate configuration
     click.echo("✅ Validating configuration...")
     subprocess.run(
-        ["python", "scripts/validate_config.py"], check=False, capture_output=True
+        ["python", "scripts/validate_config.py"],  # noqa: S607
+        check=False,
+        capture_output=True,
     )
 
     click.echo("✅ Setup complete! Run 'task dev' to start development.")
@@ -94,16 +98,17 @@ def quality():
 
     # Format code
     click.echo("📝 Formatting code...")
-    subprocess.run(["ruff", "format", "."], check=False)
+    subprocess.run(["ruff", "format", "."], check=False)  # noqa: S607
 
     # Lint code
     click.echo("🧹 Linting code...")
-    subprocess.run(["ruff", "check", ".", "--fix"], check=False)
+    subprocess.run(["ruff", "check", ".", "--fix"], check=False)  # noqa: S607
 
     # Type check
     click.echo("🔍 Type checking...")
     result = subprocess.run(
-        ["mypy", "src/", "--config-file", "pyproject.toml"], check=False
+        ["mypy", "src/", "--config-file", "pyproject.toml"],  # noqa: S607
+        check=False,
     )
 
     if result.returncode == 0:
@@ -114,13 +119,14 @@ def quality():
 
 
 @cli.command()
-@click.option("--host", default="0.0.0.0")
+@click.option("--host", default="0.0.0.0")  # noqa: S104
 @click.option("--port", default=8001)
 def docs(host: str, port: int):
     """Serve documentation locally"""
     click.echo(f"📚 Starting documentation server at http://{host}:{port}")
     subprocess.run(
-        ["mkdocs", "serve", "--host", host, "--port", str(port)], check=False
+        ["mkdocs", "serve", "--host", host, "--port", str(port)],  # noqa: S607
+        check=False,
     )
 
 
@@ -137,7 +143,8 @@ def benchmark(profile: str):
     """Run performance benchmarks"""
     click.echo(f"⚡ Running {profile} benchmark profile...")
     subprocess.run(
-        ["python", "scripts/run_benchmarks.py", "--profile", profile], check=False
+        ["python", "scripts/run_benchmarks.py", "--profile", profile],  # noqa: S607
+        check=False,
     )
 
 
@@ -147,10 +154,10 @@ def validate():
     click.echo("🔍 Validating project configuration...")
 
     # Validate configuration
-    result1 = subprocess.run(["python", "scripts/validate_config.py"], check=False)
+    result1 = subprocess.run(["python", "scripts/validate_config.py"], check=False)  # noqa: S607
 
     # Validate documentation links
-    result2 = subprocess.run(["python", "scripts/validate_docs_links.py"], check=False)
+    result2 = subprocess.run(["python", "scripts/validate_docs_links.py"], check=False)  # noqa: S607
 
     if result1.returncode == 0 and result2.returncode == 0:
         click.echo("✅ All validations passed!")

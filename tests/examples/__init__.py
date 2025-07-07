@@ -1,1 +1,1 @@
-"""Examples of modern testing patterns and best practices."""
+"""Examples of  testing patterns and best practices."""

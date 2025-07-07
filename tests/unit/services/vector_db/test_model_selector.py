@@ -8,8 +8,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.config import Config
-from src.config.enums import (
+from src.config import (
+    Config,
     EmbeddingModel,
     ModelType,
     OptimizationStrategy,
@@ -48,6 +48,7 @@ class TestModelSelector:
             features={"has_code_keywords": True},
         )
 
+    @pytest.mark.asyncio
     async def test_initialization(self, selector):
         """Test model selector initialization."""
         assert selector.config is not None
@@ -55,6 +56,7 @@ class TestModelSelector:
         assert selector.cost_budget == 1000.0
         assert isinstance(selector.performance_history, dict)
 
+    @pytest.mark.asyncio
     async def test_model_registry_structure(self, selector):
         """Test model registry structure and required fields."""
         for model_info in selector.model_registry.values():
@@ -88,6 +90,7 @@ class TestModelSelector:
             ),
         ],
     )
+    @pytest.mark.asyncio
     async def test_candidate_model_selection(
         self, selector, query_type, expected_models
     ):
@@ -118,6 +121,7 @@ class TestModelSelector:
             (OptimizationStrategy.BALANCED, "balanced"),
         ],
     )
+    @pytest.mark.asyncio
     async def test_optimization_strategy_weighting(
         self,
         selector,
@@ -144,6 +148,7 @@ class TestModelSelector:
         elif expected_weight_priority == "cost_per_1k_tokens":
             assert "cost" in selection.selection_rationale.lower()
 
+    @pytest.mark.asyncio
     async def test_specialization_scoring(self, selector):
         """Test specialization scoring for different query types."""
         # Code query should prefer code-specialized models
@@ -172,6 +177,7 @@ class TestModelSelector:
             )
             assert code_score > general_score
 
+    @pytest.mark.asyncio
     async def test_historical_performance_tracking(
         self, selector, sample_query_classification
     ):
@@ -193,6 +199,7 @@ class TestModelSelector:
         )
         assert historical_score > 0.5  # Should be influenced by the update
 
+    @pytest.mark.asyncio
     async def test_weighted_score_calculation(self, selector):
         """Test weighted score calculation for different strategies."""
         quality_score = 0.9
@@ -220,10 +227,11 @@ class TestModelSelector:
             OptimizationStrategy.SPEED_OPTIMIZED,
         )
 
-        # Quality-optimized should weight quality more heavily when quality is high
-        # Speed-optimized should weight speed more when considering the same scores
+        # Quality- should weight quality more heavily when quality is high
+        # Speed- should weight speed more when considering the same scores
         assert quality_weighted != speed_weighted
 
+    @pytest.mark.asyncio
     async def test_ensemble_weights_calculation(self, selector):
         """Test ensemble weights calculation."""
         scored_candidates = [
@@ -243,6 +251,7 @@ class TestModelSelector:
         # Weights should sum to less than or equal to 1
         assert sum(weights.values()) <= 1.0
 
+    @pytest.mark.asyncio
     async def test_fallback_strategy(self, selector, sample_query_classification):
         """Test fallback strategy when selection fails."""
         fallback = selector._get_fallback_strategy(sample_query_classification)
@@ -252,6 +261,7 @@ class TestModelSelector:
         assert fallback.model_type == ModelType.GENERAL_PURPOSE
         assert "fallback" in fallback.selection_rationale.lower()
 
+    @pytest.mark.asyncio
     async def test_cost_estimation(self, selector):
         """Test monthly cost estimation."""
         model_id = EmbeddingModel.TEXT_EMBEDDING_3_SMALL.value
@@ -263,8 +273,9 @@ class TestModelSelector:
         assert isinstance(cost, float)
         assert cost >= 0
 
+    @pytest.mark.asyncio
     async def test_cost_optimized_recommendations(self, selector):
-        """Test cost-optimized model recommendations."""
+        """Test cost- model recommendations."""
         monthly_budget = 50.0
         estimated_queries = 10000
 
@@ -278,6 +289,7 @@ class TestModelSelector:
             assert "cost_efficiency" in rec
             assert "quality_score" in rec
 
+    @pytest.mark.asyncio
     async def test_model_info_retrieval(self, selector):
         """Test model information retrieval."""
         model_id = EmbeddingModel.TEXT_EMBEDDING_3_SMALL.value
@@ -288,6 +300,7 @@ class TestModelSelector:
         assert "quality_score" in info
         assert "cost_per_1k_tokens" in info
 
+    @pytest.mark.asyncio
     async def test_available_models_listing(self, selector):
         """Test listing available models."""
         # All models
@@ -302,6 +315,7 @@ class TestModelSelector:
         for model in general_models:
             assert model["type"] == ModelType.GENERAL_PURPOSE
 
+    @pytest.mark.asyncio
     async def test_complex_query_model_selection(self, selector):
         """Test model selection for complex queries."""
         complex_classification = QueryClassification(
@@ -321,6 +335,7 @@ class TestModelSelector:
         model_info = selector.model_registry[selection.primary_model]
         assert model_info["quality_score"] > 0.7
 
+    @pytest.mark.asyncio
     async def test_simple_query_optimization(self, selector):
         """Test optimization for simple queries."""
         simple_classification = QueryClassification(
@@ -343,6 +358,7 @@ class TestModelSelector:
         model_info = selector.model_registry[selection.primary_model]
         assert model_info["latency_ms"] < 200  # Reasonable threshold
 
+    @pytest.mark.asyncio
     async def test_multimodal_query_handling(self, selector):
         """Test handling of multimodal queries."""
         multimodal_classification = QueryClassification(
@@ -366,6 +382,7 @@ class TestModelSelector:
             "specializations", []
         )
 
+    @pytest.mark.asyncio
     async def test_performance_history_exponential_moving_average(
         self, selector, sample_query_classification
     ):
@@ -392,6 +409,7 @@ class TestModelSelector:
         assert second_score != first_score
         assert second_score != 0.6  # Should be averaged with previous
 
+    @pytest.mark.asyncio
     async def test_error_handling_in_model_selection(
         self, selector, sample_query_classification
     ):
@@ -412,6 +430,7 @@ class TestModelSelector:
         finally:
             selector._get_candidate_models = original_method
 
+    @pytest.mark.asyncio
     async def test_selection_rationale_generation(
         self, selector, sample_query_classification
     ):
@@ -424,6 +443,7 @@ class TestModelSelector:
         assert len(selection.selection_rationale) > 0
         assert selection.primary_model in selection.selection_rationale
 
+    @pytest.mark.asyncio
     async def test_cost_efficiency_calculation(
         self, selector, sample_query_classification
     ):
@@ -434,6 +454,7 @@ class TestModelSelector:
         assert isinstance(selection.cost_efficiency, int | float)
         assert selection.cost_efficiency >= 0
 
+    @pytest.mark.asyncio
     async def test_programming_language_specific_selection(self, selector):
         """Test model selection based on programming language."""
         python_classification = QueryClassification(
@@ -458,6 +479,7 @@ class TestModelSelector:
             or "programming" in specializations
         )
 
+    @pytest.mark.asyncio
     async def test_model_fallback_list(self, selector, sample_query_classification):
         """Test that fallback models are provided."""
         selection = await selector.select_optimal_model(sample_query_classification)
@@ -467,6 +489,7 @@ class TestModelSelector:
         for fallback_model in selection.fallback_models:
             assert fallback_model in selector.model_registry
 
+    @pytest.mark.asyncio
     async def test_empty_candidates_handling(
         self, selector, sample_query_classification
     ):
@@ -486,6 +509,7 @@ class TestModelSelector:
         "model_type",
         [ModelType.GENERAL_PURPOSE, ModelType.CODE_SPECIALIZED, ModelType.MULTIMODAL],
     )
+    @pytest.mark.asyncio
     async def test_model_type_filtering(self, selector, model_type):
         """Test model listing with type filtering."""
         models = selector.list_available_models(model_type)

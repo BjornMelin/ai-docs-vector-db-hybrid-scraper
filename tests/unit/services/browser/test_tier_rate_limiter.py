@@ -54,6 +54,7 @@ def rate_limiter(tier_configs):
 class TestTierRateLimiter:
     """Test TierRateLimiter functionality."""
 
+    @pytest.mark.asyncio
     async def test_acquire_within_rate_limit(self, rate_limiter):
         """Test acquiring permission within rate limit."""
         # Should succeed for first request
@@ -63,6 +64,7 @@ class TestTierRateLimiter:
         # Release to avoid concurrent limit
         await rate_limiter.release("lightweight")
 
+    @pytest.mark.asyncio
     async def test_acquire_exceeds_rate_limit(self, rate_limiter):
         """Test rate limiting when requests exceed limit."""
         tier = "browser_use"  # 10 requests per minute
@@ -78,6 +80,7 @@ class TestTierRateLimiter:
         assert allowed is False
         assert rate_limiter.rate_limit_hits[tier] == 1
 
+    @pytest.mark.asyncio
     async def test_concurrent_request_limiting(self, rate_limiter):
         """Test concurrent request limiting."""
         tier = "browser_use"  # Max 2 concurrent
@@ -103,6 +106,7 @@ class TestTierRateLimiter:
         await rate_limiter.release(tier)
         await rate_limiter.release(tier)
 
+    @pytest.mark.asyncio
     async def test_sliding_window_cleanup(self, rate_limiter):
         """Test sliding window cleanup of old requests."""
         tier = "browser_use"  # 10 requests per minute
@@ -130,6 +134,7 @@ class TestTierRateLimiter:
         assert allowed is True
         await rate_limiter.release(tier)
 
+    @pytest.mark.asyncio
     async def test_unlimited_tier(self, rate_limiter):
         """Test tier with no rate limit (requests_per_minute=0)."""
         tier = "firecrawl"
@@ -143,12 +148,14 @@ class TestTierRateLimiter:
         # Should never hit rate limit
         assert rate_limiter.rate_limit_hits.get(tier, 0) == 0
 
+    @pytest.mark.asyncio
     async def test_unknown_tier(self, rate_limiter):
         """Test behavior with unknown tier."""
         # Unknown tier should be allowed
         allowed = await rate_limiter.acquire("unknown_tier")
         assert allowed is True
 
+    @pytest.mark.asyncio
     async def test_disabled_tier(self, tier_configs):
         """Test behavior with disabled tier."""
         # Disable a tier
@@ -217,6 +224,7 @@ class TestTierRateLimiter:
         assert "browser_use" in status["tiers"]
         assert "firecrawl" in status["tiers"]
 
+    @pytest.mark.asyncio
     async def test_wait_if_needed(self, rate_limiter):
         """Test waiting when rate limit requires it."""
         tier = "browser_use"
@@ -271,6 +279,7 @@ class TestTierRateLimiter:
         assert len(rate_limiter.concurrent_requests) == 0
         assert len(rate_limiter.rate_limit_hits) == 0
 
+    @pytest.mark.asyncio
     async def test_rate_limit_context_success(self, rate_limiter):
         """Test RateLimitContext when acquisition succeeds."""
         tier = "lightweight"
@@ -284,6 +293,7 @@ class TestTierRateLimiter:
         # Note: There's a race condition here in the actual implementation
         # but for testing we'll just check the method was called
 
+    @pytest.mark.asyncio
     async def test_rate_limit_context_failure(self, rate_limiter):
         """Test RateLimitContext when acquisition fails."""
         tier = "browser_use"
@@ -297,6 +307,7 @@ class TestTierRateLimiter:
             assert allowed is False
             # Should not have acquired anything
 
+    @pytest.mark.asyncio
     async def test_concurrent_tier_isolation(self, rate_limiter):
         """Test that rate limits are isolated between tiers."""
         # Fill up browser_use tier
@@ -314,6 +325,7 @@ class TestTierRateLimiter:
         assert allowed is True
         await rate_limiter.release("lightweight")
 
+    @pytest.mark.asyncio
     async def test_rate_limiter_thread_safety(self, rate_limiter):
         """Test rate limiter handles concurrent requests safely."""
         tier = "crawl4ai"  # 30 requests per minute, 3 concurrent
