@@ -138,7 +138,7 @@ accessibility = [
     "selenium>=4.25.0,<5.0.0",       # For browser automation
     "playwright>=1.52.0,<2.0.0",     # Alternative browser automation
     "beautifulsoup4>=4.12.3,<5.0.0", # HTML parsing for static analysis
-    "lxml>=5.3.0,<6.0.0",            # XML/HTML parser
+    "lxml>=5.3.0,<7.0.0",            # XML/HTML parser
 ]
 
 # Browser automation (optional heavy dependencies)
