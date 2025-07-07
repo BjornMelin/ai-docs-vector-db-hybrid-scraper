@@ -224,3 +224,28 @@ dev-debug.log
 !src/models/
 ruff_errors.json
 security_validation_report_*.json
+
+# Temporary report files
+*_REPORT.md
+*_FIX_REPORT.md
+*_VALIDATION_REPORT.md
+*_CLEANUP_REPORT.md
+*_RESOLUTION_REPORT.md
+*_MIGRATION_REPORT.md
+SUBAGENT_*.md
+TEST_COLLECTION_REPORT.md
+TEST_INFRASTRUCTURE_*.md
+
+# Temporary analysis files
+current_*.txt
+current_*.json
+performance_validation_report.md
+
+# Docker temporary files
+Dockerfile.fixed
+Dockerfile.tmp
+Dockerfile.bak
+
+# Build solutions and temporary docs
+*_BUILD_SOLUTION.md
+DOCKER_BUILD_*.md
