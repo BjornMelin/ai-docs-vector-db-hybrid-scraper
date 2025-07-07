@@ -43,7 +43,7 @@ class TestXSSPrevention:
         ]
 
     @pytest.fixture
-    def advanced_xss_payloads(self):
+    def xss_payloads(self):
         """Advanced XSS payloads with encoding and obfuscation."""
         return [
             # JavaScript protocol variations
@@ -105,10 +105,8 @@ class TestXSSPrevention:
                 security_validator.validate_query_string(payload)
 
     @pytest.mark.asyncio
-    async def test_advanced_xss_prevention(
-        self, security_validator, advanced_xss_payloads
-    ):
-        """Test advanced XSS payload prevention."""
+    async def test_xss_prevention(self, security_validator, advanced_xss_payloads):
+        """Test  XSS payload prevention."""
         for payload in advanced_xss_payloads:
             with pytest.raises(SecurityError):
                 security_validator.validate_query_string(payload)

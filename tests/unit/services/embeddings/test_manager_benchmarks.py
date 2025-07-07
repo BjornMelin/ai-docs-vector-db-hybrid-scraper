@@ -252,7 +252,7 @@ class TestEmbeddingManagerBenchmarks:
     def test_load_custom_benchmarks_integration_with_smart_selection(
         self, mock_config, mock_client_manager, tmp_path
     ):
-        """Test that loaded benchmarks integrate properly with smart selection."""
+        """Test that loaded benchmarks integrate properly with  selection."""
         manager = EmbeddingManager(
             config=mock_config,
             client_manager=mock_client_manager,

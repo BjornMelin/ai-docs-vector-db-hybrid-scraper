@@ -43,7 +43,7 @@ class TestSQLInjectionPrevention:
         ]
 
     @pytest.fixture
-    def advanced_sql_payloads(self):
+    def sql_payloads(self):
         """Advanced SQL injection payloads."""
         return [
             "1' OR '1'='1' /*",
@@ -92,10 +92,10 @@ class TestSQLInjectionPrevention:
                 security_validator.validate_url(malicious_url)
 
     @pytest.mark.asyncio
-    async def test_advanced_sql_injection_patterns(
+    async def test_sql_injection_patterns(
         self, security_validator, advanced_sql_payloads
     ):
-        """Test protection against advanced SQL injection techniques."""
+        """Test protection against  SQL injection techniques."""
         for payload in advanced_sql_payloads:
             with pytest.raises(SecurityError):
                 security_validator.validate_query_string(payload)

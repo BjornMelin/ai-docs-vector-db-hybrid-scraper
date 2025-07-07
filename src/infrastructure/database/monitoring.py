@@ -59,7 +59,8 @@ class LoadMonitor:
     async def initialize(self) -> None:
         """Initialize ML-based monitoring systems."""
         logger.info(
-            f"Enterprise load monitor initialized (ML accuracy: {self._prediction_accuracy})"
+            "Enterprise load monitor initialized (ML accuracy: %s)",
+            self._prediction_accuracy,
         )
 
     async def start_monitoring(self) -> None:
@@ -111,7 +112,8 @@ class QueryMonitor:
     async def initialize(self) -> None:
         """Initialize query monitoring systems."""
         logger.info(
-            f"Enterprise query monitor initialized (affinity hit rate: {self._affinity_hit_rate})"
+            "Enterprise query monitor initialized (affinity hit rate: %s)",
+            self._affinity_hit_rate,
         )
 
     async def cleanup(self) -> None:

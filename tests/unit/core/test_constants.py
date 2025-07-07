@@ -6,12 +6,14 @@ configuration settings that have been moved to Pydantic models and enums.
 
 import pytest
 
-from src.config import CacheConfig, ChunkingConfig, PerformanceConfig
-from src.config.enums import (
+from src.config import (
+    CacheConfig,
     CacheType,
+    ChunkingConfig,
     DocumentStatus,
     Environment,
     LogLevel,
+    PerformanceConfig,
     SearchAccuracy,
     VectorType,
 )
@@ -251,7 +253,7 @@ class TestMigratedConfigModels:
         # Test basic cache settings
         assert isinstance(config.enable_caching, bool)
         assert isinstance(config.enable_local_cache, bool)
-        assert config.ttl_seconds > 0
+        # Note: ttl_seconds doesn't exist, using specific TTL fields instead
 
         # Test TTL settings (updated structure)
         assert isinstance(config.cache_ttl_seconds, dict)
@@ -334,7 +336,7 @@ class TestConfigurationIntegrity:
         assert config.chunk_overlap == 320
 
     def test_backwards_compatibility_values(self):
-        """Test that new config values match expected constant values."""
+        """Test that  config values match expected constant values."""
         # Cache configuration
         cache_config = CacheConfig()
         assert cache_config.cache_ttl_seconds["embeddings"] == 86400

@@ -737,7 +737,7 @@ class TestValidateInput:
         def validate_string(value):
             if not isinstance(value, str):
                 msg = "Must be string"
-                raise ValueError(msg)
+                raise TypeError(msg)
             return value.strip()
 
         @validate_input(count=validate_positive, name=validate_string)
@@ -827,6 +827,7 @@ class TestErrorIntegration:
 
     @pytest.mark.asyncio
     @patch("src.services.errors.logger")
+    @pytest.mark.asyncio
     async def test_error_logging_integration(self, mock_logger):
         """Test error logging works correctly."""
 

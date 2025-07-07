@@ -38,13 +38,13 @@ def mock_qdrant_client():
 @pytest.fixture
 async def qdrant_service(mock_config, mock_client_manager):
     """Create QdrantService instance."""
-    service = QdrantService(mock_config, client_manager=mock_client_manager)
-    return service
+    return QdrantService(mock_config, client_manager=mock_client_manager)
 
 
 class TestQdrantServiceInitialization:
     """Test QdrantService initialization."""
 
+    @pytest.mark.asyncio
     async def test_initialization_with_client_manager(
         self, mock_config, mock_client_manager, mock_qdrant_client
     ):
@@ -61,6 +61,7 @@ class TestQdrantServiceInitialization:
         assert service._documents is not None
         mock_client_manager.get_qdrant_client.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_initialization_requires_client_manager(self, mock_config):
         """Test that QdrantService requires ClientManager."""
         with pytest.raises(
@@ -68,6 +69,7 @@ class TestQdrantServiceInitialization:
         ):
             QdrantService(mock_config)
 
+    @pytest.mark.asyncio
     async def test_double_initialization(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -79,6 +81,7 @@ class TestQdrantServiceInitialization:
 
         assert qdrant_service._initialized
 
+    @pytest.mark.asyncio
     async def test_initialization_failure(self, mock_config, mock_client_manager):
         """Test initialization failure handling."""
         mock_client_manager.get_qdrant_client.side_effect = Exception(
@@ -94,6 +97,7 @@ class TestQdrantServiceInitialization:
 
         assert not service._initialized
 
+    @pytest.mark.asyncio
     async def test_cleanup(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -113,6 +117,7 @@ class TestQdrantServiceInitialization:
 class TestQdrantServiceCollectionAPI:
     """Test collection management API delegation."""
 
+    @pytest.mark.asyncio
     async def test_create_collection(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -141,6 +146,7 @@ class TestQdrantServiceCollectionAPI:
             "test_collection"
         )
 
+    @pytest.mark.asyncio
     async def test_create_collection_indexing_failure(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -160,6 +166,7 @@ class TestQdrantServiceCollectionAPI:
         # Should still return True even if indexing fails
         assert result is True
 
+    @pytest.mark.asyncio
     async def test_delete_collection(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -176,6 +183,7 @@ class TestQdrantServiceCollectionAPI:
             "test_collection"
         )
 
+    @pytest.mark.asyncio
     async def test_list_collections(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -193,6 +201,7 @@ class TestQdrantServiceCollectionAPI:
         assert result == expected_collections
         qdrant_service._collections.list_collections.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_get_collection_info(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -216,6 +225,7 @@ class TestQdrantServiceCollectionAPI:
 class TestQdrantServiceCollectionAPIExtended:
     """Extended tests for collection management API delegation."""
 
+    @pytest.mark.asyncio
     async def test_list_collections_details(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -236,6 +246,7 @@ class TestQdrantServiceCollectionAPIExtended:
         assert result == expected_details
         qdrant_service._collections.list_collections_details.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_trigger_collection_optimization(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -258,6 +269,7 @@ class TestQdrantServiceCollectionAPIExtended:
 class TestQdrantServiceSearchAPI:
     """Test search API delegation."""
 
+    @pytest.mark.asyncio
     async def test_hybrid_search(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -289,6 +301,7 @@ class TestQdrantServiceSearchAPI:
             search_accuracy="balanced",
         )
 
+    @pytest.mark.asyncio
     async def test_multi_stage_search(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -322,6 +335,7 @@ class TestQdrantServiceSearchAPI:
             search_accuracy="balanced",
         )
 
+    @pytest.mark.asyncio
     async def test_hyde_search(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -355,6 +369,7 @@ class TestQdrantServiceSearchAPI:
             search_accuracy="balanced",
         )
 
+    @pytest.mark.asyncio
     async def test_filtered_search(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -390,6 +405,7 @@ class TestQdrantServiceSearchAPI:
 class TestQdrantServiceDocumentAPI:
     """Test document API delegation."""
 
+    @pytest.mark.asyncio
     async def test_upsert_points(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -409,6 +425,7 @@ class TestQdrantServiceDocumentAPI:
             collection_name="test_collection", points=points, batch_size=50
         )
 
+    @pytest.mark.asyncio
     async def test_get_points(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -438,6 +455,7 @@ class TestQdrantServiceDocumentAPI:
             with_vectors=False,
         )
 
+    @pytest.mark.asyncio
     async def test_delete_points(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -459,6 +477,7 @@ class TestQdrantServiceDocumentAPI:
             filter_condition=None,
         )
 
+    @pytest.mark.asyncio
     async def test_update_point_payload(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -485,6 +504,7 @@ class TestQdrantServiceDocumentAPI:
             replace=False,
         )
 
+    @pytest.mark.asyncio
     async def test_count_points(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -506,6 +526,7 @@ class TestQdrantServiceDocumentAPI:
             exact=True,
         )
 
+    @pytest.mark.asyncio
     async def test_scroll_points(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -540,6 +561,7 @@ class TestQdrantServiceDocumentAPI:
             with_vectors=False,
         )
 
+    @pytest.mark.asyncio
     async def test_clear_collection(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -560,6 +582,7 @@ class TestQdrantServiceDocumentAPI:
 class TestQdrantServiceIndexingAPI:
     """Test indexing API delegation."""
 
+    @pytest.mark.asyncio
     async def test_create_payload_indexes(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -575,6 +598,7 @@ class TestQdrantServiceIndexingAPI:
             "test_collection"
         )
 
+    @pytest.mark.asyncio
     async def test_list_payload_indexes(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -594,6 +618,7 @@ class TestQdrantServiceIndexingAPI:
             "test_collection"
         )
 
+    @pytest.mark.asyncio
     async def test_drop_payload_index(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -609,6 +634,7 @@ class TestQdrantServiceIndexingAPI:
             "test_collection", "category"
         )
 
+    @pytest.mark.asyncio
     async def test_reindex_collection(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -624,6 +650,7 @@ class TestQdrantServiceIndexingAPI:
             "test_collection"
         )
 
+    @pytest.mark.asyncio
     async def test_get_payload_index_stats(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -646,6 +673,7 @@ class TestQdrantServiceIndexingAPI:
             "test_collection"
         )
 
+    @pytest.mark.asyncio
     async def test_validate_index_health(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -669,6 +697,7 @@ class TestQdrantServiceIndexingAPI:
             "test_collection"
         )
 
+    @pytest.mark.asyncio
     async def test_get_index_usage_stats(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -696,6 +725,7 @@ class TestQdrantServiceIndexingAPI:
 class TestQdrantServiceHNSWOptimization:
     """Test HNSW optimization API delegation."""
 
+    @pytest.mark.asyncio
     async def test_create_collection_with_hnsw_optimization(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -755,6 +785,7 @@ class TestQdrantServiceHNSWOptimization:
 class TestQdrantServiceValidation:
     """Test service validation."""
 
+    @pytest.mark.asyncio
     async def test_validate_initialized_success(
         self, qdrant_service, mock_client_manager, mock_qdrant_client
     ):
@@ -765,11 +796,13 @@ class TestQdrantServiceValidation:
         # Should not raise error
         qdrant_service._validate_initialized()
 
+    @pytest.mark.asyncio
     async def test_validate_initialized_not_initialized(self, qdrant_service):
         """Test validation when service is not initialized."""
         with pytest.raises(QdrantServiceError, match="Service not initialized"):
             qdrant_service._validate_initialized()
 
+    @pytest.mark.asyncio
     async def test_validate_initialized_missing_collections(self, qdrant_service):
         """Test validation when collections module is missing."""
         qdrant_service._initialized = True
@@ -778,6 +811,7 @@ class TestQdrantServiceValidation:
         with pytest.raises(QdrantServiceError, match="Service not initialized"):
             qdrant_service._validate_initialized()
 
+    @pytest.mark.asyncio
     async def test_api_methods_require_initialization(self, qdrant_service):
         """Test that API methods require initialization."""
         with pytest.raises(QdrantServiceError, match="Service not initialized"):

@@ -7,25 +7,49 @@ security framework, and observability platform.
 """
 
 import asyncio
+import contextlib
 import logging
 import time
-from collections.abc import Callable
+
+# Callable import removed (unused)
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set
+from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, Field
-
+# BaseModel and Field imports removed (unused)
 from src.architecture.service_factory import BaseService
 from src.config.modern import Config
-from src.services.deployment.blue_green import BlueGreenDeployment
-from src.services.deployment.feature_flags import FeatureFlagManager
+from src.services.deployment.feature_flags import FeatureFlagConfig, FeatureFlagManager
+from src.services.enterprise.cache import EnterpriseCacheService
+from src.services.enterprise.search import EnterpriseSearchService
 from src.services.observability.performance import PerformanceMonitor
 from src.services.security.integration import SecurityManager
 
 
+if TYPE_CHECKING:
+    from src.services.deployment.blue_green import BlueGreenDeployment
+
+
 logger = logging.getLogger(__name__)
+
+
+def _raise_missing_service_dependencies(missing_deps: list[str]) -> None:
+    """Raise ValueError for missing service dependencies."""
+    msg = f"Missing service dependencies: {missing_deps}"
+    raise ValueError(msg)
+
+
+def _raise_circular_dependencies_detected(cycles: list) -> None:
+    """Raise ValueError for circular dependencies detected."""
+    msg = f"Circular dependencies detected: {cycles}"
+    raise ValueError(msg)
+
+
+def _raise_service_health_check_failed(service_name: str, health_result: dict) -> None:
+    """Raise RuntimeError for service health check failure."""
+    msg = f"Service {service_name} failed health check: {health_result}"
+    raise RuntimeError(msg)
 
 
 class ServiceStatus(str, Enum):
@@ -142,7 +166,7 @@ class HealthMonitor:
                     "details": {"reason": "health_check_exception", "error": str(e)},
                 }
             )
-            logger.exception(f"Health check failed for {self.service_name}: {e}")
+            logger.exception("Health check failed for {self.service_name}")
 
         # Update descriptor status
         self.descriptor.status = ServiceStatus(health_result["status"])
@@ -222,7 +246,8 @@ class ServiceDependencyGraph:
 
         def visit(node: str) -> None:
             if node in temp_visited:
-                raise ValueError(f"Circular dependency detected involving {node}")
+                msg = f"Circular dependency detected involving {node}"
+                raise ValueError(msg)
             if node in visited:
                 return
 
@@ -237,7 +262,7 @@ class ServiceDependencyGraph:
             result.append(node)
 
         # Visit all nodes
-        for service in self.graph.keys():
+        for service in self.graph:
             if service not in visited:
                 visit(service)
 
@@ -257,7 +282,7 @@ class ServiceDependencyGraph:
             if node in path:
                 # Found a cycle
                 cycle_start = path.index(node)
-                cycle = path[cycle_start:] + [node]
+                cycle = [*path[cycle_start:], node]
                 cycles.append(cycle)
                 return
 
@@ -272,7 +297,7 @@ class ServiceDependencyGraph:
 
             path.remove(node)
 
-        for service in self.graph.keys():
+        for service in self.graph:
             if service not in visited:
                 dfs(service)
 
@@ -289,8 +314,7 @@ class ServiceDependencyGraph:
         missing_deps = {}
 
         for service, deps in self.graph.items():
-            missing = [dep for dep in deps if dep not in available_services]
-            if missing:
+            if missing := [dep for dep in deps if dep not in available_services]:
                 missing_deps[service] = missing
 
         return missing_deps
@@ -319,8 +343,8 @@ class EnterpriseServiceRegistry:
     async def register_service(
         self,
         service: BaseService,
-        dependencies: list[str] = None,
-        config: dict[str, Any] = None,
+        dependencies: list[str] | None = None,
+        config: dict[str, Any] | None = None,
         **kwargs,
     ) -> None:
         """Register enterprise service with dependency tracking."""
@@ -346,12 +370,13 @@ class EnterpriseServiceRegistry:
         # Update dependency graph
         self.dependency_graph.add_service(service_name, dependencies)
 
-        logger.info(f"Registered enterprise service: {service_name}")
+        logger.info("Registered enterprise service: %s", service_name)
 
     async def orchestrate_startup(self) -> None:
         """Start services in dependency order with health validation."""
         if self.is_orchestrating:
-            raise RuntimeError("Service orchestration already in progress")
+            msg = "Service orchestration already in progress"
+            raise RuntimeError(msg)
 
         self.is_orchestrating = True
 
@@ -363,18 +388,17 @@ class EnterpriseServiceRegistry:
             )
 
             if missing_deps:
-                raise ValueError(f"Missing service dependencies: {missing_deps}")
+                _raise_missing_service_dependencies(missing_deps)
 
             # Detect circular dependencies
-            cycles = self.dependency_graph.detect_circular_dependencies()
-            if cycles:
-                raise ValueError(f"Circular dependencies detected: {cycles}")
+            if cycles := self.dependency_graph.detect_circular_dependencies():
+                _raise_circular_dependencies_detected(cycles)
 
             # Resolve startup order
             self.startup_order = self.dependency_graph.resolve_startup_order()
             self.shutdown_order = self.dependency_graph.resolve_shutdown_order()
 
-            logger.info(f"Starting services in order: {self.startup_order}")
+            logger.info("Starting services in order: %s", self.startup_order)
 
             # Start services
             for service_name in self.startup_order:
@@ -385,8 +409,8 @@ class EnterpriseServiceRegistry:
 
             logger.info("Enterprise service orchestration completed successfully")
 
-        except Exception as e:
-            logger.exception(f"Service orchestration failed: {e}")
+        except Exception:
+            logger.exception("Service orchestration failed")
             await self.coordinate_shutdown()
             raise
         finally:
@@ -399,10 +423,8 @@ class EnterpriseServiceRegistry:
         # Stop health monitoring
         if self.health_check_task:
             self.health_check_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.health_check_task
-            except asyncio.CancelledError:
-                pass
 
         # Shutdown services in reverse order
         for service_name in self.shutdown_order:
@@ -457,7 +479,8 @@ class EnterpriseServiceRegistry:
     async def validate_service_health(self, service_name: str) -> dict[str, Any]:
         """Perform detailed health validation for specific service."""
         if service_name not in self.health_monitors:
-            raise ValueError(f"Service {service_name} not registered")
+            msg = f"Service {service_name} not registered"
+            raise ValueError(msg)
 
         health_monitor = self.health_monitors[service_name]
         return await health_monitor.check_health()
@@ -470,7 +493,7 @@ class EnterpriseServiceRegistry:
             descriptor.status = ServiceStatus.STARTING
             start_time = time.time()
 
-            logger.info(f"Starting service: {service_name}")
+            logger.info("Starting service: %s", service_name)
 
             # Initialize service
             await descriptor.service.initialize()
@@ -481,17 +504,15 @@ class EnterpriseServiceRegistry:
             if health_result["status"] == "healthy":
                 descriptor.status = ServiceStatus.HEALTHY
                 descriptor.startup_time = start_time
-                logger.info(f"Service {service_name} started successfully")
+                logger.info("Service %s started successfully", service_name)
             else:
                 descriptor.status = ServiceStatus.UNHEALTHY
-                raise RuntimeError(
-                    f"Service {service_name} failed health check: {health_result}"
-                )
+                _raise_service_health_check_failed(service_name, health_result)
 
-        except Exception as e:
+        except Exception:
             descriptor.status = ServiceStatus.FAILED
             descriptor.error_count += 1
-            logger.exception(f"Failed to start service {service_name}: {e}")
+            logger.exception("Failed to start service {service_name}")
             raise
 
     async def _stop_service(self, service_name: str) -> None:
@@ -501,18 +522,18 @@ class EnterpriseServiceRegistry:
         try:
             descriptor.status = ServiceStatus.STOPPING
 
-            logger.info(f"Stopping service: {service_name}")
+            logger.info("Stopping service: %s", service_name)
 
             # Cleanup service
             await descriptor.service.cleanup()
 
             descriptor.status = ServiceStatus.STOPPED
-            logger.info(f"Service {service_name} stopped successfully")
+            logger.info("Service %s stopped successfully", service_name)
 
-        except Exception as e:
+        except Exception:
             descriptor.status = ServiceStatus.FAILED
             descriptor.error_count += 1
-            logger.exception(f"Failed to stop service {service_name}: {e}")
+            logger.exception("Failed to stop service {service_name}")
 
     async def _health_check_loop(self) -> None:
         """Background health monitoring for all services."""
@@ -522,15 +543,15 @@ class EnterpriseServiceRegistry:
                 for service_name in self.services:
                     try:
                         await self.health_monitors[service_name].check_health()
-                    except Exception as e:
-                        logger.exception(f"Health check failed for {service_name}: {e}")
+                    except Exception:
+                        logger.exception("Health check failed for {service_name}")
 
                 await asyncio.sleep(self.health_check_interval)
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
-                logger.exception(f"Error in health check loop: {e}")
+            except Exception:
+                logger.exception("Error in health check loop")
                 await asyncio.sleep(self.health_check_interval)
 
 
@@ -585,9 +606,9 @@ class EnterpriseIntegrationManager:
                 f"Enterprise integration completed in {integration_time:.2f} seconds"
             )
 
-        except Exception as e:
+        except Exception:
             self.integration_phase = IntegrationPhase.FAILED
-            logger.exception(f"Enterprise integration failed: {e}")
+            logger.exception("Enterprise integration failed")
             await self.cleanup_enterprise_features()
             raise
 
@@ -607,14 +628,14 @@ class EnterpriseIntegrationManager:
 
             logger.info("Enterprise feature cleanup completed")
 
-        except Exception as e:
-            logger.exception(f"Error during enterprise cleanup: {e}")
+        except Exception:
+            logger.exception("Error during enterprise cleanup")
 
     async def get_integration_status(self) -> dict[str, Any]:
         """Get comprehensive integration status."""
         system_status = await self.service_registry.get_system_status()
 
-        integration_status = {
+        return {
             "integration_phase": self.integration_phase.value,
             "integration_uptime": (
                 time.time() - self.integration_start_time
@@ -630,8 +651,6 @@ class EnterpriseIntegrationManager:
             },
         }
 
-        return integration_status
-
     async def _initialize_core_infrastructure(self) -> None:
         """Initialize core infrastructure components."""
         # Initialize security manager
@@ -643,14 +662,14 @@ class EnterpriseIntegrationManager:
         await self.performance_monitor.initialize()
 
         # Initialize feature flag manager
-        self.feature_flag_manager = FeatureFlagManager()
+        feature_flag_config = FeatureFlagConfig()
+        self.feature_flag_manager = FeatureFlagManager(feature_flag_config)
 
         logger.info("Core infrastructure initialized")
 
     async def _register_enterprise_services(self) -> None:
         """Register all enterprise services with the registry."""
         # Register enterprise cache service
-        from src.services.enterprise.cache import EnterpriseCacheService
 
         cache_service = EnterpriseCacheService()
         await self.service_registry.register_service(
@@ -658,7 +677,6 @@ class EnterpriseIntegrationManager:
         )
 
         # Register enterprise search service
-        from src.services.enterprise.search import EnterpriseSearchService
 
         search_service = EnterpriseSearchService()
         await self.service_registry.register_service(
@@ -675,35 +693,46 @@ class EnterpriseIntegrationManager:
         system_status = await self.service_registry.get_system_status()
 
         if system_status["health_summary"]["overall_status"] != "healthy":
-            raise RuntimeError(
-                "Enterprise integration validation failed: unhealthy services"
-            )
+            msg = "Enterprise integration validation failed: unhealthy services"
+            raise RuntimeError(msg)
 
         # Validate security framework
         if self.security_manager:
             security_status = await self.security_manager.get_security_status()
             if not security_status.get("components_initialized", False):
-                raise RuntimeError("Security framework validation failed")
+                msg = "Security framework validation failed"
+                raise RuntimeError(msg)
 
         logger.info("Enterprise integration validation passed")
 
 
-# Global integration manager instance
-_integration_manager: EnterpriseIntegrationManager | None = None
+class _IntegrationManagerSingleton:
+    """Singleton holder for enterprise integration manager instance."""
+
+    _instance: EnterpriseIntegrationManager | None = None
+
+    @classmethod
+    async def get_instance(cls, config: Config = None) -> EnterpriseIntegrationManager:
+        """Get the singleton enterprise integration manager instance."""
+        if cls._instance is None:
+            if config is None:
+                config = Config()
+            cls._instance = EnterpriseIntegrationManager(config)
+        return cls._instance
+
+    @classmethod
+    async def cleanup_instance(cls) -> None:
+        """Cleanup the singleton instance."""
+        if cls._instance:
+            await cls._instance.cleanup_enterprise_features()
+            cls._instance = None
 
 
 async def get_integration_manager(
     config: Config = None,
 ) -> EnterpriseIntegrationManager:
     """Get or create the global enterprise integration manager."""
-    global _integration_manager
-
-    if _integration_manager is None:
-        if config is None:
-            config = Config()
-        _integration_manager = EnterpriseIntegrationManager(config)
-
-    return _integration_manager
+    return await _IntegrationManagerSingleton.get_instance(config)
 
 
 async def initialize_enterprise_platform(
@@ -717,8 +746,4 @@ async def initialize_enterprise_platform(
 
 async def cleanup_enterprise_platform() -> None:
     """Cleanup the enterprise platform."""
-    global _integration_manager
-
-    if _integration_manager:
-        await _integration_manager.cleanup_enterprise_features()
-        _integration_manager = None
+    await _IntegrationManagerSingleton.cleanup_instance()

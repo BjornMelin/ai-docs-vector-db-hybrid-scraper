@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-docs-app
+  namespace: ai-docs-system
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+      - name: ai-docs-app
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1"
+          limits:
+            memory: "4Gi"
+            cpu: "2"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-docs-worker
+  namespace: ai-docs-system
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+      - name: ai-docs-worker
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1"
+          limits:
+            memory: "4Gi"
+            cpu: "2"
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: qdrant
+  namespace: ai-docs-system
+spec:
+  template:
+    spec:
+      containers:
+      - name: qdrant
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2"
+          limits:
+            memory: "8Gi"
+            cpu: "4"
+  volumeClaimTemplates:
+  - metadata:
+      name: qdrant-storage
+    spec:
+      resources:
+        requests:
+          storage: 100Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dragonfly
+  namespace: ai-docs-system
+spec:
+  template:
+    spec:
+      containers:
+      - name: dragonfly
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2"
+          limits:
+            memory: "8Gi"
+            cpu: "4"
+        env:
+        - name: DRAGONFLY_MEMORY_LIMIT
+          value: "8gb"

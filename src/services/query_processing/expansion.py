@@ -201,6 +201,79 @@ class QueryExpansionService:
             "strategy_usage": {},
         }
 
+    async def initialize(self) -> None:
+        """Initialize the query expansion service."""
+        self._logger.info("Query expansion service initialized")
+
+    async def cleanup(self) -> None:
+        """Clean up resources used by the query expansion service."""
+        self.expansion_cache.clear()
+        self.expansion_history.clear()
+        self.success_feedback.clear()
+        self._logger.info("Query expansion service cleaned up")
+
+    async def expand(self, query: str, **kwargs) -> str:
+        """Simple query expansion interface that returns expanded query string.
+
+        Args:
+            query: Original query string
+            **kwargs: Additional expansion parameters
+
+        Returns:
+            Expanded query string
+        """
+        # Create a request with default parameters
+        request = QueryExpansionRequest(
+            original_query=query,
+            strategy=kwargs.get("strategy", ExpansionStrategy.HYBRID),
+            max_expansions=kwargs.get("max_expansions", 10),
+            confidence_threshold=kwargs.get("confidence_threshold", 0.5),
+        )
+
+        result = await self.expand_query(request)
+        return result.expanded_query
+
+    async def _process_expansion_pipeline(
+        self, request: QueryExpansionRequest, start_time: float
+    ) -> QueryExpansionResult:
+        """Process the complete expansion pipeline."""
+        # Preprocess query
+        preprocessed_query = self._preprocess_query(request.original_query)
+
+        # Extract key terms
+        key_terms = self._extract_key_terms(preprocessed_query, request.query_context)
+
+        # Generate and filter expansions
+        expanded_terms = await self._generate_expansions(key_terms, request)
+        filtered_terms = self._filter_and_rank_terms(expanded_terms, request)
+
+        # Build expanded query
+        expanded_query = self._build_expanded_query(
+            preprocessed_query, filtered_terms, request
+        )
+
+        # Calculate metrics
+        confidence_score = self._calculate_expansion_confidence(filtered_terms, request)
+        processing_time_ms = (time.time() - start_time) * 1000
+
+        # Build result
+        return QueryExpansionResult(
+            original_query=request.original_query,
+            expanded_terms=filtered_terms,
+            expanded_query=expanded_query,
+            expansion_strategy=request.strategy,
+            expansion_scope=request.scope,
+            confidence_score=confidence_score,
+            processing_time_ms=processing_time_ms,
+            cache_hit=False,
+            term_statistics=self._generate_term_statistics(filtered_terms),
+            expansion_metadata={
+                "key_terms_count": len(key_terms),
+                "expansion_sources": list({term.source for term in filtered_terms}),
+                "relation_types": list({term.relation_type for term in filtered_terms}),
+            },
+        )
+
     async def expand_query(
         self, request: QueryExpansionRequest
     ) -> QueryExpansionResult:
@@ -281,12 +354,10 @@ class QueryExpansionService:
                 f"with {len(filtered_terms)} terms in {processing_time_ms:.1f}ms"
             )
 
-            return result
-
         except Exception as e:
             processing_time_ms = (time.time() - start_time) * 1000
-            self._logger.error(
-                f"Query expansion failed: {e}", exc_info=True
+            self._logger.exception(
+                "Query expansion failed: "
             )  # TODO: Convert f-string to logging format
 
             # Return fallback result
@@ -301,6 +372,9 @@ class QueryExpansionService:
                 cache_hit=False,
                 expansion_metadata={"error": str(e)},
             )
+
+        else:
+            return result
 
     async def _generate_expansions(
         self, key_terms: list[str], request: QueryExpansionRequest
@@ -539,9 +613,7 @@ class QueryExpansionService:
         query = re.sub(r"[^\w\s\-\+\.]", " ", query)
 
         # Normalize whitespace
-        query = re.sub(r"\s+", " ", query)
-
-        return query
+        return re.sub(r"\s+", " ", query)
 
     def _extract_key_terms(self, query: str, _context: dict[str, Any]) -> list[str]:
         """Extract key terms from the query for expansion."""
@@ -657,8 +729,9 @@ class QueryExpansionService:
         for original_term, related_terms in term_groups.items():
             if original_term in expanded_query:
                 # Add related terms as OR alternatives
-                all_terms = [original_term] + related_terms[
-                    :3
+                all_terms = [
+                    original_term,
+                    *related_terms[:3],
                 ]  # Limit to avoid overly complex queries
                 term_expansion = f"({' OR '.join(all_terms)})"
                 expanded_query = expanded_query.replace(
@@ -830,12 +903,10 @@ class QueryExpansionService:
     def _calculate_synonym_confidence(self, _original: str, _synonym: str) -> float:
         """Calculate confidence for synonym relationships."""
         # Simple confidence calculation - in production would be more sophisticated
-        base_confidence = 0.7
+        return 0.7
 
         # Boost confidence for exact matches in dictionaries
         # Reduce confidence for approximate matches
-
-        return base_confidence
 
     def _calculate_context_relevance(self, term: str, context: dict[str, Any]) -> float:
         """Calculate relevance of term to query context."""

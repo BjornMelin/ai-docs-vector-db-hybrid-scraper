@@ -1,0 +1,145 @@
+name: Fast Feedback Loop
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+env:
+  PYTHONUNBUFFERED: 1
+  PYTHONDONTWRITEBYTECODE: 1
+  UV_CACHE_COMPRESSION: 1
+
+# Cancel previous runs on new pushes
+concurrency:
+  group: fast-feedback-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ultra-fast-validation:
+    name: ⚡ Ultra Fast Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1  # Minimal checkout for speed
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-environment
+        with:
+          python-version: '3.12'
+          cache-suffix: '-ultra-fast'
+          install-dev: 'false'  # Only core dependencies
+
+      - name: Install minimal test dependencies
+        run: |
+          uv pip install ruff pytest pytest-timeout pytest-xdist
+
+      - name: Parallel validation checks
+        run: |
+          echo "🚀 Running parallel validation checks..."
+          
+          # Run checks in parallel using background processes
+          {
+            echo "🔍 Linting..."
+            uv run ruff check . --output-format=compact 2>&1 | sed 's/^/[LINT] /'
+          } &
+          LINT_PID=$!
+          
+          {
+            echo "📐 Format check..."
+            uv run ruff format --check . 2>&1 | sed 's/^/[FORMAT] /'
+          } &
+          FORMAT_PID=$!
+          
+          {
+            echo "🐍 Syntax check..."
+            python -m compileall src -q 2>&1 | sed 's/^/[SYNTAX] /'
+          } &
+          SYNTAX_PID=$!
+          
+          {
+            echo "🧪 Critical tests..."
+            mkdir -p tests/fixtures logs cache
+            uv run pytest tests/unit \
+              -m "not slow and not browser and not integration and not external" \
+              -q \
+              --tb=no \
+              --maxfail=3 \
+              -x \
+              --timeout=15 \
+              --disable-warnings 2>&1 | sed 's/^/[TEST] /'
+          } &
+          TEST_PID=$!
+          
+          # Wait for all background processes and collect results
+          FAILED=0
+          
+          wait $LINT_PID || { echo "❌ Linting failed"; FAILED=1; }
+          wait $FORMAT_PID || { echo "❌ Format check failed"; FAILED=1; }
+          wait $SYNTAX_PID || { echo "❌ Syntax check failed"; FAILED=1; }
+          wait $TEST_PID || { echo "❌ Critical tests failed"; FAILED=1; }
+          
+          if [ $FAILED -eq 0 ]; then
+            echo "✅ All ultra-fast checks passed!"
+          else
+            echo "❌ Some checks failed - see details above"
+            exit 1
+          fi
+
+      - name: Quick import test
+        run: |
+          echo "📦 Testing core imports..."
+          uv run python -c "
+          try:
+              import src
+              print('✅ Core imports successful')
+          except Exception as e:
+              print(f'❌ Import error: {e}')
+              exit(1)
+          "
+
+      - name: Post feedback comment
+        if: always()
+        uses: ./.github/actions/pr-comment
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          comment-id: "fast-feedback-results"
+          title: "⚡ Fast Feedback Results"
+          body: |
+            **Status**: ${{ job.status == 'success' && '🟢 All checks passed!' || '🔴 Issues found' }}
+            
+            This ultra-fast validation completed in ~3 minutes and checks:
+            - ✅ Code linting and formatting
+            - ✅ Python syntax validation  
+            - ✅ Critical unit tests
+            - ✅ Core module imports
+            
+            ${{ job.status == 'success' && '**✨ Ready for comprehensive CI!** The main CI pipeline will now run more thorough tests.' || '**🔧 Please fix the issues above** before the main CI pipeline runs.' }}
+            
+            ---
+            *💡 This fast feedback loop helps catch basic issues quickly. More comprehensive testing (including cross-platform, integration, and security checks) will run automatically.*
+
+  trigger-full-ci:
+    name: Trigger Full CI
+    runs-on: ubuntu-latest
+    needs: ultra-fast-validation
+    if: success()
+    
+    steps:
+      - name: Trigger comprehensive CI
+        run: |
+          echo "✅ Fast feedback passed - comprehensive CI will run automatically"
+          echo "The main CI pipeline includes:"
+          echo "  - Multi-platform testing (Ubuntu, Windows, macOS)"
+          echo "  - Full test suite with integration tests"
+          echo "  - Security and dependency scanning"
+          echo "  - Build validation and packaging tests"

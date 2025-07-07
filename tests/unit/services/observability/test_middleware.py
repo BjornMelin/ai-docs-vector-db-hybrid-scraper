@@ -84,6 +84,7 @@ class TestFastAPIObservabilityMiddleware:
 
     @pytest.mark.asyncio
     @patch("src.services.observability.middleware.get_tracer")
+    @pytest.mark.asyncio
     async def test_dispatch_basic_request(self, mock_get_tracer):
         """Test basic request processing."""
         mock_get_tracer.return_value = self.mock_tracer
@@ -124,6 +125,7 @@ class TestFastAPIObservabilityMiddleware:
 
     @pytest.mark.asyncio
     @patch("src.services.observability.middleware.get_tracer")
+    @pytest.mark.asyncio
     async def test_dispatch_with_correlation_id(self, mock_get_tracer):
         """Test request processing with correlation ID."""
         mock_get_tracer.return_value = self.mock_tracer
@@ -162,6 +164,7 @@ class TestFastAPIObservabilityMiddleware:
 
     @pytest.mark.asyncio
     @patch("src.services.observability.middleware.get_tracer")
+    @pytest.mark.asyncio
     async def test_dispatch_with_ai_context(self, mock_get_tracer):
         """Test request processing with AI context detection."""
         mock_get_tracer.return_value = self.mock_tracer
@@ -203,6 +206,7 @@ class TestFastAPIObservabilityMiddleware:
 
     @pytest.mark.asyncio
     @patch("src.services.observability.middleware.get_tracer")
+    @pytest.mark.asyncio
     async def test_dispatch_error_handling(self, mock_get_tracer):
         """Test request processing with exception handling."""
         mock_get_tracer.return_value = self.mock_tracer
@@ -239,6 +243,7 @@ class TestFastAPIObservabilityMiddleware:
     @pytest.mark.asyncio
     @patch("src.services.observability.middleware.get_tracer")
     @patch("src.services.observability.middleware.get_meter")
+    @pytest.mark.asyncio
     async def test_dispatch_with_metrics(self, mock_get_meter, mock_get_tracer):
         """Test request processing with metrics recording."""
         mock_get_tracer.return_value = self.mock_tracer
@@ -279,6 +284,7 @@ class TestFastAPIObservabilityMiddleware:
 
     @pytest.mark.asyncio
     @patch("src.services.observability.middleware.get_tracer")
+    @pytest.mark.asyncio
     async def test_dispatch_client_error_status(self, mock_get_tracer):
         """Test request processing with client error status."""
         mock_get_tracer.return_value = self.mock_tracer
