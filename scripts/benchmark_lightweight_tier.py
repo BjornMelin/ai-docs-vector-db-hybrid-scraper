@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """Benchmark script to demonstrate Lightweight HTTP Tier performance improvements."""
 
-import asyncio  # noqa: PLC0415
+import asyncio
 
 # Configure logging
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
-from statistics import mean
-from statistics import stdev
+import logging
+import time
+from statistics import mean, stdev
 
-from ..config import Config
 from src.services.crawling.manager import CrawlManager
 from src.utils.imports import log_import_issues
+
+from ..config import Config
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

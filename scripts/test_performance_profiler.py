@@ -2,11 +2,11 @@
 """Test performance profiler for identifying slow tests and optimization opportunities."""
 
 import argparse
-import json  # noqa: PLC0415
-import os  # noqa: PLC0415
+import json
+import os
 import re
 import subprocess
-import time  # noqa: PLC0415
+import time
 from collections import defaultdict
 from pathlib import Path
 
@@ -45,7 +45,7 @@ class TestPerformanceProfiler:
         start_time = time.time()
         result = subprocess.run(
             cmd,
-            capture_output=True,
+            check=False, capture_output=True,
             text=True,
             cwd=self.project_root,
         )
@@ -196,7 +196,7 @@ class TestPerformanceProfiler:
                 )
 
         # Tests that could benefit from parallelization
-        unit_test_files = [f for f in file_stats.keys() if "unit" in f]
+        unit_test_files = [f for f in file_stats if "unit" in f]
         slow_unit_files = [
             f for f in unit_test_files if file_stats[f]["avg_time"] > 0.5
         ]
@@ -214,7 +214,7 @@ class TestPerformanceProfiler:
 
         return optimizations
 
-    def generate_report(self, output_file: str = None) -> str:
+    def generate_report(self, output_file: str | None = None) -> str:
         """Generate performance report."""
         if not self.results:
             return "No profiling results available. Run profile_tests() first."
@@ -353,7 +353,7 @@ def main():
     # Save detailed results
     profiler.save_results(args.json)
 
-    print(f"\n🎉 Performance profiling complete!")
+    print("\n🎉 Performance profiling complete!")
     print(f"   Report: {args.output}")
     print(f"   Data: {args.json}")
 

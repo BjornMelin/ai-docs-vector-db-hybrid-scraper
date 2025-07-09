@@ -6,7 +6,7 @@ Handles mass renaming and moving of documentation files while tracking all chang
 for link updates.
 """
 
-import json  # noqa: PLC0415
+import json
 import re
 import shutil
 from pathlib import Path
@@ -28,7 +28,7 @@ class DocumentationRestructurer:
             return filename
 
         # Remove .md extension for processing
-        name = filename[:-3] if filename.endswith(".md") else filename
+        name = filename.removesuffix(".md")
 
         # Handle UPPERCASE_UNDERSCORE pattern
         if name.isupper() or "_" in name:

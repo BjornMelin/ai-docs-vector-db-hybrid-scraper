@@ -9,14 +9,14 @@ This script validates the 4-6x performance improvement claims by:
 5. Generating detailed performance comparison report
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import contextlib
-import logging  # noqa: PLC0415
-import os  # noqa: PLC0415
+import logging
+import os
 import platform
 import statistics
-import time  # noqa: PLC0415
-from datetime import datetime, timezone
+import time
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -26,11 +26,13 @@ from pydantic import BaseModel
 from rich.console import Console
 from rich.progress import Progress
 from rich.table import Table
+
 from src.config import get_config
 from src.infrastructure.client_manager import ClientManager
 from src.services.crawling.crawl4ai_provider import Crawl4AIProvider
 from src.services.crawling.firecrawl_provider import FirecrawlProvider
 from src.services.utilities.rate_limiter import RateLimiter
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -57,7 +59,8 @@ def validate_api_keys() -> None:
             + "\n".join(missing_keys)
             + "\n\nSet these environment variables before running benchmarks."
         )
-        raise ValueError("Missing required API keys")
+        msg = "Missing required API keys"
+        raise ValueError(msg)
 
     console.print("[green]✓ All required API keys validated[/green]")
 
@@ -172,7 +175,7 @@ class CrawlerBenchmark:
                     await cpu_task
 
             error_type = type(e).__name__
-            logger.error(f"{provider_name} failed on {url}: {error_type}: {e}")
+            logger.exception(f"{provider_name} failed on {url}: {error_type}: {e}")
             return elapsed, {
                 "success": False,
                 "error": str(e),
@@ -368,7 +371,7 @@ class CrawlerBenchmark:
                 )
 
             except Exception:
-                logger.error(f"Bulk crawl failed for {provider_name}: {e}")
+                logger.exception(f"Bulk crawl failed for {provider_name}: {e}")
                 results[f"{provider_name}_bulk"] = BenchmarkMetrics(
                     provider=f"{provider_name}_bulk",
                     total_urls=len(bulk_urls),
@@ -399,7 +402,7 @@ class CrawlerBenchmark:
         """Estimate cost based on provider pricing."""
         if provider == "crawl4ai":
             return 0.0  # Free
-        elif provider == "firecrawl":
+        if provider == "firecrawl":
             # Firecrawl pricing: ~$15 per 1000 pages
             return (num_urls / 1000) * 15.0
         return 0.0
@@ -412,7 +415,7 @@ class CrawlerBenchmark:
         """Generate comprehensive benchmark report."""
         report_lines = [
             "# Crawl4AI vs Firecrawl Performance Benchmark Report",
-            f"\nGenerated: {datetime.now(tz=timezone.utc).isoformat()}",
+            f"\nGenerated: {datetime.now(tz=UTC).isoformat()}",
             f"Platform: {platform.system()} {platform.release()}",
             f"Python: {platform.python_version()}",
             "\n## Executive Summary\n",
@@ -598,7 +601,7 @@ class CrawlerBenchmark:
         report_dir = Path("benchmark_results")
         report_dir.mkdir(exist_ok=True)
 
-        timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(tz=UTC).strftime("%Y%m%d_%H%M%S")
         report_file = report_dir / f"crawl4ai_benchmark_{timestamp}.md"
 
         with open(report_file, "w") as f:

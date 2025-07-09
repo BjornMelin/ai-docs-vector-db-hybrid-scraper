@@ -9,11 +9,12 @@ This script tests:
 4. CI environment compatibility
 """
 
-import asyncio  # noqa: PLC0415
-import os  # noqa: PLC0415
+import asyncio
+import os
 import subprocess
 import sys
 from pathlib import Path
+
 
 # Add src to path
 project_root = Path(__file__).parent.parent
@@ -22,11 +23,11 @@ sys.path.insert(0, str(src_path))
 
 # Import cross-platform utilities
 from utils.cross_platform import (
-    is_windows,
-    is_macos,
-    is_linux,
-    is_ci_environment,
     get_playwright_browser_path,
+    is_ci_environment,
+    is_linux,
+    is_macos,
+    is_windows,
     set_platform_environment_defaults,
 )
 
@@ -156,9 +157,8 @@ async def test_basic_crawling() -> bool:
                 print_status("Basic crawling test passed", "SUCCESS")
                 print(f"  Extracted {len(result.markdown)} characters of content")
                 return True
-            else:
-                print_status(f"Crawling failed: {result.error}", "ERROR")
-                return False
+            print_status(f"Crawling failed: {result.error}", "ERROR")
+            return False
 
     except Exception:
         print_status(f"Crawling test error: {e}", "ERROR")
@@ -185,13 +185,12 @@ def install_browsers_if_needed() -> bool:
             ]
 
             result = subprocess.run(
-                check_cmd, capture_output=True, text=True, timeout=30
+                check_cmd, check=False, capture_output=True, text=True, timeout=30
             )
             if result.returncode == 0:
                 print_status("Browsers already installed and working", "SUCCESS")
                 return True
-            else:
-                print_status("Browsers need to be installed...", "INFO")
+            print_status("Browsers need to be installed...", "INFO")
         except:
             pass
 
@@ -209,7 +208,7 @@ def install_browsers_if_needed() -> bool:
                     "chromium",
                 ]
                 result = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=300
+                    cmd, check=False, capture_output=True, text=True, timeout=300
                 )
                 if result.returncode != 0:
                     print_status(
@@ -217,13 +216,13 @@ def install_browsers_if_needed() -> bool:
                     )
                     cmd = [sys.executable, "-m", "playwright", "install", "chromium"]
                     result = subprocess.run(
-                        cmd, capture_output=True, text=True, timeout=300
+                        cmd, check=False, capture_output=True, text=True, timeout=300
                     )
             else:
                 # Windows/macOS: Browser-only installation in CI
                 cmd = [sys.executable, "-m", "playwright", "install", "chromium"]
                 result = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=300
+                    cmd, check=False, capture_output=True, text=True, timeout=300
                 )
         else:
             # Local environment: Platform-specific strategy
@@ -237,7 +236,7 @@ def install_browsers_if_needed() -> bool:
                 print_status("Linux detected, trying browser-only first...")
                 cmd = [sys.executable, "-m", "playwright", "install", "chromium"]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=300)
 
             # For Linux local dev, try with system deps if browser-only fails
             if result.returncode != 0 and is_linux():
@@ -253,16 +252,15 @@ def install_browsers_if_needed() -> bool:
                     "chromium",
                 ]
                 result = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=300
+                    cmd, check=False, capture_output=True, text=True, timeout=300
                 )
 
         if result.returncode == 0:
             print_status("Browser installation completed", "SUCCESS")
             return True
-        else:
-            error_msg = result.stderr.strip() if result.stderr else "Unknown error"
-            print_status(f"Browser installation failed: {error_msg}", "ERROR")
-            return False
+        error_msg = result.stderr.strip() if result.stderr else "Unknown error"
+        print_status(f"Browser installation failed: {error_msg}", "ERROR")
+        return False
 
     except subprocess.TimeoutExpired:
         print_status("Browser installation timed out", "ERROR")
@@ -311,20 +309,19 @@ async def main():
         print_status("All browser automation tests passed!", "SUCCESS")
         print_status("Browser setup is ready for testing", "SUCCESS")
         return 0
-    else:
-        print_status("Some browser automation tests failed", "ERROR")
-        failed_tests = []
-        if not browsers_ok:
-            failed_tests.append("browser installation")
-        if not playwright_ok:
-            failed_tests.append("playwright setup")
-        if not crawl4ai_ok:
-            failed_tests.append("crawl4ai config")
-        if not crawling_ok:
-            failed_tests.append("basic crawling")
+    print_status("Some browser automation tests failed", "ERROR")
+    failed_tests = []
+    if not browsers_ok:
+        failed_tests.append("browser installation")
+    if not playwright_ok:
+        failed_tests.append("playwright setup")
+    if not crawl4ai_ok:
+        failed_tests.append("crawl4ai config")
+    if not crawling_ok:
+        failed_tests.append("basic crawling")
 
-        print_status(f"Failed tests: {', '.join(failed_tests)}", "ERROR")
-        return 1
+    print_status(f"Failed tests: {', '.join(failed_tests)}", "ERROR")
+    return 1
 
 
 if __name__ == "__main__":

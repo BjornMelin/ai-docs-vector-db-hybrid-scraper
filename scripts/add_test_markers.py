@@ -91,7 +91,7 @@ class TestMarkerAnalyzer(ast.NodeVisitor):
     def analyze_file(self, file_path: Path) -> set[str]:
         """Analyze a test file and return recommended markers."""
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
 
             self.source = content
@@ -129,7 +129,7 @@ class TestMarkerAnalyzer(ast.NodeVisitor):
 def add_markers_to_test_file(file_path: Path, markers: set[str]) -> bool:
     """Add markers to a test file if they're not already present."""
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         # Check if file already has pytest imports
@@ -212,11 +212,10 @@ def main():
         analyzer = TestMarkerAnalyzer()  # Reset for each file
         markers = analyzer.analyze_file(test_file)
 
-        if markers:
-            if add_markers_to_test_file(test_file, markers):
-                files_modified += 1
+        if markers and add_markers_to_test_file(test_file, markers):
+            files_modified += 1
 
-    print(f"\n📊 Summary:")
+    print("\n📊 Summary:")
     print(f"   Total test files analyzed: {total_files}")
     print(f"   Files modified: {files_modified}")
     print(f"   Files up to date: {total_files - files_modified}")

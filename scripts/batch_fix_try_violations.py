@@ -3,14 +3,14 @@
 Batch fix TRY violations across the codebase.
 """
 
-import json  # noqa: PLC0415
+import json
 import re
 import subprocess
 from pathlib import Path
 from typing import Dict, List
 
 
-def get_violations() -> List[Dict]:
+def get_violations() -> list[dict]:
     """Get all TRY violations using ruff."""
     result = subprocess.run(
         [
@@ -22,7 +22,7 @@ def get_violations() -> List[Dict]:
             "--select=TRY300,TRY401,TRY002,TRY301",
             "--output-format=json",
         ],
-        capture_output=True,
+        check=False, capture_output=True,
         text=True,
         cwd=Path.cwd(),
     )
@@ -51,9 +51,9 @@ def fix_try401_violations():
 
     fixed_count = 0
 
-    for filepath, file_violations in by_file.items():
+    for filepath in by_file:
         try:
-            with open(filepath, "r", encoding="utf-8") as f:
+            with open(filepath, encoding="utf-8") as f:
                 content = f.read()
 
             original_content = content
@@ -108,9 +108,9 @@ def fix_try002_violations():
 
     fixed_count = 0
 
-    for filepath, file_violations in by_file.items():
+    for filepath in by_file:
         try:
-            with open(filepath, "r", encoding="utf-8") as f:
+            with open(filepath, encoding="utf-8") as f:
                 lines = f.readlines()
 
             # Add custom exceptions at the top
@@ -155,24 +155,23 @@ def _get_custom_exception_name(filepath: str, base_exception: str) -> str:
     path_parts = Path(filepath).stem.split("_")
     if "test" in path_parts:
         return f"Test{base_exception.replace('Exception', 'Error')}"
-    elif "config" in path_parts:
+    if "config" in path_parts:
         return f"Config{base_exception.replace('Exception', 'Error')}"
-    elif "service" in path_parts:
+    if "service" in path_parts:
         return f"Service{base_exception.replace('Exception', 'Error')}"
-    elif "cache" in path_parts:
+    if "cache" in path_parts:
         return f"Cache{base_exception.replace('Exception', 'Error')}"
-    elif "embedding" in path_parts:
+    if "embedding" in path_parts:
         return f"Embedding{base_exception.replace('Exception', 'Error')}"
-    else:
-        return f"Custom{base_exception.replace('Exception', 'Error')}"
+    return f"Custom{base_exception.replace('Exception', 'Error')}"
 
 
-def _add_custom_exception(lines: List[str], exception_name: str, base_name: str):
+def _add_custom_exception(lines: list[str], exception_name: str, base_name: str):
     """Add custom exception class to the file."""
     # Find a good place to add the exception (after imports)
     insert_row = 0
     for i, line in enumerate(lines):
-        if line.startswith("import ") or line.startswith("from "):
+        if line.startswith(("import ", "from ")):
             insert_row = i + 1
         elif line.strip() == "":
             continue
@@ -206,7 +205,7 @@ def main():
     final_violations = get_violations()
     final_count = len(final_violations)
 
-    print(f"\n📊 Results:")
+    print("\n📊 Results:")
     print(f"  Initial violations: {initial_count}")
     print(f"  Final violations: {final_count}")
     print(f"  Reduction: {initial_count - final_count}")

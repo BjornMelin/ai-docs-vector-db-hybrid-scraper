@@ -8,10 +8,10 @@ This script provides optimized test execution strategies for:
 - Performance benchmarking
 """
 
-import os  # noqa: PLC0415
+import os
 import subprocess
 import sys
-import time  # noqa: PLC0415
+import time
 from pathlib import Path
 
 
@@ -28,9 +28,8 @@ class TestRunner:
         if self.is_ci:
             # CI environments: Use fewer workers to avoid resource exhaustion
             return min(cpu_count, 4)
-        else:
-            # Local: Use more aggressive parallelization but leave one CPU free
-            return max(1, cpu_count - 1)
+        # Local: Use more aggressive parallelization but leave one CPU free
+        return max(1, cpu_count - 1)
 
     def run_quick_tests(self) -> int:
         """Run fast unit tests for local development."""

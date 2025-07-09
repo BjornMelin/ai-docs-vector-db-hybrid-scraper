@@ -6,19 +6,20 @@ performance impact on scraping operations. Useful for optimizing the
 balance between stealth and performance.
 """
 
-import asyncio  # noqa: PLC0415
-import json  # noqa: PLC0415
+import asyncio
+import json
 import statistics
 
 # Add src to path for imports
 import sys
-import time  # noqa: PLC0415
+import time
 from pathlib import Path
 from typing import Any
 
 import click
 import psutil
 from tabulate import tabulate
+
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 

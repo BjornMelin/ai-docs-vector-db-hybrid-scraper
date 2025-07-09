@@ -6,17 +6,18 @@ Extends the existing payload indexing benchmark to include comprehensive
 HNSW parameter testing and optimization capabilities.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 import contextlib
-import json  # noqa: PLC0415
-import logging  # noqa: PLC0415
+import json
+import logging
 import sys
-import time  # noqa: PLC0415
-from datetime import datetime, timezone
+import time
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -24,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 # Import the existing benchmark as a base
 from benchmark_payload_indexing import PayloadIndexingBenchmark
+
 
 # Configure logging
 logging.basicConfig(
@@ -143,7 +145,7 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
                 )
 
             except Exception:
-                logger.error(f"Failed to test configuration {config_name}: {e}")
+                logger.exception(f"Failed to test configuration {config_name}: {e}")
                 config_results[config_name] = {
                     "config": hnsw_config,
                     "error": str(e),
@@ -305,9 +307,8 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
 
             # Calculate recall
             intersection = len(hnsw_ids.intersection(exact_ids))
-            recall = intersection / len(exact_ids) if exact_ids else 0.0
+            return intersection / len(exact_ids) if exact_ids else 0.0
 
-            return recall
 
         except Exception:
             logger.debug(f"Failed to calculate recall for EF={ef_value}: {e}")
@@ -344,7 +345,7 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
             return adaptive_results
 
         except Exception:
-            logger.error(f"Adaptive EF testing failed: {e}")
+            logger.exception(f"Adaptive EF testing failed: {e}")
             return {"error": str(e)}
 
     async def _test_adaptive_ef_for_budget(
@@ -422,7 +423,7 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
         """
         logger.info("Starting comprehensive HNSW optimization benchmark")
 
-        start_time = datetime.now(tz=timezone.utc)
+        start_time = datetime.now(tz=UTC)
 
         try:
             # 1. Test different HNSW build configurations
@@ -437,7 +438,7 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
             self.hnsw_results["comparison_summary"] = self._create_comparison_summary()
 
             # 4. Add metadata
-            end_time = datetime.now(tz=timezone.utc)
+            end_time = datetime.now(tz=UTC)
             duration = (end_time - start_time).total_seconds()
 
             self.hnsw_results["metadata"] = {
@@ -452,7 +453,7 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
             return self.hnsw_results
 
         except Exception:
-            logger.error(f"Comprehensive HNSW benchmark failed: {e}")
+            logger.exception(f"Comprehensive HNSW benchmark failed: {e}")
             raise
 
     def _create_comparison_summary(self) -> dict[str, Any]:
@@ -658,7 +659,7 @@ class HNSWOptimizationBenchmark(PayloadIndexingBenchmark):
         print("\n⚡ ADAPTIVE EF PERFORMANCE")
         print("-" * 40)
 
-        for _budget_key, budget_results in adaptive_results.items():
+        for budget_results in adaptive_results.values():
             if isinstance(budget_results, dict) and "time_budget_ms" in budget_results:
                 budget = budget_results["time_budget_ms"]
                 final_ef = budget_results.get("final_ef", 0)

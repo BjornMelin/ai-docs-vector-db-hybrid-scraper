@@ -6,19 +6,19 @@ performance benchmarks of the Advanced Hybrid Search system.
 """
 
 import argparse
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
+import asyncio
+import logging
 import sys
 from pathlib import Path
+
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from benchmarks import HybridSearchBenchmark
-from benchmarks import BenchmarkConfig
-from benchmarks import BenchmarkResults
-from ..config import Config
+from benchmarks import BenchmarkConfig, BenchmarkResults, HybridSearchBenchmark
 from services.vector_db.hybrid_search import HybridSearchService
+
+from ..config import Config
 
 
 def setup_logging(log_level: str = "INFO") -> None:

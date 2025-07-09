@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Quick test to verify Crawl4AI is working before running full benchmark."""
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
-import time  # noqa: PLC0415
+import asyncio
+import logging
+import time
 
 from src.services.crawling.crawl4ai_provider import Crawl4AIProvider
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

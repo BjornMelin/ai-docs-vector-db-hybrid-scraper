@@ -13,11 +13,11 @@ Provides detailed reporting and coverage analysis.
 """
 
 import argparse
-import asyncio  # noqa: PLC0415
-import os  # noqa: PLC0415
+import asyncio
+import os
 import subprocess
 import sys
-import time  # noqa: PLC0415
+import time
 from pathlib import Path
 from typing import Any
 
@@ -46,13 +46,7 @@ class ServiceTestRunner:
             "tests/unit/services/test_function_based_dependencies.py",
         ]
 
-        args = [
-            "--verbose" if verbose else "-v",
-            "--tb=short",
-            "--strict-markers",
-            f"--cov=src/services/functional",
-            "--cov-report=term-missing",
-        ] + test_files
+        args = ["--verbose" if verbose else "-v", "--tb=short", "--strict-markers", "--cov=src/services/functional", "--cov-report=term-missing", *test_files]
 
         result = pytest.main(args)
 
@@ -81,7 +75,7 @@ class ServiceTestRunner:
                 "--strict-markers",
                 "-m",
                 "circuit_breaker or not circuit_breaker",  # Run all circuit breaker related tests
-                f"--cov=src/services/functional/circuit_breaker",
+                "--cov=src/services/functional/circuit_breaker",
                 "--cov-report=term-missing",
             ]
             + test_files
@@ -107,15 +101,7 @@ class ServiceTestRunner:
             "tests/benchmarks/test_database_performance.py",
         ]
 
-        args = [
-            "--verbose" if verbose else "-v",
-            "--tb=short",
-            "--strict-markers",
-            "-m",
-            "database_pooling or not database_pooling",
-            f"--cov=src/infrastructure/database",
-            "--cov-report=term-missing",
-        ] + test_files
+        args = ["--verbose" if verbose else "-v", "--tb=short", "--strict-markers", "-m", "database_pooling or not database_pooling", "--cov=src/infrastructure/database", "--cov-report=term-missing", *test_files]
 
         result = pytest.main(args)
 
@@ -138,15 +124,7 @@ class ServiceTestRunner:
             "tests/unit/services/browser/test_unified_manager.py",
         ]
 
-        args = [
-            "--verbose" if verbose else "-v",
-            "--tb=short",
-            "--strict-markers",
-            "-m",
-            "browser_monitoring or not browser_monitoring",
-            f"--cov=src/services/browser",
-            "--cov-report=term-missing",
-        ] + test_files
+        args = ["--verbose" if verbose else "-v", "--tb=short", "--strict-markers", "-m", "browser_monitoring or not browser_monitoring", "--cov=src/services/browser", "--cov-report=term-missing", *test_files]
 
         result = pytest.main(args)
 
@@ -169,16 +147,7 @@ class ServiceTestRunner:
             "tests/integration/test_query_processing_integration.py",
         ]
 
-        args = [
-            "--verbose" if verbose else "-v",
-            "--tb=short",
-            "--strict-markers",
-            "-m",
-            "service_integration or integration",
-            f"--cov=src/services",
-            "--cov-append",
-            "--cov-report=term-missing",
-        ] + test_files
+        args = ["--verbose" if verbose else "-v", "--tb=short", "--strict-markers", "-m", "service_integration or integration", "--cov=src/services", "--cov-append", "--cov-report=term-missing", *test_files]
 
         result = pytest.main(args)
 
@@ -199,17 +168,7 @@ class ServiceTestRunner:
             "tests/performance/services/test_service_performance_benchmarks.py",
         ]
 
-        args = [
-            "--verbose" if verbose else "-v",
-            "--tb=short",
-            "--strict-markers",
-            "-m",
-            "performance_benchmark",
-            "--benchmark-only",
-            "--benchmark-sort=mean",
-            "--benchmark-columns=min,max,mean,stddev,ops,rounds",
-            "--benchmark-group-by=group",
-        ] + test_files
+        args = ["--verbose" if verbose else "-v", "--tb=short", "--strict-markers", "-m", "performance_benchmark", "--benchmark-only", "--benchmark-sort=mean", "--benchmark-columns=min,max,mean,stddev,ops,rounds", "--benchmark-group-by=group", *test_files]
 
         result = pytest.main(args)
 
@@ -230,16 +189,7 @@ class ServiceTestRunner:
             "tests/mutation/test_service_mutation_testing.py",
         ]
 
-        args = [
-            "--verbose" if verbose else "-v",
-            "--tb=short",
-            "--strict-markers",
-            "-m",
-            "mutation_testing",
-            f"--cov=src/services/functional",
-            "--cov-append",
-            "--cov-report=term-missing",
-        ] + test_files
+        args = ["--verbose" if verbose else "-v", "--tb=short", "--strict-markers", "-m", "mutation_testing", "--cov=src/services/functional", "--cov-append", "--cov-report=term-missing", *test_files]
 
         result = pytest.main(args)
 
@@ -380,7 +330,7 @@ class ServiceTestRunner:
         )
 
         # Detailed results
-        print(f"\n📋 Detailed Results:")
+        print("\n📋 Detailed Results:")
         for suite_name, result in self.results.items():
             if suite_name == "summary":
                 continue
@@ -401,7 +351,7 @@ class ServiceTestRunner:
 
         # Failed suites details
         if summary["failed_suites"]:
-            print(f"\n🚨 Failed Test Suites:")
+            print("\n🚨 Failed Test Suites:")
             for suite in summary["failed_suites"]:
                 result = self.results.get(suite, {})
                 print(f"  - {suite}: {result.get('description', 'No description')}")
@@ -415,7 +365,7 @@ class ServiceTestRunner:
             )
 
         # Next steps
-        print(f"\n🔄 Next Steps:")
+        print("\n🔄 Next Steps:")
         if summary["overall_status"] == "passed":
             print("  - All service layer tests are passing!")
             print("  - Consider running mutation testing for additional validation")
@@ -426,7 +376,7 @@ class ServiceTestRunner:
             print("  - Ensure all dependencies are properly mocked")
             print("  - Verify service logic implementation")
 
-    def generate_report(self, output_file: Path = None) -> Path:
+    def generate_report(self, output_file: Path | None = None) -> Path:
         """Generate detailed test report.
 
         Args:
@@ -455,7 +405,7 @@ class ServiceTestRunner:
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
 
         report = f"""# Service Layer Test Report
-        
+
 Generated: {timestamp}
 
 ## Executive Summary
@@ -485,7 +435,7 @@ Generated: {timestamp}
             report += f"**Description**: {description}\n"
 
             if test_files:
-                report += f"**Test Files**:\n"
+                report += "**Test Files**:\n"
                 for test_file in test_files:
                     report += f"- `{test_file}`\n"
 
@@ -661,8 +611,7 @@ Examples:
     # Exit with appropriate code
     if "summary" in runner.results:
         return 0 if runner.results["summary"]["overall_status"] == "passed" else 1
-    else:
-        return 0
+    return 0
 
 
 if __name__ == "__main__":

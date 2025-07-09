@@ -6,16 +6,18 @@ Demonstrates the 10-100x performance improvement achieved through
 payload indexing on metadata fields.
 """
 
-import asyncio  # noqa: PLC0415
-import logging  # noqa: PLC0415
+import asyncio
+import logging
 import sys
-import time  # noqa: PLC0415
-from datetime import datetime, timezone
+import time
+from datetime import UTC, datetime, timezone
 from typing import Any
 
-from ..config import Config
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.vector_db.service import QdrantService
+
+from ..config import Config
+
 
 # Configure logging
 logging.basicConfig(
@@ -51,7 +53,7 @@ class PayloadIndexingBenchmark:
             await self.embedding_manager.initialize()
             logger.info("Successfully initialized services")
         except Exception:
-            logger.error(f"Failed to initialize services: {e}")
+            logger.exception(f"Failed to initialize services: {e}")
             raise
 
     async def cleanup(self):
@@ -343,7 +345,7 @@ class PayloadIndexingBenchmark:
         """Run complete benchmark suite."""
         logger.info("Starting comprehensive payload indexing benchmark")
 
-        start_time = datetime.now(tz=timezone.utc)
+        start_time = datetime.now(tz=UTC)
 
         try:
             # Benchmark 1: Index creation performance
@@ -364,7 +366,7 @@ class PayloadIndexingBenchmark:
             ] = await self.benchmark_comparison()
 
             # Add summary
-            end_time = datetime.now(tz=timezone.utc)
+            end_time = datetime.now(tz=UTC)
             duration = (end_time - start_time).total_seconds()
 
             self.benchmark_results["setup_info"] = {
@@ -378,7 +380,7 @@ class PayloadIndexingBenchmark:
             return self.benchmark_results
 
         except Exception:
-            logger.error(f"Benchmark failed: {e}")
+            logger.exception(f"Benchmark failed: {e}")
             raise
 
     def print_benchmark_results(self, results: dict[str, Any]):

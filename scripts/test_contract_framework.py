@@ -5,10 +5,11 @@ This script validates that the contract testing framework is properly set up
 and all components are working correctly.
 """
 
+import json
 import sys
-import json  # noqa: PLC0415
+from datetime import UTC, datetime, timezone
 from pathlib import Path
-from datetime import datetime, timezone
+
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -139,11 +140,11 @@ def test_api_contract_models():
 
     try:
         from src.models.api_contracts import (
-            SearchRequest,
-            SearchResponse,
             DocumentRequest,
             ErrorResponse,
             HealthCheckResponse,
+            SearchRequest,
+            SearchResponse,
         )
 
         # Test model instantiation
@@ -151,13 +152,13 @@ def test_api_contract_models():
         print(f"✓ SearchRequest model works: {search_req.query}")
 
         search_resp = SearchResponse(
-            success=True, timestamp=datetime.now(tz=timezone.utc).timestamp()
+            success=True, timestamp=datetime.now(tz=UTC).timestamp()
         )
         print(f"✓ SearchResponse model works: {search_resp.success}")
 
         error_resp = ErrorResponse(
             success=False,
-            timestamp=datetime.now(tz=timezone.utc).timestamp(),
+            timestamp=datetime.now(tz=UTC).timestamp(),
             error="Test error",
         )
         print(f"✓ ErrorResponse model works: {error_resp.error}")

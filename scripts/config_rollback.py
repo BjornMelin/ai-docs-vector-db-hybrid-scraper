@@ -6,17 +6,17 @@ This script provides automated rollback capabilities for configuration deploymen
 supporting the GitOps configuration management workflow.
 """
 
-import json  # noqa: PLC0415
-import sys
 import argparse
-import logging  # noqa: PLC0415
+import json
+import logging
 import shutil
 import subprocess
-from pathlib import Path
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, asdict
-from datetime import datetime, timezone
+import sys
 import tarfile
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -30,12 +30,12 @@ class DeploymentSnapshot:
     commit_message: str
     author: str
     deployment_strategy: str
-    changed_files: List[str]
+    changed_files: list[str]
 
     @classmethod
     def from_file(cls, snapshot_file: Path) -> "DeploymentSnapshot":
         """Load snapshot metadata from file"""
-        with open(snapshot_file, "r") as f:
+        with open(snapshot_file) as f:
             data = json.load(f)
         return cls(**data)
 
@@ -80,8 +80,8 @@ class ConfigurationRollback:
         return logger
 
     def list_snapshots(
-        self, environment: Optional[str] = None
-    ) -> List[DeploymentSnapshot]:
+        self, environment: str | None = None
+    ) -> list[DeploymentSnapshot]:
         """List available deployment snapshots"""
         snapshots = []
 
@@ -99,7 +99,7 @@ class ConfigurationRollback:
         snapshots.sort(key=lambda s: s.timestamp, reverse=True)
         return snapshots
 
-    def get_snapshot(self, snapshot_id: str) -> Optional[DeploymentSnapshot]:
+    def get_snapshot(self, snapshot_id: str) -> DeploymentSnapshot | None:
         """Get a specific snapshot by ID"""
         snapshot_file = self.snapshots_dir / f"{snapshot_id}.json"
 
@@ -109,7 +109,7 @@ class ConfigurationRollback:
         try:
             return DeploymentSnapshot.from_file(snapshot_file)
         except Exception:
-            self.logger.error(f"Failed to load snapshot {snapshot_id}: {e}")
+            self.logger.exception(f"Failed to load snapshot {snapshot_id}: {e}")
             return None
 
     def validate_rollback_target(self, snapshot: DeploymentSnapshot) -> bool:
@@ -129,12 +129,12 @@ class ConfigurationRollback:
             return True
 
         except Exception:
-            self.logger.error(f"Snapshot archive is corrupted: {e}")
+            self.logger.exception(f"Snapshot archive is corrupted: {e}")
             return False
 
     def create_current_backup(self, environment: str) -> str:
         """Create a backup of current configuration before rollback"""
-        timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d-%H%M%S")
+        timestamp = datetime.now(tz=UTC).strftime("%Y%m%d-%H%M%S")
         backup_id = f"pre-rollback-{environment}-{timestamp}"
 
         # Create backup archive
@@ -162,7 +162,7 @@ class ConfigurationRollback:
             return backup_id
 
         except Exception:
-            self.logger.error(f"Failed to create backup: {e}")
+            self.logger.exception(f"Failed to create backup: {e}")
             raise
 
     def restore_snapshot(
@@ -181,7 +181,7 @@ class ConfigurationRollback:
             try:
                 backup_id = self.create_current_backup(snapshot.environment)
             except Exception:
-                self.logger.error(f"Failed to create backup: {e}")
+                self.logger.exception(f"Failed to create backup: {e}")
                 return False
 
         # Restore from snapshot
@@ -206,7 +206,7 @@ class ConfigurationRollback:
             return True
 
         except Exception:
-            self.logger.error(f"Failed to restore snapshot: {e}")
+            self.logger.exception(f"Failed to restore snapshot: {e}")
 
             # Try to restore from backup if available
             if backup_id:
@@ -227,7 +227,7 @@ class ConfigurationRollback:
             # Check if we're in a Git repository
             result = subprocess.run(
                 ["git", "rev-parse", "--git-dir"],
-                cwd=self.config_dir.parent,
+                check=False, cwd=self.config_dir.parent,
                 capture_output=True,
                 text=True,
             )
@@ -243,7 +243,7 @@ class ConfigurationRollback:
                 if file_path.startswith("config/"):
                     cmd = ["git", "checkout", snapshot.commit_sha, "--", file_path]
                     result = subprocess.run(
-                        cmd, cwd=self.config_dir.parent, capture_output=True, text=True
+                        cmd, check=False, cwd=self.config_dir.parent, capture_output=True, text=True
                     )
 
                     if result.returncode != 0:
@@ -272,10 +272,10 @@ class ConfigurationRollback:
             return True
 
         except subprocess.CalledProcessError as e:
-            self.logger.error(f"Git rollback failed: {e}")
+            self.logger.exception(f"Git rollback failed: {e}")
             return False
         except Exception:
-            self.logger.error(f"Unexpected error during Git rollback: {e}")
+            self.logger.exception(f"Unexpected error during Git rollback: {e}")
             return False
 
     def validate_post_rollback(self, environment: str) -> bool:
@@ -302,7 +302,7 @@ class ConfigurationRollback:
                     "--environment",
                     environment,
                 ],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=120,
             )
@@ -310,22 +310,21 @@ class ConfigurationRollback:
             if result.returncode == 0:
                 self.logger.info("Post-rollback validation passed")
                 return True
-            else:
-                self.logger.error(f"Post-rollback validation failed: {result.stderr}")
-                return False
+            self.logger.error(f"Post-rollback validation failed: {result.stderr}")
+            return False
 
         except subprocess.TimeoutExpired:
-            self.logger.error("Post-rollback validation timed out")
+            self.logger.exception("Post-rollback validation timed out")
             return False
         except Exception:
-            self.logger.error(f"Failed to run post-rollback validation: {e}")
+            self.logger.exception(f"Failed to run post-rollback validation: {e}")
             return False
 
     def generate_rollback_report(
         self, snapshot: DeploymentSnapshot, success: bool
     ) -> str:
         """Generate a rollback report"""
-        timestamp = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = datetime.now(tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
 
         report_lines = [
             "# Configuration Rollback Report",

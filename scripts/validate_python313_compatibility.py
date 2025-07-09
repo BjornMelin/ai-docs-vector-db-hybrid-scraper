@@ -16,19 +16,18 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 
-def check_python_version() -> Tuple[bool, str]:
+def check_python_version() -> tuple[bool, str]:
     """Check if running on Python 3.13+"""
     version = sys.version_info
     if version >= (3, 13):
         return True, f"✅ Python {version.major}.{version.minor}.{version.micro}"
-    else:
-        return (
-            False,
-            f"⚠️  Python {version.major}.{version.minor}.{version.micro} (3.13+ recommended)",
-        )
+    return (
+        False,
+        f"⚠️  Python {version.major}.{version.minor}.{version.micro} (3.13+ recommended)",
+    )
 
 
-def check_critical_imports() -> Dict[str, bool]:
+def check_critical_imports() -> dict[str, bool]:
     """Test importing critical dependencies"""
     critical_packages = [
         # Core framework
@@ -72,7 +71,7 @@ def check_critical_imports() -> Dict[str, bool]:
     return results
 
 
-def check_src_imports() -> Dict[str, bool]:
+def check_src_imports() -> dict[str, bool]:
     """Test importing our own modules"""
     src_modules = [
         "src.config.settings",
@@ -97,7 +96,7 @@ def check_src_imports() -> Dict[str, bool]:
     return results
 
 
-def test_basic_functionality() -> Dict[str, bool]:
+def test_basic_functionality() -> dict[str, bool]:
     """Test basic functionality of key components"""
     tests = {}
 
@@ -153,7 +152,8 @@ def test_basic_functionality() -> Dict[str, bool]:
         import psutil
 
         cpu_count = psutil.cpu_count()
-        assert isinstance(cpu_count, int) and cpu_count > 0
+        assert isinstance(cpu_count, int)
+        assert cpu_count > 0
         tests["psutil_basic"] = True
     except Exception:
         tests["psutil_basic"] = False
@@ -163,10 +163,10 @@ def test_basic_functionality() -> Dict[str, bool]:
 
 
 def print_summary(
-    python_check: Tuple[bool, str],
-    import_results: Dict[str, bool],
-    src_results: Dict[str, bool],
-    functionality_results: Dict[str, bool],
+    python_check: tuple[bool, str],
+    import_results: dict[str, bool],
+    src_results: dict[str, bool],
+    functionality_results: dict[str, bool],
 ) -> None:
     """Print validation summary"""
     print("\n" + "=" * 60)

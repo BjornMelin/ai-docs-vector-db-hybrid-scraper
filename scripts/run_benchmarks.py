@@ -58,7 +58,8 @@ def run_benchmark_suite(suite_name, output_file, env):
     elif suite_name == "integration":
         test_path = "tests/performance"
     else:
-        raise ValueError(f"Unknown benchmark suite: {suite_name}")
+        msg = f"Unknown benchmark suite: {suite_name}"
+        raise ValueError(msg)
 
     # Check if path exists
     if not Path(test_path).exists():
@@ -134,10 +135,7 @@ def main():
     env = setup_environment()
 
     # Determine which suites to run
-    if args.suite == "all":
-        suites = ["config", "core", "integration"]
-    else:
-        suites = [args.suite]
+    suites = ["config", "core", "integration"] if args.suite == "all" else [args.suite]
 
     # Run benchmarks
     success = True

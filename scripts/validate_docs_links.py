@@ -12,7 +12,7 @@ Usage:
 """
 
 import argparse
-import json  # noqa: PLC0415
+import json
 import re
 import sys
 from pathlib import Path
@@ -108,7 +108,7 @@ class LinkValidator:
             return True
 
         # Handle relative paths
-        if clean_link.startswith("./") or clean_link.startswith("../"):
+        if clean_link.startswith(("./", "../")):
             # Resolve relative path from source file's directory
             source_dir = source_file.parent
             target_path = (source_dir / clean_link).resolve()
@@ -119,8 +119,7 @@ class LinkValidator:
                 return False
 
         # Handle absolute paths from docs root
-        if clean_link.startswith("/"):
-            clean_link = clean_link[1:]
+        clean_link = clean_link.removeprefix("/")
 
         target_path = Path(clean_link)
         return target_path in self.valid_files
@@ -142,7 +141,7 @@ class LinkValidator:
                 try:
                     rel_path = (
                         Path("..") / valid_file
-                        if source_dir != Path(".")
+                        if source_dir != Path()
                         else valid_file
                     )
                     similar_files.append(str(rel_path))

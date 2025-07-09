@@ -13,8 +13,8 @@ def update_status_indicators():
     click.echo("📝 Updating status indicators...")
     result = subprocess.run([
         "python", "scripts/add_status_indicators.py"
-    ], capture_output=True, text=True)
-    
+    ], check=False, capture_output=True, text=True)
+
     if result.returncode == 0:
         click.echo("  ✅ Status indicators updated")
     else:
@@ -28,8 +28,8 @@ def update_documentation_links():
     click.echo("🔗 Updating documentation links...")
     result = subprocess.run([
         "python", "scripts/update_doc_links.py"
-    ], capture_output=True, text=True)
-    
+    ], check=False, capture_output=True, text=True)
+
     if result.returncode == 0:
         click.echo("  ✅ Documentation links updated")
     else:
@@ -43,8 +43,8 @@ def validate_documentation_links():
     click.echo("🔍 Validating documentation links...")
     result = subprocess.run([
         "python", "scripts/validate_docs_links.py"
-    ], capture_output=True, text=True)
-    
+    ], check=False, capture_output=True, text=True)
+
     if result.returncode == 0:
         click.echo("  ✅ Documentation links validated")
     else:
@@ -58,8 +58,8 @@ def build_documentation():
     click.echo("📚 Building documentation...")
     result = subprocess.run([
         "mkdocs", "build"
-    ], capture_output=True, text=True)
-    
+    ], check=False, capture_output=True, text=True)
+
     if result.returncode == 0:
         click.echo("  ✅ Documentation built successfully")
     else:
@@ -74,33 +74,32 @@ def build_documentation():
 def main(skip_validation: bool, build_only: bool):
     """Complete documentation build process."""
     click.echo("📚 Starting documentation automation...\n")
-    
+
     success = True
-    
+
     if not build_only:
         # Update status indicators
         if not update_status_indicators():
             success = False
-            
+
         # Update documentation links
         if not update_documentation_links():
             success = False
-    
+
     # Validate links (unless skipped)
-    if not skip_validation:
-        if not validate_documentation_links():
-            success = False
-    
+    if not skip_validation and not validate_documentation_links():
+        success = False
+
     # Build documentation
     if not build_documentation():
         success = False
-    
+
     click.echo()
     if success:
         click.echo("✅ Documentation automation completed successfully!")
     else:
         click.echo("❌ Documentation automation failed!")
-        
+
     sys.exit(0 if success else 1)
 
 

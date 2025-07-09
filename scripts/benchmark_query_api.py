@@ -6,10 +6,9 @@ This script demonstrates the enhanced search capabilities and optimizations
 implemented in issue #55.
 """
 
-import asyncio  # noqa: PLC0415
+import asyncio
 
-from src.config import get_config
-from src.config import FusionAlgorithm
+from src.config import FusionAlgorithm, get_config
 from src.services.vector_db.service import QdrantService
 
 

@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 """Test performance monitoring dashboard and regression detection."""
 
-import json  # noqa: PLC0415
+import json
 import sqlite3
-import time  # noqa: PLC0415
-from datetime import datetime, timezone
-from datetime import timedelta
+import time
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
-
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -66,8 +64,8 @@ class TestPerformanceDatabase:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.execute(
                 """
-                INSERT INTO test_runs 
-                (timestamp, git_commit, branch, total_tests, total_time, 
+                INSERT INTO test_runs
+                (timestamp, git_commit, branch, total_tests, total_time,
                  average_time, parallel_workers, success_rate)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
@@ -116,8 +114,8 @@ class TestPerformanceDatabase:
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
                 """
-                INSERT INTO performance_alerts 
-                (timestamp, alert_type, test_name, current_value, baseline_value, 
+                INSERT INTO performance_alerts
+                (timestamp, alert_type, test_name, current_value, baseline_value,
                  threshold_exceeded, message)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
@@ -139,15 +137,15 @@ class TestPerformanceDatabase:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.execute(
                 """
-                SELECT * FROM test_runs 
-                WHERE timestamp > ? 
+                SELECT * FROM test_runs
+                WHERE timestamp > ?
                 ORDER BY timestamp DESC
             """,
                 (cutoff,),
             )
 
             columns = [desc[0] for desc in cursor.description]
-            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+            return [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
 
     def get_test_history(self, test_name: str, days: int = 30) -> list[Dict]:
         """Get performance history for a specific test."""
@@ -178,19 +176,19 @@ class TestPerformanceDatabase:
             # Overall trends
             cursor = conn.execute(
                 """
-                SELECT 
+                SELECT
                     AVG(total_time) as avg_total_time,
                     AVG(average_time) as avg_test_time,
                     AVG(success_rate) as avg_success_rate,
                     COUNT(*) as run_count
-                FROM test_runs 
+                FROM test_runs
                 WHERE timestamp > ?
             """,
                 (cutoff,),
             )
 
             overall = dict(
-                zip([desc[0] for desc in cursor.description], cursor.fetchone())
+                zip([desc[0] for desc in cursor.description], cursor.fetchone(), strict=False)
             )
 
             # Slowest tests
@@ -318,7 +316,7 @@ class PerformanceDashboard:
         html_content = html_content.replace("{{TRENDS_DATA}}", json.dumps(trends))
         html_content = html_content.replace("{{RECENT_RUNS}}", json.dumps(recent_runs))
         html_content = html_content.replace(
-            "{{LAST_UPDATED}}", datetime.now(tz=timezone.utc).isoformat()
+            "{{LAST_UPDATED}}", datetime.now(tz=UTC).isoformat()
         )
 
         Path(output_file).write_text(html_content)
@@ -353,15 +351,15 @@ class PerformanceDashboard:
         <h1>🚀 Test Performance Dashboard</h1>
         <p>Last Updated: {{LAST_UPDATED}}</p>
     </div>
-    
+
     <div class="metrics" id="metricsContainer">
         <!-- Metrics will be populated by JavaScript -->
     </div>
-    
+
     <div class="chart-container">
         <canvas id="performanceChart"></canvas>
     </div>
-    
+
     <h2>📋 Recent Test Runs</h2>
     <table class="table" id="recentRunsTable">
         <thead>
@@ -378,7 +376,7 @@ class PerformanceDashboard:
             <!-- Runs will be populated by JavaScript -->
         </tbody>
     </table>
-    
+
     <h2>🐌 Slowest Tests</h2>
     <table class="table" id="slowestTestsTable">
         <thead>
@@ -393,23 +391,23 @@ class PerformanceDashboard:
             <!-- Tests will be populated by JavaScript -->
         </tbody>
     </table>
-    
+
     <script>
         const trendsData = {{TRENDS_DATA}};
         const recentRuns = {{RECENT_RUNS}};
-        
+
         // Populate metrics
         function populateMetrics() {
             const metricsContainer = document.getElementById('metricsContainer');
             const overall = trendsData.overall;
-            
+
             const metrics = [
                 { label: 'Average Total Time', value: `${overall.avg_total_time?.toFixed(1) || 0}s`, status: overall.avg_total_time > 300 ? 'danger' : 'good' },
                 { label: 'Average Test Time', value: `${(overall.avg_test_time * 1000)?.toFixed(0) || 0}ms`, status: overall.avg_test_time > 0.5 ? 'warning' : 'good' },
                 { label: 'Success Rate', value: `${(overall.avg_success_rate * 100)?.toFixed(1) || 0}%`, status: overall.avg_success_rate < 0.95 ? 'danger' : 'good' },
                 { label: 'Total Runs', value: overall.run_count || 0, status: 'good' }
             ];
-            
+
             metrics.forEach(metric => {
                 const card = document.createElement('div');
                 card.className = 'metric-card';
@@ -420,16 +418,16 @@ class PerformanceDashboard:
                 metricsContainer.appendChild(card);
             });
         }
-        
+
         // Populate recent runs table
         function populateRecentRuns() {
             const tbody = document.getElementById('recentRunsBody');
-            
+
             recentRuns.forEach(run => {
                 const row = document.createElement('tr');
                 const date = new Date(run.timestamp * 1000).toLocaleString();
                 const status = run.success_rate >= 0.95 ? 'good' : run.success_rate >= 0.8 ? 'warning' : 'danger';
-                
+
                 row.innerHTML = `
                     <td>${date}</td>
                     <td>${run.total_tests}</td>
@@ -441,15 +439,15 @@ class PerformanceDashboard:
                 tbody.appendChild(row);
             });
         }
-        
+
         // Populate slowest tests table
         function populateSlowestTests() {
             const tbody = document.getElementById('slowestTestsBody');
-            
+
             trendsData.slowest_tests.forEach(test => {
                 const row = document.createElement('tr');
                 const status = test.avg_duration > 2 ? 'danger' : test.avg_duration > 0.5 ? 'warning' : 'good';
-                
+
                 row.innerHTML = `
                     <td>${test.test}</td>
                     <td class="status-${status}">${test.avg_duration.toFixed(3)}s</td>
@@ -459,11 +457,11 @@ class PerformanceDashboard:
                 tbody.appendChild(row);
             });
         }
-        
+
         // Create performance chart
         function createPerformanceChart() {
             const ctx = document.getElementById('performanceChart').getContext('2d');
-            
+
             const chartData = {
                 labels: recentRuns.map(run => new Date(run.timestamp * 1000).toLocaleDateString()).reverse(),
                 datasets: [{
@@ -481,7 +479,7 @@ class PerformanceDashboard:
                     yAxisID: 'y1'
                 }]
             };
-            
+
             new Chart(ctx, {
                 type: 'line',
                 data: chartData,
@@ -520,7 +518,7 @@ class PerformanceDashboard:
                 }
             });
         }
-        
+
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
             populateMetrics();
@@ -541,7 +539,7 @@ class PerformanceDashboard:
         report = []
         report.append("🚀 Test Performance Report")
         report.append("=" * 50)
-        report.append(f"Generated: {datetime.now(tz=timezone.utc).isoformat()}")
+        report.append(f"Generated: {datetime.now(tz=UTC).isoformat()}")
         report.append("")
 
         # Overall trends
@@ -637,7 +635,7 @@ def main():
         print(report)
 
         # Save report to file
-        report_file = f"performance_report_{datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')}.txt"
+        report_file = f"performance_report_{datetime.now(tz=UTC).strftime('%Y%m%d_%H%M%S')}.txt"
         Path(report_file).write_text(report)
         print(f"\n📄 Report saved to: {report_file}")
 

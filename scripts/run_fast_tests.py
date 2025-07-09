@@ -2,27 +2,27 @@
 """Fast test execution script for optimized CI/CD and development feedback loops."""
 
 import argparse
-import os  # noqa: PLC0415
+import os
 import subprocess
 import sys
-import time  # noqa: PLC0415
+import time
 from pathlib import Path
 
 
 class FastTestRunner:
     """Optimized test runner for fast feedback loops."""
-    
+
     def __init__(self):
         self.cpu_count = max(1, (os.cpu_count() or 4) - 1)
         self.is_ci = os.getenv('CI', '').lower() in ('true', '1')
         self.project_root = Path(__file__).parent.parent
-        
+
     def run_command(self, cmd: list[str], timeout: int = 300) -> tuple[int, str, str]:
         """Run command with timeout and capture output."""
         try:
             result = subprocess.run(
                 cmd,
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=timeout,
                 cwd=self.project_root,
@@ -30,7 +30,7 @@ class FastTestRunner:
             return result.returncode, result.stdout, result.stderr
         except subprocess.TimeoutExpired:
             return 1, "", f"Command timed out after {timeout} seconds"
-    
+
     def run_fast_tests(self, profile: str = "fast", parallel: int = 0, verbose: bool = False, coverage: bool = False) -> int:
         """Run unit tests with aggressive optimization."""
         cmd = [
@@ -43,7 +43,7 @@ class FastTestRunner:
             "--disable-warnings",  # Less noise in development
             "--durations=5"  # Show slowest tests
         ]
-        
+
         # Profile-specific optimizations
         if profile == "unit":
             cmd.extend(["-m", "fast", "--maxfail=1"])
@@ -53,22 +53,22 @@ class FastTestRunner:
             timeout = 120
         else:
             timeout = 300
-            
+
         if not self.is_ci:
             cmd.extend([
                 "--lf",  # Last failed only (for local development)
                 "-q" if not verbose else "-v"
             ])
-        
+
         if coverage:
             cmd.extend(["--cov=src", "--cov-report=term-missing:skip-covered"])
-            
+
         return self.run_command(cmd, timeout)
-    
+
     def run_integration_tests(self, parallel: int = 0) -> tuple[int, str, str]:
         """Run integration tests separately."""
         cmd = [
-            "uv", "run", "pytest", 
+            "uv", "run", "pytest",
             "tests/integration/",
             "-v",
             f"-n{min(parallel if parallel > 0 else self.cpu_count, 4)}"  # Fewer workers for integration
@@ -97,7 +97,7 @@ def main():
     )
 
     args = parser.parse_args()
-    
+
     # Initialize test runner
     runner = FastTestRunner()
 
@@ -128,15 +128,15 @@ def main():
             cmd.extend(["-m", "(fast or medium) and not slow", "--maxfail=5"])
         else:  # full
             cmd.extend(["--maxfail=10"])
-            
+
         if args.coverage:
             cmd.extend(["--cov=src", "--cov-report=html", "--cov-report=term-missing"])
-            
+
         if args.verbose:
             cmd.extend(["-v"])
         else:
             cmd.extend(["-q"])
-            
+
         returncode, stdout, stderr = runner.run_command(cmd, args.timeout)
 
     execution_time = time.time() - start_time
@@ -148,7 +148,7 @@ def main():
         print(stderr, file=sys.stderr)
 
     # Performance summary
-    print(f"\n📊 Execution Summary:")
+    print("\n📊 Execution Summary:")
     print(f"   Profile: {args.profile}")
     print(f"   Duration: {execution_time:.2f}s")
     print(f"   Status: {'✅ PASSED' if returncode == 0 else '❌ FAILED'}")

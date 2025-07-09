@@ -6,16 +6,18 @@ This script provides comprehensive validation for configuration deployments,
 supporting the GitOps configuration management workflow.
 """
 
-import json  # noqa: PLC0415
-import sys
-import yaml
 import argparse
-import logging  # noqa: PLC0415
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass
+import json
+import logging
 import subprocess
-import time  # noqa: PLC0415
+import sys
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+import yaml
+
 
 # Import existing project modules
 sys.path.append(str(Path(__file__).parent.parent / "src"))
@@ -27,10 +29,10 @@ except ImportError as e:
     logging.warning(f"Could not import project modules: {e}")
 
     # Define minimal fallback validators
-    def load_config() -> Dict[str, Any]:
+    def load_config() -> dict[str, Any]:
         return {}
 
-    def validate_config_schema(config: Dict[str, Any]) -> bool:
+    def validate_config_schema(config: dict[str, Any]) -> bool:
         return True
 
 
@@ -41,7 +43,7 @@ class ValidationResult:
     component: str
     passed: bool
     message: str
-    details: Optional[Dict[str, Any]] = None
+    details: dict[str, Any] | None = None
 
 
 class ConfigDeploymentValidator:
@@ -60,7 +62,7 @@ class ConfigDeploymentValidator:
         self.config_dir = Path(config_dir)
         self.environment = environment
         self.logger = self._setup_logging()
-        self.results: List[ValidationResult] = []
+        self.results: list[ValidationResult] = []
 
     def _setup_logging(self) -> logging.Logger:
         """Setup logging configuration"""
@@ -86,13 +88,13 @@ class ConfigDeploymentValidator:
 
         for json_file in json_files:
             try:
-                with open(json_file, "r") as f:
+                with open(json_file) as f:
                     json.load(f)
                 self.logger.debug(f"✅ Valid JSON: {json_file}")
             except json.JSONDecodeError as e:
                 error_msg = f"Invalid JSON in {json_file}: {e}"
                 errors.append(error_msg)
-                self.logger.error(error_msg)
+                self.logger.exception(error_msg)
 
         if errors:
             return ValidationResult(
@@ -119,13 +121,13 @@ class ConfigDeploymentValidator:
 
         for yaml_file in yaml_files:
             try:
-                with open(yaml_file, "r") as f:
+                with open(yaml_file) as f:
                     yaml.safe_load(f)
                 self.logger.debug(f"✅ Valid YAML: {yaml_file}")
             except yaml.YAMLError as e:
                 error_msg = f"Invalid YAML in {yaml_file}: {e}"
                 errors.append(error_msg)
-                self.logger.error(error_msg)
+                self.logger.exception(error_msg)
 
         if errors:
             return ValidationResult(
@@ -155,7 +157,7 @@ class ConfigDeploymentValidator:
             )
 
         try:
-            with open(config_file, "r") as f:
+            with open(config_file) as f:
                 config = json.load(f)
 
             # Validate required sections
@@ -231,7 +233,7 @@ class ConfigDeploymentValidator:
             # Validate base compose file
             result = subprocess.run(
                 ["docker", "compose", "-f", str(base_compose), "config"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=30,
             )
@@ -255,7 +257,7 @@ class ConfigDeploymentValidator:
                         str(env_compose),
                         "config",
                     ],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=30,
                 )
@@ -309,7 +311,7 @@ class ConfigDeploymentValidator:
                         "config",
                         "/etc/prometheus/prometheus.yml",
                     ],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=60,
                 )
@@ -326,7 +328,7 @@ class ConfigDeploymentValidator:
         if grafana_dashboards.exists():
             for dashboard_file in grafana_dashboards.glob("*.json"):
                 try:
-                    with open(dashboard_file, "r") as f:
+                    with open(dashboard_file) as f:
                         dashboard = json.load(f)
 
                     # Basic dashboard validation
@@ -361,7 +363,7 @@ class ConfigDeploymentValidator:
         # Check for hardcoded secrets
         for config_file in self.config_dir.rglob("*.json"):
             try:
-                with open(config_file, "r") as f:
+                with open(config_file) as f:
                     content = f.read()
 
                 # Look for potential secrets (excluding templates)
@@ -382,7 +384,7 @@ class ConfigDeploymentValidator:
         if self.environment == "production":
             config_file = self.config_dir / "templates" / "production.json"
             if config_file.exists():
-                with open(config_file, "r") as f:
+                with open(config_file) as f:
                     config = json.load(f)
 
                 if config.get("debug", False):
@@ -434,7 +436,7 @@ class ConfigDeploymentValidator:
                 message=f"Schema validation failed: {e}",
             )
 
-    def run_all_validations(self) -> Tuple[bool, List[ValidationResult]]:
+    def run_all_validations(self) -> tuple[bool, list[ValidationResult]]:
         """Run all configuration validations"""
         self.logger.info(
             f"Starting comprehensive configuration validation for {self.environment}"
@@ -471,13 +473,13 @@ class ConfigDeploymentValidator:
                     message=f"Validation failed with error: {e}",
                 )
                 results.append(error_result)
-                self.logger.error(f"❌ {validation.__name__}: {e}")
+                self.logger.exception(f"❌ {validation.__name__}: {e}")
                 all_passed = False
 
         self.results = results
         return all_passed, results
 
-    def generate_report(self, output_file: Optional[Path] = None) -> str:
+    def generate_report(self, output_file: Path | None = None) -> str:
         """Generate a validation report"""
         report_lines = [
             "# Configuration Deployment Validation Report",
