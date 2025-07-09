@@ -1,0 +1,55 @@
+# Task ID: 46
+# Title: Browser Session Management & Resilience Patterns with Redis, Error Handling, and Circuit Breakers
+# Status: pending
+# Dependencies: 45
+# Priority: high
+# Description: Implement robust browser session management by combining Redis-backed session persistence with explicit ≥80% session reuse target, unified FastAPI error handling with BrowserUseError middleware translation, and circuit breaker patterns to achieve operational resilience and comprehensive observability.
+# Details:
+1. Design and implement async save/restore functions for browser session contexts using Redis as the backing store, ensuring session affinity mapping for distributed/clustered deployments (e.g., via consistent hashing or sticky sessions). Sessions must be serialized/deserialized efficiently and support TTL-based cleanup with Redis keyspace notifications for expired sessions. 
+2. Integrate Redis session persistence into browser-use orchestration, targeting explicit ≥80% session reuse rate across distributed agents. Ensure fallback and graceful degradation if Redis is unavailable.
+3. Implement robust error handling using FastAPI's HTTPException patterns, with a centralized error code mapping module (e.g., src/common/errors.py) to translate internal errors and circuit breaker states into consistent API responses. Include explicit middleware to translate BrowserUseError exceptions to HTTPException responses.
+4. Add circuit breaker logic (using a shared library or custom implementation) to wrap all external browser and network calls. Configure explicit thresholds (fail_max=5, reset_timeout=60s) and ensure breaker state transitions are observable and trigger appropriate HTTP 503 responses when open.
+5. Expose metrics endpoints (via OpenTelemetry and Prometheus integration) for session hit/miss rates, error frequencies, and circuit breaker states. Instrument all major session and error-handling paths with OpenTelemetry spans and attributes for traceability.
+6. Ensure all session operations, error handling, and circuit breaker events are logged and traced, with metrics available for dashboarding and alerting. 
+7. Document operational patterns, configuration options (e.g., Redis URLs, TTLs, breaker thresholds), and provide code samples for async session save/restore, error mapping, and circuit breaker usage.
+
+# Test Strategy:
+- Unit test async session save/restore logic with Redis (using fakeredis or test containers), including TTL expiry with keyspace notifications and session affinity mapping.
+- Integration test session reuse rate: simulate 1000 browser sessions and verify explicit ≥80% reuse target is met via Redis persistence.
+- Simulate Redis outages and verify graceful fallback and error reporting.
+- Test FastAPI endpoints for correct error code mapping and HTTPException responses under various failure scenarios, including BrowserUseError translation.
+- Mock external failures to ensure circuit breakers open after threshold (fail_max=5) and API returns 503 within 10 ms, with reset_timeout=60s behavior.
+- Validate OpenTelemetry traces and metrics for session hit rates, error frequencies, and circuit breaker state transitions appear in Prometheus/Grafana dashboards.
+- Conduct load and chaos tests to ensure operational resilience and no memory/resource leaks.
+
+# Subtasks:
+## 1. Implement Browser-Specific Session Persistence with Redis [pending]
+### Dependencies: None
+### Description: Design and implement async save/restore functions for browser session contexts using Redis as the backing store. Ensure efficient serialization/deserialization, TTL-based cleanup, and support for Redis keyspace notifications for expired sessions. Integrate with browser_use_adapter.py and services/cache/ for seamless session lifecycle management.
+### Details:
+Sessions must support affinity mapping for distributed deployments (e.g., consistent hashing or sticky sessions), and handle resource cleanup for long-running sessions. Add Redis Sentinel support for high availability.
+
+## 2. Integrate Session Routing and Affinity with AutomationRouter [pending]
+### Dependencies: 46.1
+### Description: Integrate Redis-backed session persistence with AutomationRouter for session routing and affinity. Ensure ≥80% session reuse rate across distributed agents, and implement session warmup strategies to meet performance targets.
+### Details:
+Implement session affinity mapping and routing logic in automation_router.py. Support session migration for maintenance and ensure compatibility with the 5-tier automation hierarchy.
+
+## 3. Implement Unified Error Handling and BrowserUseError Middleware [pending]
+### Dependencies: None
+### Description: Develop a centralized error code mapping module to translate internal errors and circuit breaker states into consistent FastAPI HTTPException responses. Implement middleware to translate BrowserUseError exceptions and integrate with services/errors.py.
+### Details:
+Ensure all error handling paths are instrumented for observability and that error responses are consistent across the API surface.
+
+## 4. Integrate Circuit Breaker Patterns for External Calls [pending]
+### Dependencies: 46.3
+### Description: Add circuit breaker logic (using a shared library or custom implementation) to wrap all external browser and network calls. Configure explicit thresholds (fail_max=5, reset_timeout=60s) and ensure breaker state transitions are observable and trigger appropriate HTTP 503 responses when open.
+### Details:
+Integrate with services/functional/circuit_breaker.py and ensure all circuit breaker events are logged and traced. Support graceful fallback and session migration when breakers are open.
+
+## 5. Implement Observability, Metrics, and Security for Session Management [pending]
+### Dependencies: 46.1, 46.2, 46.3, 46.4
+### Description: Expose metrics endpoints (via OpenTelemetry and Prometheus) for session hit/miss rates, error frequencies, and circuit breaker states. Instrument all major session and error-handling paths with OpenTelemetry spans and attributes. Add session analytics dashboards, encryption, and access controls for session security.
+### Details:
+Integrate with services/monitoring/ and observability/. Ensure all session operations, error handling, and circuit breaker events are logged and traced. Provide dashboards and alerting for operational visibility.
+

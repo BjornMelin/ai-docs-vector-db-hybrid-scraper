@@ -253,7 +253,7 @@
             "description": "Comprehensively test Task 4's existing FastAPI error handling implementation across all endpoints. Identify any gaps in error response consistency, HTTP status codes, or missing error scenarios that need enhancement.",
             "status": "pending",
             "dependencies": [],
-            "details": "Audit all API endpoints to verify they use Task 4's error handling patterns correctly. Test edge cases, validation errors, and internal server errors. Document any inconsistencies or missing error scenarios that need addressing.",
+            "details": "Audit all API endpoints to verify they use Task 4's error handling patterns correctly. Test edge cases, validation errors, and internal server errors. Document any inconsistencies or missing error scenarios that need addressing.\n<info added on 2025-07-09T07:43:04.579Z>\nPOA (Performance Optimization API) linting cleanup completed. All 260 initial ruff errors have been systematically resolved through iterative fixes. The POA modules now maintain proper code formatting standards and pass all static analysis checks. This cleanup ensures POA error handling implementations align with project coding standards and can be properly audited for consistency with Task 4's error handling patterns.\n</info added on 2025-07-09T07:43:04.579Z>",
             "testStrategy": "Integration test all endpoints with invalid inputs, missing data, and error conditions. Verify consistent error response format and appropriate HTTP status codes across the API."
           },
           {
@@ -859,7 +859,7 @@
           11,
           12
         ],
-        "status": "done",
+        "status": "in-progress",
         "subtasks": [
           {
             "id": 1,
@@ -1556,7 +1556,7 @@
         "id": 26,
         "title": "Type-annotation modernisation & static type checks",
         "description": "Validate type annotation modernization completed in Tasks 21-22 and implement comprehensive mypy static type checking for the Python 3.13 migrated codebase to ensure type safety and maintainability for solo development.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           21,
           22,
@@ -1570,7 +1570,7 @@
             "id": 1,
             "title": "Validate Type Annotation Modernization from Python 3.13 Migration",
             "description": "Verify that type annotations were properly modernized during Tasks 21-22, identifying any remaining legacy patterns that need cleanup.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "details": "Review the codebase post-migration to confirm modern type syntax usage (X | Y unions, built-in generics). Run `ruff check --select UP00 .` to identify any missed modernization opportunities and clean up any remaining legacy typing imports.",
             "testStrategy": "Execute Ruff checks and manually review key modules to confirm consistent modern type annotation usage throughout the migrated codebase."
@@ -1579,11 +1579,11 @@
             "id": 2,
             "title": "Configure mypy for Python 3.13 Static Type Checking",
             "description": "Set up mypy with appropriate configuration for the migrated Python 3.13 codebase, optimized for solo developer workflow.",
-            "status": "pending",
+            "status": "in-progress",
             "dependencies": [
               1
             ],
-            "details": "Add mypy to development dependencies in pyproject.toml, create mypy.ini with strict mode flags suitable for solo development, and configure it to check all source files with appropriate excludes for generated code.",
+            "details": "Add mypy to development dependencies in pyproject.toml, create mypy.ini with strict mode flags suitable for solo development, and configure it to check all source files with appropriate excludes for generated code.\n<info added on 2025-07-08T03:45:53.150Z>\nSuccessfully configured mypy development environment and completed initial error analysis. Removed deprecated `from __future__ import annotations` import from vector_search.py and ran comprehensive mypy check revealing 3651 total errors across 5 primary categories: attr-defined (526 errors for missing attributes), no-untyped-def (519 errors for missing function annotations), type-arg (488 errors for missing generic type parameters), call-arg (390 errors for function call argument mismatches), and union-attr (323 errors for union type attribute access issues). Initiated systematic resolution approach prioritizing type annotations and generic type parameters to address foundational typing infrastructure before tackling more complex attribute and call-related errors.\n</info added on 2025-07-08T03:45:53.150Z>\n<info added on 2025-07-08T04:07:24.000Z>\nContinued systematic mypy error resolution progress. Made strategic fixes across multiple categories including assignment type errors in algorithms.py, proper type annotations in response_converter.py, tuple type annotations in errors.py, Pydantic decorator order fixes in deployment/models.py, and generic type parameters for Future/Task/Callable types. Fixed 27 errors this session (3678 → 3651), bringing cumulative reduction to 60+ errors from baseline. Key improvements: type-arg errors reduced by 7 (486 → 479), no-untyped-def errors reduced by 14 (518 → 504). Top remaining categories: attr-defined (520 errors), no-untyped-def (504 errors), type-arg (479 errors), call-arg (399 errors). Systematic approach proving effective for gradual error reduction.\n</info added on 2025-07-08T04:07:24.000Z>",
             "testStrategy": "Run mypy against the codebase to establish baseline results and confirm configuration is appropriate for the project's complexity and development style."
           },
           {
@@ -1970,7 +1970,7 @@
         "id": 46,
         "title": "Browser Session Management & Resilience Patterns with Redis, Error Handling, and Circuit Breakers",
         "description": "Implement robust browser session management by combining Redis-backed session persistence with explicit ≥80% session reuse target, unified FastAPI error handling with BrowserUseError middleware translation, and circuit breaker patterns to achieve operational resilience and comprehensive observability.",
-        "status": "pending",
+        "status": "in-progress",
         "dependencies": [
           45
         ],
@@ -2357,11 +2357,88 @@
             "parentTaskId": 50
           }
         ]
+      },
+      {
+        "id": 51,
+        "title": "Create Comprehensive End-to-End (E2E) Testing and User Experience Validation Suite",
+        "description": "Develop a comprehensive E2E testing framework using Playwright MCP tools for browser automation, user workflow validation, cross-browser compatibility testing, performance under load validation, and UX quality assurance with Minimum Delight quality gate implementation. Strategy document has been created at planning/in-progress/P5/e2e-testing.md with complete implementation roadmap.",
+        "status": "pending",
+        "dependencies": [
+          1,
+          2,
+          44,
+          45,
+          46,
+          47
+        ],
+        "priority": "high",
+        "details": "1. Implement E2E Testing Framework with Playwright MCP Integration:\n   - Integrate mcp__playwright__* tools for browser automation and testing following documented strategy\n   - Create comprehensive test scenarios covering user registration, document upload, search functionality, and RAG interactions\n   - Implement cross-browser testing matrix (Chrome, Firefox, Safari, Edge) with automated browser setup\n   - Build responsive design validation for mobile and desktop viewports\n\n2. User Workflow Testing and Portfolio Presentation Validation:\n   - Design end-to-end user journey tests from onboarding through advanced features per strategy document\n   - Implement portfolio presentation scenarios including document visualization, embedding exploration, and search result quality\n   - Create accessibility testing suite compliant with WCAG 2.1 AA standards\n   - Build performance testing under realistic load conditions with concurrent user simulation\n\n3. UX Quality Validation with Minimum Delight Quality Gate:\n   - Implement \"Minimum Delight\" metrics including page load times <2s, search response times <500ms, and UI interaction responsiveness <100ms as defined in strategy\n   - Create automated visual regression testing using screenshot comparison\n   - Build user experience metrics collection including task completion rates, error rates, and user satisfaction scoring\n   - Implement automated lighthouse audits for performance, accessibility, and SEO scores\n\n4. CI/CD Integration and Reporting:\n   - Integrate E2E tests into existing CI/CD pipeline with parallel test execution following documented workflow\n   - Create comprehensive test reporting with screenshots, videos, and performance metrics\n   - Implement flaky test detection and automatic retry mechanisms\n   - Build test environment provisioning and teardown automation\n\n5. Phase 1 Implementation (Ready to Execute):\n   - Begin with browser automation workflow implementation using strategy document as reference\n   - Establish basic Playwright MCP tool integration and validation\n   - Create foundational test infrastructure following documented approach",
+        "testStrategy": "1. Validate Playwright MCP tool integration by executing basic browser automation commands and verifying screenshot capture, form interaction, and navigation functionality across all target browsers following strategy document guidelines.\n\n2. Execute comprehensive user journey tests covering 95% of critical user paths including account creation, document management, search operations, and RAG interactions with ≥90% success rate per documented scenarios.\n\n3. Verify cross-browser compatibility by running the full test suite across Chrome, Firefox, Safari, and Edge browsers with consistent results and <5% variance in performance metrics as outlined in strategy.\n\n4. Validate Minimum Delight quality gates by measuring page load times, search response times, and UI responsiveness against defined thresholds with automated failure detection per strategy framework.\n\n5. Execute performance testing under load by simulating 50+ concurrent users and validating system responsiveness maintains quality standards following documented load scenarios.\n\n6. Verify CI/CD integration by running E2E tests in pipeline environment with proper test isolation, parallel execution, and comprehensive reporting generation per strategy workflow.\n\n7. Validate accessibility compliance by running automated WCAG 2.1 AA audits and ensuring 100% compliance across all tested user interfaces.\n\n8. Verify Phase 1 implementation by confirming strategy document requirements are met and foundation is established for subsequent phases.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Review and validate E2E testing strategy document",
+            "description": "Review the comprehensive E2E testing strategy document at planning/in-progress/P5/e2e-testing.md to understand implementation roadmap and requirements",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Set up Playwright MCP tool integration foundation",
+            "description": "Initialize basic Playwright MCP tool integration following strategy document guidelines and establish browser automation workflow foundation",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement core browser automation test scenarios",
+            "description": "Create basic test scenarios for user registration, document upload, and search functionality using documented approach",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Establish cross-browser testing matrix",
+            "description": "Configure automated browser setup for Chrome, Firefox, Safari, and Edge following strategy document specifications",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement Minimum Delight quality gate framework",
+            "description": "Create automated quality gate validation for page load times <2s, search response times <500ms, and UI responsiveness <100ms per strategy",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 52,
+        "title": "GROUP 2A – Performance Optimization Agent",
+        "description": "Implement an autonomous agent that continuously analyzes runtime metrics and applies database, API, memory, and async-processing optimizations to guarantee ≤100 ms 95th-percentile latency and reliable handling of 1 M+ documents.",
+        "details": "1. Architecture & Scope\n   • Deliver an event-driven “Performance Optimization Agent” (POA) deployed as a dedicated micro-service with privileged read-only access to observability data and write access to tunable config surfaces (e.g., DB indexes, cache TTLs, concurrency limits).\n   • Integrate with the benchmarking & profiling outputs produced in Task 48, consuming OpenTelemetry traces, Prometheus metrics, and pytest-benchmark CSVs via gRPC/HTTP API.\n   • Maintain a rule/heuristic engine plus optional ML-based optimiser (Optuna Bayesian tuner) to decide which optimisation to apply and to roll back if regression detected.\n\n2. Optimisation Domains\n   a. Database\n      – Automatic index recommendation and creation (PostgreSQL, Redis secondary indexes).\n      – Adaptive query plan caching and prepared-statement pooling.\n   b. API Layer\n      – Intelligent response caching (ETag, Redis, CDN headers) with dynamic TTL tuning.\n      – FastAPI middleware for micro-batching and async task off-loading (Starlette background tasks / Celery).\n   c. Memory & Object Lifecycle\n      – Implement object-pooling for high-churn models, enable Pydantic v2 compiled mode, and leverage Python 3.13 arena allocator hints.\n   d. Async Processing\n      – Tune uvicorn/uvloop workers via dynamic concurrency controls; integrate asyncio.TaskGroup patterns and cancellation scopes.\n   e. Global Caching Strategy\n      – Multi-layer cache (in-process LRU → Redis → CDN) with automated waterfall invalidation; use cache-aside pattern with stale-while-revalidate.\n\n3. Control Loop\n   • Every 60 s ingest latest metrics, compute SLI deltas, and trigger targeted optimisation jobs via Celery beat / APScheduler.\n   • Maintain change ledger (YAML) for audit and rollback; expose /optimisation/status REST endpoint.\n\n4. Safety & Rollback\n   • Canary roll-outs with automatic rollback on P95 > baseline +10 % for two consecutive windows.\n   • Use feature flags (Task 2 SmartConfig) to toggle individual optimisations.\n\n5. Documentation\n   • Provide operator guide with tuning knobs, dashboards, and troubleshooting playbooks in docs/performance/poa.md.\n\n6. Deliverables\n   • poa/ service code, Helm chart values, Grafana dashboard JSON, and Optuna study DB schema changes.",
+        "testStrategy": "1. Baseline Capture\n   – Execute full benchmark suite from Task 48 to record current P95 latency, throughput, and memory footprint.\n2. Unit Tests\n   – Validate rule engine decision logic with mocked metric inputs.\n   – Ensure database index generator produces valid, non-duplicating DDL.\n3. Integration Tests\n   – Deploy POA in staging; run Locust load tests (10 K RPS, 1 M document corpus) and verify automated optimisations are applied (check change ledger).\n   – Confirm rollback triggers when synthetic regression (+20 % latency spike) is injected.\n4. Performance Acceptance\n   – Under sustained mixed workload (reads/writes 80/20, 5 k concurrent users), verify:\n       • 95th percentile latency ≤100 ms for API and search endpoints.\n       • ≤1.25× baseline memory growth.\n       • Zero failed requests >0.1 %.\n   – Repeat test with 1 M, 2 M, and 5 M documents; latency target must hold for at least 1 M.\n5. Observability Validation\n   – Grafana dashboard shows live P50/P95 metrics, optimisation events, and rollback counts.\n   – Alerts fire when P95 >100 ms for >5 min and close automatically after recovery.",
+        "status": "in-progress",
+        "dependencies": [
+          48
+        ],
+        "priority": "medium",
+        "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-06-21T19:30:53.185Z",
-      "updated": "2025-07-02T19:37:49.141Z",
+      "updated": "2025-07-09T16:52:37.488Z",
       "description": "Tasks for master context"
     }
   }

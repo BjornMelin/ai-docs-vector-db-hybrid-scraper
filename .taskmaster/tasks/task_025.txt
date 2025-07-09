@@ -1,7 +1,7 @@
 # Task ID: 25
 # Title: Automate security scanning with Bandit & Safety CI integration
 # Status: pending
-# Dependencies: 23, 24
+# Dependencies: 23, 24, 2
 # Priority: medium
 # Description: Integrate Bandit for static security analysis and Safety for dependency vulnerability scanning into CI/CD pipeline with fail-on-high severity configuration and weekly scheduled runs.
 # Details:

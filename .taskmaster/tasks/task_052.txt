@@ -1,0 +1,58 @@
+# Task ID: 52
+# Title: GROUP 2A – Performance Optimization Agent
+# Status: pending
+# Dependencies: 48
+# Priority: medium
+# Description: Implement an autonomous agent that continuously analyzes runtime metrics and applies database, API, memory, and async-processing optimizations to guarantee ≤100 ms 95th-percentile latency and reliable handling of 1 M+ documents.
+# Details:
+1. Architecture & Scope
+   • Deliver an event-driven “Performance Optimization Agent” (POA) deployed as a dedicated micro-service with privileged read-only access to observability data and write access to tunable config surfaces (e.g., DB indexes, cache TTLs, concurrency limits).
+   • Integrate with the benchmarking & profiling outputs produced in Task 48, consuming OpenTelemetry traces, Prometheus metrics, and pytest-benchmark CSVs via gRPC/HTTP API.
+   • Maintain a rule/heuristic engine plus optional ML-based optimiser (Optuna Bayesian tuner) to decide which optimisation to apply and to roll back if regression detected.
+
+2. Optimisation Domains
+   a. Database
+      – Automatic index recommendation and creation (PostgreSQL, Redis secondary indexes).
+      – Adaptive query plan caching and prepared-statement pooling.
+   b. API Layer
+      – Intelligent response caching (ETag, Redis, CDN headers) with dynamic TTL tuning.
+      – FastAPI middleware for micro-batching and async task off-loading (Starlette background tasks / Celery).
+   c. Memory & Object Lifecycle
+      – Implement object-pooling for high-churn models, enable Pydantic v2 compiled mode, and leverage Python 3.13 arena allocator hints.
+   d. Async Processing
+      – Tune uvicorn/uvloop workers via dynamic concurrency controls; integrate asyncio.TaskGroup patterns and cancellation scopes.
+   e. Global Caching Strategy
+      – Multi-layer cache (in-process LRU → Redis → CDN) with automated waterfall invalidation; use cache-aside pattern with stale-while-revalidate.
+
+3. Control Loop
+   • Every 60 s ingest latest metrics, compute SLI deltas, and trigger targeted optimisation jobs via Celery beat / APScheduler.
+   • Maintain change ledger (YAML) for audit and rollback; expose /optimisation/status REST endpoint.
+
+4. Safety & Rollback
+   • Canary roll-outs with automatic rollback on P95 > baseline +10 % for two consecutive windows.
+   • Use feature flags (Task 2 SmartConfig) to toggle individual optimisations.
+
+5. Documentation
+   • Provide operator guide with tuning knobs, dashboards, and troubleshooting playbooks in docs/performance/poa.md.
+
+6. Deliverables
+   • poa/ service code, Helm chart values, Grafana dashboard JSON, and Optuna study DB schema changes.
+
+# Test Strategy:
+1. Baseline Capture
+   – Execute full benchmark suite from Task 48 to record current P95 latency, throughput, and memory footprint.
+2. Unit Tests
+   – Validate rule engine decision logic with mocked metric inputs.
+   – Ensure database index generator produces valid, non-duplicating DDL.
+3. Integration Tests
+   – Deploy POA in staging; run Locust load tests (10 K RPS, 1 M document corpus) and verify automated optimisations are applied (check change ledger).
+   – Confirm rollback triggers when synthetic regression (+20 % latency spike) is injected.
+4. Performance Acceptance
+   – Under sustained mixed workload (reads/writes 80/20, 5 k concurrent users), verify:
+       • 95th percentile latency ≤100 ms for API and search endpoints.
+       • ≤1.25× baseline memory growth.
+       • Zero failed requests >0.1 %.
+   – Repeat test with 1 M, 2 M, and 5 M documents; latency target must hold for at least 1 M.
+5. Observability Validation
+   – Grafana dashboard shows live P50/P95 metrics, optimisation events, and rollback counts.
+   – Alerts fire when P95 >100 ms for >5 min and close automatically after recovery.

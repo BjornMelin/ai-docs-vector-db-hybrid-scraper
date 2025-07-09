@@ -1,0 +1,82 @@
+# Task ID: 45
+# Title: Integrate Browser-use FastAPI Endpoints with Multi-Agent Orchestration
+# Status: pending
+# Dependencies: 44, 2
+# Priority: high
+# Description: Embed browser-use endpoints into the existing FastAPI app and implement async multi-agent orchestration with semaphores, LRU cache pools, adaptive scaling, health probes, and resource tracking, while preserving middleware, migrating legacy sessions, integrating MCP tools, and updating documentation with BROWSER_USE_ENABLED feature flag support.
+# Details:
+1. Refactor and embed browser-use endpoints into the main FastAPI app, ensuring all routes are registered under the appropriate API version prefix and that existing middleware (CORS, authentication, rate limiting) remains intact.
+2. Implement BROWSER_USE_ENABLED feature flag for graceful fallback when browser-use functionality is disabled.
+3. Implement async multi-agent orchestration using asyncio semaphores to control concurrency, and leverage functools.lru_cache for agent pool management, ensuring thread/process safety and efficient resource reuse.
+4. Integrate adaptive scaling logic to dynamically adjust agent pool size based on workload and resource utilization, with real-time health probes (e.g., /healthz endpoints) and resource tracking (CPU, memory, browser session counts) exposed via FastAPI endpoints and Prometheus-compatible metrics.
+5. Migrate any legacy session management to the new orchestration layer, ensuring session continuity and backward compatibility for v0.2.x clients.
+6. Integrate MCP tools and registry so browser-use endpoints and orchestration tools are discoverable and manageable via the MCP interface.
+7. Align error propagation patterns with Task 46 requirements for consistent error handling across all browser-use components.
+8. Update all relevant documentation (API docs, developer guides, architecture diagrams) to reflect the new integration and orchestration model, including usage examples and migration notes.
+9. Ensure all changes are compatible with the infrastructure and configuration established in browser-use v0.3.2 setup, and that CI/CD and test coverage requirements are met.
+
+# Test Strategy:
+- Write integration tests using FastAPI TestClient and async test frameworks to verify all browser-use endpoints function correctly within the unified app, including session migration and MCP tool registration.
+- Test BROWSER_USE_ENABLED feature flag behavior in both enabled and disabled states.
+- Simulate high concurrency and adaptive scaling scenarios to validate semaphore limits, LRU cache eviction, and resource tracking accuracy.
+- Use health probe endpoints and Prometheus metrics to confirm real-time status and resource reporting.
+- Perform regression tests to ensure middleware, authentication, and legacy session flows are preserved for v0.2.x compatibility.
+- Validate error propagation alignment with Task 46 requirements.
+- Validate documentation updates by generating new OpenAPI/Swagger docs and reviewing developer guides for completeness.
+- Ensure all tests pass in CI and coverage remains ≥95% for browser-use modules.
+
+# Subtasks:
+## 1. Refactor and Embed Browser-use Endpoints [pending]
+### Dependencies: None
+### Description: Refactor the browser-use endpoints and embed them into the main FastAPI application, ensuring all routes are registered under the correct API version prefix and that existing middleware stack (CORS, authentication, rate limiting) is explicitly preserved and functional.
+### Details:
+Use FastAPI's APIRouter and include_router pattern to modularize and integrate endpoints. Explicitly preserve existing middleware stack (CORS, authentication, rate limiting) and confirm that all middleware is triggered for browser-use endpoints. Maintain backward compatibility with v0.2.x browser sessions.
+
+## 2. Implement BROWSER_USE_ENABLED Feature Flag [pending]
+### Dependencies: 45.1
+### Description: Implement BROWSER_USE_ENABLED feature flag for graceful fallback when browser-use functionality is disabled, ensuring the application continues to function without browser automation capabilities.
+### Details:
+Add configuration-driven feature flag that allows browser-use endpoints to be disabled gracefully, with appropriate fallback responses and error handling for disabled state.
+
+## 3. Implement Async Multi-Agent Orchestration [pending]
+### Dependencies: 45.1, 45.2
+### Description: Develop asynchronous orchestration for multi-agent management using asyncio semaphores for concurrency control and functools.lru_cache for agent pool management, ensuring thread/process safety, efficient resource reuse, and backward compatibility with v0.2.x browser sessions.
+### Details:
+Design agent orchestration logic to handle concurrent browser sessions, leveraging semaphores for limiting concurrency and LRU cache for efficient agent reuse. Ensure backward compatibility with v0.2.x browser session management.
+
+## 4. Integrate Adaptive Scaling, Health Probes, and Resource Tracking [pending]
+### Dependencies: 45.3
+### Description: Integrate adaptive scaling logic to dynamically adjust agent pool size based on workload and resource utilization. Expose real-time health probes and resource tracking (CPU, memory, session counts) via FastAPI endpoints and Prometheus-compatible metrics while maintaining v0.2.x compatibility.
+### Details:
+Implement scaling triggers based on monitored metrics, add /healthz and /metrics endpoints, ensure compatibility with Prometheus scraping, and maintain backward compatibility with v0.2.x monitoring expectations.
+
+## 5. Migrate Legacy Session Management with v0.2.x Compatibility [pending]
+### Dependencies: 45.3
+### Description: Migrate legacy session management to the new orchestration layer, ensuring explicit session continuity and comprehensive backward compatibility for v0.2.x clients with all existing session patterns preserved.
+### Details:
+Refactor session handling code, implement migration logic with explicit v0.2.x compatibility shims, and provide comprehensive backward compatibility for all v0.2.x session management patterns.
+
+## 6. Integrate MCP Tools and Registry [pending]
+### Dependencies: 45.4, 45.5
+### Description: Integrate MCP tools and registry so that browser-use endpoints and orchestration tools are discoverable and manageable via the MCP interface, maintaining backward compatibility with v0.2.x MCP integrations.
+### Details:
+Register endpoints and orchestration components with MCP, implement required discovery and management hooks, and ensure backward compatibility with existing v0.2.x MCP tool integrations.
+
+## 7. Align Error Propagation with Task 46 [pending]
+### Dependencies: 45.3, 45.4, 45.5
+### Description: Align error propagation patterns with Task 46 requirements for consistent error handling across all browser-use components, ensuring backward compatibility with v0.2.x error handling expectations.
+### Details:
+Implement consistent error propagation patterns as defined in Task 46, ensuring all browser-use components follow the same error handling conventions while maintaining v0.2.x error response compatibility.
+
+## 8. Update Documentation and Ensure Compatibility [pending]
+### Dependencies: 45.1, 45.2, 45.3, 45.4, 45.5, 45.6, 45.7
+### Description: Update all relevant documentation (API docs, developer guides, architecture diagrams) to reflect the new integration and orchestration model, including usage examples, migration notes, BROWSER_USE_ENABLED flag documentation, and v0.2.x compatibility guidance. Ensure compatibility with browser-use v0.3.2 infrastructure and that CI/CD and test coverage requirements are met.
+### Details:
+Revise documentation to include BROWSER_USE_ENABLED feature flag usage, update OpenAPI specs, document v0.2.x compatibility requirements and migration paths, and confirm all changes are reflected in CI/CD pipelines and test suites.
+
+## 9. Implement Browser-use Security Isolation and Agent Communication Security [pending]
+### Dependencies: 45.3, 45.6
+### Description: Implement comprehensive security measures for multi-agent browser automation including session isolation, cross-agent data leakage prevention, secure agent communication, and browser automation security best practices while maintaining v0.2.x security compatibility.
+### Details:
+Design and implement security measures specific to browser automation: isolated browser contexts per agent, secure session data handling, prevention of cross-agent data contamination, secure communication channels between agents, browser automation security hardening (CSP, sandboxing), and audit logging for security events. Ensure compatibility with existing authentication middleware and v0.2.x security patterns.
+

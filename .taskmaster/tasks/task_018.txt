@@ -1,7 +1,7 @@
 # Task ID: 18
 # Title: Implement Enterprise SSO Integration
 # Status: pending
-# Dependencies: 6
+# Dependencies: 6, 2
 # Priority: medium
 # Description: Transform authentication and authorization into a 2025-ready, zero-trust enterprise identity fabric with advanced SSO, OAuth 2.1, and adaptive security orchestration.
 # Details:
@@ -59,4 +59,29 @@ Implement event-driven workflows for user lifecycle events. Integrate with enter
 ### Description: Integrate OpenTelemetry for distributed tracing, metrics, and logging across all authentication, authorization, and adaptive security flows. Implement audit logging for all critical events, SIEM integration, and automated incident response.
 ### Details:
 Ensure logs capture authentication attempts, adaptive risk events, role/attribute changes, provisioning actions, privileged access, and security incidents. Set up alerting for anomalous activity, impossible travel, and threat detection. Provide dashboards for operational, compliance, and identity analytics reporting. Integrate with SIEM platforms (Splunk, Elastic) and enable automated remediation workflows.
+<info added on 2025-06-24T21:15:07.334Z>
+SCOPE MODIFICATION - Integration with Existing Observability Infrastructure
+
+Original scope reduced by 80% - leveraging comprehensive observability system from Task 20 instead of building new infrastructure.
+
+EXISTING INFRASTRUCTURE INTEGRATION:
+- OpenTelemetry distributed tracing already implemented in src/services/observability/instrumentation.py
+- Comprehensive metrics and logging system with security focus available
+- Security monitoring and audit trails from Task 20.6
+- Automated incident response and alerting infrastructure operational
+
+REVISED IMPLEMENTATION APPROACH:
+1. Extend existing MetricsRegistry with SSO-specific metrics: authentication success/failure rates, SSO provider response times, session duration analytics, and token refresh patterns
+2. Integrate SSO authentication events into existing security monitoring framework for OAuth/SAML flows, token lifecycle tracking, and adaptive authentication decisions
+3. Apply established audit logging patterns to capture SSO compliance events, user provisioning activities, and privilege escalations
+4. Utilize existing automated incident response workflows for authentication anomalies, suspicious login patterns, and security policy violations
+
+TECHNICAL INTEGRATION POINTS:
+- Hook SSO authentication flows into existing tracing spans
+- Map SSO events to current security event taxonomy
+- Extend existing dashboard templates for SSO-specific operational metrics
+- Configure SSO alerts within established monitoring thresholds
+
+Implementation shifts from full observability build-out to focused authentication telemetry integration, maintaining consistency with existing monitoring architecture while providing comprehensive SSO visibility.
+</info added on 2025-06-24T21:15:07.334Z>
 

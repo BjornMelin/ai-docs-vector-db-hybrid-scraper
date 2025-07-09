@@ -1,51 +1,38 @@
 # Task ID: 10
 # Title: Implement Natural Language Query Interface
 # Status: pending
-# Dependencies: 7
+# Dependencies: 7, 2
 # Priority: medium
-# Description: Develop a conversational query processing system with intent recognition
+# Description: Develop a simplified natural language query enhancement system that leverages existing RAG infrastructure and FastAPI capabilities
 # Details:
-1. Implement intent recognition using a pre-trained NLP model (e.g., BERT)
-2. Create a classification system for query types (e.g., search, analyze, compare)
-3. Develop a state machine for managing multi-turn conversations
-4. Integrate with the RAG system for answer generation
-5. Implement context management for follow-up queries
-6. Use FastAPI WebSockets for real-time conversation handling
+1. Implement lightweight intent classification using existing vector search capabilities
+2. Create simple query enhancement and reformulation using existing RAG pipeline
+3. Integrate with existing FastAPI WebSocket infrastructure for real-time queries
+4. Leverage existing observability infrastructure for monitoring query processing
+5. Focus on practical query understanding rather than complex conversation management
 
 # Test Strategy:
-1. Unit test intent recognition and classification components
-2. Integration test the entire conversational pipeline
-3. Conduct user studies to improve accuracy and natural language understanding
-4. Performance test under high concurrent user loads
+1. Unit test intent classification and query enhancement components
+2. Integration test with existing RAG pipeline from Task 7
+3. Performance test query processing latency and accuracy
+4. Validate WebSocket integration with existing FastAPI infrastructure
 
 # Subtasks:
-## 1. Design and Implement Intent Recognition and Query Classification Module [pending]
+## 1. Implement Lightweight Intent Classification and Query Enhancement [pending]
 ### Dependencies: None
-### Description: Develop an async, production-grade FastAPI service using Pydantic v2 for type safety, implementing intent recognition with a pre-trained transformer (e.g., BERT) and a robust query type classifier (search, analyze, compare). Integrate dependency injection for modularity and testability.
+### Description: Create a simple intent classifier that enhances user queries using existing vector search capabilities and RAG infrastructure. Focus on practical query understanding over complex NLP models.
 ### Details:
-Leverage modern async patterns and FastAPI's dependency injection to ensure scalability and maintainability. Use OpenTelemetry for tracing and monitoring. Ensure the module is extensible for future intent types and supports enterprise-grade error handling.
+Use existing vector search from Task 6 to classify query intent (search, analyze, compare) and enhance queries for better RAG retrieval. Implement using FastAPI patterns with Pydantic v2 for type safety. Integrate with existing observability infrastructure.
 
-## 2. Develop Multi-Turn Conversation State Machine and Context Management [pending]
+## 2. Integrate Natural Language Processing with Existing RAG Pipeline [pending]
 ### Dependencies: 10.1
-### Description: Implement a clean, function-based state machine to manage multi-turn conversations, including context tracking for follow-up queries and slot filling. Ensure compatibility with async FastAPI endpoints and clean architecture principles.
+### Description: Connect the query enhancement system to Task 7's RAG implementation, enabling natural language queries to be processed through the existing retrieval and generation pipeline.
 ### Details:
-Utilize Pydantic models for state representation and context objects. Integrate OpenTelemetry for observability of conversation flows. Ensure the state machine is stateless where possible, with pluggable persistence for enterprise deployment.
+Leverage Task 7's RAG infrastructure for answer generation after query enhancement. Use existing FastAPI async patterns and dependency injection. Ensure compatibility with existing vector database and search capabilities from Task 6.
 
-## 3. Integrate Retrieval-Augmented Generation (RAG) and Vector Database Backend [pending]
+## 3. Implement WebSocket Interface Using Existing FastAPI Infrastructure [pending]
 ### Dependencies: 10.2
-### Description: Connect the query interface to a RAG pipeline with optimized vector database retrieval (e.g., FAISS, Qdrant), ensuring efficient, low-latency knowledge retrieval and answer generation. Support async streaming responses.
+### Description: Build a real-time query interface using existing FastAPI WebSocket capabilities, connecting enhanced natural language queries to the RAG pipeline for immediate responses.
 ### Details:
-Apply latest vector database optimization techniques for fast semantic search. Use dependency injection for RAG and DB clients. Ensure observability with OpenTelemetry spans for retrieval and generation steps.
-
-## 4. Implement Real-Time WebSocket API with FastAPI for Conversational Interface [pending]
-### Dependencies: 10.3
-### Description: Build a robust, async WebSocket API using FastAPI for real-time conversational query handling. Ensure secure, authenticated connections and efficient resource utilization.
-### Details:
-Leverage FastAPI's async WebSocket support and Pydantic v2 for message validation. Integrate OpenTelemetry for real-time monitoring. Apply KISS principles for maintainability and clean separation of concerns.
-
-## 5. Production Deployment, Observability, and Quality Assurance Automation [pending]
-### Dependencies: 10.4
-### Description: Automate deployment with CI/CD pipelines, configure enterprise observability (OpenTelemetry, logging, metrics), and enforce security best practices. Implement comprehensive QA with property-based and mutation testing.
-### Details:
-Deploy using container orchestration (e.g., Kubernetes), automate configuration, and set up monitoring dashboards. Enforce API security (rate limiting, auth). Ensure all modules are observable and maintainable.
+Use existing FastAPI WebSocket infrastructure from Task 4 for real-time query handling. Integrate with existing observability infrastructure from Task 20 for monitoring. Apply KISS principles for maintainability and leverage existing async patterns.
 

@@ -1,60 +1,55 @@
 # Task ID: 29
 # Title: Crawl4AI advanced feature integration - Upgrade to crawl4ai>=0.6 and enable LXML parsing plus memory-adaptive dispatcher for 30% scraping speed gain
 # Status: pending
-# Dependencies: 21, 22, 28
+# Dependencies: 21, 22, 2, 20
 # Priority: medium
-# Description: Upgrade crawl4ai dependency to version 0.6 or higher and integrate advanced features including LXML parsing engine and memory-adaptive dispatcher to achieve a 30% improvement in web scraping performance.
+# Description: Refocus Crawl4AI integration as a lightweight, specialized scraping tool for scenarios where browser-use overhead is not justified. Upgrade crawl4ai dependency to version 0.6 or higher, enable LXML parsing, and leverage the memory-adaptive dispatcher to optimize server-side HTML scraping performance. Integrate Crawl4AI as an optional backend within the existing browser service architecture, ensuring compatibility with shared error handling, monitoring, and HTTP client infrastructure.
 # Details:
 1. Upgrade crawl4ai dependency in pyproject.toml:
    - Update crawl4ai requirement from current version to >=0.6.0
    - Review breaking changes in crawl4ai 0.6 release notes and update affected code
-   - Ensure compatibility with existing async crawling patterns
+   - Ensure compatibility with async crawling patterns for lightweight, headless scraping
 
-2. Enable LXML parsing engine for improved HTML processing:
-   - Configure crawl4ai to use LXML parser instead of default BeautifulSoup for faster parsing
-   - Update parsing configurations in src/services/browser/ modules
+2. Enable LXML parsing engine for server-side HTML processing:
+   - Configure crawl4ai to use LXML parser for fast, efficient parsing
+   - Optimize XPath and CSS selectors for LXML compatibility
    - Implement fallback mechanisms for edge cases where LXML parsing fails
-   - Optimize XPath expressions and CSS selectors for LXML compatibility
 
 3. Implement memory-adaptive dispatcher:
-   - Configure crawl4ai's memory-adaptive dispatcher to dynamically adjust concurrent request limits based on available system memory
-   - Set memory thresholds and scaling parameters for optimal resource utilization
-   - Integrate with existing rate limiting and throttling mechanisms
-   - Monitor memory usage patterns and adjust dispatcher parameters accordingly
+   - Enable crawl4ai's memory-adaptive dispatcher to dynamically adjust concurrency based on available system memory
+   - Set memory thresholds and scaling parameters for optimal lightweight scraping
+   - Integrate with shared rate limiting and throttling mechanisms
 
-4. Update browser service integration:
-   - Modify src/services/browser/browser_use_adapter.py to leverage new crawl4ai features
-   - Ensure compatibility with existing crawling workflows and data extraction patterns
-   - Update error handling and retry logic for new crawl4ai API changes
-   - Implement performance monitoring to track the 30% speed improvement target
+4. Integrate Crawl4AI as an optional backend in browser service architecture:
+   - Expose Crawl4AI as a fallback/alternative scraping method for simple tasks
+   - Ensure compatibility with shared error handling, monitoring, and HTTP client infrastructure (leveraging Task 28)
+   - Remove any browser automation or orchestration features that overlap with Tasks 36-43
 
 5. Configuration and optimization:
-   - Create configuration profiles for different scraping scenarios (lightweight vs comprehensive)
-   - Implement adaptive timeout settings based on content complexity
-   - Configure connection pooling and keep-alive settings for optimal performance
-   - Add metrics collection for scraping throughput and resource utilization
+   - Create configuration profiles for lightweight scraping scenarios
+   - Implement adaptive timeout settings and connection pooling using shared HTTP client
+   - Add metrics collection for scraping throughput and resource utilization, integrating with existing monitoring infrastructure
 
 # Test Strategy:
 1. Performance benchmarking validation:
-   - Create comprehensive scraping benchmark suite measuring pages/second, memory usage, and parsing accuracy
-   - Execute before/after performance tests across different website types and content sizes
-   - Verify ≥30% speed improvement target is consistently achieved
+   - Create scraping benchmark suite measuring pages/second, memory usage, and parsing accuracy for lightweight scenarios
+   - Execute before/after performance tests on representative simple HTML sites
+   - Verify ≥30% speed improvement target is achieved for server-side scraping
    - Monitor memory consumption patterns with memory-adaptive dispatcher enabled
 
 2. Compatibility and functionality testing:
-   - Test LXML parsing accuracy against existing BeautifulSoup results on sample documents
-   - Verify all existing scraping workflows continue to function correctly
-   - Test error handling and fallback mechanisms for parsing failures
-   - Validate data extraction accuracy and completeness with new parsing engine
+   - Test LXML parsing accuracy and fallback mechanisms on sample documents
+   - Verify all lightweight scraping workflows function correctly as an alternative backend
+   - Validate integration with shared error handling and monitoring infrastructure
 
 3. Integration testing:
-   - Test crawl4ai integration with existing browser automation workflows
-   - Verify compatibility with rate limiting, retry logic, and error handling
+   - Test Crawl4AI as an optional backend within the browser service architecture
+   - Verify compatibility with shared HTTP client, rate limiting, and error handling
    - Test concurrent scraping scenarios with memory-adaptive dispatcher
    - Validate integration with existing monitoring and logging infrastructure
 
 4. Resource utilization testing:
-   - Monitor CPU and memory usage under various load scenarios
+   - Monitor CPU and memory usage under various lightweight load scenarios
    - Test memory-adaptive dispatcher behavior under memory pressure
    - Verify graceful degradation when system resources are constrained
    - Test long-running scraping sessions for memory leaks or resource accumulation
@@ -78,15 +73,15 @@ Adjust parser settings in relevant modules, optimize XPath and CSS selectors for
 ### Details:
 Set memory thresholds and scaling parameters, integrate with rate limiting and throttling, and monitor memory usage to optimize dispatcher settings.
 
-## 4. Update Browser Service Integration [pending]
+## 4. Integrate Crawl4AI as Lightweight Backend [pending]
 ### Dependencies: 29.2, 29.3
-### Description: Modify browser service modules to leverage new crawl4ai features, ensuring compatibility with updated APIs and workflows.
+### Description: Integrate Crawl4AI as an optional, lightweight backend for simple scraping tasks within the existing browser service architecture. Remove any browser automation or orchestration features that overlap with Tasks 36-43.
 ### Details:
-Refactor src/services/browser/browser_use_adapter.py and related modules, update error handling and retry logic, and implement performance monitoring to track speed improvements.
+Expose Crawl4AI as a fallback/alternative scraping method for scenarios where browser-use is unnecessary. Ensure compatibility with shared error handling, monitoring, and HTTP client infrastructure. Remove redundant browser automation logic.
 
 ## 5. Optimize Configuration and Performance Monitoring [pending]
 ### Dependencies: 29.4
-### Description: Create adaptive configuration profiles, tune timeout and connection settings, and add metrics collection for throughput and resource utilization.
+### Description: Create adaptive configuration profiles for lightweight scraping, tune timeout and connection settings using the shared HTTP client, and add metrics collection for throughput and resource utilization.
 ### Details:
-Develop profiles for different scraping scenarios, implement adaptive timeouts, configure connection pooling, and integrate metrics for ongoing optimization.
+Develop profiles for lightweight scraping scenarios, implement adaptive timeouts, configure connection pooling via shared HTTP client, and integrate metrics with existing monitoring.
 
