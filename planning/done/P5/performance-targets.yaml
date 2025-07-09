@@ -1,0 +1,48 @@
+# Performance Targets Configuration
+# Used for automated validation in CI/CD pipeline
+
+api_performance:
+  latency_p95_ms: 100
+  latency_p99_ms: 150
+  min_ops_per_second: 1000
+  max_error_rate: 0.01
+
+vector_search:
+  latency_p95_ms: 50
+  latency_p99_ms: 75
+  min_queries_per_second: 2000
+  max_memory_per_query_mb: 10
+
+document_processing:
+  min_docs_per_minute: 1000
+  max_processing_time_per_doc_ms: 500
+  batch_size_optimal: 1000
+  max_memory_per_batch_mb: 100
+
+resource_limits:
+  max_memory_1m_docs_gb: 4.0
+  max_cpu_percent_peak: 80
+  min_cache_hit_rate: 0.90
+  max_db_connections: 100
+
+scaling_targets:
+  min_scaling_efficiency: 0.85  # 85% linear scaling
+  max_nodes: 10
+  target_availability: 0.999  # 99.9% uptime
+
+concurrent_users:
+  max_concurrent_connections: 10000
+  max_requests_per_second: 5000
+  max_websocket_connections: 1000
+
+infrastructure:
+  max_db_connection_pool_wait_ms: 5
+  max_internal_service_latency_ms: 10
+  min_health_check_frequency_seconds: 10
+  max_startup_time_seconds: 30
+
+security_performance:
+  max_auth_latency_ms: 50
+  max_encryption_overhead_percent: 5
+  min_audit_log_throughput_per_second: 10000
+  max_security_scan_time_minutes: 5
