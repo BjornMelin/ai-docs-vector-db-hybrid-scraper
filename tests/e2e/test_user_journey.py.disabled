@@ -1,0 +1,535 @@
+"""Core user journey E2E tests using Playwright MCP tools."""
+
+import asyncio
+import json
+import logging
+import time
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+# MCP Playwright tool imports
+from mcp__playwright__playwright_click import mcp__playwright__playwright_click
+from mcp__playwright__playwright_close import mcp__playwright__playwright_close
+from mcp__playwright__playwright_console_logs import (
+    mcp__playwright__playwright_console_logs,
+)
+from mcp__playwright__playwright_evaluate import (
+    mcp__playwright__playwright_evaluate,
+)
+from mcp__playwright__playwright_fill import mcp__playwright__playwright_fill
+from mcp__playwright__playwright_navigate import (
+    mcp__playwright__playwright_navigate,
+)
+from mcp__playwright__playwright_press_key import (
+    mcp__playwright__playwright_press_key,
+)
+from mcp__playwright__playwright_screenshot import (
+    mcp__playwright__playwright_screenshot,
+)
+from mcp__playwright__playwright_upload_file import (
+    mcp__playwright__playwright_upload_file,
+)
+
+from .conftest import get_report_path, get_screenshot_path
+
+
+class TestCoreUserJourney:
+    """Test complete user journeys from onboarding to advanced features."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    async def test_complete_user_journey_under_2_minutes(
+        self,
+        app_url: str,
+        browser_session: dict[str, Any],
+        test_document: Path,
+        quality_gate_thresholds: dict[str, float],
+        performance_metrics: dict[str, Any],
+    ):
+        """Test complete user journey completion within 2 minutes (Minimum Delight Gate #1)."""
+        start_time = time.time()
+        browser_type = browser_session["config"]["browser_type"]
+        viewport = browser_session["config"]["viewport"]
+
+        # MCP tools now imported at top level
+
+        try:
+            # Step 1: Navigate to application
+            navigation_start = time.time()
+            await mcp__playwright__playwright_navigate(
+                url=app_url,
+                browserType=browser_type,
+                headless=browser_session["config"]["headless"],
+                width=viewport["width"],
+                height=viewport["height"],
+                timeout=30000,
+            )
+            navigation_time = time.time() - navigation_start
+            performance_metrics["page_load_times"].append(navigation_time)
+
+            # Validate page load time meets threshold
+            assert navigation_time < quality_gate_thresholds["page_load_time"], (
+                f"Page load time {navigation_time:.2f}s exceeded {quality_gate_thresholds['page_load_time']}s threshold"
+            )
+
+            # Step 2: Take baseline screenshot
+            await mcp__playwright__playwright_screenshot(
+                name=str(get_screenshot_path("journey_baseline", browser_type)),
+                fullPage=True,
+                savePng=True,
+            )
+
+            # Step 3: Document ingestion workflow
+            upload_start = time.time()
+
+            # Look for upload button/area
+            await mcp__playwright__playwright_click(
+                selector="[data-testid='upload-docs'], .upload-button, input[type='file']"
+            )
+
+            # Upload test document
+            if test_document.exists():
+                await mcp__playwright__playwright_upload_file(
+                    selector="input[type='file']",
+                    filePath=str(test_document.absolute()),
+                )
+
+            _ = time.time() - upload_start
+
+            # Step 4: Search workflow
+            search_start = time.time()
+
+            # Fill search input
+            test_query = "test query about uploaded document"
+            await mcp__playwright__playwright_fill(
+                selector="[data-testid='search-input'], .search-input, input[name='search'], input[placeholder*='search' i]",
+                value=test_query,
+            )
+
+            # Execute search
+            await mcp__playwright__playwright_click(
+                selector="[data-testid='search-button'], .search-button, button[type='submit'], .search-submit"
+            )
+
+            # Wait for search results
+            _ = await mcp__playwright__playwright_evaluate(
+                script="""
+                return new Promise((resolve) => {
+                    const checkResults = () => {
+                        const results = document.querySelector('[data-testid="search-results"], .search-results, .results');
+                        if (results && results.children.length > 0) {
+                            resolve(true);
+                        } else if (Date.now() - startTime > 10000) {
+                            resolve(false); // Timeout after 10 seconds
+                        } else {
+                            setTimeout(checkResults, 100);
+                        }
+                    };
+                    const startTime = Date.now();
+                    checkResults();
+                });
+                """
+            )
+
+            search_time = time.time() - search_start
+            performance_metrics["search_response_times"].append(search_time)
+
+            # Validate search response time
+            assert search_time < quality_gate_thresholds["search_response_time"], (
+                f"Search response time {search_time:.2f}s exceeded {quality_gate_thresholds['search_response_time']}s threshold"
+            )
+
+            # Step 5: RAG interaction (if available)
+            rag_start = time.time()
+            try:
+                rag_response = await mcp__playwright__playwright_evaluate(
+                    script="""
+                    const ragElement = document.querySelector('[data-testid="rag-response"], .rag-response, .ai-response');
+                    return ragElement ? ragElement.textContent.length > 0 : false;
+                    """
+                )
+
+                if rag_response:
+                    rag_time = time.time() - rag_start
+                    performance_metrics["ui_interaction_times"].append(rag_time)
+            except (RuntimeError, TimeoutError, ConnectionError):
+                # RAG might not be available, continue test
+                logging.getLogger(__name__).debug(
+                    "RAG interaction failed, continuing test"
+                )
+
+            # Step 6: Capture console logs for debugging
+            logs = await mcp__playwright__playwright_console_logs(
+                type="error", limit=50, clear=False
+            )
+            browser_session["console_logs"] = logs
+
+            # Check for critical errors
+            critical_errors = [
+                log
+                for log in logs
+                if "error" in log.lower()
+                and any(
+                    keyword in log.lower()
+                    for keyword in ["uncaught", "failed", "timeout", "network"]
+                )
+            ]
+
+            # Log errors but don't fail test unless they're blocking
+            if critical_errors:
+                print(f"⚠️ Found {len(critical_errors)} critical console errors")
+                for error in critical_errors:
+                    print(f"   - {error}")
+
+            # Step 7: Final validation screenshot
+            await mcp__playwright__playwright_screenshot(
+                name=str(get_screenshot_path("journey_completion", browser_type)),
+                fullPage=True,
+                savePng=True,
+            )
+
+            # Calculate total journey time
+            total_time = time.time() - start_time
+            performance_metrics["total_journey_time"] = total_time
+
+            # Validate 2-minute completion requirement (Minimum Delight Gate #1)
+            assert total_time < 120, (
+                f"User journey took {total_time:.2f}s, exceeding 120s requirement"
+            )
+
+            # Step 8: Generate performance report
+            report_data = {
+                "test_name": "complete_user_journey",
+                "browser_type": browser_type,
+                "viewport": viewport,
+                "performance_metrics": performance_metrics,
+                "quality_gates": {
+                    "under_2_minutes": total_time < 120,
+                    "page_load_under_threshold": navigation_time
+                    < quality_gate_thresholds["page_load_time"],
+                    "search_response_under_threshold": search_time
+                    < quality_gate_thresholds["search_response_time"],
+                },
+                "console_errors": len(critical_errors),
+                "test_passed": True,
+                "timestamp": time.time(),
+            }
+
+            report_path = get_report_path("complete_user_journey")
+            with report_path.open("w") as f:
+                json.dump(report_data, f, indent=2)
+
+            print(f"✅ User journey completed in {total_time:.2f}s")
+            print(f"📊 Page load: {navigation_time:.2f}s, Search: {search_time:.2f}s")
+
+        except Exception as e:
+            # Capture error state
+            await mcp__playwright__playwright_screenshot(
+                name=str(get_screenshot_path("journey_error", browser_type)),
+                fullPage=True,
+                savePng=True,
+            )
+
+            # Log error details
+            error_report = {
+                "test_name": "complete_user_journey",
+                "browser_type": browser_type,
+                "error": str(e),
+                "timestamp": time.time(),
+                "test_passed": False,
+            }
+
+            report_path = get_report_path("complete_user_journey_error")
+            with report_path.open("w") as f:
+                json.dump(error_report, f, indent=2)
+
+            raise
+
+        finally:
+            # Cleanup
+            await mcp__playwright__playwright_close()
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    async def test_error_recovery_workflow(
+        self,
+        app_url: str,
+        browser_session: dict[str, Any],
+        quality_gate_thresholds: dict[str, float],
+    ):
+        """Test error handling and recovery paths (Minimum Delight Gate #2)."""
+        browser_type = browser_session["config"]["browser_type"]
+        viewport = browser_session["config"]["viewport"]
+
+        # MCP tools now imported at top level
+
+        try:
+            # Navigate to application
+            await mcp__playwright__playwright_navigate(
+                url=app_url,
+                browserType=browser_type,
+                headless=browser_session["config"]["headless"],
+                width=viewport["width"],
+                height=viewport["height"],
+            )
+
+            # Simulate network failure
+            await mcp__playwright__playwright_evaluate(
+                script="""
+                // Temporarily break network requests
+                window._originalFetch = window.fetch;
+                window.fetch = () => Promise.reject(new Error('Network temporarily unavailable'));
+                """
+            )
+
+            # Attempt operation during network failure
+            await mcp__playwright__playwright_fill(
+                selector="[data-testid='search-input'], .search-input, input[name='search']",
+                value="test query during network failure",
+            )
+
+            await mcp__playwright__playwright_click(
+                selector="[data-testid='search-button'], .search-button, button[type='submit']"
+            )
+
+            # Capture error state
+            await mcp__playwright__playwright_screenshot(
+                name=str(get_screenshot_path("network_failure_state", browser_type)),
+                fullPage=True,
+                savePng=True,
+            )
+
+            # Check for helpful error message
+            error_message_present = await mcp__playwright__playwright_evaluate(
+                script="""
+                const errorElements = document.querySelectorAll('[data-testid="error-message"], .error, .alert-error, .notification-error');
+                return Array.from(errorElements).some(el => el.textContent.length > 0);
+                """
+            )
+
+            assert error_message_present, (
+                "No helpful error message displayed during network failure"
+            )
+
+            # Restore network
+            await mcp__playwright__playwright_evaluate(
+                script="window.fetch = window._originalFetch;"
+            )
+
+            # Test recovery
+            recovery_start = time.time()
+
+            # Look for retry button or mechanism
+            retry_available = await mcp__playwright__playwright_evaluate(
+                script="""
+                const retryElements = document.querySelectorAll('[data-testid="retry-button"], .retry, .try-again, button[onclick*="retry"]');
+                return retryElements.length > 0;
+                """
+            )
+
+            if retry_available:
+                await mcp__playwright__playwright_click(
+                    selector="[data-testid='retry-button'], .retry, .try-again"
+                )
+            else:
+                # Fallback: re-attempt the search
+                await mcp__playwright__playwright_click(
+                    selector="[data-testid='search-button'], .search-button, button[type='submit']"
+                )
+
+            recovery_time = time.time() - recovery_start
+
+            # Validate recovery time
+            assert recovery_time < quality_gate_thresholds["error_recovery_time"], (
+                f"Error recovery took {recovery_time:.2f}s, exceeding {quality_gate_thresholds['error_recovery_time']}s threshold"
+            )
+
+            # Capture successful recovery
+            await mcp__playwright__playwright_screenshot(
+                name=str(get_screenshot_path("network_recovery_success", browser_type)),
+                fullPage=True,
+                savePng=True,
+            )
+
+            print(f"✅ Error recovery completed in {recovery_time:.2f}s")
+
+        finally:
+            await mcp__playwright__playwright_close()
+
+    @pytest.mark.asyncio
+    @pytest.mark.cross_browser
+    @pytest.mark.accessibility
+    async def test_accessibility_compliance(
+        self,
+        app_url: str,
+        browser_session: dict[str, Any],
+        quality_gate_thresholds: dict[str, float],
+    ):
+        """Test WCAG 2.1 AA accessibility compliance (Minimum Delight Gate #4)."""
+        browser_type = browser_session["config"]["browser_type"]
+
+        # MCP tools now imported at top level
+
+        try:
+            await mcp__playwright__playwright_navigate(
+                url=app_url,
+                browserType=browser_type,
+                headless=browser_session["config"]["headless"],
+            )
+
+            # Check for proper ARIA labels and roles
+            accessibility_audit = await mcp__playwright__playwright_evaluate(
+                script="""
+                const auditResults = {
+                    ariaElements: 0,
+                    altTexts: 0,
+                    headingStructure: 0,
+                    keyboardAccessible: 0,
+                    colorContrast: 0
+                };
+
+                // Count ARIA labeled elements
+                auditResults.ariaElements = document.querySelectorAll('[aria-label], [aria-describedby], [role]').length;
+
+                // Count images with alt text
+                const images = document.querySelectorAll('img');
+                auditResults.altTexts = Array.from(images).filter(img => img.alt && img.alt.trim().length > 0).length;
+
+                // Check heading structure
+                auditResults.headingStructure = document.querySelectorAll('h1, h2, h3, h4, h5, h6').length;
+
+                // Test keyboard navigation (basic check)
+                const focusableElements = document.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+                auditResults.keyboardAccessible = focusableElements.length;
+
+                return auditResults;
+                """
+            )
+
+            # Test keyboard navigation
+            await mcp__playwright__playwright_press_key(key="Tab")
+            await mcp__playwright__playwright_press_key(key="Tab")
+            await mcp__playwright__playwright_press_key(key="Enter")
+
+            # Calculate accessibility score
+            total_elements = (
+                accessibility_audit["ariaElements"]
+                + accessibility_audit["altTexts"]
+                + accessibility_audit["headingStructure"]
+            )
+            accessibility_score = (
+                total_elements / max(1, accessibility_audit["keyboardAccessible"])
+                if accessibility_audit["keyboardAccessible"] > 0
+                else 0
+            )
+
+            # Normalize to 0-1 scale (simplified scoring)
+            accessibility_score = min(1.0, accessibility_score)
+
+            # Validate accessibility compliance
+            assert (
+                accessibility_score >= quality_gate_thresholds["accessibility_score"]
+            ), (
+                f"Accessibility score {accessibility_score:.2f} below threshold {quality_gate_thresholds['accessibility_score']}"
+            )
+
+            await mcp__playwright__playwright_screenshot(
+                name=str(get_screenshot_path("accessibility_validation", browser_type)),
+                fullPage=True,
+                savePng=True,
+            )
+
+            print(f"✅ Accessibility score: {accessibility_score:.2f}")
+            print(
+                f"📊 ARIA elements: {accessibility_audit['ariaElements']}, Alt texts: {accessibility_audit['altTexts']}"
+            )
+
+        finally:
+            await mcp__playwright__playwright_close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.slow
+@pytest.mark.performance
+async def test_concurrent_user_simulation(
+    app_url: str, quality_gate_thresholds: dict[str, float]
+):
+    """Test performance under concurrent user load (Minimum Delight Gate #4)."""
+
+    async def simulate_user_session(user_id: int) -> dict[str, Any]:
+        """Simulate a single user session."""
+        # MCP tools now imported at top level
+
+        session_start = time.time()
+
+        try:
+            # Navigate to app
+            await mcp__playwright__playwright_navigate(
+                url=f"{app_url}?session={user_id}",
+                browserType="chromium",
+                headless=True,
+            )
+
+            # Simulate user behavior with random delays
+            await asyncio.sleep(0.5 + (user_id % 3))  # Stagger user actions
+
+            # Perform search
+            await mcp__playwright__playwright_fill(
+                selector="[data-testid='search-input'], .search-input, input[name='search']",
+                value=f"concurrent test query {user_id}",
+            )
+
+            await mcp__playwright__playwright_click(
+                selector="[data-testid='search-button'], .search-button, button[type='submit']"
+            )
+
+            session_time = time.time() - session_start
+
+        except (RuntimeError, TimeoutError, ConnectionError, AssertionError) as e:
+            await mcp__playwright__playwright_close()
+            return {
+                "user_id": user_id,
+                "session_time": time.time() - session_start,
+                "success": False,
+                "error": str(e),
+            }
+        else:
+            await mcp__playwright__playwright_close()
+            return {"user_id": user_id, "session_time": session_time, "success": True}
+
+    # Simulate 10 concurrent users
+    concurrent_users = 10
+    print(f"🚀 Starting concurrent user simulation with {concurrent_users} users")
+
+    tasks = [simulate_user_session(i) for i in range(concurrent_users)]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    # Analyze results
+    successful_sessions = [
+        r for r in results if isinstance(r, dict) and r.get("success")
+    ]
+    failed_sessions = [
+        r for r in results if isinstance(r, dict) and not r.get("success")
+    ]
+    exception_count = len([r for r in results if isinstance(r, Exception)])
+
+    success_rate = len(successful_sessions) / concurrent_users
+    avg_session_time = sum(s["session_time"] for s in successful_sessions) / max(
+        1, len(successful_sessions)
+    )
+
+    print("📊 Concurrent user test results:")
+    print(f"   - Success rate: {success_rate:.1%}")
+    print(f"   - Average session time: {avg_session_time:.2f}s")
+    print(f"   - Failed sessions: {len(failed_sessions)}")
+    print(f"   - Exceptions: {exception_count}")
+
+    # Validate performance under load
+    assert success_rate >= 0.8, f"Success rate {success_rate:.1%} below 80% threshold"
+    assert avg_session_time < 10.0, (
+        f"Average session time {avg_session_time:.2f}s exceeded 10s threshold"
+    )
+
+    print("✅ Concurrent user simulation passed")

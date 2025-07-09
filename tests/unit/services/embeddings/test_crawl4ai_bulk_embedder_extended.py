@@ -88,16 +88,12 @@ class TestBulkEmbedderExtended:
 
         with respx.mock:
             # Setup responses
-            async def mock_get(url):
-                response = AsyncMock()
-                response.raise_for_status = AsyncMock()
-                if "sitemap1.xml" in url:
-                    response.content = sub_sitemap_xml.encode()
-                else:
-                    response.content = sitemap_index_xml.encode()
-                return response
-
-            mock_client.return_value.__aenter__.return_value.get = mock_get
+            respx.get("https://example.com/sitemap_index.xml").mock(
+                return_value=respx.Response(200, content=sitemap_index_xml.encode())
+            )
+            respx.get("https://example.com/sitemap1.xml").mock(
+                return_value=respx.Response(200, content=sub_sitemap_xml.encode())
+            )
 
             urls = await embedder.load_urls_from_sitemap(
                 "https://example.com/sitemap_index.xml"
@@ -128,9 +124,8 @@ class TestBulkEmbedderExtended:
                 "404 Not Found", request=mock_request, response=mock_response
             )
 
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
-                side_effect=error
-            )
+            # Mock the HTTP error response
+            respx.get("https://example.com/missing.xml").mock(side_effect=error)
 
             with pytest.raises(httpx.HTTPStatusError):
                 await embedder.load_urls_from_sitemap("https://example.com/missing.xml")

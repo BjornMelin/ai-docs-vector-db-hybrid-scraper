@@ -6,15 +6,11 @@ and reusable test utilities.
 """
 
 import asyncio
-from typing import Any, Dict, List
+from typing import Any
 
 import httpx
 import pytest
-import pytest_asyncio
 import respx
-from respx.router import MockRouter
-
-from tests.fixtures.async_http_utilities import AsyncHTTPTestHelper
 
 
 class TestModernAsyncPatterns:
@@ -32,7 +28,12 @@ class TestModernAsyncPatterns:
         )
 
         # Make the request
-        async with httpx.AsyncClient() as client:
+        # Use optimized httpx client with HTTP/2 and connection pooling
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(30.0, connect=5.0),
+            limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+            http2=True,
+        ) as client:
             response = await client.get("https://api.example.com/data")
 
         # Verify response
@@ -65,7 +66,12 @@ class TestModernAsyncPatterns:
         )
 
         # Test GET list
-        async with httpx.AsyncClient() as client:
+        # Use optimized httpx client with HTTP/2 and connection pooling
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(30.0, connect=5.0),
+            limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+            http2=True,
+        ) as client:
             # List users
             response = await client.get("https://api.example.com/users")
             users = response.json()
@@ -100,7 +106,12 @@ class TestModernAsyncPatterns:
             side_effect=httpx.TimeoutException("Request timed out")
         )
 
-        async with httpx.AsyncClient() as client:
+        # Use optimized httpx client with HTTP/2 and connection pooling
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(30.0, connect=5.0),
+            limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+            http2=True,
+        ) as client:
             # Test 404
             response = await client.get("https://api.example.com/not-found")
             assert response.status_code == 404
@@ -135,7 +146,8 @@ class TestModernAsyncPatterns:
 
             async def perform_operation(self, name: str) -> str:
                 if not self.initialized:
-                    raise RuntimeError("Service not initialized")
+                    msg = "Service not initialized"
+                    raise RuntimeError(msg)
                 self.operations.append(name)
                 return f"Completed: {name}"
 
@@ -197,19 +209,24 @@ class TestModernAsyncPatterns:
             )
 
             # Make requests
-            async with httpx.AsyncClient() as client:
-                # Success case
-                response = await client.get("https://api.example.com/data")
-                assert response.status_code == 200
-                assert response.json()["result"] == "success"
+            # Use optimized httpx client with HTTP/2 and connection pooling
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(30.0, connect=5.0),
+            limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+            http2=True,
+        ) as client:
+            # Success case
+            response = await client.get("https://api.example.com/data")
+            assert response.status_code == 200
+            assert response.json()["result"] == "success"
 
-                # Error case
-                response = await client.get("https://api.example.com/error")
-                assert response.status_code == 503
+            # Error case
+            response = await client.get("https://api.example.com/error")
+            assert response.status_code == 503
 
-            # Check request tracking
-            assert async_http_helper.get_request_count() == 2
-            assert async_http_helper.get_request_count("data") == 1
+        # Check request tracking
+        assert async_http_helper.get_request_count() == 2
+        assert async_http_helper.get_request_count("data") == 1
 
     @respx.mock
     @pytest.mark.asyncio
@@ -227,7 +244,12 @@ class TestModernAsyncPatterns:
             )
         )
 
-        async with httpx.AsyncClient() as client:
+        # Use optimized httpx client with HTTP/2 and connection pooling
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(30.0, connect=5.0),
+            limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+            http2=True,
+        ) as client:
             response = await client.get("https://api.example.com/stream")
             content = await response.aread()
 
@@ -252,7 +274,12 @@ class TestModernAsyncPatterns:
             "https://api.example.com/data", json={"action": "create", "type": "user"}
         ).mock(return_value=httpx.Response(201, json={"id": 123}))
 
-        async with httpx.AsyncClient() as client:
+        # Use optimized httpx client with HTTP/2 and connection pooling
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(30.0, connect=5.0),
+            limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+            http2=True,
+        ) as client:
             # Test header matching
             response = await client.get(
                 "https://api.example.com/auth",
@@ -336,7 +363,12 @@ class TestRespxAdvancedPatterns:
         # Setup dynamic mock
         respx.get("https://api.example.com/status").mock(side_effect=dynamic_response)
 
-        async with httpx.AsyncClient() as client:
+        # Use optimized httpx client with HTTP/2 and connection pooling
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(30.0, connect=5.0),
+            limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+            http2=True,
+        ) as client:
             # First call
             response = await client.get("https://api.example.com/status")
             assert response.json()["status"] == "pending"
@@ -363,10 +395,15 @@ class TestRespxAdvancedPatterns:
                 "https://api.example.com/helper", "Helper mock"
             )
 
-            async with httpx.AsyncClient() as client:
-                # Both should work
-                direct_response = await client.get("https://api.example.com/direct")
-                helper_response = await client.get("https://api.example.com/helper")
+            # Use optimized httpx client with HTTP/2 and connection pooling
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(30.0, connect=5.0),
+            limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+            http2=True,
+        ) as client:
+            # Both should work
+            direct_response = await client.get("https://api.example.com/direct")
+            helper_response = await client.get("https://api.example.com/helper")
 
-                assert direct_response.text == "Direct mock"
-                assert helper_response.text == "Helper mock"
+            assert direct_response.text == "Direct mock"
+            assert helper_response.text == "Helper mock"

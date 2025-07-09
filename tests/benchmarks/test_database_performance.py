@@ -65,7 +65,7 @@ def _check_docker_availability():
         client = docker.from_env()
         client.ping()
         client.close()
-    except (OSError, ConnectionError, TimeoutError):
+    except (OSError, ConnectionError, TimeoutError, docker.errors.DockerException):
         return False, docker, DockerContainer
     else:
         return True, docker, DockerContainer
@@ -606,7 +606,7 @@ class TestDatabasePerformance:
     ):
         """Benchmark real collection creation and management operations."""
 
-        def collection_operations_sync():
+        async def collection_operations_sync():
             """Synchronous wrapper for async collection operations."""
 
             async def collection_operations():
@@ -712,7 +712,8 @@ class TestDatabasePerformance:
                     / max(upsert_time, 0.001),
                 }
 
-            return await vector_upsert()
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(vector_upsert())
 
         # Run benchmark
         result = benchmark(vector_upsert_sync)
@@ -797,7 +798,8 @@ class TestDatabasePerformance:
                     "search_throughput": len(search_times) / sum(search_times),
                 }
 
-            return await search_performance()
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(search_performance())
 
         # Run benchmark
         result = benchmark(search_performance_sync)
@@ -894,7 +896,8 @@ class TestDatabasePerformance:
                     "success_rate": successful_operations / len(results),
                 }
 
-            return await concurrent_db()
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(concurrent_db())
 
         # Run benchmark
         result = benchmark(concurrent_db_sync)
@@ -998,7 +1001,8 @@ class TestDatabasePerformance:
                     else 0,
                 }
 
-            return await payload_indexing()
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(payload_indexing())
 
         # Run benchmark
         result = benchmark(payload_indexing_sync)
@@ -1080,7 +1084,8 @@ class TestEnterpriseFeatures:
                     result = await session.execute("SELECT 1")
                     return result.fetchone()
 
-            return await monitoring_overhead_test()
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(monitoring_overhead_test())
 
         # Run the benchmark
         result = benchmark(monitoring_overhead_test_sync)

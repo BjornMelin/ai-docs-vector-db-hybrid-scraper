@@ -102,8 +102,8 @@ def sample_request():
 
 
 @pytest.fixture
-def sample_request():
-    """Create a sample  search request."""
+def advanced_sample_request():
+    """Create a sample advanced search request."""
     return AdvancedSearchRequest(
         query="What is machine learning?",
         collection_name="documentation",

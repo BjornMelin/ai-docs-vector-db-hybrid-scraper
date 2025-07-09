@@ -4,8 +4,7 @@ Tests for collection selection strategies, search modes, result merging strategi
 """
 
 import asyncio
-from datetime import UTC, datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 

@@ -3,23 +3,13 @@
 Tests for PersonalizedRankingRequest and PersonalizedRankingResult classes.
 """
 
-import asyncio
-from datetime import UTC, datetime, timedelta
-from unittest.mock import patch
-
 import pytest
 
 from src.services.query_processing.ranking import (
-    ContentCategory,
-    InteractionEvent,
-    InteractionType,
     PersonalizedRankingRequest,
     PersonalizedRankingResult,
-    PersonalizedRankingService,
     RankedResult,
     RankingStrategy,
-    UserPreference,
-    UserProfile,
 )
 
 

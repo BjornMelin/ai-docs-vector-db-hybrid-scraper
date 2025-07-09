@@ -1,5 +1,7 @@
 """Tests for observability configuration."""
 
+import os
+
 import pytest
 from pydantic import ValidationError
 
@@ -122,8 +124,6 @@ class TestGetObservabilityConfig:
         get_observability_config.cache_clear()
 
         # Test with environment variables set
-        import os
-
         os.environ["AI_DOCS_MONITORING__ENABLE_METRICS"] = "true"
         os.environ["AI_DOCS_ENVIRONMENT"] = "staging"
         os.environ["AI_DOCS_APP_NAME"] = "AI Documentation System"
@@ -167,8 +167,6 @@ class TestGetObservabilityConfig:
         get_observability_config.cache_clear()
 
         # Set only some environment variables
-        import os
-
         os.environ["AI_DOCS_APP_NAME"] = "Test App"
         os.environ["AI_DOCS_ENVIRONMENT"] = "staging"
 

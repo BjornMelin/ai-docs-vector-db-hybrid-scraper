@@ -7,8 +7,7 @@ CI platforms and execution environments with performance monitoring.
 import os
 import platform
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 import psutil
 
@@ -79,9 +78,6 @@ class CIEnvironmentDetector:
     @staticmethod
     def _get_github_runner_specs() -> dict[str, Any]:
         """Get GitHub Actions runner specifications."""
-        runner_os = os.getenv("RUNNER_OS", "").lower()
-        runner_arch = os.getenv("RUNNER_ARCH", "X64")
-
         # Standard GitHub-hosted runner specs
         specs = {
             "ubuntu-latest": {"cores": 2, "memory_gb": 7, "storage_gb": 14},
@@ -159,9 +155,7 @@ class XDistOptimizer:
         config = self._apply_platform_optimizations(config)
 
         # Apply safety limits
-        config = self._apply_safety_limits(config)
-
-        return config
+        return self._apply_safety_limits(config)
 
     def _configure_for_ci(self, config: XDistConfig) -> XDistConfig:
         """Configure for CI environment."""
@@ -228,7 +222,9 @@ class XDistOptimizer:
         config.num_workers = min(max(1, cpu_count // 2), 2)
         config.max_workers = 2
         config.timeout = 300
-        config.max_memory_per_worker_mb = int((memory_gb * 1024 * 0.5) / config.num_workers)
+        config.max_memory_per_worker_mb = int(
+            (memory_gb * 1024 * 0.5) / config.num_workers
+        )
         config.dist_mode = "loadscope"
         config.collect_performance_metrics = True
 
@@ -273,8 +269,7 @@ class XDistOptimizer:
         max_test_memory = total_memory_mb * 0.8  # Use max 80% of total memory
 
         config.max_memory_per_worker_mb = min(
-            config.max_memory_per_worker_mb,
-            int(max_test_memory / config.num_workers)
+            config.max_memory_per_worker_mb, int(max_test_memory / config.num_workers)
         )
 
         # Ensure reasonable worker count

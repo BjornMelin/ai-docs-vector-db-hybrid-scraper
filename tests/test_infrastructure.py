@@ -5,8 +5,16 @@ including fixtures, parallel execution, and performance monitoring.
 """
 
 import asyncio
+import time
 
+import httpx
 import pytest
+
+
+try:
+    from tests.conftest import embedding_strategy
+except ImportError:
+    embedding_strategy = None
 
 
 class TestBasicInfrastructure:
@@ -32,8 +40,6 @@ class TestBasicInfrastructure:
         performance_monitor.start()
 
         # Simulate some work
-        import time
-
         time.sleep(0.01)
 
         metrics = performance_monitor.stop()
@@ -50,8 +56,6 @@ class TestBasicInfrastructure:
         checkpoint1 = performance_monitor.checkpoint("start_processing")
         assert checkpoint1["name"] == "start_processing"
         assert "elapsed_seconds" in checkpoint1
-
-        import time
 
         time.sleep(0.01)
 
@@ -177,9 +181,12 @@ class TestRespxIntegration:
     @pytest.mark.asyncio
     async def test_respx_mock_fixture(self, respx_mock):
         """Test respx mock fixture with pre-configured routes."""
-        import httpx
-
-        async with httpx.AsyncClient() as client:
+        # Use optimized httpx client with HTTP/2 and connection pooling
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(30.0, connect=5.0),
+            limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+            http2=True,
+        ) as client:
             # Test pre-configured OpenAI route
             response = await client.post("https://api.openai.com/v1/embeddings")
             assert response.status_code == 200
@@ -218,7 +225,8 @@ class TestParallelExecution:
         port2 = parallel_resource_manager.get_free_port(8000)
 
         assert port1 != port2  # Should get different ports
-        assert port1 > 0 and port2 > 0
+        assert port1 > 0
+        assert port2 > 0
 
         # Test temp directory creation
         temp_dir = parallel_resource_manager.create_worker_temp_dir("test_dir")
@@ -235,11 +243,9 @@ class TestPerformanceFixtures:
         performance_monitor.start()
 
         # Very fast operation
-        import time
-
         time.sleep(0.001)
 
-        metrics = performance_monitor.stop()
+        _ = performance_monitor.stop()
 
         # Should not raise - operation was fast enough
         performance_monitor.assert_performance(max_duration=1.0)
@@ -255,17 +261,13 @@ class TestPropertyBasedInfrastructure:
 
     def test_embedding_strategy_available(self):
         """Test that embedding strategy is available."""
-        try:
-            from tests.conftest import embedding_strategy
-
+        if embedding_strategy is not None:
             # Generate a test embedding
             strategy_instance = embedding_strategy()
             # This is a placeholder - actual property-based tests would use this
             assert callable(strategy_instance)
-        except ImportError:
+        else:
             # Hypothesis not available - should use fallback
-            from tests.conftest import embedding_strategy
-
             embedding = embedding_strategy(max_dim=128)
             assert len(embedding) == 128
-            assert all(isinstance(x, (int, float)) for x in embedding)
+            assert all(isinstance(x, int | float) for x in embedding)

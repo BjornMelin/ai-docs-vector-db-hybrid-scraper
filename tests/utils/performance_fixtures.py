@@ -49,6 +49,7 @@ def async_loop():
     # Create high-performance event loop
     # Use pytest-asyncio's event loop management
     # The event loop is managed by pytest-asyncio fixtures
+    policy = asyncio.get_event_loop_policy()
     loop = policy.new_event_loop()
 
     # Optimize loop settings
@@ -66,7 +67,7 @@ def async_loop():
 
         # Wait for cancellation to complete
         if pending:
-            await asyncio.gather(*pending, return_exceptions=True)
+            loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
 
         loop.close()
     except (RuntimeError, OSError, AttributeError) as e:
@@ -249,16 +250,16 @@ def performance_monitor():
             )
 
         def get_total_time(self) -> float:
-            """Get _total elapsed time."""
+            """Get total elapsed time."""
             if self.start_time is None:
                 return 0.0
             return time.perf_counter() - self.start_time
 
         def assert_under(self, max_time: float, message: str = ""):
-            """Assert that _total time is under threshold."""
-            _total_time = self.get__total_time()
-            assert _total_time <= max_time, (
-                f"Performance assertion failed: {_total_time:.3f}s > {max_time:.3f}s. {message}"
+            """Assert that total time is under threshold."""
+            total_time = self.get_total_time()
+            assert total_time <= max_time, (
+                f"Performance assertion failed: {total_time:.3f}s > {max_time:.3f}s. {message}"
             )
 
     return TestPerformanceMonitor()

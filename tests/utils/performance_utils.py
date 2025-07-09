@@ -383,6 +383,7 @@ class BenchmarkSuite:
             if asyncio.iscoroutinefunction(func):
                 # Performance measurement - consider using pytest-asyncio fixtures
                 # await func(*args, **_kwargs  # TODO: Convert to async test)
+                pass
             else:
                 func(*args, **_kwargs)
 
@@ -396,6 +397,7 @@ class BenchmarkSuite:
             if asyncio.iscoroutinefunction(func):
                 # Performance measurement - consider using pytest-asyncio fixtures
                 # await func(*args, **_kwargs  # TODO: Convert to async test)
+                pass
             else:
                 func(*args, **_kwargs)
 
@@ -523,6 +525,7 @@ def time_function(func: Callable, *args, **_kwargs) -> float:
     if asyncio.iscoroutinefunction(func):
         # Performance measurement - consider using pytest-asyncio fixtures
         # await func(*args, **_kwargs  # TODO: Convert to async test)
+        pass
     else:
         func(*args, **_kwargs)
 
@@ -546,6 +549,7 @@ def profile_memory_usage(func: Callable, *args, **_kwargs) -> dict[str, float]:
     if asyncio.iscoroutinefunction(func):
         # Performance measurement - consider using pytest-asyncio fixtures
         # await func(*args, **_kwargs  # TODO: Convert to async test)
+        pass
     else:
         func(*args, **_kwargs)
 

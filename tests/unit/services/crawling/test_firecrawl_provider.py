@@ -503,7 +503,9 @@ class TestFirecrawlProvider:
         mock_client.scrape_url.return_value = {"success": True}
         provider._client = mock_client
 
-        with patch("asyncio.get_event_loop")  # Testing event loop behavior as mock_loop:
+        with patch(
+            "asyncio.get_event_loop"
+        ) as mock_loop:  # Testing event loop behavior
             mock_executor = AsyncMock()
             mock_executor.return_value = {"success": True}
             mock_loop.return_value.run_in_executor = mock_executor
@@ -525,7 +527,9 @@ class TestFirecrawlProvider:
         mock_client.async_crawl_url.return_value = {"id": "crawl-123"}
         provider._client = mock_client
 
-        with patch("asyncio.get_event_loop")  # Testing event loop behavior as mock_loop:
+        with patch(
+            "asyncio.get_event_loop"
+        ) as mock_loop:  # Testing event loop behavior
             mock_executor = AsyncMock()
             mock_executor.return_value = {"id": "crawl-123"}
             mock_loop.return_value.run_in_executor = mock_executor

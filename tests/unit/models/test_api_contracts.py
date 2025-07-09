@@ -2,29 +2,31 @@
 
 import pytest
 from pydantic import ValidationError
-from src.models.api_contracts import SearchRequest
-from src.models.api_contracts import AnalyticsRequest
-from src.models.api_contracts import AnalyticsResponse
-from src.models.api_contracts import BulkDocumentRequest
-from src.models.api_contracts import BulkDocumentResponse
-from src.models.api_contracts import CacheRequest
-from src.models.api_contracts import CacheResponse
-from src.models.api_contracts import CollectionInfo
-from src.models.api_contracts import CollectionRequest
-from src.models.api_contracts import CollectionResponse
-from src.models.api_contracts import DocumentRequest
-from src.models.api_contracts import DocumentResponse
-from src.models.api_contracts import ErrorResponse
-from src.models.api_contracts import HealthCheckResponse
-from src.models.api_contracts import ListCollectionsResponse
-from src.models.api_contracts import MCPRequest
-from src.models.api_contracts import MCPResponse
-from src.models.api_contracts import MetricData
-from src.models.api_contracts import SearchRequest
-from src.models.api_contracts import SearchResponse
-from src.models.api_contracts import SearchResultItem
-from src.models.api_contracts import ValidationRequest
-from src.models.api_contracts import ValidationResponse
+
+from src.models.api_contracts import (
+    AnalyticsRequest,
+    AnalyticsResponse,
+    BulkDocumentRequest,
+    BulkDocumentResponse,
+    CacheRequest,
+    CacheResponse,
+    CollectionInfo,
+    CollectionRequest,
+    CollectionResponse,
+    DocumentRequest,
+    DocumentResponse,
+    ErrorResponse,
+    HealthCheckResponse,
+    ListCollectionsResponse,
+    MCPRequest,
+    MCPResponse,
+    MetricData,
+    SearchRequest,
+    SearchResponse,
+    SearchResultItem,
+    ValidationRequest,
+    ValidationResponse,
+)
 
 
 class TestMCPRequest:
@@ -98,8 +100,8 @@ class TestErrorResponse:
         assert isinstance(response, MCPResponse)
 
 
-class TestSearchRequest:
-    """Test SearchRequest model."""
+class TestSearchRequestBasic:
+    """Test SearchRequest model basic functionality."""
 
     def test_default_values(self):
         """Test default field values."""
@@ -262,7 +264,7 @@ class TestSearchResponse:
         response = SearchResponse(
             timestamp=123.45,
             results=results,
-            _total_count=2,
+            total_count=2,
             query_time_ms=15.5,
             search_strategy="hybrid",
             cache_hit=True,
@@ -437,7 +439,7 @@ class TestBulkDocumentResponse:
             timestamp=123.45,
             processed_count=2,
             failed_count=1,
-            _total_chunks=8,
+            total_chunks=8,
             processing_time_ms=500.0,
             results=results,
             errors=errors,
@@ -580,7 +582,7 @@ class TestListCollectionsResponse:
         response = ListCollectionsResponse(
             timestamp=123.45,
             collections=collections,
-            _total_count=2,
+            total_count=2,
         )
         assert len(response.collections) == 2
         assert response._total_count == 2

@@ -699,11 +699,11 @@ class TestMetricsCollection:
                 recent_metrics.sort(key=lambda x: x.timestamp)
 
                 # Calculate rate (simple difference)
-                 = recent_metrics[-1]
+                latest = recent_metrics[-1]
                 earliest = recent_metrics[0]
 
-                time_diff = .timestamp - earliest.timestamp
-                value_diff = .value - earliest.value
+                time_diff = latest.timestamp - earliest.timestamp
+                value_diff = latest.value - earliest.value
 
                 return value_diff / time_diff if time_diff > 0 else 0.0
 

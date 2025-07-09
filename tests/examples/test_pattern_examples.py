@@ -336,7 +336,7 @@ class TestStandardizedPatterns:
         }
 
         # Act
-        result = await validate__user_input(malicious_input)
+        result = await validate_user_input(malicious_input)
 
         # Assert
         assert_error_response_standardized(

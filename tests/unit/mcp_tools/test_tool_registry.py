@@ -7,19 +7,13 @@ This test module demonstrates:
 - Minimal mock complexity
 """
 
+import contextlib
 import logging
-from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.mcp_tools.tool_registry import register_all_tools
-
-
-if TYPE_CHECKING:
-    from fastmcp import FastMCP
-
-    from src.infrastructure.client_manager import ClientManager
 
 
 class TestToolRegistryBehavior:
@@ -62,13 +56,11 @@ class TestToolRegistryBehavior:
 
         # Registration should handle external service errors
         # The exact behavior depends on implementation, but it should not crash
-        try:
+        with contextlib.suppress(ConnectionError, TimeoutError, RuntimeError):
             await register_all_tools(mock_mcp, mock_client_manager)
-        except Exception as e:
-            # If an exception is raised, it should be a controlled error
-            assert "Service unavailable" in str(e) or isinstance(
-                e, (ConnectionError, TimeoutError)
-            )
+
+        # Verify that we attempted to use the external boundary
+        assert mock_client_manager.get_qdrant_client.called
 
     @pytest.mark.asyncio
     async def test_logs_registration_progress(
@@ -198,11 +190,8 @@ class TestErrorScenarios:
 
         with caplog.at_level(logging.ERROR):
             # The function should handle external service errors gracefully
-            try:
+            with contextlib.suppress(ConnectionError):
                 await register_all_tools(mock_mcp, mock_client_manager)
-            except ConnectionError:
-                # If an error propagates, it should be the external service error
-                pass
 
         # Verify that we attempted to use the external boundary
         assert mock_client_manager.get_qdrant_client.called
@@ -217,10 +206,10 @@ class TestErrorScenarios:
 
         with caplog.at_level(logging.ERROR):
             # Should handle FastMCP external service errors
-            try:
+            with pytest.raises(RuntimeError) as exc_info:
                 await register_all_tools(mock_mcp, mock_client_manager)
-            except RuntimeError as e:
-                assert "FastMCP service error" in str(e)
+
+            assert "FastMCP service error" in str(exc_info.value)
 
         # Verify we attempted to use the FastMCP boundary
         assert mock_mcp.tool.called

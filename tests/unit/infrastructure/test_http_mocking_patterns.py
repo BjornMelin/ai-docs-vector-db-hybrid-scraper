@@ -23,7 +23,13 @@ class MockLightweightScraper:
 
     async def initialize(self):
         """Initialize mock scraper."""
-        self._http_client = httpx.AsyncClient(follow_redirects=True)
+        # Use optimized httpx client with HTTP/2 and connection pooling for tests
+        self._http_client = httpx.AsyncClient(
+            timeout=httpx.Timeout(30.0, connect=5.0),
+            limits=httpx.Limits(max_keepalive_connections=10, max_connections=20),
+            http2=True,
+            follow_redirects=True,
+        )
         self._initialized = True
 
     async def scrape_url(self, url: str) -> dict:

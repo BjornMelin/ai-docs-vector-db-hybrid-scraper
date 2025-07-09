@@ -58,8 +58,8 @@ class CachedConfigModel(BaseModel):
         return cls(**_kwargs)
 
 
-class Config(BaseSettings):
-    """Performance- configuration for benchmarking."""
+class BenchmarkConfig(BaseSettings):
+    """Performance configuration for benchmarking."""
 
     model_config = {
         "env_file": ".env",
@@ -437,7 +437,7 @@ class TestAsyncConfigurationPerformance:
 
         def create_async_compatible_config():
             """Create and validate config in async-compatible way."""
-            config = Config()
+            config = BenchmarkConfig()
             # Test basic config validation and access
             _ = config.app_name
             _ = config.environment
@@ -452,7 +452,7 @@ class TestAsyncConfigurationPerformance:
     def test_concurrent_config_access(self, benchmark):
         """Benchmark concurrent configuration access patterns."""
 
-        config = Config()
+        config = BenchmarkConfig()
 
         def concurrent_config_access():
             # Synchronous simulation of concurrent config access patterns
@@ -520,7 +520,7 @@ class TestConfigurationCaching:
     def test_nested_config_access(self, benchmark):
         """Benchmark nested configuration access patterns."""
 
-        config = Config()
+        config = BenchmarkConfig()
 
         def nested_access():
             # Common nested access patterns
@@ -602,7 +602,7 @@ class TestPerformanceTargets:
         """Ensure config loading meets <100ms target."""
 
         def timed_config_creation():
-            return Config()
+            return BenchmarkConfig()
 
         result = benchmark(timed_config_creation)
 
@@ -697,7 +697,7 @@ class TestRealWorldScenarios:
 
         def application_startup():
             # Simulate full application config loading
-            config = Config()
+            config = BenchmarkConfig()
 
             # Access all major config sections (typical startup pattern)
             _ = config.app_name
@@ -766,7 +766,7 @@ class TestRealWorldScenarios:
     def test_concurrent_service_config_access(self, benchmark):
         """Benchmark concurrent access to service configurations."""
 
-        config = Config()
+        config = BenchmarkConfig()
 
         def concurrent_service_access():
             # Synchronous simulation of concurrent config access patterns
@@ -802,10 +802,10 @@ def test_performance_benchmark_summary(benchmark):
         configs = []
 
         # Basic config
-        configs.append(Config())
+        configs.append(BenchmarkConfig())
 
         # Optimized config
-        configs.append(Config())
+        configs.append(BenchmarkConfig())
 
         # Cached config
         configs.append(CachedConfigModel.create_cached(app_name="summary"))

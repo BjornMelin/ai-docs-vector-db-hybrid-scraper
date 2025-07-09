@@ -3,21 +3,14 @@
 Tests for interaction events, user profiles and ranked results.
 """
 
-import asyncio
-from datetime import UTC, datetime, timedelta
-from unittest.mock import patch
+from datetime import UTC, datetime
 
 import pytest
 
 from src.services.query_processing.ranking import (
-    ContentCategory,
     InteractionEvent,
     InteractionType,
-    PersonalizedRankingRequest,
-    PersonalizedRankingResult,
-    PersonalizedRankingService,
     RankedResult,
-    RankingStrategy,
     UserPreference,
     UserProfile,
 )

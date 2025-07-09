@@ -3,23 +3,15 @@
 Tests for ranking strategy enums, interaction types, content categories and user preferences.
 """
 
-import asyncio
-from datetime import UTC, datetime, timedelta
-from unittest.mock import patch
+from datetime import UTC, datetime
 
 import pytest
 
 from src.services.query_processing.ranking import (
     ContentCategory,
-    InteractionEvent,
     InteractionType,
-    PersonalizedRankingRequest,
-    PersonalizedRankingResult,
-    PersonalizedRankingService,
-    RankedResult,
     RankingStrategy,
     UserPreference,
-    UserProfile,
 )
 
 

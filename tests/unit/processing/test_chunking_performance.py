@@ -22,7 +22,6 @@ from unittest.mock import Mock, patch
 
 from src.chunking import DocumentChunker
 from src.config import ChunkingConfig, ChunkingStrategy
-from src.models.document_processing import Chunk
 
 
 logger = logging.getLogger(__name__)

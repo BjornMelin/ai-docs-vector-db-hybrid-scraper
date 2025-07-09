@@ -545,7 +545,11 @@ class TestFilterComposer:
         )
         criteria["execution_strategy"] = "parallel"
 
+        import time
+
+        start_time = time.time()
         result = await composer.apply(criteria)
+        end_time = time.time()
 
         # Should execute in parallel (faster than sequential)
         execution_time = end_time - start_time

@@ -19,6 +19,58 @@ class BrowserTestError(Exception):
         self.message = message
 
 
+class MockPage:
+    """Mock page for testing."""
+
+    def __init__(self):
+        self.url = ""
+        self.title = ""
+        self.content = ""
+        self.elements = {}
+        self.form_data = {}
+        self.navigation_history = []
+        self.screenshots = []
+
+    async def goto(self, url: str, **kwargs):
+        """Navigate to URL."""
+        self.url = url
+        self._title = f"Test Page - {url}"
+        self.content = (
+            f"<html><body><h1>Test Page</h1><p>Content for {url}</p></body></html>"
+        )
+        self.navigation_history.append(
+            {
+                "url": url,
+                "timestamp": kwargs.get("timestamp", 0),
+                "load_time_ms": 500,
+            }
+        )
+        return {"success": True, "load_time_ms": 500}
+
+    async def click(self, selector: str, **kwargs):
+        """Click an element."""
+        return {"success": True, "selector": selector}
+
+    async def fill(self, selector: str, value: str, **kwargs):
+        """Fill a form field."""
+        self.form_data[selector] = value
+        return {"success": True, "selector": selector, "value": value}
+
+    async def type(self, selector: str, text: str, **kwargs):
+        """Type text into a field."""
+        self.form_data[selector] = text
+        return {"success": True, "selector": selector, "text": text}
+
+    async def close(self):
+        """Close the page."""
+
+    async def screenshot(self, **kwargs):
+        """Take a screenshot."""
+        screenshot_data = {"timestamp": kwargs.get("timestamp", 0)}
+        self.screenshots.append(screenshot_data)
+        return screenshot_data
+
+
 @pytest.fixture
 def mock_browser_config():
     """Browser configuration for testing."""

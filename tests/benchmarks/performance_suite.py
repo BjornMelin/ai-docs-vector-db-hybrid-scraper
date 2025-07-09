@@ -779,7 +779,8 @@ class VectorSearch:
 
                 return results
 
-            return await generate_embeddings()
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(generate_embeddings())
 
         # Run benchmark with pytest-benchmark
         results = benchmark(generate_embeddings_sync)
@@ -865,7 +866,8 @@ class VectorSearch:
 
                 return search_results
 
-            return await vector_search()
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(vector_search())
 
         # Run benchmark
         results = benchmark(vector_search_sync)
@@ -921,7 +923,8 @@ class VectorSearch:
                     "warm_results": len(warm_results),
                 }
 
-            return await cache_performance()
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(cache_performance())
 
         # Run benchmark
         results = benchmark(cache_performance_sync)
@@ -976,7 +979,8 @@ class VectorSearch:
                     "operations": len(test_texts),
                 }
 
-            return await concurrent_operations()
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(concurrent_operations())
 
         # Run benchmark
         results = benchmark(concurrent_operations_sync)
@@ -1033,7 +1037,8 @@ class VectorSearch:
                     "operations": len(results),
                 }
 
-            return await memory_usage()
+            loop = asyncio.get_event_loop()
+            return loop.run_until_complete(memory_usage())
 
         # Run benchmark
         results = benchmark(memory_usage_sync)
@@ -1111,4 +1116,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    await main()
+    asyncio.run(main())

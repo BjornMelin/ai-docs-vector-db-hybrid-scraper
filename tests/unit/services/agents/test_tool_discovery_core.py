@@ -3,7 +3,6 @@
 Tests for tool metrics, capabilities, initialization and scanning functionality.
 """
 
-import asyncio
 from unittest.mock import Mock
 from uuid import uuid4
 

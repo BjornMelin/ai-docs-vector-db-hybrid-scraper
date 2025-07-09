@@ -4,10 +4,14 @@ This module provides configuration and utilities for optimizing
 parallel test execution with proper resource isolation.
 """
 
+import contextlib
+import fcntl
+import json
 import os
+import socket
 import tempfile
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 
@@ -100,8 +104,6 @@ class ParallelResourceManager:
 
     def get_free_port(self, base_port: int = 0) -> int:
         """Get a free port for the current worker."""
-        import socket
-
         if self.worker_config["is_master"]:
             # For master process, use any available port
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -129,9 +131,10 @@ class ParallelResourceManager:
                     except OSError:
                         continue
 
-            raise RuntimeError(
+            msg = (
                 f"No free ports available for worker {self.worker_config['worker_id']}"
             )
+            raise RuntimeError(msg)
 
     def create_worker_temp_dir(self, name: str) -> Path:
         """Create a temporary directory specific to this worker."""
@@ -161,14 +164,11 @@ def shared_test_state():
 
         def get(self, key: str, default=None):
             """Get a value from shared state."""
-            import fcntl
-            import json
-
             if not self.state_file.exists():
                 return default
 
             try:
-                with open(self.state_file) as f:
+                with self.state_file.open() as f:
                     fcntl.flock(f.fileno(), fcntl.LOCK_SH)
                     data = json.load(f)
                     return data.get(key, default)
@@ -177,14 +177,11 @@ def shared_test_state():
 
         def set(self, key: str, value):
             """Set a value in shared state."""
-            import fcntl
-            import json
-
             # Read existing data
             data = {}
             if self.state_file.exists():
                 try:
-                    with open(self.state_file) as f:
+                    with self.state_file.open() as f:
                         fcntl.flock(f.fileno(), fcntl.LOCK_SH)
                         data = json.load(f)
                 except (json.JSONDecodeError, OSError):
@@ -193,7 +190,7 @@ def shared_test_state():
             # Update and write
             data[key] = value
 
-            with open(self.state_file, "w") as f:
+            with self.state_file.open("w") as f:
                 fcntl.flock(f.fileno(), fcntl.LOCK_EX)
                 json.dump(data, f)
 
@@ -204,7 +201,5 @@ def shared_test_state():
     # Cleanup on session end (only master worker)
     worker_id = os.getenv("PYTEST_XDIST_WORKER", "master")
     if worker_id == "master" and state_file.exists():
-        try:
+        with contextlib.suppress(OSError):
             state_file.unlink()
-        except OSError:
-            pass

@@ -4,10 +4,7 @@ This module provides fixtures for generating consistent test data
 including documents, embeddings, and configuration objects.
 """
 
-import json
 from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Any
 
 import pytest
 

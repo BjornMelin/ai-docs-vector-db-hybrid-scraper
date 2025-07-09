@@ -5,23 +5,22 @@ async functions and managing async resources properly.
 """
 
 import asyncio
-from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
+import httpx
 import pytest_asyncio
 
 
 @pytest_asyncio.fixture
 async def async_test_client():
     """Async HTTP test client with session management."""
-    import httpx
-
+    # Use optimized httpx client with HTTP/2 and connection pooling
     async with httpx.AsyncClient(
-        timeout=httpx.Timeout(30.0),
-        limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
+        timeout=httpx.Timeout(30.0, connect=5.0),
+        limits=httpx.Limits(max_keepalive_connections=20, max_connections=50),
+        http2=True,
     ) as client:
         # Add test headers
         client.headers.update({"User-Agent": "TestClient/1.0", "X-Test-Run": "true"})
@@ -74,6 +73,7 @@ async def async_rate_limiter():
                     return await self.acquire()
 
                 self.calls.append(now)
+            return None
 
         async def __aenter__(self):
             await self.acquire()
@@ -97,8 +97,7 @@ async def async_task_manager():
             return task
 
         async def gather(self, *coros):
-            results = await asyncio.gather(*coros, return_exceptions=True)
-            return results
+            return await asyncio.gather(*coros, return_exceptions=True)
 
         async def cancel_all(self):
             for task in tasks:

@@ -19,7 +19,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.api.main import app
-from src.services.security import AISecurityValidator
+from src.services.security.ai_security import AISecurityService as AISecurityValidator
 from src.services.security.integration import SecurityManager
 from src.services.security.monitoring import SecurityEventType, SecurityMonitor
 

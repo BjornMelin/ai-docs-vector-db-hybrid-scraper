@@ -1,8 +1,6 @@
 """Comprehensive tests for the personalized ranking service."""
 
-import asyncio
-from datetime import UTC, datetime, timedelta
-from unittest.mock import patch
+from datetime import UTC, datetime
 
 import pytest
 
@@ -12,7 +10,6 @@ from src.services.query_processing.ranking import (
     InteractionType,
     PersonalizedRankingRequest,
     PersonalizedRankingResult,
-    PersonalizedRankingService,
     RankedResult,
     RankingStrategy,
     UserPreference,
@@ -825,11 +822,7 @@ class TestPersonalizedRankingResult:
             )
 
 
-# Import split test classes
-from .test_ranking_service_calculations import (
-    TestPersonalizedRankingServiceCalculations,
-)
-from .test_ranking_service_core import TestPersonalizedRankingServiceCore
+# Test classes are imported at the top of the file
 
 
 if __name__ == "__main__":

@@ -67,6 +67,11 @@ class MockBrowserTier:
             msg = f"Tier {self.name} at capacity"
             raise TestError(msg)
 
+        # Lightweight tier can't handle complex scrapes
+        if self.name == "lightweight" and request_type == "complex_scrape":
+            msg = f"Tier {self.name} cannot handle {request_type}"
+            raise TestError(msg)
+
         self.active_sessions += 1
         try:
             # Simulate work
@@ -185,7 +190,7 @@ class MockBrowserMonitoringSystem:
                 result["failover_tier"] = tier_name
                 result["attempts"] = tier_order.index(tier_name) + 1
 
-            except (ConnectionError, RuntimeError, OSError) as e:
+            except (ConnectionError, RuntimeError, OSError, TestError) as e:
                 last_error = e
                 continue
             else:
@@ -259,9 +264,9 @@ class TestBrowserAutomationMonitoring:
         return MockBrowserMonitoringSystem()
 
     @pytest.fixture
-    def lightweight_tier(self):
+    def lightweight_tier(self, monitoring_system):
         """Lightweight tier fixture."""
-        return MockBrowserTier("lightweight", 1)
+        return monitoring_system.tiers["lightweight"]
 
     def test_tier_initialization(self, monitoring_system):
         """Test 5-tier system initialization."""
@@ -323,8 +328,11 @@ class TestBrowserAutomationMonitoring:
         task1.add_done_callback(lambda _: None)
         task2.add_done_callback(lambda _: None)
 
+        # Wait a bit to ensure tasks have started and incremented active_sessions
+        await asyncio.sleep(0.01)
+
         # Third request should fail due to capacity
-        with pytest.raises(Exception, match="at capacity"):
+        with pytest.raises(TestError, match="at capacity"):
             await lightweight_tier.execute_request("test3")
 
     @pytest.mark.asyncio

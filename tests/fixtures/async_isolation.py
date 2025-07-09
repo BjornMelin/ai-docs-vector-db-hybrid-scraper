@@ -6,14 +6,20 @@ concurrent execution patterns.
 """
 
 import asyncio
+import logging
+import time
 import weakref
-from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any, List, Set
+from typing import Any
 from unittest.mock import AsyncMock
 
-import pytest
 import pytest_asyncio
+
+
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 
 class AsyncResourceManager:
@@ -50,16 +56,18 @@ class AsyncResourceManager:
             if hasattr(resource, "aclose"):
                 try:
                     await resource.aclose()
-                except Exception:
-                    pass  # Ignore cleanup errors
+                except (AttributeError, RuntimeError, OSError) as e:
+                    # Ignore common cleanup errors during resource shutdown
+                    logging.getLogger(__name__).debug(f"Resource cleanup error: {e}")
             elif hasattr(resource, "close"):
                 try:
                     if asyncio.iscoroutinefunction(resource.close):
                         await resource.close()
                     else:
                         resource.close()
-                except Exception:
-                    pass  # Ignore cleanup errors
+                except (AttributeError, RuntimeError, OSError) as e:
+                    # Ignore common cleanup errors during resource shutdown
+                    logging.getLogger(__name__).debug(f"Resource cleanup error: {e}")
 
         self._resources.clear()
         self._cleanup_callbacks.clear()
@@ -171,7 +179,7 @@ async def async_timeout_manager():
             self.default_timeout = 30.0
 
         @asynccontextmanager
-        async def timeout(self, seconds: float = None):
+        async def timeout(self, seconds: float | None = None):
             """Context manager for timeout operations."""
             timeout_value = seconds or self.default_timeout
 
@@ -179,16 +187,19 @@ async def async_timeout_manager():
                 async with asyncio.timeout(timeout_value):
                     yield
             except TimeoutError:
-                raise AssertionError(f"Operation timed out after {timeout_value}s")
+                msg = f"Operation timed out after {timeout_value}s"
+                raise AssertionError(msg)
 
-        async def wait_for(self, coro, timeout: float = None):
+        async def wait_for(self, coro, timeout_seconds: float | None = None):
             """Wait for a coroutine with timeout."""
-            timeout_value = timeout or self.default_timeout
+            timeout_value = timeout_seconds or self.default_timeout
 
             try:
-                return await asyncio.wait_for(coro, timeout=timeout_value)
+                async with asyncio.timeout(timeout_value):
+                    return await coro
             except TimeoutError:
-                raise AssertionError(f"Operation timed out after {timeout_value}s")
+                msg = f"Operation timed out after {timeout_value}s"
+                raise AssertionError(msg)
 
     return TimeoutManager()
 
@@ -214,8 +225,7 @@ async def async_mock_manager():
                 raise side_effect
             return return_value
 
-        mock = create_async_mock(side_effect=mock_coro)
-        return mock
+        return create_async_mock(side_effect=mock_coro)
 
     try:
         yield {
@@ -240,19 +250,15 @@ async def async_performance_profiler():
         @asynccontextmanager
         async def profile(self, name: str):
             """Profile an async operation."""
-            import time
-
             start_time = time.perf_counter()
             start_memory = 0
 
-            try:
-                # Try to get memory info if psutil available
-                import psutil
-
-                process = psutil.Process()
-                start_memory = process.memory_info().rss / 1024 / 1024
-            except ImportError:
-                pass
+            if psutil is not None:
+                try:
+                    process = psutil.Process()
+                    start_memory = process.memory_info().rss / 1024 / 1024
+                except (AttributeError, RuntimeError, OSError):
+                    pass
 
             try:
                 yield
@@ -260,13 +266,12 @@ async def async_performance_profiler():
                 end_time = time.perf_counter()
                 end_memory = start_memory
 
-                try:
-                    import psutil
-
-                    process = psutil.Process()
-                    end_memory = process.memory_info().rss / 1024 / 1024
-                except ImportError:
-                    pass
+                if psutil is not None:
+                    try:
+                        process = psutil.Process()
+                        end_memory = process.memory_info().rss / 1024 / 1024
+                    except (AttributeError, RuntimeError, OSError):
+                        pass
 
                 self.profiles[name] = {
                     "duration_seconds": end_time - start_time,
@@ -280,23 +285,29 @@ async def async_performance_profiler():
             return self.profiles.get(name)
 
         def assert_performance(
-            self, name: str, max_duration: float = None, max_memory_mb: float = None
+            self,
+            name: str,
+            max_duration: float | None = None,
+            max_memory_mb: float | None = None,
         ):
             """Assert performance constraints."""
             profile = self.profiles.get(name)
             if not profile:
-                raise AssertionError(f"No profile found for '{name}'")
+                msg = f"No profile found for '{name}'"
+                raise AssertionError(msg)
 
             if max_duration and profile["duration_seconds"] > max_duration:
-                raise AssertionError(
+                msg = (
                     f"Profile '{name}' exceeded max duration: "
                     f"{profile['duration_seconds']:.3f}s > {max_duration}s"
                 )
+                raise AssertionError(msg)
 
             if max_memory_mb and profile["memory_delta_mb"] > max_memory_mb:
-                raise AssertionError(
+                msg = (
                     f"Profile '{name}' exceeded max memory: "
                     f"{profile['memory_delta_mb']:.2f}MB > {max_memory_mb}MB"
                 )
+                raise AssertionError(msg)
 
     return AsyncProfiler()

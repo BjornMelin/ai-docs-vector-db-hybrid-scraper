@@ -30,7 +30,14 @@ class TestAPISecurity:
         class RealPenetrationClient:
             def __init__(self):
                 self.test_client = TestClient(app)
-                self.async_client = httpx.AsyncClient(timeout=30.0)
+                # Use optimized httpx client with HTTP/2 and connection pooling
+                self.async_client = httpx.AsyncClient(
+                    timeout=httpx.Timeout(30.0, connect=5.0),
+                    limits=httpx.Limits(
+                        max_keepalive_connections=20, max_connections=50
+                    ),
+                    http2=True,
+                )
                 self.base_url = "http://testserver"
                 self.session_cookies = {}
                 self.auth_headers = {}

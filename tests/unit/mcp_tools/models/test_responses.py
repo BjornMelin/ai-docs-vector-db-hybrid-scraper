@@ -1,11 +1,11 @@
 """Unit tests for MCP response models."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
-from src.mcp_tools.models.responses import CrawlResult
-from src.mcp_tools.models.responses import SearchResult
+
+from src.mcp_tools.models.responses import CrawlResult, SearchResult
 
 
 class TestSearchResult:
@@ -179,9 +179,9 @@ class TestCrawlResult:
 
     def test_default_crawl_timestamp(self):
         """Test that crawl_timestamp is automatically set to current time."""
-        before = datetime.now(tz=timezone.utc).isoformat()
+        before = datetime.now(tz=UTC).isoformat()
         result = CrawlResult(url="https://example.com")
-        after = datetime.now(tz=timezone.utc).isoformat()
+        after = datetime.now(tz=UTC).isoformat()
 
         # crawl_timestamp should be between before and after
         assert before <= result.crawl_timestamp <= after

@@ -3,8 +3,7 @@
 Tests for service initialization, collection registration/unregistration, and basic search functionality.
 """
 
-import asyncio
-from datetime import UTC, datetime
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest

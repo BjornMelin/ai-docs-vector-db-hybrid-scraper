@@ -2,8 +2,6 @@
 
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
-import respx
-import httpx
 
 import pytest
 from click.testing import CliRunner
@@ -64,10 +62,10 @@ def sample_state_data():
         "urls_to_process": ["https://example.com/page3"],
         "completed_urls": ["https://example.com/page1"],
         "failed_urls": {"https://example.com/error": "404 Not Found"},
-        "_total_chunks_processed": 10,
-        "_total_embeddings_generated": 10,
-        "start_time": "2024-01-01T00:00:00",
-        "last_checkpoint": "2024-01-01T01:00:00",
+        "total_chunks_processed": 10,
+        "total_embeddings_generated": 10,
+        "start_time": "2024-01-01T00:00:00Z",
+        "last_checkpoint": "2024-01-01T01:00:00Z",
         "collection_name": "test_collection",
     }
 
@@ -81,8 +79,8 @@ class TestProcessingState:
         assert state.urls_to_process == []
         assert state.completed_urls == []
         assert state.failed_urls == {}
-        assert state._total_chunks_processed == 0
-        assert state._total_embeddings_generated == 0
+        assert state.total_chunks_processed == 0
+        assert state.total_embeddings_generated == 0
         assert state.collection_name == "bulk_embeddings"
 
     def test_from_dict(self, sample_state_data):
@@ -91,7 +89,7 @@ class TestProcessingState:
         assert state.urls_to_process == ["https://example.com/page3"]
         assert state.completed_urls == ["https://example.com/page1"]
         assert state.failed_urls == {"https://example.com/error": "404 Not Found"}
-        assert state._total_chunks_processed == 10
+        assert state.total_chunks_processed == 10
         assert state.collection_name == "test_collection"
 
 
@@ -128,7 +126,7 @@ class TestBulkEmbedder:
         )
 
         assert embedder.state.completed_urls == ["https://example.com/page1"]
-        assert embedder.state._total_chunks_processed == 10
+        assert embedder.state.total_chunks_processed == 10
 
     def test_save_state(self, mock_config, mock_client_manager, temp_state_file):
         """Test saving state to file."""
@@ -139,7 +137,7 @@ class TestBulkEmbedder:
         )
 
         embedder.state.completed_urls = ["https://example.com/test"]
-        embedder.state._total_chunks_processed = 5
+        embedder.state.total_chunks_processed = 5
         embedder._save_state()
 
         # Verify file was written
@@ -150,7 +148,7 @@ class TestBulkEmbedder:
             saved_data = json.load(f)
 
         assert saved_data["completed_urls"] == ["https://example.com/test"]
-        assert saved_data["_total_chunks_processed"] == 5
+        assert saved_data["total_chunks_processed"] == 5
 
     @pytest.mark.asyncio
     async def test_initialize_services(self, mock_config, mock_client_manager):
@@ -300,6 +298,7 @@ https://example.com/page2,Page 2
 </urlset>"""
 
         with patch("httpx.AsyncClient") as mock_client:
+            mock_response = AsyncMock()
             mock_response.content = sitemap_xml.encode()
 
             mock_client.return_value.__aenter__.return_value.get = AsyncMock(
@@ -441,14 +440,14 @@ https://example.com/page2,Page 2
                 max_concurrent=2,
             )
 
-            assert results["_total"] == 4
+            assert results["total"] == 4
             assert results["successful"] == 3
             assert results["failed"] == 1
 
             # Check state updates
             assert len(embedder.state.completed_urls) == 3
             assert len(embedder.state.failed_urls) == 1
-            assert embedder.state._total_chunks_processed == 6
+            assert embedder.state.total_chunks_processed == 6
 
     @pytest.mark.asyncio
     async def test_run_with_resume(self, mock_config, mock_client_manager, sample_urls):
@@ -468,7 +467,7 @@ https://example.com/page2,Page 2
             ) as mock_process,
         ):
             mock_process.return_value = {
-                "_total": 2,
+                "total": 2,
                 "successful": 2,
                 "failed": 0,
                 "results": [],
@@ -502,7 +501,7 @@ https://example.com/page2,Page 2
             ) as mock_process,
         ):
             mock_process.return_value = {
-                "_total": 3,
+                "total": 3,
                 "successful": 3,
                 "failed": 0,
                 "results": [],
@@ -522,7 +521,9 @@ class TestCLI:
     def test_cli_with_urls(self):
         """Test CLI with direct URLs."""
         with (
-            patch("src.crawl4ai_bulk_embedder.asyncio.run")  # Mocking async execution as mock_run,
+            patch(
+                "src.crawl4ai_bulk_embedder.asyncio.run"
+            ) as mock_run,  # Mocking async execution
             patch("src.crawl4ai_bulk_embedder.ConfigLoader.load_config") as mock_config,
         ):
             mock_config.return_value = MagicMock()
@@ -548,7 +549,9 @@ class TestCLI:
         urls_file.write_text("https://example.com/page1\n")
 
         with (
-            patch("src.crawl4ai_bulk_embedder.asyncio.run")  # Mocking async execution as mock_run,
+            patch(
+                "src.crawl4ai_bulk_embedder.asyncio.run"
+            ) as mock_run,  # Mocking async execution
             patch("src.crawl4ai_bulk_embedder.ConfigLoader.load_config") as mock_config,
         ):
             mock_config.return_value = MagicMock()
@@ -569,7 +572,9 @@ class TestCLI:
     def test_cli_with_sitemap(self):
         """Test CLI with sitemap."""
         with (
-            patch("src.crawl4ai_bulk_embedder.asyncio.run")  # Mocking async execution as mock_run,
+            patch(
+                "src.crawl4ai_bulk_embedder.asyncio.run"
+            ) as mock_run,  # Mocking async execution
             patch("src.crawl4ai_bulk_embedder.ConfigLoader.load_config") as mock_config,
         ):
             mock_config.return_value = MagicMock()
@@ -605,7 +610,9 @@ class TestCLI:
         config_file.write_text("{}")
 
         with (
-            patch("src.crawl4ai_bulk_embedder.asyncio.run")  # Mocking async execution as mock_run,
+            patch(
+                "src.crawl4ai_bulk_embedder.asyncio.run"
+            ) as mock_run,  # Mocking async execution
             patch("src.crawl4ai_bulk_embedder.ConfigLoader.load_config") as mock_config,
         ):
             mock_config.return_value = MagicMock()
