@@ -12,6 +12,8 @@ from urllib.parse import urlparse
 
 from fastapi import Depends, HTTPException
 
+from src.utils.async_utils import gather_with_taskgroup
+
 from .circuit_breaker import CircuitBreakerConfig, circuit_breaker
 from .dependencies import get_crawling_client
 
@@ -328,7 +330,7 @@ async def batch_crawl_urls(
 
         # Process URLs in parallel with concurrency control
         tasks = [crawl_single_url(url) for url in urls]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        results = await gather_with_taskgroup(*tasks, return_exceptions=True)
 
         # Handle any exceptions
         processed_results = []

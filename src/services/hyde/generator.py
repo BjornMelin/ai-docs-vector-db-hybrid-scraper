@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from src.services.base import BaseService
 from src.services.errors import EmbeddingServiceError
+from src.utils.async_utils import gather_with_taskgroup
 
 from .config import HyDEConfig, HyDEPromptConfig
 
@@ -304,7 +305,7 @@ class HypotheticalDocumentGenerator(BaseService):
 
         # Generate all documents concurrently
         tasks = [generate_single(prompt) for prompt in prompts]
-        documents = await asyncio.gather(*tasks, return_exceptions=True)
+        documents = await gather_with_taskgroup(*tasks, return_exceptions=True)
 
         # Filter out exceptions and empty documents
         return [

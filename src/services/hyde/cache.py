@@ -1,6 +1,5 @@
 """HyDE caching implementation using DragonflyDB."""
 
-import asyncio
 import hashlib
 import json
 import logging
@@ -17,6 +16,7 @@ except ImportError:
 
 from src.services.base import BaseService
 from src.services.errors import EmbeddingServiceError
+from src.utils.async_utils import gather_with_taskgroup
 
 from .config import HyDEConfig
 from .generator import GenerationResult
@@ -513,7 +513,7 @@ class HyDECache(BaseService):
                 self.cache_manager.delete(documents_key),
             ]
 
-            results = await asyncio.gather(*tasks, return_exceptions=True)
+            results = await gather_with_taskgroup(*tasks, return_exceptions=True)
 
             success_count = sum(1 for result in results if result is True)
 

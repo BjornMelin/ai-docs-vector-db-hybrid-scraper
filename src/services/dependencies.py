@@ -43,6 +43,7 @@ from src.services.errors import (
 )
 from src.services.rag import RAGGenerator
 from src.services.rag.models import RAGRequest as InternalRAGRequest
+from src.utils.async_utils import gather_with_taskgroup
 
 
 logger = logging.getLogger(__name__)
@@ -1534,7 +1535,7 @@ async def _bulk_scrape_fallback(
             return await crawl_manager.scrape_url(url, request.preferred_provider)
 
     tasks = [scrape_with_semaphore(url) for url in request.urls]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+    results = await gather_with_taskgroup(*tasks, return_exceptions=True)
 
     # Convert exceptions to error results
     processed_results = []
@@ -1917,3 +1918,33 @@ async def get_embedding_usage_report(
     except Exception as e:
         logger.exception("Usage report generation failed")
         return {"error": str(e)}
+
+
+# Performance Optimization Agent Dependencies
+@circuit_breaker(
+    service_name="poa_service",
+    failure_threshold=3,
+    recovery_timeout=30.0,
+    enable_adaptive_timeout=True,
+)
+async def get_poa_service(
+    config: ConfigDep,
+    client_manager: ClientManagerDep,
+) -> Any:
+    """Get initialized Performance Optimization Agent service.
+
+    Creates POA instance with monitoring and optimization capabilities.
+    Protected by circuit breaker for external service failures.
+    """
+    from src.services.monitoring.performance_monitor import RealTimePerformanceMonitor
+    from src.services.performance.poa_service import PerformanceOptimizationAgent
+
+    monitor = RealTimePerformanceMonitor()
+    redis_client = await client_manager.get_redis_client()
+
+    return PerformanceOptimizationAgent(
+        settings=config, monitor=monitor, redis_client=redis_client
+    )
+
+
+POAServiceDep = Annotated[Any, Depends(get_poa_service)]

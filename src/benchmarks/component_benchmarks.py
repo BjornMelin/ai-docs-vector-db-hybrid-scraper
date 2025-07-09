@@ -4,7 +4,6 @@ This module provides isolated performance testing for each component
 of the advanced hybrid search system.
 """
 
-import asyncio
 import logging
 import statistics
 import time
@@ -14,6 +13,7 @@ from pydantic import BaseModel, Field
 from src.config import Config
 from src.models.vector_search import HybridSearchRequest
 from src.services.vector_db.hybrid_search import AdvancedHybridSearchService
+from src.utils.async_utils import gather_with_taskgroup
 
 
 logger = logging.getLogger(__name__)
@@ -414,7 +414,7 @@ class ComponentBenchmarks:
         tasks = [concurrent_classify(q.query) for q in test_queries[:10]]
 
         start_time = time.time()
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        results = await gather_with_taskgroup(*tasks, return_exceptions=True)
         end_time = time.time()
 
         successes = sum(1 for r in results if not isinstance(r, Exception))

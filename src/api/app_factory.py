@@ -2,9 +2,37 @@
 
 This module creates FastAPI applications configured for specific modes,
 implementing the dual-mode architecture for complexity management.
+
+The application factory pattern allows dynamic creation of FastAPI instances
+based on the selected mode (Simple or Enterprise), ensuring proper service
+registration, middleware configuration, and route setup for each mode.
+
+Key Components:
+    - Mode Detection: Automatically detects or accepts explicit mode specification
+    - Service Registration: Registers mode-specific and universal services
+    - Middleware Stack: Applies mode-appropriate middleware configuration
+    - Route Configuration: Sets up mode-specific API endpoints
+    - CORS Configuration: Configures CORS based on security requirements
+    - Lifespan Management: Handles startup and shutdown procedures
+
+Modes:
+    - Simple Mode: Minimal features for solo developers (25K lines)
+    - Enterprise Mode: Full feature set for teams (70K lines)
+
+Example:
+    >>> from src.architecture.modes import ApplicationMode
+    >>> # Create app for simple mode
+    >>> app = create_app(ApplicationMode.SIMPLE)
+    >>> # Or let it auto-detect from environment
+    >>> app = create_app()
+
+Note:
+    The factory handles graceful fallbacks when optional services are
+    not available, making the application resilient to missing dependencies.
 """
 
 import logging
+from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI
@@ -72,11 +100,37 @@ logger = logging.getLogger(__name__)
 def create_app(mode: ApplicationMode | None = None) -> FastAPI:
     """Create FastAPI app configured for specific mode.
 
+    Creates a FastAPI application instance with configuration tailored
+    to the specified mode. The factory pattern allows for clean separation
+    of simple and enterprise mode configurations, including different
+    middleware stacks, route sets, and service registrations.
+
+    The created application includes:
+    - Mode-specific API title and description
+    - Appropriate documentation endpoints (Swagger/ReDoc)
+    - CORS configuration based on security requirements
+    - Middleware stack from mode configuration
+    - Route registration for mode-specific endpoints
+    - Service factory for dependency injection
+
     Args:
-        mode: Application mode to use. If None, detects from environment.
+        mode: Application mode to use. If None, detects from environment
+            using APPLICATION_MODE env var. Must be either ApplicationMode.SIMPLE
+            or ApplicationMode.ENTERPRISE.
 
     Returns:
-        Configured FastAPI application instance
+        FastAPI: Configured FastAPI application instance with:
+            - app.state.mode: Current application mode
+            - app.state.mode_config: Mode configuration object
+            - app.state.service_factory: Service factory for DI
+
+    Example:
+        >>> # Create simple mode app
+        >>> app = create_app(ApplicationMode.SIMPLE)
+        >>> # Auto-detect mode from environment
+        >>> app = create_app()
+        >>> # Access mode info
+        >>> print(app.state.mode.value)
     """
     if mode is None:
         mode = get_current_mode()
@@ -91,6 +145,7 @@ def create_app(mode: ApplicationMode | None = None) -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc" if mode == ApplicationMode.ENTERPRISE else None,
         openapi_url="/openapi.json",
+        lifespan=lifespan,
     )
 
     # Store mode information in app state
@@ -107,16 +162,32 @@ def create_app(mode: ApplicationMode | None = None) -> FastAPI:
     # Add mode-specific routes
     _configure_routes(app, mode)
 
-    # Add startup and shutdown events
-    _configure_lifecycle_events(app)
-
     logger.info("Created FastAPI app in %s mode", mode.value)
 
     return app
 
 
 def _get_app_description(mode: ApplicationMode) -> str:
-    """Get mode-specific application description."""
+    """Get mode-specific application description.
+
+    Generates a descriptive string for the API based on the current
+    application mode. This description appears in the OpenAPI documentation
+    and helps users understand the capabilities of the current deployment.
+
+    Args:
+        mode: Application mode (SIMPLE or ENTERPRISE)
+
+    Returns:
+        str: Human-readable description of the API including:
+            - Base functionality description
+            - Mode-specific capabilities
+            - Target user information
+
+    Example:
+        >>> desc = _get_app_description(ApplicationMode.SIMPLE)
+        >>> print(desc)
+        'Hybrid AI documentation scraping system... - Optimized for solo developers...'
+    """
     base_description = (
         "Hybrid AI documentation scraping system with vector database integration"
     )
@@ -135,7 +206,25 @@ def _get_app_description(mode: ApplicationMode) -> str:
 
 
 def _configure_cors(app: FastAPI, mode: ApplicationMode) -> None:
-    """Configure CORS middleware based on mode."""
+    """Configure CORS middleware based on mode.
+
+    Sets up Cross-Origin Resource Sharing (CORS) policies appropriate
+    for the application mode. Simple mode uses more permissive settings
+    for development, while enterprise mode enforces stricter policies.
+
+    Security considerations:
+    - Simple mode: Allows localhost origins for development
+    - Enterprise mode: More restrictive origin and method policies
+    - Both modes require credentials and specific headers
+
+    Args:
+        app: FastAPI application instance to configure
+        mode: Application mode determining CORS policy strictness
+
+    Note:
+        In production, replace hardcoded origins with environment-based
+        configuration to support dynamic deployment scenarios.
+    """
     if mode == ApplicationMode.SIMPLE:
         # Secure CORS for development with domain whitelist
         app.add_middleware(
@@ -306,33 +395,56 @@ def _get_mode_features(mode: ApplicationMode) -> dict[str, Any]:
     }
 
 
-def _configure_lifecycle_events(app: FastAPI) -> None:
-    """Configure startup and shutdown events."""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Modern FastAPI lifespan context manager for startup and shutdown.
 
-    @app.on_event("startup")
-    async def startup_event():
-        """Initialize services on startup."""
-        mode = app.state.mode
-        service_factory: ModeAwareServiceFactory = app.state.service_factory
+    Manages the application lifecycle using FastAPI's lifespan events.
+    This context manager handles both startup and shutdown procedures,
+    ensuring proper initialization and cleanup of resources.
 
-        logger.info("Starting application in %s mode", mode.value)
+    Startup tasks:
+    - Logs application mode
+    - Registers mode-specific services with the factory
+    - Initializes critical services (embedding, vector DB, search, cache)
+    - Handles initialization failures gracefully
 
-        # Register mode-specific services
-        _register_mode_services(service_factory)
+    Shutdown tasks:
+    - Cleans up all registered services
+    - Ensures proper resource deallocation
 
-        # Initialize critical services
-        await _initialize_critical_services(service_factory)
+    Args:
+        app: FastAPI application instance with state containing:
+            - mode: Current application mode
+            - service_factory: Mode-aware service factory
 
-        logger.info("Application startup complete in %s mode", mode.value)
+    Yields:
+        None: Control returns to FastAPI during application runtime
 
-    @app.on_event("shutdown")
-    async def shutdown_event():
-        """Clean up services on shutdown."""
-        service_factory: ModeAwareServiceFactory = app.state.service_factory
+    Note:
+        Critical service initialization failures are logged but don't
+        prevent application startup, allowing partial functionality.
+    """
+    # Startup
+    mode = app.state.mode
+    service_factory: ModeAwareServiceFactory = app.state.service_factory
 
-        logger.info("Shutting down application")
-        await service_factory.cleanup_all_services()
-        logger.info("Application shutdown complete")
+    logger.info("Starting application in %s mode", mode.value)
+
+    # Register mode-specific services
+    _register_mode_services(service_factory)
+
+    # Initialize critical services
+    await _initialize_critical_services(service_factory)
+
+    logger.info("Application startup complete in %s mode", mode.value)
+
+    yield  # Application runs here
+
+    # Shutdown
+    logger.info("Shutting down application")
+    await service_factory.cleanup_all_services()
+    logger.info("Application shutdown complete")
 
 
 def _register_mode_services(factory: ModeAwareServiceFactory) -> None:
@@ -391,10 +503,47 @@ async def _initialize_critical_services(factory: ModeAwareServiceFactory) -> Non
 
 
 def get_app_mode(app: FastAPI) -> ApplicationMode:
-    """Get the mode of a FastAPI application."""
+    """Get the mode of a FastAPI application.
+
+    Utility function to retrieve the application mode from a FastAPI
+    instance. This is useful for request handlers and middleware that
+    need to adapt behavior based on the current mode.
+
+    Args:
+        app: FastAPI application instance created by create_app()
+
+    Returns:
+        ApplicationMode: The current mode (SIMPLE or ENTERPRISE)
+
+    Example:
+        >>> from fastapi import Request
+        >>> def my_handler(request: Request):
+        ...     mode = get_app_mode(request.app)
+        ...     if mode == ApplicationMode.ENTERPRISE:
+        ...         # Enterprise-specific logic
+        ...         pass
+    """
     return app.state.mode  # type: ignore[attr-defined]
 
 
 def get_app_service_factory(app: FastAPI) -> ModeAwareServiceFactory:
-    """Get the service factory from a FastAPI application."""
+    """Get the service factory from a FastAPI application.
+
+    Utility function to retrieve the service factory, which provides
+    access to mode-specific service instances. This enables dependency
+    injection patterns in route handlers and middleware.
+
+    Args:
+        app: FastAPI application instance created by create_app()
+
+    Returns:
+        ModeAwareServiceFactory: Factory for accessing mode-specific services
+
+    Example:
+        >>> from fastapi import Request
+        >>> async def my_handler(request: Request):
+        ...     factory = get_app_service_factory(request.app)
+        ...     search_service = await factory.get_service("search_service")
+        ...     results = await search_service.search("query")
+    """
     return app.state.service_factory  # type: ignore[attr-defined]

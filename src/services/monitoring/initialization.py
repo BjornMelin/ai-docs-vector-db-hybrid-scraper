@@ -9,6 +9,7 @@ import logging
 import time
 
 from src.config import Config, MonitoringConfig
+from src.utils.async_utils import gather_with_taskgroup
 
 from .health import HealthCheckConfig, HealthCheckManager, HealthStatus
 from .metrics import MetricsConfig, MetricsRegistry, initialize_metrics
@@ -144,7 +145,7 @@ async def stop_background_monitoring_tasks(tasks: list[asyncio.Task]) -> None:
         task.cancel()
 
     # Wait for tasks to be cancelled
-    await asyncio.gather(*tasks, return_exceptions=True)
+    await gather_with_taskgroup(*tasks, return_exceptions=True)
 
     logger.info("Background monitoring tasks stopped")
 

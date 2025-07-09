@@ -4,7 +4,6 @@ Full-featured search service with all advanced capabilities for enterprise deplo
 and portfolio demonstrations.
 """
 
-import asyncio
 import logging
 import time
 from typing import Any
@@ -12,6 +11,7 @@ from typing import Any
 from src.architecture.service_factory import BaseService
 from src.models.requests import SearchRequest
 from src.models.vector_search import SearchResponse
+from src.utils.async_utils import gather_with_taskgroup
 
 
 # Optional imports for enterprise features
@@ -208,7 +208,7 @@ class EnterpriseSearchService(BaseService):
         vector_task = self._perform_vector_search(request, query)
         keyword_task = self._perform_keyword_search(request, query)
 
-        vector_results, keyword_results = await asyncio.gather(
+        vector_results, keyword_results = await gather_with_taskgroup(
             vector_task, keyword_task, return_exceptions=True
         )
 

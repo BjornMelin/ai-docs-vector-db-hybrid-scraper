@@ -212,7 +212,7 @@ class QueryExpansionService:
         self.success_feedback.clear()
         self._logger.info("Query expansion service cleaned up")
 
-    async def expand(self, query: str, **kwargs) -> str:
+    async def expand(self, query: str, **kwargs: Any) -> str:
         """Simple query expansion interface that returns expanded query string.
 
         Args:

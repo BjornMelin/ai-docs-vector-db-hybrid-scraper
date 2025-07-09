@@ -60,7 +60,7 @@ class CacheMetrics:
 
     def get_summary(self) -> dict[str, Any]:
         """Get metrics summary."""
-        summary = {}
+        summary: dict[str, Any] = {}
 
         for cache_type, layers in self._stats.items():
             summary[cache_type] = {}

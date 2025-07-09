@@ -47,7 +47,7 @@ class BatchProcessor:
         self.process_func = process_func
         self.config = config or BatchConfig()
         self.pending_items: list[T] = []
-        self.pending_futures: list[asyncio.Future] = []
+        self.pending_futures: list[asyncio.Future[Any]] = []
         self.last_batch_time = time.time()
         self.processing_lock = asyncio.Lock()
 

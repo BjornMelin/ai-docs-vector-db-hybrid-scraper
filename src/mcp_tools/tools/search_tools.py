@@ -1,10 +1,11 @@
 """Advanced search tools for MCP server."""
 
-import asyncio
 import logging
 import time
 from typing import TYPE_CHECKING
 from uuid import uuid4
+
+from src.utils.async_utils import gather_with_taskgroup
 
 from ._search_utils import search_documents_core
 
@@ -73,7 +74,7 @@ async def _perform_ab_test_search(
     )
 
     # Wait for both to complete
-    hyde_results, regular_results = await asyncio.gather(
+    hyde_results, regular_results = await gather_with_taskgroup(
         hyde_task, regular_task, return_exceptions=True
     )
 

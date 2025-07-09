@@ -1,6 +1,3 @@
-import typing
-
-
 """Request models for MCP server tools."""
 
 from typing import Any

@@ -17,6 +17,8 @@ from typing import Any
 
 from fastapi import BackgroundTasks
 
+from src.utils.async_utils import gather_with_taskgroup
+
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +183,7 @@ class BackgroundTaskManager:
         if self._workers:
             try:
                 await asyncio.wait_for(
-                    asyncio.gather(*self._workers, return_exceptions=True),
+                    gather_with_taskgroup(*self._workers, return_exceptions=True),
                     timeout=timeout,
                 )
             except TimeoutError:

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from src.mcp_tools.models.responses import AddDocumentResponse, DocumentBatchResponse
+from src.utils.async_utils import gather_with_taskgroup
 
 
 if TYPE_CHECKING:
@@ -306,7 +307,7 @@ def register_tools(mcp, client_manager: ClientManager):
                     failures.append(url)
 
         # Process all URLs concurrently
-        await asyncio.gather(
+        await gather_with_taskgroup(
             *[process_url(url) for url in request.urls],
             return_exceptions=True,
         )

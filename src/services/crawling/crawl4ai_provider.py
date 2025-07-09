@@ -13,6 +13,8 @@ from crawl4ai.extraction_strategy import (
     LLMExtractionStrategy,
 )
 
+from src.utils.async_utils import gather_with_taskgroup
+
 
 try:
     from crawl4ai import (
@@ -42,7 +44,16 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
     """High-performance web crawling with Memory-Adaptive Dispatcher for intelligent concurrency control."""
 
     def __init__(self, config: Crawl4AIConfig, rate_limiter: object = None):
-        """Initialize Crawl4AI provider with Memory-Adaptive Dispatcher."""
+        """Initialize Crawl4AI provider with Memory-Adaptive Dispatcher.
+
+        Sets up the provider with intelligent concurrency control using either
+        Memory-Adaptive Dispatcher (if available) or traditional semaphore-based
+        approach. Configures browser settings, extraction helpers, and rate limiting.
+
+        Args:
+            config: Crawl4AI configuration with memory thresholds and limits
+            rate_limiter: Optional rate limiter instance for API throttling
+        """
         super().__init__(config)
         self.config = config
         self.logger = logger
@@ -96,7 +107,15 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
         self._initialized = False
 
     def _create_memory_dispatcher(self) -> "MemoryAdaptiveDispatcher":
-        """Create Memory-Adaptive Dispatcher with configuration."""
+        """Create Memory-Adaptive Dispatcher with configuration.
+
+        Configures the memory-aware dispatcher that automatically adjusts
+        concurrent sessions based on system memory usage. Includes exponential
+        backoff rate limiting and performance monitoring.
+
+        Returns:
+            MemoryAdaptiveDispatcher: Configured dispatcher instance
+        """
         # Create Crawl4AI rate limiter with exponential backoff
         crawl4ai_rate_limiter = Crawl4AIRateLimiter(
             base_delay=(
@@ -129,7 +148,14 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
         return dispatcher
 
     async def initialize(self) -> None:
-        """Initialize Crawl4AI crawler with Memory-Adaptive Dispatcher."""
+        """Initialize Crawl4AI crawler with Memory-Adaptive Dispatcher.
+
+        Sets up the crawler instance with appropriate concurrency control,
+        initializes the browser context, and prepares extraction strategies.
+
+        Raises:
+            CrawlServiceError: If initialization fails
+        """
         if self._initialized:
             return
 
@@ -142,7 +168,12 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             raise CrawlServiceError(msg) from e
 
     async def cleanup(self) -> None:
-        """Cleanup Crawl4AI resources and Memory-Adaptive Dispatcher."""
+        """Cleanup Crawl4AI resources and Memory-Adaptive Dispatcher.
+
+        Gracefully shuts down the browser context, clears dispatcher references,
+        and releases all resources. Handles cleanup errors without raising to
+        ensure reliable shutdown.
+        """
         # Cleanup Memory-Adaptive Dispatcher first
         if self.use_memory_dispatcher and self.dispatcher:
             try:
@@ -456,7 +487,14 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             return self._build_error_result(url, e, extraction_type)
 
     def _get_dispatcher_stats(self) -> dict[str, object]:
-        """Get Memory-Adaptive Dispatcher performance statistics."""
+        """Get Memory-Adaptive Dispatcher performance statistics.
+
+        Retrieves runtime statistics from the memory-adaptive dispatcher
+        including memory usage, active sessions, and configuration details.
+
+        Returns:
+            Performance statistics dictionary with dispatcher metrics
+        """
         if not self.use_memory_dispatcher or not self.dispatcher:
             return {"dispatcher_type": "semaphore", "active_sessions": "unknown"}
 
@@ -548,7 +586,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
         """
         tasks = [self.scrape_url(url, extraction_type=extraction_type) for url in urls]
 
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        results = await gather_with_taskgroup(*tasks, return_exceptions=True)
 
         # Process results
         successful = []

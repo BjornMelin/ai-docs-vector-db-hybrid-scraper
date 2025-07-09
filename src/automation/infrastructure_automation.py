@@ -82,7 +82,7 @@ class AdaptiveCircuitBreaker:
         self.state = CircuitBreakerState()
         self.historical_data: list[dict[str, Any]] = []
 
-    async def call(self, func: Callable, *args, **kwargs):
+    async def call(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         """Execute function with circuit breaker protection."""
         if self._should_reject():
             msg = f"Circuit breaker {self.name} is open"

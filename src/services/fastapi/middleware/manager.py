@@ -12,6 +12,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from src.config import get_config
 
+from .ai_security import AISecurityMiddleware
 from .performance import PerformanceMiddleware
 from .security import SecurityMiddleware
 from .timeout import TimeoutMiddleware
@@ -35,9 +36,10 @@ class MiddlewareManager:
 
         Simplified order:
         1. CORS (for API access)
-        2. Security (basic protection)
-        3. Timeout (request timeout)
-        4. Performance (basic monitoring)
+        2. AI Security (OWASP AI Top 10 protection)
+        3. Security (basic protection)
+        4. Timeout (request timeout)
+        5. Performance (basic monitoring)
         """
         middleware_stack = []
 
@@ -52,18 +54,27 @@ class MiddlewareManager:
             )
         )
 
-        # 2. Security - Basic protection
+        # 2. AI Security - OWASP AI Top 10 protection
+        if (
+            hasattr(self.config, "ai_security")
+            and self.config.ai_security.enable_ai_security
+        ):
+            middleware_stack.append(
+                Middleware(AISecurityMiddleware, config=self.config.ai_security)
+            )
+
+        # 3. Security - Basic protection
         if self.config.security.enable_rate_limiting:
             middleware_stack.append(
                 Middleware(SecurityMiddleware, config=self.config.security)
             )
 
-        # 3. Timeout - Request timeout
+        # 4. Timeout - Request timeout
         middleware_stack.append(
             Middleware(TimeoutMiddleware, config=self.config.performance)
         )
 
-        # 4. Performance - Basic monitoring
+        # 5. Performance - Basic monitoring
         middleware_stack.append(
             Middleware(PerformanceMiddleware, config=self.config.performance)
         )
@@ -79,6 +90,9 @@ class MiddlewareManager:
                 allow_credentials=True,
                 allow_methods=["*"],
                 allow_headers=["*"],
+            ),
+            "ai_security": Middleware(
+                AISecurityMiddleware, config=getattr(self.config, "ai_security", None)
             ),
             "security": Middleware(SecurityMiddleware, config=self.config.security),
             "timeout": Middleware(TimeoutMiddleware, config=self.config.performance),

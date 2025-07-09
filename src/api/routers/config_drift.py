@@ -87,7 +87,9 @@ class DriftEventResponse(BaseModel):
     "/status",
     response_model=DriftServiceStatusResponse,
     summary="Get configuration drift service status",
-    description="Retrieve current status and configuration of the drift detection service",
+    description=(
+        "Retrieve current status and configuration of the drift detection service"
+    ),
 )
 async def get_drift_status():
     """Get current status of the configuration drift detection service."""
@@ -295,20 +297,23 @@ async def get_drift_config():
         with monitor_operation("api_config_drift_config", category="api"):
             config = get_config()
 
+            drift_config = config.drift_detection
             return {
-                "enabled": config.drift_detection.enabled,
-                "snapshot_interval_minutes": config.drift_detection.snapshot_interval_minutes,
-                "comparison_interval_minutes": config.drift_detection.comparison_interval_minutes,
-                "monitored_paths": config.drift_detection.monitored_paths,
-                "excluded_paths": config.drift_detection.excluded_paths,
-                "alert_on_severity": config.drift_detection.alert_on_severity,
-                "max_alerts_per_hour": config.drift_detection.max_alerts_per_hour,
-                "snapshot_retention_days": config.drift_detection.snapshot_retention_days,
-                "events_retention_days": config.drift_detection.events_retention_days,
-                "auto_remediation_enabled": config.drift_detection.enable_auto_remediation,
+                "enabled": drift_config.enabled,
+                "snapshot_interval_minutes": drift_config.snapshot_interval_minutes,
+                "comparison_interval_minutes": (
+                    drift_config.comparison_interval_minutes
+                ),
+                "monitored_paths": drift_config.monitored_paths,
+                "excluded_paths": drift_config.excluded_paths,
+                "alert_on_severity": drift_config.alert_on_severity,
+                "max_alerts_per_hour": drift_config.max_alerts_per_hour,
+                "snapshot_retention_days": drift_config.snapshot_retention_days,
+                "events_retention_days": drift_config.events_retention_days,
+                "auto_remediation_enabled": drift_config.enable_auto_remediation,
                 "integrations": {
-                    "task20_anomaly": config.drift_detection.integrate_with_task20_anomaly,
-                    "performance_monitoring": config.drift_detection.use_performance_monitoring,
+                    "task20_anomaly": drift_config.integrate_with_task20_anomaly,
+                    "performance_monitoring": (drift_config.use_performance_monitoring),
                 },
             }
 

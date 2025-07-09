@@ -11,6 +11,7 @@ from typing import Annotated, Any
 from fastapi import Depends, HTTPException
 
 from src.services.embeddings.manager import QualityTier, TextAnalysis
+from src.utils.async_utils import gather_with_taskgroup
 
 from .circuit_breaker import CircuitBreakerConfig, circuit_breaker
 from .dependencies import get_embedding_client
@@ -370,7 +371,7 @@ async def batch_generate_embeddings(
 
         # Process batches in parallel with concurrency control
         tasks = [process_batch(batch) for batch in text_batches]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        results = await gather_with_taskgroup(*tasks, return_exceptions=True)
 
         # Handle any exceptions
         processed_results = []

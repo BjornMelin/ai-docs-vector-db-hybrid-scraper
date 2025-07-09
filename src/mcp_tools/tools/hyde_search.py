@@ -126,7 +126,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 )
 
                 if search_result and "points" in search_result:
-                    # Add metadata about which hypothetical document generated this result
+                    # Add metadata about which hypothetical document generated this
+                    # result
                     for point in search_result["points"]:
                         point["hyde_source"] = i
                         point["hyde_document"] = doc["content"][:100] + "..."

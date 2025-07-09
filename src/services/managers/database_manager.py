@@ -1,7 +1,7 @@
 """Database manager for Qdrant and cache operations."""
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 import redis
 from dependency_injector.wiring import Provide, inject
@@ -387,7 +387,7 @@ class DatabaseManager:
 
         return status
 
-    async def get_cache_manager(self) -> Optional["CacheManager"]:
+    async def get_cache_manager(self) -> CacheManager | None:
         """Get cache manager instance.
 
         Returns:
@@ -395,7 +395,7 @@ class DatabaseManager:
         """
         return self._cache_manager
 
-    async def get_qdrant_service(self) -> Optional["QdrantService"]:
+    async def get_qdrant_service(self) -> QdrantService | None:
         """Get Qdrant service instance.
 
         Returns:

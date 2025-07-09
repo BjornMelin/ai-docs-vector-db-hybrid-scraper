@@ -99,5 +99,7 @@ async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") ->
         logger.exception("Failed to register agentic RAG tools")
 
     logger.info(
-        f"Successfully registered {len(registered_tools)} tool modules: {', '.join(registered_tools)}"
+        "Successfully registered %d tool modules: %s",
+        len(registered_tools),
+        ", ".join(registered_tools),
     )

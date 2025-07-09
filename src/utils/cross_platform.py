@@ -236,7 +236,9 @@ def set_platform_environment_defaults() -> dict[str, str]:
 
     if is_windows():
         env_defaults["PYTHONUTF8"] = "1"
-        env_defaults["PLAYWRIGHT_BROWSERS_PATH"] = get_playwright_browser_path()
+        browser_path = get_playwright_browser_path()
+        if browser_path is not None:
+            env_defaults["PLAYWRIGHT_BROWSERS_PATH"] = browser_path
     elif is_ci_environment():
         env_defaults["PLAYWRIGHT_BROWSERS_PATH"] = "0"
         env_defaults["CRAWL4AI_HEADLESS"] = "true"

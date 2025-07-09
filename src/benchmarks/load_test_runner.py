@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from src.config import Config
 from src.models.vector_search import HybridSearchRequest
 from src.services.vector_db.hybrid_search import HybridSearchService
+from src.utils.async_utils import gather_with_taskgroup
 
 
 logger = logging.getLogger(__name__)
@@ -303,14 +304,14 @@ class LoadTestRunner:
         # Wait for completion or timeout
         try:
             await asyncio.wait_for(
-                asyncio.gather(*user_tasks),
+                gather_with_taskgroup(*user_tasks),
                 timeout=load_config.duration_seconds + load_config.ramp_up_seconds + 30,
             )
         except TimeoutError:
             logger.warning("Load test timed out, stopping users")
             for user in users:
                 user.active = False
-            await asyncio.gather(*user_tasks, return_exceptions=True)
+            await gather_with_taskgroup(*user_tasks, return_exceptions=True)
 
         # Stop metrics tracking
         metrics_tracker.cancel()

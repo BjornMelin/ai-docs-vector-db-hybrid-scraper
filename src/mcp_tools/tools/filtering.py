@@ -49,7 +49,8 @@ def register_tools(mcp, client_manager: ClientManager):
         Args:
             query: Search query for filter optimization
             base_filters: Base filters to optimize
-            optimization_target: Target for optimization (relevance, performance, coverage)
+            optimization_target: Target for optimization (relevance, performance,
+                coverage)
             auto_enhance: Enable autonomous filter enhancement
             collection_name: Optional collection for context-aware optimization
             ctx: MCP context for logging

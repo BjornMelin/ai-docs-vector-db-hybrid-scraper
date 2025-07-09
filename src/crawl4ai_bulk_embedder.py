@@ -30,6 +30,7 @@ from .config import Config, get_config
 from .infrastructure.client_manager import ClientManager
 from .services.embeddings.manager import QualityTier
 from .services.logging_config import configure_logging
+from .utils.async_utils import gather_with_taskgroup
 
 
 class ScrapingError(Exception):
@@ -73,8 +74,8 @@ class ProcessingState(BaseModel):
     failed_urls: dict[str, str] = Field(default_factory=dict)
     total_chunks_processed: int = 0
     total_embeddings_generated: int = 0
-    start_time: datetime = Field(default_factory=datetime.now)
-    last_checkpoint: datetime = Field(default_factory=datetime.now)
+    start_time: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
+    last_checkpoint: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))
     collection_name: str = "bulk_embeddings"
 
 
@@ -217,7 +218,12 @@ class BulkEmbedder:
         """Load URLs from a sitemap."""
         urls = []
 
-        async with httpx.AsyncClient() as client:
+        # Use optimized httpx client with HTTP/2 and connection pooling
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(30.0, connect=5.0),
+            limits=httpx.Limits(max_keepalive_connections=50, max_connections=100),
+            http2=True,
+        ) as client:
             response = await client.get(sitemap_url)
             response.raise_for_status()
 
@@ -482,7 +488,7 @@ class BulkEmbedder:
             tasks.append(task)
 
         # Wait for all tasks
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        results = await gather_with_taskgroup(*tasks, return_exceptions=True)
 
         # Process results
         successful = sum(1 for r in results if isinstance(r, dict) and r.get("success"))

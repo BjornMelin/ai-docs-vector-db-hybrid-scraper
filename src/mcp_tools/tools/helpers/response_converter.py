@@ -1,5 +1,6 @@
 """Response converters for query processing MCP tools."""
 
+from typing import Any
 from uuid import uuid4
 
 from src.mcp_tools.models.responses import (
@@ -15,7 +16,7 @@ class ResponseConverter:
     """Converts internal response formats to MCP response formats."""
 
     @staticmethod
-    def convert_intent_classification(intent_data) -> QueryIntentResult | None:
+    def convert_intent_classification(intent_data: Any) -> QueryIntentResult | None:
         """Convert intent classification data to MCP format."""
         if not intent_data:
             return None
@@ -38,7 +39,7 @@ class ResponseConverter:
 
     @staticmethod
     def convert_preprocessing_result(
-        preprocessing_data,
+        preprocessing_data: Any,
     ) -> QueryPreprocessingResult | None:
         """Convert preprocessing result to MCP format."""
         if not preprocessing_data:
@@ -55,7 +56,7 @@ class ResponseConverter:
         )
 
     @staticmethod
-    def convert_strategy_selection(strategy_data) -> SearchStrategyResult | None:
+    def convert_strategy_selection(strategy_data: Any) -> SearchStrategyResult | None:
         """Convert strategy selection data to MCP format."""
         if not strategy_data:
             return None
@@ -74,7 +75,7 @@ class ResponseConverter:
 
     @staticmethod
     def convert_search_results(
-        results, include_analytics: bool = False
+        results: Any, include_analytics: bool = False
     ) -> list[SearchResult]:
         """Convert search results to MCP format."""
         search_results = []
@@ -91,7 +92,7 @@ class ResponseConverter:
         return search_results
 
     def convert_to_mcp_response(
-        self, response, include_analytics: bool = False
+        self, response: Any, include_analytics: bool = False
     ) -> AdvancedQueryProcessingResponse:
         """Convert internal response to MCP response format."""
         # Convert components using helper methods

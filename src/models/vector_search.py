@@ -12,15 +12,14 @@ Key Features:
 - Performance-optimized with caching and validation strategies
 """
 
-from __future__ import annotations
-
-import importlib
 import math
 import re
+from datetime import datetime
 from enum import Enum
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, Literal, Self
+from typing import Any, Literal, Self
 
+from fastapi import HTTPException
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -29,10 +28,6 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-
-
-if TYPE_CHECKING:
-    from datetime import datetime
 
 
 # =============================================================================
@@ -195,7 +190,10 @@ class SecureVectorModel(SecureBaseModel):
             raise ValueError(msg)
 
         if len(v) > 4096:
-            msg = f"Vector dimensions exceed maximum allowed (4096), got {len(v)} (security: DoS prevention)"
+            msg = (
+                f"Vector dimensions exceed maximum allowed (4096), got {len(v)} "
+                f"(security: DoS prevention)"
+            )
             raise DimensionError(msg)
 
         def _raise_error(message: str) -> None:
@@ -380,7 +378,7 @@ class SecureFilterGroupModel(SecureBaseModel):
     """Secure filter group for complex queries."""
 
     operator: Literal["and", "or", "not"] = Field(..., description="Logical operator")
-    filters: list[SecureFilterModel | SecureFilterGroupModel] = Field(
+    filters: "list[SecureFilterModel | SecureFilterGroupModel]" = Field(
         ...,
         min_length=1,
         max_length=50,  # DoS prevention
@@ -398,7 +396,7 @@ class SecureFilterGroupModel(SecureBaseModel):
 
             max_child_depth = current_depth
             for f in obj.filters:
-                if isinstance(f, SecureFilterGroupModel):
+                if type(f).__name__ == "SecureFilterGroupModel":
                     child_depth = check_depth(f, current_depth + 1)
                     max_child_depth = max(max_child_depth, child_depth)
 
@@ -467,14 +465,26 @@ class SecurePayloadModel(SecureBaseModel):
         # Use lazy import to avoid circular dependency
         try:
             # Import at runtime to avoid circular dependency
-            security_module = importlib.import_module(
-                "src.services.security.ai_security"
+            # Import the synchronous AISecurityValidator from the standalone ai_security.py file
+            # We need to import the standalone file directly, not the directory module
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(
+                'ai_security_standalone',
+                '/workspace/repos/ai-docs-vector-db-hybrid-scraper/src/services/security/ai_security.py'
             )
-            validator = security_module.AISecurityValidator()
+            ai_security_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(ai_security_module)
+            AISecurityValidator = ai_security_module.AISecurityValidator
 
-            if not validator.validate_search_query(v):
-                msg = "Content failed AI security validation"
-                raise SecurityValidationError(msg)
+            validator = AISecurityValidator()
+
+            # Use validate_search_query method for content validation
+            # This method returns sanitized string or raises HTTPException on threats
+            return validator.validate_search_query(v)
+        except HTTPException as e:
+            # Convert HTTPException to SecurityValidationError
+            msg = f"Content failed AI security validation: {e.detail}"
+            raise SecurityValidationError(msg) from e
         except ImportError:
             # Fallback validation if AI security is not available
             dangerous_patterns = [
@@ -561,21 +571,36 @@ class HyDESearchRequest(AdvancedFilteredSearchRequest):
     @classmethod
     def validate_query_security(cls, v: str) -> str:
         """Validate query text for security."""
+        # Basic validation first
+        if len(v.strip()) < 3:
+            msg = "Query too short for meaningful search"
+            raise ValueError(msg)
+
         try:
             # Import at runtime to avoid circular dependency
-            security_module = importlib.import_module(
-                "src.services.security.ai_security"
+            # Import the synchronous AISecurityValidator from the standalone ai_security.py file
+            # We need to import the standalone file directly, not the directory module
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(
+                'ai_security_standalone',
+                '/workspace/repos/ai-docs-vector-db-hybrid-scraper/src/services/security/ai_security.py'
             )
-            validator = security_module.AISecurityValidator()
+            ai_security_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(ai_security_module)
+            AISecurityValidator = ai_security_module.AISecurityValidator
 
-            if not validator.validate_search_query(v):
-                msg = "Query failed AI security validation"
-                raise SecurityValidationError(msg)
+            validator = AISecurityValidator()
+
+            # Use validate_search_query method for query validation
+            # This method returns sanitized string or raises HTTPException on threats
+            return validator.validate_search_query(v)
+        except HTTPException as e:
+            # Convert HTTPException to SecurityValidationError
+            msg = f"Query failed AI security validation: {e.detail}"
+            raise SecurityValidationError(msg) from e
         except ImportError:
-            # Basic fallback validation
-            if len(v.strip()) < 3:
-                msg = "Query too short for meaningful search"
-                raise ValueError(msg) from None
+            # Already did basic validation above
+            pass
 
         return v
 

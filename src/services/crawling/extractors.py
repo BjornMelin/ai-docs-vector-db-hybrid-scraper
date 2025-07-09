@@ -4,6 +4,7 @@ This module provides reusable components for JavaScript execution and
 documentation extraction that can be used across different crawling providers.
 """
 
+from typing import Any
 from urllib.parse import urlparse
 
 
@@ -84,7 +85,7 @@ class DocumentationExtractor:
 
     def __init__(self):
         """Initialize documentation extractor with selector mappings."""
-        self.selectors = {
+        self.selectors: dict[str, Any] = {
             # Common documentation selectors
             "content": [
                 "main",
@@ -119,7 +120,7 @@ class DocumentationExtractor:
             },
         }
 
-    def create_extraction_schema(self, doc_type: str = "general") -> dict:
+    def create_extraction_schema(self, doc_type: str = "general") -> dict[str, Any]:
         """Create extraction schema based on documentation type.
 
         Args:

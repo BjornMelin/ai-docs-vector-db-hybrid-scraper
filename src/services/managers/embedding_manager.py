@@ -2,7 +2,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from dependency_injector.wiring import Provide, inject
 
@@ -25,11 +25,11 @@ class EmbeddingOptions:
 if TYPE_CHECKING:
     from src.config import Config
     from src.infrastructure.client_manager import ClientManager
-    from src.services.embeddings.manager import EmbeddingManager as CoreEmbeddingManager
 
 # Imports to avoid circular dependencies
 try:
     from src.services.embeddings.manager import (
+        EmbeddingManager as CoreEmbeddingManager,
         EmbeddingManager as CoreManager,
         QualityTier,
         TextAnalysis,
@@ -385,7 +385,7 @@ class EmbeddingManager:
 
         return status
 
-    def get_core_manager(self) -> Optional["CoreEmbeddingManager"]:
+    def get_core_manager(self) -> CoreEmbeddingManager | None:
         """Get core embedding manager instance.
 
         Returns:

@@ -92,7 +92,7 @@ class IntelligentCache(Generic[K, V]):
         self._memory_cache: OrderedDict[K, CacheEntry] = OrderedDict()
         self._cache_lock = asyncio.Lock()
         self._stats = CacheStats()
-        self._background_tasks: set[asyncio.Task] = set()
+        self._background_tasks: set[asyncio.Task[Any]] = set()
 
         # Setup persistence if enabled
         if self.config.enable_persistence:
@@ -722,7 +722,7 @@ def cached_with_ttl(ttl_seconds: int = 3600, cache_size: int = 1000):
         Decorated function with caching
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         cache: dict[str, tuple[Any, float]] = {}
 
         @functools.wraps(func)

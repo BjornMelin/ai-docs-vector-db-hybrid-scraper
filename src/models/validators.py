@@ -145,7 +145,7 @@ def validate_rate_limit_config(
     for provider, limits in value.items():
         if not isinstance(limits, dict):
             msg = f"Rate limits for provider '{provider}' must be a dictionary"
-            raise TypeError(msg)
+            raise ValueError(msg)
 
         required_keys = {"max_calls", "time_window"}
         if not required_keys.issubset(limits.keys()):
@@ -210,7 +210,7 @@ def validate_scoring_weights(
         raise ValueError(msg)
 
 
-def validate_vector_dimensions(value: int) -> int:
+def validate_vector_dimensions(value: int, model_name: str | None = None) -> int:
     """Validate vector dimensions are within reasonable bounds.
 
     Args:
@@ -297,7 +297,7 @@ def validate_collection_name(value: str) -> str:
     return value
 
 
-def validate_embedding_model_name(value: str) -> str:
+def validate_embedding_model_name(value: str, provider: str | None = None) -> str:
     """Validate embedding model name format.
 
     Args:

@@ -212,7 +212,7 @@ class ConfigurationError(BaseError):
 
 
 # Utility Functions and Decorators
-def safe_response(success: bool, **kwargs) -> dict[str, Any]:
+def safe_response(success: bool, **kwargs: Any) -> dict[str, Any]:
     """Create a safe response dictionary for MCP tools.
 
     Args:
@@ -251,7 +251,7 @@ def retry_async(
     base_delay: float = 1.0,
     max_delay: float = 60.0,
     backoff_factor: float = 2.0,
-    exceptions: tuple = (Exception,),
+    exceptions: tuple[type[Exception], ...] = (Exception,),
 ) -> Callable[[F], F]:
     """Async retry decorator with exponential backoff.
 
@@ -323,7 +323,7 @@ class CircuitBreakerMetrics:
         self.response_times = []
         self.last_reset = datetime.now(tz=UTC)
 
-    def record_call(self, success: bool, response_time: float | None = None):
+    def record_call(self, success: bool, response_time: float | None = None) -> None:
         """Record a service call."""
         self.total_calls += 1
         if success:
@@ -334,7 +334,9 @@ class CircuitBreakerMetrics:
         if response_time is not None:
             self.response_times.append(response_time)
 
-    def record_state_change(self, old_state: CircuitState, new_state: CircuitState):
+    def record_state_change(
+        self, old_state: CircuitState, new_state: CircuitState
+    ) -> None:
         """Record a circuit state transition."""
         self.state_transitions.append(
             {
@@ -424,7 +426,7 @@ class AdvancedCircuitBreaker:
         """
         return self._should_attempt_reset()
 
-    def record_success(self, response_time: float):
+    def record_success(self, response_time: float) -> None:
         """Record a successful call (public interface).
 
         Args:
@@ -433,7 +435,7 @@ class AdvancedCircuitBreaker:
         """
         return self._record_success(response_time)
 
-    def record_failure(self, exception: Exception, response_time: float):
+    def record_failure(self, exception: Exception, response_time: float) -> None:
         """Record a failed call (public interface).
 
         Args:
@@ -443,7 +445,7 @@ class AdvancedCircuitBreaker:
         """
         return self._record_failure(exception, response_time)
 
-    def _update_adaptive_timeout(self, success: bool):
+    def _update_adaptive_timeout(self, success: bool) -> None:
         """Update adaptive timeout based on recent success/failure patterns."""
         if not self.enable_adaptive_timeout:
             return
@@ -462,7 +464,7 @@ class AdvancedCircuitBreaker:
                 self.recovery_timeout * 1.5, self.recovery_timeout * 3
             )
 
-    def _change_state(self, new_state: CircuitState):
+    def _change_state(self, new_state: CircuitState) -> None:
         """Change circuit state and record metrics."""
         old_state = self.state
         self.state = new_state
@@ -475,7 +477,7 @@ class AdvancedCircuitBreaker:
             f"{old_state.value} -> {new_state.value}"
         )
 
-    async def call(self, func: Callable, *args, **kwargs) -> Any:
+    async def call(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         """Execute function with circuit breaker protection."""
         start_time = time.time()
 

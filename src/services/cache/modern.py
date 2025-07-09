@@ -307,7 +307,7 @@ class ModernCacheManager:
                 await self._clear_cache_namespace(cache)
             else:
                 # Clear all caches - use delete_many with pattern matching
-                await asyncio.gather(
+                await gather_with_taskgroup(
                     self._clear_cache_namespace(self.embedding_cache),
                     self._clear_cache_namespace(self.search_cache),
                     self._clear_cache_namespace(self.crawl_cache),
@@ -407,7 +407,7 @@ class ModernCacheManager:
         """Clean up cache resources."""
         try:
             # Close all cache connections
-            await asyncio.gather(
+            await gather_with_taskgroup(
                 self._close_cache(self.embedding_cache),
                 self._close_cache(self.search_cache),
                 self._close_cache(self.crawl_cache),

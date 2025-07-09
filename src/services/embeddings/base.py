@@ -1,13 +1,14 @@
 """Base embedding provider interface."""
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 
 class EmbeddingProvider(ABC):
     """Abstract base class for embedding providers."""
 
     @abstractmethod
-    def __init__(self, model_name: str, **kwargs):
+    def __init__(self, model_name: str, **kwargs: Any) -> None:
         """Initialize embedding provider.
 
         Args:

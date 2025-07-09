@@ -752,7 +752,11 @@ class VectorVisualizationEngine(BaseService):
                     {
                         "type": "quality",
                         "title": "High Quality Embeddings",
-                        "description": f"Embeddings show {quality_metrics.quality_grade}-grade quality with {quality_metrics.coherence_score:.2f} coherence score",
+                        "description": (
+                            f"Embeddings show {quality_metrics.quality_grade}-grade "
+                            f"quality with {quality_metrics.coherence_score:.2f} "
+                            f"coherence score"
+                        ),
                         "positive": True,
                     }
                 )

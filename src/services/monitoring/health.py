@@ -8,6 +8,7 @@ import asyncio
 import logging
 import time
 from abc import ABC, abstractmethod
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 from urllib.parse import urlparse
@@ -15,9 +16,18 @@ from urllib.parse import urlparse
 import aiohttp
 import httpx
 import redis.asyncio as redis
-from pydantic import BaseModel, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
+
+from src.utils.async_utils import gather_with_taskgroup
 
 from .metrics import MetricsRegistry
 
@@ -33,20 +43,62 @@ logger = logging.getLogger(__name__)
 
 
 class HealthCheckConfig(BaseModel):
-    """Configuration for health check system."""
+    """Configuration for health check system with advanced validation."""
 
     enabled: bool = Field(default=True, description="Enable health checks")
     interval: float = Field(
-        default=30.0, description="Health check interval in seconds"
+        default=30.0, ge=5.0, le=3600.0, description="Health check interval in seconds"
     )
-    timeout: float = Field(default=10.0, description="Health check timeout in seconds")
-    max_retries: int = Field(default=3, description="Maximum retry attempts")
+    timeout: float = Field(
+        default=10.0, ge=1.0, le=300.0, description="Health check timeout in seconds"
+    )
+    max_retries: int = Field(
+        default=3, ge=0, le=10, description="Maximum retry attempts"
+    )
     qdrant_url: str = Field(
         default="http://localhost:6333", description="Qdrant URL for health checks"
     )
     redis_url: str = Field(
         default="redis://localhost:6379", description="Redis URL for health checks"
     )
+
+    @field_validator("qdrant_url", "redis_url")
+    @classmethod
+    def validate_url_format(cls, v: str) -> str:
+        """Validate URL format for service endpoints."""
+        if not v.startswith(("http://", "https://", "redis://")):
+            msg = "URL must start with http://, https://, or redis://"
+            raise ValueError(msg)
+
+        # Parse URL to validate format
+        parsed = urlparse(v)
+        if not parsed.netloc:
+            msg = "URL must include hostname"
+            raise ValueError(msg)
+
+        return v
+
+    @model_validator(mode="after")
+    def validate_timeout_interval_relationship(self) -> "HealthCheckConfig":
+        """Ensure timeout is reasonable compared to interval."""
+        if self.timeout >= self.interval:
+            msg = "Timeout must be less than interval to avoid overlapping checks"
+            raise ValueError(msg)
+        return self
+
+    @computed_field
+    @property
+    def total_check_time_ms(self) -> float:
+        """Maximum time for health check including retries."""
+        return (self.timeout + 0.5) * (self.max_retries + 1) * 1000
+
+    @computed_field
+    @property
+    def is_production_config(self) -> bool:
+        """Determine if this is a production-suitable configuration."""
+        return self.timeout <= 30.0 and self.interval >= 15.0 and self.max_retries <= 5
+
+    model_config = ConfigDict(extra="forbid", validate_assignment=True, frozen=False)
 
 
 class HealthStatus(str, Enum):
@@ -59,15 +111,82 @@ class HealthStatus(str, Enum):
 
 
 class HealthCheckResult(BaseModel):
-    """Result of a health check operation."""
+    """Result of a health check operation with advanced analytics."""
 
-    name: str = Field(description="Name of the health check")
+    name: str = Field(min_length=1, description="Name of the health check")
     status: HealthStatus = Field(description="Health status")
     message: str = Field(description="Human-readable status message")
     timestamp: float = Field(default_factory=time.time, description="Check timestamp")
-    duration_ms: float = Field(description="Check duration in milliseconds")
+    duration_ms: float = Field(ge=0.0, description="Check duration in milliseconds")
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
+    )
+
+    @field_validator("duration_ms")
+    @classmethod
+    def validate_duration(cls, v: float) -> float:
+        """Validate duration is reasonable."""
+        if v > 300_000:  # 5 minutes
+            msg = "Health check duration cannot exceed 5 minutes"
+            raise ValueError(msg)
+        return round(v, 2)
+
+    @computed_field
+    @property
+    def is_healthy(self) -> bool:
+        """Quick boolean check for healthy status."""
+        return self.status == HealthStatus.HEALTHY
+
+    @computed_field
+    @property
+    def duration_seconds(self) -> float:
+        """Duration in seconds for easier consumption."""
+        return round(self.duration_ms / 1000.0, 3)
+
+    @computed_field
+    @property
+    def performance_category(self) -> str:
+        """Categorize performance based on duration."""
+        if self.duration_ms < 100:
+            return "excellent"
+        if self.duration_ms < 500:
+            return "good"
+        if self.duration_ms < 2000:
+            return "acceptable"
+        return "slow"
+
+    @computed_field
+    @property
+    def formatted_timestamp(self) -> str:
+        """Human-readable timestamp."""
+        return datetime.fromtimestamp(self.timestamp, tz=UTC).isoformat()
+
+    @computed_field
+    @property
+    def status_emoji(self) -> str:
+        """Emoji representation of status for UI display."""
+        status_emojis = {
+            HealthStatus.HEALTHY: "🟢",
+            HealthStatus.DEGRADED: "🟡",
+            HealthStatus.UNHEALTHY: "🔴",
+            HealthStatus.UNKNOWN: "⚪",
+        }
+        return status_emojis.get(self.status, "❓")
+
+    model_config = ConfigDict(
+        extra="allow",
+        validate_assignment=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "qdrant",
+                    "status": "healthy",
+                    "message": "Qdrant cluster is operational",
+                    "duration_ms": 45.2,
+                    "metadata": {"version": "1.5.0", "collections": 5},
+                }
+            ]
+        },
     )
 
 
@@ -715,7 +834,7 @@ class HealthCheckManager:
 
         # Run all health checks concurrently
         tasks = [check.check() for check in self.health_checks]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        results = await gather_with_taskgroup(*tasks, return_exceptions=True)
 
         # Process results
         health_results = {}

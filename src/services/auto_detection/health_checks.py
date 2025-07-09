@@ -33,7 +33,9 @@ except ImportError:
 from pydantic import BaseModel
 
 from src.config import AutoDetectionConfig, DetectedService
+from src.infrastructure.clients.http_factory import HTTPClientFactory
 from src.services.errors import circuit_breaker
+from src.utils.async_utils import gather_with_taskgroup
 
 
 logger = logging.getLogger(__name__)
@@ -140,7 +142,7 @@ class HealthChecker:
         check_tasks = [self.check_service(service) for service in self._services]
 
         if check_tasks:
-            results = await asyncio.gather(*check_tasks, return_exceptions=True)
+            results = await gather_with_taskgroup(*check_tasks, return_exceptions=True)
 
             # Filter out exceptions and convert to HealthCheckResult
             valid_results = []
@@ -267,7 +269,10 @@ class HealthChecker:
             if httpx is None:
                 _raise_httpx_unavailable()
 
-            async with httpx.AsyncClient(timeout=5.0) as client:
+            # Use HTTPClientFactory for optimized HTTP/2 configuration
+            async with HTTPClientFactory.create_lightweight_client(
+                timeout=30.0
+            ) as client:
                 # Use HTTP health endpoint
                 health_url = (
                     service.health_check_url
@@ -350,7 +355,10 @@ class HealthChecker:
                 if httpx is None:
                     _raise_httpx_unavailable()
 
-                async with httpx.AsyncClient(timeout=5.0) as client:
+                # Use HTTPClientFactory for optimized HTTP/2 configuration
+                async with HTTPClientFactory.create_lightweight_client(
+                    timeout=30.0
+                ) as client:
                     response = await client.get(service.health_check_url)
 
                     is_healthy = response.status_code == 200

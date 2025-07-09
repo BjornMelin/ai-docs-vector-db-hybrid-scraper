@@ -15,6 +15,8 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, Field, field_validator
 
+from src.utils.async_utils import gather_with_taskgroup
+
 
 logger = logging.getLogger(__name__)
 
@@ -684,7 +686,7 @@ class FederatedSearchService:
         # Execute with timeout
         try:
             results = await asyncio.wait_for(
-                asyncio.gather(*tasks, return_exceptions=True),
+                gather_with_taskgroup(*tasks, return_exceptions=True),
                 timeout=request.timeout_ms / 1000.0,
             )
 

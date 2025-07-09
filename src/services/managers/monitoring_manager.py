@@ -12,6 +12,7 @@ from src.infrastructure.container import ApplicationContainer
 from src.infrastructure.shared import ClientHealth, ClientState
 from src.services.monitoring.metrics import get_metrics_registry
 from src.services.monitoring.performance_monitor import RealTimePerformanceMonitor
+from src.utils.async_utils import gather_with_taskgroup
 
 
 if TYPE_CHECKING:
@@ -502,7 +503,7 @@ class MonitoringManager:
                     tasks.append(task)
 
                 if tasks:
-                    await asyncio.gather(*tasks, return_exceptions=True)
+                    await gather_with_taskgroup(*tasks, return_exceptions=True)
 
             except asyncio.CancelledError:
                 logger.info("Health check loop cancelled")

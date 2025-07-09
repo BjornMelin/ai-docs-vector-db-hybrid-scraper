@@ -15,11 +15,23 @@ if utils_path.exists():
     import importlib.util
 
     spec = importlib.util.spec_from_file_location("parent_utils", utils_path)
-    parent_utils = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(parent_utils)
+    if spec is not None and spec.loader is not None:
+        parent_utils = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(parent_utils)
 
-    async_to_sync_click = parent_utils.async_to_sync_click
-    async_command = parent_utils.async_command
+        async_to_sync_click = parent_utils.async_to_sync_click
+        async_command = parent_utils.async_command
+    else:
+        # Fallback implementations if spec creation fails
+        def async_to_sync_click(*_args, **_kwargs):
+            """Fallback async_to_sync_click function."""
+            msg = "async_to_sync_click not available"
+            raise ImportError(msg)
+
+        def async_command(*_args, **_kwargs):
+            """Fallback async_command function."""
+            msg = "async_command not available"
+            raise ImportError(msg)
 else:
     # Fallback implementations
     def async_to_sync_click(*_args, **_kwargs):

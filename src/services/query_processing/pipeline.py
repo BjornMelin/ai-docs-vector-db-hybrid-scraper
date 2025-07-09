@@ -11,6 +11,7 @@ import time
 from typing import Any
 
 from src.services.base import BaseService
+from src.utils.async_utils import gather_with_taskgroup
 
 from .models import QueryProcessingRequest, QueryProcessingResponse
 from .orchestrator import SearchOrchestrator as AdvancedSearchOrchestrator
@@ -158,7 +159,7 @@ class QueryProcessingPipeline(BaseService):
 
         # Execute all queries concurrently
         tasks = [process_single_request(request) for request in requests]
-        return await asyncio.gather(*tasks)
+        return await gather_with_taskgroup(*tasks)
 
     async def analyze_query(
         self,

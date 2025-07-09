@@ -1,26 +1,30 @@
-"""HTTP client provider."""
+"""HTTP client provider with modern httpx integration."""
 
 import logging
 from typing import Any
 
-import aiohttp
+import httpx
 
 
 logger = logging.getLogger(__name__)
 
 
 class HTTPClientProvider:
-    """Provider for HTTP client with health checks and session management."""
+    """Provider for HTTP client with health checks and session management.
+
+    Uses httpx for modern async HTTP client with better performance
+    and feature set compared to aiohttp.
+    """
 
     def __init__(
         self,
-        http_client: aiohttp.ClientSession,
+        http_client: httpx.AsyncClient,
     ):
         self._client = http_client
         self._healthy = True
 
     @property
-    def client(self) -> aiohttp.ClientSession | None:
+    def client(self) -> httpx.AsyncClient | None:
         """Get the HTTP client if available and healthy."""
         if not self._healthy:
             return None
@@ -32,8 +36,8 @@ class HTTPClientProvider:
             if not self._client:
                 return False
 
-            # Check if session is not closed
-            if self._client.closed:
+            # Check if client is not closed
+            if self._client.is_closed:
                 self._healthy = False
                 return False
 
@@ -47,7 +51,7 @@ class HTTPClientProvider:
 
     async def get(
         self, url: str, headers: dict[str, str] | None = None, **kwargs
-    ) -> aiohttp.ClientResponse:
+    ) -> httpx.Response:
         """Make GET request.
 
         Args:
@@ -74,7 +78,7 @@ class HTTPClientProvider:
         json: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
         **kwargs,
-    ) -> aiohttp.ClientResponse:
+    ) -> httpx.Response:
         """Make POST request.
 
         Args:
@@ -105,7 +109,7 @@ class HTTPClientProvider:
         json: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
         **kwargs,
-    ) -> aiohttp.ClientResponse:
+    ) -> httpx.Response:
         """Make PUT request.
 
         Args:
@@ -131,7 +135,7 @@ class HTTPClientProvider:
 
     async def delete(
         self, url: str, headers: dict[str, str] | None = None, **kwargs
-    ) -> aiohttp.ClientResponse:
+    ) -> httpx.Response:
         """Make DELETE request.
 
         Args:
@@ -153,7 +157,7 @@ class HTTPClientProvider:
 
     async def request(
         self, method: str, url: str, headers: dict[str, str] | None = None, **kwargs
-    ) -> aiohttp.ClientResponse:
+    ) -> httpx.Response:
         """Make generic HTTP request.
 
         Args:

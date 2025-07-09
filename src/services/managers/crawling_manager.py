@@ -2,18 +2,21 @@
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from dependency_injector.wiring import Provide, inject
 
 from src.infrastructure.container import ApplicationContainer
-from src.services.crawling.manager import CrawlManager as CoreManager
+from src.services.crawling.manager import (
+    CrawlManager as CoreCrawlManager,
+    CrawlManager as CoreManager,
+)
 from src.services.errors import CrawlServiceError
+from src.utils.async_utils import gather_with_taskgroup
 
 
 if TYPE_CHECKING:
     from src.config import Config
-    from src.services.crawling.manager import CrawlManager as CoreCrawlManager
 
 logger = logging.getLogger(__name__)
 
@@ -302,7 +305,7 @@ class CrawlingManager:
 
         return status
 
-    def get_core_manager(self) -> Optional["CoreCrawlManager"]:
+    def get_core_manager(self) -> CoreCrawlManager | None:
         """Get core crawl manager instance.
 
         Returns:
@@ -406,7 +409,7 @@ class CrawlingManager:
 
         try:
             tasks = [scrape_with_semaphore(url) for url in urls]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
+            results = await gather_with_taskgroup(*tasks, return_exceptions=True)
 
             # Convert exceptions to error results
             processed_results = []

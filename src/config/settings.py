@@ -434,7 +434,7 @@ class ChunkingConfig(BaseModel):
         default=True, description="Auto-detect programming language"
     )
     max_function_chunk_size: int = Field(
-        default=2000, gt=0, description="Max size for function chunks"
+        default=3000, gt=0, description="Max size for function chunks"
     )
 
     supported_languages: list[str] = Field(
@@ -452,6 +452,9 @@ class ChunkingConfig(BaseModel):
             raise ValueError(msg)
         if self.max_chunk_size < self.chunk_size:
             msg = "max_chunk_size must be >= chunk_size"
+            raise ValueError(msg)
+        if self.max_function_chunk_size < self.max_chunk_size:
+            msg = "max_function_chunk_size must be >= max_chunk_size"
             raise ValueError(msg)
         return self
 

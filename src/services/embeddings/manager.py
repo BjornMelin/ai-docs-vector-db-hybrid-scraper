@@ -4,10 +4,11 @@ import json
 import logging
 import time
 from collections import defaultdict
-from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+from pydantic import BaseModel, Field, computed_field, field_validator
 
 
 try:
@@ -35,42 +36,201 @@ logger = logging.getLogger(__name__)
 
 
 class QualityTier(Enum):
-    """Embedding quality tiers."""
+    """Embedding quality tiers for intelligent provider selection.
+
+    Defines three quality tiers that balance embedding quality, processing speed,
+    and cost considerations. Used by the smart selection algorithm to match
+    user requirements with appropriate embedding models.
+
+    Attributes:
+        FAST: Local models optimized for speed, zero cost, suitable for
+            real-time applications and simple text matching
+        BALANCED: Default tier balancing quality and efficiency, suitable
+            for most use cases with moderate quality requirements
+        BEST: Premium quality embeddings using state-of-the-art models,
+            optimal for complex semantic search and high-precision tasks
+    """
 
     FAST = "fast"  # Local models, fastest
     BALANCED = "balanced"  # Balance of speed and quality
     BEST = "best"  # Highest quality, may be slower/costlier
 
 
-@dataclass
-class UsageStats:
-    """Usage statistics tracking."""
+class UsageStats(BaseModel):
+    """Usage statistics tracking with validation and computed fields.
 
-    total_requests: int = 0
-    total_tokens: int = 0
-    total_cost: float = 0.0
-    requests_by_tier: dict[str, int] = None
-    requests_by_provider: dict[str, int] = None
-    daily_cost: float = 0.0
-    last_reset_date: str = ""
+    Tracks comprehensive usage metrics for embedding generation including
+    API requests, token consumption, costs, and provider/tier breakdowns.
+    Includes automatic daily cost tracking with date-based reset logic.
 
-    def __post_init__(self):
-        if self.requests_by_tier is None:
-            self.requests_by_tier = defaultdict(int)
-        if self.requests_by_provider is None:
-            self.requests_by_provider = defaultdict(int)
+    Attributes:
+        total_requests: Cumulative count of all API requests made
+        total_tokens: Cumulative count of all tokens processed
+        total_cost: Cumulative cost in USD across all requests
+        requests_by_tier: Request count breakdown by quality tier
+        requests_by_provider: Request count breakdown by provider
+        daily_cost: Cost incurred today, resets automatically
+        last_reset_date: Date of last daily cost reset (YYYY-MM-DD)
+    """
+
+    total_requests: int = Field(default=0, ge=0, description="Total API requests made")
+    total_tokens: int = Field(default=0, ge=0, description="Total tokens processed")
+    total_cost: float = Field(default=0.0, ge=0.0, description="Total cost in USD")
+    requests_by_tier: dict[str, int] = Field(default_factory=lambda: defaultdict(int))
+    requests_by_provider: dict[str, int] = Field(
+        default_factory=lambda: defaultdict(int)
+    )
+    daily_cost: float = Field(default=0.0, ge=0.0, description="Daily cost in USD")
+    last_reset_date: str = Field(
+        default="", description="Last daily reset date (YYYY-MM-DD)"
+    )
+
+    @field_validator("total_cost", "daily_cost")
+    @classmethod
+    def validate_cost(cls, v: float) -> float:
+        """Ensure costs are non-negative and properly rounded.
+
+        Args:
+            v: Cost value to validate
+
+        Returns:
+            Validated and rounded cost value (4 decimal places)
+
+        Raises:
+            ValueError: If cost is negative
+        """
+        if v < 0:
+            msg = "Cost cannot be negative"
+            raise ValueError(msg)
+        return round(v, 4)
+
+    @field_validator("last_reset_date")
+    @classmethod
+    def validate_date_format(cls, v: str) -> str:
+        """Validate date format if provided.
+
+        Args:
+            v: Date string to validate
+
+        Returns:
+            Validated date string
+
+        Raises:
+            ValueError: If date format is not YYYY-MM-DD
+        """
+        if v and len(v) != 10:  # YYYY-MM-DD format
+            msg = "Date must be in YYYY-MM-DD format"
+            raise ValueError(msg)
+        return v
+
+    @computed_field
+    @property
+    def avg_cost_per_request(self) -> float:
+        """Average cost per request.
+
+        Calculates the average cost across all requests. Returns 0 if no
+        requests have been made to avoid division by zero.
+
+        Returns:
+            Average cost per request in USD
+        """
+        return self.total_cost / max(1, self.total_requests)
+
+    @computed_field
+    @property
+    def avg_tokens_per_request(self) -> float:
+        """Average tokens per request.
+
+        Calculates the average token count across all requests. Returns 0
+        if no requests have been made to avoid division by zero.
+
+        Returns:
+            Average number of tokens per request
+        """
+        return self.total_tokens / max(1, self.total_requests)
 
 
-@dataclass
-class TextAnalysis:
-    """Analysis of text characteristics for model selection."""
+class TextAnalysis(BaseModel):
+    """Analysis of text characteristics for model selection with validation.
 
-    total_length: int
-    avg_length: int
-    complexity_score: float  # 0-1 based on vocabulary diversity
-    estimated_tokens: int
-    text_type: str  # "code", "docs", "short", "long"
-    requires_high_quality: bool
+    Encapsulates comprehensive text analysis results used by the smart
+    selection algorithm to choose optimal embedding models. Analyzes
+    text length, vocabulary complexity, content type, and quality needs.
+
+    Attributes:
+        total_length: Sum of character lengths across all texts
+        avg_length: Average character length per text
+        complexity_score: Vocabulary diversity measure (0-1), higher means more diverse
+        estimated_tokens: Approximate token count for cost estimation
+        text_type: Content classification (code, docs, short, long, etc.)
+        requires_high_quality: Flag indicating need for premium embeddings
+    """
+
+    total_length: int = Field(ge=0, description="Total character length of all texts")
+    avg_length: int = Field(ge=0, description="Average character length per text")
+    complexity_score: float = Field(
+        ge=0.0, le=1.0, description="Vocabulary diversity score (0-1)"
+    )
+    estimated_tokens: int = Field(ge=0, description="Estimated token count")
+    text_type: str = Field(description="Text type classification")
+    requires_high_quality: bool = Field(
+        description="Whether high-quality embeddings are required"
+    )
+
+    @field_validator("text_type")
+    @classmethod
+    def validate_text_type(cls, v: str) -> str:
+        """Validate text type is one of known categories.
+
+        Args:
+            v: Text type string to validate
+
+        Returns:
+            Validated text type
+
+        Raises:
+            ValueError: If text type is not in allowed categories
+        """
+        valid_types = {"code", "docs", "short", "long", "mixed", "technical", "empty"}
+        if v not in valid_types:
+            msg = f"text_type must be one of: {', '.join(valid_types)}"
+            raise ValueError(msg)
+        return v
+
+    @computed_field
+    @property
+    def complexity_level(self) -> str:
+        """Human-readable complexity level.
+
+        Converts numerical complexity score to categorical level for
+        easier interpretation and decision making.
+
+        Returns:
+            Complexity level: "low" (<0.3), "medium" (0.3-0.7), or "high" (>0.7)
+        """
+        if self.complexity_score < 0.3:
+            return "low"
+        if self.complexity_score < 0.7:
+            return "medium"
+        return "high"
+
+    @computed_field
+    @property
+    def estimated_cost_tier(self) -> str:
+        """Estimated cost tier based on analysis.
+
+        Categorizes expected embedding cost based on text characteristics
+        and quality requirements to aid in budget planning.
+
+        Returns:
+            Cost tier: "economy" (simple/short), "standard" (typical),
+            or "premium" (complex/high-quality)
+        """
+        if self.requires_high_quality or self.complexity_score > 0.7:
+            return "premium"
+        if self.avg_length > 1000 or self.estimated_tokens > 500:
+            return "standard"
+        return "economy"
 
 
 class EmbeddingManager:
@@ -576,7 +736,15 @@ class EmbeddingManager:
     async def _generate_dense_embeddings(
         self, provider, texts: list[str]
     ) -> list[list[float]]:
-        """Generate dense embeddings using the provider."""
+        """Generate dense embeddings using the provider.
+
+        Args:
+            provider: EmbeddingProvider instance to use
+            texts: List of texts to embed
+
+        Returns:
+            List of embedding vectors (one per text)
+        """
         return await provider.generate_embeddings(
             texts,
             batch_size=32,  # Default batch size for optimal performance
@@ -585,7 +753,16 @@ class EmbeddingManager:
     async def _generate_sparse_embeddings_if_needed(
         self, provider, texts: list[str], generate_sparse: bool
     ) -> list[dict] | None:
-        """Generate sparse embeddings if requested and supported."""
+        """Generate sparse embeddings if requested and supported.
+
+        Args:
+            provider: EmbeddingProvider instance
+            texts: List of texts to generate sparse embeddings for
+            generate_sparse: Whether sparse embeddings are requested
+
+        Returns:
+            List of sparse embedding dictionaries or None if not applicable
+        """
         if not generate_sparse or not hasattr(provider, "generate_sparse_embeddings"):
             return None
 
@@ -602,7 +779,17 @@ class EmbeddingManager:
         selected_model: str,
         metrics: dict[str, object],
     ) -> None:
-        """Cache embedding if conditions are met."""
+        """Cache embedding if conditions are met.
+
+        Only caches single text embeddings to avoid excessive cache size.
+        Silently handles cache failures to prevent service disruption.
+
+        Args:
+            texts: Original texts that were embedded
+            embeddings: Generated embedding vectors
+            selected_model: Model name used for generation
+            metrics: Metrics dictionary containing provider_key
+        """
         if not (self.cache_manager and len(texts) == 1 and len(embeddings) == 1):
             return
 
@@ -624,7 +811,18 @@ class EmbeddingManager:
         selected_model: str,
         reasoning: str,
     ) -> dict[str, object]:
-        """Build comprehensive embedding result with all metadata."""
+        """Build comprehensive embedding result with all metadata.
+
+        Args:
+            embeddings: Dense embedding vectors
+            sparse_embeddings: Optional sparse embeddings for hybrid search
+            metrics: Performance and cost metrics
+            selected_model: Model name that was used
+            reasoning: Human-readable selection reasoning
+
+        Returns:
+            Complete result dictionary with embeddings and metadata
+        """
         result = {
             "embeddings": embeddings,
             "provider": metrics["provider_key"],

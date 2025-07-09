@@ -5,11 +5,18 @@ and content representation in the vector database system.
 """
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 from src.config import ChunkingStrategy, DocumentStatus
 
@@ -70,7 +77,7 @@ class DocumentMetadata(BaseModel):
     doc_type: str | None = Field(default=None, description="Document type")
     language: str | None = Field(default=None, description="Programming language")
     crawled_at: datetime = Field(
-        default_factory=datetime.now, description="Crawl timestamp"
+        default_factory=lambda: datetime.now(UTC), description="Crawl timestamp"
     )
     last_modified: datetime | None = Field(
         default=None, description="Last modification time"
@@ -127,19 +134,127 @@ class ProcessedDocument(BaseModel):
 
 
 class VectorMetrics(BaseModel):
-    """Vector processing metrics."""
+    """Vector processing metrics with comprehensive analytics."""
 
-    total_documents: int = Field(default=0, description="Total documents processed")
-    total_chunks: int = Field(default=0, description="Total chunks created")
-    successful_embeddings: int = Field(default=0, description="Successful embeddings")
-    failed_embeddings: int = Field(default=0, description="Failed embeddings")
-    processing_time: float = Field(
-        default=0.0, description="Processing time in seconds"
+    total_documents: int = Field(
+        default=0, ge=0, description="Total documents processed"
     )
-    tokens_processed: int = Field(default=0, description="Total tokens processed")
-    avg_chunk_size: float = Field(default=0.0, description="Average chunk size")
+    total_chunks: int = Field(default=0, ge=0, description="Total chunks created")
+    successful_embeddings: int = Field(
+        default=0, ge=0, description="Successful embeddings"
+    )
+    failed_embeddings: int = Field(default=0, ge=0, description="Failed embeddings")
+    processing_time: float = Field(
+        default=0.0, ge=0.0, description="Processing time in seconds"
+    )
+    tokens_processed: int = Field(default=0, ge=0, description="Total tokens processed")
+    avg_chunk_size: float = Field(default=0.0, ge=0.0, description="Average chunk size")
 
-    model_config = ConfigDict(extra="forbid")
+    @field_validator("avg_chunk_size")
+    @classmethod
+    def validate_chunk_size(cls, v: float) -> float:
+        """Validate chunk size is reasonable."""
+        if v > 50000:  # 50k characters seems excessive
+            msg = "Average chunk size exceeds reasonable bounds"
+            raise ValueError(msg)
+        return round(v, 2)
+
+    @model_validator(mode="after")
+    def validate_embedding_consistency(self) -> "VectorMetrics":
+        """Ensure embedding counts don't exceed chunk counts."""
+        total_embeddings = self.successful_embeddings + self.failed_embeddings
+        if total_embeddings > self.total_chunks:
+            msg = "Total embeddings cannot exceed total chunks"
+            raise ValueError(msg)
+        return self
+
+    @computed_field
+    @property
+    def total_embeddings_attempted(self) -> int:
+        """Total embedding attempts (successful + failed)."""
+        return self.successful_embeddings + self.failed_embeddings
+
+    @computed_field
+    @property
+    def success_rate(self) -> float:
+        """Embedding success rate as percentage."""
+        total = self.total_embeddings_attempted
+        if total == 0:
+            return 0.0
+        return round((self.successful_embeddings / total) * 100, 2)
+
+    @computed_field
+    @property
+    def failure_rate(self) -> float:
+        """Embedding failure rate as percentage."""
+        return round(100.0 - self.success_rate, 2)
+
+    @computed_field
+    @property
+    def chunks_per_document(self) -> float:
+        """Average chunks per document."""
+        if self.total_documents == 0:
+            return 0.0
+        return round(self.total_chunks / self.total_documents, 2)
+
+    @computed_field
+    @property
+    def tokens_per_chunk(self) -> float:
+        """Average tokens per chunk."""
+        if self.total_chunks == 0:
+            return 0.0
+        return round(self.tokens_processed / self.total_chunks, 1)
+
+    @computed_field
+    @property
+    def processing_efficiency(self) -> str:
+        """Categorize processing efficiency."""
+        if self.total_documents == 0:
+            return "unknown"
+
+        docs_per_second = self.total_documents / max(self.processing_time, 1)
+
+        if docs_per_second > 10:
+            return "excellent"
+        if docs_per_second > 5:
+            return "good"
+        if docs_per_second > 1:
+            return "moderate"
+        return "slow"
+
+    @computed_field
+    @property
+    def quality_score(self) -> float:
+        """Combined quality score based on success rate and efficiency."""
+        success_component = self.success_rate / 100.0
+        efficiency_scores = {
+            "excellent": 1.0,
+            "good": 0.8,
+            "moderate": 0.6,
+            "slow": 0.3,
+            "unknown": 0.0,
+        }
+        efficiency_component = efficiency_scores.get(self.processing_efficiency, 0.0)
+
+        return round((success_component * 0.7 + efficiency_component * 0.3), 3)
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "total_documents": 100,
+                    "total_chunks": 500,
+                    "successful_embeddings": 480,
+                    "failed_embeddings": 20,
+                    "processing_time": 45.2,
+                    "tokens_processed": 125000,
+                    "avg_chunk_size": 250.0,
+                }
+            ]
+        },
+    )
 
 
 class ScrapingStats(BaseModel):
@@ -206,7 +321,7 @@ class DocumentBatch(BaseModel):
     )
     batch_size: int = Field(default=0, description="Number of documents in batch")
     created_at: datetime = Field(
-        default_factory=datetime.now, description="Batch creation time"
+        default_factory=lambda: datetime.now(UTC), description="Batch creation time"
     )
     status: str = Field(default="pending", description="Batch processing status")
 

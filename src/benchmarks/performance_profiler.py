@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from src.models.vector_search import HybridSearchRequest
 from src.services.vector_db.hybrid_search import AdvancedHybridSearchService
+from src.utils.async_utils import gather_with_taskgroup
 
 
 logger = logging.getLogger(__name__)
@@ -169,7 +170,7 @@ class PerformanceProfiler:
                 if i % 3 == 0:
                     # Concurrent execution for some queries
                     tasks = [search_service.hybrid_search(query) for _ in range(2)]
-                    await asyncio.gather(*tasks, return_exceptions=True)
+                    await gather_with_taskgroup(*tasks, return_exceptions=True)
                 else:
                     # Sequential execution
                     await search_service.hybrid_search(query)

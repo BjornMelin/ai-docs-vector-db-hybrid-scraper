@@ -389,7 +389,7 @@ class RealTimePerformanceMonitor:
         # For now, return a placeholder value
         return 0.85
 
-    def _get_gc_stats(self) -> tuple:
+    def _get_gc_stats(self) -> tuple[int, int, int]:
         """Get garbage collection statistics.
 
         Returns:

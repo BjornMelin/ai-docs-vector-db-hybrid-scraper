@@ -27,9 +27,10 @@ Usage:
 """
 
 from src.services.security.ai_security import (
+    AISecurityService,
     AISecurityValidator,
-    SecurityThreat,
-    ThreatLevel,
+    AIThreatType,
+    SecurityLevel,
 )
 from src.services.security.integration import (
     SecurityManager,
@@ -49,11 +50,14 @@ from src.services.security.rate_limiter import DistributedRateLimiter
 
 __all__ = [
     # AI security
+    "AISecurityService",
     "AISecurityValidator",
+    "AIThreatType",
     # Rate limiting
     "DistributedRateLimiter",
     "SecurityEvent",
     "SecurityEventType",
+    "SecurityLevel",
     # Integration
     "SecurityManager",
     # Middleware
@@ -61,8 +65,6 @@ __all__ = [
     # Monitoring
     "SecurityMonitor",
     "SecuritySeverity",
-    "SecurityThreat",
-    "ThreatLevel",
     "get_security_manager",
     "security_manager",
     "setup_application_security",

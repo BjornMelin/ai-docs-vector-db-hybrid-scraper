@@ -6,7 +6,7 @@ and API endpoints, providing clear contracts for external interfaces.
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
 
 
 # Base Models
@@ -42,11 +42,22 @@ class SearchRequest(MCPRequest):
 
     query: str = Field(..., description="Search query text", min_length=1)
     collection_name: str = Field(default="documents", description="Target collection")
+    search_strategy: str = Field(
+        default="hybrid", description="Search strategy (dense, hybrid, multi_stage)"
+    )
     limit: int = Field(default=10, ge=1, le=100, description="Number of results")
+    accuracy_level: str = Field(
+        default="balanced",
+        description="Accuracy level (fast, balanced, accurate, exact)",
+    )
     score_threshold: float = Field(
         default=0.0, ge=0.0, le=1.0, description="Minimum score"
     )
     enable_hyde: bool = Field(default=False, description="Enable HyDE enhancement")
+    enable_reranking: bool = Field(default=False, description="Enable result reranking")
+    hyde_config: dict[str, Any] | None = Field(
+        default=None, description="HyDE configuration settings"
+    )
     filters: dict[str, Any] | None = Field(default=None, description="Search filters")
 
 
@@ -96,9 +107,26 @@ class SearchResponse(MCPResponse):
     query_time_ms: float = Field(default=0.0, description="Query execution time")
     search_strategy: str = Field(default="unknown", description="Strategy used")
     cache_hit: bool = Field(default=False, description="Whether result was cached")
+    _total_count: int = PrivateAttr(default=0)
+
+    @model_validator(mode="after")
+    def sync_total_count(self) -> "SearchResponse":
+        """Sync private total count with public field."""
+        self._total_count = self.total_count
+        return self
 
 
 # Document Management Models
+class Document(BaseModel):
+    """Basic document model for testing."""
+
+    content: str = Field(..., description="Document content")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Document metadata"
+    )
+    source: str = Field(..., description="Document source")
+
+
 class DocumentRequest(MCPRequest):
     """Request model for document operations."""
 
@@ -157,6 +185,13 @@ class BulkDocumentResponse(MCPResponse):
         default_factory=list, description="Individual results"
     )
     errors: list[str] = Field(default_factory=list, description="Processing errors")
+    _total_chunks: int = PrivateAttr(default=0)
+
+    @model_validator(mode="after")
+    def sync_total_chunks(self) -> "BulkDocumentResponse":
+        """Sync private total chunks with public field."""
+        self._total_chunks = self.total_chunks
+        return self
 
 
 # Collection Management Models
@@ -206,6 +241,13 @@ class ListCollectionsResponse(MCPResponse):
         default_factory=list, description="Collection information"
     )
     total_count: int = Field(default=0, description="Total number of collections")
+    _total_count: int = PrivateAttr(default=0)
+
+    @model_validator(mode="after")
+    def sync_total_count(self) -> "ListCollectionsResponse":
+        """Sync private total count with public field."""
+        self._total_count = self.total_count
+        return self
 
 
 # Analytics Models

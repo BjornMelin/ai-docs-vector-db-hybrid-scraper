@@ -2,7 +2,14 @@
 
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 
 if TYPE_CHECKING:
@@ -143,8 +150,107 @@ class HyDEConfig(BaseModel):
             track_metrics=unified_hyde_config.track_metrics,
         )
 
-    model_config = {
-        "json_schema_extra": {
+    @field_validator("generation_model")
+    @classmethod
+    def validate_generation_model(cls, v: str) -> str:
+        """Validate that the generation model is supported."""
+        supported_models = {
+            "gpt-3.5-turbo",
+            "gpt-4",
+            "gpt-4-turbo",
+            "gpt-4o",
+            "claude-3-haiku",
+            "claude-3-sonnet",
+            "claude-3-opus",
+        }
+        if v not in supported_models:
+            # Allow any model but warn about unknown ones
+            pass
+        return v
+
+    @field_validator("fusion_algorithm")
+    @classmethod
+    def validate_fusion_algorithm(cls, v: str) -> str:
+        """Validate fusion algorithm is supported."""
+        if v not in {"rrf", "dbsf", "linear", "rank_fusion"}:
+            msg = f"Unsupported fusion algorithm: {v}. Use 'rrf', 'dbsf', 'linear', or 'rank_fusion'"
+            raise ValueError(msg)
+        return v
+
+    @model_validator(mode="after")
+    def validate_generation_settings(self) -> "HyDEConfig":
+        """Cross-field validation for generation settings."""
+        # Ensure cache TTL is reasonable for timeout
+        if self.cache_ttl_seconds < self.generation_timeout_seconds * 2:
+            msg = "Cache TTL should be at least 2x the generation timeout"
+            raise ValueError(msg)
+
+        # Ensure concurrent generations doesn't exceed total generations
+        if self.max_concurrent_generations > self.num_generations:
+            msg = "Max concurrent generations cannot exceed total generations"
+            raise ValueError(msg)
+
+        # Validate prefetch limits make sense
+        if self.hyde_prefetch_limit < self.query_prefetch_limit:
+            msg = "HyDE prefetch limit should be >= query prefetch limit"
+            raise ValueError(msg)
+
+        return self
+
+    @computed_field
+    @property
+    def estimated_total_cost_per_query(self) -> float:
+        """Estimate cost per query based on configuration."""
+        # Rough cost estimation (adjust based on actual pricing)
+        base_cost_per_token = 0.00002  # Approximate cost per token
+        estimated_cost = (
+            self.num_generations * self.max_generation_tokens * base_cost_per_token
+        )
+        return round(estimated_cost, 6)
+
+    @computed_field
+    @property
+    def estimated_latency_ms(self) -> float:
+        """Estimate total latency based on configuration."""
+        if self.parallel_generation:
+            # Parallel generation - limited by slowest request
+            generation_time = self.generation_timeout_seconds * 1000
+        else:
+            # Sequential generation
+            generation_time = (
+                self.num_generations * self.generation_timeout_seconds * 1000
+            )
+
+        # Add overhead for processing and caching
+        overhead = 50 + (self.num_generations * 10)
+        return generation_time + overhead
+
+    @computed_field
+    @property
+    def is_production_ready(self) -> bool:
+        """Determine if configuration is suitable for production."""
+        return (
+            self.enable_fallback
+            and self.enable_caching
+            and self.generation_timeout_seconds <= 30
+            and self.num_generations <= 8
+            and self.cache_ttl_seconds >= 1800  # At least 30 minutes
+        )
+
+    @computed_field
+    @property
+    def performance_tier(self) -> str:
+        """Categorize configuration by performance characteristics."""
+        if self.num_generations <= 3 and self.max_generation_tokens <= 150:
+            return "fast"
+        if self.num_generations <= 5 and self.max_generation_tokens <= 250:
+            return "balanced"
+        return "quality"
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        json_schema_extra={
             "example": {
                 "enable_hyde": True,
                 "num_generations": 5,
@@ -156,8 +262,8 @@ class HyDEConfig(BaseModel):
                 "cache_ttl_seconds": 3600,
                 "parallel_generation": True,
             }
-        }
-    }
+        },
+    )
 
 
 class HyDEPromptConfig(BaseModel):

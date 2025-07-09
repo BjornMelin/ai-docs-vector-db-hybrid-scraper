@@ -5,11 +5,19 @@ including query intent classification, processing requests/responses, and
 configuration models for the centralized orchestrator.
 """
 
+import math
 from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 
 class QueryIntent(str, Enum):
@@ -95,7 +103,92 @@ class QueryIntentClassification(BaseModel):
         default_factory=list, description="Suggested follow-up questions"
     )
 
-    model_config = ConfigDict(extra="forbid")
+    @field_validator("confidence_scores")
+    @classmethod
+    def validate_confidence_scores(
+        cls, v: dict[QueryIntent, float]
+    ) -> dict[QueryIntent, float]:
+        """Validate confidence scores are between 0 and 1."""
+        for intent, score in v.items():
+            if not 0.0 <= score <= 1.0:
+                msg = f"Confidence score for {intent} must be between 0.0 and 1.0"
+                raise ValueError(msg)
+        return v
+
+    @model_validator(mode="after")
+    def validate_intent_consistency(self) -> "QueryIntentClassification":
+        """Ensure primary intent has the highest confidence."""
+        if self.confidence_scores:
+            primary_confidence = self.confidence_scores.get(self.primary_intent, 0.0)
+            max_confidence = (
+                max(self.confidence_scores.values()) if self.confidence_scores else 0.0
+            )
+
+            if primary_confidence != max_confidence:
+                msg = "Primary intent must have the highest confidence score"
+                raise ValueError(msg)
+
+        return self
+
+    @computed_field
+    @property
+    def total_confidence(self) -> float:
+        """Sum of all confidence scores."""
+        return round(sum(self.confidence_scores.values()), 3)
+
+    @computed_field
+    @property
+    def confidence_distribution(self) -> dict[str, float]:
+        """Normalized confidence distribution."""
+        total = self.total_confidence
+        if total == 0:
+            return {}
+        return {
+            intent.value: round(score / total, 3)
+            for intent, score in self.confidence_scores.items()
+        }
+
+    @computed_field
+    @property
+    def is_high_confidence(self) -> bool:
+        """Check if primary intent has high confidence (>0.8)."""
+        return self.confidence_scores.get(self.primary_intent, 0.0) > 0.8
+
+    @computed_field
+    @property
+    def ambiguity_score(self) -> float:
+        """Measure of classification ambiguity (entropy-based)."""
+        if not self.confidence_scores:
+            return 1.0
+
+        scores = list(self.confidence_scores.values())
+        total = sum(scores)
+        if total == 0:
+            return 1.0
+
+        # Calculate entropy
+        entropy = -sum(
+            (score / total) * math.log2(score / total) for score in scores if score > 0
+        )
+        # Normalize by max possible entropy
+        max_entropy = math.log2(len(scores)) if len(scores) > 1 else 1
+        return round(entropy / max_entropy, 3)
+
+    @computed_field
+    @property
+    def processing_strategy_hint(self) -> str:
+        """Suggest processing strategy based on intent and complexity."""
+        if self.complexity_level == QueryComplexity.SIMPLE:
+            return "direct_search"
+        if self.primary_intent in {QueryIntent.COMPARATIVE, QueryIntent.ARCHITECTURAL}:
+            return "multi_stage_retrieval"
+        if self.primary_intent in {QueryIntent.TROUBLESHOOTING, QueryIntent.DEBUGGING}:
+            return "context_enhanced_search"
+        if self.requires_context:
+            return "hyde_enhanced_search"
+        return "hybrid_search"
+
+    model_config = ConfigDict(extra="forbid", validate_assignment=True)
 
 
 class QueryPreprocessingResult(BaseModel):
@@ -145,7 +238,97 @@ class SearchStrategySelection(BaseModel):
         default=100.0, description="Estimated search latency"
     )
 
-    model_config = ConfigDict(extra="forbid")
+    @field_validator("confidence", "estimated_quality")
+    @classmethod
+    def validate_probability(cls, v: float) -> float:
+        """Validate probability values are between 0 and 1."""
+        if not 0.0 <= v <= 1.0:
+            msg = "Value must be between 0.0 and 1.0"
+            raise ValueError(msg)
+        return round(v, 3)
+
+    @field_validator("estimated_latency_ms")
+    @classmethod
+    def validate_latency(cls, v: float) -> float:
+        """Validate latency is reasonable."""
+        if v < 0:
+            msg = "Latency cannot be negative"
+            raise ValueError(msg)
+        if v > 30000:  # 30 seconds
+            msg = "Estimated latency exceeds reasonable bounds (30s)"
+            raise ValueError(msg)
+        return round(v, 1)
+
+    @computed_field
+    @property
+    def strategy_complexity_score(self) -> float:
+        """Calculate complexity score based on strategy."""
+        complexity_scores = {
+            SearchStrategy.SEMANTIC: 0.2,
+            SearchStrategy.HYBRID: 0.5,
+            SearchStrategy.HYDE: 0.7,
+            SearchStrategy.MULTI_STAGE: 0.8,
+            SearchStrategy.FILTERED: 0.6,
+            SearchStrategy.RERANKED: 0.9,
+            SearchStrategy.ADAPTIVE: 1.0,
+        }
+        return complexity_scores.get(self.primary_strategy, 0.5)
+
+    @computed_field
+    @property
+    def fallback_chain_length(self) -> int:
+        """Number of fallback strategies available."""
+        return len(self.fallback_strategies)
+
+    @computed_field
+    @property
+    def estimated_accuracy_confidence(self) -> float:
+        """Combined score for accuracy confidence."""
+        return round((self.confidence * self.estimated_quality), 3)
+
+    @computed_field
+    @property
+    def performance_category(self) -> str:
+        """Categorize performance based on estimated metrics."""
+        if self.estimated_latency_ms < 200:
+            return "fast"
+        if self.estimated_latency_ms < 1000:
+            return "moderate"
+        return "slow"
+
+    @computed_field
+    @property
+    def resource_intensity(self) -> str:
+        """Estimate resource requirements."""
+        intensity = self.strategy_complexity_score
+        if self.matryoshka_dimension == MatryoshkaDimension.LARGE:
+            intensity += 0.3
+        elif self.matryoshka_dimension == MatryoshkaDimension.MEDIUM:
+            intensity += 0.1
+
+        if intensity < 0.4:
+            return "low"
+        if intensity < 0.7:
+            return "medium"
+        return "high"
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "primary_strategy": "hybrid",
+                    "fallback_strategies": ["semantic", "dense"],
+                    "matryoshka_dimension": 768,
+                    "confidence": 0.85,
+                    "reasoning": "Query complexity suggests hybrid approach",
+                    "estimated_quality": 0.9,
+                    "estimated_latency_ms": 150.0,
+                }
+            ]
+        },
+    )
 
 
 class QueryProcessingRequest(BaseModel):

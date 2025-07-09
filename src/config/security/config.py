@@ -6,7 +6,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ConfigAccessLevel(str, Enum):
@@ -230,8 +230,7 @@ class SecurityConfig(BaseModel):
     )
     redis_password: str | None = Field(default=None, description="Redis password")
 
-    class Config:
-        """Pydantic configuration."""
-
-        env_prefix = "SECURITY_"
-        case_sensitive = False
+    model_config = ConfigDict(
+        env_prefix="SECURITY_",
+        case_sensitive=False,
+    )

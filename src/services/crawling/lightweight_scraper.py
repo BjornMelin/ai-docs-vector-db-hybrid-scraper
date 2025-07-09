@@ -55,8 +55,19 @@ class LightweightScraper(CrawlProvider):
         if self._initialized:
             return
 
+        # Configure optimized httpx client with HTTP/2 and connection pooling
+        limits = httpx.Limits(
+            max_keepalive_connections=50, max_connections=100, keepalive_expiry=30.0
+        )
+
+        timeout = httpx.Timeout(
+            connect=5.0, read=self.config.timeout, write=5.0, pool=2.0
+        )
+
         self._http_client = httpx.AsyncClient(
-            timeout=httpx.Timeout(self.config.timeout),
+            limits=limits,
+            timeout=timeout,
+            http2=True,
             follow_redirects=True,
             headers={"User-Agent": "Mozilla/5.0 (compatible; LightweightScraper/1.0)"},
         )

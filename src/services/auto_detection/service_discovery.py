@@ -18,6 +18,9 @@ from urllib.parse import urlparse
 import httpx
 from pydantic import BaseModel
 
+from src.infrastructure.clients.http_factory import HTTPClientFactory
+from src.utils.async_utils import gather_with_taskgroup
+
 
 try:
     import asyncpg
@@ -112,7 +115,7 @@ class ServiceDiscovery:
                     self.logger.warning(error_msg)
 
         # Execute all discovery tasks
-        await asyncio.gather(
+        await gather_with_taskgroup(
             *[
                 run_discovery(service_type, task)
                 for service_type, task in discovery_tasks
@@ -417,7 +420,10 @@ class ServiceDiscovery:
             collections = await client.get_collections()
 
             # Get version info from the root endpoint
-            async with httpx.AsyncClient(timeout=3.0) as http_client:
+            # Use optimized httpx client from factory with HTTP/2 and connection pooling
+            async with HTTPClientFactory.create_lightweight_client(
+                timeout=5.0  # Shorter timeout for discovery
+            ) as http_client:
                 response = await http_client.get(f"http://{host}:{port}/")
                 version_data = response.json() if response.status_code == 200 else {}
 

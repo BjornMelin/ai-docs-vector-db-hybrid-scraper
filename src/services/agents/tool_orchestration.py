@@ -21,6 +21,7 @@ from src.infrastructure.client_manager import ClientManager
 
 # BaseAgent and BaseAgentDependencies imports removed (unused)
 from src.services.cache.patterns import CircuitBreakerPattern
+from src.utils.async_utils import gather_with_taskgroup
 
 
 logger = logging.getLogger(__name__)
@@ -794,7 +795,9 @@ class AdvancedToolOrchestrator:
         # Wait for completion with timeout
         try:
             done_tasks = await asyncio.wait_for(
-                asyncio.gather(*[task for _, task in tasks], return_exceptions=True),
+                gather_with_taskgroup(
+                    *[task for _, task in tasks], return_exceptions=True
+                ),
                 timeout=timeout_seconds,
             )
 

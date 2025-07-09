@@ -17,6 +17,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from src.utils.async_utils import gather_with_taskgroup
+
 from .feature_flags import FeatureFlagManager
 from .models import DeploymentConfig, DeploymentEnvironment
 
@@ -828,7 +830,7 @@ class CanaryDeployment:
         # Wait for tasks to complete
         if self._monitoring_tasks:
             with contextlib.suppress(Exception):
-                await asyncio.gather(
+                await gather_with_taskgroup(
                     *self._monitoring_tasks.values(), return_exceptions=True
                 )
 

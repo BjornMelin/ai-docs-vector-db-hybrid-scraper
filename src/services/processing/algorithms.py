@@ -9,41 +9,333 @@ import logging
 import re
 import time
 from collections import Counter
-from dataclasses import dataclass
 from typing import Any
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class TextAnalysisResult:
-    """Results from optimized text analysis."""
+class TextAnalysisResult(BaseModel):
+    """Results from optimized text analysis with comprehensive validation."""
 
-    word_count: int
-    char_count: int
-    sentence_count: int
-    paragraph_count: int
-    avg_word_length: float
-    avg_sentence_length: float
-    complexity_score: float
-    readability_score: float
-    keyword_density: dict[str, float]
-    content_type_indicators: dict[str, float]
-    language_confidence: float
-    processing_time_ms: float
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        frozen=True,  # Immutable analysis results
+        json_schema_extra={
+            "examples": [
+                {
+                    "word_count": 1542,
+                    "char_count": 8765,
+                    "sentence_count": 87,
+                    "paragraph_count": 12,
+                    "avg_word_length": 5.68,
+                    "avg_sentence_length": 17.73,
+                    "complexity_score": 0.74,
+                    "readability_score": 0.82,
+                    "keyword_density": {
+                        "machine": 0.045,
+                        "learning": 0.032,
+                        "algorithm": 0.028,
+                    },
+                    "content_type_indicators": {
+                        "documentation": 0.85,
+                        "code": 0.12,
+                        "blog": 0.03,
+                    },
+                    "language_confidence": 0.95,
+                    "processing_time_ms": 1250.5,
+                }
+            ]
+        },
+    )
+
+    word_count: int = Field(
+        ...,
+        ge=0,
+        le=1_000_000,  # Reasonable upper bound for text analysis
+        description="Total number of words in the text",
+    )
+    char_count: int = Field(
+        ...,
+        ge=0,
+        le=10_000_000,  # Reasonable upper bound for character count
+        description="Total number of characters in the text",
+    )
+    sentence_count: int = Field(
+        ...,
+        ge=0,
+        le=100_000,  # Reasonable upper bound for sentences
+        description="Total number of sentences in the text",
+    )
+    paragraph_count: int = Field(
+        ...,
+        ge=0,
+        le=10_000,  # Reasonable upper bound for paragraphs
+        description="Total number of paragraphs in the text",
+    )
+    avg_word_length: float = Field(
+        ...,
+        ge=0.0,
+        le=50.0,  # Reasonable upper bound for average word length
+        description="Average length of words in characters",
+    )
+    avg_sentence_length: float = Field(
+        ...,
+        ge=0.0,
+        le=1000.0,  # Reasonable upper bound for average sentence length
+        description="Average number of words per sentence",
+    )
+    complexity_score: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Text complexity score (0-1, higher is more complex)",
+    )
+    readability_score: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Text readability score (0-1, higher is more readable)",
+    )
+    keyword_density: dict[str, float] = Field(
+        ..., description="Keyword density mapping (keyword -> density ratio)"
+    )
+    content_type_indicators: dict[str, float] = Field(
+        ..., description="Content type confidence scores (type -> confidence)"
+    )
+    language_confidence: float = Field(
+        ..., ge=0.0, le=1.0, description="Confidence in language detection (0-1)"
+    )
+    processing_time_ms: float = Field(
+        ...,
+        ge=0.0,
+        le=300_000.0,  # Max 5 minutes processing time
+        description="Analysis processing time in milliseconds",
+    )
+
+    @field_validator("keyword_density", "content_type_indicators")
+    @classmethod
+    def validate_density_scores(cls, v: dict[str, float]) -> dict[str, float]:
+        """Validate density and indicator scores are within valid ranges."""
+        for key, score in v.items():
+            if not isinstance(key, str) or len(key.strip()) == 0:
+                msg = f"Dictionary key must be non-empty string, got: {type(key).__name__}"
+                raise ValueError(msg)
+            if not (0.0 <= score <= 1.0):
+                msg = f"Score for '{key}' must be between 0.0 and 1.0, got: {score}"
+                raise ValueError(msg)
+        return v
+
+    @computed_field
+    @property
+    def words_per_paragraph(self) -> float:
+        """Calculate average words per paragraph."""
+        if self.paragraph_count == 0:
+            return 0.0
+        return self.word_count / self.paragraph_count
+
+    @computed_field
+    @property
+    def chars_per_word(self) -> float:
+        """Calculate average characters per word (should match avg_word_length)."""
+        if self.word_count == 0:
+            return 0.0
+        return self.char_count / self.word_count
+
+    @computed_field
+    @property
+    def sentences_per_paragraph(self) -> float:
+        """Calculate average sentences per paragraph."""
+        if self.paragraph_count == 0:
+            return 0.0
+        return self.sentence_count / self.paragraph_count
+
+    @computed_field
+    @property
+    def processing_efficiency(self) -> float:
+        """Calculate processing efficiency (chars per millisecond)."""
+        if self.processing_time_ms == 0:
+            return float("inf")
+        return self.char_count / self.processing_time_ms
+
+    @model_validator(mode="after")
+    def validate_analysis_consistency(self) -> "TextAnalysisResult":
+        """Validate consistency across analysis metrics."""
+        # Validate calculated average word length matches provided value
+        calculated_avg_word_length = self.chars_per_word
+        if abs(self.avg_word_length - calculated_avg_word_length) > 0.1:
+            msg = f"Average word length {self.avg_word_length} doesn't match calculated {calculated_avg_word_length:.2f}"
+            raise ValueError(msg)
+
+        # Validate readability and complexity are reasonable together
+        # High complexity typically means lower readability
+        if self.complexity_score > 0.8 and self.readability_score > 0.8:
+            msg = "High complexity with high readability is unusual - check calculation"
+            raise ValueError(msg)
+
+        # Validate keyword density scores sum to reasonable total
+        if self.keyword_density:
+            total_density = sum(self.keyword_density.values())
+            if total_density > 1.0:
+                msg = f"Total keyword density {total_density:.3f} exceeds 1.0 - indicates calculation error"
+                raise ValueError(msg)
+
+        # Validate content type indicators
+        if self.content_type_indicators:
+            max_indicator = max(self.content_type_indicators.values())
+            if max_indicator < 0.1:
+                msg = "All content type indicators below 0.1 - check detection logic"
+                raise ValueError(msg)
+
+        return self
 
 
-@dataclass
-class DocumentSimilarity:
-    """Document similarity analysis results."""
+class DocumentSimilarity(BaseModel):
+    """Document similarity analysis results with comprehensive validation."""
 
-    similarity_score: float
-    common_keywords: list[str]
-    unique_keywords_a: list[str]
-    unique_keywords_b: list[str]
-    semantic_overlap: float
-    structural_similarity: float
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_assignment=True,
+        frozen=True,  # Immutable similarity results
+        json_schema_extra={
+            "examples": [
+                {
+                    "similarity_score": 0.73,
+                    "common_keywords": ["machine", "learning", "algorithm", "data"],
+                    "unique_keywords_a": ["neural", "network", "training"],
+                    "unique_keywords_b": ["classification", "regression", "clustering"],
+                    "semantic_overlap": 0.68,
+                    "structural_similarity": 0.82,
+                }
+            ]
+        },
+    )
+
+    similarity_score: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Overall similarity score (0-1, higher is more similar)",
+    )
+    common_keywords: list[str] = Field(
+        ..., description="Keywords found in both documents"
+    )
+    unique_keywords_a: list[str] = Field(
+        ..., description="Keywords unique to document A"
+    )
+    unique_keywords_b: list[str] = Field(
+        ..., description="Keywords unique to document B"
+    )
+    semantic_overlap: float = Field(
+        ..., ge=0.0, le=1.0, description="Semantic content overlap score (0-1)"
+    )
+    structural_similarity: float = Field(
+        ..., ge=0.0, le=1.0, description="Document structure similarity score (0-1)"
+    )
+
+    @field_validator("common_keywords", "unique_keywords_a", "unique_keywords_b")
+    @classmethod
+    def validate_keyword_lists(cls, v: list[str]) -> list[str]:
+        """Validate keyword lists contain only non-empty strings."""
+        for keyword in v:
+            if not isinstance(keyword, str) or len(keyword.strip()) == 0:
+                msg = f"Keyword must be non-empty string, got: {type(keyword).__name__}"
+                raise ValueError(msg)
+        return v
+
+    @computed_field
+    @property
+    def total_unique_keywords(self) -> int:
+        """Calculate total number of unique keywords across both documents."""
+        return (
+            len(self.common_keywords)
+            + len(self.unique_keywords_a)
+            + len(self.unique_keywords_b)
+        )
+
+    @computed_field
+    @property
+    def keyword_overlap_ratio(self) -> float:
+        """Calculate ratio of common keywords to total unique keywords."""
+        if self.total_unique_keywords == 0:
+            return 0.0
+        return len(self.common_keywords) / self.total_unique_keywords
+
+    @computed_field
+    @property
+    def asymmetry_score(self) -> float:
+        """Calculate asymmetry between document A and B unique keywords."""
+        unique_a_count = len(self.unique_keywords_a)
+        unique_b_count = len(self.unique_keywords_b)
+        total_unique = unique_a_count + unique_b_count
+
+        if total_unique == 0:
+            return 0.0
+
+        # Calculate asymmetry as absolute difference normalized by total
+        return abs(unique_a_count - unique_b_count) / total_unique
+
+    @computed_field
+    @property
+    def composite_similarity(self) -> float:
+        """Calculate weighted composite similarity score."""
+        return (
+            self.similarity_score * 0.4
+            + self.semantic_overlap * 0.3
+            + self.structural_similarity * 0.3
+        )
+
+    @model_validator(mode="after")
+    def validate_similarity_consistency(self) -> "DocumentSimilarity":
+        """Validate consistency across similarity metrics."""
+        # Validate similarity components are reasonably aligned
+        similarities = [
+            self.similarity_score,
+            self.semantic_overlap,
+            self.structural_similarity,
+        ]
+        max_diff = max(similarities) - min(similarities)
+
+        if max_diff > 0.7:
+            msg = f"Similarity metrics show large variance (max diff: {max_diff:.2f}) - check calculation"
+            raise ValueError(msg)
+
+        # Validate keyword overlap is consistent with similarity scores
+        if len(self.common_keywords) == 0 and self.similarity_score > 0.5:
+            msg = "High similarity score with no common keywords is inconsistent"
+            raise ValueError(msg)
+
+        # Validate no duplicate keywords across lists
+        all_common = set(self.common_keywords)
+        all_unique_a = set(self.unique_keywords_a)
+        all_unique_b = set(self.unique_keywords_b)
+
+        if all_common & all_unique_a:
+            overlap = all_common & all_unique_a
+            msg = f"Keywords appear in both common and unique_a lists: {list(overlap)[:5]}"
+            raise ValueError(msg)
+
+        if all_common & all_unique_b:
+            overlap = all_common & all_unique_b
+            msg = f"Keywords appear in both common and unique_b lists: {list(overlap)[:5]}"
+            raise ValueError(msg)
+
+        if all_unique_a & all_unique_b:
+            overlap = all_unique_a & all_unique_b
+            msg = f"Keywords appear in both unique lists: {list(overlap)[:5]}"
+            raise ValueError(msg)
+
+        return self
 
 
 class OptimizedTextAnalyzer:
@@ -366,7 +658,7 @@ class OptimizedTextAnalyzer:
             return 0.0
 
         # Simple heuristics for English language detection
-        english_indicators = 0
+        english_indicators = 0.0  # Use float to handle fractional additions
         total_words = len(words)
 
         for word in words:
@@ -465,7 +757,7 @@ class OptimizedTextAnalyzer:
             Performance benchmark results
         """
 
-        results = {
+        results: dict[str, Any] = {
             "algorithm_complexity": "O(n)",
             "cache_enabled": True,
             "benchmarks": [],
@@ -537,7 +829,7 @@ def extract_entities_optimized(text: str) -> dict[str, list[str]]:
     Returns:
         Dictionary of entity types and extracted entities
     """
-    entities = {
+    entities: dict[str, list[str]] = {
         "urls": [],
         "emails": [],
         "numbers": [],

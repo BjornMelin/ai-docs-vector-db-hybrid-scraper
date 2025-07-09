@@ -1,9 +1,6 @@
-import typing
-
-
 """Response models for MCP server tools."""
 
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -46,7 +43,7 @@ class CrawlResult(BaseModel):
         description="Crawl timestamp",
     )
     links: list[str] = Field(default_factory=list, description="Extracted links")
-    metadata: dict = Field(default_factory=dict, description="Page metadata")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Page metadata")
     error: str | None = Field(default=None, description="Error message if failed")
 
 

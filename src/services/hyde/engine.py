@@ -12,6 +12,7 @@ from src.services.base import BaseService
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.errors import EmbeddingServiceError, QdrantServiceError
 from src.services.vector_db.service import QdrantService
+from src.utils.async_utils import gather_with_taskgroup
 
 from .cache import HyDECache
 from .config import HyDEConfig, HyDEMetricsConfig, HyDEPromptConfig
@@ -77,7 +78,7 @@ class HyDEQueryEngine(BaseService):
 
         try:
             # Initialize components in parallel
-            await asyncio.gather(
+            await gather_with_taskgroup(
                 self.generator.initialize(),
                 self.cache.initialize(),
                 self.embedding_manager.initialize()
@@ -97,7 +98,7 @@ class HyDEQueryEngine(BaseService):
 
     async def cleanup(self) -> None:
         """Cleanup all components."""
-        await asyncio.gather(
+        await gather_with_taskgroup(
             self.generator.cleanup(), self.cache.cleanup(), return_exceptions=True
         )
         self._initialized = False
@@ -459,7 +460,7 @@ class HyDEQueryEngine(BaseService):
 
         # Execute searches concurrently
         tasks = [search_single(query) for query in queries]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        results = await gather_with_taskgroup(*tasks, return_exceptions=True)
 
         # Handle exceptions
         processed_results = []

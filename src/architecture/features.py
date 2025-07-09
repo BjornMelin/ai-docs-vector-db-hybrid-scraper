@@ -50,7 +50,9 @@ class FeatureFlag:
         return service_name in self.mode_config.enabled_services
 
 
-def enterprise_only(fallback_value: Any = None, log_access: bool = True):
+def enterprise_only(
+    fallback_value: Any = None, log_access: bool = True
+) -> Callable[..., Any]:
     """Decorator to enable features only in enterprise mode.
 
     Args:
@@ -70,7 +72,10 @@ def enterprise_only(fallback_value: Any = None, log_access: bool = True):
 
             if log_access:
                 logger.info(
-                    "Enterprise feature '%s' accessed in simple mode, returning fallback value: %s",
+                    (
+                        "Enterprise feature '%s' accessed in simple mode, "
+                        "returning fallback value: %s"
+                    ),
                     func.__name__,
                     fallback_value,
                 )
@@ -84,7 +89,10 @@ def enterprise_only(fallback_value: Any = None, log_access: bool = True):
 
             if log_access:
                 logger.info(
-                    "Enterprise feature '%s' accessed in simple mode, returning fallback value: %s",
+                    (
+                        "Enterprise feature '%s' accessed in simple mode, "
+                        "returning fallback value: %s"
+                    ),
                     func.__name__,
                     fallback_value,
                 )
@@ -100,7 +108,7 @@ def enterprise_only(fallback_value: Any = None, log_access: bool = True):
 
 def conditional_feature(
     feature_name: str, fallback_value: Any = None, log_access: bool = True
-):
+) -> Callable[..., Any]:
     """Enable features based on mode configuration.
 
     Args:
