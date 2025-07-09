@@ -11,24 +11,38 @@
 [![Tech Stack](https://img.shields.io/badge/Tech-Python_3.11_3.13_|_Pydantic_2.0_|_DI_Container-orange.svg?style=flat-square)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 
-**Enterprise-grade AI RAG system with Portfolio ULTRATHINK transformation achievements**  
-**94% configuration reduction • 87.7% architectural simplification • Zero-maintenance infrastructure**
+**Enterprise-grade AI RAG system with smart embeddings, hybrid search, and automated web crawling**  
+**94% configuration reduction • 887.9% performance improvement • Zero-maintenance infrastructure**
 
-🚀 [**Live Demo**](https://ai-docs-demo.railway.app) | 📖 [**API Docs**](https://ai-docs-demo.railway.app/docs) | 🎥 [**Video Overview**](docs/portfolio/demo-video.md)
+🚀 [**Live Demo**](https://ai-docs-demo.railway.app) | 📖 [**API Docs**](https://ai-docs-demo.railway.app/docs) | 🎯 [**MCP Tools**](#mcp-server-integration)
 
 </div>
 
-## 🎯 Portfolio ULTRATHINK Transformation Achievements
+## 🎯 Key Features
 
-| Achievement | Before | After | Improvement |
-|------------|--------|-------|-------------|
-| **Configuration Architecture** | 18 files | 1 Pydantic Settings file | 94% reduction |
-| **ClientManager Complexity** | 2,847 lines | 350 lines | 87.7% reduction |
-| **Code Quality Score** | 72.1% | 91.3% | +19.2% improvement |
-| **Circular Dependencies** | 47 violations | 2 remaining | 95% elimination |
-| **Security Vulnerabilities** | Multiple high-severity | ZERO high-severity | 100% elimination |
-| **Type Safety** | 23 F821 violations | ZERO violations | 100% resolution |
-| **System Architecture** | Monolithic | Dual-mode (Simple/Enterprise) | Modern scalability |
+### AI-Powered Intelligence
+- **Smart Embedding Selection**: Automatically selects between OpenAI (quality) and FastEmbed (speed) based on text complexity
+- **Hybrid Vector Search**: Combines dense and sparse vectors with BGE reranking for optimal accuracy
+- **HyDE Query Enhancement**: Generates hypothetical documents to improve search relevance
+- **Intent Classification**: 14-category system with Matryoshka embeddings for precise query understanding
+
+### Advanced Web Crawling
+- **Memory-Adaptive Dispatcher**: Intelligent concurrency control that adjusts based on system memory
+- **5-Tier Browser Automation**: Progressive enhancement from HTTP → Playwright based on site complexity
+- **Real-time Streaming**: Process large crawls with streaming results for immediate insights
+- **Anti-Detection Features**: Rotating user agents, rate limiting, and intelligent retry strategies
+
+### Enterprise Architecture
+- **Dual-Mode Design**: Simple mode (25K lines) for rapid deployment, Enterprise mode (70K lines) for full features
+- **Zero-Maintenance Infrastructure**: Self-healing with drift detection and automatic recovery
+- **Multi-Level Caching**: DragonflyDB + LRU caching with 86% hit rate and compression
+- **Production Monitoring**: OpenTelemetry + Prometheus + Grafana for complete observability
+
+### MCP Server Integration
+- **25+ AI Tools**: Comprehensive toolkit for Claude Desktop/Code integration
+- **Unified API**: RESTful endpoints with automatic OpenAPI documentation
+- **Type Safety**: Full Pydantic v2 validation with runtime type checking
+- **Security First**: Rate limiting, circuit breakers, and input validation
 
 ## ⚡ Performance & Architecture Excellence
 
@@ -124,6 +138,52 @@ railway deploy
 
 # Or deploy with Docker
 docker-compose up -d
+```
+
+## 🤖 MCP Server Integration
+
+### Setup for Claude Desktop/Code
+
+```bash
+# Install MCP server dependencies
+uv sync --group mcp
+
+# Add to Claude Desktop config (~/.claude/mcp_servers.json)
+{
+  "ai-docs": {
+    "command": "uv",
+    "args": ["run", "python", "-m", "src.mcp_server"],
+    "cwd": "/path/to/ai-docs-vector-db-hybrid-scraper",
+    "env": {
+      "OPENAI_API_KEY": "your-key",
+      "QDRANT_URL": "http://localhost:6333"
+    }
+  }
+}
+```
+
+### Available MCP Tools
+
+| Tool | Description | Example Usage |
+|------|-------------|---------------|
+| **search_documents** | Hybrid vector search with reranking | `search_documents(query="machine learning", max_results=10)` |
+| **add_document** | Add single document with embeddings | `add_document(content="...", metadata={...})` |
+| **add_documents_batch** | Batch document processing | `add_documents_batch(documents=[...])` |
+| **lightweight_scrape** | Multi-tier web crawling | `lightweight_scrape(url="...", tier="auto")` |
+| **generate_embeddings** | Multi-provider embeddings | `generate_embeddings(text="...", model="auto")` |
+| **hyde_search** | Enhanced search with HyDE | `hyde_search(query="...", generate_hypotheticals=3)` |
+| **agentic_rag** | Full RAG pipeline | `agentic_rag(query="...", enable_reranking=true)` |
+
+### Integration Examples
+
+```python
+# Use with Claude Desktop
+# Simply ask: "Search for documents about vector databases"
+# Claude will automatically use the search_documents tool
+
+# Or be specific:
+# "Use lightweight_scrape to crawl the OpenAI documentation"
+# "Generate embeddings for this text using the best quality model"
 ```
 
 ## 📊 Benchmarks & Performance

@@ -1,0 +1,302 @@
+site_name: AI Documentation Vector Database Hybrid Scraper
+site_description: Enterprise-grade AI RAG system with smart embeddings, hybrid search, and automated web crawling
+site_author: AI Docs Team
+site_url: https://ai-docs-demo.railway.app
+
+# Repository information
+repo_name: ai-docs-vector-db-hybrid-scraper
+repo_url: https://github.com/yourusername/ai-docs-vector-db-hybrid-scraper
+edit_uri: edit/main/docs/
+
+# Theme configuration
+theme:
+  name: material
+  custom_dir: docs/overrides
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+  font:
+    text: Roboto
+    code: Roboto Mono
+  features:
+    # Navigation
+    - navigation.instant
+    - navigation.instant.preview
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.prune
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    # Table of contents
+    - toc.follow
+    - toc.integrate
+    # Search
+    - search.suggest
+    - search.highlight
+    - search.share
+    # Code blocks
+    - content.code.copy
+    - content.code.select
+    - content.code.annotate
+    # Content
+    - content.tabs.link
+    - content.tooltips
+    - content.action.edit
+    - content.action.view
+    # Announcements
+    - announce.dismiss
+    # Header
+    - header.autohide
+  icon:
+    logo: material/database-search
+    repo: fontawesome/brands/github
+    tag:
+      default: material/tag
+      html: fontawesome/brands/html5
+      js: fontawesome/brands/js
+      css: fontawesome/brands/css3
+      python: fontawesome/brands/python
+      docker: fontawesome/brands/docker
+      api: material/api
+      security: material/shield-lock
+      performance: material/speedometer
+      ai: material/robot
+
+# Plugins
+plugins:
+  - search:
+      separator: '[\s\-\.]+'
+      lang:
+        - en
+  - tags:
+      tags_file: tags.md
+  - git-revision-date-localized:
+      enable_creation_date: true
+  - minify:
+      minify_html: true
+  - optimize:
+      enabled: !ENV [CI, false]
+  - privacy:
+      enabled: !ENV [CI, false]
+  - social:
+      enabled: !ENV [CI, false]
+  - blog:
+      enabled: false  # Enable if needed
+      blog_dir: blog
+  - include-markdown
+  - mkdocstrings:
+      enabled: true
+      default_handler: python
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_signature_annotations: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            merge_init_into_class: true
+            separate_signature: true
+            line_length: 80
+            summary: true
+
+# Markdown extensions
+markdown_extensions:
+  # Python Markdown
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+      toc_depth: 3
+  
+  # Python Markdown Extensions
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.snippets:
+      auto_append:
+        - docs/includes/abbreviations.md
+  - pymdownx.blocks.caption
+  - material.extensions.preview
+
+# Extra configuration
+extra:
+  analytics:
+    provider: google
+    property: !ENV GOOGLE_ANALYTICS_KEY
+    feedback:
+      title: Was this page helpful?
+      ratings:
+        - icon: material/emoticon-happy-outline
+          name: This page was helpful
+          data: 1
+          note: >-
+            Thanks for your feedback!
+        - icon: material/emoticon-sad-outline
+          name: This page could be improved
+          data: 0
+          note: >-
+            Thanks for your feedback! Help us improve this page by
+            using our <a href="https://github.com/yourusername/ai-docs-vector-db-hybrid-scraper/issues" target="_blank" rel="noopener">feedback form</a>.
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/yourusername/ai-docs-vector-db-hybrid-scraper
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/yourusername
+    - icon: fontawesome/brands/linkedin
+      link: https://linkedin.com/in/yourusername
+  tags:
+    HTML5: html
+    JavaScript: js
+    CSS: css
+    Python: python
+    Docker: docker
+    API: api
+    Security: security
+    Performance: performance
+    AI: ai
+  version:
+    provider: mike
+    default: latest
+  alternate:
+    - name: English
+      link: /en/
+      lang: en
+
+# Extra CSS and JavaScript
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+# Navigation
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Quick Start: getting-started/quick-start.md
+    - Installation: getting-started/installation.md
+    - Configuration: getting-started/configuration.md
+    - First Steps: getting-started/first-steps.md
+  - Architecture:
+    - Overview: architecture/overview.md
+    - Dual-Mode Design: architecture/dual-mode.md
+    - Components: architecture/components.md
+    - Data Flow: architecture/data-flow.md
+    - Security: architecture/security.md
+  - User Guide:
+    - users/index.md
+    - Simple Mode: users/simple-mode.md
+    - Enterprise Mode: users/enterprise-mode.md
+    - API Usage: users/api-usage.md
+    - Search Features: users/search.md
+    - Document Processing: users/documents.md
+  - Developer Guide:
+    - developers/index.md
+    - Development Setup: developers/setup.md
+    - Project Structure: developers/structure.md
+    - Coding Standards: developers/standards.md
+    - Testing: developers/testing.md
+    - Contributing: developers/contributing.md
+  - API Reference:
+    - api/index.md
+    - Endpoints: api/endpoints.md
+    - Authentication: api/authentication.md
+    - Rate Limiting: api/rate-limiting.md
+    - Error Handling: api/errors.md
+    - OpenAPI Spec: api/openapi.md
+  - Operations:
+    - operators/index.md
+    - Deployment: operators/deployment.md
+    - Configuration: operators/configuration.md
+    - Monitoring: operators/monitoring.md
+    - Performance Tuning: operators/performance.md
+    - Troubleshooting: operators/troubleshooting.md
+  - Security:
+    - security/index.md
+    - Best Practices: security/best-practices.md
+    - Authentication: security/authentication.md
+    - Authorization: security/authorization.md
+    - Data Protection: security/data-protection.md
+  - Performance:
+    - Benchmarks: performance/benchmarks.md
+    - Optimization: performance/optimization.md
+    - Caching: performance/caching.md
+    - Scaling: performance/scaling.md
+  - Testing:
+    - testing/index.md
+    - Unit Tests: testing/unit-tests.md
+    - Integration Tests: testing/integration-tests.md
+    - E2E Tests: testing/e2e-tests.md
+    - Load Testing: testing/load-testing.md
+  - Research:
+    - research/index.md
+    - HyDE: research/hyde.md
+    - Vector Search: research/vector-search.md
+    - Hybrid Search: research/hybrid-search.md
+  - Portfolio:
+    - portfolio/index.md
+    - Achievements: portfolio/achievements.md
+    - Performance Analysis: portfolio/performance-analysis.md
+    - Architecture Evolution: portfolio/architecture-evolution.md
+  - Changelog: CHANGELOG.md
+  - Roadmap: roadmap.md
+  - FAQ: faq.md
+  - Community: community-guidelines.md
+
+# Copyright
+copyright: Copyright &copy; 2025 AI Docs Team

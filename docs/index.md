@@ -1,10 +1,10 @@
-# AI Docs Vector DB Hybrid Scraper
+# AI Documentation Vector Database Hybrid Scraper
 
-**Enterprise-grade AI RAG system with Portfolio ULTRATHINK transformation achievements**
+**Enterprise-grade AI RAG system with smart embeddings, hybrid search, and automated web crawling**
 
-🎯 **94% configuration reduction** • **87.7% architectural simplification** • **887.9% performance improvement**
+🎯 **Smart Embedding Selection** • **Memory-Adaptive Dispatcher** • **887.9% Performance Improvement**
 
-A revolutionary documentation scraping and vector search system that combines intelligent browser automation, advanced vector search, and AI-powered query enhancement, now enhanced with Portfolio ULTRATHINK transformation delivering enterprise-grade performance and zero-maintenance infrastructure.
+A production-ready documentation scraping and vector search system that combines intelligent browser automation, hybrid vector search, and AI-powered query enhancement with enterprise-grade performance and zero-maintenance infrastructure.
 
 ## 🏆 Portfolio ULTRATHINK Transformation Achievements
 
@@ -82,6 +82,15 @@ A revolutionary documentation scraping and vector search system that combines in
     - [Configuration](operators/configuration.md) - System configuration options
     - [Monitoring](operators/monitoring.md) - Observability and alerting
     - [Security](operators/security.md) - Security best practices
+
+=== "Dependencies"
+
+    Managing project dependencies?
+    
+    - [Dependency Overview](dependencies/index.md) - Dependency management documentation
+    - [Changes Summary](dependencies/DEPENDENCY_CHANGES_SUMMARY.md) - Quick reference guide
+    - [Upgrade Guide](dependencies/DEPENDENCY_UPGRADE_GUIDE.md) - Comprehensive upgrade documentation
+    - [Migration Checklist](dependencies/MIGRATION_CHECKLIST.md) - Step-by-step migration guide
 
 ## 🏗️ Transformed Architecture Overview
 
