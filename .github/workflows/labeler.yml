@@ -19,7 +19,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Label PR based on files changed
         uses: actions/labeler@v5
