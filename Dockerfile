@@ -4,7 +4,7 @@
 # =========================================
 # Stage 1: Build Environment
 # =========================================
-FROM python:3.12 AS builder
+FROM python:3.13 AS builder
 
 # Prevent Python from writing pyc files and buffer stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -58,7 +58,7 @@ RUN uv sync --frozen --no-dev
 # =========================================
 # Stage 2: Runtime Environment
 # =========================================
-FROM python:3.12-slim AS runtime
+FROM python:3.13.7-slim AS runtime
 
 # Prevent Python from writing pyc files and buffer stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1
