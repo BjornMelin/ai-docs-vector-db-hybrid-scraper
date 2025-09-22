@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 import click
-import uvicorn
+import uvicorn  # type: ignore[import]
 
 
 @click.group()
@@ -33,24 +33,41 @@ def dev(mode: str, reload: bool, host: str, port: int):
 @cli.command()
 @click.option(
     "--profile",
-    type=click.Choice(["unit", "fast", "integration", "full"]),
-    default="fast",
+    type=click.Choice(["quick", "unit", "integration", "performance", "full", "ci"]),
+    default="quick",
 )
 @click.option("--coverage/--no-coverage", default=False)
 @click.option("--verbose/--quiet", default=False)
 @click.option(
-    "--parallel", type=int, default=0, help="Number of parallel workers (0 = auto)"
+    "--workers", type=int, default=0, help="Number of parallel workers (0 = auto)"
 )
-def test(profile: str, coverage: bool, verbose: bool, parallel: int):
-    """Run test suite with optimized feedback loops"""
-    cmd = ["python", "scripts/run_fast_tests.py", "--profile", profile]
+@click.argument("extra_args", nargs=-1)
+def test(
+    profile: str,
+    coverage: bool,
+    verbose: bool,
+    workers: int,
+    extra_args: tuple[str, ...],
+):
+    """Run test suite with optimized feedback loops."""
+
+    cmd = [
+        sys.executable,
+        "scripts/dev.py",
+        "test",
+        "--profile",
+        profile,
+    ]
 
     if coverage:
         cmd.append("--coverage")
     if verbose:
         cmd.append("--verbose")
-    if parallel > 0:
-        cmd.extend(["--parallel", str(parallel)])
+    if workers > 0:
+        cmd.extend(["--workers", str(workers)])
+    if extra_args:
+        cmd.append("--")
+        cmd.extend(extra_args)
 
     click.echo(f"🧪 Running {profile} test profile")
     subprocess.run(cmd, check=False)
@@ -58,7 +75,7 @@ def test(profile: str, coverage: bool, verbose: bool, parallel: int):
 
 @cli.command()
 def setup():
-    """Complete development environment setup"""
+    """Complete development environment setup."""
     click.echo("🔧 Setting up development environment...")
 
     # Create .env.local if it doesn't exist
@@ -67,9 +84,15 @@ def setup():
         click.echo("📝 Creating .env.local from template...")
         env_example = Path(".env.example")
         if env_example.exists():
-            env_local.write_text(env_example.read_text())
+            env_local.write_text(
+                env_example.read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
         else:
-            env_local.write_text("AI_DOCS__MODE=simple\nAI_DOCS__DEBUG=true\n")
+            env_local.write_text(
+                "AI_DOCS__MODE=simple\nAI_DOCS__DEBUG=true\n",
+                encoding="utf-8",
+            )
 
     # Install pre-commit hooks
     click.echo("🪝 Installing pre-commit hooks...")
@@ -82,7 +105,7 @@ def setup():
     # Validate configuration
     click.echo("✅ Validating configuration...")
     subprocess.run(
-        ["python", "scripts/validate_config.py"],  # noqa: S607
+        [sys.executable, "scripts/dev.py", "validate"],
         check=False,
         capture_output=True,
     )
@@ -91,31 +114,29 @@ def setup():
 
 
 @cli.command()
-@click.option("--fix/--no-fix", default=True)
-def quality():
-    """Run code quality checks (format, lint, typecheck)"""
+@click.option("--skip-format/--no-skip-format", default=False)
+@click.option("--fix-lint/--no-fix-lint", default=True)
+def quality(skip_format: bool, fix_lint: bool):
+    """Run code quality checks (format, lint, typecheck)."""
+
+    cmd = [
+        sys.executable,
+        "scripts/dev.py",
+        "quality",
+    ]
+    if skip_format:
+        cmd.append("--skip-format")
+    if fix_lint:
+        cmd.append("--fix-lint")
+
     click.echo("🔍 Running code quality checks...")
-
-    # Format code
-    click.echo("📝 Formatting code...")
-    subprocess.run(["ruff", "format", "."], check=False)  # noqa: S607
-
-    # Lint code
-    click.echo("🧹 Linting code...")
-    subprocess.run(["ruff", "check", ".", "--fix"], check=False)  # noqa: S607
-
-    # Type check
-    click.echo("🔍 Type checking...")
-    result = subprocess.run(
-        ["mypy", "src/", "--config-file", "pyproject.toml"],  # noqa: S607
-        check=False,
-    )
+    result = subprocess.run(cmd, check=False)
 
     if result.returncode == 0:
         click.echo("✅ All quality checks passed!")
     else:
         click.echo("❌ Quality checks failed!")
-        sys.exit(1)
+        sys.exit(result.returncode)
 
 
 @cli.command()
@@ -131,39 +152,71 @@ def docs(host: str, port: int):
 
 
 @cli.command()
-def services():
-    """Start local services (Qdrant, Redis)"""
-    click.echo("🚀 Starting local services...")
-    subprocess.run(["./scripts/start-services.sh"], check=False)
+@click.option(
+    "--action",
+    type=click.Choice(["start", "stop", "status"]),
+    default="start",
+)
+@click.option("--stack", type=click.Choice(["vector", "monitoring"]), default="vector")
+@click.option("--skip-health-check/--no-skip-health-check", default=False)
+def services(action: str, stack: str, skip_health_check: bool):
+    """Manage local services (Qdrant, monitoring stack)."""
+
+    cmd = [
+        sys.executable,
+        "scripts/dev.py",
+        "services",
+        action,
+        "--stack",
+        stack,
+    ]
+    if skip_health_check:
+        cmd.append("--skip-health-check")
+
+    click.echo(f"🚀 Services command: {action} ({stack})")
+    subprocess.run(cmd, check=False)
 
 
 @cli.command()
 @click.option("--profile", default="standard")
 def benchmark(profile: str):
-    """Run performance benchmarks"""
+    """Run performance benchmarks."""
+
     click.echo(f"⚡ Running {profile} benchmark profile...")
+    suite_map = {
+        "standard": "performance",
+        "performance": "performance",
+        "integration": "integration",
+        "all": "all",
+    }
+    suite = suite_map.get(profile, "performance")
     subprocess.run(
-        ["python", "scripts/run_benchmarks.py", "--profile", profile],  # noqa: S607
+        [sys.executable, "scripts/dev.py", "benchmark", "--suite", suite],
         check=False,
     )
 
 
 @cli.command()
 def validate():
-    """Validate project configuration and health"""
+    """Validate project configuration and health."""
+
     click.echo("🔍 Validating project configuration...")
 
-    # Validate configuration
-    result1 = subprocess.run(["python", "scripts/validate_config.py"], check=False)  # noqa: S607
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/dev.py",
+            "validate",
+            "--check-docs",
+        ],
+        check=False,
+    )
 
-    # Validate documentation links
-    result2 = subprocess.run(["python", "scripts/validate_docs_links.py"], check=False)  # noqa: S607
-
-    if result1.returncode == 0 and result2.returncode == 0:
+    if result.returncode == 0:
         click.echo("✅ All validations passed!")
     else:
         click.echo("❌ Validation failed!")
-        sys.exit(1)
+        sys.exit(result.returncode)
 
 
 if __name__ == "__main__":

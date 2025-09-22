@@ -1009,68 +1009,39 @@ dev = "uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000"
 dev-simple = "AI_DOCS__MODE=simple uvicorn src.api.main:app --reload --port 8000"
 dev-enterprise = "AI_DOCS__MODE=enterprise uvicorn src.api.main:app --reload --port 8000"
 
-# Testing & Quality (Fast feedback loops)
-test = "python scripts/run_fast_tests.py --profile=fast"
-test-unit = "python scripts/run_fast_tests.py --profile=unit"
-test-integration = "python scripts/run_fast_tests.py --profile=integration"
-test-full = "python scripts/test_runner.py --comprehensive"
-test-ai = "pytest tests/unit/ai/ tests/integration/ai/ -v"
-test-performance = "python scripts/benchmark_query_api.py"
-coverage = "pytest --cov=src --cov-report=html --cov-report=term-missing"
+# Testing & Quality
+test = "python scripts/dev.py test --profile quick"
+test-unit = "python scripts/dev.py test --profile unit"
+test-integration = "python scripts/dev.py test --profile integration"
+test-full = "python scripts/dev.py test --profile full"
+test-performance = "python scripts/dev.py benchmark --suite performance"
+coverage = "python scripts/dev.py test --profile full --coverage"
 
-# Code Quality & Enterprise Standards
-lint = "ruff check . --fix"
-format = "ruff format ."
-typecheck = "mypy src/ --config-file pyproject.toml"
-quality = "task format && task lint && task typecheck"
-
-# Advanced Quality Analysis  
-quality-check = "task quality && python scripts/quality_analysis.py"
-complexity-check = "python scripts/complexity_analyzer.py"
-security-check = "bandit -r src/ -f json -o security_report.json"
+# Code Quality
+lint = "python scripts/dev.py lint --fix"
+format = "python scripts/dev.py format"
+typecheck = "python scripts/dev.py typecheck"
+quality = "python scripts/dev.py quality --fix-lint"
 docstring-check = "interrogate src/ --fail-under=85"
-
-# Quality Gates for CI/CD
-quality-gate = "task quality-check && task complexity-check && task security-check && task docstring-check"
-quality-baseline = "python scripts/create_quality_baseline.py"
-quality-report = "python scripts/generate_quality_report.py"
-
-# Zero-Violation Goals
-zero-violations = "python scripts/zero_violations_fix.py --auto-fix"
-quality-enterprise = "task zero-violations && task quality-gate"
-
-# Specialized Scripts Integration
-fix-try = "python scripts/fix_try_violations.py"
-benchmark-crawl4ai = "python scripts/benchmark_crawl4ai_performance.py"
-docs-add-status = "python scripts/add_status_indicators.py"
-docs-update-links = "python scripts/update_doc_links.py"
-setup-complete = "uv run python -m src.cli.main setup && echo 'Setup complete! Run: source .env.local'"
+security-check = "bandit -r src/ -f json -o security_report.json"
 
 # Documentation
-docs-build = "task docs-add-status && task docs-update-links && mkdocs build"
+docs-build = "mkdocs build"
 docs-serve = "mkdocs serve --host 0.0.0.0 --port 8001"
 docs-deploy = "mkdocs gh-deploy"
 
-# Database & Services
-services-start = "./scripts/start-services.sh"
-services-stop = "docker-compose down"
-db-migrate = "python scripts/database_migration.py"
-db-seed = "python scripts/seed_test_data.py"
-
-# Performance & Monitoring
-benchmark = "python scripts/run_benchmarks.py --profile=standard"
-monitor = "python scripts/health_check.py --continuous"
-profile = "python scripts/profile_performance.py"
-
-# Deployment
-deploy-staging = "python scripts/deploy.py --env=staging"
-deploy-prod = "python scripts/deploy.py --env=production"
+# Services & Operations
+services-start = "python scripts/dev.py services start"
+services-stop = "python scripts/dev.py services stop"
+monitoring-start = "python scripts/dev.py services start --stack monitoring"
+monitoring-stop = "python scripts/dev.py services stop --stack monitoring"
+benchmark = "python scripts/dev.py benchmark"
 
 # Utilities
 clean = "find . -type d -name __pycache__ -exec rm -rf {} + && find . -type f -name '*.pyc' -delete"
 security = "bandit -r src/"
 deps-check = "uv pip compile pyproject.toml --universal --upgrade"
-validate-config = "python scripts/validate_config.py"
+validate-config = "python scripts/dev.py validate --check-docs"
 
 # ===== Versioning and release configuration =====
 [tool.commitizen]
