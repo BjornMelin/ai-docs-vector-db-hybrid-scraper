@@ -45,11 +45,15 @@ def _run_command(
 ) -> subprocess.CompletedProcess[Any]:
     """Execute a subprocess with defensively normalised arguments."""
 
+    if "shell" in kwargs:
+        msg = "shell execution is not permitted for CLI commands"
+        raise ValueError(msg)
     normalized = _normalize_command(command)
     return subprocess.run(
         normalized,
         check=check,
         capture_output=capture_output,
+        shell=False,
         **kwargs,
     )
 

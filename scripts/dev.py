@@ -78,7 +78,7 @@ def run_command(
 
     normalized = _normalize_command(command)
     print(f"$ {shlex.join(normalized)}")
-    result = subprocess.run(normalized, cwd=cwd, env=env, check=False)
+    result = subprocess.run(normalized, cwd=cwd, env=env, check=False, shell=False)
     if result.returncode != 0:
         print(f"Command exited with status {result.returncode}", file=sys.stderr)
     return result.returncode
