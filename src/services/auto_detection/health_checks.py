@@ -316,7 +316,7 @@ class HealthChecker:
         """Check PostgreSQL service health."""
         try:
             # Simple TCP connection test for now
-            reader, writer = await asyncio.wait_for(
+            _reader, writer = await asyncio.wait_for(
                 asyncio.open_connection(service.host, service.port), timeout=5.0
             )
 
@@ -366,7 +366,7 @@ class HealthChecker:
                     )
             else:
                 # TCP connection test
-                reader, writer = await asyncio.wait_for(
+                _reader, writer = await asyncio.wait_for(
                     asyncio.open_connection(service.host, service.port), timeout=5.0
                 )
 

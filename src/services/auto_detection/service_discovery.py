@@ -351,7 +351,7 @@ class ServiceDiscovery:
         their respective client libraries for direct connection testing.
         """
         try:
-            reader, writer = await asyncio.wait_for(
+            _reader, writer = await asyncio.wait_for(
                 asyncio.open_connection(host, port), timeout=timeout
             )
             writer.close()
@@ -445,7 +445,7 @@ class ServiceDiscovery:
         """Test Qdrant gRPC availability for performance optimization."""
         try:
             # Quick TCP test for gRPC port availability
-            reader, writer = await asyncio.wait_for(
+            _reader, writer = await asyncio.wait_for(
                 asyncio.open_connection(host, port), timeout=1.0
             )
             writer.close()
