@@ -500,96 +500,39 @@ addopts = [
 
 # Enhanced test markers for modern AI/ML testing
 markers = [
-    # Core test types
-    "fast: Fast unit tests (<100ms each)",
-    "integration: Integration tests (<5s each)", 
-    "e2e: End-to-end tests (full pipeline)",
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "unit: marks tests as unit tests",
-    "asyncio: marks tests as async tests",
-    "smoke: marks tests as smoke tests",
-    
-    # AI/ML specific markers
-    "ai: AI/ML specific tests",
-    "ai_ml: AI/ML specific tests",
-    "embedding: Embedding-related tests",
-    "vector_db: Vector database tests",
-    "rag: RAG system tests",
-    "property: Property-based tests using Hypothesis",
-    "hypothesis: marks tests as property-based tests using Hypothesis",
-    
-    # Performance testing markers
-    "performance: Performance and benchmark tests",
-    "benchmark: marks tests as benchmark tests",
-    "memory_test: mark test as memory test",
-    "cpu_test: mark test as CPU test",
-    "throughput: mark test as throughput test",
-    "latency: mark test as latency test",
-    "scalability: mark test as scalability test",
-    
-    # Security testing markers
-    "security: mark test as security test",
-    "vulnerability: mark test as vulnerability test",
-    "vulnerability_scan: mark test as vulnerability scan test",
-    "penetration: mark test as penetration test",
-    "penetration_test: mark test as penetration test",
-    "owasp: mark test as OWASP compliance test",
-    "input_validation: mark test as input validation test",
+    "accessibility: mark test as accessibility test",
+    "ai: mark test as AI/ML specific",
     "authentication: mark test as authentication test",
     "authorization: mark test as authorization test",
-    "compliance: mark test as compliance test",
-    "data_protection: mark test as data protection test",
-    "encryption: mark test as encryption test",
-    "injection_prevention: mark test as injection prevention test",
-    "pii_detection: mark test as PII detection test",
-    "prompt_injection: mark test as prompt injection test",
-    "rbac: mark test as role-based access control test",
-    "zero_vulnerability: mark test as zero vulnerability test",
-    "enterprise_grade: mark test as enterprise grade test",
-    
-    # Accessibility testing markers
-    "accessibility: mark test as accessibility test",
-    "a11y: mark test as general accessibility test",
-    "wcag: mark test as WCAG compliance test",
-    "screen_reader: mark test as screen reader test",
-    "keyboard_navigation: mark test as keyboard navigation test",
-    "color_contrast: mark test as color contrast test",
-    "aria: mark test as ARIA attributes test",
-    
-    # Contract testing markers
-    "contract: mark test as contract test",
-    "api_contract: mark test as API contract test",
-    "schema_validation: mark test as schema validation test",
-    "pact: mark test as Pact contract test",
-    "openapi: mark test as OpenAPI contract test",
-    "consumer_driven: mark test as consumer-driven contract test",
-    
-    # Chaos engineering markers
-    "chaos: mark test as chaos engineering test",
-    "fault_injection: mark test as fault injection test",
-    "resilience: mark test as resilience test",
-    "failure_scenarios: mark test as failure scenario test",
-    "network_chaos: mark test as network chaos test",
-    "resource_exhaustion: mark test as resource exhaustion test",
-    "dependency_failure: mark test as dependency failure test",
-    
-    # Load testing markers
-    "load: mark test as load test",
-    "stress: mark test as stress test",
-    "spike: mark test as spike test",
+    "benchmark: mark test as benchmark test",
+    "browser: mark test as browser automation test",
+    "cli: mark test as CLI-specific",
+    "database: mark test as requiring database",
+    "e2e: End-to-end tests (full pipeline)",
+    "embedding: Embedding-related tests",
     "endurance: mark test as endurance test",
+    "fast: Fast unit tests (<100ms each)",
+    "integration: Integration tests (<5s each)",
+    "interactive: mark test as requiring interactive features",
+    "input_validation: mark test as input validation test",
+    "load: mark test as load test",
+    "hypothesis: mark test as property-based using Hypothesis",
+    "performance: Performance and benchmark tests",
+    "property: mark test as property-based test",
+    "questionary: mark test as requiring questionary interactions",
+    "rag: RAG system tests",
+    "rate_limit: mark test as rate limit test",
+    "respx: mark test as using respx HTTP mocking",
+    "rich: mark test as requiring Rich console features",
+    "security: mark test as security test",
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "spike: mark test as spike test",
+    "stress: mark test as stress test",
+    "unit: marks tests as unit tests",
+    "vector_db: Vector database tests",
     "volume: mark test as volume test",
-    
-    # Deployment and reporting markers
-    "deployment: mark test as deployment test",
-    "post_deployment: mark test as post-deployment test",
-    "reporting: mark test as reporting test",
-    "blue_green: mark test as blue-green deployment test",
-    "disaster_recovery: mark test as disaster recovery test",
-    "environment: mark test as environment test",
-    "infrastructure: mark test as infrastructure test",
-    "pipeline: mark test as pipeline test",
-    "performance_critical: mark test as performance critical test",
+    "vulnerability: mark test as vulnerability test",
+    "asyncio: marks tests as async tests",
 ]
 
 # Logging configuration for tests
@@ -1010,68 +953,39 @@ dev = "uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000"
 dev-simple = "AI_DOCS__MODE=simple uvicorn src.api.main:app --reload --port 8000"
 dev-enterprise = "AI_DOCS__MODE=enterprise uvicorn src.api.main:app --reload --port 8000"
 
-# Testing & Quality (Fast feedback loops)
-test = "python scripts/run_fast_tests.py --profile=fast"
-test-unit = "python scripts/run_fast_tests.py --profile=unit"
-test-integration = "python scripts/run_fast_tests.py --profile=integration"
-test-full = "python scripts/test_runner.py --comprehensive"
-test-ai = "pytest tests/unit/ai/ tests/integration/ai/ -v"
-test-performance = "python scripts/benchmark_query_api.py"
-coverage = "pytest --cov=src --cov-report=html --cov-report=term-missing"
+# Testing & Quality
+test = "python scripts/dev.py test --profile quick"
+test-unit = "python scripts/dev.py test --profile unit"
+test-integration = "python scripts/dev.py test --profile integration"
+test-full = "python scripts/dev.py test --profile full"
+test-performance = "python scripts/dev.py benchmark --suite performance"
+coverage = "python scripts/dev.py test --profile full --coverage"
 
-# Code Quality & Enterprise Standards
-lint = "ruff check . --fix"
-format = "ruff format ."
-typecheck = "mypy src/ --config-file pyproject.toml"
-quality = "task format && task lint && task typecheck"
-
-# Advanced Quality Analysis  
-quality-check = "task quality && python scripts/quality_analysis.py"
-complexity-check = "python scripts/complexity_analyzer.py"
-security-check = "bandit -r src/ -f json -o security_report.json"
+# Code Quality
+lint = "python scripts/dev.py lint --fix"
+format = "python scripts/dev.py format"
+typecheck = "python scripts/dev.py typecheck"
+quality = "python scripts/dev.py quality --fix-lint"
 docstring-check = "interrogate src/ --fail-under=85"
-
-# Quality Gates for CI/CD
-quality-gate = "task quality-check && task complexity-check && task security-check && task docstring-check"
-quality-baseline = "python scripts/create_quality_baseline.py"
-quality-report = "python scripts/generate_quality_report.py"
-
-# Zero-Violation Goals
-zero-violations = "python scripts/zero_violations_fix.py --auto-fix"
-quality-enterprise = "task zero-violations && task quality-gate"
-
-# Specialized Scripts Integration
-fix-try = "python scripts/fix_try_violations.py"
-benchmark-crawl4ai = "python scripts/benchmark_crawl4ai_performance.py"
-docs-add-status = "python scripts/add_status_indicators.py"
-docs-update-links = "python scripts/update_doc_links.py"
-setup-complete = "uv run python -m src.cli.main setup && echo 'Setup complete! Run: source .env.local'"
+security-check = "bandit -r src/ -f json -o security_report.json"
 
 # Documentation
-docs-build = "task docs-add-status && task docs-update-links && mkdocs build"
+docs-build = "mkdocs build"
 docs-serve = "mkdocs serve --host 0.0.0.0 --port 8001"
 docs-deploy = "mkdocs gh-deploy"
 
-# Database & Services
-services-start = "./scripts/start-services.sh"
-services-stop = "docker-compose down"
-db-migrate = "python scripts/database_migration.py"
-db-seed = "python scripts/seed_test_data.py"
-
-# Performance & Monitoring
-benchmark = "python scripts/run_benchmarks.py --profile=standard"
-monitor = "python scripts/health_check.py --continuous"
-profile = "python scripts/profile_performance.py"
-
-# Deployment
-deploy-staging = "python scripts/deploy.py --env=staging"
-deploy-prod = "python scripts/deploy.py --env=production"
+# Services & Operations
+services-start = "python scripts/dev.py services start"
+services-stop = "python scripts/dev.py services stop"
+monitoring-start = "python scripts/dev.py services start --stack monitoring"
+monitoring-stop = "python scripts/dev.py services stop --stack monitoring"
+benchmark = "python scripts/dev.py benchmark"
 
 # Utilities
 clean = "find . -type d -name __pycache__ -exec rm -rf {} + && find . -type f -name '*.pyc' -delete"
 security = "bandit -r src/"
 deps-check = "uv pip compile pyproject.toml --universal --upgrade"
-validate-config = "python scripts/validate_config.py"
+validate-config = "python scripts/dev.py validate --check-docs"
 
 # ===== Versioning and release configuration =====
 [tool.commitizen]

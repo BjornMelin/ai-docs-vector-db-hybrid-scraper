@@ -193,7 +193,6 @@ class TestRespxIntegration:
             assert "Test content" in response.text
 
 
-@pytest.mark.parallel_safe
 class TestParallelExecution:
     """Test parallel execution support."""
 

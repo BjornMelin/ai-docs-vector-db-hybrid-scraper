@@ -731,4 +731,4 @@ def rag_test(test_func):
 
 def performance_critical(test_func):
     """Decorator for performance-critical tests."""
-    return pytest.mark.performance_critical(test_func)
+    return pytest.mark.performance(test_func)

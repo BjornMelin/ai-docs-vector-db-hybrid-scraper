@@ -442,7 +442,7 @@ class ConfigurationWizard:
             style="cyan",
         )
         success_text.append(
-            "2. Start services: ./scripts/start-services.sh\n", style="cyan"
+            "2. Start services: python scripts/dev.py services start\n", style="cyan"
         )
         success_text.append(
             "3. Check system status: uv run python -m src.cli.main status\n",

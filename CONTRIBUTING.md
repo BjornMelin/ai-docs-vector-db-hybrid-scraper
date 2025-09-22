@@ -174,6 +174,26 @@ change: code
    - Include testing information
    - Add screenshots for UI changes
 
+### GitHub Actions Workflows
+
+- The **Core CI** workflow (`core-ci.yml`) runs automatically on every pull
+  request and must pass before a merge.
+- The **Documentation Checks** workflow triggers when Markdown or docs assets
+  change.
+
+Two additional workflows are available on demand when you need deeper
+validation:
+
+| Workflow | How to run | Inputs |
+| --- | --- | --- |
+| **Security Scan (On-Demand)**<br>`security-opt-in.yml` | 1. Open the **Actions** tab  → **Security Scan (On-Demand)**.<br>2. Click **Run workflow** and pick your branch.<br>3. Toggle the optional inputs as needed.<br>4. Review the uploaded artifacts (`dependency-security-reports`, `bandit-report`). | `include_bandit` (default `true`)<br>`include_safety` (default `true`) |
+| **Extended Tests (On-Demand)**<br>`regression-opt-in.yml` | 1. Navigate to **Actions** → **Extended Tests (On-Demand)**.<br>2. Choose your branch and press **Run workflow**.<br>3. Enable benchmark execution if required.<br>4. Inspect artifacts (`regression-coverage`, `benchmark-results`). | `run_full_tests` (default `true`)<br>`run_benchmarks` (default `false`) |
+
+Both workflows also trigger automatically on pull requests when their path
+filters match (e.g., dependency manifest or test suite changes). Use them before
+merging riskier updates to keep the default CI experience fast while still
+gaining full security and regression coverage when it matters.
+
 ## 🧪 Testing Guidelines
 
 ### Test Structure

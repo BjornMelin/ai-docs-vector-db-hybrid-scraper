@@ -400,20 +400,3 @@ def performance_assertions():
         "fast_execution": assert_fast_execution,
         "fast_async_execution": assert_fast_async_execution,
     }
-
-
-# Pre-configured test markers for performance optimization
-def pytest_configure(config):
-    """Configure performance- test markers."""
-    config.addinivalue_line(
-        "markers", "fast_unit: marks test as fast unit test (< 0.1s)"
-    )
-    config.addinivalue_line(
-        "markers", "cached_fixtures: marks test as using cached fixtures"
-    )
-    config.addinivalue_line(
-        "markers", "memory_efficient: marks test as memory efficient"
-    )
-    config.addinivalue_line(
-        "markers", "parallel_safe: marks test as safe for parallel execution"
-    )
