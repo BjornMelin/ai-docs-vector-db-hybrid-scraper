@@ -249,7 +249,7 @@ class MockBrowserMonitoringSystem:
         }
 
 
-@pytest.mark.browser_monitoring
+@pytest.mark.browser
 class TestBrowserAutomationMonitoring:
     """Test browser automation monitoring functionality."""
 
@@ -485,7 +485,7 @@ class TestBrowserAutomationMonitoring:
         assert response_times["browser_use"] < response_times["firecrawl"]
 
 
-@pytest.mark.browser_monitoring
+@pytest.mark.browser
 class TestAdvancedMonitoringFeatures:
     """Test  monitoring features."""
 

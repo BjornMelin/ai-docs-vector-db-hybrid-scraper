@@ -19,7 +19,7 @@ from src.api.main import app
 
 
 @pytest.mark.security
-@pytest.mark.penetration
+@pytest.mark.security
 class TestAPISecurity:
     """Test API security through penetration testing scenarios."""
 
@@ -716,7 +716,6 @@ class TestAPISecurity:
 
 
 @pytest.mark.security
-@pytest.mark.penetration
 class TestSubprocessSecurity:
     """Enhanced penetration tests for subprocess and command injection vulnerabilities.
 
@@ -1214,7 +1213,6 @@ class TestSubprocessSecurity:
 
 
 @pytest.mark.security
-@pytest.mark.penetration
 class TestInputValidationEnhanced:
     """Enhanced input validation tests specifically for complex attack scenarios."""
 
