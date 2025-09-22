@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.11, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -326,7 +326,7 @@ requires-dist = [
     { name = "tree-sitter-javascript", marker = "extra == 'parsing'", specifier = ">=0.25.0,<0.26.0" },
     { name = "tree-sitter-python", marker = "extra == 'parsing'", specifier = ">=0.25.0,<0.26.0" },
     { name = "tree-sitter-typescript", marker = "extra == 'parsing'", specifier = ">=0.23.2,<0.24.0" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.36.0,<0.37.0" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.36.0,<1.0.0" },
     { name = "watchdog", specifier = ">=6.0.0,<7.0.0" },
 ]
 provides-extras = ["dev", "contract", "accessibility", "browser", "llm", "observability", "parsing", "dataframe", "docs", "all"]
