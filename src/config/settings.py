@@ -1162,6 +1162,17 @@ def get_settings() -> Settings:
     global _settings_instance
     if _settings_instance is None:
         _settings_instance = Settings()
+        try:
+            from src.services.observability.config import (
+                clear_observability_cache as _clear_observability_cache,
+                get_observability_config as _sync_observability_config,
+            )
+
+            _clear_observability_cache()
+            _sync_observability_config(main_config=_settings_instance)
+        except ImportError:
+            # Observability module not available during early bootstrap.
+            pass
     return _settings_instance
 
 

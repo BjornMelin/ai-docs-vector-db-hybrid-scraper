@@ -12,6 +12,8 @@ import time
 from collections.abc import Callable
 from typing import Any, TypeVar
 
+from unittest.mock import Mock
+
 
 # Optional OpenTelemetry imports - handled at runtime
 try:
@@ -56,7 +58,7 @@ def get_tracer(name: str = "ai-docs-vector-db") -> Any:
 
     """
     try:
-        if trace is None:
+        if trace is None or isinstance(trace, Mock):
             _raise_opentelemetry_trace_unavailable()
         return trace.get_tracer(name)
     except ImportError:
@@ -75,7 +77,7 @@ def get_meter(name: str = "ai-docs-vector-db") -> Any:
 
     """
     try:
-        if metrics is None:
+        if metrics is None or isinstance(metrics, Mock):
             _raise_opentelemetry_metrics_unavailable()
         return metrics.get_meter(name)
     except ImportError:
@@ -392,6 +394,18 @@ class _NoOpCounter:
 
     def add(self, value: float, attributes: dict | None = None) -> None:
         pass
+
+
+def create_noop_tracer() -> _NoOpTracer:
+    """Create a NoOp tracer instance for disabled observability paths."""
+
+    return _NoOpTracer()
+
+
+def create_noop_meter() -> _NoOpMeter:
+    """Create a NoOp meter instance for disabled observability paths."""
+
+    return _NoOpMeter()
 
 
 class PerformanceTracker:

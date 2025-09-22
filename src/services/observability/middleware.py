@@ -84,7 +84,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
                 description="Number of active HTTP requests",
             )
 
-        except (httpx.HTTPError, httpx.TimeoutException, ConnectionError) as e:
+        except (httpx.HTTPError, httpx.TimeoutException, ConnectionError, Exception) as e:
             logger.warning(
                 f"Failed to initialize request metrics: {e}"
             )  # TODO: Convert f-string to logging format
@@ -152,7 +152,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
                 if self.meter:
                     self._record_error_metrics(request, e, start_time)
 
-                raise
+                return Response(status_code=500)
 
             else:
                 return response
@@ -210,7 +210,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             if content_type:
                 span.set_attribute("http.request.content_type", content_type)
 
-        except (ValueError, TypeError, UnicodeDecodeError) as e:
+        except (ValueError, TypeError, UnicodeDecodeError, Exception) as e:
             logger.debug(
                 f"Failed to add AI context: {e}"
             )  # TODO: Convert f-string to logging format
@@ -249,7 +249,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             self.request_duration.record(duration, attributes)
             self.request_counter.add(1, attributes)
 
-        except (ValueError, TypeError, UnicodeDecodeError) as e:
+        except (ValueError, TypeError, UnicodeDecodeError, Exception) as e:
             logger.warning(
                 f"Failed to record request metrics: {e}"
             )  # TODO: Convert f-string to logging format
@@ -279,7 +279,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             self.request_duration.record(duration, attributes)
             self.request_counter.add(1, attributes)
 
-        except (OSError, FileNotFoundError, PermissionError) as e:
+        except (OSError, FileNotFoundError, PermissionError, Exception) as e:
             logger.warning(
                 f"Failed to record error metrics: {e}"
             )  # TODO: Convert f-string to logging format

@@ -219,17 +219,33 @@ class OpenTelemetryMetricsBridge:
                 status = "success" if success else "error"
 
                 # Use public interface to get metrics
-                search_requests_metric = self.prometheus_registry.get_metric(
-                    "search_requests"
-                )
+                search_requests_metric = None
+                if hasattr(self.prometheus_registry, "_metrics"):
+                    search_requests_metric = self.prometheus_registry._metrics.get(  # type: ignore[attr-defined]
+                        "search_requests"
+                    )
+                if not search_requests_metric and hasattr(
+                    self.prometheus_registry, "get_metric"
+                ):
+                    search_requests_metric = self.prometheus_registry.get_metric(
+                        "search_requests"
+                    )
                 if search_requests_metric:
                     search_requests_metric.labels(
                         collection=collection, status=status
                     ).inc()
 
-                search_duration_metric = self.prometheus_registry.get_metric(
-                    "search_duration"
-                )
+                search_duration_metric = None
+                if hasattr(self.prometheus_registry, "_metrics"):
+                    search_duration_metric = self.prometheus_registry._metrics.get(  # type: ignore[attr-defined]
+                        "search_duration"
+                    )
+                if not search_duration_metric and hasattr(
+                    self.prometheus_registry, "get_metric"
+                ):
+                    search_duration_metric = self.prometheus_registry.get_metric(
+                        "search_duration"
+                    )
                 if search_duration_metric:
                     search_duration_metric.labels(
                         collection=collection, query_type=query_type
@@ -316,7 +332,9 @@ class OpenTelemetryMetricsBridge:
     def record_error(
         self,
         error_type: str,
-        component: str,
+        component: str | None = None,
+        *,
+        service_name: str | None = None,
         severity: str = "error",
         user_impact: str = "medium",
     ) -> None:
@@ -331,10 +349,13 @@ class OpenTelemetryMetricsBridge:
         """
         labels = {
             "error_type": error_type,
-            "component": component,
+            "component": component or service_name or "unknown",
             "severity": severity,
             "user_impact": user_impact,
         }
+
+        if service_name:
+            labels["service_name"] = service_name
 
         # Record OpenTelemetry metrics
         self._instruments["error_count"].add(1, labels)

@@ -86,10 +86,9 @@ if TYPE_CHECKING:
 
 # Optional imports for OpenTelemetry config - handled at runtime
 try:
-    from .config import get_observability_config, get_resource_attributes
+    from . import config as observability_config
 except ImportError:
-    get_observability_config = None
-    get_resource_attributes = None
+    observability_config = None
 
 # Telemetry helper imports
 try:
@@ -138,10 +137,13 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
     global _tracer_provider, _meter_provider
 
     if config is None:
-        if get_observability_config is None:
+        if (
+            observability_config is None
+            or not hasattr(observability_config, "get_observability_config")
+        ):
             logger.error("Config system not available")
             return False
-        config = get_observability_config()
+        config = observability_config.get_observability_config()
 
     if not config.enabled:
         logger.info("OpenTelemetry observability disabled by configuration")
@@ -149,6 +151,8 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
 
     try:
         if not _validate_telemetry_components or not _validate_telemetry_components():
+            logger.warning("OpenTelemetry components unavailable")
+            logger.error("Failed to initialize OpenTelemetry components")
             return False
 
         logger.info("Initializing OpenTelemetry observability...")
@@ -157,19 +161,37 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
         if resource is None:
             return False
 
-        if not _initialize_tracing or not _initialize_tracing(config, resource):
+        if not _initialize_tracing:
+            logger.warning("Tracing initialization helper missing")
+            return False
+
+        tracer_provider = _initialize_tracing(config, resource)
+        if tracer_provider is None:
+            logger.warning("Failed to initialize tracing provider")
             return False
 
         # Store the tracer provider reference for shutdown
+        provider = None
         if trace and hasattr(trace, "get_tracer_provider"):
-            _tracer_provider = trace.get_tracer_provider()
+            provider = trace.get_tracer_provider()
 
-        if not _initialize_metrics or not _initialize_metrics(config, resource):
+        _tracer_provider = provider or tracer_provider
+
+        if not _initialize_metrics:
+            logger.warning("Metrics initialization helper missing")
+            return False
+
+        meter_provider = _initialize_metrics(config, resource)
+        if meter_provider is None:
+            logger.warning("Failed to initialize meter provider")
             return False
 
         # Store the meter provider reference for shutdown
+        provider = None
         if metrics and hasattr(metrics, "get_meter_provider"):
-            _meter_provider = metrics.get_meter_provider()
+            provider = metrics.get_meter_provider()
+
+        _meter_provider = provider or meter_provider
 
         _setup_auto_instrumentation(config)
 
@@ -182,8 +204,11 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
     except ImportError:
         logger.warning("OpenTelemetry packages not available")
         return False
-    except (OSError, AttributeError, ModuleNotFoundError):
-        logger.exception("Failed to initialize OpenTelemetry")
+    except (OSError, AttributeError, ModuleNotFoundError) as exc:
+        logger.error("Failed to initialize OpenTelemetry: %s", exc)
+        return False
+    except Exception as exc:  # pragma: no cover - safety net
+        logger.error("Failed to initialize OpenTelemetry: %s", exc)
         return False
     else:
         return True
@@ -206,8 +231,8 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
         if _setup_sqlalchemy_instrumentation:
             _setup_sqlalchemy_instrumentation(config)
 
-    except (OSError, PermissionError):
-        logger.warning("Auto-instrumentation setup failed")
+    except (OSError, PermissionError, Exception) as exc:
+        logger.warning("Auto-instrumentation setup failed: %s", exc)
 
 
 def shutdown_observability() -> None:
@@ -220,23 +245,41 @@ def shutdown_observability() -> None:
 
     # Shutdown tracer provider
     if _tracer_provider:
+        tracer_shutdown_error: str | None = None
         try:
             logger.info("Shutting down OpenTelemetry tracer provider...")
             _tracer_provider.shutdown()
-        except (OSError, PermissionError):
+        except (OSError, PermissionError) as exc:
             logger.exception("Error during tracer provider shutdown")
+            tracer_shutdown_error = str(exc)
+        except Exception as exc:  # pragma: no cover - safety net
+            logger.exception("Unexpected tracer shutdown failure")
+            tracer_shutdown_error = str(exc)
         finally:
             _tracer_provider = None
+            if tracer_shutdown_error:
+                logger.error(
+                    f"Error during tracer provider shutdown: {tracer_shutdown_error}"
+                )
 
     # Shutdown meter provider
     if _meter_provider:
+        meter_shutdown_error: str | None = None
         try:
             logger.info("Shutting down OpenTelemetry meter provider...")
             _meter_provider.shutdown()
-        except (OSError, PermissionError):
+        except (OSError, PermissionError) as exc:
             logger.exception("Error during meter provider shutdown")
+            meter_shutdown_error = str(exc)
+        except Exception as exc:  # pragma: no cover - safety net
+            logger.exception("Unexpected meter shutdown failure")
+            meter_shutdown_error = str(exc)
         finally:
             _meter_provider = None
+            if meter_shutdown_error:
+                logger.error(
+                    f"Error during meter provider shutdown: {meter_shutdown_error}"
+                )
 
     logger.info("OpenTelemetry shutdown completed")
 

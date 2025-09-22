@@ -53,15 +53,27 @@ class BatchSpanProcessor:
 class MockMetrics:
     """Mock metrics API."""
 
-    def set_meter_provider(self, *args, **kwargs):
-        pass
+    def __init__(self) -> None:
+        self._provider = None
+
+    def set_meter_provider(self, provider, *args, **kwargs):
+        self._provider = provider
+
+    def get_meter_provider(self):
+        return self._provider
 
 
 class MockTrace:
     """Mock trace API."""
 
-    def set_tracer_provider(self, *args, **kwargs):
-        pass
+    def __init__(self) -> None:
+        self._provider = None
+
+    def set_tracer_provider(self, provider, *args, **kwargs):
+        self._provider = provider
+
+    def get_tracer_provider(self):
+        return self._provider
 
 
 def create_mock_telemetry() -> tuple[Any, ...]:
