@@ -5,7 +5,7 @@ import tempfile
 import time
 import uuid
 from collections.abc import Generator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from pathlib import Path
 
 import pytest
@@ -93,10 +93,8 @@ class IsolatedTestResources:
 
         for temp_dir in self._temp_dirs:
             if temp_dir.exists():
-                try:
+                with suppress(Exception):
                     shutil.rmtree(temp_dir)
-                except Exception:
-                    pass
 
         self._temp_dirs.clear()
         self._allocated_ports.clear()

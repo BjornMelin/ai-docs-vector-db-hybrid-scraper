@@ -8,13 +8,13 @@ This test module demonstrates:
 """
 
 import logging
+from contextlib import suppress
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.mcp_tools.tool_registry import register_all_tools
-
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -198,11 +198,8 @@ class TestErrorScenarios:
 
         with caplog.at_level(logging.ERROR):
             # The function should handle external service errors gracefully
-            try:
+            with suppress(ConnectionError):
                 await register_all_tools(mock_mcp, mock_client_manager)
-            except ConnectionError:
-                # If an error propagates, it should be the external service error
-                pass
 
         # Verify that we attempted to use the external boundary
         assert mock_client_manager.get_qdrant_client.called

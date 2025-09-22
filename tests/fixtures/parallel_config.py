@@ -6,8 +6,9 @@ parallel test execution with proper resource isolation.
 
 import os
 import tempfile
+from contextlib import suppress
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 
@@ -183,12 +184,10 @@ def shared_test_state():
             # Read existing data
             data = {}
             if self.state_file.exists():
-                try:
+                with suppress(json.JSONDecodeError, OSError):
                     with open(self.state_file) as f:
                         fcntl.flock(f.fileno(), fcntl.LOCK_SH)
                         data = json.load(f)
-                except (json.JSONDecodeError, OSError):
-                    pass
 
             # Update and write
             data[key] = value
@@ -204,7 +203,5 @@ def shared_test_state():
     # Cleanup on session end (only master worker)
     worker_id = os.getenv("PYTEST_XDIST_WORKER", "master")
     if worker_id == "master" and state_file.exists():
-        try:
+        with suppress(OSError):
             state_file.unlink()
-        except OSError:
-            pass

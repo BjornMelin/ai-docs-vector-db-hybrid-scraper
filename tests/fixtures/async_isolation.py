@@ -7,12 +7,10 @@ concurrent execution patterns.
 
 import asyncio
 import weakref
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
-from typing import Any, List, Set
+from contextlib import asynccontextmanager, suppress
+from typing import Any
 from unittest.mock import AsyncMock
 
-import pytest
 import pytest_asyncio
 
 
@@ -48,18 +46,16 @@ class AsyncResourceManager:
         # Close any resources with close methods
         for resource in self._resources:
             if hasattr(resource, "aclose"):
-                try:
+                with suppress(Exception):
                     await resource.aclose()
-                except Exception:
-                    pass  # Ignore cleanup errors
             elif hasattr(resource, "close"):
-                try:
-                    if asyncio.iscoroutinefunction(resource.close):
-                        await resource.close()
-                    else:
-                        resource.close()
-                except Exception:
-                    pass  # Ignore cleanup errors
+                close_method = resource.close
+                if asyncio.iscoroutinefunction(close_method):
+                    with suppress(Exception):
+                        await close_method()
+                else:
+                    with suppress(Exception):
+                        close_method()
 
         self._resources.clear()
         self._cleanup_callbacks.clear()
