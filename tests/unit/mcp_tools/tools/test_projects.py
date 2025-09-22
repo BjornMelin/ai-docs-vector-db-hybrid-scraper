@@ -291,7 +291,7 @@ async def test_delete_project_not_found(mock_client_manager, mock_context):
     register_tools(mock_mcp, mock_client_manager)
 
     # Test deletion of non-existent project
-    with pytest.raises(ValueError, match="Project .* not found"):
+    with pytest.raises(ValueError, match=r"Project .* not found"):
         await registered_tools["delete_project"]("missing_proj", True, mock_context)
 
 
@@ -914,7 +914,7 @@ async def test_search_project_not_found(mock_client_manager, mock_context):
     register_tools(mock_mcp, mock_client_manager)
 
     # Test search with non-existent project
-    with pytest.raises(ValueError, match="Project .* not found"):
+    with pytest.raises(ValueError, match=r"Project .* not found"):
         await registered_tools["search_project"](
             "missing_proj", "test query", 10, None, mock_context
         )
@@ -1000,7 +1000,7 @@ async def test_update_project_not_found(mock_client_manager, mock_context):
     register_tools(mock_mcp, mock_client_manager)
 
     # Test update with non-existent project
-    with pytest.raises(ValueError, match="Project .* not found"):
+    with pytest.raises(ValueError, match=r"Project .* not found"):
         await registered_tools["update_project"](
             "missing_proj", "New Name", "New Description", mock_context
         )

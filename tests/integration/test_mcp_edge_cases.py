@@ -502,7 +502,7 @@ class TestMCPEdgeCases:
                 "Invalid URL or access denied"
             )
 
-            with pytest.raises(Exception, match="Invalid URL|access denied"):
+            with pytest.raises(Exception, match=r"Invalid URL|access denied"):
                 await doc_tool.handler(
                     url=path,
                     collection="docs",

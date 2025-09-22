@@ -245,7 +245,7 @@ class TestInteractionEvent:
         )
 
         # Invalid ratings
-        with pytest.raises(ValueError, match="Rating must be between 1.0 and 5.0"):
+        with pytest.raises(ValueError, match=r"Rating must be between 1.0 and 5.0"):
             InteractionEvent(
                 user_id="user123",
                 session_id="session456",
@@ -254,7 +254,7 @@ class TestInteractionEvent:
                 value=0.5,
             )
 
-        with pytest.raises(ValueError, match="Rating must be between 1.0 and 5.0"):
+        with pytest.raises(ValueError, match=r"Rating must be between 1.0 and 5.0"):
             InteractionEvent(
                 user_id="user123",
                 session_id="session456",
@@ -811,13 +811,6 @@ class TestPersonalizedRankingResult:
                 diversity_score=0.5,
                 coverage_score=0.5,
             )
-
-
-# Import split test classes
-from .test_ranking_service_calculations import (
-    TestPersonalizedRankingServiceCalculations,
-)
-from .test_ranking_service_core import TestPersonalizedRankingServiceCore
 
 
 if __name__ == "__main__":
