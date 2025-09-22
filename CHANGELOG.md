@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactored the CI workflow to use a fan-in `ci-gate` job, ensuring branch protection relies on a single aggregated status and enforcing an 80% coverage threshold consistently.
 - Tuned `tests/ci/performance_reporter.py` for precise psutil sampling, UTC timestamps, and Ruff-compliant patterns while reducing per-test overhead.
 - Hardened container security scans by pinning Trivy/Hadolint actions, fixing Dockerfile selection, and locking the Trivy CLI version.
+- Standardized workflow environment setup on the shared `.github/actions/setup-environment` composite, removed `PYTHONOPTIMIZE`, and aligned Python/uv versions across CI and automation jobs.
+- Replaced legacy benchmark and documentation scripts with the unified `scripts/dev.py` CLI and updated workflow/documentation references accordingly.
+- Simplified the security job to emit SARIF reports via `pip-audit` and `bandit`, uploading directly to GitHub code scanning without auxiliary processing steps.
 
 ### Security
 - Applied SHA pinning across composite actions and documentation snippets, aligning with GitHub’s secure-use guidance to mitigate supply-chain risk.
