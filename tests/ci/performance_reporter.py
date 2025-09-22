@@ -4,18 +4,29 @@ This module provides performance monitoring and reporting capabilities
 for parallel test execution with detailed metrics and insights.
 """
 
+import importlib
 import json
 import time
 from collections import defaultdict
+from contextlib import suppress
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
 from _pytest.config import Config
 from _pytest.reports import TestReport
-from _pytest.terminal import TerminalReporter
+
+
+def _load_psutil():  # pragma: no cover - optional dependency helper
+    try:
+        return importlib.import_module("psutil")  # type: ignore[import-not-found]
+    except ImportError:
+        return None
+
+
+psutil = _load_psutil()
 
 
 @dataclass
@@ -83,15 +94,16 @@ class PerformanceReporter:
         self.report_path = Path(
             config.getoption("--performance-report", default="test-performance.json")
         )
+        self._last_metrics_by_nodeid: dict[str, TestMetrics] = {}
 
         # Try to import psutil for memory monitoring
-        try:
-            import psutil
-
-            self.psutil = psutil
-            self.process = psutil.Process()
-        except ImportError:
-            self.psutil = None
+        self.psutil = psutil
+        if self.psutil is not None:
+            self.process = self.psutil.Process()
+            # Prime CPU sampling to avoid the first call returning a meaningless 0.0
+            with suppress(self.psutil.Error):
+                self.process.cpu_percent(None)
+        else:
             self.process = None
 
     # pytest hooks
@@ -112,11 +124,9 @@ class PerformanceReporter:
 
         # Capture metrics before test
         memory_before = None
-        if self.process:
-            try:
+        if self.process and self.psutil:
+            with suppress(self.psutil.Error):
                 memory_before = self.process.memory_info().rss
-            except Exception:
-                pass
 
         start_time = time.time()
 
@@ -129,19 +139,14 @@ class PerformanceReporter:
         # Capture metrics after test
         memory_after = None
         cpu_percent = None
-        if self.process:
-            try:
+        if self.process and self.psutil:
+            with suppress(self.psutil.Error):
                 memory_after = self.process.memory_info().rss
-                cpu_percent = self.process.cpu_percent(interval=0.1)
-            except Exception:
-                pass
+                cpu_percent = self.process.cpu_percent(interval=None)
 
         # Get test outcome
         report = outcome.get_result()
-        if hasattr(report, "outcome"):
-            test_outcome = report.outcome
-        else:
-            test_outcome = "unknown"
+        test_outcome = report.outcome if hasattr(report, "outcome") else "unknown"
 
         # Record metrics
         metrics = TestMetrics(
@@ -158,12 +163,17 @@ class PerformanceReporter:
 
         self.test_metrics.append(metrics)
         self.update_worker_metrics(worker_id, metrics)
+        self._last_metrics_by_nodeid[item.nodeid] = metrics
 
     def pytest_report_teststatus(self, report: TestReport, config: Config):
         """Process test reports for outcome tracking."""
         if report.when == "call":
             worker_id = getattr(config, "workerinput", {}).get("workerid", "master")
             worker_metrics = self.worker_metrics[worker_id]
+
+            last_metrics = self._last_metrics_by_nodeid.get(report.nodeid)
+            if last_metrics:
+                last_metrics.outcome = report.outcome
 
             if report.passed:
                 worker_metrics.passed_tests += 1
@@ -201,7 +211,7 @@ class PerformanceReporter:
 
         report = {
             "metadata": {
-                "generated_at": datetime.now().isoformat(),
+                "generated_at": datetime.now(UTC).isoformat(),
                 "pytest_version": pytest.__version__,
                 "total_duration": total_duration,
                 "total_tests": len(self.test_metrics),
@@ -237,7 +247,7 @@ class PerformanceReporter:
 
         # Write JSON report
         self.report_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.report_path, "w") as f:
+        with self.report_path.open("w", encoding="utf-8") as f:
             json.dump(report, f, indent=2)
 
         # Print summary to console
@@ -294,19 +304,16 @@ class PerformanceReporter:
             durations[threshold_idx] if threshold_idx < len(durations) else 0
         )
 
-        slow_tests = []
-        for test in sorted_tests[:10]:  # Top 10 slowest
-            if test.duration >= threshold_duration:
-                slow_tests.append(
-                    {
-                        "nodeid": test.nodeid,
-                        "duration": test.duration,
-                        "worker": test.worker_id,
-                        "outcome": test.outcome,
-                    }
-                )
-
-        return slow_tests
+        return [
+            {
+                "nodeid": test.nodeid,
+                "duration": test.duration,
+                "worker": test.worker_id,
+                "outcome": test.outcome,
+            }
+            for test in sorted_tests[:10]
+            if test.duration >= threshold_duration
+        ]
 
     def calculate_worker_efficiency(self) -> dict[str, float]:
         """Calculate efficiency metrics for each worker."""

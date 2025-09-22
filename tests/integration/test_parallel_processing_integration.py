@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from src.config import Settings
+from src.config.settings import CacheConfig
 from src.infrastructure.client_manager import ClientManager
 from src.infrastructure.container import initialize_container, shutdown_container
-from src.services.cache. import CacheConfig
 from src.services.embeddings.parallel import ParallelConfig
 from src.services.processing.parallel_integration import (
     OptimizationConfig,

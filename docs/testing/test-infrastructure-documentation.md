@@ -546,10 +546,10 @@ jobs:
           - 6379:6379
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
       
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
         with:
           python-version: ${{ matrix.python-version }}
       
@@ -575,14 +575,14 @@ jobs:
           REDIS_URL: redis://localhost:6379
       
       - name: Upload coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
           file: ./coverage.xml
           flags: ${{ matrix.test-group }}
           name: py${{ matrix.python-version }}-${{ matrix.test-group }}
       
       - name: Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: test-results-py${{ matrix.python-version }}-${{ matrix.test-group }}

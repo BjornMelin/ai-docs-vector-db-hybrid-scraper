@@ -37,7 +37,7 @@ dependencies = [
     # Core web framework & API
     "fastapi[standard]>=0.117.1,<0.118.0", # Align with FastAPI 0.117 performance updates
     "starlette>=0.48.0,<0.49.0", # Sync with Starlette 0.48 compatibility window
-    "uvicorn[standard]>=0.36.0,<0.37.0",
+    "uvicorn[standard]>=0.36.0,<1.0.0",
     "python-multipart>=0.0.20,<0.1.0", # For FastAPI file uploads
     # Data validation & configuration
     "pydantic>=2.11.9,<3.0.0", # browser-use 0.2.6 compatibility

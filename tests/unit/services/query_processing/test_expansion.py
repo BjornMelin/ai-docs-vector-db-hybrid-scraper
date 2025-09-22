@@ -888,7 +888,7 @@ class TestQueryExpansionService:
             strategy=ExpansionStrategy.SEMANTIC_BASED,
         )
 
-        await service._semantic_expansion(key_terms, request
+        result = await service._semantic_expansion(key_terms, request)
         assert result == []
 
     async def test_disabled_domain_expansion(self):
@@ -903,7 +903,7 @@ class TestQueryExpansionService:
             target_domains=["programming"],
         )
 
-        await service._domain_specific_expansion(key_terms, request
+        result = await service._domain_specific_expansion(key_terms, request)
         assert result == []
 
     @pytest.mark.asyncio

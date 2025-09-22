@@ -1,5 +1,5 @@
 {
-  "dependencies": {
-    "@anthropic-ai/claude-code": "^1.0.120"
-  }
+  "name": "ai-docs-vector-db-hybrid-scraper",
+  "private": true,
+  "dependencies": {}
 }

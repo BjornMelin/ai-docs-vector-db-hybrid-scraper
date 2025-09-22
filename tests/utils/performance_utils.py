@@ -378,13 +378,27 @@ class BenchmarkSuite:
         """
         benchmark_name = name or func.__name__
 
-        # Warmup runs
-        for _ in range(self.warmup_iterations):
+        async def _call_async():
+            await func(*args, **_kwargs)
+
+        def _execute_once():
             if asyncio.iscoroutinefunction(func):
-                # Performance measurement - consider using pytest-asyncio fixtures
-                # await func(*args, **_kwargs  # TODO: Convert to async test)
+                try:
+                    asyncio.get_running_loop()
+                except RuntimeError:
+                    asyncio.run(_call_async())
+                else:
+                    message = (
+                        "benchmark_function cannot execute coroutine functions while an"
+                        " event loop is running"
+                    )
+                    raise RuntimeError(message)
             else:
                 func(*args, **_kwargs)
+
+        # Warmup runs
+        for _ in range(self.warmup_iterations):
+            _execute_once()
 
         # Measured runs
         execution_times = []
@@ -393,16 +407,12 @@ class BenchmarkSuite:
         for _ in range(iterations):
             start_time = time.perf_counter()
 
-            if asyncio.iscoroutinefunction(func):
-                # Performance measurement - consider using pytest-asyncio fixtures
-                # await func(*args, **_kwargs  # TODO: Convert to async test)
-            else:
-                func(*args, **_kwargs)
+            _execute_once()
 
             end_time = time.perf_counter()
             execution_times.append(end_time - start_time)
 
-        current_memory, peak_memory = tracemalloc.get_traced_memory()
+        _current_memory, peak_memory = tracemalloc.get_traced_memory()
         tracemalloc.stop()
 
         # Calculate statistics
@@ -520,9 +530,20 @@ def time_function(func: Callable, *args, **_kwargs) -> float:
     """
     start_time = time.perf_counter()
 
+    async def _call_async():
+        await func(*args, **_kwargs)
+
     if asyncio.iscoroutinefunction(func):
-        # Performance measurement - consider using pytest-asyncio fixtures
-        # await func(*args, **_kwargs  # TODO: Convert to async test)
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(_call_async())
+        else:
+            message = (
+                "time_function cannot execute coroutine functions while an event loop"
+                " is running"
+            )
+            raise RuntimeError(message)
     else:
         func(*args, **_kwargs)
 
@@ -543,9 +564,20 @@ def profile_memory_usage(func: Callable, *args, **_kwargs) -> dict[str, float]:
     tracemalloc.start()
     gc.collect()
 
+    async def _call_async():
+        await func(*args, **_kwargs)
+
     if asyncio.iscoroutinefunction(func):
-        # Performance measurement - consider using pytest-asyncio fixtures
-        # await func(*args, **_kwargs  # TODO: Convert to async test)
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(_call_async())
+        else:
+            message = (
+                "profile_memory_usage cannot execute coroutine functions while an event"
+                " loop is running"
+            )
+            raise RuntimeError(message)
     else:
         func(*args, **_kwargs)
 

@@ -20,10 +20,7 @@ from unittest.mock import AsyncMock
 import pytest
 from cryptography.fernet import Fernet
 
-from src.config import (
-    Config,
-    SecurityConfig
-)
+from src.config import Config, SecurityConfig
 
 
 # Mock classes for testing since modules don't exist
@@ -273,10 +270,10 @@ class TestConfigReloadPerformance:
 
         return listeners
 
-
     @pytest.mark.asyncio
-
-    async def test_basic_reload_performance(self, benchmark, config_reloader, test_config):
+    async def test_basic_reload_performance(
+        self, benchmark, config_reloader, test_config
+    ):
         """Benchmark basic configuration reload operation."""
         config_reloader.set_current_config(test_config)
 
@@ -298,10 +295,10 @@ class TestConfigReloadPerformance:
         )
         print(f"\n✅ Basic reload performance: {result._total_duration_ms:.2f}ms")
 
-
     @pytest.mark.asyncio
-
-    async def test_reload_with_validation(self, benchmark, config_reloader, test_config):
+    async def test_reload_with_validation(
+        self, benchmark, config_reloader, test_config
+    ):
         """Benchmark reload with configuration validation."""
         config_reloader.set_current_config(test_config)
 
@@ -323,9 +320,7 @@ class TestConfigReloadPerformance:
         )
         print(f"\n✅ Validation performance: {result.validation_duration_ms:.2f}ms")
 
-
     @pytest.mark.asyncio
-
     async def test_reload_with_listeners(
         self, benchmark, config_reloader, test_config, mock_listeners
     ):
@@ -355,10 +350,10 @@ class TestConfigReloadPerformance:
         print(f"\n✅ Reload with listeners: {result._total_duration_ms:.2f}ms")
         print(f"   Apply duration: {result.apply_duration_ms:.2f}ms")
 
-
     @pytest.mark.asyncio
-
-    async def test_concurrent_reload_rejection(self, benchmark, config_reloader, test_config):
+    async def test_concurrent_reload_rejection(
+        self, benchmark, config_reloader, test_config
+    ):
         """Benchmark concurrent reload rejection performance."""
         config_reloader.set_current_config(test_config)
 
@@ -371,10 +366,7 @@ class TestConfigReloadPerformance:
 
             return await asyncio.gather(*tasks)
 
-        def run_concurrent():
-            return await concurrent_reloads()
-
-        results = benchmark(run_concurrent)
+        results = await benchmark.async_runner(concurrent_reloads)
 
         # Only one should succeed, others should be rejected quickly
         successful = [r for r in results if r.success]
@@ -393,9 +385,7 @@ class TestConfigReloadPerformance:
 
         print("\n✅ Concurrent reload handling: 1 success, 4 instant rejections")
 
-
     @pytest.mark.asyncio
-
     async def test_file_change_reload_performance(
         self, benchmark, config_reloader, temp_env_file
     ):
@@ -405,27 +395,25 @@ class TestConfigReloadPerformance:
         initial_config = Config()
         config_reloader.set_current_config(initial_config)
 
-        def modify_and_reload():
+        async def modify_and_reload():
             # Modify the file
-            with temp_env_file.open("a") as f:
+            with temp_env_file.open("a", encoding="utf-8") as f:
                 f.write(f"\nNEW_SETTING=value_{time.time()}\n")
 
             # Reload configuration
-            return await 
-                config_reloader.reload_config(
-                    trigger=ReloadTrigger.FILE_WATCH, config_source=temp_env_file
-                
+            return await config_reloader.reload_config(
+                trigger=ReloadTrigger.FILE_WATCH, config_source=temp_env_file
             )
 
-        result = benchmark(modify_and_reload)
+        result = await benchmark.async_runner(modify_and_reload)
         assert result.success
         assert result._total_duration_ms < 100
         print(f"\n✅ File-based reload: {result._total_duration_ms:.2f}ms")
 
-
     @pytest.mark.asyncio
-
-    async def test_reload_history_performance(self, benchmark, config_reloader, test_config):
+    async def test_reload_history_performance(
+        self, benchmark, config_reloader, test_config
+    ):
         """Benchmark reload history tracking performance."""
         config_reloader.set_current_config(test_config)
 

@@ -230,8 +230,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v6.7.0
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+      - uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
+        with:
+          version: "0.8.19"
       
       - name: Install dependencies
         run: uv sync --all-extras
@@ -251,7 +253,7 @@ jobs:
             --cov-fail-under=85
             
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
           file: ./coverage.xml
 ```
@@ -268,8 +270,10 @@ jobs:
         test-category: [unit, integration, security, performance]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v6.7.0
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+      - uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
+        with:
+          version: "0.8.19"
       
       - name: Install dependencies
         run: uv sync --all-extras
@@ -286,11 +290,15 @@ jobs:
             security)
               uv run pytest tests/security/ -v
               ;;
-            performance)
+          performance)
               uv run pytest tests/performance/ --benchmark-only
               ;;
           esac
 ```
+
+> **Branch protection tip:** Configure GitHub branch protection to require only the
+> `ci-gate` job from the optimized CI workflow. This keeps merge requirements
+> stable while still enforcing every test/scan that feeds into the gate.
 
 ### Coverage Monitoring
 
