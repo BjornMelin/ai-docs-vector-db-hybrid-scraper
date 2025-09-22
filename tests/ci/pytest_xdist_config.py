@@ -7,8 +7,7 @@ CI platforms and execution environments with performance monitoring.
 import os
 import platform
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 import psutil
 

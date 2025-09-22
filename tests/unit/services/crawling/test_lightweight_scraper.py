@@ -1,4 +1,4 @@
-import respx
+import respx  # noqa: F401
 
 
 """Tests for the lightweight HTTP scraper."""

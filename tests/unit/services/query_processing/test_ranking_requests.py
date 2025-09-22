@@ -3,8 +3,6 @@
 Tests for PersonalizedRankingRequest and PersonalizedRankingResult classes.
 """
 
-from datetime import UTC
-
 import pytest
 
 from src.services.query_processing.ranking import (

@@ -1,6 +1,5 @@
 """Tests for query expansion service."""
 
-import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest

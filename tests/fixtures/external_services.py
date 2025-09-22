@@ -4,7 +4,6 @@ This module provides fixtures for mocking external dependencies like
 APIs, databases, and third-party services to ensure test isolation.
 """
 
-import json
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 

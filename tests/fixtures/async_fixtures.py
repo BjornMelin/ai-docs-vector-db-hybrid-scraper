@@ -5,12 +5,10 @@ async functions and managing async resources properly.
 """
 
 import asyncio
-from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 import pytest_asyncio
 
 

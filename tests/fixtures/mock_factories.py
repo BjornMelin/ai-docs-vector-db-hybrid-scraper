@@ -4,7 +4,7 @@ This module provides factory functions for creating consistent mock objects
 following the boundary-only mocking principle for external services.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

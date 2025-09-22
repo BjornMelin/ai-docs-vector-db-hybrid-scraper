@@ -5,7 +5,6 @@ mocked dependencies, Rich console capturing, questionary mocking, and async test
 Now includes  Rich CLI testing patterns and interactive flow simulation.
 """
 
-import asyncio
 import json
 from io import StringIO
 from unittest.mock import AsyncMock, MagicMock

@@ -9,17 +9,11 @@ This test module demonstrates:
 
 import logging
 from contextlib import suppress
-from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.mcp_tools.tool_registry import register_all_tools
-
-if TYPE_CHECKING:
-    from fastmcp import FastMCP
-
-    from src.infrastructure.client_manager import ClientManager
 
 
 class TestToolRegistryBehavior:
