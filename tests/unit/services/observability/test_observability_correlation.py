@@ -1,6 +1,6 @@
 """Tests for trace correlation and context propagation module."""
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 from opentelemetry import context
@@ -436,7 +436,7 @@ class TestCorrelationIntegration:
 
     def test_manager_with_mocked_trace(self, mock_trace):
         """Test correlation manager with mocked trace."""
-        mock_trace_module, tracer, span = mock_trace
+        _trace_module, _tracer, _span = mock_trace
 
         manager = TraceCorrelationManager()
         manager.tracer = tracer
@@ -449,7 +449,7 @@ class TestCorrelationIntegration:
 
     def test_get_current_context_with_mocked_trace(self, mock_trace):
         """Test get_current_context with mocked trace."""
-        mock_trace_module, tracer, span = mock_trace
+        _trace_module, _tracer, _span = mock_trace
 
         manager = TraceCorrelationManager()
         context_info = manager.get_current_context()
@@ -461,7 +461,7 @@ class TestCorrelationIntegration:
 
     def test_error_recording_with_mocked_trace(self, mock_trace):
         """Test error recording with mocked trace."""
-        mock_trace_module, tracer, span = mock_trace
+        _, _, span = mock_trace
 
         manager = TraceCorrelationManager()
         tracker = ErrorCorrelationTracker(manager)

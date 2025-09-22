@@ -4,10 +4,18 @@ This module provides factory functions for creating consistent mock objects
 following the boundary-only mocking principle for external services.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
+from tests.conftest import CollectionInfo, CollectionStatus
+
+
+try:
+    from redis.exceptions import ConnectionError as RedisConnectionError
+except ImportError:  # pragma: no cover - redis optional for tests
+    RedisConnectionError = ConnectionError  # type: ignore[assignment]
 
 
 class ExternalServiceMockFactory:
@@ -62,8 +70,6 @@ class ExternalServiceMockFactory:
         collection_exists: bool = True,
     ) -> MagicMock:
         """Create Qdrant client mock with configurable vector parameters."""
-        from tests.conftest import CollectionInfo, CollectionStatus
-
         client = MagicMock()
 
         # Collection operations
@@ -117,9 +123,9 @@ class ExternalServiceMockFactory:
             client.ttl = AsyncMock(return_value=-2)
         else:
             # Simulate connection failures
-            from redis.exceptions import ConnectionError
-
-            client.ping = AsyncMock(side_effect=ConnectionError("Connection failed"))
+            client.ping = AsyncMock(
+                side_effect=RedisConnectionError("Connection failed")
+            )
             client.get = AsyncMock(side_effect=ConnectionError("Connection failed"))
 
         client.close = AsyncMock()
@@ -128,7 +134,9 @@ class ExternalServiceMockFactory:
         return client
 
     @staticmethod
-    def create_httpx_client(status_code: int = 200, content: str = None) -> MagicMock:
+    def create_httpx_client(
+        status_code: int = 200, content: str | None = None
+    ) -> MagicMock:
         """Create httpx async client mock with configurable responses."""
         client = MagicMock()
 

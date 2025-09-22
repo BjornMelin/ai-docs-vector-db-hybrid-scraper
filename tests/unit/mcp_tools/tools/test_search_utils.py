@@ -262,7 +262,6 @@ class TestSearchDocumentsCore:
                 "metadata": {"cached": True},
             }
         ]
-        mock_cache = mock_client_manager.get_cache_manager.return_value
         respx.get("https://api.example.com/").mock(
             return_value=httpx.Response(200, json=cached_results)
         )

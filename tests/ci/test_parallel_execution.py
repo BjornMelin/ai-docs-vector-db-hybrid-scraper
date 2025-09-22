@@ -1,8 +1,4 @@
-"""Tests for parallel execution configuration and isolation.
-
-This module tests that our pytest-xdist configuration works correctly
-and provides proper test isolation.
-"""
+"""Tests covering pytest-xdist configuration, isolation, and benchmarks."""
 
 import os
 import time
@@ -10,8 +6,9 @@ from pathlib import Path
 
 import pytest
 
+from tests.ci.performance_reporter import PerformanceReporter
 from tests.ci.pytest_xdist_config import XDistOptimizer, get_xdist_args
-from tests.ci.test_environments import detect_environment
+from tests.ci.test_environments import GitHubActionsEnvironment, detect_environment
 from tests.ci.test_isolation import (
     IsolatedTestResources,
     TestDataIsolation,
@@ -52,11 +49,14 @@ class TestXDistConfiguration:
         assert hasattr(env, "get_pytest_args")
         assert hasattr(env, "get_env_vars")
 
-    @pytest.mark.parametrize("ci_env,expected_workers", [
-        ("GITHUB_ACTIONS", 4),
-        ("GITLAB_CI", 2),
-        ("CIRCLECI", None),  # Depends on resource class
-    ])
+    @pytest.mark.parametrize(
+        ("ci_env", "expected_workers"),
+        [
+            ("GITHUB_ACTIONS", 4),
+            ("GITLAB_CI", 2),
+            ("CIRCLECI", None),  # Depends on resource class
+        ],
+    )
     def test_ci_specific_configuration(self, monkeypatch, ci_env, expected_workers):
         """Test CI-specific configurations."""
         # Mock CI environment
@@ -173,8 +173,6 @@ class TestCIIntegration:
         monkeypatch.setenv("GITHUB_ACTIONS", "true")
         monkeypatch.setenv("RUNNER_OS", "Linux")
 
-        from tests.ci.test_environments import GitHubActionsEnvironment
-
         env = GitHubActionsEnvironment()
         assert env.detect()
 
@@ -184,8 +182,6 @@ class TestCIIntegration:
 
     def test_performance_reporter_registration(self):
         """Test that performance reporter can be registered."""
-        from tests.ci.performance_reporter import PerformanceReporter
-
         # Should be importable and instantiable
         assert PerformanceReporter is not None
 
@@ -245,12 +241,12 @@ class TestParallelBenchmarks:
             _ = resources.get_isolated_port()
             _ = resources.get_isolated_database_name()
 
-        result = benchmark(allocate_resources)
+        benchmark(allocate_resources)
         resources.cleanup()
 
     def test_unique_id_generation_speed(self, benchmark):
         """Benchmark unique ID generation speed."""
-        result = benchmark(TestDataIsolation.get_unique_id, "benchmark")
+        benchmark(TestDataIsolation.get_unique_id, "benchmark")
 
 
 if __name__ == "__main__":

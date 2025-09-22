@@ -3,18 +3,10 @@
 Tests for boost calculations, scoring algorithms, and performance tracking.
 """
 
-import asyncio
-from datetime import UTC, datetime, timedelta
-from unittest.mock import patch
-
 import pytest
 
 from src.services.query_processing.ranking import (
-    ContentCategory,
-    InteractionEvent,
-    InteractionType,
     PersonalizedRankingRequest,
-    PersonalizedRankingResult,
     PersonalizedRankingService,
     RankedResult,
     RankingStrategy,

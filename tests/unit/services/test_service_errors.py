@@ -5,7 +5,7 @@ for all services and MCP server error handling.
 """
 
 import asyncio
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 from pydantic import ValidationError as PydanticValidationError

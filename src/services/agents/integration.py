@@ -418,7 +418,7 @@ class UnifiedAgenticSystem:
                 vector_status,
                 orchestrator_status,
             ) = await self._get_subsystem_statuses()
-            overall_health_score, overall_health = self._calculate_system_health(
+            _overall_health_score, overall_health = self._calculate_system_health(
                 coordinator_status, vector_status, orchestrator_status
             )
 

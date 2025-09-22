@@ -277,11 +277,12 @@ jobs:
     timeout-minutes: 5
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
     
     - name: Setup Python and uv
-      uses: astral-sh/setup-uv@v3
+      uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
       with:
+        version: "0.8.19"
         enable-cache: true
     
     - name: Install dependencies
@@ -292,7 +293,7 @@ jobs:
         python scripts/run_fast_tests.py --profile unit --timeout 60
     
     - name: Cache test results
-      uses: actions/cache@v4
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
       with:
         path: .pytest_cache
         key: test-cache-${{ runner.os }}-${{ github.sha }}

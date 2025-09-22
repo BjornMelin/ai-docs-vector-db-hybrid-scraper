@@ -67,7 +67,7 @@ class TestOpenAIProviderInitialization:
 
     def test_provider_creation_dimensions_too_large(self, mock_client_manager):
         """Test creating provider with dimensions exceeding limit."""
-        with pytest.raises(EmbeddingServiceError, match="Dimensions .* exceeds max"):
+        with pytest.raises(EmbeddingServiceError, match=r"Dimensions .* exceeds max"):
             OpenAIEmbeddingProvider(
                 api_key="test-key",
                 model_name="text-embedding-3-small",

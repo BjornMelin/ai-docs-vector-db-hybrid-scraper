@@ -3,21 +3,14 @@
 Tests for interaction events, user profiles and ranked results.
 """
 
-import asyncio
-from datetime import UTC, datetime, timedelta
-from unittest.mock import patch
+from datetime import UTC, datetime
 
 import pytest
 
 from src.services.query_processing.ranking import (
-    ContentCategory,
     InteractionEvent,
     InteractionType,
-    PersonalizedRankingRequest,
-    PersonalizedRankingResult,
-    PersonalizedRankingService,
     RankedResult,
-    RankingStrategy,
     UserPreference,
     UserProfile,
 )
@@ -85,7 +78,7 @@ class TestInteractionEvent:
         )
 
         # Invalid ratings
-        with pytest.raises(ValueError, match="Rating must be between 1.0 and 5.0"):
+        with pytest.raises(ValueError, match=r"Rating must be between 1.0 and 5.0"):
             InteractionEvent(
                 user_id="user123",
                 session_id="session456",
@@ -94,7 +87,7 @@ class TestInteractionEvent:
                 value=0.5,
             )
 
-        with pytest.raises(ValueError, match="Rating must be between 1.0 and 5.0"):
+        with pytest.raises(ValueError, match=r"Rating must be between 1.0 and 5.0"):
             InteractionEvent(
                 user_id="user123",
                 session_id="session456",

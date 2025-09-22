@@ -2,7 +2,7 @@
 
 import asyncio
 import time
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
@@ -535,7 +535,7 @@ class TestGlobalMonitorInstance:
 
         # Test operation monitoring
         with monitor_operation("test_operation"):
-            time.sleep(0.001)
+            await asyncio.sleep(0.001)
 
         # Test async operation monitoring
         async def async_test():
@@ -546,13 +546,13 @@ class TestGlobalMonitorInstance:
 
         # Test specialized monitoring
         with monitor_database_query("select"):
-            time.sleep(0.001)
+            await asyncio.sleep(0.001)
 
         with monitor_external_api_call("api_service", "endpoint"):
-            time.sleep(0.001)
+            await asyncio.sleep(0.001)
 
         with monitor_ai_model_inference("gpt-4", "openai"):
-            time.sleep(0.001)
+            await asyncio.sleep(0.001)
 
         # Test statistics
         stats = get_operation_statistics("test_operation")

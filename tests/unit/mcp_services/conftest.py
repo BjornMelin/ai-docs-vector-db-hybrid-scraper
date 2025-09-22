@@ -4,7 +4,6 @@ Provides common test fixtures for testing FastMCP 2.0+ modular services
 with proper mocking and integration test patterns.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, Mock
 
 import pytest

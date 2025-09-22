@@ -249,3 +249,4 @@ Dockerfile.bak
 # Build solutions and temporary docs
 *_BUILD_SOLUTION.md
 DOCKER_BUILD_*.md
+CLAUDE.md

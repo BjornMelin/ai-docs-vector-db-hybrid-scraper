@@ -481,12 +481,12 @@ class TestAITrackingIntegration:
 
     def test_tracker_with_mocked_metrics(self, mock_metrics):
         """Test tracker initialization with mocked metrics."""
-        mock_metrics_module, meter = mock_metrics
+        metrics_module, meter = mock_metrics
 
         AIOperationTracker()
 
         # Verify meter creation
-        mock_metrics_module.get_meter.assert_called()
+        metrics_module.get_meter.assert_called()
 
         # Verify instrument creation
         assert meter.create_counter.call_count >= 2
@@ -495,7 +495,7 @@ class TestAITrackingIntegration:
 
     def test_record_operation_with_mocked_instruments(self, mock_metrics):
         """Test recording operations with mocked instruments."""
-        mock_metrics_module, meter = mock_metrics
+        _metrics_module, meter = mock_metrics
 
         # Setup mocked instruments
         duration_histogram = Mock()

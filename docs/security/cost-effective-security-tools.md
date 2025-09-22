@@ -78,7 +78,7 @@ jobs:
   security:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
       - name: Run Bandit
         run: bandit -r src/ --severity-level medium
 ```
@@ -254,11 +254,12 @@ jobs:
         run: docker build -t myapp:${{ github.sha }} .
       
       - name: Run Trivy scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
         with:
           image-ref: 'myapp:${{ github.sha }}'
           format: 'sarif'
           output: 'trivy-results.sarif'
+          trivy-version: '0.55.2'
 ```
 
 **ROI**: Replaces $200-500/month container security platforms

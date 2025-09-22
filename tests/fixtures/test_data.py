@@ -4,10 +4,7 @@ This module provides fixtures for generating consistent test data
 including documents, embeddings, and configuration objects.
 """
 
-import json
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Any
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -15,7 +12,7 @@ import pytest
 @pytest.fixture
 def sample_documents():
     """Generate sample documents for testing."""
-    base_time = datetime(2024, 1, 1)
+    base_time = datetime(2024, 1, 1, tzinfo=UTC)
 
     return [
         {

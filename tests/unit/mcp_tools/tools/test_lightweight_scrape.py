@@ -189,7 +189,7 @@ class TestLightweightScrapeTool:
         register_tools(mock_mcp, mock_client_manager)
 
         # Test with invalid format
-        with pytest.raises(ValueError, match="Invalid formats: {'invalid'}"):
+        with pytest.raises(ValueError, match=r"Invalid formats: {'invalid'}"):
             await tool_func(
                 url="https://example.com",
                 formats=["markdown", "invalid"],

@@ -118,7 +118,7 @@ async def real_security_middleware(
     real_starlette_app, security_config, real_redis_client
 ):
     """Create real SecurityMiddleware with Redis integration."""
-    client, redis_url = real_redis_client
+    _client, redis_url = real_redis_client
 
     # Create middleware with real Redis URL
     middleware = SecurityMiddleware(real_starlette_app, security_config, redis_url)
@@ -152,7 +152,7 @@ class TestRealRedisRateLimiting:
         self, real_starlette_app, security_config, real_redis_client
     ):
         """Test successful Redis connection initialization with real Redis."""
-        client, redis_url = real_redis_client
+        _client, redis_url = real_redis_client
 
         middleware = SecurityMiddleware(real_starlette_app, security_config, redis_url)
         await middleware._initialize_redis()
@@ -306,7 +306,7 @@ class TestRealRedisRateLimiting:
         self, real_starlette_app, security_config, real_redis_client
     ):
         """Test Redis health check with successful connection."""
-        client, redis_url = real_redis_client
+        _client, redis_url = real_redis_client
         middleware = SecurityMiddleware(real_starlette_app, security_config, redis_url)
 
         # Initialize Redis connection
@@ -348,7 +348,7 @@ class TestRealRedisRateLimiting:
         self, real_starlette_app, security_config, real_redis_client
     ):
         """Test Redis connection cleanup."""
-        client, redis_url = real_redis_client
+        _client, redis_url = real_redis_client
         middleware = SecurityMiddleware(real_starlette_app, security_config, redis_url)
 
         # Initialize Redis connection
@@ -386,7 +386,7 @@ class TestRealRedisRateLimiting:
         self, real_starlette_app, security_config, real_redis_client
     ):
         """Test complete rate limiting workflow with Redis and fallback."""
-        client, redis_url = real_redis_client
+        _client, redis_url = real_redis_client
         client_ip = "192.168.1.100"
 
         # Test 1: Redis unavailable, should use memory

@@ -1,12 +1,6 @@
-"""Test environment configurations for different CI platforms.
-
-This module provides platform-specific test configurations and
-environment detection for optimal test execution.
-"""
+"""Test environment configurations for common CI platforms."""
 
 import os
-import sys
-from typing import Dict, List, Optional, Tuple
 
 
 class TestEnvironment:
@@ -58,21 +52,27 @@ class GitHubActionsEnvironment(TestEnvironment):
 
         # OS-specific optimizations
         if runner_os == "windows":
-            args.extend([
-                "--numprocesses=2",  # Windows has higher process overhead
-                "--timeout=300",
-            ])
+            args.extend(
+                [
+                    "--numprocesses=2",  # Windows has higher process overhead
+                    "--timeout=300",
+                ]
+            )
         elif runner_os == "macos":
-            args.extend([
-                "--numprocesses=3",  # macOS runners have 3 cores
-            ])
+            args.extend(
+                [
+                    "--numprocesses=3",  # macOS runners have 3 cores
+                ]
+            )
 
         # Add GitHub-specific output formatting
-        args.extend([
-            "--junit-xml=test-results/junit.xml",
-            "--html=test-results/report.html",
-            "--self-contained-html",
-        ])
+        args.extend(
+            [
+                "--junit-xml=test-results/junit.xml",
+                "--html=test-results/report.html",
+                "--self-contained-html",
+            ]
+        )
 
         return args
 
@@ -242,8 +242,12 @@ class LocalEnvironment(TestEnvironment):
     def detect(self) -> bool:
         # Active if no CI environment is detected
         ci_envs = [
-            "CI", "GITHUB_ACTIONS", "GITLAB_CI", "JENKINS_URL",
-            "SYSTEM_TEAMFOUNDATIONCOLLECTIONURI", "CIRCLECI"
+            "CI",
+            "GITHUB_ACTIONS",
+            "GITLAB_CI",
+            "JENKINS_URL",
+            "SYSTEM_TEAMFOUNDATIONCOLLECTIONURI",
+            "CIRCLECI",
         ]
         return not any(os.getenv(var) for var in ci_envs)
 
