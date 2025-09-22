@@ -246,7 +246,7 @@ python scripts/validate_config.py --strict
 
 ### Old Script → New Task Mapping
 - `./scripts/run_fast_tests.py` → `task test`
-- `./scripts/start-services.sh` → `task services-start`
+- `./scripts/start-services.sh` → `python scripts/dev.py services start`
 - `./scripts/benchmark_query_api.py` → `task benchmark`
 - `ruff check . --fix && ruff format .` → `task quality`
 - `mkdocs serve` → `task docs-serve`

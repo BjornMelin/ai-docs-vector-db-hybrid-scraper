@@ -30,9 +30,9 @@ Performance benchmarks were failing across all Python versions (3.11, 3.12) and 
 - **Added job-level timeout**: Set to 30 minutes
 - **Excluded slow tests**: Added `-m "not slow"` flag
 - **Created directory setup step**: Ensures all required directories exist
-- **Switched to custom runner**: Uses `scripts/run_benchmarks.py` for better control
+- **Switched to custom runner**: Uses `scripts/dev.py benchmark` for better control
 
-### 2. Custom Benchmark Runner (`scripts/run_benchmarks.py`)
+### 2. Custom Benchmark Runner (`scripts/dev.py benchmark`)
 - **Environment setup**: Properly configures CI environment variables
 - **Directory creation**: Creates all necessary directories before running
 - **Suite-specific handling**: Routes config/core/integration suites correctly

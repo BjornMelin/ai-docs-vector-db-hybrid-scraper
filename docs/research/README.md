@@ -16,7 +16,7 @@ This directory contains all research documentation organized by domain and imple
 - **Focus**: Browser-use v0.3.2 integration and optimization
 - **Documents**:
   - Implementation guides, PRDs, and archived version research
-  - See [browser-use/README.md](browser-use/README.md) for details
+  - See [browser-use/README.md](./browser-use/README.md) for details
 
 #### `transformation/` - Portfolio ULTRATHINK Transformation
 - **Status**: 85% Complete - Ready for final implementation
@@ -24,7 +24,7 @@ This directory contains all research documentation organized by domain and imple
 - **Focus**: System architecture modernization and performance optimization
 - **Documents**:
   - Master transformation plan and subagent execution strategies
-  - See [transformation/README.md](transformation/README.md) for details
+  - See [transformation/README.md](./transformation/README.md) for details
 
 ### Research Documentation Standards
 
@@ -88,13 +88,13 @@ flowchart LR
 ## 🔗 Quick Navigation
 
 ### By Status
-- **Active Research**: [Browser-Use Enhancement](browser-use/README.md) | [Transformation Completion](transformation/README.md)
-- **Implementation Ready**: [Portfolio ULTRATHINK Transformation](transformation/README.md)
+- **Active Research**: [Browser-Use Enhancement](./browser-use/README.md) | [Transformation Completion](./transformation/README.md)
+- **Implementation Ready**: [Portfolio ULTRATHINK Transformation](./transformation/README.md)
 - **Historical Archive**: Available in planning/ directory
 
 ### By Domain
-- **Browser Automation**: [browser-use/](browser-use/README.md)
-- **System Architecture**: [transformation/](transformation/README.md)
+- **Browser Automation**: [browser-use/](./browser-use/README.md)
+- **System Architecture**: [transformation/](./transformation/README.md)
 - **Performance Optimization**: Available in planning/archive/detailed-reports/
 
 ### Integration Points

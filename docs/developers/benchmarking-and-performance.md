@@ -117,10 +117,10 @@ uv run pytest tests/benchmarks/test_database_performance.py \
   --benchmark-compare-fail=mean:10%
 
 # Quick benchmark validation (faster execution)
-uv run python scripts/run_benchmarks.py --quick
+uv run python scripts/dev.py benchmark --suite performance --output-dir .
 
 # Comprehensive benchmark with result saving
-uv run python scripts/run_benchmarks.py --save-results --verbose
+uv run python scripts/dev.py benchmark --suite all --output-dir . --compare-baseline --baseline benchmark_baseline.json --verbose
 
 # Performance regression testing with statistical analysis
 uv run pytest tests/benchmarks/test_database_performance.py \

@@ -26,8 +26,8 @@ from src.services.security.monitoring import SecurityEventType, SecurityMonitor
 
 # Security test markers
 security_test = pytest.mark.security
-injection_test = pytest.mark.injection
-auth_test = pytest.mark.auth
+injection_test = pytest.mark.input_validation
+auth_test = pytest.mark.authentication
 rate_limit_test = pytest.mark.rate_limit
 
 

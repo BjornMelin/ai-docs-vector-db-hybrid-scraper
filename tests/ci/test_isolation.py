@@ -230,19 +230,6 @@ class TestDataIsolation:
         return data_dir / filename
 
 
-# Pytest marker for tests that require isolation
-pytest.mark.isolated = pytest.mark.isolated
-
-
-def requires_isolation(reason: str = "Test requires resource isolation"):
-    """Decorator to mark tests that require special isolation."""
-
-    def decorator(func):
-        return pytest.mark.isolated(func, reason=reason)
-
-    return decorator
-
-
 # Hook for pytest-xdist to ensure proper isolation
 def pytest_configure_node(node):
     """Configure worker node for proper isolation."""

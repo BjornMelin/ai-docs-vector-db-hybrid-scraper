@@ -44,31 +44,27 @@ This directory contains **world-class security testing** for the AI Documentatio
 
 ```bash
 # Run all Portfolio ULTRATHINK security tests
-uv run pytest tests/security/ -v --zero-vulnerability-validation
+uv run pytest tests/security/ -v
 
-# Run zero-vulnerability validation framework
+# Run zero-vulnerability validation focus
 uv run pytest tests/security/zero_vulnerability/ -v
 
-# Run enterprise-grade security testing
-uv run pytest tests/security/ -v --enterprise-security
-
-# Run with Portfolio ULTRATHINK security markers
-uv run pytest -m "security and zero_vulnerability" -v
-uv run pytest -m "security and enterprise_grade" -v
-uv run pytest -m "security and ai_ml" -v
+# Run with security markers
+uv run pytest -m "security" -v
+uv run pytest -m "security and ai" -v
 ```
 
 ### Portfolio ULTRATHINK Achievement Testing
 
 ```bash
 # Test zero high-severity vulnerabilities achievement
-uv run pytest -m "security and zero_vulnerability" -v --vulnerability-validation
+uv run pytest -m "security" -v
 
 # Test OWASP Top 10 compliance with Portfolio ULTRATHINK enhancements
 uv run pytest tests/security/compliance/ -v --owasp-enhanced
 
 # Test AI/ML security with prompt injection prevention
-uv run pytest tests/security/ai_ml_security/ -v --prompt-injection-prevention
+uv run pytest tests/security/ai_ml_security/ -v
 
 # Test enterprise-grade encryption and data protection
 uv run pytest tests/security/encryption/ -v --enterprise-encryption
@@ -140,8 +136,6 @@ from src.security.models import SecurityThreat, VulnerabilityLevel
 from typing import Dict, Any, List
 
 @pytest.mark.security
-@pytest.mark.zero_vulnerability
-@pytest.mark.enterprise_grade
 async def test_zero_vulnerability_validation(
     security_validator: SecurityValidator,
     vulnerability_scanner: VulnerabilityScanner
@@ -172,8 +166,7 @@ async def test_zero_vulnerability_validation(
     assert security_score >= 95.0, f"Security score {security_score} below 95% threshold"
 
 @pytest.mark.security
-@pytest.mark.zero_vulnerability
-@pytest.mark.injection_prevention
+@pytest.mark.input_validation
 async def test_comprehensive_injection_prevention(
     security_validator: SecurityValidator
 ) -> None:
@@ -212,8 +205,7 @@ async def test_comprehensive_injection_prevention(
         assert result.blocked is True
 
 @pytest.mark.security
-@pytest.mark.ai_ml
-@pytest.mark.prompt_injection
+@pytest.mark.ai
 async def test_ai_ml_prompt_injection_prevention(
     ai_security_validator: AISecurityValidator
 ) -> None:
@@ -248,7 +240,6 @@ async def test_ai_ml_prompt_injection_prevention(
 ```python
 @pytest.mark.security
 @pytest.mark.authentication
-@pytest.mark.enterprise_grade
 async def test_enterprise_jwt_security(
     jwt_validator: JWTValidator,
     auth_service: AuthenticationService
