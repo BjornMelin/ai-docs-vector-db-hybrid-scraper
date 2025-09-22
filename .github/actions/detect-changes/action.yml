@@ -41,7 +41,7 @@ runs:
   using: "composite"
   steps:
     - name: Detect configuration changes
-      uses: dorny/paths-filter@v3
+      uses: dorny/paths-filter@v3.0.2
       id: changes
       with:
         filters: |

@@ -26,7 +26,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -34,7 +34,7 @@ jobs:
           python-version: '3.13'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v6.7.0
         with:
           version: "latest"
           enable-cache: true
@@ -100,7 +100,7 @@ jobs:
           fi
 
       - name: Upload security scan results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: security-scan-results
           path: |
@@ -112,7 +112,7 @@ jobs:
 
       - name: Comment security results on PR
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');
@@ -134,12 +134,12 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Run TruffleHog OSS
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@v3.90.8
         with:
           path: ./
           base: ${{ github.event.repository.default_branch }}
@@ -147,7 +147,7 @@ jobs:
           extra_args: --debug --only-verified
 
       - name: Run GitLeaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v2.3.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -159,10 +159,10 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v3.30.3
         with:
           languages: python
           config: |
@@ -173,10 +173,10 @@ jobs:
               - uses: security-extended
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@v3.30.3
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v3.30.3
         with:
           category: "/language:python"
 
@@ -186,7 +186,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -194,7 +194,7 @@ jobs:
           python-version: '3.13'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v6.7.0
         with:
           version: "latest"
           enable-cache: true
@@ -232,7 +232,7 @@ jobs:
           fi
 
       - name: Upload license report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: license-report
           path: license-report.md
@@ -245,10 +245,10 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3.11.1
 
       - name: Build Docker image
         run: |
@@ -262,20 +262,20 @@ jobs:
           fi
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: 'security-scan:latest'
           format: 'sarif'
           output: 'trivy-results.sarif'
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v3.30.3
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
 
       - name: Run Hadolint Dockerfile linter
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: Dockerfile.worker
           format: sarif
@@ -283,7 +283,7 @@ jobs:
           no-fail: true
 
       - name: Upload Hadolint scan results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v3.30.3
         if: always()
         with:
           sarif_file: hadolint-results.sarif
@@ -296,7 +296,7 @@ jobs:
     
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5.0.0
 
       - name: Create security summary
         run: |
@@ -324,7 +324,7 @@ jobs:
           fi
 
       - name: Upload final security summary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: final-security-summary
           path: SECURITY_SUMMARY.md
@@ -332,7 +332,7 @@ jobs:
 
       - name: Comment security summary on PR
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');

@@ -1,8 +1,4 @@
-"""Tests for parallel execution configuration and isolation.
-
-This module tests that our pytest-xdist configuration works correctly
-and provides proper test isolation.
-"""
+"""Tests covering pytest-xdist configuration, isolation, and benchmarks."""
 
 import os
 import time
@@ -52,11 +48,14 @@ class TestXDistConfiguration:
         assert hasattr(env, "get_pytest_args")
         assert hasattr(env, "get_env_vars")
 
-    @pytest.mark.parametrize("ci_env,expected_workers", [
-        ("GITHUB_ACTIONS", 4),
-        ("GITLAB_CI", 2),
-        ("CIRCLECI", None),  # Depends on resource class
-    ])
+    @pytest.mark.parametrize(
+        "ci_env,expected_workers",
+        [
+            ("GITHUB_ACTIONS", 4),
+            ("GITLAB_CI", 2),
+            ("CIRCLECI", None),  # Depends on resource class
+        ],
+    )
     def test_ci_specific_configuration(self, monkeypatch, ci_env, expected_workers):
         """Test CI-specific configurations."""
         # Mock CI environment
@@ -245,12 +244,12 @@ class TestParallelBenchmarks:
             _ = resources.get_isolated_port()
             _ = resources.get_isolated_database_name()
 
-        result = benchmark(allocate_resources)
+        benchmark(allocate_resources)
         resources.cleanup()
 
     def test_unique_id_generation_speed(self, benchmark):
         """Benchmark unique ID generation speed."""
-        result = benchmark(TestDataIsolation.get_unique_id, "benchmark")
+        benchmark(TestDataIsolation.get_unique_id, "benchmark")
 
 
 if __name__ == "__main__":

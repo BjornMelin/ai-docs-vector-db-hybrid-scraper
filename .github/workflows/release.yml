@@ -44,7 +44,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -95,7 +95,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -103,7 +103,7 @@ jobs:
           python-version: '3.13'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v6.7.0
         with:
           version: "latest"
           enable-cache: true
@@ -134,7 +134,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -142,7 +142,7 @@ jobs:
           python-version: '3.13'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v6.7.0
         with:
           version: "latest"
           enable-cache: true
@@ -178,7 +178,7 @@ jobs:
           uv tool run twine check dist/*
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: release-artifacts
           path: dist/
@@ -192,13 +192,13 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3.11.1
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v3.5.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -206,7 +206,7 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v5.8.0
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
@@ -216,7 +216,7 @@ jobs:
             type=semver,pattern={{major}}
 
       - name: Build and push Docker images
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v6.18.0
         with:
           context: .
           file: Dockerfile.worker
@@ -228,14 +228,14 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Generate SBOM
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@v0.20.6
         with:
           image: ghcr.io/${{ github.repository }}:${{ needs.validate-release.outputs.version }}
           format: spdx-json
           output-file: sbom.spdx.json
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: docker-sbom
           path: sbom.spdx.json
@@ -248,10 +248,10 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5.0.0
         with:
           name: release-artifacts
           path: dist/
@@ -262,7 +262,7 @@ jobs:
           python-version: '3.13'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v6.7.0
         with:
           version: "latest"
 
@@ -289,7 +289,7 @@ jobs:
           uv tool run bandit -r src/ -f txt >> security-report.md || echo "No issues found" >> security-report.md
 
       - name: Upload security report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: security-report
           path: security-report.md
@@ -304,7 +304,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -344,7 +344,7 @@ jobs:
           } >> $GITHUB_OUTPUT
 
       - name: Upload changelog
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: changelog
           path: CHANGELOG.md
@@ -357,10 +357,10 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5.0.0
 
       - name: Create or update tag
         if: github.event_name == 'workflow_dispatch'
@@ -372,7 +372,7 @@ jobs:
           git push origin "$VERSION"
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v2.3.3
         with:
           tag_name: ${{ needs.validate-release.outputs.version }}
           name: ${{ needs.validate-release.outputs.version }}
@@ -394,7 +394,7 @@ jobs:
     
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5.0.0
         with:
           name: release-artifacts
           path: dist/
@@ -405,7 +405,7 @@ jobs:
           python-version: '3.13'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v6.7.0
         with:
           version: "latest"
 
@@ -422,10 +422,10 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Create post-release issue
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const version = '${{ needs.validate-release.outputs.version }}';
@@ -502,7 +502,7 @@ jobs:
           fi
 
       - name: Upload release summary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: release-summary
           path: RELEASE_SUMMARY.md

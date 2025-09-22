@@ -24,19 +24,19 @@ runs:
   using: 'composite'
   steps:
     - name: Set up Python ${{ inputs.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ inputs.python-version }}
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v4
+      uses: astral-sh/setup-uv@v6.7.0
       with:
         version: "latest"
         enable-cache: true
         cache-dependency-glob: "**/uv.lock"
 
     - name: Cache Python dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v4.2.4
       id: cache
       with:
         path: |

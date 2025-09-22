@@ -228,7 +228,9 @@ class XDistOptimizer:
         config.num_workers = min(max(1, cpu_count // 2), 2)
         config.max_workers = 2
         config.timeout = 300
-        config.max_memory_per_worker_mb = int((memory_gb * 1024 * 0.5) / config.num_workers)
+        config.max_memory_per_worker_mb = int(
+            (memory_gb * 1024 * 0.5) / config.num_workers
+        )
         config.dist_mode = "loadscope"
         config.collect_performance_metrics = True
 
@@ -273,8 +275,7 @@ class XDistOptimizer:
         max_test_memory = total_memory_mb * 0.8  # Use max 80% of total memory
 
         config.max_memory_per_worker_mb = min(
-            config.max_memory_per_worker_mb,
-            int(max_test_memory / config.num_workers)
+            config.max_memory_per_worker_mb, int(max_test_memory / config.num_workers)
         )
 
         # Ensure reasonable worker count

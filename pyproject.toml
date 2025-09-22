@@ -35,156 +35,156 @@ classifiers = [
 
 dependencies = [
     # Core web framework & API
-    "fastapi[standard]>=0.115.12,<0.120.0", # Latest stable with performance improvements
-    "starlette>=0.41.0,<0.49.0", # Liberal constraint for better compatibility
-    "uvicorn[standard]>=0.34.0,<0.40.0",
-    "python-multipart>=0.0.12,<0.1.0", # For FastAPI file uploads
+    "fastapi[standard]>=0.117.1,<0.118.0", # Align with FastAPI 0.117 performance updates
+    "starlette>=0.48.0,<0.49.0", # Sync with Starlette 0.48 compatibility window
+    "uvicorn[standard]>=0.36.0,<0.37.0",
+    "python-multipart>=0.0.20,<0.1.0", # For FastAPI file uploads
     # Data validation & configuration
-    "pydantic>=2.11.5,<3.0.0", # browser-use 0.2.6 compatibility
-    "pydantic-settings>=2.8.0,<3.0.0",
-    "python-dotenv>=1.1.0,<2.0.0",
+    "pydantic>=2.11.9,<3.0.0", # browser-use 0.2.6 compatibility
+    "pydantic-settings>=2.10.1,<3.0.0",
+    "python-dotenv>=1.1.1,<2.0.0",
     "pyyaml>=6.0.2,<7.0.0",
     # Core web scraping
-    "crawl4ai[all]>=0.6.3,<0.8.0",
-    "firecrawl-py>=2.7.1",
+    "crawl4ai[all]>=0.7.4,<0.8.0",
+    "firecrawl-py>=4.3.6,<5.0.0", # Adopt Firecrawl v4 async client
     # Vector database & embeddings
-    "qdrant-client[fastembed]>=1.14.2,<2.0.0",
-    "openai>=1.56.0,<2.0.0",
-    "fastembed>=0.7.0,<0.8.0", # Python 3.13 compatible as of v0.7.0 (June 2025)
+    "qdrant-client[fastembed]>=1.15.1,<2.0.0",
+    "openai>=1.108.1,<2.0.0",
+    "fastembed>=0.7.3,<0.8.0", # Python 3.13 compatibility verified in v0.7.x
     "FlagEmbedding>=1.3.5,<2.0.0",
     # Data processing & ML (Python 3.13 compatible)
-    "numpy>=1.26.0,<3.0.0", # Allow NumPy 2.x for better Python 3.13 performance
-    "scipy>=1.15.3,<2.0.0", # Python 3.13 support from 1.13+
+    "numpy>=2.3.3,<3.0.0", # Allow NumPy 2.x for better Python 3.13 performance
+    "scipy>=1.16.2,<2.0.0", # Python 3.13 support from SciPy 1.16+
     "defusedxml>=0.7.1,<0.8.0", # Secure XML parsing
     # HTTP & async (optimized for performance)
-    "aiohttp>=3.12.4,<4.0.0", # Kept for superior async performance
+    "aiohttp>=3.12.15,<4.0.0", # Includes resolver fixes and Python 3.13 support
     "asyncio-throttle>=1.0.2,<2.0.0",
     "aiofiles>=24.1.0,<25.0.0",
     # Circuit breaker & retry patterns
-    "tenacity>=9.1.0,<10.0.0", # Advanced retry and circuit breaker patterns
+    "tenacity>=9.1.2,<10.0.0", # Advanced retry and circuit breaker patterns
     # MCP framework
-    "mcp>=1.9.2,<2.0.0",
-    "fastmcp>=2.5.2,<3.0.0",
+    "mcp>=1.14.1,<2.0.0",
+    "fastmcp>=2.12.3,<3.0.0",
     # Caching & task queue
-    "redis[hiredis]>=6.2.0,<7.0.0",
-    "arq>=0.25.0,<0.27.0",
-    "cachetools>=5.3.0,<6.0.0", # For LRU cache implementation
+    "redis[hiredis]>=5.3.1,<6.0.0", # Constrained by arq redis<6 requirement
+    "arq>=0.26.3,<0.27.0",
+    "cachetools>=5.5.2,<6.0.0", # Bound by google-auth<6 cachetools constraint
     # Modern libraries for optimization
     "slowapi>=0.1.9,<0.2.0", # Rate limiting
     "purgatory-circuitbreaker>=0.7.2,<0.8.0", # Distributed circuit breaker
-    "aiocache>=0.12.0,<0.13.0", # Modern async caching
+    "aiocache>=0.12.3,<0.13.0", # Modern async caching
     # CLI & user interface
-    "click>=8.2.1",
-    "rich>=14.0.0,<15.0.0",
+    "click>=8.2.1,<8.2.2", # Pinned by mkdocs-material 9.6.x requirement
+    "rich>=14.1.0,<15.0.0",
     "colorlog>=6.9.0,<7.0.0",
     "tqdm>=4.67.1,<5.0.0",
-    "questionary>=2.1.0,<3.0.0",
+    "questionary>=2.1.1,<3.0.0",
     # Monitoring & observability
-    "prometheus-client>=0.21.1,<0.24.0",
-    "prometheus-fastapi-instrumentator>=7.0.0,<8.0.0",
-    "psutil>=5.7.2,<8.0.0", # Compatible with taskipy and other dependencies
+    "prometheus-client>=0.23.1,<0.24.0",
+    "prometheus-fastapi-instrumentator>=7.1.0,<8.0.0",
+    "psutil>=6.1.1,<7.0.0", # Capped for taskipy compatibility (crawl4ai now requires >=6.1.1)
     # Database & ORM
-    "sqlalchemy>=2.0.0,<3.0.0",
+    "sqlalchemy>=2.0.43,<3.0.0",
     # Utility libraries
-    "tomli-w>=1.0.0,<2.0.0",
-    "jsonschema2md>=1.5.2,<2.0.0",
-    "opentelemetry-api>=1.34.1,<2.0.0",
-    "opentelemetry-sdk>=1.34.1,<2.0.0",
-    "respx>=0.22.0",
-    "watchdog>=6.0.0",
+    "tomli-w>=1.2.0,<2.0.0",
+    "jsonschema2md>=1.7.0,<2.0.0",
+    "opentelemetry-api>=1.37.0,<2.0.0",
+    "opentelemetry-sdk>=1.37.0,<2.0.0",
+    "respx>=0.22.0,<0.23.0",
+    "watchdog>=6.0.0,<7.0.0",
     "tool>=0.8.0",
-    "ruff>=0.12.0",
-    "taskipy>=1.14.0,<2.0.0",
-    "dependency-injector>=4.48.1",
+    "ruff>=0.13.1,<0.14.0",
+    "taskipy>=1.14.1,<2.0.0",
+    "dependency-injector>=4.48.2",
     "pydeps>=3.0.1",
-    "pydantic-ai>=0.2.17",
-    "scikit-learn>=1.7.0",
-    "httpx>=0.28.1",
-    "opentelemetry-instrumentation-fastapi>=0.55b1",
-    "pytest-benchmark>=5.1.0",
+    "pydantic-ai>=0.2.20,<0.3.0",
+    "scikit-learn>=1.7.2,<2.0.0",
+    "httpx>=0.28.1,<0.29.0",
+    "opentelemetry-instrumentation-fastapi>=0.58b0,<0.59.0",
+    "pytest-benchmark>=5.1.0,<6.0.0",
 ]
 
 [project.optional-dependencies]
 # Development tools
 dev = [
-    "pytest>=8.4.0,<9.0.0",
-    "pytest-asyncio>=1.0.0,<2.0.0",
-    "pytest-cov>=6.1.1,<8.0.0",
-    "pytest-mock>=3.14.1,<4.0.0",
-    "pytest-timeout>=2.3.1,<3.0.0",
-    "pytest-xdist>=3.7.0,<4.0.0",   # Parallel test execution - latest performance improvements
-    "hypothesis>=6.135.0,<7.0.0",   # Property-based testing - latest features
-    "mutmut>=2.5.1,<4.0.0",         # Mutation testing
-    "fakeredis>=2.29.0,<3.0.0",
-    "ruff>=0.12.0,<0.14.0",
-    "black>=25.1.0,<26.0.0",
+    "pytest>=8.4.2,<9.0.0",
+    "pytest-asyncio>=1.2.0,<2.0.0",
+    "pytest-cov>=7.0.0,<8.0.0",
+    "pytest-mock>=3.15.1,<4.0.0",
+    "pytest-timeout>=2.4.0,<3.0.0",
+    "pytest-xdist>=3.8.0,<4.0.0",   # Parallel test execution - latest performance improvements
+    "hypothesis>=6.140.0,<7.0.0",   # Property-based testing - latest features
+    "mutmut>=3.3.1,<4.0.0",         # Mutation testing
+    "fakeredis>=2.31.3,<3.0.0",
+    "ruff>=0.13.1,<0.14.0",
+    "black>=25.9.0,<26.0.0",
 ]
 
 # Contract testing tools
 contract = [
-    "schemathesis>=3.21.0,<4.1.0",          # OpenAPI property-based testing
-    "openapi-spec-validator>=0.7.0,<0.9.0", # OpenAPI spec validation
-    "jsonschema>=4.23.0,<5.0.0",            # JSON schema validation
+    "schemathesis>=3.39.16,<4.0.0",          # OpenAPI property-based testing (tomli compatibility)
+    "openapi-spec-validator>=0.7.2,<0.9.0", # OpenAPI spec validation
+    "jsonschema>=4.25.1,<5.0.0",            # JSON schema validation
     # "pact-python>=2.3.1,<3.0.0",         # Pact consumer-driven contracts - temporarily disabled due to psutil conflict
-    "responses>=0.25.0,<0.26.0", # HTTP request mocking
+    "responses>=0.25.8,<0.26.0", # HTTP request mocking
     "httpx>=0.28.1,<0.29.0",     # HTTP client for testing
-    "factory-boy>=3.3.1,<4.0.0", # Test data generation
-    "faker>=36.1.0,<38.0.0",     # Fake data generation
+    "factory-boy>=3.3.3,<4.0.0", # Test data generation
+    "faker>=37.8.0,<38.0.0",     # Fake data generation
 ]
 
 # Accessibility testing tools
 accessibility = [
     "axe-core-python>=0.1.0,<1.0.0", # Python bindings for axe-core (using available version)
-    "selenium>=4.25.0,<5.0.0",       # For browser automation
-    "playwright>=1.52.0,<2.0.0",     # Alternative browser automation
-    "beautifulsoup4>=4.12.3,<5.0.0", # HTML parsing for static analysis
-    "lxml>=5.3.0,<7.0.0",            # XML/HTML parser
+    "selenium>=4.35.0,<5.0.0",       # For browser automation
+    "playwright>=1.55.0,<2.0.0",     # Alternative browser automation
+    "beautifulsoup4>=4.13.5,<5.0.0", # HTML parsing for static analysis
+    "lxml>=5.3.0,<5.4.0",            # XML/HTML parser (crawl4ai pins to ~=5.3)
 ]
 
 # Browser automation (optional heavy dependencies)
 browser = [
-    "playwright>=1.52.0,<2.0.0", # Python 3.13 compatibility (memory module optional in 0.3.0+)
+    "playwright>=1.55.0,<2.0.0", # Python 3.13 compatibility (memory module optional in 0.3.0+)
 ]
 
 # LangChain integrations (optional AI features)  
 llm = [
-    "langchain-openai>=0.3.11,<1.0.0",
-    "langchain-anthropic>=0.3.0,<1.0.0",
-    "langchain-google-genai>=2.0.0,<3.0.0",
+    "langchain-openai>=0.3.33,<1.0.0",
+    "langchain-anthropic>=0.3.20,<1.0.0",
+    "langchain-google-genai>=2.1.12,<3.0.0",
 ]
 
 # Observability and tracing (optional monitoring features)
 observability = [
-    "opentelemetry-api>=1.34.1,<2.0.0",
-    "opentelemetry-sdk>=1.34.1,<2.0.0",
-    "opentelemetry-instrumentation-fastapi>=0.54b0,<1.0.0",
-    "opentelemetry-exporter-prometheus>=0.54b1,<1.0.0",
-    "opentelemetry-instrumentation-starlette>=0.54b0,<1.0.0", # For Starlette instrumentation
+    "opentelemetry-api>=1.37.0,<2.0.0",
+    "opentelemetry-sdk>=1.37.0,<2.0.0",
+    "opentelemetry-instrumentation-fastapi>=0.58b0,<0.59.0",
+    "opentelemetry-exporter-prometheus>=0.58b0,<0.59.0",
+    "opentelemetry-instrumentation-starlette>=0.58b0,<0.59.0", # For Starlette instrumentation
 ]
 
 # Code parsing tools (optional development features)
 parsing = [
-    "tree-sitter>=0.24.0,<0.26.0",
-    "tree-sitter-python>=0.23.6,<0.26.0",
-    "tree-sitter-javascript>=0.23.1,<0.24.0",
+    "tree-sitter>=0.25.1,<0.26.0",
+    "tree-sitter-python>=0.25.0,<0.26.0",
+    "tree-sitter-javascript>=0.25.0,<0.26.0",
     "tree-sitter-typescript>=0.23.2,<0.24.0",
 ]
 
 # High-performance data processing (optional replacement for pandas)
 dataframe = [
-    "polars>=1.17.0,<2.0.0",   # High-performance DataFrame library (pandas replacement)
-    "pyarrow>=18.1.0,<21.0.0", # Columnar data format for better performance
+    "polars>=1.33.1,<2.0.0",   # High-performance DataFrame library (pandas replacement)
+    "pyarrow>=21.0.0,<22.0.0", # Columnar data format for better performance
 ]
 
 # Documentation tools (moved from docs/requirements.txt)
 docs = [
-    "mkdocs>=1.6.0,<2.0.0",
-    "mkdocs-material>=9.5.0,<10.0.0",
-    "mkdocstrings>=0.24.0,<1.0.0",
-    "mkdocstrings-python>=1.8.0,<2.0.0",
+    "mkdocs>=1.6.1,<2.0.0",
+    "mkdocs-material>=9.6.20,<10.0.0",
+    "mkdocstrings>=0.30.1,<1.0.0",
+    "mkdocstrings-python>=1.18.2,<2.0.0",
     "pdoc3>=0.11.6,<1.0.0",
-    "sphinx>=8.2.0,<9.0.0",
-    "sphinx-rtd-theme>=3.0.0,<4.0.0",
+    "sphinx>=8.2.3,<9.0.0",
+    "sphinx-rtd-theme>=3.0.2,<4.0.0",
     "interrogate>=1.7.0,<2.0.0",
 ]
 
@@ -663,8 +663,8 @@ dev = [
     "pytest-cov>=6.1.1",
     "pytest-mock>=3.14.1",
     "coverage>=7.6.0",
-    "ruff>=0.12.0",
-    "pytest-benchmark>=5.1.0",
+    "ruff>=0.13.1,<0.14.0",
+    "pytest-benchmark>=5.1.0,<6.0.0",
     "testcontainers>=4.8.1",
     "hypothesis>=6.135.0,<7.0.0",
     "pytest-xdist>=3.7.0",

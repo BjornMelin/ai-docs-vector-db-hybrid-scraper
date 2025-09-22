@@ -40,12 +40,12 @@ jobs:
       workflows: ${{ steps.changes.outputs.workflows }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Detect file changes
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v3.0.2
         id: changes
         with:
           filters: |
@@ -81,7 +81,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup environment
         uses: ./.github/actions/setup-environment
@@ -90,7 +90,7 @@ jobs:
           cache-suffix: '-fast'
 
       - name: Cache ruff
-        uses: actions/cache@v4
+        uses: actions/cache@v4.2.4
         with:
           path: ~/.cache/ruff
           key: ruff-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
@@ -169,7 +169,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup environment
         uses: ./.github/actions/setup-environment
@@ -236,7 +236,7 @@ jobs:
 
       - name: Upload coverage reports
         if: matrix.coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5.5.1
         with:
           file: ./coverage.xml
           flags: unittests
@@ -252,7 +252,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup environment
         uses: ./.github/actions/setup-environment
@@ -315,7 +315,7 @@ jobs:
           EOF
 
       - name: Upload security results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: security-scan-results
           path: |
@@ -331,7 +331,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup environment
         uses: ./.github/actions/setup-environment
@@ -348,7 +348,7 @@ jobs:
           uv tool run twine check dist/*
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: build-artifacts
           path: dist/

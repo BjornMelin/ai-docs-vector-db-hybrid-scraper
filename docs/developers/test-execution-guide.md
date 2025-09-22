@@ -230,8 +230,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v1
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6.7.0
       
       - name: Install dependencies
         run: uv sync --all-extras
@@ -268,8 +268,8 @@ jobs:
         test-category: [unit, integration, security, performance]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v1
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6.7.0
       
       - name: Install dependencies
         run: uv sync --all-extras

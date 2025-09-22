@@ -1,16 +1,12 @@
-"""Test isolation utilities for parallel test execution.
-
-This module provides utilities to ensure proper test isolation
-when running tests in parallel with pytest-xdist.
-"""
+"""Test isolation utilities to support reliable parallel pytest execution."""
 
 import os
 import tempfile
+import time
 import uuid
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, Optional
 
 import pytest
 
@@ -18,7 +14,7 @@ import pytest
 class IsolatedTestResources:
     """Manages isolated resources for parallel test execution."""
 
-    def __init__(self, worker_id: str = None):
+    def __init__(self, worker_id: str | None = None):
         self.worker_id = worker_id or os.getenv("PYTEST_XDIST_WORKER", "master")
         self.is_parallel = self.worker_id != "master"
         self._temp_dirs = []
@@ -45,6 +41,7 @@ class IsolatedTestResources:
         if not self.is_parallel:
             # For non-parallel execution, use dynamic port allocation
             import socket
+
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.bind(("", 0))
                 s.listen(1)
@@ -67,6 +64,7 @@ class IsolatedTestResources:
             if port not in self._allocated_ports:
                 # Check if port is actually available
                 import socket
+
                 try:
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                         s.bind(("127.0.0.1", port))
@@ -237,18 +235,16 @@ class TestDataIsolation:
         return data_dir / filename
 
 
-# Import time for timestamp generation
-import time
-
-
 # Pytest marker for tests that require isolation
 pytest.mark.isolated = pytest.mark.isolated
 
 
 def requires_isolation(reason: str = "Test requires resource isolation"):
     """Decorator to mark tests that require special isolation."""
+
     def decorator(func):
         return pytest.mark.isolated(func, reason=reason)
+
     return decorator
 
 

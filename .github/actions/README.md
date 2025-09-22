@@ -65,7 +65,7 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/detect-changes
         with:
           github-event-name: ${{ github.event_name }}
@@ -75,7 +75,7 @@ jobs:
     needs: detect-changes
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/validate-config
         with:
           target-environment: ${{ needs.detect-changes.outputs.target-environment }}
@@ -84,7 +84,7 @@ jobs:
     needs: [detect-changes, validate]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/deploy-config
         with:
           target-environment: ${{ needs.detect-changes.outputs.target-environment }}
@@ -94,7 +94,7 @@ jobs:
     needs: [detect-changes, deploy]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/smoke-tests
         with:
           target-environment: ${{ needs.detect-changes.outputs.target-environment }}

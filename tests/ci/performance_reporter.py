@@ -10,7 +10,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pytest
 from _pytest.config import Config
@@ -80,11 +80,14 @@ class PerformanceReporter:
         )
         self.session_start_time: float | None = None
         self.session_end_time: float | None = None
-        self.report_path = Path(config.getoption("--performance-report", default="test-performance.json"))
+        self.report_path = Path(
+            config.getoption("--performance-report", default="test-performance.json")
+        )
 
         # Try to import psutil for memory monitoring
         try:
             import psutil
+
             self.psutil = psutil
             self.process = psutil.Process()
         except ImportError:
@@ -112,7 +115,7 @@ class PerformanceReporter:
         if self.process:
             try:
                 memory_before = self.process.memory_info().rss
-            except:
+            except Exception:
                 pass
 
         start_time = time.time()
@@ -130,7 +133,7 @@ class PerformanceReporter:
             try:
                 memory_after = self.process.memory_info().rss
                 cpu_percent = self.process.cpu_percent(interval=0.1)
-            except:
+            except Exception:
                 pass
 
         # Get test outcome
@@ -208,7 +211,10 @@ class PerformanceReporter:
                 "passed": sum(w.passed_tests for w in self.worker_metrics.values()),
                 "failed": sum(w.failed_tests for w in self.worker_metrics.values()),
                 "skipped": sum(w.skipped_tests for w in self.worker_metrics.values()),
-                "average_test_duration": sum(t.duration for t in self.test_metrics) / len(self.test_metrics) if self.test_metrics else 0,
+                "average_test_duration": sum(t.duration for t in self.test_metrics)
+                / len(self.test_metrics)
+                if self.test_metrics
+                else 0,
             },
             "worker_metrics": {
                 worker_id: {
@@ -244,17 +250,29 @@ class PerformanceReporter:
         for worker_id, metrics in self.worker_metrics.items():
             distribution[worker_id] = {
                 "test_count": metrics.total_tests,
-                "percentage": (metrics.total_tests / len(self.test_metrics) * 100) if self.test_metrics else 0,
-                "duration_percentage": (metrics.total_duration / sum(t.duration for t in self.test_metrics) * 100) if self.test_metrics else 0,
+                "percentage": (metrics.total_tests / len(self.test_metrics) * 100)
+                if self.test_metrics
+                else 0,
+                "duration_percentage": (
+                    metrics.total_duration
+                    / sum(t.duration for t in self.test_metrics)
+                    * 100
+                )
+                if self.test_metrics
+                else 0,
             }
 
         # Calculate load balance score (0-100, higher is better)
         if len(self.worker_metrics) > 1:
             test_counts = [m.total_tests for m in self.worker_metrics.values()]
             avg_tests = sum(test_counts) / len(test_counts)
-            variance = sum((count - avg_tests) ** 2 for count in test_counts) / len(test_counts)
-            std_dev = variance ** 0.5
-            load_balance_score = max(0, 100 - (std_dev / avg_tests * 100)) if avg_tests > 0 else 0
+            variance = sum((count - avg_tests) ** 2 for count in test_counts) / len(
+                test_counts
+            )
+            std_dev = variance**0.5
+            load_balance_score = (
+                max(0, 100 - (std_dev / avg_tests * 100)) if avg_tests > 0 else 0
+            )
         else:
             load_balance_score = 100
 
@@ -272,17 +290,21 @@ class PerformanceReporter:
         # Calculate percentile threshold
         durations = [t.duration for t in sorted_tests]
         threshold_idx = int(len(durations) * threshold_percentile / 100)
-        threshold_duration = durations[threshold_idx] if threshold_idx < len(durations) else 0
+        threshold_duration = (
+            durations[threshold_idx] if threshold_idx < len(durations) else 0
+        )
 
         slow_tests = []
         for test in sorted_tests[:10]:  # Top 10 slowest
             if test.duration >= threshold_duration:
-                slow_tests.append({
-                    "nodeid": test.nodeid,
-                    "duration": test.duration,
-                    "worker": test.worker_id,
-                    "outcome": test.outcome,
-                })
+                slow_tests.append(
+                    {
+                        "nodeid": test.nodeid,
+                        "duration": test.duration,
+                        "worker": test.worker_id,
+                        "outcome": test.outcome,
+                    }
+                )
 
         return slow_tests
 
@@ -346,7 +368,10 @@ class PerformanceReporter:
 
         # Memory recommendations
         memory_analysis = self.analyze_memory_usage()
-        if memory_analysis.get("available") and memory_analysis.get("peak_memory_mb", 0) > 2048:
+        if (
+            memory_analysis.get("available")
+            and memory_analysis.get("peak_memory_mb", 0) > 2048
+        ):
             recommendations.append(
                 f"High memory usage detected ({memory_analysis['peak_memory_mb']:.0f} MB peak)"
             )
@@ -355,9 +380,9 @@ class PerformanceReporter:
 
     def print_summary(self, report: dict[str, Any]):
         """Print a summary of the performance report to console."""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("pytest-xdist Performance Report")
-        print("="*60)
+        print("=" * 60)
 
         print(f"\nTotal Duration: {report['metadata']['total_duration']:.2f}s")
         print(f"Total Tests: {report['metadata']['total_tests']}")
@@ -369,25 +394,27 @@ class PerformanceReporter:
         print(f"  Skipped: {report['summary']['skipped']}")
 
         print("\nWorker Performance:")
-        for worker_id, metrics in report['worker_metrics'].items():
+        for worker_id, metrics in report["worker_metrics"].items():
             print(f"  {worker_id}:")
             print(f"    Tests: {metrics['total_tests']}")
             print(f"    Duration: {metrics['total_duration']:.2f}s")
             print(f"    Efficiency: {metrics['efficiency']:.1f}%")
 
-        if report['recommendations']:
+        if report["recommendations"]:
             print("\nRecommendations:")
-            for rec in report['recommendations']:
+            for rec in report["recommendations"]:
                 print(f"  • {rec}")
 
         print(f"\nDetailed report saved to: {self.report_path}")
-        print("="*60)
+        print("=" * 60)
 
 
 def pytest_configure(config):
     """Register the performance reporter plugin."""
     if config.getoption("--performance-report", default=None) is not None:
-        config.pluginmanager.register(PerformanceReporter(config), "performance_reporter")
+        config.pluginmanager.register(
+            PerformanceReporter(config), "performance_reporter"
+        )
 
 
 def pytest_addoption(parser):
