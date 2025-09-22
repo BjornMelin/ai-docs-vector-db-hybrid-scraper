@@ -385,7 +385,7 @@ jobs:
           cp -r docs/_build/html/* site/sphinx/ 2>/dev/null || echo "No Sphinx HTML found"
 
       - name: Upload documentation site
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: ./site
 
