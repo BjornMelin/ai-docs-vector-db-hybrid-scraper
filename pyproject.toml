@@ -82,7 +82,7 @@ dependencies = [
     # Monitoring & observability
     "prometheus-client>=0.23.1,<0.24.0",
     "prometheus-fastapi-instrumentator>=7.1.0,<8.0.0",
-    "psutil>=6.1.1,<7.0.0", # Capped for taskipy compatibility (crawl4ai now requires >=6.1.1)
+    "psutil>=6.1.1,<8.0.0", # Capped for taskipy compatibility (crawl4ai now requires >=6.1.1)
     # Database & ORM
     "sqlalchemy>=2.0.43,<3.0.0",
     # Utility libraries
