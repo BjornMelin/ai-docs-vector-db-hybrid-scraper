@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field, ValidationError
 from pydantic_settings import BaseSettings
 
 from src.config import (
-    Config,
+    Config as AppConfig,
     Settings,
     create_settings_from_env,
     get_settings,
@@ -58,7 +58,7 @@ class CachedConfigModel(BaseModel):
         return cls(**_kwargs)
 
 
-class Config(BaseSettings):
+class BenchmarkConfig(BaseSettings):
     """Performance- configuration for benchmarking."""
 
     model_config = {
@@ -437,7 +437,7 @@ class TestAsyncConfigurationPerformance:
 
         def create_async_compatible_config():
             """Create and validate config in async-compatible way."""
-            config = Config()
+            config = AppConfig()
             # Test basic config validation and access
             _ = config.app_name
             _ = config.environment
@@ -452,7 +452,7 @@ class TestAsyncConfigurationPerformance:
     def test_concurrent_config_access(self, benchmark):
         """Benchmark concurrent configuration access patterns."""
 
-        config = Config()
+        config = AppConfig()
 
         def concurrent_config_access():
             # Synchronous simulation of concurrent config access patterns
@@ -500,7 +500,7 @@ class TestConfigurationCaching:
     def test_config_serialization_performance(self, benchmark):
         """Benchmark config serialization and deserialization."""
 
-        config = Config(
+        config = AppConfig(
             app_name="serialization-test",
             debug=False,
             max_memory_mb=1024,
@@ -511,7 +511,7 @@ class TestConfigurationCaching:
             # Serialize to dict
             config_dict = config.model_dump()
             # Deserialize back to model
-            return Config(**config_dict)
+            return AppConfig(**config_dict)
 
         result = benchmark(serialize_deserialize)
         assert result.app_name == "serialization-test"
@@ -520,7 +520,7 @@ class TestConfigurationCaching:
     def test_nested_config_access(self, benchmark):
         """Benchmark nested configuration access patterns."""
 
-        config = Config()
+        config = AppConfig()
 
         def nested_access():
             # Common nested access patterns
@@ -602,7 +602,7 @@ class TestPerformanceTargets:
         """Ensure config loading meets <100ms target."""
 
         def timed_config_creation():
-            return Config()
+            return AppConfig()
 
         result = benchmark(timed_config_creation)
 
@@ -697,7 +697,7 @@ class TestRealWorldScenarios:
 
         def application_startup():
             # Simulate full application config loading
-            config = Config()
+            config = AppConfig()
 
             # Access all major config sections (typical startup pattern)
             _ = config.app_name
@@ -752,8 +752,8 @@ class TestRealWorldScenarios:
 
         def hot_reload_cycle():
             # Simulate hot reload: load v1, then v2
-            config1 = Config(**config_v1)
-            config2 = Config(**config_v2)
+            config1 = AppConfig(**config_v1)
+            config2 = AppConfig(**config_v2)
             return config1, config2
 
         result = benchmark(hot_reload_cycle)
@@ -766,7 +766,7 @@ class TestRealWorldScenarios:
     def test_concurrent_service_config_access(self, benchmark):
         """Benchmark concurrent access to service configurations."""
 
-        config = Config()
+        config = AppConfig()
 
         def concurrent_service_access():
             # Synchronous simulation of concurrent config access patterns
@@ -802,16 +802,16 @@ def test_performance_benchmark_summary(benchmark):
         configs = []
 
         # Basic config
-        configs.append(Config())
+        configs.append(AppConfig())
 
         # Optimized config
-        configs.append(Config())
+        configs.append(AppConfig())
 
         # Cached config
         configs.append(CachedConfigModel.create_cached(app_name="summary"))
 
         # Config from dict
-        configs.append(Config(app_name="dict-test", debug=True))
+        configs.append(AppConfig(app_name="dict-test", debug=True))
 
         return len(configs)
 

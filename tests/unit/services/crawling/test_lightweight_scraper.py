@@ -1,12 +1,10 @@
-import respx  # noqa: F401
-
-
 """Tests for the lightweight HTTP scraper."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
+import respx  # noqa: F401  # third-party mock helper used via fixtures
 from bs4 import BeautifulSoup
 
 # LightweightScraperConfig not in simplified config, use Config instead

@@ -15,7 +15,7 @@ import os
 import random
 import time
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, Coroutine, TypeVar
 
 import psutil
 import pytest
@@ -80,6 +80,18 @@ CI_MODE = (
     os.getenv("CI", "false").lower() == "true"
     or os.getenv("GITHUB_ACTIONS", "false").lower() == "true"
 )
+
+
+T = TypeVar("T")
+
+
+def run_async(coro: Coroutine[Any, Any, T]) -> T:
+    """Run a coroutine in an isolated loop for synchronous benchmarking wrappers."""
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
 
 
 class RealPerformanceMonitor:
@@ -507,7 +519,7 @@ class TestDatabasePerformance:
 
         # Start Qdrant container or mock
         qdrant_fixture = ContainerizedQdrantFixture()
-        client, qdrant_url = await qdrant_fixture.start_qdrant_container()
+        client, _qdrant_url = await qdrant_fixture.start_qdrant_container()
 
         try:
             # For CI mode, create a simplified service that just uses the client directly
@@ -645,7 +657,7 @@ class TestDatabasePerformance:
                     in [c.name for c in collections.collections],
                 }
 
-            return await collection_operations()
+            return asyncio.run(collection_operations())
 
         # Run benchmark with pytest-benchmark
         result = benchmark(collection_operations_sync)
@@ -712,7 +724,7 @@ class TestDatabasePerformance:
                     / max(upsert_time, 0.001),
                 }
 
-            return await vector_upsert()
+            return asyncio.run(vector_upsert())
 
         # Run benchmark
         result = benchmark(vector_upsert_sync)
@@ -797,7 +809,7 @@ class TestDatabasePerformance:
                     "search_throughput": len(search_times) / sum(search_times),
                 }
 
-            return await search_performance()
+            return asyncio.run(search_performance())
 
         # Run benchmark
         result = benchmark(search_performance_sync)
@@ -894,7 +906,7 @@ class TestDatabasePerformance:
                     "success_rate": successful_operations / len(results),
                 }
 
-            return await concurrent_db()
+            return asyncio.get_event_loop().run_until_complete(concurrent_db())
 
         # Run benchmark
         result = benchmark(concurrent_db_sync)
@@ -998,7 +1010,7 @@ class TestDatabasePerformance:
                     else 0,
                 }
 
-            return await payload_indexing()
+            return asyncio.get_event_loop().run_until_complete(payload_indexing())
 
         # Run benchmark
         result = benchmark(payload_indexing_sync)
@@ -1080,7 +1092,9 @@ class TestEnterpriseFeatures:
                     result = await session.execute("SELECT 1")
                     return result.fetchone()
 
-            return await monitoring_overhead_test()
+            return asyncio.get_event_loop().run_until_complete(
+                monitoring_overhead_test()
+            )
 
         # Run the benchmark
         result = benchmark(monitoring_overhead_test_sync)

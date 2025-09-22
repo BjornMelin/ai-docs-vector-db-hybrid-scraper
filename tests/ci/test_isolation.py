@@ -1,6 +1,7 @@
 """Test isolation utilities to support reliable parallel pytest execution."""
 
 import os
+import socket
 import tempfile
 import time
 import uuid
@@ -40,8 +41,6 @@ class IsolatedTestResources:
         """Get an isolated port number for this test worker."""
         if not self.is_parallel:
             # For non-parallel execution, use dynamic port allocation
-            import socket
-
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.bind(("", 0))
                 s.listen(1)
@@ -63,8 +62,6 @@ class IsolatedTestResources:
         for port in range(start_port, start_port + 100):
             if port not in self._allocated_ports:
                 # Check if port is actually available
-                import socket
-
                 try:
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                         s.bind(("127.0.0.1", port))

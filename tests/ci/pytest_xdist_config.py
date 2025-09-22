@@ -78,8 +78,8 @@ class CIEnvironmentDetector:
     @staticmethod
     def _get_github_runner_specs() -> dict[str, Any]:
         """Get GitHub Actions runner specifications."""
-        runner_os = os.getenv("RUNNER_OS", "").lower()
-        runner_arch = os.getenv("RUNNER_ARCH", "X64")
+        _runner_os = os.getenv("RUNNER_OS", "").lower()
+        _runner_arch = os.getenv("RUNNER_ARCH", "X64")
 
         # Standard GitHub-hosted runner specs
         specs = {
@@ -91,7 +91,7 @@ class CIEnvironmentDetector:
             "ubuntu-20.04": {"cores": 2, "memory_gb": 7, "storage_gb": 14},
         }
 
-        runner_image = os.getenv("ImageOS", "ubuntu-latest")
+        runner_image = os.getenv("IMAGEOS", "ubuntu-latest")
         return specs.get(runner_image, specs["ubuntu-latest"])
 
     @staticmethod
@@ -158,9 +158,7 @@ class XDistOptimizer:
         config = self._apply_platform_optimizations(config)
 
         # Apply safety limits
-        config = self._apply_safety_limits(config)
-
-        return config
+        return self._apply_safety_limits(config)
 
     def _configure_for_ci(self, config: XDistConfig) -> XDistConfig:
         """Configure for CI environment."""

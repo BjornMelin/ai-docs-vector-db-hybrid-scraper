@@ -15,12 +15,25 @@ import tempfile
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, Coroutine, TypeVar
 from unittest.mock import AsyncMock
 
 import pytest
 from cryptography.fernet import Fernet
 
 from src.config import Config, SecurityConfig
+
+
+T = TypeVar("T")
+
+
+def run_async(coro: Coroutine[Any, Any, T]) -> T:
+    """Execute coroutine in isolated event loop for synchronous benchmarking wrappers."""
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
 
 
 # Mock classes for testing since modules don't exist
@@ -270,10 +283,7 @@ class TestConfigReloadPerformance:
 
         return listeners
 
-    @pytest.mark.asyncio
-    async def test_basic_reload_performance(
-        self, benchmark, config_reloader, test_config
-    ):
+    def test_basic_reload_performance(self, benchmark, config_reloader, test_config):
         """Benchmark basic configuration reload operation."""
         config_reloader.set_current_config(test_config)
 
@@ -283,7 +293,7 @@ class TestConfigReloadPerformance:
             )
 
         def run_reload():
-            return await reload_config()
+            return run_async(reload_config())
 
         result = benchmark(run_reload)
         assert isinstance(result, ReloadOperation)
@@ -295,10 +305,7 @@ class TestConfigReloadPerformance:
         )
         print(f"\n✅ Basic reload performance: {result._total_duration_ms:.2f}ms")
 
-    @pytest.mark.asyncio
-    async def test_reload_with_validation(
-        self, benchmark, config_reloader, test_config
-    ):
+    def test_reload_with_validation(self, benchmark, config_reloader, test_config):
         """Benchmark reload with configuration validation."""
         config_reloader.set_current_config(test_config)
 
@@ -308,7 +315,7 @@ class TestConfigReloadPerformance:
             )
 
         def run_reload():
-            return await reload_with_validation()
+            return run_async(reload_with_validation())
 
         result = benchmark(run_reload)
         assert result.success
@@ -320,8 +327,7 @@ class TestConfigReloadPerformance:
         )
         print(f"\n✅ Validation performance: {result.validation_duration_ms:.2f}ms")
 
-    @pytest.mark.asyncio
-    async def test_reload_with_listeners(
+    def test_reload_with_listeners(
         self, benchmark, config_reloader, test_config, mock_listeners
     ):
         """Benchmark reload with multiple change listeners."""
@@ -337,7 +343,7 @@ class TestConfigReloadPerformance:
             )
 
         def run_reload():
-            return await reload_with_listeners()
+            return run_async(reload_with_listeners())
 
         result = benchmark(run_reload)
         assert result.success
