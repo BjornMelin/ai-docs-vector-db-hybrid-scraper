@@ -26,23 +26,6 @@ if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
 
-def pytest_configure(config):
-    """Configure pytest for CLI testing."""
-    # Add custom markers
-    config.addinivalue_line("markers", "cli: mark test as CLI-specific")
-    config.addinivalue_line(
-        "markers", "interactive: mark test as requiring interactive features"
-    )
-    config.addinivalue_line(
-        "markers", "rich: mark test as requiring Rich console features"
-    )
-    config.addinivalue_line(
-        "markers", "questionary: mark test as requiring questionary interactions"
-    )
-    config.addinivalue_line("markers", "integration: mark test as integration test")
-    config.addinivalue_line("markers", "performance: mark test as performance test")
-
-
 def pytest_collection_modifyitems(_config, items):
     """Modify test collection for CLI tests."""
     for item in items:

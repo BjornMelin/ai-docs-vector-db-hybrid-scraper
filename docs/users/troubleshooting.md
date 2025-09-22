@@ -25,7 +25,7 @@ Most problems have simple fixes that don't require technical expertise.
 
 1. **Verify the server is running**: Look for startup messages
 2. **Check port availability**: Default port is usually 6333 for Qdrant
-3. **Try restarting services**: Use `./scripts/start-services.sh`
+3. **Try restarting services**: Use `python scripts/dev.py services start`
 4. **Verify configuration**: Check that your `.env` file has correct settings
 
 ## 🔍 Search Problems
@@ -299,7 +299,7 @@ mcp scrape --url "https://your-target-site.com"
 docker stop $(docker ps -q)
 
 # Restart services
-./scripts/start-services.sh
+python scripts/dev.py services start
 ```
 
 ## 🔧 Performance Issues
@@ -431,7 +431,7 @@ The system now includes sophisticated database connection pool optimization that
 
    ```bash
    # Stop services and restart
-   ./scripts/start-services.sh
+   python scripts/dev.py services start
    ```
 
 #### **Slow Query Performance**

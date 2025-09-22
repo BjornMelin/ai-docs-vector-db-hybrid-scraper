@@ -348,7 +348,6 @@ async def test_integration_latency_reduction(
 ```python
 @pytest.mark.integration
 @pytest.mark.security
-@pytest.mark.zero_vulnerability
 async def test_security_integration_zero_vulnerabilities(
     security_integration_suite: SecurityIntegrationSuite
 ) -> None:
@@ -432,7 +431,7 @@ uv run pytest tests/integration/services/ -v --dependency-injection
 
 # Run with Portfolio ULTRATHINK achievement markers
 uv run pytest -m "integration and modern" -v
-uv run pytest -m "integration and zero_vulnerability" -v
+uv run pytest -m "integration and security" -v
 uv run pytest -m "integration and performance" -v
 ```
 
@@ -446,7 +445,7 @@ uv run pytest -m "integration and transformation_validation" -v
 uv run pytest -m "integration and respx_compatibility" -v
 
 # Test zero-vulnerability integration
-uv run pytest -m "integration and zero_vulnerability" -v
+uv run pytest -m "integration and security" -v
 
 # Test 887.9% throughput improvement validation
 uv run pytest -m "integration and throughput_validation" -v

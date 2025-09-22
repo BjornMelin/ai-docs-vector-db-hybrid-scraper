@@ -58,12 +58,12 @@ This modernized benchmark suite uses **actual system components** instead of moc
 
 ```bash
 # Run all modernized benchmarks
-uv run python scripts/run_benchmarks.py
+uv run python scripts/dev.py benchmark --suite all --output-dir .
 
 # Run specific benchmark category
-uv run python scripts/run_benchmarks.py core
-uv run python scripts/run_benchmarks.py database
-uv run python scripts/run_benchmarks.py config
+uv run python scripts/dev.py benchmark --suite performance --output-dir .
+uv run python scripts/dev.py benchmark --suite database --output-dir .
+uv run python scripts/dev.py benchmark --suite config --output-dir .
 ```
 
 ### Individual Test Execution
@@ -140,8 +140,11 @@ async def real_qdrant_service(self):
 ```yaml
 - name: Run Performance Benchmarks
   run: |
-    uv run python scripts/run_benchmarks.py core
-    uv run pytest --benchmark-compare=benchmark_baseline.json
+    uv run python scripts/dev.py benchmark \
+      --suite performance \
+      --output-dir . \
+      --compare-baseline \
+      --baseline benchmark_baseline.json
 ```
 
 ## 🛠 Benchmark Configuration
@@ -249,12 +252,12 @@ This modernized benchmark suite uses **actual system components** instead of moc
 
 ```bash
 # Run all modernized benchmarks
-uv run python scripts/run_benchmarks.py
+uv run python scripts/dev.py benchmark --suite all --output-dir .
 
 # Run specific benchmark category
-uv run python scripts/run_benchmarks.py core
-uv run python scripts/run_benchmarks.py database
-uv run python scripts/run_benchmarks.py config
+uv run python scripts/dev.py benchmark --suite performance --output-dir .
+uv run python scripts/dev.py benchmark --suite database --output-dir .
+uv run python scripts/dev.py benchmark --suite config --output-dir .
 ```
 
 ### Individual Test Execution
@@ -331,8 +334,11 @@ async def real_qdrant_service(self):
 ```yaml
 - name: Run Performance Benchmarks
   run: |
-    uv run python scripts/run_benchmarks.py core
-    uv run pytest --benchmark-compare=benchmark_baseline.json
+    uv run python scripts/dev.py benchmark \
+      --suite performance \
+      --output-dir . \
+      --compare-baseline \
+      --baseline benchmark_baseline.json
 ```
 
 ## 🛠 Benchmark Configuration

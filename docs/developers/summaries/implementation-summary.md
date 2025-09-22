@@ -190,10 +190,10 @@ class HealthStatus(str, Enum):
 - **Auto-provisioning** of dashboards and datasources
 - **Persistent storage** for metrics and configurations
 
-### Management Scripts
+### Management Commands
 
-- `scripts/start-monitoring.sh` - Automated stack startup with health checks
-- `scripts/stop-monitoring.sh` - Clean shutdown and resource cleanup
+- `python scripts/dev.py services start --stack monitoring` - Automated stack startup with health checks
+- `python scripts/dev.py services stop --stack monitoring` - Clean shutdown and resource cleanup
 
 ## 📊 Performance Impact Analysis
 
@@ -281,8 +281,7 @@ config/
 docker-compose.monitoring.yml
 docker-compose.override.yml
 scripts/
-├── start-monitoring.sh
-└── stop-monitoring.sh
+└── dev.py
 
 tests/unit/services/monitoring/
 ├── __init__.py

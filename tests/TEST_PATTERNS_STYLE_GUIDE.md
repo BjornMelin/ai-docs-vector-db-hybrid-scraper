@@ -170,7 +170,7 @@ def document_chunks(draw) -> Dict[str, Any]:
     }
 
 @pytest.mark.property_based
-@pytest.mark.ai_ml
+@pytest.mark.ai
 @given(embedding_vectors())
 @settings(max_examples=50, deadline=5000)
 async def test_embedding_properties(
@@ -193,7 +193,7 @@ async def test_embedding_properties(
     assert magnitude <= 1.01  # Allow small floating point error
 
 @pytest.mark.property_based
-@pytest.mark.ai_ml
+@pytest.mark.ai
 @given(document_chunks())
 async def test_document_processing_properties(
     document_chunk: Dict[str, Any],
@@ -305,7 +305,7 @@ from src.security.models import SecurityThreat
 import pytest
 
 @pytest.mark.security
-@pytest.mark.zero_vulnerability
+@pytest.mark.security
 async def test_input_validation_security(
     security_validator: SecurityValidator
 ) -> None:
@@ -331,7 +331,7 @@ async def test_input_validation_security(
         assert result.blocked is True
 
 @pytest.mark.security
-@pytest.mark.zero_vulnerability
+@pytest.mark.security
 async def test_authentication_security_patterns(
     auth_service: AuthenticationService
 ) -> None:
@@ -353,7 +353,7 @@ async def test_authentication_security_patterns(
             await auth_service.validate_token(attempt["token"])
 
 @pytest.mark.security
-@pytest.mark.zero_vulnerability
+@pytest.mark.security
 async def test_data_sanitization_security(
     data_sanitizer: DataSanitizer
 ) -> None:
@@ -769,26 +769,23 @@ test_data = (TestDataBuilder()
 ### Portfolio ULTRATHINK Achievement Markers
 
 ```python
-@pytest.mark.modern
-@pytest.mark.dependency_injection
+@pytest.mark.unit
 async def test_clean_di_patterns() -> None:
     """Test clean dependency injection patterns."""
     pass
 
-@pytest.mark.property_based
-@pytest.mark.ai_ml
+@pytest.mark.property
+@pytest.mark.ai
 async def test_ai_ml_properties() -> None:
     """Test AI/ML operations with property-based testing."""
     pass
 
-@pytest.mark.zero_vulnerability
 @pytest.mark.security
 async def test_security_validation() -> None:
     """Test zero-vulnerability security patterns."""
     pass
 
 @pytest.mark.performance
-@pytest.mark.transformation_validation
 async def test_performance_improvement() -> None:
     """Test Portfolio ULTRATHINK performance improvements."""
     pass
@@ -797,22 +794,19 @@ async def test_performance_improvement() -> None:
 ### Performance Markers
 
 ```python
-@pytest.mark.slow
 @pytest.mark.performance
-@pytest.mark.benchmark
+@pytest.mark.slow
 async def test_large_data_processing() -> None:
     """Test processing large datasets with Portfolio ULTRATHINK optimization."""
     pass
 
 @pytest.mark.benchmark
-@pytest.mark.transformation_validation
 def test_throughput_improvement(benchmark) -> None:
     """Benchmark 887.9% throughput improvement validation."""
     result = benchmark(optimized_function)
     assert result is not None
 
 @pytest.mark.performance
-@pytest.mark.latency_validation
 async def test_latency_reduction() -> None:
     """Test 50.9% latency reduction achievement."""
     pass
@@ -829,7 +823,7 @@ async def test_database_integration() -> None:
     pass
 
 @pytest.mark.network
-@pytest.mark.zero_vulnerability
+@pytest.mark.security
 @pytest.mark.security
 async def test_api_security() -> None:
     """Test API security with zero-vulnerability validation."""
@@ -983,7 +977,7 @@ When updating existing tests to follow Portfolio ULTRATHINK transformation patte
 - [ ] Apply consistent parametrization patterns with AI/ML edge case coverage
 - [ ] Add comprehensive error handling tests with security validation
 - [ ] Ensure **enterprise-grade resource cleanup** patterns
-- [ ] Apply **Portfolio ULTRATHINK achievement markers** (modern, zero_vulnerability, property_based)
+- [ ] Apply **standard achievement markers** (modern, security, property)
 - [ ] Update imports to follow Portfolio ULTRATHINK transformation standards
 
 ### **Quality Validation** ✅

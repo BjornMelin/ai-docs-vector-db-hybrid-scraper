@@ -13,7 +13,7 @@ from src.security import SecurityError, SecurityValidator
 
 
 @pytest.mark.security
-@pytest.mark.compliance
+@pytest.mark.security
 class TestOWASPTop10Compliance:
     """Test OWASP Top 10 2021 compliance."""
 
