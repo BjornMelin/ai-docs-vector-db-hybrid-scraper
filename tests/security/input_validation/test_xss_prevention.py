@@ -43,7 +43,7 @@ class TestXSSPrevention:
         ]
 
     @pytest.fixture
-    def xss_payloads(self):
+    def advanced_xss_payloads(self):
         """Advanced XSS payloads with encoding and obfuscation."""
         return [
             # JavaScript protocol variations
