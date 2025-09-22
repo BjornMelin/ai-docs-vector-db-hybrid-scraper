@@ -399,7 +399,7 @@ class TestInstrumentationIntegration:
 
     def test_error_handling_with_mocked_tracer(self, mock_tracer):
         """Test error handling with mocked tracer."""
-        tracer, span = mock_tracer
+        _tracer, span = mock_tracer
 
         @instrument_function("error_test")
         def failing_function():
