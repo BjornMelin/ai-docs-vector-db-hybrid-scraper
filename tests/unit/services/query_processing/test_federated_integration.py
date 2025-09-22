@@ -214,7 +214,8 @@ class TestSearchModeIntegration:
 
                 async def failing_search(collection_name, _request):
                     if collection_name == "api":
-                        raise Exception("Collection failed")
+                        error_message = "Collection failed"
+                        raise RuntimeError(error_message)
                     return CollectionSearchResult(
                         collection_name=collection_name,
                         results=[],

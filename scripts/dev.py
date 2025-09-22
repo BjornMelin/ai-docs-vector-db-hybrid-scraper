@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -21,6 +22,19 @@ if TYPE_CHECKING:
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DOCS_ROOT = PROJECT_ROOT / "docs"
+
+
+def _normalize_command(command: Sequence[str | os.PathLike[str]]) -> list[str]:
+    """Convert supported command tokens into plain strings."""
+
+    normalized: list[str] = []
+    for token in command:
+        token_str = os.fspath(token)
+        if "\x00" in token_str:
+            msg = "Command tokens must not contain NUL characters."
+            raise ValueError(msg)
+        normalized.append(token_str)
+    return normalized
 
 
 @dataclass(frozen=True)
@@ -55,15 +69,16 @@ PYTEST_PROFILES: dict[str, PytestProfile] = {
 
 
 def run_command(
-    command: Sequence[str],
+    command: Sequence[str | os.PathLike[str]],
     *,
     cwd: Path | None = PROJECT_ROOT,
     env: dict[str, str] | None = None,
 ) -> int:
     """Run a command and stream its output."""
 
-    print(f"$ {' '.join(command)}")
-    result = subprocess.run(command, cwd=cwd, env=env, check=False)
+    normalized = _normalize_command(command)
+    print(f"$ {shlex.join(normalized)}")
+    result = subprocess.run(normalized, cwd=cwd, env=env, check=False)
     if result.returncode != 0:
         print(f"Command exited with status {result.returncode}", file=sys.stderr)
     return result.returncode
@@ -333,10 +348,25 @@ def _compose_base_command() -> list[str]:
     """Determine the docker compose executable to use."""
 
     if docker := shutil.which("docker"):
-        return [docker, "compose"]
+        compose_probe = subprocess.run(  # noqa: S603
+            _normalize_command([docker, "compose", "version"]),
+            check=False,
+            capture_output=True,
+        )
+        if compose_probe.returncode == 0:
+            return [docker, "compose"]
     if compose := shutil.which("docker-compose"):
         return [compose]
-    message = "docker compose is required but not available on PATH"
+    message = (
+        "Docker Compose is required but was not found on your PATH.\n"
+        "Please install Docker Compose:\n"
+        "  - For Docker Compose v2 (recommended): "
+        "https://docs.docker.com/compose/install/\n"
+        "  - Or install legacy docker-compose: "
+        "https://docs.docker.com/compose/compose-v1/\n"
+        "After installation, ensure 'docker compose' or 'docker-compose' "
+        "is available in your terminal."
+    )
     raise RuntimeError(message)
 
 
@@ -349,7 +379,7 @@ def _compose_command(
     if action == "start":
         command.extend(["up", "-d"])
     elif action == "stop":
-        command.append("down" if not services else "stop")
+        command.append("stop" if services else "down")
     else:
         command.append("ps")
 
@@ -423,8 +453,7 @@ def cmd_quality(args: argparse.Namespace) -> int:
     lint_cmd = ["uv", "run", "ruff", "check", "."]
     if args.fix_lint:
         lint_cmd.append("--fix")
-    commands.append(lint_cmd)
-    commands.append(["uv", "run", "pyright"])
+    commands.extend((lint_cmd, ["uv", "run", "pyright"]))
 
     exit_code = 0
     for command in commands:

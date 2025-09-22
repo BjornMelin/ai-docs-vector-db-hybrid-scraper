@@ -4,10 +4,60 @@
 import os
 import subprocess
 import sys
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 import click
-import uvicorn  # type: ignore[import]
+import uvicorn
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DEV_SCRIPT = REPO_ROOT / "scripts" / "dev.py"
+
+BENCHMARK_SUITES: dict[str, str] = {
+    "standard": "performance",
+    "performance": "performance",
+    "integration": "integration",
+    "all": "all",
+}
+
+
+def _normalize_command(command: Sequence[str | os.PathLike[str]]) -> list[str]:
+    """Convert command arguments into safe string tokens."""
+
+    normalized: list[str] = []
+    for token in command:
+        token_str = os.fspath(token)
+        if "\x00" in token_str:
+            msg = "Command tokens must not contain NUL characters."
+            raise ValueError(msg)
+        normalized.append(token_str)
+    return normalized
+
+
+def _run_command(
+    command: Sequence[str | os.PathLike[str]],
+    *,
+    check: bool = False,
+    capture_output: bool = False,
+    **kwargs: Any,
+) -> subprocess.CompletedProcess[Any]:
+    """Execute a subprocess with defensively normalised arguments."""
+
+    normalized = _normalize_command(command)
+    return subprocess.run(
+        normalized,
+        check=check,
+        capture_output=capture_output,
+        **kwargs,
+    )
+
+
+def _dev_script_command(*args: str) -> list[str | os.PathLike[str]]:
+    """Build an invocation of the shared dev helper script."""
+
+    return [sys.executable, DEV_SCRIPT, *args]
 
 
 @click.group()
@@ -51,13 +101,9 @@ def test(
 ):
     """Run test suite with optimized feedback loops."""
 
-    cmd = [
-        sys.executable,
-        "scripts/dev.py",
-        "test",
-        "--profile",
-        profile,
-    ]
+    cmd: list[str | os.PathLike[str]] = _dev_script_command(
+        "test", "--profile", profile
+    )
 
     if coverage:
         cmd.append("--coverage")
@@ -70,7 +116,7 @@ def test(
         cmd.extend(extra_args)
 
     click.echo(f"🧪 Running {profile} test profile")
-    subprocess.run(cmd, check=False)
+    _run_command(cmd)
 
 
 @cli.command()
@@ -96,19 +142,11 @@ def setup():
 
     # Install pre-commit hooks
     click.echo("🪝 Installing pre-commit hooks...")
-    subprocess.run(
-        ["uv", "run", "pre-commit", "install"],  # noqa: S607
-        check=False,
-        capture_output=True,
-    )
+    _run_command(["uv", "run", "pre-commit", "install"], capture_output=True)
 
     # Validate configuration
     click.echo("✅ Validating configuration...")
-    subprocess.run(
-        [sys.executable, "scripts/dev.py", "validate"],
-        check=False,
-        capture_output=True,
-    )
+    _run_command(_dev_script_command("validate"), capture_output=True)
 
     click.echo("✅ Setup complete! Run 'task dev' to start development.")
 
@@ -119,18 +157,14 @@ def setup():
 def quality(skip_format: bool, fix_lint: bool):
     """Run code quality checks (format, lint, typecheck)."""
 
-    cmd = [
-        sys.executable,
-        "scripts/dev.py",
-        "quality",
-    ]
+    cmd: list[str | os.PathLike[str]] = _dev_script_command("quality")
     if skip_format:
         cmd.append("--skip-format")
     if fix_lint:
         cmd.append("--fix-lint")
 
     click.echo("🔍 Running code quality checks...")
-    result = subprocess.run(cmd, check=False)
+    result = _run_command(cmd)
 
     if result.returncode == 0:
         click.echo("✅ All quality checks passed!")
@@ -145,10 +179,7 @@ def quality(skip_format: bool, fix_lint: bool):
 def docs(host: str, port: int):
     """Serve documentation locally"""
     click.echo(f"📚 Starting documentation server at http://{host}:{port}")
-    subprocess.run(
-        ["mkdocs", "serve", "--host", host, "--port", str(port)],  # noqa: S607
-        check=False,
-    )
+    _run_command(["mkdocs", "serve", "--host", host, "--port", str(port)])
 
 
 @cli.command()
@@ -162,38 +193,29 @@ def docs(host: str, port: int):
 def services(action: str, stack: str, skip_health_check: bool):
     """Manage local services (Qdrant, monitoring stack)."""
 
-    cmd = [
-        sys.executable,
-        "scripts/dev.py",
+    cmd: list[str | os.PathLike[str]] = _dev_script_command(
         "services",
         action,
         "--stack",
         stack,
-    ]
+    )
     if skip_health_check:
         cmd.append("--skip-health-check")
 
     click.echo(f"🚀 Services command: {action} ({stack})")
-    subprocess.run(cmd, check=False)
+    _run_command(cmd)
 
 
 @cli.command()
-@click.option("--profile", default="standard")
+@click.option(
+    "--profile", type=click.Choice(tuple(BENCHMARK_SUITES)), default="standard"
+)
 def benchmark(profile: str):
     """Run performance benchmarks."""
 
     click.echo(f"⚡ Running {profile} benchmark profile...")
-    suite_map = {
-        "standard": "performance",
-        "performance": "performance",
-        "integration": "integration",
-        "all": "all",
-    }
-    suite = suite_map.get(profile, "performance")
-    subprocess.run(
-        [sys.executable, "scripts/dev.py", "benchmark", "--suite", suite],
-        check=False,
-    )
+    suite = BENCHMARK_SUITES.get(profile, "performance")
+    _run_command(_dev_script_command("benchmark", "--suite", suite))
 
 
 @cli.command()
@@ -202,14 +224,8 @@ def validate():
 
     click.echo("🔍 Validating project configuration...")
 
-    result = subprocess.run(
-        [
-            sys.executable,
-            "scripts/dev.py",
-            "validate",
-            "--check-docs",
-        ],
-        check=False,
+    result = _run_command(
+        _dev_script_command("validate", "--check-docs"),
     )
 
     if result.returncode == 0:
