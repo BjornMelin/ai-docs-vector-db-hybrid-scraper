@@ -505,7 +505,13 @@ class ServiceDiscovery:
                         },
                     }
 
-                except (TimeoutError, Exception) as e:
+                except (
+                    TimeoutError,
+                    asyncpg.PostgresError,
+                    ConnectionError,
+                    OSError,
+                    ValueError,
+                ) as e:
                     self.logger.debug(
                         f"Database connection failed: {e}"
                     )  # TODO: Convert f-string to logging format

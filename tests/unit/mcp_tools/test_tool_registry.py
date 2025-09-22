@@ -58,11 +58,9 @@ class TestToolRegistryBehavior:
         # The exact behavior depends on implementation, but it should not crash
         try:
             await register_all_tools(mock_mcp, mock_client_manager)
-        except Exception as e:
+        except (ConnectionError, TimeoutError) as e:
             # If an exception is raised, it should be a controlled error
-            assert "Service unavailable" in str(e) or isinstance(
-                e, (ConnectionError, TimeoutError)
-            )
+            assert "Service unavailable" in str(e)
 
     @pytest.mark.asyncio
     async def test_logs_registration_progress(

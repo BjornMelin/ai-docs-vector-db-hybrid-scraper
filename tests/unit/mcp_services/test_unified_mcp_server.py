@@ -304,7 +304,7 @@ class TestLifespanContextManager:
 
                     # Verify cleanup was called
                     assert mock_client_manager.cleanup.called
-                except Exception:
+                except RuntimeError:
                     # Expected if internal components aren't fully mocked
                     # The test focuses on boundary behavior
                     pass
@@ -356,7 +356,7 @@ class TestLifespanContextManager:
                 async with unified_mcp_server.lifespan():
                     # Simulate operation during lifespan
                     pass
-            except Exception:
+            except RuntimeError:
                 # Expected if internal components need setup
                 pass
 
