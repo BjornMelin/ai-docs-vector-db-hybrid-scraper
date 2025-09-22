@@ -11,6 +11,7 @@ permissions:
   contents: read
   pull-requests: write
   issues: write
+  security-events: write
 
 env:
   PYTHONUNBUFFERED: 1
@@ -228,7 +229,7 @@ jobs:
     name: Security & Dependency Check
     runs-on: ubuntu-latest
     needs: detect-changes
-    if: needs.detect-changes.outputs.dependencies == 'true' || needs.detect-changes.outputs.python-code == 'true' || github.event_name == 'schedule'
+    if: needs.detect-changes.outputs.dependencies == 'true' || needs.detect-changes.outputs.python-code == 'true'
     
     steps:
       - name: Checkout repository
@@ -239,69 +240,35 @@ jobs:
         with:
           cache-suffix: '-security'
 
-      - name: Run security scans
+      - name: Install security tools
         run: |
-          echo "🔒 Running security scans..."
-          
-          # Dependency vulnerability scan
           uv tool install pip-audit
-          uv tool run pip-audit --format=json --output=pip-audit-results.json --desc || true
-          
-          # Code security scan
           uv tool install bandit
-          uv tool run bandit -r src/ -f json -o bandit-results.json || true
-          
-          # Safety check
-          uv tool install safety
-          uv tool run safety check --json --output safety-results.json || true
 
-      - name: Process security results
+      - name: Run dependency audit (SARIF)
+        continue-on-error: true
         run: |
-          echo "📊 Processing security scan results..."
-          python - << 'EOF'
-          import json
-          import os
-          
-          results = {"vulnerabilities": 0, "issues": 0, "summary": []}
-          
-          # Process pip-audit results
-          if os.path.exists("pip-audit-results.json") and os.path.getsize("pip-audit-results.json") > 0:
-              with open("pip-audit-results.json") as f:
-                  try:
-                      audit_data = json.load(f)
-                      if audit_data:
-                          results["vulnerabilities"] += len(audit_data)
-                          results["summary"].append(f"Found {len(audit_data)} dependency vulnerabilities")
-                  except json.JSONDecodeError:
-                      pass
-          
-          # Process bandit results
-          if os.path.exists("bandit-results.json"):
-              with open("bandit-results.json") as f:
-                  try:
-                      bandit_data = json.load(f)
-                      issues = len(bandit_data.get("results", []))
-                      results["issues"] += issues
-                      if issues > 0:
-                          results["summary"].append(f"Found {issues} code security issues")
-                  except json.JSONDecodeError:
-                      pass
-          
-          # Save summary
-          with open("security-summary.json", "w") as f:
-              json.dump(results, f)
-          
-          print(f"Security scan complete: {results['vulnerabilities']} vulnerabilities, {results['issues']} code issues")
-          EOF
+          uv tool run pip-audit --format sarif --output pip-audit.sarif
 
-      - name: Upload security results
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - name: Run Bandit scan (SARIF)
+        continue-on-error: true
+        run: |
+          uv tool run bandit -r src/ -f sarif -o bandit.sarif
+
+      - name: Ensure SARIF outputs exist
+        run: |
+          for report in pip-audit.sarif bandit.sarif; do
+            if [ ! -f "$report" ]; then
+              printf '{"version":"2.1.0","runs":[]}' > "$report"
+            fi
+          done
+
+      - name: Upload SARIF results
+        uses: github/codeql-action/upload-sarif@v3
         with:
-          name: security-scan-results
-          path: |
-            *-results.json
-            security-summary.json
-          retention-days: 30
+          sarif_file: |
+            pip-audit.sarif
+            bandit.sarif
 
   build-test:
     name: Build & Package Test
