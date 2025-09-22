@@ -337,6 +337,7 @@ ignore = [
     "PLR0913", # Too many arguments (>5)
     "PLR0915", # Too many statements (>50)
     "PLR2004", # Magic value used in comparison
+    "TRY002",  # Reraise exception instead of throwing a new one (project pattern)
 
     # Test-specific overrides
     "S101",    # Use of assert (needed for tests)
