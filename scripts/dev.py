@@ -176,7 +176,7 @@ def _build_integration_benchmark_command(
         "--benchmark-sort=mean",
     ]
     if output:
-        command.append(f"--benchmark-json={output}.integration")
+        command.append(f"--benchmark-json={output}")
     if verbose:
         command.append("-v")
     return command
@@ -192,8 +192,24 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
         else (args.suite,)
     )
 
+    if len(suites) > 1 and args.output and not args.output_dir:
+        print(
+            "⚠️ Ignoring --output because multiple suites are selected; "
+            "use --output-dir for per-suite reports.",
+            file=sys.stderr,
+        )
+        output_override: str | None = None
+    else:
+        output_override = args.output
+
     exit_code = 0
     for suite in suites:
+        output_path = output_override
+        if args.output_dir:
+            target = Path(args.output_dir) / f"{suite}_benchmark_results.json"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            output_path = str(target)
+
         if suite == "performance":
             command = _build_pytest_command(
                 "performance",
@@ -202,10 +218,20 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
                 verbose=args.verbose,
                 extra=[],
             )
-            if args.output:
-                command.append(f"--benchmark-json={args.output}")
+            if output_path:
+                command.append(f"--benchmark-json={output_path}")
         else:
-            command = _build_integration_benchmark_command(args.verbose, args.output)
+            command = _build_integration_benchmark_command(args.verbose, output_path)
+
+        if args.compare_baseline:
+            baseline_path = Path(args.baseline).resolve()
+            if baseline_path.exists():
+                command.append(f"--benchmark-compare={baseline_path}")
+            else:
+                print(
+                    f"⚠️ Baseline file '{baseline_path}' not found; skipping comparison.",
+                    file=sys.stderr,
+                )
 
         print(f"\n⚡ Running {suite} benchmarks")
         exit_code = max(exit_code, run_command(command))
@@ -518,6 +544,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     benchmark_parser.add_argument(
         "--verbose", action="store_true", help="Verbose pytest output."
+    )
+    benchmark_parser.add_argument(
+        "--output-dir",
+        help="Directory where per-suite benchmark JSON reports should be written.",
+    )
+    benchmark_parser.add_argument(
+        "--compare-baseline",
+        action="store_true",
+        help="Compare benchmark results against a stored baseline JSON file.",
+    )
+    benchmark_parser.add_argument(
+        "--baseline",
+        default="benchmark_baseline.json",
+        help="Baseline JSON file used when --compare-baseline is supplied.",
     )
     benchmark_parser.set_defaults(func=cmd_benchmark)
 

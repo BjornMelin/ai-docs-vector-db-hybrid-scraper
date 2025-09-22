@@ -96,11 +96,7 @@ jobs:
           
       - name: Validate documentation links
         run: |
-          if [ -f "scripts/validate_docs_links.py" ]; then
-            uv run python scripts/validate_docs_links.py --check-only
-          else
-            echo "⚠️ Link validation script not found, skipping"
-          fi
+          uv run python scripts/dev.py validate --check-docs --strict
 
   check-naming-convention:
     name: Check File Naming Convention

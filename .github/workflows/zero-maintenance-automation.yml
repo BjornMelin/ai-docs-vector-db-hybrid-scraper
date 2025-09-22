@@ -121,16 +121,12 @@ jobs:
           # Run integration tests
           uv run pytest tests/integration/ -x --tb=short --disable-warnings
           
-          # Run performance benchmarks
-          uv run pytest tests/benchmarks/ --benchmark-only --benchmark-min-rounds=3
-          
-      - name: Performance regression check
-        if: steps.update_deps.outputs.dependency_update_success == 'true'
-        run: |
-          echo "Checking for performance regressions..."
-          
-          # Run performance baseline comparison
-          uv run python scripts/run_benchmarks.py --compare-baseline
+          # Run performance benchmarks with baseline comparison
+          uv run python scripts/dev.py benchmark \
+            --suite all \
+            --output-dir "." \
+            --compare-baseline \
+            --baseline benchmark_baseline.json
           
       - name: Generate update summary
         if: steps.update_deps.outputs.dependency_update_success == 'true'

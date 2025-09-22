@@ -87,10 +87,9 @@ jobs:
         run: |
           echo "⚡ Running ${{ matrix.benchmark-suite }} performance benchmarks..."
           
-          # Use the benchmark runner script for better control and error handling
-          uv run python scripts/run_benchmarks.py \
-            --suite="${{ matrix.benchmark-suite }}" \
-            --output-dir="."
+          uv run python scripts/dev.py benchmark \
+            --suite "${{ matrix.benchmark-suite }}" \
+            --output-dir "."
           
           # Ensure output file exists even on failure
           OUTPUT_FILE="${{ matrix.benchmark-suite }}_benchmark_results.json"
