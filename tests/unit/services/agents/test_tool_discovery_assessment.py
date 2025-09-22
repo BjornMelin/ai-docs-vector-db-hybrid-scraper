@@ -4,7 +4,6 @@ Tests for capability assessment, performance-driven selection and performance tr
 """
 
 import asyncio
-import time
 from unittest.mock import Mock
 from uuid import uuid4
 
@@ -18,7 +17,6 @@ from src.services.agents.core import (
 )
 from src.services.agents.dynamic_tool_discovery import (
     DynamicToolDiscovery,
-    ToolCapability,
     ToolCapabilityType,
     ToolMetrics,
 )

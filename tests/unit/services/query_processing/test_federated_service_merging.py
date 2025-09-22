@@ -3,9 +3,6 @@
 Tests for result merging strategies, deduplication, quality metrics, and caching functionality.
 """
 
-import asyncio
-from unittest.mock import patch
-
 import pytest
 
 from src.services.query_processing.federated import (

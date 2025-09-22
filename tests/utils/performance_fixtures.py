@@ -66,7 +66,7 @@ def async_loop():
 
         # Wait for cancellation to complete
         if pending:
-            await asyncio.gather(*pending, return_exceptions=True)
+            loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
 
         loop.close()
     except (RuntimeError, OSError, AttributeError) as e:

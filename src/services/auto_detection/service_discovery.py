@@ -351,7 +351,7 @@ class ServiceDiscovery:
         their respective client libraries for direct connection testing.
         """
         try:
-            reader, writer = await asyncio.wait_for(
+            _reader, writer = await asyncio.wait_for(
                 asyncio.open_connection(host, port), timeout=timeout
             )
             writer.close()
@@ -445,7 +445,7 @@ class ServiceDiscovery:
         """Test Qdrant gRPC availability for performance optimization."""
         try:
             # Quick TCP test for gRPC port availability
-            reader, writer = await asyncio.wait_for(
+            _reader, writer = await asyncio.wait_for(
                 asyncio.open_connection(host, port), timeout=1.0
             )
             writer.close()
@@ -505,7 +505,13 @@ class ServiceDiscovery:
                         },
                     }
 
-                except (TimeoutError, Exception) as e:
+                except (
+                    TimeoutError,
+                    asyncpg.PostgresError,
+                    ConnectionError,
+                    OSError,
+                    ValueError,
+                ) as e:
                     self.logger.debug(
                         f"Database connection failed: {e}"
                     )  # TODO: Convert f-string to logging format

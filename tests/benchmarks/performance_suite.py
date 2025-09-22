@@ -11,17 +11,25 @@ import os
 import random
 import statistics
 import time
+from collections.abc import Awaitable
 from dataclasses import dataclass, field
 from typing import Any
 
-# Mock classes for testing
 import psutil
 import pytest
 
-# Mock imports - these modules might not exist, so we'll create mocks
 from src.config import CacheConfig, get_settings
 from src.services.embeddings.manager import EmbeddingManager
 from src.services.vector_db.service import QdrantService
+
+
+def run_async(coro: Awaitable[Any]) -> Any:
+    """Run a coroutine in an isolated event loop for synchronous wrappers."""
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
 
 
 class EmbeddingCache:
@@ -322,7 +330,7 @@ class Sampleclass{i}:
         processor = ParallelProcessor(mock_process_batch, config)
 
         start_time = time.time()
-        parallel_results, metrics = await processor.process_batch_parallel(test_items)
+        _parallel_results, metrics = await processor.process_batch_parallel(test_items)
         parallel_time_ms = (time.time() - start_time) * 1000
 
         # Calculate performance metrics
@@ -779,7 +787,7 @@ class VectorSearch:
 
                 return results
 
-            return await generate_embeddings()
+            return run_async(generate_embeddings())
 
         # Run benchmark with pytest-benchmark
         results = benchmark(generate_embeddings_sync)
@@ -865,7 +873,7 @@ class VectorSearch:
 
                 return search_results
 
-            return await vector_search()
+            return run_async(vector_search())
 
         # Run benchmark
         results = benchmark(vector_search_sync)
@@ -921,7 +929,7 @@ class VectorSearch:
                     "warm_results": len(warm_results),
                 }
 
-            return await cache_performance()
+            return run_async(cache_performance())
 
         # Run benchmark
         results = benchmark(cache_performance_sync)
@@ -976,7 +984,7 @@ class VectorSearch:
                     "operations": len(test_texts),
                 }
 
-            return await concurrent_operations()
+            return run_async(concurrent_operations())
 
         # Run benchmark
         results = benchmark(concurrent_operations_sync)
@@ -1033,7 +1041,7 @@ class VectorSearch:
                     "operations": len(results),
                 }
 
-            return await memory_usage()
+            return run_async(memory_usage())
 
         # Run benchmark
         results = benchmark(memory_usage_sync)
@@ -1111,4 +1119,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    await main()
+    asyncio.run(main())

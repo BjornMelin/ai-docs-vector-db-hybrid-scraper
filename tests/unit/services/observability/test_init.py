@@ -1,6 +1,6 @@
 """Tests for OpenTelemetry initialization."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import src.services.observability.init as init_module
 from src.services.observability.config import ObservabilityConfig

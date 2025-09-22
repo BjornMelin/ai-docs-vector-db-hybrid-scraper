@@ -393,26 +393,22 @@ class TestPerformanceTargets:
 class TestBenchmarkTargets:
     """Benchmark tests for specific performance metrics."""
 
-
     @pytest.mark.asyncio
-
     async def test_hnsw_optimization_benchmark(self, benchmark, mock_qdrant_client):
         """Benchmark HNSW optimization performance."""
         optimizer = QdrantOptimizer(mock_qdrant_client)
 
-        def create_optimized_collection():
+        async def create_optimized_collection():
             """Benchmark function for collection creation."""
 
-            return await 
-                optimizer.create_optimized_collection("benchmark_collection", 384
+            return await optimizer.create_optimized_collection(
+                "benchmark_collection", 384
             )
 
-        result = benchmark(create_optimized_collection)
+        result = await benchmark.async_runner(create_optimized_collection)
         assert result, "Failed to create optimized collection in benchmark"
 
-
     @pytest.mark.asyncio
-
     async def test_cache_performance_benchmark(self, benchmark, redis_url):
         """Benchmark cache performance."""
 
@@ -429,8 +425,5 @@ class TestBenchmarkTargets:
             finally:
                 await cache.cleanup()
 
-        def run_cache_benchmark():
-            return await cache_operations()
-
-        result = benchmark(run_cache_benchmark)
+        result = await benchmark.async_runner(cache_operations)
         assert result, "Cache benchmark failed"

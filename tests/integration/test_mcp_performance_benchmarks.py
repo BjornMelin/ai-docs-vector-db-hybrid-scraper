@@ -292,7 +292,7 @@ class TestMCPPerformanceBenchmarks:
     @pytest.mark.asyncio
     async def test_search_performance_benchmark(self, benchmark_server):
         """Benchmark search operation performance."""
-        mcp_server, mock_client_manager = benchmark_server
+        mcp_server, _mock_client_manager = benchmark_server
         thresholds = _get_performance_thresholds()
 
         search_tool = None
@@ -345,7 +345,7 @@ class TestMCPPerformanceBenchmarks:
     @pytest.mark.asyncio
     async def test_embedding_generation_performance(self, benchmark_server):
         """Benchmark embedding generation performance."""
-        mcp_server, mock_client_manager = benchmark_server
+        mcp_server, _mock_client_manager = benchmark_server
         thresholds = _get_performance_thresholds()
 
         embedding_tool = None
@@ -387,7 +387,7 @@ class TestMCPPerformanceBenchmarks:
     @pytest.mark.asyncio
     async def test_mixed_workload_performance(self, benchmark_server):
         """Benchmark mixed workload with multiple tool types."""
-        mcp_server, mock_client_manager = benchmark_server
+        mcp_server, _mock_client_manager = benchmark_server
         thresholds = _get_performance_thresholds()
 
         # Find tools
@@ -438,7 +438,7 @@ class TestMCPPerformanceBenchmarks:
     @pytest.mark.asyncio
     async def test_sustained_load_performance(self, benchmark_server):
         """Test performance under sustained load over time."""
-        mcp_server, mock_client_manager = benchmark_server
+        mcp_server, _mock_client_manager = benchmark_server
         thresholds = _get_performance_thresholds()
 
         search_tool = None
@@ -531,7 +531,7 @@ class TestMCPPerformanceBenchmarks:
     @pytest.mark.asyncio
     async def test_spike_load_handling(self, benchmark_server):
         """Test handling of sudden load spikes."""
-        mcp_server, mock_client_manager = benchmark_server
+        mcp_server, _mock_client_manager = benchmark_server
         thresholds = _get_performance_thresholds()
 
         search_tool = None
@@ -632,7 +632,7 @@ class TestMCPPerformanceBenchmarks:
     @pytest.mark.asyncio
     async def test_memory_leak_detection(self, benchmark_server):
         """Test for memory leaks under repeated operations."""
-        mcp_server, mock_client_manager = benchmark_server
+        mcp_server, _mock_client_manager = benchmark_server
 
         search_tool = None
         for tool in mcp_server._tools:
@@ -690,7 +690,7 @@ class TestMCPPerformanceBenchmarks:
     @pytest.mark.asyncio
     async def test_concurrent_tool_performance(self, benchmark_server):
         """Test performance of different tools running concurrently."""
-        mcp_server, mock_client_manager = benchmark_server
+        mcp_server, _mock_client_manager = benchmark_server
 
         # Find multiple tools
         tools = {}
@@ -810,7 +810,7 @@ class TestMCPResourceOptimization:
     @pytest.mark.asyncio
     async def test_connection_pooling_efficiency(self, benchmark_server):
         """Test efficiency of connection pooling under load."""
-        mcp_server, mock_client_manager = benchmark_server
+        mcp_server, _mock_client_manager = benchmark_server
 
         search_tool = None
         for tool in mcp_server._tools:
@@ -863,7 +863,7 @@ class TestMCPResourceOptimization:
     @pytest.mark.asyncio
     async def test_batch_processing_optimization(self, benchmark_server):
         """Test optimization through batch processing."""
-        mcp_server, mock_client_manager = benchmark_server
+        mcp_server, _mock_client_manager = benchmark_server
 
         embedding_tool = None
         for tool in mcp_server._tools:

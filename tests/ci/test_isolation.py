@@ -1,16 +1,15 @@
-"""Test isolation utilities for parallel test execution.
+"""Test isolation utilities to support reliable parallel pytest execution."""
 
-This module provides utilities to ensure proper test isolation
-when running tests in parallel with pytest-xdist.
-"""
-
+import asyncio
 import os
+import shutil
+import socket
 import tempfile
+import time
 import uuid
 from collections.abc import Generator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from pathlib import Path
-from typing import Any, Dict, Optional
 
 import pytest
 
@@ -18,7 +17,7 @@ import pytest
 class IsolatedTestResources:
     """Manages isolated resources for parallel test execution."""
 
-    def __init__(self, worker_id: str = None):
+    def __init__(self, worker_id: str | None = None):
         self.worker_id = worker_id or os.getenv("PYTEST_XDIST_WORKER", "master")
         self.is_parallel = self.worker_id != "master"
         self._temp_dirs = []
@@ -44,7 +43,6 @@ class IsolatedTestResources:
         """Get an isolated port number for this test worker."""
         if not self.is_parallel:
             # For non-parallel execution, use dynamic port allocation
-            import socket
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.bind(("", 0))
                 s.listen(1)
@@ -66,7 +64,6 @@ class IsolatedTestResources:
         for port in range(start_port, start_port + 100):
             if port not in self._allocated_ports:
                 # Check if port is actually available
-                import socket
                 try:
                     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                         s.bind(("127.0.0.1", port))
@@ -75,7 +72,8 @@ class IsolatedTestResources:
                 except OSError:
                     continue
 
-        raise RuntimeError(f"No free ports available for worker {self.worker_id}")
+        message = f"No free ports available for worker {self.worker_id}"
+        raise RuntimeError(message)
 
     def get_isolated_database_name(self, base_name: str = "test_db") -> str:
         """Get an isolated database name for this test worker."""
@@ -91,14 +89,11 @@ class IsolatedTestResources:
 
     def cleanup(self):
         """Clean up allocated resources."""
-        import shutil
 
         for temp_dir in self._temp_dirs:
             if temp_dir.exists():
-                try:
+                with suppress(Exception):
                     shutil.rmtree(temp_dir)
-                except Exception:
-                    pass
 
         self._temp_dirs.clear()
         self._allocated_ports.clear()
@@ -148,8 +143,10 @@ def isolated_environment_variables(**kwargs) -> Generator[dict[str, str]]:
         original_env[key] = os.environ.get(key)
         # Add worker ID to environment variable values for isolation
         if worker_id != "master" and isinstance(value, str):
-            value = f"{value}_{worker_id}"
-        os.environ[key] = str(value)
+            isolated_value = f"{value}_{worker_id}"
+        else:
+            isolated_value = value
+        os.environ[key] = str(isolated_value)
 
     try:
         yield dict(os.environ)
@@ -170,8 +167,6 @@ class IsolatedAsyncioPolicy:
         self._original_policy = None
 
     def __enter__(self):
-        import asyncio
-
         # Store original policy
         self._original_policy = asyncio.get_event_loop_policy()
 
@@ -184,8 +179,6 @@ class IsolatedAsyncioPolicy:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        import asyncio
-
         # Close any running loops
         try:
             loop = asyncio.get_event_loop()
@@ -237,18 +230,16 @@ class TestDataIsolation:
         return data_dir / filename
 
 
-# Import time for timestamp generation
-import time
-
-
 # Pytest marker for tests that require isolation
 pytest.mark.isolated = pytest.mark.isolated
 
 
 def requires_isolation(reason: str = "Test requires resource isolation"):
     """Decorator to mark tests that require special isolation."""
+
     def decorator(func):
         return pytest.mark.isolated(func, reason=reason)
+
     return decorator
 
 

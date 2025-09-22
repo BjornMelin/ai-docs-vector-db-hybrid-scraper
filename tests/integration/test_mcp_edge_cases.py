@@ -75,7 +75,7 @@ class TestMCPEdgeCases:
     @pytest.mark.asyncio
     async def test_empty_string_inputs(self, edge_case_server):
         """Test handling of empty string inputs."""
-        mcp_server, mock_client_manager = edge_case_server
+        _mcp_server, _mock_client_manager = edge_case_server
 
         # Test empty query string
         with pytest.raises(ValidationError):
@@ -92,7 +92,7 @@ class TestMCPEdgeCases:
     @pytest.mark.asyncio
     async def test_extremely_long_inputs(self, edge_case_server):
         """Test handling of extremely long input strings."""
-        mcp_server, mock_client_manager = edge_case_server
+        _mcp_server, _mock_client_manager = edge_case_server
 
         # Create extremely long query (10MB)
         long_query = "a" * (10 * 1024 * 1024)
@@ -123,7 +123,7 @@ class TestMCPEdgeCases:
     @pytest.mark.asyncio
     async def test_special_characters_in_inputs(self, edge_case_server):
         """Test handling of special characters and Unicode."""
-        mcp_server, mock_client_manager = edge_case_server
+        _mcp_server, _mock_client_manager = edge_case_server
 
         search_tool = None
         for tool in mcp_server._tools:
@@ -158,7 +158,7 @@ class TestMCPEdgeCases:
     @pytest.mark.asyncio
     async def test_boundary_value_limits(self, edge_case_server):
         """Test boundary values for numeric parameters."""
-        mcp_server, mock_client_manager = edge_case_server
+        _mcp_server, _mock_client_manager = edge_case_server
 
         # Test limit boundaries
         with pytest.raises(ValidationError):
@@ -186,7 +186,7 @@ class TestMCPEdgeCases:
     @pytest.mark.asyncio
     async def test_vector_service_connection_failure(self, edge_case_server):
         """Test handling when vector database is unavailable."""
-        mcp_server, mock_client_manager = edge_case_server
+        mcp_server, _mock_client_manager = edge_case_server
 
         search_tool = None
         for tool in mcp_server._tools:
@@ -209,7 +209,7 @@ class TestMCPEdgeCases:
     @pytest.mark.asyncio
     async def test_embedding_service_timeout(self, edge_case_server):
         """Test handling of embedding service timeouts."""
-        mcp_server, mock_client_manager = edge_case_server
+        _mcp_server, _mock_client_manager = edge_case_server
 
         embedding_tool = None
         for tool in mcp_server._tools:
@@ -234,7 +234,7 @@ class TestMCPEdgeCases:
     @pytest.mark.asyncio
     async def test_crawling_service_failure(self, edge_case_server):
         """Test handling of crawling service failures."""
-        mcp_server, mock_client_manager = edge_case_server
+        mcp_server, _mock_client_manager = edge_case_server
 
         doc_tool = None
         for tool in mcp_server._tools:
@@ -264,7 +264,7 @@ class TestMCPEdgeCases:
     @pytest.mark.asyncio
     async def test_memory_exhaustion_handling(self, edge_case_server):
         """Test handling when approaching memory limits."""
-        mcp_server, mock_client_manager = edge_case_server
+        _mcp_server, _mock_client_manager = edge_case_server
 
         embedding_tool = None
         for tool in mcp_server._tools:
@@ -286,7 +286,7 @@ class TestMCPEdgeCases:
     @pytest.mark.asyncio
     async def test_rate_limiting_scenarios(self, edge_case_server):
         """Test handling of rate limiting from external services."""
-        mcp_server, mock_client_manager = edge_case_server
+        mcp_server, _ = edge_case_server
 
         search_tool = None
         for tool in mcp_server._tools:
@@ -360,7 +360,7 @@ class TestMCPEdgeCases:
     @pytest.mark.asyncio
     async def test_invalid_tool_names(self, edge_case_server):
         """Test handling of requests for non-existent tools."""
-        mcp_server, mock_client_manager = edge_case_server
+        _mcp_server, _ = edge_case_server
 
         # Try to find non-existent tool
         non_existent_tool = None
@@ -374,7 +374,7 @@ class TestMCPEdgeCases:
     @pytest.mark.asyncio
     async def test_missing_required_parameters(self, edge_case_server):
         """Test handling of missing required parameters."""
-        mcp_server, mock_client_manager = edge_case_server
+        _mcp_server, _ = edge_case_server
 
         # Test with missing required fields
         with pytest.raises(ValidationError):
@@ -502,7 +502,7 @@ class TestMCPEdgeCases:
                 "Invalid URL or access denied"
             )
 
-            with pytest.raises(Exception, match="Invalid URL|access denied"):
+            with pytest.raises(Exception, match=r"Invalid URL|access denied"):
                 await doc_tool.handler(
                     url=path,
                     collection="docs",

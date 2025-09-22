@@ -8,18 +8,12 @@ This test module demonstrates:
 """
 
 import logging
-from typing import TYPE_CHECKING
+from contextlib import suppress
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.mcp_tools.tool_registry import register_all_tools
-
-
-if TYPE_CHECKING:
-    from fastmcp import FastMCP
-
-    from src.infrastructure.client_manager import ClientManager
 
 
 class TestToolRegistryBehavior:
@@ -56,19 +50,14 @@ class TestToolRegistryBehavior:
     ):
         """Test that registration handles errors gracefully."""
         # Simulate external service failure
-        mock_client_manager.get_qdrant_client.side_effect = Exception(
+        mock_client_manager.get_qdrant_client.side_effect = ConnectionError(
             "Service unavailable"
         )
 
         # Registration should handle external service errors
         # The exact behavior depends on implementation, but it should not crash
-        try:
+        with pytest.raises(ConnectionError, match="Service unavailable"):
             await register_all_tools(mock_mcp, mock_client_manager)
-        except Exception as e:
-            # If an exception is raised, it should be a controlled error
-            assert "Service unavailable" in str(e) or isinstance(
-                e, (ConnectionError, TimeoutError)
-            )
 
     @pytest.mark.asyncio
     async def test_logs_registration_progress(
@@ -196,13 +185,9 @@ class TestErrorScenarios:
             "Qdrant unavailable"
         )
 
-        with caplog.at_level(logging.ERROR):
+        with caplog.at_level(logging.ERROR), suppress(ConnectionError):
             # The function should handle external service errors gracefully
-            try:
-                await register_all_tools(mock_mcp, mock_client_manager)
-            except ConnectionError:
-                # If an error propagates, it should be the external service error
-                pass
+            await register_all_tools(mock_mcp, mock_client_manager)
 
         # Verify that we attempted to use the external boundary
         assert mock_client_manager.get_qdrant_client.called
@@ -215,12 +200,12 @@ class TestErrorScenarios:
         # Simulate external FastMCP service failure
         mock_mcp.tool.side_effect = RuntimeError("FastMCP service error")
 
-        with caplog.at_level(logging.ERROR):
+        with (
+            caplog.at_level(logging.ERROR),
+            pytest.raises(RuntimeError, match="FastMCP service error"),
+        ):
             # Should handle FastMCP external service errors
-            try:
-                await register_all_tools(mock_mcp, mock_client_manager)
-            except RuntimeError as e:
-                assert "FastMCP service error" in str(e)
+            await register_all_tools(mock_mcp, mock_client_manager)
 
         # Verify we attempted to use the FastMCP boundary
         assert mock_mcp.tool.called

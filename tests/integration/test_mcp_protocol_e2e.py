@@ -646,7 +646,7 @@ class TestMCPPerformance:
     @pytest.mark.asyncio
     async def test_high_frequency_requests(self, performance_server):
         """Test handling high-frequency requests."""
-        mcp_server, mock_client_manager = performance_server
+        mcp_server, _mock_client_manager = performance_server
 
         search_tool = None
         for tool in mcp_server._tools:
@@ -685,7 +685,7 @@ class TestMCPPerformance:
     @pytest.mark.asyncio
     async def test_memory_usage_stability(self, performance_server):
         """Test memory usage remains stable under load."""
-        mcp_server, mock_client_manager = performance_server
+        mcp_server, _mock_client_manager = performance_server
 
         search_tool = None
         for tool in mcp_server._tools:
@@ -715,7 +715,7 @@ class TestMCPPerformance:
     @pytest.mark.asyncio
     async def test_response_time_consistency(self, performance_server):
         """Test response time consistency under varying loads."""
-        mcp_server, mock_client_manager = performance_server
+        mcp_server, _mock_client_manager = performance_server
 
         search_tool = None
         for tool in mcp_server._tools:
