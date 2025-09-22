@@ -165,7 +165,7 @@ observability = [
 # Code parsing tools (optional development features)
 parsing = [
     "tree-sitter>=0.24.0,<0.26.0",
-    "tree-sitter-python>=0.23.6,<0.24.0",
+    "tree-sitter-python>=0.23.6,<0.26.0",
     "tree-sitter-javascript>=0.23.1,<0.24.0",
     "tree-sitter-typescript>=0.23.2,<0.24.0",
 ]
