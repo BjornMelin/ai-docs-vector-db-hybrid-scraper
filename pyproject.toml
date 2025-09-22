@@ -80,7 +80,7 @@ dependencies = [
     "tqdm>=4.67.1,<5.0.0",
     "questionary>=2.1.0,<3.0.0",
     # Monitoring & observability
-    "prometheus-client>=0.21.1,<0.23.0",
+    "prometheus-client>=0.21.1,<0.24.0",
     "prometheus-fastapi-instrumentator>=7.0.0,<8.0.0",
     "psutil>=5.7.2,<8.0.0", # Compatible with taskipy and other dependencies
     # Database & ORM
