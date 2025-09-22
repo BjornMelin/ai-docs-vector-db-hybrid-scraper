@@ -232,8 +232,8 @@ def _is_external_link(link: str) -> bool:
 def _resolve_link_target(source: Path, link: str) -> Path | None:
     """Resolve a documentation link to an absolute path."""
 
-    clean_link = link.split("#", 1)[0]
-    if not clean_link:
+    parts = link.split("#", 1)
+    if (clean_link := parts[0]) == "":
         return source
 
     if clean_link.startswith(("./", "../")):
