@@ -29,7 +29,7 @@ cd ai-docs-vector-db
 uv sync
 
 # Start services and test
-./scripts/start-services.sh
+python scripts/dev.py services start
 uv run pytest tests/unit/ --tb=short -q
 ```
 
@@ -229,7 +229,7 @@ curl localhost:8000/admin/connection-affinity-patterns
 
 ```bash
 # Start Qdrant (vector database) and DragonflyDB (cache)
-./scripts/start-services.sh
+python scripts/dev.py services start
 
 # Verify services are running
 curl localhost:6333/health        # Qdrant health check
@@ -620,7 +620,7 @@ uv run pytest
 
 ```bash
 # Ensure services are running
-./scripts/start-services.sh
+python scripts/dev.py services start
 
 # Check service status
 docker ps

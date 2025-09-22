@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class TestScalabilityLoad:
     """Test suite for scalability validation."""
 
-    @pytest.mark.scalability
+    @pytest.mark.load
     def test_horizontal_scaling_pattern(self, load_test_runner):
         """Test horizontal scaling behavior with increasing load."""
         # Configuration for horizontal scaling test
@@ -123,7 +123,7 @@ class TestScalabilityLoad:
             "Response times degraded significantly during scaling"
         )
 
-    @pytest.mark.scalability
+    @pytest.mark.load
     def test_vertical_scaling_validation(self, load_test_runner):
         """Test vertical scaling (resource increase) effectiveness."""
 
@@ -279,7 +279,7 @@ class TestScalabilityLoad:
             "Vertical scaling not effective"
         )
 
-    @pytest.mark.scalability
+    @pytest.mark.load
     def test_auto_scaling_triggers(self, load_test_runner):
         """Test auto-scaling trigger mechanisms and responsiveness."""
 
@@ -509,7 +509,7 @@ class TestScalabilityLoad:
         )
         assert scaling_analysis["resource_efficiency"] > 0.6, "Poor resource efficiency"
 
-    @pytest.mark.scalability
+    @pytest.mark.load
     def test_database_scaling_limits(self, load_test_runner):
         """Test database scaling limits and connection pool behavior."""
 

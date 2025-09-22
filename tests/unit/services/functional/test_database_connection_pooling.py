@@ -130,7 +130,7 @@ class MockCircuitBreaker:
         return (self.success_count / _total_requests) * 100
 
 
-@pytest.mark.database_pooling
+@pytest.mark.database
 class TestDatabaseConnectionPooling:
     """Test database connection pooling functionality."""
 
@@ -353,7 +353,7 @@ class TestDatabaseConnectionPooling:
         assert mock_predictor.prediction_calls == 10
 
 
-@pytest.mark.database_pooling
+@pytest.mark.database
 class TestAdvancedPoolingFeatures:
     """Test  pooling features."""
 

@@ -79,8 +79,11 @@ EOF
 ## Step 3: Start Enhanced Services Stack
 
 ```bash
-# Start the complete infrastructure (Qdrant + DragonflyDB + Monitoring)
-./scripts/start-services.sh
+# Start the vector infrastructure (Qdrant + DragonflyDB)
+python scripts/dev.py services start
+
+# Optional: launch the monitoring stack
+python scripts/dev.py services start --stack monitoring
 
 # Verify all services are running
 curl localhost:6333/health    # Qdrant Vector DB
@@ -318,7 +321,7 @@ time curl -X POST localhost:8000/api/v1/search \
 
 ```bash
 # Start complete transformation stack
-./scripts/start-services.sh --enterprise
+python scripts/dev.py services start --stack monitoring
 
 # Verify all transformation services
 curl localhost:6333/health      # Qdrant Vector DB

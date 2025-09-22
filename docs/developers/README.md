@@ -67,7 +67,7 @@ cd ai-docs-vector-db
 ./setup.sh
 
 # Start development environment
-./scripts/start-services.sh
+python scripts/dev.py services start
 ```
 
 ### 2. API Testing

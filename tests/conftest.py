@@ -1006,7 +1006,6 @@ def pytest_configure(config):
         "database: mark test as requiring database",
         "network: mark test as requiring network access",
         "redis: mark test as requiring Redis",
-        "async_test: mark test as async test",
         # Test framework markers
         "hypothesis: mark test as property-based test using Hypothesis",
         "property: mark test as property-based test",
@@ -1014,8 +1013,6 @@ def pytest_configure(config):
         # CI/Platform markers
         "ci_only: mark test to run only in CI",
         "local_only: mark test to run only locally",
-        "parallel_safe: mark test as safe for parallel execution",
-        "isolation_required: mark test as requiring complete isolation",
     ]
 
     for marker in markers:
@@ -1038,20 +1035,12 @@ def pytest_collection_modifyitems(config, items):
         elif "/e2e/" in str(item.fspath):
             item.add_marker(pytest.mark.e2e)
 
-        # Auto-mark async tests
-        if asyncio.iscoroutinefunction(item.function):
-            item.add_marker(pytest.mark.async_test)
-
         # Auto-mark based on fixtures used
         if hasattr(item, "fixturenames"):
             fixture_names = item.fixturenames
 
             if "respx_mock" in fixture_names:
                 item.add_marker(pytest.mark.respx)
-            if any(name.startswith("mock_") for name in fixture_names):
-                item.add_marker(pytest.mark.parallel_safe)
-            if "isolated_db_session" in fixture_names:
-                item.add_marker(pytest.mark.isolation_required)
             if "performance_monitor" in fixture_names:
                 item.add_marker(pytest.mark.performance)
 

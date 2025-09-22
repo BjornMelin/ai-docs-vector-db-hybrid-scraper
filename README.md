@@ -110,7 +110,7 @@ cd ai-docs-vector-db-hybrid-scraper
 uv sync --dev
 
 # Start development server (Simple Mode)
-./scripts/start-services.sh
+python scripts/dev.py services start
 uv run python -m src.api.main
 
 # Start with full enterprise features

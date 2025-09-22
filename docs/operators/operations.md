@@ -111,7 +111,7 @@ tar -czf /backup/logs/daily-logs-$(date +%Y%m%d).tar.gz /var/log/ai-docs/
 
 ```bash
 # Start all services
-./scripts/start-services.sh
+python scripts/dev.py services start
 
 # Stop services gracefully
 docker-compose down --timeout 30

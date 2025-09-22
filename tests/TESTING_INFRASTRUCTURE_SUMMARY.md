@@ -134,9 +134,9 @@ uv run pytest tests/load/ -v              # Load tests (887.9% improvement valid
 uv run pytest tests/security/ -v          # Security tests (zero vulnerability validation)
 
 # Run with Portfolio ULTRATHINK markers
-uv run pytest -m "unit and modern" -v     # Modern unit test patterns
-uv run pytest -m "integration and ai_ml" -v  # AI/ML integration tests
-uv run pytest -m "property_based" -v      # Property-based tests with Hypothesis
+uv run pytest -m "unit" -v                # Unit test patterns
+uv run pytest -m "integration and ai" -v  # AI/ML integration tests
+uv run pytest -m "property" -v            # Property-based tests with Hypothesis
 uv run pytest -m "security" -v            # Zero-vulnerability security tests
 
 # Parallel execution with transformation enhancements

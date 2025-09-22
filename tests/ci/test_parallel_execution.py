@@ -253,5 +253,12 @@ if __name__ == "__main__":
     # Run tests with optimal configuration
     import subprocess
 
-    cmd = ["python", "scripts/run_ci_tests.py", "--test-type", "unit", "-v"]
+    cmd = [
+        "python",
+        "scripts/dev.py",
+        "test",
+        "--profile",
+        "ci",
+        "--verbose",
+    ]
     subprocess.run(cmd, check=False)

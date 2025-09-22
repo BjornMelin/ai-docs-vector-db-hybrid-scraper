@@ -21,7 +21,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 
 @pytest.mark.security
-@pytest.mark.encryption
+@pytest.mark.security
 class TestDataProtection:
     """Test data encryption and protection mechanisms."""
 

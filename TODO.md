@@ -150,7 +150,7 @@ All remaining tasks have corresponding Linear issues for tracking and detailed i
   - ✅ **Replaced 395-line custom script with pytest-benchmark integration**
   - ✅ **Industry-standard benchmarking with statistical reliability** 
   - ✅ **Comprehensive test suite**: `tests/benchmarks/test_database_performance.py` (361 lines)
-  - ✅ **Benchmark runner**: `scripts/run_benchmarks.py` (118 lines) with multiple execution options
+  - ✅ **Benchmark runner**: `scripts/dev.py benchmark` with multiple execution options
   - ✅ **Performance validation**: All BJO-134 targets maintained through pytest-benchmark
   - ✅ **Documentation updates**: Clean migration guide and benchmark command reference
   - ✅ **Repository cleanup**: Benchmark artifacts properly gitignored, temporary files removed
