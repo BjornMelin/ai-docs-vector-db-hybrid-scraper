@@ -1,6 +1,6 @@
 """Tests for observability initialization and setup."""
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from src.services.observability.config import ObservabilityConfig
 from src.services.observability.init import (

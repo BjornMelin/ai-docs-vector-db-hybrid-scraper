@@ -5,7 +5,7 @@ including documents, embeddings, and configuration objects.
 """
 
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 

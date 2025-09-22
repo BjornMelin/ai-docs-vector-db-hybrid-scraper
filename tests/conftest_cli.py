@@ -9,7 +9,6 @@ import re
 import sys
 import time
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner

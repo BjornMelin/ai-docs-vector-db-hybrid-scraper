@@ -8,7 +8,7 @@ import logging
 import tempfile
 from io import StringIO
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from src.services.logging_config import (
     LogContext,

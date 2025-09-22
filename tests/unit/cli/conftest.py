@@ -8,11 +8,9 @@ Now includes  Rich CLI testing patterns and interactive flow simulation.
 import asyncio
 import json
 from io import StringIO
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from click.shell_completion import CompletionItem
 from click.testing import CliRunner
 from rich.console import Console
 

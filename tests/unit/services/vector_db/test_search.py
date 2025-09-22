@@ -369,7 +369,7 @@ class TestQdrantSearch:
 
         # Test wrong dimension
         with pytest.raises(
-            ValueError, match="query_vector dimension .* does not match expected"
+            ValueError, match=r"query_vector dimension .* does not match expected"
         ):
             await search_service.filtered_search(
                 collection_name="test_collection",

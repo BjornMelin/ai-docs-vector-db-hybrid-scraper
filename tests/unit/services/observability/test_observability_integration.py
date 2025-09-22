@@ -5,7 +5,7 @@ import pytest
 
 import asyncio
 import time
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from src.services.observability.ai_tracking import (
     get_ai_tracker,

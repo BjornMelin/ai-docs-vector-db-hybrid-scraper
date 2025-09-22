@@ -4,7 +4,6 @@ Tests for result merging strategies, deduplication, quality metrics, and caching
 """
 
 import asyncio
-from unittest.mock import patch
 
 import pytest
 

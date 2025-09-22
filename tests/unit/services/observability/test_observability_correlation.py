@@ -1,6 +1,6 @@
 """Tests for trace correlation and context propagation module."""
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 from opentelemetry import context

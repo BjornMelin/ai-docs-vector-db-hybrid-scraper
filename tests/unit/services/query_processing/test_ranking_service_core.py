@@ -3,23 +3,18 @@
 Tests for service initialization, profile management, and basic ranking functionality.
 """
 
-import asyncio
-from datetime import UTC, datetime, timedelta
-from unittest.mock import patch
+from datetime import UTC, datetime
 
 import pytest
 
 from src.services.query_processing.ranking import (
-    ContentCategory,
     InteractionEvent,
     InteractionType,
     PersonalizedRankingRequest,
     PersonalizedRankingResult,
     PersonalizedRankingService,
-    RankedResult,
     RankingStrategy,
     UserPreference,
-    UserProfile,
 )
 
 
