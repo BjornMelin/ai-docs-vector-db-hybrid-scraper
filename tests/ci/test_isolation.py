@@ -1,6 +1,8 @@
 """Test isolation utilities to support reliable parallel pytest execution."""
 
+import asyncio
 import os
+import shutil
 import socket
 import tempfile
 import time
@@ -70,7 +72,8 @@ class IsolatedTestResources:
                 except OSError:
                     continue
 
-        raise RuntimeError(f"No free ports available for worker {self.worker_id}")
+        message = f"No free ports available for worker {self.worker_id}"
+        raise RuntimeError(message)
 
     def get_isolated_database_name(self, base_name: str = "test_db") -> str:
         """Get an isolated database name for this test worker."""
@@ -86,7 +89,6 @@ class IsolatedTestResources:
 
     def cleanup(self):
         """Clean up allocated resources."""
-        import shutil
 
         for temp_dir in self._temp_dirs:
             if temp_dir.exists():
@@ -141,8 +143,10 @@ def isolated_environment_variables(**kwargs) -> Generator[dict[str, str]]:
         original_env[key] = os.environ.get(key)
         # Add worker ID to environment variable values for isolation
         if worker_id != "master" and isinstance(value, str):
-            value = f"{value}_{worker_id}"
-        os.environ[key] = str(value)
+            isolated_value = f"{value}_{worker_id}"
+        else:
+            isolated_value = value
+        os.environ[key] = str(isolated_value)
 
     try:
         yield dict(os.environ)
@@ -163,8 +167,6 @@ class IsolatedAsyncioPolicy:
         self._original_policy = None
 
     def __enter__(self):
-        import asyncio
-
         # Store original policy
         self._original_policy = asyncio.get_event_loop_policy()
 
@@ -177,8 +179,6 @@ class IsolatedAsyncioPolicy:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        import asyncio
-
         # Close any running loops
         try:
             loop = asyncio.get_event_loop()

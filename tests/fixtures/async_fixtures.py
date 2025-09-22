@@ -9,13 +9,13 @@ from contextlib import asynccontextmanager
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
+import httpx
 import pytest_asyncio
 
 
 @pytest_asyncio.fixture
 async def async_test_client():
     """Async HTTP test client with session management."""
-    import httpx
 
     async with httpx.AsyncClient(
         timeout=httpx.Timeout(30.0),
@@ -72,6 +72,7 @@ async def async_rate_limiter():
                     return await self.acquire()
 
                 self.calls.append(now)
+                return None
 
         async def __aenter__(self):
             await self.acquire()
@@ -95,8 +96,7 @@ async def async_task_manager():
             return task
 
         async def gather(self, *coros):
-            results = await asyncio.gather(*coros, return_exceptions=True)
-            return results
+            return await asyncio.gather(*coros, return_exceptions=True)
 
         async def cancel_all(self):
             for task in tasks:

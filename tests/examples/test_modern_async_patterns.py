@@ -131,7 +131,8 @@ class TestModernAsyncPatterns:
 
             async def perform_operation(self, name: str) -> str:
                 if not self.initialized:
-                    raise RuntimeError("Service not initialized")
+                    error_msg = "Service not initialized"
+                    raise RuntimeError(error_msg)
                 self.operations.append(name)
                 return f"Completed: {name}"
 
@@ -152,9 +153,9 @@ class TestModernAsyncPatterns:
         """Test concurrent async operations with proper patterns."""
         results = []
 
-        async def async_operation(id: int, delay: float) -> dict[str, Any]:
+        async def async_operation(op_id: int, delay: float) -> dict[str, Any]:
             await asyncio.sleep(delay)
-            return {"id": id, "delay": delay, "completed": True}
+            return {"id": op_id, "delay": delay, "completed": True}
 
         # Run operations concurrently
         tasks = [

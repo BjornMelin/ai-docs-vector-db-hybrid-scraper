@@ -122,8 +122,6 @@ def mock_webhook_endpoint():
 @pytest_asyncio.fixture
 async def mock_elasticsearch():
     """Mock Elasticsearch client for hybrid search testing."""
-    from unittest.mock import MagicMock
-
     client = MagicMock()
 
     # Index operations

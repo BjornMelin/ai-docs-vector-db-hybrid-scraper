@@ -13,9 +13,10 @@ import asyncio
 import json
 import tempfile
 import time
+from collections.abc import Awaitable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Coroutine, TypeVar
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -24,10 +25,7 @@ from cryptography.fernet import Fernet
 from src.config import Config, SecurityConfig
 
 
-T = TypeVar("T")
-
-
-def run_async(coro: Coroutine[Any, Any, T]) -> T:
+def run_async(coro: Awaitable[Any]) -> Any:
     """Execute coroutine in isolated event loop for synchronous benchmarking wrappers."""
     loop = asyncio.new_event_loop()
     try:

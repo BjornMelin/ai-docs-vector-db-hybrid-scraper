@@ -6,8 +6,9 @@ from pathlib import Path
 
 import pytest
 
+from tests.ci.performance_reporter import PerformanceReporter
 from tests.ci.pytest_xdist_config import XDistOptimizer, get_xdist_args
-from tests.ci.test_environments import detect_environment
+from tests.ci.test_environments import GitHubActionsEnvironment, detect_environment
 from tests.ci.test_isolation import (
     IsolatedTestResources,
     TestDataIsolation,
@@ -49,7 +50,7 @@ class TestXDistConfiguration:
         assert hasattr(env, "get_env_vars")
 
     @pytest.mark.parametrize(
-        "ci_env,expected_workers",
+        ("ci_env", "expected_workers"),
         [
             ("GITHUB_ACTIONS", 4),
             ("GITLAB_CI", 2),
@@ -172,8 +173,6 @@ class TestCIIntegration:
         monkeypatch.setenv("GITHUB_ACTIONS", "true")
         monkeypatch.setenv("RUNNER_OS", "Linux")
 
-        from tests.ci.test_environments import GitHubActionsEnvironment
-
         env = GitHubActionsEnvironment()
         assert env.detect()
 
@@ -183,8 +182,6 @@ class TestCIIntegration:
 
     def test_performance_reporter_registration(self):
         """Test that performance reporter can be registered."""
-        from tests.ci.performance_reporter import PerformanceReporter
-
         # Should be importable and instantiable
         assert PerformanceReporter is not None
 

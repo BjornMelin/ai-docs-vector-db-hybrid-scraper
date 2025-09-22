@@ -11,29 +11,25 @@ import os
 import random
 import statistics
 import time
+from collections.abc import Awaitable
 from dataclasses import dataclass, field
-from typing import Any, Coroutine, TypeVar
+from typing import Any
+
+import psutil
+import pytest
+
+from src.config import CacheConfig, get_settings
+from src.services.embeddings.manager import EmbeddingManager
+from src.services.vector_db.service import QdrantService
 
 
-T = TypeVar("T")
-
-
-def run_async(coro: Coroutine[Any, Any, T]) -> T:
+def run_async(coro: Awaitable[Any]) -> Any:
     """Run a coroutine in an isolated event loop for synchronous wrappers."""
     loop = asyncio.new_event_loop()
     try:
         return loop.run_until_complete(coro)
     finally:
         loop.close()
-
-# Mock classes for testing
-import psutil
-import pytest
-
-# Mock imports - these modules might not exist, so we'll create mocks
-from src.config import CacheConfig, get_settings
-from src.services.embeddings.manager import EmbeddingManager
-from src.services.vector_db.service import QdrantService
 
 
 class EmbeddingCache:

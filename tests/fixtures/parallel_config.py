@@ -4,13 +4,21 @@ This module provides configuration and utilities for optimizing
 parallel test execution with proper resource isolation.
 """
 
+import json
 import os
+import socket
 import tempfile
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
 import pytest
+
+
+try:
+    import fcntl  # type: ignore[import-not-found]
+except ImportError:  # pragma: no cover - fcntl not available on Windows
+    fcntl = None  # type: ignore[assignment]
 
 
 def pytest_configure_node(node):
@@ -101,8 +109,6 @@ class ParallelResourceManager:
 
     def get_free_port(self, base_port: int = 0) -> int:
         """Get a free port for the current worker."""
-        import socket
-
         if self.worker_config["is_master"]:
             # For master process, use any available port
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -130,9 +136,10 @@ class ParallelResourceManager:
                     except OSError:
                         continue
 
-            raise RuntimeError(
+            message = (
                 f"No free ports available for worker {self.worker_config['worker_id']}"
             )
+            raise RuntimeError(message)
 
     def create_worker_temp_dir(self, name: str) -> Path:
         """Create a temporary directory specific to this worker."""
@@ -162,15 +169,13 @@ def shared_test_state():
 
         def get(self, key: str, default=None):
             """Get a value from shared state."""
-            import fcntl
-            import json
-
             if not self.state_file.exists():
                 return default
 
             try:
-                with open(self.state_file) as f:
-                    fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+                with self.state_file.open() as f:
+                    if fcntl is not None:
+                        fcntl.flock(f.fileno(), fcntl.LOCK_SH)
                     data = json.load(f)
                     return data.get(key, default)
             except (json.JSONDecodeError, OSError):
@@ -178,22 +183,23 @@ def shared_test_state():
 
         def set(self, key: str, value):
             """Set a value in shared state."""
-            import fcntl
-            import json
-
             # Read existing data
             data = {}
             if self.state_file.exists():
-                with suppress(json.JSONDecodeError, OSError):
-                    with open(self.state_file) as f:
+                with (
+                    suppress(json.JSONDecodeError, OSError),
+                    self.state_file.open() as f,
+                ):
+                    if fcntl is not None:
                         fcntl.flock(f.fileno(), fcntl.LOCK_SH)
-                        data = json.load(f)
+                    data = json.load(f)
 
             # Update and write
             data[key] = value
 
-            with open(self.state_file, "w") as f:
-                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            with self.state_file.open("w") as f:
+                if fcntl is not None:
+                    fcntl.flock(f.fileno(), fcntl.LOCK_EX)
                 json.dump(data, f)
 
     shared_state = SharedState(state_file)

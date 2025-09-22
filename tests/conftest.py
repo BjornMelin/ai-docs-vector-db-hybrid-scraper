@@ -508,7 +508,7 @@ def isolated_db_session():
     session.close = MagicMock()
 
     # Start transaction for isolation
-    transaction_context = session.begin()
+    session.begin()
 
     try:
         yield session
@@ -781,7 +781,7 @@ def respx_mock():
         yield router
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def event_loop():
     """Create an instance of the default event loop for the test session."""
     loop = asyncio.new_event_loop()
@@ -887,18 +887,24 @@ def performance_monitor():
             return self.metrics
 
         def assert_performance(
-            self, max_duration: float = None, max_memory_mb: float = None
-        ):
+            self,
+            max_duration: float | None = None,
+            max_memory_mb: float | None = None,
+        ) -> None:
             """Assert performance constraints."""
             if max_duration and self.metrics.get("duration_seconds", 0) > max_duration:
-                raise AssertionError(
-                    f"Test exceeded max duration: {self.metrics['duration_seconds']:.2f}s > {max_duration}s"
+                duration_msg = (
+                    "Test exceeded max duration: "
+                    f"{self.metrics['duration_seconds']:.2f}s > {max_duration}s"
                 )
+                raise AssertionError(duration_msg)
 
             if max_memory_mb and self.metrics.get("memory_delta_mb", 0) > max_memory_mb:
-                raise AssertionError(
-                    f"Test exceeded max memory usage: {self.metrics['memory_delta_mb']:.2f}MB > {max_memory_mb}MB"
+                memory_msg = (
+                    "Test exceeded max memory usage: "
+                    f"{self.metrics['memory_delta_mb']:.2f}MB > {max_memory_mb}MB"
                 )
+                raise AssertionError(memory_msg)
 
     return PerformanceMonitor()
 
@@ -1017,8 +1023,6 @@ def pytest_configure(config):
 
     # Configure parallel execution
     if config.getoption("--numprocesses", default="auto") == "auto":
-        import os
-
         worker_count = min(4, max(1, (os.cpu_count() or 1) // 2))
         config.option.numprocesses = worker_count
 
