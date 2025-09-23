@@ -54,17 +54,13 @@ def get_observability_service() -> dict[str, any]:
                 initialization_result = bool(initialize_observability(config))
 
             enabled = (
-                already_enabled
-                or initialization_result
-                or is_observability_enabled()
+                already_enabled or initialization_result or is_observability_enabled()
             )
 
             tracer_obj = (
                 get_tracer("ai-docs-service") if enabled else create_noop_tracer()
             )
-            meter_obj = (
-                get_meter("ai-docs-service") if enabled else create_noop_meter()
-            )
+            meter_obj = get_meter("ai-docs-service") if enabled else create_noop_meter()
 
             service_state = {
                 "config": config,

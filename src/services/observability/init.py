@@ -137,9 +137,8 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
     global _tracer_provider, _meter_provider
 
     if config is None:
-        if (
-            observability_config is None
-            or not hasattr(observability_config, "get_observability_config")
+        if observability_config is None or not hasattr(
+            observability_config, "get_observability_config"
         ):
             logger.error("Config system not available")
             return False

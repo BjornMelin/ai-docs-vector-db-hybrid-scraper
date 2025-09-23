@@ -18,6 +18,7 @@ from opentelemetry.trace import Status, StatusCode
 
 logger = logging.getLogger(__name__)
 
+
 class _TracerProxy:
     """Proxy that delegates to the current OpenTelemetry tracer."""
 

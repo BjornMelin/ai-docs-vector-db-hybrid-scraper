@@ -37,7 +37,6 @@ class OpenTelemetryMetricsBridge:
 
     def _resolve_prometheus_getter(self) -> Callable[[str], Any] | None:
         """Return a callable that resolves Prometheus metrics by name."""
-
         if not self.prometheus_registry:
             return None
 
@@ -55,11 +54,8 @@ class OpenTelemetryMetricsBridge:
 
     def _get_prometheus_metric(self, name: str) -> Any | None:
         """Safely fetch a Prometheus metric from the registry."""
-
         if not self._prometheus_get_metric:
-            registry_metrics = getattr(
-                self.prometheus_registry, "_metrics", None
-            )
+            registry_metrics = getattr(self.prometheus_registry, "_metrics", None)
             if isinstance(registry_metrics, dict):
                 metric = registry_metrics.get(name)
                 if metric is not None:
@@ -256,29 +252,21 @@ class OpenTelemetryMetricsBridge:
             try:
                 status = "success" if success else "error"
 
-                search_requests_metric = self._get_prometheus_metric(
-                    "search_requests"
-                )
+                search_requests_metric = self._get_prometheus_metric("search_requests")
                 if search_requests_metric:
                     search_requests_metric.labels(
                         collection=collection, status=status
                     ).inc()
 
-                search_duration_metric = self._get_prometheus_metric(
-                    "search_duration"
-                )
+                search_duration_metric = self._get_prometheus_metric("search_duration")
                 if search_duration_metric:
                     search_duration_metric.labels(
                         collection=collection, query_type=query_type
                     ).observe(duration_ms / 1000)  # Convert to seconds for Prometheus
             except (httpx.HTTPError, httpx.TimeoutException, ConnectionError) as exc:
-                logger.warning(
-                    "Failed to update Prometheus metrics: %s", exc
-                )
+                logger.warning("Failed to update Prometheus metrics: %s", exc)
             except Exception as exc:  # noqa: BLE001 - Prometheus bridge is best-effort
-                logger.warning(
-                    "Failed to update Prometheus metrics: %s", exc
-                )
+                logger.warning("Failed to update Prometheus metrics: %s", exc)
 
     def record_cache_operation(
         self,
@@ -367,6 +355,7 @@ class OpenTelemetryMetricsBridge:
         Args:
             error_type: Type of error
             component: Component where error occurred
+            service_name: Service where error occurred
             severity: Error severity
             user_impact: Impact on user experience
 
@@ -458,13 +447,9 @@ class OpenTelemetryMetricsBridge:
                         instrument.set(value, labels)
 
             except (ValueError, TypeError, UnicodeDecodeError) as exc:
-                logger.warning(
-                    "Failed to record metric %s: %s", metric_name, exc
-                )
+                logger.warning("Failed to record metric %s: %s", metric_name, exc)
             except Exception as exc:  # noqa: BLE001 - batch metrics should be best-effort
-                logger.warning(
-                    "Failed to record metric %s: %s", metric_name, exc
-                )
+                logger.warning("Failed to record metric %s: %s", metric_name, exc)
 
     def create_custom_counter(
         self, name: str, description: str, unit: str = ""
