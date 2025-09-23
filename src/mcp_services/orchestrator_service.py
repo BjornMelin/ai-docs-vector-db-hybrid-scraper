@@ -38,6 +38,7 @@ class OrchestratorService:
 
         Args:
             name: Service name for MCP registration
+
         """
         self.mcp = FastMCP(
             name,
@@ -76,6 +77,7 @@ class OrchestratorService:
 
         Args:
             client_manager: Shared client manager instance
+
         """
         self.client_manager = client_manager
 
@@ -176,6 +178,7 @@ class OrchestratorService:
 
             Returns:
                 Workflow execution results with service coordination details
+
             """
             if not self.agentic_orchestrator:
                 return {"error": "Agentic orchestrator not initialized"}
@@ -208,6 +211,7 @@ class OrchestratorService:
 
             Returns:
                 Dictionary with service capabilities and status
+
             """
             capabilities = {"services": {}}
 
@@ -242,6 +246,7 @@ class OrchestratorService:
 
             Returns:
                 Optimization results and recommendations
+
             """
             if not self.discovery_engine:
                 return {"error": "Discovery engine not available"}
@@ -272,6 +277,7 @@ class OrchestratorService:
 
         Returns:
             Configured FastMCP server for this service
+
         """
         return self.mcp
 
@@ -280,6 +286,7 @@ class OrchestratorService:
 
         Returns:
             Service metadata and capability information
+
         """
         return {
             "service": "orchestrator",
@@ -313,6 +320,7 @@ class OrchestratorService:
 
         Returns:
             Information about all domain-specific services
+
         """
         services_info = {}
 

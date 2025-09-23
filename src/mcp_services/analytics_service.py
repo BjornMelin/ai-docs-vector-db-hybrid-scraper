@@ -40,6 +40,7 @@ class AnalyticsService:
 
         Args:
             name: Service name for MCP registration
+
         """
         self.mcp = FastMCP(
             name,
@@ -78,6 +79,7 @@ class AnalyticsService:
 
         Args:
             client_manager: Shared client manager instance
+
         """
         self.client_manager = client_manager
 
@@ -135,6 +137,7 @@ class AnalyticsService:
 
             Returns:
                 Agent decision metrics integrated with existing observability
+
             """
             if not self.ai_tracker:
                 return {"error": "AI tracker not available"}
@@ -172,6 +175,7 @@ class AnalyticsService:
 
             Returns:
                 Workflow visualization data leveraging existing correlation manager
+
             """
             if not self.correlation_manager:
                 return {"error": "Correlation manager not available"}
@@ -211,6 +215,7 @@ class AnalyticsService:
 
             Returns:
                 Auto-RAG performance data leveraging existing performance monitor
+
             """
             if not self.performance_monitor:
                 return {"error": "Performance monitor not available"}
@@ -245,6 +250,7 @@ class AnalyticsService:
 
         Returns:
             Configured FastMCP server for this service
+
         """
         return self.mcp
 
@@ -253,6 +259,7 @@ class AnalyticsService:
 
         Returns:
             Service metadata and capability information
+
         """
         return {
             "service": "analytics",
