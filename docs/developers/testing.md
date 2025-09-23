@@ -2,35 +2,38 @@
 
 ## Test Categories
 
-# Unit Tests - Test individual functions/classes in isolation
-# Integration Tests - Test interactions between components
-# End-to-End Tests - Test complete user workflows
+- **Unit Tests** - Test individual functions/classes in isolation
+- **Integration Tests** - Test interactions between components
+- **End-to-End Tests** - Test complete user workflows
 
 ## Essential Test Commands
 
+```bash
 # Run all tests
-# pytest
+pytest
 
 # Run tests in specific file
-# pytest tests/test_example.py
+pytest tests/test_example.py
 
 # Run tests with verbose output
-# pytest -v
+pytest -v
 
 # Run tests matching pattern
-# pytest -k "test_function_name"
+pytest -k "test_function_name"
 
 # Run tests with coverage report
-# pytest --cov=src --cov-report=term-missing
+pytest --cov=src --cov-report=term-missing
 
 # Run tests in parallel
-# pytest -n auto
+pytest -n auto
 
 # Run tests with specific marker
-# pytest -m integration
+pytest -m integration
+```
 
 ## Test Structure and Patterns
 
+```python
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
 
@@ -39,10 +42,10 @@ def test_example():
     # Arrange
     input_data = "test"
     expected = "TEST"
-    
+
     # Act
     result = input_data.upper()
-    
+
     # Assert
     assert result == expected
 
@@ -61,9 +64,11 @@ def database_connection():
 
 def test_with_fixture(sample_data):
     assert sample_data["key"] == "value"
+```
 
 ## Async Testing Basics
 
+```python
 import asyncio
 
 @pytest.mark.asyncio
@@ -77,9 +82,11 @@ async def async_resource():
     resource = await create_async_resource()
     yield resource
     await resource.cleanup()
+```
 
 ## Mocking Patterns
 
+```python
 # Mock external service calls
 @patch("src.service.external_api_call")
 def test_with_mock(mock_api):
@@ -100,40 +107,55 @@ def test_with_context_manager():
     mock_file = Mock()
     mock_file.__enter__ = Mock(return_value=mock_file)
     mock_file.read = Mock(return_value="file_content")
-    
+
     with patch("builtins.open", return_value=mock_file):
         content = read_file("test.txt")
         assert content == "file_content"
+```
 
 ## Coverage Requirements
 
+```bash
 # Minimum coverage threshold
-# pytest --cov=src --cov-fail-under=80
+pytest --cov=src --cov-fail-under=80
+```
 
-# Coverage configuration in pyproject.toml
-# [tool.coverage.run]
-# branch = true
-# source = ["src"]
+**Coverage configuration in pyproject.toml:**
 
-# [tool.coverage.report]
-# exclude_lines = ["pragma: no cover", "def __repr__"]
+```toml
+[tool.coverage.run]
+branch = true
+source = ["src"]
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "def __repr__"]
+```
 
 ## Test Organization and Markers
 
-# Directory structure:
-# tests/
-#   unit/
-#   integration/
-#   e2e/
+**Directory structure:**
 
-# Custom markers in pytest.ini or pyproject.toml
-# markers = [
-#     "unit: unit tests",
-#     "integration: integration tests", 
-#     "e2e: end-to-end tests",
-#     "slow: slow running tests"
-# ]
+```
+tests/
+  unit/
+  integration/
+  e2e/
+```
 
+**Custom markers in pytest.ini or pyproject.toml:**
+
+```toml
+markers = [
+    "unit: unit tests",
+    "integration: integration tests",
+    "e2e: end-to-end tests",
+    "slow: slow running tests"
+]
+```
+
+**Test examples with markers:**
+
+```python
 @pytest.mark.unit
 def test_unit_function():
     pass
@@ -149,3 +171,4 @@ def test_user_workflow():
 @pytest.mark.slow
 def test_long_running_process():
     pass
+```

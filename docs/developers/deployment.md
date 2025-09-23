@@ -2,7 +2,9 @@
 
 ## 1. Docker Deployment Basics
 
-# Build optimized image
+### Build Optimized Image
+
+```dockerfile
 FROM python:3.9-slim
 WORKDIR /app
 COPY requirements.txt .
@@ -10,12 +12,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 EXPOSE 8000
 CMD ["gunicorn", "app:app", "-b", "0.0.0.0:8000"]
+```
 
-# Run container with restart policy
+### Run Container with Restart Policy
+
+```bash
 docker run -d --restart=unless-stopped --name myapp myapp:latest
+```
 
-# Use docker-compose for multi-container setup
-version: '3.8'
+### Use Docker Compose for Multi-Container Setup
+
+```yaml
+version: "3.8"
 services:
   web:
     image: myapp:latest
@@ -33,61 +41,82 @@ services:
   redis:
     image: redis:6-alpine
     restart: unless-stopped
+```
 
 ## 2. Environment Configuration
 
-# Environment variables file (.env.prod)
+### Environment Variables File (.env.prod)
+
+```bash
 DATABASE_URL=postgresql://user:pass@db:5432/myapp
 REDIS_URL=redis://redis:6379/0
 SECRET_KEY=your-secret-key-here
 DEBUG=False
 ALLOWED_HOSTS=yourdomain.com,api.yourdomain.com
+```
 
-# Load environment in application
+### Load Environment in Application
+
+```python
 import os
 from dotenv import load_dotenv
 
 load_dotenv('.env.prod')
 DATABASE_URL = os.getenv('DATABASE_URL')
 SECRET_KEY = os.getenv('SECRET_KEY')
+```
 
 ## 3. Essential Service Dependencies
 
-# Database (PostgreSQL)
+### Database (PostgreSQL)
+
 - Connection pooling
 - Backup strategy
 - Read replicas for scaling
 
-# Cache (Redis)
+### Cache (Redis)
+
 - Session storage
 - Rate limiting
 - Background task queue
 
-# Reverse proxy (Nginx)
+### Reverse Proxy (Nginx)
+
 - SSL termination
 - Static file serving
 - Load balancing
 
-# Logging service
+### Logging Service
+
 - Centralized log aggregation
 - Log rotation
 - Error tracking integration
 
 ## 4. Health Checks and Monitoring
 
-# Application health endpoint
+### Application Health Endpoint
+
+```python
 @app.route('/health')
 def health_check():
     return {'status': 'healthy'}, 200
+```
 
-# Docker health check
+### Docker Health Check
+
+```dockerfile
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:8000/health || exit 1
+```
 
-# Container resource limits
+### Container Resource Limits
+
+```bash
 docker run --memory=512m --cpus=1.0 --name myapp myapp:latest
+```
 
-# Monitoring setup
+### Monitoring Setup
+
 - CPU and memory usage tracking
 - HTTP response time monitoring
 - Database connection count
@@ -95,47 +124,62 @@ docker run --memory=512m --cpus=1.0 --name myapp myapp:latest
 
 ## 5. Basic Scaling Considerations
 
-# Horizontal scaling
-docker-compose up --scale web=3
+### Horizontal Scaling
 
-# Vertical scaling limits
+```bash
+docker-compose up --scale web=3
+```
+
+### Vertical Scaling Limits
+
 - Memory: 512MB-2GB per container
 - CPU: 1-4 cores per container
 - Database connections: 100-200 max
 
-# Load balancer configuration
+### Load Balancer Configuration
+
+```nginx
 upstream app_servers {
     server web1:8000;
     server web2:8000;
     server web3:8000;
 }
+```
 
-# Session persistence
+### Session Persistence
+
 - Use Redis for shared sessions
 - Enable sticky sessions if needed
 
 ## 6. Security Configuration
 
-# Container security
+### Container Security
+
 - Run as non-root user
 - Disable unnecessary capabilities
 - Use read-only filesystem where possible
 
-# Network security
+### Network Security
+
 - Internal network segmentation
 - Firewall rules for service ports
 - SSL/TLS for all external traffic
 
-# Application security
+### Application Security
+
 - Environment variable secrets
 - CORS policy configuration
 - Rate limiting implementation
 - Input validation and sanitization
 
-# Image scanning
-docker scan myapp:latest
+### Image Scanning
 
-# Runtime security
+```bash
+docker scan myapp:latest
+```
+
+### Runtime Security
+
 - Enable Docker content trust
 - Regular security updates
 - Log security events

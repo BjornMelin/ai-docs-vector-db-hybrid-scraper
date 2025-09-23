@@ -6,7 +6,7 @@ owner: platform-engineering
 last_reviewed: 2025-03-13
 ---
 
-# Developer Documentation
+## Developer Documentation
 
 Use this hub to develop against, extend, and maintain the AI Docs Vector DB platform. The
 sections below link to the key guides and reference material that engineers rely on every day.
