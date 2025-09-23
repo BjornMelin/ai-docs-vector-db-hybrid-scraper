@@ -45,6 +45,7 @@ class MonitoringManager:
 
         Args:
             config: Configuration from DI container
+
         """
         if self._initialized:
             return
@@ -103,6 +104,7 @@ class MonitoringManager:
             service_name: Name of the service
             check_function: Async function that returns bool for health status
             check_interval: Check interval in seconds
+
         """
         self._health_checks[service_name] = ClientHealth(
             state=ClientState.HEALTHY,
@@ -119,6 +121,7 @@ class MonitoringManager:
 
         Args:
             service_name: Name of the service
+
         """
         if service_name in self._health_checks:
             del self._health_checks[service_name]
@@ -134,6 +137,7 @@ class MonitoringManager:
 
         Returns:
             True if healthy, False otherwise
+
         """
         if service_name not in self._health_checks:
             logger.warning(
@@ -179,6 +183,7 @@ class MonitoringManager:
 
         Returns:
             Dictionary mapping service names to health information
+
         """
         status = {}
 
@@ -198,6 +203,7 @@ class MonitoringManager:
 
         Returns:
             Overall health status with summary metrics
+
         """
         health_status = await self.get_health_status()
 
@@ -233,6 +239,7 @@ class MonitoringManager:
             metric_name: Name of the metric
             value: Metric value
             labels: Optional labels for the metric
+
         """
         if not self._metrics_registry:
             return
@@ -255,6 +262,7 @@ class MonitoringManager:
         Args:
             counter_name: Name of the counter
             labels: Optional labels for the counter
+
         """
         if not self._metrics_registry:
             return
@@ -279,6 +287,7 @@ class MonitoringManager:
             histogram_name: Name of the histogram
             value: Value to record
             labels: Optional labels for the histogram
+
         """
         if not self._metrics_registry:
             return
@@ -313,6 +322,7 @@ class MonitoringManager:
 
         Returns:
             Result of the operation function
+
         """
         start_time = time.time()
 
@@ -344,6 +354,7 @@ class MonitoringManager:
 
         Returns:
             Performance metrics data
+
         """
         if not self._performance_monitor:
             return {}
@@ -371,6 +382,7 @@ class MonitoringManager:
             operation: Name of the operation
             details: Operation details
             level: Log level (debug, info, warning, error)
+
         """
         log_data = {"operation": operation, "timestamp": time.time(), **details}
 
@@ -403,6 +415,7 @@ class MonitoringManager:
 
         Returns:
             Span context manager
+
         """
 
         # Basic span implementation - can be extended with actual tracing
@@ -435,6 +448,7 @@ class MonitoringManager:
 
         Returns:
             Status information for all monitoring components
+
         """
         status = {
             "initialized": self._initialized,
