@@ -27,6 +27,7 @@ class FeatureFlag:
 
         Args:
             mode_config: Mode configuration to use. If None, uses current mode config.
+
         """
         self.mode_config = mode_config or get_mode_config()
         self.current_mode = get_current_mode()
@@ -59,6 +60,7 @@ def enterprise_only(fallback_value: Any = None, log_access: bool = True):
 
     Returns:
         Decorator function
+
     """
 
     def decorator(func: F) -> F:
@@ -110,6 +112,7 @@ def conditional_feature(
 
     Returns:
         Decorator function
+
     """
 
     def decorator(func: F) -> F:
@@ -163,6 +166,7 @@ def service_required(
 
     Returns:
         Decorator function
+
     """
 
     def decorator(func: F) -> F:
@@ -213,6 +217,7 @@ def mode_adaptive(simple_implementation: F, enterprise_implementation: F):
 
     Returns:
         Mode-adaptive function
+
     """
 
     @wraps(enterprise_implementation)
@@ -239,6 +244,7 @@ class ModeAwareFeatureManager:
     """Advanced feature manager with runtime mode switching capabilities."""
 
     def __init__(self):
+        """Initialize the advanced feature manager."""
         self._feature_flags = FeatureFlag()
         self._feature_registry: dict[str, dict[str, Any]] = {}
 

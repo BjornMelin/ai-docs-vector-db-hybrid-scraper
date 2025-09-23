@@ -196,6 +196,7 @@ def get_mode_config(mode: ApplicationMode | None = None) -> ModeConfig:
 
     Returns:
         ModeConfig instance for the specified mode.
+
     """
     if mode is None:
         mode = detect_mode_from_environment()
