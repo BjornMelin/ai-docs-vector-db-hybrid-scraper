@@ -237,7 +237,8 @@ class QueryOrchestrator(BaseAgent):
 
             # Get search service from client manager
             try:
-                # search_orchestrator = await ctx.deps.client_manager.get_search_orchestrator()
+                # search_orchestrator = await ctx.deps.client_manager. \
+                #     get_search_orchestrator()
 
                 # Execute coordinated search
                 # search_request = {

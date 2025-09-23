@@ -899,7 +899,7 @@ class AutonomousHealthMonitor:
             (
                 f"Active Predictions: {len(predictions)} | "
                 f"High Risk: "
-                f"{len([p for p in predictions if p.risk_level == FailureRiskLevel.HIGH])}"
+                f"{len([p for p in predictions if p.risk_level == FailureRiskLevel.HIGH])}"  # noqa: E501
             ),
             f"System Stability: {insights['system_stability']}",
             "=== End Summary ===",

@@ -172,7 +172,8 @@ class TestBrowserUserJourneys:
 
                     // Extract meta tags
                     document.querySelectorAll('meta').forEach(tag => {
-                        const name = tag.getAttribute('name') || tag.getAttribute('property');
+                        const name = tag.getAttribute('name') ||
+                            tag.getAttribute('property');
                         const content = tag.getAttribute('content');
                         if (name && content) {
                             meta[name] = content;
@@ -276,8 +277,10 @@ class TestBrowserUserJourneys:
                         url: window.location.href,
                         contentLength: document.body.innerHTML.length,
                         textLength: document.body.innerText.length,
-                        linkCount: document.querySelectorAll('a[href]').length,
-                        loadTime: performance.timing.loadEventEnd - performance.timing.navigationStart,
+                        linkCount: document.querySelectorAll('a[href]')
+                            .length,
+                        loadTime: performance.timing.loadEventEnd -
+                            performance.timing.navigationStart,
                     })
                 """)
 
@@ -543,7 +546,9 @@ class TestBrowserUserJourneys:
                     return {
                         hasForm: true,
                         formData: data,
-                        inputCount: form.querySelectorAll('input, select, textarea').length,
+                        inputCount: form.querySelectorAll(
+                            'input, select, textarea'
+                        ).length,
                     };
                 }
             """)
