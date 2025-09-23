@@ -444,7 +444,7 @@ def main():
         logger.info("✓ Data classification and access control")
         logger.info("✓ Real-time security event correlation")
 
-    except Exception as e:
+    except Exception:
         logger.exception("Demo failed with error")
         raise
 

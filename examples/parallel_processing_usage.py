@@ -351,7 +351,7 @@ async def main():
         logger.info("✅ <100ms API response time optimization")
         logger.info("✅ Comprehensive performance monitoring")
 
-    except Exception as e:
+    except Exception:
         logger.exception(
             "❌ Demonstration failed"
         )  # TODO: Convert f-string to logging format
