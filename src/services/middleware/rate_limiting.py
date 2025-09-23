@@ -43,6 +43,7 @@ class ModernRateLimiter:
             key_func: Function to generate rate limit keys (default: IP-based)
             default_limits: Default rate limits to apply
             config: Application configuration
+
         """
         self.app = app
         self.redis_url = redis_url
@@ -81,6 +82,7 @@ class ModernRateLimiter:
 
         Returns:
             Rate limit decorator
+
         """
         return self.limiter.limit(rate, per_method=per_method)
 
@@ -93,6 +95,7 @@ class ModernRateLimiter:
 
         Returns:
             Shared rate limit decorator
+
         """
         return self.limiter.shared_limit(rate, scope)
 
@@ -104,6 +107,7 @@ class ModernRateLimiter:
 
         Returns:
             True if request should be exempted, False otherwise
+
         """
         # Example exemption logic - customize as needed
         if hasattr(self.config, "rate_limiting") and self.config.rate_limiting:
@@ -126,6 +130,7 @@ class ModernRateLimiter:
 
         Returns:
             HTTP 429 response with rate limit information
+
         """
         response = Response(
             content=f"Rate limit exceeded: {exc.detail}",
@@ -161,6 +166,7 @@ class ModernRateLimiter:
 
         Returns:
             Dictionary with current rate limit information
+
         """
         try:
             key = self.key_func(request)
@@ -189,6 +195,7 @@ class ModernRateLimiter:
 
         Returns:
             True if successful, False otherwise
+
         """
         try:
             # Rate limit reset requires direct storage access which is not exposed
@@ -207,6 +214,7 @@ class ModernRateLimiter:
 
         Returns:
             Dictionary with rate limiter statistics
+
         """
         try:
             return {
@@ -240,6 +248,7 @@ def create_api_key_limiter(redis_url: str) -> Limiter:
 
     Returns:
         Limiter instance configured for API key-based limiting
+
     """
 
     def get_api_key(request: Request) -> str:
@@ -266,6 +275,7 @@ def create_user_based_limiter(redis_url: str) -> Limiter:
 
     Returns:
         Limiter instance configured for user-based limiting
+
     """
 
     def get_user_id(request: Request) -> str:
@@ -300,6 +310,7 @@ def setup_rate_limiting(
 
     Returns:
         ModernRateLimiter instance
+
     """
     # Determine rate limits from config
     default_limits = ["1000/hour", "100/minute"]

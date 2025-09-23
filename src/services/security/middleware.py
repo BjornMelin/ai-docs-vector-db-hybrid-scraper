@@ -63,6 +63,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             security_config: Security configuration
             ai_validator: AI security validator
             security_monitor: Security monitoring instance
+
         """
         super().__init__(app)
         self.rate_limiter = rate_limiter
@@ -105,6 +106,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             HTTP response with security headers
+
         """
         start_time = time.time()
 
@@ -172,6 +174,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Raises:
             HTTPException: If request fails security validation
+
         """
         # Check blocked IPs
         client_ip = self._get_client_ip(request)
@@ -225,6 +228,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             True if User-Agent is suspicious
+
         """
         suspicious_agents = [
             "sqlmap",
@@ -248,6 +252,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Raises:
             HTTPException: If rate limit is exceeded
+
         """
         # Determine rate limit category
         path = request.url.path
@@ -299,6 +304,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Raises:
             HTTPException: If input contains security threats
+
         """
         # Validate URL path
         self._validate_url_path(request.url.path)
@@ -323,6 +329,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Raises:
             HTTPException: If path contains security threats
+
         """
         # Check for path traversal
         if ".." in path or "//" in path:
@@ -347,6 +354,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Raises:
             HTTPException: If query contains threats
+
         """
         # Check for SQL injection patterns
         query_lower = query_string.lower()
@@ -371,6 +379,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Raises:
             HTTPException: If headers contain threats
+
         """
         # Check for header injection
         for value in headers.values():
@@ -398,6 +407,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             True if host is valid
+
         """
         # Basic validation - in production, check against allowed hosts
         if not host or len(host) > 253:
@@ -415,6 +425,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Raises:
             HTTPException: If body contains threats
+
         """
         try:
             # Get content type
@@ -452,6 +463,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Raises:
             HTTPException: If data contains threats
+
         """
         # Prevent excessive nesting
         if depth > 10:
@@ -504,6 +516,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Unique client identifier
+
         """
         # Try API key first
         api_key = request.headers.get("x-api-key") or request.headers.get(
@@ -525,6 +538,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Client IP address
+
         """
         # Check for forwarded headers (reverse proxy)
         forwarded_for = request.headers.get("x-forwarded-for")
@@ -544,6 +558,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Args:
             response: HTTP response to add headers to
+
         """
         security_headers = {
             # Content type protection
@@ -581,6 +596,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             JSON response with security error
+
         """
         # Don't expose sensitive error details
         safe_details = {
@@ -620,6 +636,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         Args:
             ip_address: IP address to block
             reason: Reason for blocking
+
         """
         self.blocked_ips.add(ip_address)
         logger.warning(f"Blocked IP address {ip_address}: {reason}")
@@ -637,6 +654,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             True if IP was unblocked, False if it wasn't blocked
+
         """
         if ip_address in self.blocked_ips:
             self.blocked_ips.remove(ip_address)
@@ -649,6 +667,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Dictionary with security status information
+
         """
         return {
             "middleware_active": True,
