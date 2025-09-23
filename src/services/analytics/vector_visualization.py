@@ -755,7 +755,11 @@ class VectorVisualizationEngine(BaseService):
                     {
                         "type": "quality",
                         "title": "High Quality Embeddings",
-                        "description": f"Embeddings show {quality_metrics.quality_grade}-grade quality with {quality_metrics.coherence_score:.2f} coherence score",
+                        "description": (
+                            f"Embeddings show {quality_metrics.quality_grade}-grade "
+                            f"quality with {quality_metrics.coherence_score:.2f} "
+                            "coherence score"
+                        ),
                         "positive": True,
                     }
                 )
@@ -764,7 +768,11 @@ class VectorVisualizationEngine(BaseService):
                     {
                         "type": "quality",
                         "title": "Embedding Quality Concerns",
-                        "description": f"Embeddings show {quality_metrics.quality_grade}-grade quality, consider retraining or preprocessing",
+                        "description": (
+                            f"Embeddings show {quality_metrics.quality_grade}-grade "
+                            "quality, consider retraining or preprocessing"
+                            "consider retraining or preprocessing"
+                        ),
                         "positive": False,
                     }
                 )
@@ -779,7 +787,10 @@ class VectorVisualizationEngine(BaseService):
                         {
                             "type": "clustering",
                             "title": "Large Clusters Detected",
-                            "description": f"Average cluster size is {avg_cluster_size:.0f}, consider increasing cluster granularity",
+                            "description": (
+                                f"Average cluster size is {avg_cluster_size:.0f}, "
+                                "consider increasing cluster granularity"
+                            ),
                             "positive": False,
                         }
                     )
@@ -788,7 +799,10 @@ class VectorVisualizationEngine(BaseService):
                         {
                             "type": "clustering",
                             "title": "Small Clusters Detected",
-                            "description": f"Average cluster size is {avg_cluster_size:.1f}, embeddings might be too diverse",
+                            "description": (
+                                f"Average cluster size is {avg_cluster_size:.1f}, "
+                                "embeddings might be too diverse"
+                            ),
                             "positive": False,
                         }
                     )
@@ -797,7 +811,10 @@ class VectorVisualizationEngine(BaseService):
                         {
                             "type": "clustering",
                             "title": "Well-Balanced Clusters",
-                            "description": f"Found {num_clusters} well-balanced clusters with good separation",
+                            "description": (
+                                f"Found {num_clusters} well-balanced clusters with "
+                                "good separation"
+                            ),
                             "positive": True,
                         }
                     )
@@ -812,7 +829,10 @@ class VectorVisualizationEngine(BaseService):
                         {
                             "type": "similarity",
                             "title": "High Query Relevance",
-                            "description": f"{high_sim_count}/{total_count} embeddings show high similarity to query",
+                            "description": (
+                                f"{high_sim_count}/{total_count} embeddings show "
+                                "high similarity to query"
+                            ),
                             "positive": True,
                         }
                     )
@@ -821,7 +841,10 @@ class VectorVisualizationEngine(BaseService):
                         {
                             "type": "similarity",
                             "title": "Low Query Relevance",
-                            "description": f"Only {high_sim_count}/{total_count} embeddings are highly relevant to query",
+                            "description": (
+                                f"Only {high_sim_count}/{total_count} embeddings "
+                                "are highly relevant to query"
+                            ),
                             "positive": False,
                         }
                     )
@@ -832,7 +855,10 @@ class VectorVisualizationEngine(BaseService):
                     {
                         "type": "dimensionality",
                         "title": "Efficient Dimensionality",
-                        "description": f"Top components explain {quality_metrics.variance_explained:.1%} of variance",
+                        "description": (
+                            "Top components explain "
+                            f"{quality_metrics.variance_explained:.1%} of variance"
+                        ),
                         "positive": True,
                     }
                 )
@@ -841,7 +867,11 @@ class VectorVisualizationEngine(BaseService):
                     {
                         "type": "dimensionality",
                         "title": "High Dimensionality Detected",
-                        "description": f"Low variance explanation ({quality_metrics.variance_explained:.1%}) suggests high intrinsic dimensionality",
+                        "description": (
+                            f"Low variance explanation "
+                            f"({quality_metrics.variance_explained:.1%}) "
+                            "suggests high intrinsic dimensionality"
+                        ),
                         "positive": False,
                     }
                 )
@@ -927,7 +957,7 @@ class VectorVisualizationEngine(BaseService):
                 sample_embeddings = embeddings_array
                 sample_texts = texts
 
-            # Calculate semantic coherence based on text similarity vs embedding similarity
+            # Calc semantic coherence based on text similarity vs embedding similarity
             coherence_scores = []
 
             for i in range(min(20, len(sample_texts))):  # Sample pairs
@@ -1056,8 +1086,13 @@ class VectorVisualizationEngine(BaseService):
                 recommendations.append(
                     {
                         "type": "dimensionality",
-                        "recommendation": "Consider dimensionality reduction or feature selection",
-                        "reason": f"Only {dimensionality_analysis.get('dimension_efficiency', 0):.1%} of dimensions are effective",
+                        "recommendation": (
+                            "Consider dimensionality reduction or feature selection"
+                        ),
+                        "reason": (
+                            f"Only {dimensionality_analysis.get('dimension_efficiency', 0):.1%} "  # noqa: E501
+                            "of dimensions are effective"
+                        ),
                     }
                 )
 
@@ -1066,8 +1101,13 @@ class VectorVisualizationEngine(BaseService):
                 recommendations.append(
                     {
                         "type": "coherence",
-                        "recommendation": "Improve text preprocessing or embedding model training",
-                        "reason": f"Low semantic correlation ({coherence_analysis.get('semantic_correlation', 0):.2f})",
+                        "recommendation": (
+                            "Improve text preprocessing or embedding model training"
+                        ),
+                        "reason": (
+                            f"Low semantic correlation "
+                            f"({coherence_analysis.get('semantic_correlation', 0):.2f})"
+                        ),
                     }
                 )
 
@@ -1077,16 +1117,26 @@ class VectorVisualizationEngine(BaseService):
                 recommendations.append(
                     {
                         "type": "diversity",
-                        "recommendation": "Increase data diversity or adjust embedding parameters",
-                        "reason": f"Very high average similarity ({avg_similarity:.2f}) suggests lack of diversity",
+                        "recommendation": (
+                            "Increase data diversity or adjust embedding parameters"
+                        ),
+                        "reason": (
+                            f"Very high average similarity "
+                            f"({avg_similarity:.2f}) suggests lack of diversity"
+                        ),
                     }
                 )
             elif avg_similarity < 0.1:
                 recommendations.append(
                     {
                         "type": "clustering",
-                        "recommendation": "Check for data quality issues or embedding model problems",
-                        "reason": f"Very low average similarity ({avg_similarity:.2f}) suggests poor semantic capture",
+                        "recommendation": (
+                            "Check for data quality issues or embedding model problems"
+                        ),
+                        "reason": (
+                            f"Very low average similarity "
+                            f"({avg_similarity:.2f}) suggests poor semantic capture"
+                        ),
                     }
                 )
 
@@ -1112,16 +1162,28 @@ class VectorVisualizationEngine(BaseService):
                 recommendations.append(
                     {
                         "type": "relevance",
-                        "recommendation": "Consider expanding the reference corpus or improving query preprocessing",
-                        "reason": f"Only {high_sim_rate:.1%} of comparisons show high similarity",
+                        "recommendation": (
+                            "Consider expanding the reference corpus or improving "
+                            "query preprocessing"
+                        ),
+                        "reason": (
+                            f"Only {high_sim_rate:.1%} of comparisons show "
+                            "high similarity"
+                        ),
                     }
                 )
             elif high_sim_rate > 0.5:
                 recommendations.append(
                     {
                         "type": "specificity",
-                        "recommendation": "Consider making queries more specific or expanding reference diversity",
-                        "reason": f"High similarity rate ({high_sim_rate:.1%}) may indicate overly broad matching",
+                        "recommendation": (
+                            "Consider making queries more specific or expanding "
+                            "reference diversity"
+                        ),
+                        "reason": (
+                            f"High similarity rate ({high_sim_rate:.1%}) may indicate "
+                            "overly broad matching"
+                        ),
                     }
                 )
 
@@ -1133,8 +1195,14 @@ class VectorVisualizationEngine(BaseService):
                 recommendations.append(
                     {
                         "type": "query_quality",
-                        "recommendation": "Improve query formulation or add context to low-quality queries",
-                        "reason": f"{len(poor_quality_queries)} out of {len(query_qualities)} queries show poor quality",
+                        "recommendation": (
+                            "Improve query formulation or add context to "
+                            "low-quality queries"
+                        ),
+                        "reason": (
+                            f"{len(poor_quality_queries)} out of "
+                            f"{len(query_qualities)} queries show poor quality"
+                        ),
                     }
                 )
 
@@ -1146,8 +1214,13 @@ class VectorVisualizationEngine(BaseService):
                 recommendations.append(
                     {
                         "type": "selectivity",
-                        "recommendation": "Make queries more specific to improve result selectivity",
-                        "reason": f"{len(low_selectivity_queries)} queries show low selectivity",
+                        "recommendation": (
+                            "Make queries more specific to improve result selectivity"
+                        ),
+                        "reason": (
+                            f"{len(low_selectivity_queries)} queries show low "
+                            "selectivity"
+                        ),
                     }
                 )
 

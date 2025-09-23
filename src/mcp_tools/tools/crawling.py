@@ -105,7 +105,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.debug(
-                    f"Selected tier {recommended_tier} with confidence {optimization_metadata['selection_confidence']}"
+                    f"Selected tier {recommended_tier} with confidence "
+                    f"{optimization_metadata['selection_confidence']}"
                 )
 
         except Exception as e:
@@ -220,7 +221,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Enhanced crawl completed: tier={tier}, quality={quality_metrics.get('overall_score', 0.0):.2f}"
+                    f"Enhanced crawl completed: tier={tier}, "
+                    f"quality={quality_metrics.get('overall_score', 0.0):.2f}"
                 )
 
         except Exception as e:

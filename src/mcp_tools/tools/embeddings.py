@@ -42,7 +42,8 @@ def register_tools(mcp, client_manager: ClientManager):
         """
         if ctx:
             await ctx.info(
-                f"Generating embeddings for {len(request.texts)} texts using model: {request.model or 'default'}"
+                f"Generating embeddings for {len(request.texts)} texts using model: "
+                f"{request.model or 'default'}"
             )
 
         try:
@@ -51,7 +52,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.debug(
-                    f"Using batch size: {request.batch_size}, sparse embeddings: {request.generate_sparse}"
+                    f"Using batch size: {request.batch_size}, "
+                    f"sparse embeddings: {request.generate_sparse}"
                 )
 
             # Generate embeddings
@@ -67,7 +69,9 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Successfully generated embeddings for {len(request.texts)} texts using provider: {provider_info.get('name', 'unknown')}"
+                    f"Successfully generated embeddings for "
+                    f"{len(request.texts)} texts using provider: "
+                    f"{provider_info.get('name', 'unknown')}"
                 )
 
             return EmbeddingGenerationResponse(

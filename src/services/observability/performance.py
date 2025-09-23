@@ -344,7 +344,7 @@ class PerformanceMonitor:
             UnicodeDecodeError,
         ) as exc:
             logger.warning("Failed to record performance metrics: %s", exc)
-        except Exception as exc:  # noqa: BLE001 - performance analytics must be resilient
+        except Exception as exc:  # noqa: BLE001 - perf analytics must be resilient
             logger.warning("Failed to record performance metrics: %s", exc)
 
     def _check_thresholds(self, metrics: PerformanceMetrics, span: trace.Span) -> None:
@@ -360,7 +360,8 @@ class PerformanceMonitor:
         # Check duration threshold
         if metrics.duration_ms > self.thresholds.max_duration_ms:
             alerts.append(
-                f"Duration {metrics.duration_ms:.1f}ms exceeds threshold {self.thresholds.max_duration_ms:.1f}ms"
+                f"Duration {metrics.duration_ms:.1f}ms exceeds threshold "
+                f"{self.thresholds.max_duration_ms:.1f}ms"
             )
 
         # Check CPU threshold
@@ -369,7 +370,8 @@ class PerformanceMonitor:
             and metrics.cpu_usage_percent > self.thresholds.max_cpu_percent
         ):
             alerts.append(
-                f"CPU usage {metrics.cpu_usage_percent:.1f}% exceeds threshold {self.thresholds.max_cpu_percent:.1f}%"
+                f"CPU usage {metrics.cpu_usage_percent:.1f}% exceeds threshold "
+                f"{self.thresholds.max_cpu_percent:.1f}%"
             )
 
         # Check memory threshold
@@ -378,7 +380,8 @@ class PerformanceMonitor:
             and metrics.memory_usage_mb > self.thresholds.max_memory_mb
         ):
             alerts.append(
-                f"Memory usage {metrics.memory_usage_mb:.1f}MB exceeds threshold {self.thresholds.max_memory_mb:.1f}MB"
+                f"Memory usage {metrics.memory_usage_mb:.1f}MB exceeds threshold "
+                f"{self.thresholds.max_memory_mb:.1f}MB"
             )
 
         # Check error rate
@@ -390,7 +393,8 @@ class PerformanceMonitor:
             error_rate = self._error_counts[metrics.operation_name] / total_ops
             if error_rate > self.thresholds.max_error_rate:
                 alerts.append(
-                    f"Error rate {error_rate:.3f} exceeds threshold {self.thresholds.max_error_rate:.3f}"
+                    f"Error rate {error_rate:.3f} exceeds threshold "
+                    f"{self.thresholds.max_error_rate:.3f}"
                 )
 
         # Record alerts
@@ -591,7 +595,10 @@ def get_performance_monitor() -> PerformanceMonitor:
 
     """
     if _performance_monitor is None:
-        msg = "Performance monitor not initialized. Call initialize_performance_monitor() first."
+        msg = (
+            "Performance monitor not initialized. Call "
+            "initialize_performance_monitor() first."
+        )
         raise RuntimeError(msg)
     return _performance_monitor
 

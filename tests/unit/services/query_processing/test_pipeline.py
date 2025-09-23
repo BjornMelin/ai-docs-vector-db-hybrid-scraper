@@ -767,7 +767,7 @@ class TestQueryAnalysis:
 
     @pytest.mark.asyncio
     async def test_analyze_query_both_features_disabled(self, initialized_pipeline):
-        """Test query analysis with both preprocessing and intent classification disabled."""
+        """Test query analysis with preprocessing and intent classification disabled."""
         analysis = await initialized_pipeline.analyze_query(
             "API design patterns",
             enable_preprocessing=False,
@@ -1055,7 +1055,8 @@ class TestEdgeCasesAndErrorHandling:
         mock_orchestrator.process_query.return_value = "invalid response"
 
         # Should handle gracefully or raise appropriate error
-        # The pipeline delegates to orchestrator, so malformed response should cause issues
+        # The pipeline delegates to orchestrator,
+        # so malformed response should cause issues
         response = await initialized_pipeline.process("test query")
         # The response should be the malformed response or an error should be raised
         assert response == "invalid response" or hasattr(response, "success")
@@ -1228,7 +1229,9 @@ class TestIntegrationBetweenStages:
                 intent_classification=QueryIntentClassification(
                     primary_intent=QueryIntent.TROUBLESHOOTING,
                     complexity_level=QueryComplexity.COMPLEX,
-                    classification_reasoning="Query about debugging indicates troubleshooting intent",
+                    classification_reasoning=(
+                        "Query about debugging indicates troubleshooting intent"
+                    ),
                 ),
                 preprocessing_result=QueryPreprocessingResult(
                     original_query="How to debug memry leaks?",

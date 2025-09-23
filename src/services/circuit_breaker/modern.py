@@ -66,7 +66,8 @@ class ModernCircuitBreakerManager:
 
         logger.info(
             f"ModernCircuitBreakerManager initialized with Redis: {redis_url}, "
-            f"threshold={default_threshold}, recovery_timeout={default_recovery_timeout}s"
+            f"threshold={default_threshold}, recovery_timeout="
+            f"{default_recovery_timeout}s"
         )
 
     async def get_breaker(self, service_name: str, **kwargs: Any):

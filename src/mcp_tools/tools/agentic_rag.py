@@ -484,7 +484,8 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
         historical performance and specified optimization targets.
 
         Args:
-            optimization_target: Target to optimize for ("speed", "quality", "cost", "balanced")
+            optimization_target: Target to optimize for
+                ("speed", "quality", "cost", "balanced")
             constraints: Optional performance constraints
 
         Returns:
@@ -499,9 +500,15 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
                 "target": optimization_target,
                 "optimization_id": str(uuid4()),
                 "improvements": {
-                    "strategy_selection": "Updated to favor faster tools for speed target",
-                    "caching_policy": "Increased cache retention for repeated queries",
-                    "tool_thresholds": "Adjusted confidence thresholds for tool selection",
+                    "strategy_selection": (
+                        "Updated to favor faster tools for speed target"
+                    ),
+                    "caching_policy": (
+                        "Increased cache retention for repeated queries"
+                    ),
+                    "tool_thresholds": (
+                        "Adjusted confidence thresholds for tool selection"
+                    ),
                 },
                 "expected_improvements": {
                     "latency_reduction_pct": 15.0

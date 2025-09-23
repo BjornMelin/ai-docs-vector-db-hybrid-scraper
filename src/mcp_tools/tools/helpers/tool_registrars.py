@@ -48,19 +48,22 @@ def register_advanced_query_processing_tool(
     async def advanced_query_processing(
         request: AdvancedQueryProcessingRequest, ctx: Context
     ) -> AdvancedQueryProcessingResponse:
-        """Process queries using advanced intent classification and intelligent strategy selection.
+        """Process queries using advanced intent
+               classification and intelligent strategy selection.
 
-        Implements complete advanced query processing pipeline with:
-        - 14 query intent categories (conceptual, procedural, factual, troubleshooting + 10 advanced)
-        - Intelligent preprocessing with spell correction and expansion
-        - Dynamic strategy selection based on intent and complexity
-        - Matryoshka embeddings with dimension optimization
-        - Comprehensive fallback handling and performance tracking
+               Implements complete advanced query processing pipeline with:
+               - 14 query intent categories (conceptual, procedural, factual,
+        troubleshooting + 10 advanced
+               )        - Intelligent preprocessing with spell correction and expansion
+               - Dynamic strategy selection based on intent and complexity
+               - Matryoshka embeddings with dimension optimization
+               - Comprehensive fallback handling and performance tracking
         """
         # Generate request ID for tracking
         request_id = str(uuid4())
         await ctx.info(
-            f"Starting advanced query processing {request_id} for query: {request.query[:50]}..."
+            f"Starting advanced query processing {request_id} for query: "
+            f"{request.query[:50]}..."
         )
 
         try:
@@ -70,7 +73,8 @@ def register_advanced_query_processing_tool(
             )
 
             await ctx.debug(
-                f"Processing with intent classification: {request.enable_intent_classification}, "
+                f"Processing with intent classification: "
+                f"{request.enable_intent_classification}, "
                 f"preprocessing: {request.enable_preprocessing}, "
                 f"strategy selection: {request.enable_strategy_selection}"
             )
@@ -106,7 +110,8 @@ def register_advanced_query_processing_tool(
 
             await ctx.debug(
                 f"Pipeline processing completed for {request_id}: "
-                f"{response.total_results} results in {response.total_processing_time_ms:.2f}ms"
+                f"{response.total_results} results in "
+                f"{response.total_processing_time_ms:.2f}ms"
             )
 
             # Convert to MCP response format
@@ -116,7 +121,8 @@ def register_advanced_query_processing_tool(
 
             await ctx.info(
                 f"Advanced query processing {request_id} completed successfully: "
-                f"{mcp_response.total_results} results, confidence: {mcp_response.confidence_score:.2f}"
+                f"{mcp_response.total_results} results, "
+                f"confidence: {mcp_response.confidence_score:.2f}"
             )
 
         except Exception as e:
@@ -168,7 +174,8 @@ def register_query_analysis_tool(
             pipeline = await factory.create_pipeline(ctx)
 
             await ctx.debug(
-                f"Analyzing query with preprocessing: {request.enable_preprocessing}, intent classification: {request.enable_intent_classification}"
+                f"Analyzing query with preprocessing: {request.enable_preprocessing}, "
+                f"intent classification: {request.enable_intent_classification}"
             )
 
             # Analyze query without search
@@ -209,7 +216,8 @@ def register_query_analysis_tool(
             await ctx.info(
                 f"Query analysis {request_id} completed: "
                 f"intent={intent_result.primary_intent if intent_result else 'N/A'}, "
-                f"complexity={intent_result.complexity_level if intent_result else 'N/A'}"
+                "complexity="
+                f"{intent_result.complexity_level if intent_result else 'N/A'}"
             )
 
         except Exception as e:

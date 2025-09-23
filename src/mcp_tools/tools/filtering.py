@@ -49,7 +49,7 @@ def register_tools(mcp, client_manager: ClientManager):
         Args:
             query: Search query for filter optimization
             base_filters: Base filters to optimize
-            optimization_target: Target for optimization (relevance, performance, coverage)
+            optimization_target: Target for optimization (relevance, perf, coverage)
             auto_enhance: Enable autonomous filter enhancement
             collection_name: Optional collection for context-aware optimization
             ctx: MCP context for logging
@@ -61,7 +61,8 @@ def register_tools(mcp, client_manager: ClientManager):
         try:
             if ctx:
                 await ctx.info(
-                    f"Starting intelligent filter optimization: target={optimization_target}"
+                    f"Starting intelligent filter optimization: "
+                    f"target={optimization_target}"
                 )
 
             # Validate query and filters
@@ -139,7 +140,9 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Filter optimization completed: {len(enhanced_filters.get('optimized_filters', {}))} filters optimized"
+                    f"Filter optimization completed: "
+                    f"{len(enhanced_filters.get('optimized_filters', {}))} "
+                    "filters optimized"
                 )
 
         except Exception as e:
@@ -171,7 +174,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Args:
             filters: List of individual filters to compose
-            composition_strategy: Strategy for composition (intelligent, union, intersection, adaptive)
+            composition_strategy: Strategy for composition
+                (intelligent, union, intersection, adaptive)
             performance_target: Optional performance target in milliseconds
             quality_threshold: Minimum quality threshold for results
             ctx: MCP context for logging
@@ -183,7 +187,8 @@ def register_tools(mcp, client_manager: ClientManager):
         try:
             if ctx:
                 await ctx.info(
-                    f"Starting adaptive filter composition: {len(filters)} filters with {composition_strategy} strategy"
+                    f"Starting adaptive filter composition: "
+                    f"{len(filters)} filters with {composition_strategy} strategy"
                 )
 
             # Validate filter consistency and compatibility
@@ -253,7 +258,9 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Filter composition completed: strategy={optimal_strategy['strategy']}, quality={quality_validation.get('quality_score', 0.0):.2f}"
+                    f"Filter composition completed: "
+                    f"strategy={optimal_strategy['strategy']}, "
+                    f"quality={quality_validation.get('quality_score', 0.0):.2f}"
                 )
 
         except Exception as e:
@@ -297,7 +304,8 @@ def register_tools(mcp, client_manager: ClientManager):
         try:
             if ctx:
                 await ctx.info(
-                    f"Starting dynamic filter learning: {len(query_patterns)} patterns with {learning_mode} mode"
+                    f"Starting dynamic filter learning: "
+                    f"{len(query_patterns)} patterns with {learning_mode} mode"
                 )
 
             # Validate input patterns and feedback
@@ -370,7 +378,9 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Filter learning completed: {len(learned_rules)} rules learned with {validation_metrics.get('accuracy', 0.0):.2f} accuracy"
+                    f"Filter learning completed: {len(learned_rules)} "
+                    "rules learned with "
+                    f"{validation_metrics.get('accuracy', 0.0):.2f} accuracy"
                 )
 
         except Exception as e:
@@ -432,7 +442,9 @@ def register_tools(mcp, client_manager: ClientManager):
                     ],
                 },
                 "temporal_filters": {
-                    "description": "Time-based filtering with intelligent date handling",
+                    "description": (
+                        "Time-based filtering with intelligent date handling"
+                    ),
                     "operators": [
                         "before",
                         "after",
@@ -790,7 +802,10 @@ async def _generate_filter_recommendations(
                     "operator": "in",
                     "value": ["documentation", "reference", "tutorial"],
                 },
-                "reasoning": "Query contains technical entities suggesting structured content preference",
+                "reasoning": (
+                    "Query contains technical entities suggesting structured "
+                    "content preference"
+                ),
                 "confidence": 0.75,
                 "impact": "medium",
             }
@@ -897,7 +912,9 @@ async def _predict_filter_performance(
 
     return {
         "performance_prediction": performance_factors,
-        "predicted_result_reduction": f"{(1 - performance_factors['selectivity_score']) * 100:.1f}%",
+        "predicted_result_reduction": (
+            f"{(1 - performance_factors['selectivity_score']) * 100:.1f}%"
+        ),
         "performance_rating": "excellent"
         if performance_factors["execution_time_ms"] < 30
         else "good",
@@ -1069,7 +1086,11 @@ async def _select_optimal_composition_strategy(
 
     return {
         "strategy": strategy,
-        "reasoning": f"Selected {strategy} based on {filter_analysis['filter_count']} filters and {filter_analysis['optimization_potential']:.2f} optimization potential",
+        "reasoning": (
+            f"Selected {strategy} based on "
+            f"{filter_analysis['filter_count']} filters and "
+            f"{filter_analysis['optimization_potential']:.2f} optimization potential"
+        ),
         "performance_target": performance_target,
         "confidence": 0.88,
     }
@@ -1235,9 +1256,12 @@ async def _generate_composition_insights(
             "quality_improvement": "12-18% better result relevance",
         },
         "key_insights": [
-            f"Composition strategy '{strategy['strategy']}' optimal for {filter_analysis['filter_count']} filters",
+            f"Composition strategy "
+            f"'{strategy['strategy']}' optimal for "
+            f"{filter_analysis['filter_count']} filters",
             f"Quality score of {quality_validation['quality_score']:.2f} achieved",
-            f"Performance optimizations provide {performance_optimization['estimated_speedup']} speedup",
+            f"Performance optimizations provide "
+            f"{performance_optimization['estimated_speedup']} speedup",
         ],
         "recommendations": [
             "Monitor composed filter performance in production",
@@ -1603,12 +1627,16 @@ async def _generate_learning_insights(
         },
         "pattern_insights": [
             f"Most common query type: {pattern_analysis['most_common_query_type']}",
-            f"Temporal patterns in {pattern_analysis['temporal_patterns']} out of {pattern_analysis['total_patterns']} queries",
-            f"Domain coverage: {len(pattern_analysis['common_domains'])} domains identified",
+            f"Temporal patterns in {pattern_analysis['temporal_patterns']} "
+            f"out of {pattern_analysis['total_patterns']} queries",
+            f"Domain coverage: {len(pattern_analysis['common_domains'])} "
+            "domains identified",
         ],
         "performance_insights": [
-            f"Average relevance score: {feedback_analysis['feedback_summary']['average_relevance']:.2f}",
-            f"Quality-relevance correlation: {feedback_analysis['correlation_analysis']['relevance_quality_correlation']:.2f}",
+            "Average relevance score: "
+            f"{feedback_analysis['feedback_summary']['average_relevance']:.2f}",
+            "Quality-relevance correlation: "
+            f"{feedback_analysis['correlation_analysis']['relevance_quality_correlation']:.2f}",
             f"Learning accuracy: {validation_metrics['accuracy']:.2f}",
         ],
         "recommendations": [

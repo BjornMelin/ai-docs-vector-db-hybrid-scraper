@@ -191,7 +191,8 @@ class ParallelAgentCoordinator:
         self._coordination_task: asyncio.Task | None = None
 
         logger.info(
-            f"ParallelAgentCoordinator initialized with max_parallel={max_parallel_agents}"
+            "ParallelAgentCoordinator initialized with "
+            f"max_parallel={max_parallel_agents}"
         )
 
     async def register_agent(
@@ -222,7 +223,8 @@ class ParallelAgentCoordinator:
             )
 
         logger.info(
-            f"Agent {agent_name} registered with capabilities: {capabilities}, role: {role}"
+            f"Agent {agent_name} registered with capabilities: {capabilities}, "
+            f"role: {role}"
         )
 
     async def unregister_agent(self, agent_name: str) -> None:
@@ -325,7 +327,8 @@ class ParallelAgentCoordinator:
         start_time = time.time()
 
         logger.info(
-            f"Starting coordinated workflow {workflow_id} with {len(tasks)} tasks using {strategy} strategy"
+            f"Starting coordinated workflow {workflow_id} with {len(tasks)} tasks "
+            f"using {strategy} strategy"
         )
 
         try:

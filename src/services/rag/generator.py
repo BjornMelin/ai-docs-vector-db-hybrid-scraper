@@ -228,7 +228,7 @@ class RAGGenerator(BaseService):
     def _build_context(
         self, request: RAGRequest, results: list[dict[str, Any]]
     ) -> dict[str, Any]:
-        """Build context string from search results with intelligent token management."""
+        """Build context string from search results with token management."""
         context_parts = []
         token_count = 0
         max_tokens = self.config.max_context_length
@@ -366,7 +366,8 @@ Relevant Information:
 
     def _build_system_prompt(self, request: RAGRequest) -> str:
         """Build system prompt for RAG answer generation."""
-        base_prompt = """You are an expert AI assistant that provides accurate, helpful answers based on the provided context.
+        base_prompt = """You are an expert AI assistant that
+        provides accurate, helpful answers based on the provided context.
 
 Guidelines:
 - Use ONLY the information provided in the context to answer the question
@@ -381,7 +382,10 @@ Guidelines:
 
         if request.require_high_confidence:
             base_prompt += "\n- Only provide answers you are highly confident about"
-            base_prompt += "\n- If confidence is low, explain what additional information would be needed"
+            base_prompt += (
+                "\n- If confidence is low, explain what additional "
+                "information would be needed"
+            )
 
         return base_prompt
 
@@ -506,7 +510,10 @@ Provide a clear, accurate answer based solely on the information provided above.
     ) -> RAGResult:
         """Create result when no valid context is available."""
         return RAGResult(
-            answer="I don't have enough relevant information to answer your question. Please try rephrasing your query or providing more specific details.",
+            answer=(
+                "I don't have enough relevant information to answer your question. "
+                "Please try rephrasing your query or providing more specific details."
+            ),
             confidence_score=0.0,
             sources=[],
             context_used="",

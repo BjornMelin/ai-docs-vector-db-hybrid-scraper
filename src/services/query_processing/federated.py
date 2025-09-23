@@ -440,8 +440,9 @@ class FederatedSearchService:
             self._update_performance_stats(request, result, total_search_time)
 
             self._logger.info(
-                f"Federated search completed: {len(successful_results)}/{len(target_collections)} "
-                f"collections, {len(merged_results)} total results in {total_search_time:.1f}ms"
+                f"Federated search completed: "
+                f"{len(successful_results)}/{len(target_collections)} collections, "
+                f"{len(merged_results)} total results in {total_search_time:.1f}ms"
             )
 
         except Exception as e:
