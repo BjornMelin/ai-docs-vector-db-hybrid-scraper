@@ -142,6 +142,7 @@ class AgenticVectorManager:
             enable_auto_optimization: Enable automatic optimization
             optimization_interval_hours: Hours between optimization runs
             health_check_interval_seconds: Seconds between health checks
+
         """
         self.qdrant_service = qdrant_service
         self.enable_auto_optimization = enable_auto_optimization
@@ -215,6 +216,7 @@ class AgenticVectorManager:
 
         Returns:
             Collection name
+
         """
         collection_name = (
             f"agent_{config.agent_id}_{config.collection_type}_{uuid4().hex[:8]}"
@@ -278,6 +280,7 @@ class AgenticVectorManager:
 
         Returns:
             Optimization results
+
         """
         if collection_name not in self.agent_collections:
             msg = f"Collection {collection_name} not managed by agentic system"
@@ -394,6 +397,7 @@ class AgenticVectorManager:
 
         Returns:
             Search results with optimization metadata
+
         """
         search_id = str(uuid4())
         start_time = time.time()
@@ -482,6 +486,7 @@ class AgenticVectorManager:
 
         Returns:
             List of collections with metadata
+
         """
         agent_collections = []
 
@@ -511,6 +516,7 @@ class AgenticVectorManager:
 
         Returns:
             Cleanup results
+
         """
         collections_to_delete = [
             name
@@ -551,6 +557,7 @@ class AgenticVectorManager:
 
         Returns:
             System status information
+
         """
         total_collections = len(self.agent_collections)
         healthy_collections = sum(

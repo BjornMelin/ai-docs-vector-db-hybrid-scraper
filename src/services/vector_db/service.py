@@ -369,6 +369,7 @@ class QdrantService(BaseService):
 
         Raises:
             QdrantServiceError: If search fails
+
         """
         if not self._search:
             msg = "Search module not initialized"
