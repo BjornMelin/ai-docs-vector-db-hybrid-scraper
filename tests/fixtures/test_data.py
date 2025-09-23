@@ -19,7 +19,10 @@ def sample_documents():
             "id": "doc1",
             "url": "https://docs.example.com/guide/intro",
             "title": "Introduction to Example Framework",
-            "content": "This guide provides a comprehensive introduction to the Example Framework...",
+            "content": (
+                "This guide provides a comprehensive introduction to the "
+                "Example Framework..."
+            ),
             "metadata": {
                 "author": "Documentation Team",
                 "version": "1.0",
@@ -32,7 +35,9 @@ def sample_documents():
             "id": "doc2",
             "url": "https://docs.example.com/api/reference",
             "title": "API Reference",
-            "content": "Complete API reference for all available endpoints and methods...",
+            "content": (
+                "Complete API reference for all available endpoints and methods..."
+            ),
             "metadata": {
                 "author": "API Team",
                 "version": "2.0",
@@ -45,7 +50,7 @@ def sample_documents():
             "id": "doc3",
             "url": "https://docs.example.com/examples/advanced",
             "title": "Advanced Examples",
-            "content": "Collection of advanced usage examples and patterns...",
+            "content": ("Collection of advanced usage examples and patterns..."),
             "metadata": {
                 "author": "Community",
                 "version": "1.5",
@@ -176,8 +181,10 @@ def query_test_suite():
             "API authentication",
         ],
         "complex_queries": [
-            "Explain the difference between supervised and unsupervised learning with examples",
-            "What are the performance implications of using batch processing vs stream processing?",
+            "Explain the difference between supervised and unsupervised learning "
+            "with examples",
+            "What are the performance implications of using batch processing vs "
+            "stream processing?",
             "How to implement OAuth2 authentication with refresh tokens?",
         ],
         "edge_queries": [

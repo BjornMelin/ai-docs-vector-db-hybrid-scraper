@@ -79,7 +79,8 @@ def _validate_streaming_config(errors: list, warnings: list) -> None:
             )
     except ValueError:
         errors.append(
-            f"Invalid buffer size: {os.getenv('FASTMCP_BUFFER_SIZE')}. Must be a valid integer"
+            f"Invalid buffer size: {os.getenv('FASTMCP_BUFFER_SIZE')}. "
+            "Must be a valid integer"
         )
 
     # Validate max response size
@@ -89,7 +90,8 @@ def _validate_streaming_config(errors: list, warnings: list) -> None:
             errors.append("Max response size must be positive")
     except ValueError:
         errors.append(
-            f"Invalid max response size: {os.getenv('FASTMCP_MAX_RESPONSE_SIZE')}. Must be a valid integer"
+            f"Invalid max response size: {os.getenv('FASTMCP_MAX_RESPONSE_SIZE')}. "
+            "Must be a valid integer"
         )
 
 
@@ -189,7 +191,8 @@ async def lifespan():
                     config.cache.enable_local_cache
                     or config.cache.enable_dragonfly_cache
                 ):
-                    # Initialize cache manager first to ensure it's available for monitoring
+                    # Initialize cache manager first to ensure it's available
+                    # for monitoring
                     cache_manager = await lifespan.client_manager.get_cache_manager()
                     cache_metrics_task = asyncio.create_task(
                         update_cache_metrics_periodically(

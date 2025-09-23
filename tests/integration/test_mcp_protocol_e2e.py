@@ -153,7 +153,10 @@ class TestMCPProtocolE2E:
             mock_search.return_value = [
                 {
                     "id": "ml-tutorial-1",
-                    "content": "Comprehensive machine learning tutorial covering basics to advanced topics",
+                    "content": (
+                        "Comprehensive machine learning tutorial covering basics "
+                        "to advanced topics"
+                    ),
                     "score": 0.95,
                     "metadata": {
                         "title": "ML Tutorial",
@@ -185,9 +188,9 @@ class TestMCPProtocolE2E:
             assert response["jsonrpc"] == "2.0"
             assert response["id"] == "e2e-test-1"
             assert len(response["result"]) == 1
-            assert (
-                response["result"][0]["content"]
-                == "Comprehensive machine learning tutorial covering basics to advanced topics"
+            assert response["result"][0]["content"] == (
+                "Comprehensive machine learning tutorial covering basics to "
+                "advanced topics"
             )
 
     @pytest.mark.asyncio

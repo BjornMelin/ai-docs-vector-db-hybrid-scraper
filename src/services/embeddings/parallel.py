@@ -254,7 +254,9 @@ class ParallelProcessor:
         return {
             "batch_size": optimal_batch_size,
             "num_batches": num_batches,
-            "reasoning": f"Adaptive batching based on {len(self._performance_history)} samples",
+            "reasoning": (
+                f"Adaptive batching based on {len(self._performance_history)} samples"
+            ),
         }
 
     def _create_batches(

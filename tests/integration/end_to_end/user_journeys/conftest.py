@@ -292,7 +292,7 @@ def journey_executor():
                 "create_project": self._action_create_project,
                 "add_to_collection": self._action_add_to_collection,
                 "validate_api_response": self._action_validate_api,
-                "validate_api": self._action_validate_api,  # Alias for backward compatibility
+                "validate_api": self._action_validate_api,  # Alias for backward compat
                 "check_system_health": self._action_check_health,
                 "wait_for_processing": self._action_wait_processing,
                 "browser_navigate": self._action_browser_navigate,
@@ -636,7 +636,9 @@ def sample_user_journeys(journey_test_config):
     # Document Processing Journey
     document_processing_journey = UserJourney(
         name="document_processing_complete",
-        description="Complete document processing workflow from URL to searchable vectors",
+        description=(
+            "Complete document processing workflow from URL to searchable vectors"
+        ),
         steps=[
             JourneyStep(
                 name="crawl_documentation_url",
@@ -727,7 +729,9 @@ def sample_user_journeys(journey_test_config):
     # Project Management Journey
     project_management_journey = UserJourney(
         name="project_management_workflow",
-        description="Complete project management workflow with collections and documents",
+        description=(
+            "Complete project management workflow with collections and documents"
+        ),
         steps=[
             JourneyStep(
                 name="create_new_project",
@@ -780,7 +784,9 @@ def sample_user_journeys(journey_test_config):
     # API Client Journey
     api_client_journey = UserJourney(
         name="api_client_workflow",
-        description="Complete API client workflow with authentication and endpoint validation",
+        description=(
+            "Complete API client workflow with authentication and endpoint validation"
+        ),
         steps=[
             JourneyStep(
                 name="check_system_health",
@@ -819,7 +825,9 @@ def sample_user_journeys(journey_test_config):
     # Administrative Journey
     admin_journey = UserJourney(
         name="administrative_monitoring",
-        description="Administrative workflow for system monitoring and performance analysis",
+        description=(
+            "Administrative workflow for system monitoring and performance analysis"
+        ),
         steps=[
             JourneyStep(
                 name="initial_health_check",

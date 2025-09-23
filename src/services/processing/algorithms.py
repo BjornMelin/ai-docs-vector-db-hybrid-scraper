@@ -631,5 +631,8 @@ def classify_text_complexity_fast(text: str) -> dict[str, Any]:
             "vocabulary_ratio": vocabulary_ratio,
             "avg_sentence_length": avg_sentence_length,
         },
-        "reasoning": f"Based on {word_count} words with {vocabulary_ratio:.2f} vocabulary diversity",
+        "reasoning": (
+            f"Based on {word_count} words with {vocabulary_ratio:.2f} "
+            "vocabulary diversity"
+        ),
     }

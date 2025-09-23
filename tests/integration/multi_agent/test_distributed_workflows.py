@@ -467,7 +467,9 @@ class TestDistributedWorkflowExecution:
                 WorkflowNode(
                     node_id="tool_discovery",
                     agent_role=AgentRole.SPECIALIST,
-                    task_description="discover optimal tools for complex data processing",
+                    task_description=(
+                        "discover optimal tools for complex data processing"
+                    ),
                     constraints={"max_latency_ms": 1500, "min_accuracy": 0.85},
                 ),
                 # Planning phase
@@ -1056,7 +1058,9 @@ class TestAutonomousCapabilities:
                 WorkflowNode(
                     node_id="speed_critical",
                     agent_role=AgentRole.COORDINATOR,
-                    task_description="speed-critical processing with time constraints",
+                    task_description=(
+                        "speed-critical processing with time constraints"
+                    ),
                     dependencies=["performance_assessment"],
                     constraints={"max_latency_ms": 200, "priority": "speed"},
                 ),
@@ -1064,7 +1068,9 @@ class TestAutonomousCapabilities:
                 WorkflowNode(
                     node_id="quality_critical",
                     agent_role=AgentRole.COORDINATOR,
-                    task_description="quality-critical processing requiring high accuracy",
+                    task_description=(
+                        "quality-critical processing requiring high accuracy"
+                    ),
                     dependencies=["performance_assessment"],
                     constraints={"min_accuracy": 0.9, "priority": "quality"},
                 ),
@@ -1072,7 +1078,9 @@ class TestAutonomousCapabilities:
                 WorkflowNode(
                     node_id="adaptive_optimization",
                     agent_role=AgentRole.COORDINATOR,
-                    task_description="adaptively optimize based on performance feedback",
+                    task_description=(
+                        "adaptively optimize based on performance feedback"
+                    ),
                     dependencies=["speed_critical", "quality_critical"],
                     constraints={"optimize": "adaptive", "target": "3x-10x"},
                 ),

@@ -166,7 +166,8 @@ class QueryClassifier:
             context: Optional context information (user history, session data)
 
         Returns:
-            QueryClassification: Classification result with type, complexity, and features
+            QueryClassification:
+                Classification result with type, complexity, and features
 
         """
         try:

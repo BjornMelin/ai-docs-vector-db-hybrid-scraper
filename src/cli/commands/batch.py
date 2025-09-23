@@ -153,7 +153,7 @@ class OperationQueue:
 
 @click.group()
 def batch():
-    """📦 Batch operations with enhanced progress tracking.
+    """📦 Batch operations with progress tracking.
 
     Perform bulk operations on collections, documents, and configurations
     with Rich progress visualization and operation queuing.

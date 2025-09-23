@@ -316,7 +316,8 @@ class QdrantAliasManager(BaseService):
 
         # Schedule deletion after grace period
         logger.info(
-            f"Scheduling deletion of {collection_name} in {grace_period_minutes} minutes"
+            f"Scheduling deletion of {collection_name} in {grace_period_minutes} "
+            "minutes"
         )
 
         # Task queue is required for persistent deletion scheduling

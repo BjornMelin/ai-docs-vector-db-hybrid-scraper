@@ -501,7 +501,7 @@ class TestBrowserUserJourneys:
                     'input[type="submit"]', timeout=2000
                 )
                 if submit_button:
-                    # Don't actually submit to avoid side effects, just validate it's present
+                    # Don't actually submit to avoid side effects, validate it's present
                     is_enabled = await submit_button.is_enabled()
                     journey_steps.append(
                         {
@@ -653,7 +653,7 @@ class TestBrowserUserJourneys:
                             } : null,
                         };
                     }
-                """)
+                """)  # noqa: E501
 
                 scenario_duration = time.perf_counter() - scenario_start
 
@@ -720,7 +720,8 @@ class TestBrowserUserJourneys:
 
         # Validate performance monitoring journey
         assert performance_result["success_rate"] >= 0.8, (
-            f"Performance monitoring success rate too low: {performance_result['success_rate']:.2%}"
+            f"Performance monitoring success rate too low: "
+            f"{performance_result['success_rate']:.2%}"
         )
         assert len(successful_scenarios) >= 2, (
             "At least 2 performance scenarios should succeed"
@@ -824,7 +825,8 @@ class TestBrowserUserJourneys:
 
         # Validate error handling
         assert error_result["prediction_accuracy"] >= 0.6, (
-            f"Error prediction accuracy too low: {error_result['prediction_accuracy']:.2%}"
+            "Error prediction accuracy too low: "
+            f"{error_result['prediction_accuracy']:.2%}"
         )
 
         # At least some error scenarios should be handled correctly

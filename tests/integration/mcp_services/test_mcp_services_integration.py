@@ -113,7 +113,7 @@ class TestMCPServicesCompleteIntegration:
     async def test_all_services_report_capabilities_correctly(
         self, complete_mcp_services_setup
     ):
-        """Test that all services report their capabilities correctly for service discovery."""
+        """Test that all services report correct features for service discovery."""
         services = complete_mcp_services_setup
 
         # Test each service's capabilities
@@ -184,7 +184,9 @@ class TestMCPServicesCompleteIntegration:
         expected_research_basis = {
             "search": "I5_WEB_SEARCH_TOOL_ORCHESTRATION",
             "document": "I3_5_TIER_CRAWLING_ENHANCEMENT",
-            "analytics": "J1_ENTERPRISE_AGENTIC_OBSERVABILITY_WITH_EXISTING_INTEGRATION",
+            "analytics": (
+                "J1_ENTERPRISE_AGENTIC_OBSERVABILITY_WITH_EXISTING_INTEGRATION"
+            ),
             "system": "SYSTEM_INFRASTRUCTURE",
             "orchestrator": "FASTMCP_2_0_SERVER_COMPOSITION",
         }
@@ -267,7 +269,7 @@ class TestMCPServicesOrchestratorIntegration:
     async def orchestrator_with_real_services(
         self, mock_client_manager, mock_observability_components
     ):
-        """Set up orchestrator with real domain-specific services for integration testing."""
+        """Set up orchestrator with real domain-specific services for testing."""
         # Create real domain services
         search_service = SearchService("integration-search")
         document_service = DocumentService("integration-document")
@@ -455,7 +457,7 @@ class TestMCPServicesWorkflowOrchestration:
     async def test_complex_research_workflow_orchestration(
         self, workflow_test_environment, sample_workflow_description
     ):
-        """Test complex research workflow orchestration across multiple services."""
+        """Test complex workflow orchestration across multiple services."""
         orchestrator = workflow_test_environment["orchestrator"]
 
         # Register orchestrator tools to test workflow orchestration
@@ -768,15 +770,15 @@ class TestMCPServicesAutonomousCapabilities:
     async def test_research_implementation_autonomous_validation(
         self, complete_mcp_services_setup
     ):
-        """Test that research implementations provide expected autonomous capabilities."""
+        """Test that implementations provide expected autonomous capabilities."""
         services = complete_mcp_services_setup
 
-        # Validate I5 research (Search service) autonomous capabilities
+        # Validate Search service autonomous capabilities
         search_info = await services["search"].get_service_info()
         assert "strategy_adaptation" in search_info["autonomous_features"]
         assert "provider_optimization" in search_info["autonomous_features"]
 
-        # Validate I3 research (Document service) autonomous capabilities
+        # Validate Document service autonomous capabilities
         document_info = await services["document"].get_service_info()
         assert "tier_selection_optimization" in document_info["autonomous_features"]
         assert "content_quality_assessment" in document_info["autonomous_features"]

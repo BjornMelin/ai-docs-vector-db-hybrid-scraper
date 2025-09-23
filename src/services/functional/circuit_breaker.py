@@ -323,7 +323,7 @@ class CircuitBreaker:
         return {
             "state": self.state.value,
             "failure_count": self.failure_count,
-            "_total_requests": self.metrics.total_requests,  # Underscore for test compatibility
+            "_total_requests": self.metrics.total_requests,
             "total_requests": self.metrics.total_requests,
             "successful_requests": self.metrics.successful_requests,
             "failed_requests": self.metrics.failed_requests,

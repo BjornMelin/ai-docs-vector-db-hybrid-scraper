@@ -261,4 +261,4 @@ if __name__ == "__main__":
         "ci",
         "--verbose",
     ]
-    subprocess.run(cmd, check=False)
+    subprocess.run(cmd, check=False)  # noqa: S603

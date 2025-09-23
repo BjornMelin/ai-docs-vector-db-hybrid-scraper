@@ -831,7 +831,8 @@ class QualityAssessor:
 
         if duplicate_similarity > self._quality_config["similarity_threshold_similar"]:
             suggestions.append(
-                "Add unique insights or perspectives to differentiate from similar content"
+                "Add unique insights or perspectives to differentiate from similar "
+                "content"
             )
 
         # Check for missing elements

@@ -550,7 +550,8 @@ def load_test_runner():
                 response_time_std = statistics.stdev(metrics.response_times) * 1000
                 if response_time_std > avg_response_time_ms * 0.5:
                     bottlenecks.append(
-                        f"High response time variability: {response_time_std:.2f}ms std dev"
+                        f"High response time variability: {response_time_std:.2f}ms "
+                        "std dev"
                     )
 
             return bottlenecks

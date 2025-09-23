@@ -568,7 +568,8 @@ class EnterpriseCacheService(BaseService):
             recommendations.append("Consider increasing cache TTL or size")
         if memory_usage > 90:
             recommendations.append(
-                "Consider increasing cache size or implementing more aggressive eviction"
+                "Consider increasing cache size or implementing more aggressive "
+                "eviction"
             )
         if len(self._hot_keys) > 100:
             recommendations.append(

@@ -520,7 +520,10 @@ class ModelSelector:
     ) -> None:
         """Update performance history for a model on a specific query type."""
         try:
-            query_type_key = f"{query_classification.query_type}_{query_classification.complexity_level}"
+            query_type_key = (
+                f"{query_classification.query_type}_"
+                f"{query_classification.complexity_level}"
+            )
 
             if model_id not in self.performance_history:
                 self.performance_history[model_id] = {}

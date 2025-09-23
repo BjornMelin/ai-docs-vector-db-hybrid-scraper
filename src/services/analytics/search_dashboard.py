@@ -231,7 +231,9 @@ class SearchAnalyticsDashboard(BaseService):
                 "feature_utilization": await self._calculate_feature_utilization(),
                 "query_volume_timeline": await self._get_query_volume_timeline(),
                 "top_performing_queries": await self._get_top_performing_queries(),
-                "optimization_opportunities": await self._identify_optimization_opportunities(),
+                "optimization_opportunities": (
+                    await self._identify_optimization_opportunities()
+                ),
                 "last_updated": datetime.now(tz=UTC).isoformat(),
             }
 

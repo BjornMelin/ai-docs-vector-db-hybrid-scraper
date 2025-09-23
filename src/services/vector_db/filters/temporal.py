@@ -109,7 +109,9 @@ class TemporalFilter(BaseFilter):
     def __init__(
         self,
         name: str = "temporal_filter",
-        description: str = "Filter documents based on temporal criteria and content freshness",
+        description: str = (
+            "Filter documents based on temporal criteria and content freshness"
+        ),
         enabled: bool = True,
         priority: int = 90,
     ):
@@ -524,7 +526,8 @@ class TemporalFilter(BaseFilter):
                     return calculator(match)
                 except (OSError, PermissionError, ValueError) as e:
                     self._logger.warning(
-                        f"Failed to calculate relative date for '{relative_date_str}': {e}"
+                        "Failed to calculate relative date for "
+                        f"'{relative_date_str}': {e}"
                     )
                     return None
 

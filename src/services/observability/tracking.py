@@ -471,7 +471,8 @@ class PerformanceTracker:
 
         Args:
             operation_id: Unique identifier for the operation
-            operation_type: Type of operation (e.g., 'tool_execution', 'agent_coordination')
+            operation_type:
+                Type of operation (e.g., 'tool_execution', 'agent_coordination')
             metadata: Additional metadata for the operation
 
         """

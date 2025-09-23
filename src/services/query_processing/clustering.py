@@ -263,14 +263,14 @@ class ResultClusteringService:
     def __init__(
         self,
         enable_hdbscan: bool = True,
-        enable_advanced_metrics: bool = True,
+        enable_metrics: bool = True,
         cache_size: int = 500,
     ):
         """Initialize result clustering service.
 
         Args:
             enable_hdbscan: Enable HDBSCAN algorithm (requires hdbscan package)
-            enable_advanced_metrics: Enable advanced clustering metrics
+            enable_metrics: Enable clustering metrics
             cache_size: Size of clustering cache
 
         """
@@ -280,7 +280,7 @@ class ResultClusteringService:
 
         # Configuration
         self.enable_hdbscan = enable_hdbscan
-        self.enable_advanced_metrics = enable_advanced_metrics
+        self.enable_metrics = enable_metrics
 
         # Caching
         self.clustering_cache = {}
@@ -402,8 +402,9 @@ class ResultClusteringService:
             self._update_performance_stats(method, processing_time_ms)
 
             self._logger.info(
-                f"Clustered {len(request.results)} results into {len(clusters)} clusters "
-                f"with {len(outliers)} outliers using {method.value} in {processing_time_ms:.1f}ms"
+                f"Clustered {len(request.results)} results into {len(clusters)} "
+                f"clusters with {len(outliers)} outliers using {method.value} "
+                f"in {processing_time_ms:.1f}ms"
             )
 
             return result
@@ -888,7 +889,7 @@ class ResultClusteringService:
         """Calculate clustering quality metrics."""
         metrics = {}
 
-        if not self.enable_advanced_metrics:
+        if not self.enable_metrics:
             return metrics
 
         if silhouette_score is not None:

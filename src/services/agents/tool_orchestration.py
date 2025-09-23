@@ -1,7 +1,7 @@
 """Advanced tool orchestration system for agentic workflows.
 
 This module implements sophisticated tool composition and orchestration patterns
-based on I4 research findings, enabling autonomous agents to intelligently
+based on research findings, enabling agents to
 compose and coordinate complex tool workflows.
 """
 
@@ -53,7 +53,7 @@ class ToolPriority(str, Enum):
 
 
 class ToolCapability(str, Enum):
-    """Tool capability categories for intelligent selection."""
+    """Tool capability categories for selection."""
 
     SEARCH = "search"  # Search and retrieval
     ANALYSIS = "analysis"  # Data analysis and processing
@@ -189,7 +189,7 @@ class AdvancedToolOrchestrator:
         default_timeout_seconds: float = 30.0,
         enable_circuit_breakers: bool = True,
     ):
-        """Initialize the advanced tool orchestrator.
+        """Initialize the tool orchestrator.
 
         Args:
             client_manager: Client manager for resource access
@@ -424,7 +424,7 @@ class AdvancedToolOrchestrator:
         timeout_seconds: float | None = None,
         fallback_enabled: bool = True,
     ) -> ToolExecutionResult:
-        """Execute a single tool with intelligent error handling.
+        """Execute a single tool with error handling.
 
         Args:
             tool_id: Tool identifier
@@ -1030,6 +1030,6 @@ class AdvancedToolOrchestrator:
         self, plan: ToolOrchestrationPlan, _execution_state: dict[str, Any]
     ) -> None:
         """Update performance history for the orchestration plan."""
-        # This would implement comprehensive performance tracking
+        # This would implement performance tracking
         # For now, just log the completion
         logger.info(f"Updated performance history for plan {plan.plan_id}")

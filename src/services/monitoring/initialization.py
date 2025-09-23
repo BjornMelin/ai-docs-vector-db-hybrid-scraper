@@ -226,7 +226,8 @@ def initialize_monitoring_system(
         try:
             metrics_registry.start_metrics_server()
             logger.info(
-                f"Prometheus metrics server started on port {metrics_config.export_port}"
+                f"Prometheus metrics server started on port "
+                f"{metrics_config.export_port}"
             )
         except (OSError, PermissionError):
             logger.exception("Failed to start metrics server")
@@ -355,7 +356,8 @@ def setup_fastmcp_monitoring(
 
         else:
             logger.warning(
-                "FastMCP app does not expose underlying FastAPI app - health endpoints not added"
+                "FastMCP app does not expose underlying FastAPI app - "
+                "health endpoints not added"
             )
 
     except (ConnectionError, OSError, PermissionError):

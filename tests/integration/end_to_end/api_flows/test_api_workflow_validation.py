@@ -151,7 +151,9 @@ class TestAPIWorkflowValidation:
                             "document": {
                                 "id": f"doc_{int(time.time())}",
                                 "url": doc_data.get("url", ""),
-                                "title": f"Document for {doc_data.get('url', 'unknown')}",
+                                "title": (
+                                    f"Document for {doc_data.get('url', 'unknown')}"
+                                ),
                                 "status": "processing",
                                 "created_at": time.time(),
                             },
@@ -817,7 +819,8 @@ class TestAPIWorkflowValidation:
 
         # Validate error handling workflow
         assert error_handling_result["success_rate"] >= 0.8, (
-            f"Error handling success rate too low: {error_handling_result['success_rate']:.2%}"
+            f"Error handling success rate too low: "
+            f"{error_handling_result['success_rate']:.2%}"
         )
         assert len(successful_steps) >= 2, (
             "At least basic error handling steps should succeed"
@@ -826,7 +829,8 @@ class TestAPIWorkflowValidation:
         # Validate error prediction accuracy if available
         if "error_prediction_accuracy" in error_handling_result:
             assert error_handling_result["error_prediction_accuracy"] >= 0.6, (
-                f"Error prediction accuracy too low: {error_handling_result['error_prediction_accuracy']:.2%}"
+                f"Error prediction accuracy too low: "
+                f"{error_handling_result['error_prediction_accuracy']:.2%}"
             )
 
     @pytest.mark.performance
@@ -1004,11 +1008,13 @@ class TestAPIWorkflowValidation:
         for step in performance_steps:
             if step["step"] == "sequential_requests":
                 assert step["avg_request_duration_s"] < 1.0, (
-                    f"Sequential requests too slow: {step['avg_request_duration_s']}s avg"
+                    f"Sequential requests too slow: "
+                    f"{step['avg_request_duration_s']}s avg"
                 )
             elif step["step"] == "concurrent_requests":
                 assert step["success_rate"] >= 0.9, (
-                    f"Concurrent request success rate too low: {step['success_rate']:.2%}"
+                    f"Concurrent request success rate too low: "
+                    f"{step['success_rate']:.2%}"
                 )
             elif step["step"] == "rate_testing":
                 assert step["throughput_rps"] >= 5, (

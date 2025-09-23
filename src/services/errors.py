@@ -48,7 +48,7 @@ F = TypeVar("F", bound=Callable[..., Any])
 
 # Base Error Classes
 class BaseError(Exception):
-    """Base error class with enhanced context support."""
+    """Base error class with context support."""
 
     def __init__(
         self,
@@ -285,8 +285,8 @@ def retry_async(
                     delay = min(base_delay * (backoff_factor**attempt), max_delay)
 
                     logger.warning(
-                        f"Attempt {attempt + 1}/{max_attempts} failed for {func.__name__}: {e}. "
-                        f"Retrying in {delay:.1f}s..."
+                        f"Attempt {attempt + 1}/{max_attempts} failed for "
+                        f"{func.__name__}: {e}. Retrying in {delay:.1f}s..."
                     )
 
                     await asyncio.sleep(delay)
@@ -810,7 +810,8 @@ def tenacity_circuit_breaker(
 
                         # Log retry attempt
                         logger.warning(
-                            f"Tenacity retry attempt {attempt.retry_state.attempt_number}/"
+                            f"Tenacity retry attempt "
+                            f"{attempt.retry_state.attempt_number}/"
                             f"{max_attempts} failed for {service_name}"
                         )
                         raise
@@ -929,18 +930,6 @@ def validate_input(**validators) -> Callable[[F], F]:
         return wrapper  # type: ignore[misc]
 
     return decorator
-
-
-# NOTE: Rate limiting has been consolidated to use the advanced RateLimitManager
-# from src.services.utilities.rate_limiter.py, which provides:
-# - Token bucket algorithm with burst capacity
-# - Adaptive rate limiting based on API responses
-# - Centralized configuration through UnifiedConfig
-#
-# For rate limiting in your services, use:
-# from ..utilities.rate_limiter import RateLimitManager
-# rate_limiter = RateLimitManager(config)
-# await rate_limiter.acquire(provider="openai", tokens=1)
 
 
 # Custom Pydantic errors following Pydantic 2.0 patterns

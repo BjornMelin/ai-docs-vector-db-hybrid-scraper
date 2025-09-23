@@ -866,7 +866,8 @@ class EnterpriseObservabilityPlatform:
     def _handle_alert_notification(self, alert: Alert) -> None:
         """Handle alert notifications."""
         logger.warning(
-            f"ALERT TRIGGERED: {alert.name} - {alert.description} (Severity: {alert.severity.value})"
+            f"ALERT TRIGGERED: {alert.name} - {alert.description} "
+            f"(Severity: {alert.severity.value})"
         )
 
         # Here you would integrate with notification systems:

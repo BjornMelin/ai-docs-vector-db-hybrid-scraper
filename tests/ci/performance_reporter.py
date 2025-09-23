@@ -356,14 +356,16 @@ class PerformanceReporter:
         distribution = self.analyze_test_distribution()
         if distribution.get("load_balance_score", 100) < 80:
             recommendations.append(
-                "Consider using --dist=loadfile or --dist=loadgroup for better test distribution"
+                "Consider using --dist=loadfile or --dist=loadgroup for better "
+                "test distribution"
             )
 
         # Check for slow tests
         slow_tests = self.find_slow_tests()
         if slow_tests and slow_tests[0]["duration"] > 10:
             recommendations.append(
-                f"Optimize slow tests: {slow_tests[0]['nodeid']} takes {slow_tests[0]['duration']:.2f}s"
+                f"Optimize slow tests: {slow_tests[0]['nodeid']} takes "
+                f"{slow_tests[0]['duration']:.2f}s"
             )
 
         # Check worker efficiency
@@ -380,7 +382,8 @@ class PerformanceReporter:
             and memory_analysis.get("peak_memory_mb", 0) > 2048
         ):
             recommendations.append(
-                f"High memory usage detected ({memory_analysis['peak_memory_mb']:.0f} MB peak)"
+                f"High memory usage detected "
+                f"({memory_analysis['peak_memory_mb']:.0f} MB peak)"
             )
 
         return recommendations

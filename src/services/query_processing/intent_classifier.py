@@ -648,7 +648,9 @@ class QueryIntentClassifier:
             QueryIntent.CONCEPTUAL: "What is the concept and how does it work?",
             QueryIntent.PROCEDURAL: "How do I implement this step by step?",
             QueryIntent.FACTUAL: "What are the specifications and requirements?",
-            QueryIntent.TROUBLESHOOTING: "How to fix this error and resolve the problem?",
+            QueryIntent.TROUBLESHOOTING: (
+                "How to fix this error and resolve the problem?"
+            ),
             QueryIntent.COMPARATIVE: "What are the differences and which is better?",
             QueryIntent.ARCHITECTURAL: "How to design the system architecture?",
             QueryIntent.PERFORMANCE: "How to optimize performance and improve speed?",
@@ -692,7 +694,8 @@ class QueryIntentClassifier:
             for i, (intent, _) in enumerate(reference_queries.items()):
                 if i >= len(reference_embeddings):
                     logger.error(
-                        f"Index {i} out of range for reference_embeddings of length {len(reference_embeddings)}"
+                        f"Index {i} out of range for reference_embeddings of "
+                        f"length {len(reference_embeddings)}"
                     )
                     break
                 similarity = self._cosine_similarity(

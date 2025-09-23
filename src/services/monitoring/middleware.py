@@ -93,7 +93,8 @@ class PrometheusMiddleware:
                         self.instrumentator.add(metrics.requests())
                 except AttributeError:
                     logger.warning(
-                        "No compatible metrics found, continuing with basic instrumentator"
+                        "No compatible metrics found, continuing with "
+                        "basic instrumentator"
                     )
             self.instrumentator.add(
                 metrics.latency(

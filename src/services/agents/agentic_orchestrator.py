@@ -112,7 +112,8 @@ maintaining high performance and reliability. Always explain your reasoning."""
 
         if not PYDANTIC_AI_AVAILABLE or self.agent is None:
             logger.warning(
-                f"AgenticOrchestrator using fallback mode (reason: {fallback_reason or 'pydantic_ai_unavailable'})"
+                "AgenticOrchestrator using fallback mode (reason: "
+                f"{fallback_reason or 'pydantic_ai_unavailable'})"
             )
             return
 

@@ -898,7 +898,8 @@ class AutonomousHealthMonitor:
             f"DB Connections: {metrics.database_connections}",
             (
                 f"Active Predictions: {len(predictions)} | "
-                f"High Risk: {len([p for p in predictions if p.risk_level == FailureRiskLevel.HIGH])}"
+                f"High Risk: "
+                f"{len([p for p in predictions if p.risk_level == FailureRiskLevel.HIGH])}"
             ),
             f"System Stability: {insights['system_stability']}",
             "=== End Summary ===",

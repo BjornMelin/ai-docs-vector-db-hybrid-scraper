@@ -60,7 +60,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         # Security headers to inject
         self._security_headers = self._build_security_headers()
 
-        # Note: Redis initialization is done lazily or explicitly via _initialize_redis()
+        # Note: Redis init is done lazily or explicitly via _initialize_redis()
 
     async def _initialize_redis(self) -> None:
         """Initialize Redis connection for distributed rate limiting.

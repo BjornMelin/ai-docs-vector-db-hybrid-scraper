@@ -1255,7 +1255,9 @@ class TestLogCorrelation:
             error_id="err_003",
             service="api_gateway",
             error_type="DegradedServiceError",
-            message="Returning degraded search results due to embedding service failure",
+            message=(
+                "Returning degraded search results due to embedding service failure"
+            ),
             correlation_id=correlation_id,
             context={
                 "user_id": "user_123",
