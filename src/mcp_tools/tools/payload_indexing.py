@@ -37,10 +37,10 @@ def register_tools(mcp, client_manager: ClientManager):
     async def create_payload_indexes(
         collection_name: str, ctx: Context
     ) -> "GenericDictResponse":
-        """Create payload indexes on a collection for 10-100x faster filtering.
+        """Create payload indexes on a collection for faster filtering.
 
         Creates indexes on key metadata fields like site_name, embedding_model,
-        title, word_count, crawl_timestamp, etc. for dramatic performance improvements.
+        title, word_count, crawl_timestamp, etc. for performance improvements.
         """
         # Generate request ID for tracking
         request_id = str(uuid4())

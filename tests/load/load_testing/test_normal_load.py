@@ -242,7 +242,8 @@ class TestNormalLoad:
 
     def _analyze_operation_mix(self, _result) -> dict:
         """Analyze the mix of operations performed."""
-        # Simplified analysis - would parse actual operation types in real implementation
+        # Simplified analysis - would parse actual operation types in real
+        # implementation
 
         return {
             "read_ratio": 0.7,  # Placeholder
@@ -264,7 +265,8 @@ class TestNormalLoad:
 
     def _calculate_cache_metrics(self, result) -> dict:
         """Calculate cache effectiveness metrics."""
-        # Simplified calculation - would analyze actual cache hits in real implementation
+        # Simplified calculation - would analyze actual cache hits in real
+        # implementation
         response_times = result.metrics.response_times
 
         # Assume first 30% are uncached, rest are potentially cached

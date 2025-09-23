@@ -186,16 +186,14 @@ class LoadTestRunner:
 
         # Run tests with security constraints
         try:
-            result = (
-                subprocess.run(  # Secure: validated executable, no shell, no user input
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    cwd=project_root,
-                    check=False,
-                    timeout=3600,  # Security: Prevent hanging processes
-                    env=self._get_secure_environment(),  # Security: Clean environment
-                )
+            result = subprocess.run(  # noqa: S603  # Secure: validated executable, no shell, no user input
+                cmd,
+                capture_output=True,
+                text=True,
+                cwd=project_root,
+                check=False,
+                timeout=3600,  # Security: Prevent hanging processes
+                env=self._get_secure_environment(),  # Security: Clean environment
             )
 
             return {

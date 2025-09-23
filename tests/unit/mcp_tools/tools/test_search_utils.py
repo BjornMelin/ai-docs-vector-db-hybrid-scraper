@@ -288,7 +288,8 @@ class TestSearchDocumentsCore:
     async def test_sparse_embeddings_not_available_error(
         self, mock_client_manager, mock_context
     ):
-        """Test error when sparse search requested but sparse embeddings not available."""
+        """Test error when sparse search requested but sparse embeddings not
+        available."""
         request = SearchRequest(query="sparse test", strategy=SearchStrategy.SPARSE)
 
         # Mock embedding manager to return no sparse embeddings

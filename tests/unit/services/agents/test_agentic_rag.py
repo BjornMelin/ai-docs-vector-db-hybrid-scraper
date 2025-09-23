@@ -534,7 +534,8 @@ class TestQueryOrchestrator:
             )
 
             assert expected_range[0] <= performance_score <= expected_range[1], (
-                f"Performance score {performance_score} not in expected range {expected_range}"
+                f"Performance score {performance_score} not in expected range "
+                f"{expected_range}"
             )
 
     def test_query_analysis_logic(self):

@@ -257,7 +257,7 @@ class TestBreakingPoints:
                 requests_per_second=step["users"] / 2,  # 0.5 RPS per user
                 duration_seconds=step["duration"],
                 success_criteria={
-                    "max_error_rate_percent": 50.0,  # Allow failures to find breaking point
+                    "max_error_rate_percent": 50.0,  # Allow failures to find breaking
                     "max_avg_response_time_ms": 10000.0,
                 },
             )

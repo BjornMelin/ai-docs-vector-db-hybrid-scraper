@@ -98,10 +98,12 @@ class TestEnduranceLoad:
         # Assertions
         assert result.success, f"Endurance test failed: {result.bottlenecks_identified}"
         assert not endurance_analysis["memory_leak_detected"], (
-            f"Memory leak detected: {endurance_analysis['memory_growth_rate_mb_per_hour']} MB/hour"
+            f"Memory leak detected: "
+            f"{endurance_analysis['memory_growth_rate_mb_per_hour']} MB/hour"
         )
         assert endurance_analysis["performance_degradation_percent"] < 20, (
-            f"Performance degraded by {endurance_analysis['performance_degradation_percent']}%"
+            f"Performance degraded by "
+            f"{endurance_analysis['performance_degradation_percent']}%"
         )
         assert endurance_analysis["stability_score"] > 0.9, (
             f"Low stability score: {endurance_analysis['stability_score']}"
@@ -155,7 +157,8 @@ class TestEnduranceLoad:
             f"Excessive memory usage: {memory_analysis['peak_memory_mb']} MB"
         )
         assert memory_analysis["growth_rate_mb_per_minute"] < 5, (
-            f"High memory growth rate: {memory_analysis['growth_rate_mb_per_minute']} MB/min"
+            f"High memory growth rate: "
+            f"{memory_analysis['growth_rate_mb_per_minute']} MB/min"
         )
         assert memory_analysis["cleanup_effectiveness"] > 0.7, (
             "Poor memory cleanup effectiveness"

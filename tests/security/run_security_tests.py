@@ -189,7 +189,7 @@ class SecurityTestRunner:
                 "-o",
                 str(self.output_dir / "bandit_report.json"),
             ]
-            subprocess.run(  # Secure: validated executable, no shell, no user input
+            subprocess.run(  # noqa: S603  # Secure: validated executable, no shell, no user input
                 bandit_cmd,
                 cwd=self.project_root,
                 capture_output=True,
@@ -261,7 +261,7 @@ class SecurityTestRunner:
                 "--output",
                 str(self.output_dir / "safety_report.json"),
             ]
-            subprocess.run(  # Secure: validated executable, no shell, no user input
+            subprocess.run(  # noqa: S603  # Secure: validated executable, no shell, no user input
                 safety_cmd,
                 cwd=self.project_root,
                 capture_output=True,
@@ -358,15 +358,13 @@ class SecurityTestRunner:
             return {"status": "skipped", "error": "Python executable invalid"}
 
         try:
-            result = (
-                subprocess.run(  # Secure: validated executable, no shell, no user input
-                    cmd,
-                    cwd=self.project_root,
-                    capture_output=True,
-                    text=True,
-                    timeout=600,
-                    check=False,  # 10 minutes
-                )
+            result = subprocess.run(  # noqa: S603  # Secure: validated executable, no shell, no user input
+                cmd,
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                timeout=600,
+                check=False,  # 10 minutes
             )
 
             # Parse pytest output

@@ -1,7 +1,6 @@
-"""Advanced document management tools for MCP server.
+"""Document management tools for MCP server.
 
-Provides comprehensive document lifecycle management with autonomous
-processing and intelligent organization capabilities.
+Provides document lifecycle management with processing and organization capabilities.
 """
 
 import datetime
@@ -59,8 +58,8 @@ def register_tools(mcp, client_manager: ClientManager):
     ) -> dict[str, Any]:
         """Create a managed document workspace with collections and configuration.
 
-        Implements autonomous document organization with intelligent defaults
-        and workspace-level configuration management.
+        Implements document organization with defaults and workspace-level
+        configuration management.
 
         Args:
             workspace_name: Name for the document workspace
@@ -154,10 +153,10 @@ def register_tools(mcp, client_manager: ClientManager):
         filters: dict[str, Any] | None = None,
         ctx: Context = None,
     ) -> dict[str, Any]:
-        """Manage document lifecycle with autonomous policies.
+        """Manage document lifecycle with policies.
 
-        Implements intelligent document lifecycle management including
-        archival, cleanup, and optimization policies.
+        Implements document lifecycle management including archival, cleanup,
+        and optimization policies.
 
         Args:
             collection_name: Target collection for lifecycle management
@@ -250,10 +249,10 @@ def register_tools(mcp, client_manager: ClientManager):
         parameters: dict[str, Any] | None = None,
         ctx: Context = None,
     ) -> dict[str, Any]:
-        """Intelligently organize documents using ML-powered strategies.
+        """Organize documents using strategies.
 
-        Implements autonomous document organization with semantic clustering,
-        topic modeling, and intelligent categorization.
+        Implements document organization with clustering, topic modeling,
+        and categorization.
 
         Args:
             collection_name: Target collection for organization

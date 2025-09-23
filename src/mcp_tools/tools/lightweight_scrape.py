@@ -135,10 +135,10 @@ def register_tools(mcp, client_manager: ClientManager):
         formats: list[Literal["markdown", "html", "text"]] | None = None,
         ctx: Context | None = None,
     ) -> dict:
-        """Ultra-fast web scraping for simple static pages using httpx + BeautifulSoup.
+        """Web scraping for simple static pages using httpx + BeautifulSoup.
 
-        This tool provides 5-10x faster scraping for static content compared to
-        browser-based scrapers. It's ideal for:
+        This tool provides faster scraping for static content compared to
+        browser-based scrapers. Suitable for:
         - Documentation sites
         - Raw text/markdown files (GitHub raw content)
         - Simple HTML pages without JavaScript

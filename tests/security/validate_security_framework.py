@@ -217,22 +217,20 @@ class SecurityFrameworkValidator:
 
         # Test secure pytest execution
         try:
-            result = (
-                subprocess.run(  # Secure: validated executable, no shell, no user input
-                    [  # noqa: S607
-                        "python",
-                        str(project_root / "tests/load/run_load_tests.py"),
-                        "--mode",
-                        "pytest",
-                        "--test-type",
-                        "load",
-                    ],
-                    capture_output=True,
-                    text=True,
-                    timeout=60,
-                    cwd=project_root,
-                    check=False,
-                )
+            result = subprocess.run(  # noqa: S603  # Secure: validated executable, no shell, no user input
+                [  # noqa: S607
+                    "python",
+                    str(project_root / "tests/load/run_load_tests.py"),
+                    "--mode",
+                    "pytest",
+                    "--test-type",
+                    "load",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                cwd=project_root,
+                check=False,
             )
 
             if result.returncode == 0:
@@ -262,15 +260,13 @@ class SecurityFrameworkValidator:
         """Run pytest command and return results."""
         try:
             cmd = ["uv", "run", "pytest", *args]
-            result = (
-                subprocess.run(  # Secure: validated executable, no shell, no user input
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    timeout=120,
-                    cwd=project_root,
-                    check=False,
-                )
+            result = subprocess.run(  # noqa: S603  # Secure: validated executable, no shell, no user input
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=project_root,
+                check=False,
             )
 
             return {
