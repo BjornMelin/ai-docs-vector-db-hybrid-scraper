@@ -140,7 +140,8 @@ class PerformanceProfiler:
         )
 
         logger.info(
-            f"Profiling completed. Duration: {duration:.2f}s, Peak memory: {results.peak_memory_mb:.1f}MB"
+            f"Profiling completed. Duration: {duration:.2f}s, "
+            f"Peak memory: {results.peak_memory_mb:.1f}MB"
         )
 
         return {
@@ -443,7 +444,8 @@ class PerformanceProfiler:
 
         if not suggestions:
             suggestions.append(
-                "Performance profile looks good - consider load testing at higher concurrency"
+                "Performance profile looks good - consider load testing"
+                "at higher concurrency"
             )
 
         return suggestions

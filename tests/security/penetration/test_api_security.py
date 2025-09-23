@@ -1287,8 +1287,7 @@ class TestInputValidationEnhanced:
         """Polyglot attack payloads that work across multiple contexts."""
         return [
             # XSS + SQL Injection polyglot
-            "';alert(String.fromCharCode(88,83,83))//';alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//--></SCRIPT>\">'><SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT>",
-            # JSON + XML polyglot
+            "';alert(String.fromCharCode(88,83,83))//';alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//--></SCRIPT>\">'><SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT>",  # JSON + XML polyglot  # noqa: E501
             '{"test":"<script>alert(1)</script>","xml":"<?xml version=\\"1.0\\"?>'
             '<root><![CDATA[<script>alert(2)</script>]]></root>"}',
             # URL + HTML polyglot

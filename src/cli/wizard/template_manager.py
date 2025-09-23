@@ -37,14 +37,16 @@ class TemplateManager:
         """Load all templates from the templates directory."""
         if not self.templates_dir.exists():
             console.print(
-                f"[yellow]Warning: Templates directory not found: {self.templates_dir}[/yellow]"
+                "[yellow]Warning: Templates directory not found: "
+                f"{self.templates_dir}[/yellow]"
             )
             return
 
         template_files = list(self.templates_dir.glob("*.json"))
         if not template_files:
             console.print(
-                f"[yellow]Warning: No template files found in {self.templates_dir}[/yellow]"
+                "[yellow]Warning: No template files found in "
+                f"{self.templates_dir}[/yellow]"
             )
             return
 
@@ -212,7 +214,8 @@ class TemplateManager:
 
         console.print(table)
         console.print(
-            "\n[dim]💡 Recommended: 'personal-use' for individual developers, 'production' for deployment[/dim]"
+            "\n[dim]💡 Recommended: 'personal-use' for "
+            "individual developers, 'production' for deployment[/dim]"
         )
 
     def preview_template(self, name: str) -> None:

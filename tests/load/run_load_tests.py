@@ -186,14 +186,16 @@ class LoadTestRunner:
 
         # Run tests with security constraints
         try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                cwd=project_root,
-                check=False,
-                timeout=3600,  # Security: Prevent hanging processes
-                env=self._get_secure_environment(),  # Security: Clean environment
+            result = (
+                subprocess.run(  # Secure: validated executable, no shell, no user input
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    cwd=project_root,
+                    check=False,
+                    timeout=3600,  # Security: Prevent hanging processes
+                    env=self._get_secure_environment(),  # Security: Clean environment
+                )
             )
 
             return {
@@ -559,11 +561,13 @@ class LoadTestRunner:
         avg_response_time = stats.total.avg_response_time
         if avg_response_time > 1000:
             recommendations.append(
-                "High response times detected - consider optimizing database queries and adding caching"
+                "High response times detected - consider optimizing database "
+                "queries and adding caching"
             )
         elif avg_response_time > 500:
             recommendations.append(
-                "Moderate response times - review application logic for performance bottlenecks"
+                "Moderate response times - review application logic for "
+                "performance bottlenecks"
             )
 
         # Error rate recommendations
@@ -574,14 +578,16 @@ class LoadTestRunner:
             )
         elif error_rate > 1:
             recommendations.append(
-                "Some errors detected - review error logs and improve system reliability"
+                "Some errors detected - review error logs and "
+                "improve system reliability"
             )
 
         # Throughput recommendations
         rps = stats.total.current_rps
         if rps < 10:
             recommendations.append(
-                "Low throughput - consider horizontal scaling or performance optimization"
+                "Low throughput - consider horizontal scaling or "
+                "performance optimization"
             )
 
         if not recommendations:
@@ -984,7 +990,8 @@ def main():
                     f"Success Rate: {summary.get('success_rate_percent', 'N/A'):.1f}%"
                 )
                 print(
-                    f"Avg Response Time: {summary.get('avg_response_time_ms', 'N/A'):.1f}ms"
+                    "Avg Response Time: "
+                    f"{summary.get('avg_response_time_ms', 'N/A'):.1f}ms"
                 )
                 print(
                     f"Requests/Second: {summary.get('requests_per_second', 'N/A'):.1f}"

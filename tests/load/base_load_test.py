@@ -128,7 +128,10 @@ class VectorDBUserBehavior(TaskSet):
     @task(2)
     def generate_embeddings(self):
         """Simulate embedding generation operations."""
-        text = f"This is a test document for load testing. Query: {random.choice(self.test_queries)}"  # noqa: S311
+        text = (
+            f"This is a test document for load testing. Query: "
+            f"{random.choice(self.test_queries)}"
+        )
 
         with self.client.post(
             "/api/v1/embeddings",

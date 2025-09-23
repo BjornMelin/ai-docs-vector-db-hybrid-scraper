@@ -597,14 +597,16 @@ class LoadTestMetricsCollector:
         avg_response_time = sum(response_times) / len(response_times)
         if avg_response_time > self.performance_thresholds["max_response_time_ms"]:
             violations.append(
-                f"Average response time {avg_response_time:.1f}ms exceeds threshold {self.performance_thresholds['max_response_time_ms']}ms"
+                f"Average response time {avg_response_time:.1f}ms exceeds threshold "
+                f"{self.performance_thresholds['max_response_time_ms']}ms"
             )
 
         # Check error rate threshold
         error_rate = (len(failed_requests) / len(self.request_metrics)) * 100
         if error_rate > self.performance_thresholds["max_error_rate_percent"]:
             violations.append(
-                f"Error rate {error_rate:.1f}% exceeds threshold {self.performance_thresholds['max_error_rate_percent']}%"
+                f"Error rate {error_rate:.1f}% exceeds "
+                f"threshold {self.performance_thresholds['max_error_rate_percent']}%"
             )
 
         # Check P95 response time
@@ -616,7 +618,8 @@ class LoadTestMetricsCollector:
             ]
             if p95_time > self.performance_thresholds["max_p95_response_time_ms"]:
                 violations.append(
-                    f"P95 response time {p95_time:.1f}ms exceeds threshold {self.performance_thresholds['max_p95_response_time_ms']}ms"
+                    f"P95 response time {p95_time:.1f}ms exceeds threshold "
+                    f"{self.performance_thresholds['max_p95_response_time_ms']}ms"
                 )
 
         return violations

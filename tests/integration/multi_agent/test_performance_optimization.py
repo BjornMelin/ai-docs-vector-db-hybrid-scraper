@@ -290,7 +290,8 @@ class PerformanceOptimizer:
         start_time: datetime,
     ) -> PerformanceMetrics:
         """Execute with adaptive load balancing."""
-        # Simulate adaptive load balancing by distributing tasks based on agent capabilities
+        # Simulate adaptive load balancing by
+        # distributing tasks based on agent capabilities
         orchestrator_agents = [a for a in agents if hasattr(a, "orchestrate")]
         discovery_agents = [a for a in agents if hasattr(a, "discover_tools_for_task")]
 
@@ -495,13 +496,16 @@ class TestPerformanceOptimizationScenarios:
 
                 print(f"  Strategy: {strategy}")
                 print(
-                    f"    Overall improvement: {improvements['overall_performance_improvement']:.2f}x"
+                    "    Overall improvement: "
+                    f"{improvements['overall_performance_improvement']:.2f}x"
                 )
                 print(
-                    f"    Throughput improvement: {improvements.get('throughput_improvement', 0):.2f}x"
+                    "    Throughput improvement: "
+                    f"{improvements.get('throughput_improvement', 0):.2f}x"
                 )
                 print(
-                    f"    Duration improvement: {improvements.get('duration_improvement', 0):.2f}x"
+                    "    Duration improvement: "
+                    f"{improvements.get('duration_improvement', 0):.2f}x"
                 )
 
             improvement_results[scenario.scenario_id] = {
@@ -726,7 +730,8 @@ class TestPerformanceOptimizationScenarios:
 
         for load_config in load_levels:
             print(
-                f"\nTesting load: {load_config['agents']} agents, {load_config['tasks_per_agent']} tasks each"
+                f"\nTesting load: {load_config['agents']} agents, "
+                f"{load_config['tasks_per_agent']} tasks each"
             )
 
             # Sequential execution (baseline)
@@ -849,10 +854,12 @@ class TestPerformanceOptimizationScenarios:
             )
 
             print(
-                f"  Sequential: {sequential_result['duration']:.2f}s, {sequential_result['throughput']:.2f} tasks/s"
+                f"  Sequential: {sequential_result['duration']:.2f}s, "
+                f"{sequential_result['throughput']:.2f} tasks/s"
             )
             print(
-                f"  Parallel: {parallel_result['duration']:.2f}s, {parallel_result['throughput']:.2f} tasks/s"
+                f"  Parallel: {parallel_result['duration']:.2f}s, "
+                f"{parallel_result['throughput']:.2f} tasks/s"
             )
             print(f"  Speedup: {speedup:.2f}x")
             print(f"  Efficiency: {efficiency:.2f}")
@@ -1050,10 +1057,12 @@ class TestPerformanceOptimizationScenarios:
 
         print("Autonomous optimization results:")
         print(
-            f"  Manual approach: {manual_result['duration']:.2f}s, autonomy: {manual_result['autonomy_score']:.2f}"
+            f"  Manual approach: {manual_result['duration']:.2f}s, "
+            f"autonomy: {manual_result['autonomy_score']:.2f}"
         )
         print(
-            f"  Autonomous approach: {autonomous_result['duration']:.2f}s, autonomy: {autonomous_result['autonomy_score']:.2f}"
+            f"  Autonomous approach: {autonomous_result['duration']:.2f}s, "
+            f"autonomy: {autonomous_result['autonomy_score']:.2f}"
         )
         print(f"  Duration improvement: {duration_improvement:.2f}x")
         print(f"  Autonomy improvement: {autonomy_improvement:.2f}x")

@@ -211,7 +211,8 @@ class TestConcurrentUsersLoad:
                     )
 
                     print(
-                        f"Running {pattern['name']}: {pattern['users']} users for {pattern['duration']}s"
+                        f"Running {pattern['name']}: {pattern['users']} users for "
+                        f"{pattern['duration']}s"
                     )
 
                     result = await load_test_runner.run_load_test(
@@ -441,5 +442,6 @@ class TestConcurrentUsersLoad:
         print("Workload analysis:")
         for result in workload_results:
             print(
-                f"  {result['workload']}: {result['_total_requests']} requests, {result['throughput']:.2f} RPS"
+                f"  {result['workload']}: {result['_total_requests']} requests, "
+                f"{result['throughput']:.2f} RPS"
             )

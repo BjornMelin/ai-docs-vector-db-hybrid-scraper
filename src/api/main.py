@@ -1,7 +1,8 @@
 """Main FastAPI application for the AI Docs Vector DB Hybrid Scraper.
 
-This module provides the main FastAPI application instance using the dual-mode architecture
-that supports both simple mode (25K lines) and enterprise mode (70K lines).
+This module provides the main FastAPI application instance using the dual-mode
+architecture that supports both simple mode (25K lines) and enterprise mode
+(70K lines).
 """
 
 from src.architecture.modes import get_current_mode

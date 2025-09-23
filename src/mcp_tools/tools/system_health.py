@@ -45,7 +45,7 @@ def register_tools(mcp, client_manager: ClientManager):
         performance correlation analysis, and security vulnerability assessment.
 
         Args:
-            assessment_scope: Scope of assessment (full_system, core_services, infrastructure)
+            assessment_scope: Scope of assessment (full_system, core_services, infra)
             include_performance: Include performance metrics analysis
             include_security: Include security vulnerability assessment
             deep_analysis: Enable deep ML-powered analysis
@@ -285,7 +285,8 @@ async def _execute_autonomous_self_healing(
     """Execute autonomous self-healing with organized error handling."""
     if ctx:
         await ctx.info(
-            f"Starting autonomous self-healing: scope={healing_scope}, safety_mode={safety_mode}"
+            "Starting autonomous self-healing: "
+            f"scope={healing_scope}, safety_mode={safety_mode}"
         )
 
     # Detect issues requiring healing
@@ -454,7 +455,8 @@ async def _build_health_assessment_results(
 
     if ctx:
         await ctx.info(
-            f"Health assessment completed: overall score {health_score['score']:.2f}/1.0"
+            f"Health assessment completed: "
+            f"overall score {health_score['score']:.2f}/1.0"
         )
 
     return final_results
@@ -558,7 +560,8 @@ async def _build_healing_results(
 
     if ctx:
         await ctx.info(
-            f"Self-healing completed: {len(healing_results.get('applied_actions', []))} actions applied"
+            f"Self-healing completed: "
+            f"{len(healing_results.get('applied_actions', []))} actions applied"
         )
 
     return final_results
@@ -651,7 +654,8 @@ async def _build_predictive_monitoring_results(
 
     if ctx:
         await ctx.info(
-            f"Predictive monitoring completed: {len(predictive_alerts.get('alerts', []))} alerts generated"
+            f"Predictive monitoring completed: "
+            f"{len(predictive_alerts.get('alerts', []))} alerts generated"
         )
 
     return final_results
@@ -1053,7 +1057,9 @@ async def _detect_issues_for_healing(healing_scope: str, ctx) -> dict[str, Any]:
             "issue_id": "memory_leak_detection",
             "severity": "low",
             "category": "resource",
-            "description": "Gradual memory usage increase detected in embedding service",
+            "description": (
+                "Gradual memory usage increase detected in embedding service",
+            ),
             "impact": "potential_resource_exhaustion",
             "auto_healable": True,
         },
@@ -1165,7 +1171,9 @@ async def _generate_healing_plan(
                 {
                     "action_id": f"heal_{issue_id}",
                     "action_type": "service_restart",
-                    "description": "Graceful restart of embedding service with memory optimization",
+                    "description": (
+                        "Graceful restart of embedding service with memory optimization"
+                    ),
                     "risk_level": "medium",
                     "estimated_time": "30_seconds",
                     "rollback_available": True,
@@ -1177,7 +1185,9 @@ async def _generate_healing_plan(
                 {
                     "action_id": f"heal_{issue_id}",
                     "action_type": "configuration_update",
-                    "description": "Expand connection pool size and optimize connection lifecycle",
+                    "description": (
+                        "Expand connection pool size and optimize connection lifecycle"
+                    ),
                     "risk_level": "low",
                     "estimated_time": "1_minute",
                     "rollback_available": True,
@@ -1651,7 +1661,8 @@ async def _generate_monitoring_insights(
     """Generate insights from monitoring analysis."""
     return {
         "key_insights": [
-            "System health is generally stable with minor upward trends in resource usage",
+            "System health is generally stable with minor upward trends "
+            "in resource usage",
             "Query latency shows increasing trend requiring attention",
             "Memory usage pattern suggests need for proactive scaling",
         ],

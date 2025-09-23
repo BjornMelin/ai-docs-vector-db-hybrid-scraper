@@ -385,10 +385,12 @@ class TestCompleteUserJourneys:
 
             # Validate performance targets
             assert avg_duration <= targets["max_duration_s"], (
-                f"{journey_name} exceeded duration target: {avg_duration}s > {targets['max_duration_s']}s"
+                f"{journey_name} exceeded duration target: {avg_duration}s > "
+                f"{targets['max_duration_s']}s"
             )
             assert avg_step_time <= targets["max_avg_step_ms"], (
-                f"{journey_name} exceeded step time target: {avg_step_time}ms > {targets['max_avg_step_ms']}ms"
+                f"{journey_name} exceeded step time target: {avg_step_time}ms > "
+                f"{targets['max_avg_step_ms']}ms"
             )
 
         # Store performance results
@@ -642,7 +644,10 @@ class TestCrossSystemIntegration:
         """Test workflow spanning multiple services and components."""
         multi_service_journey = UserJourney(
             name="multi_service_integration",
-            description="Test integration across crawling, processing, storage, and search services",
+            description=(
+                "Test integration across crawling, processing, storage, and "
+                "search services"
+            ),
             steps=[
                 JourneyStep(
                     name="validate_service_health",
@@ -785,7 +790,8 @@ class TestCrossSystemIntegration:
         # At least 80% of journeys should succeed under load
         success_rate = len(successful_journeys) / len(load_journeys)
         assert success_rate >= 0.8, (
-            f"Load resilience test failed: {success_rate:.2%} success rate, failed: {failed_journeys}"
+            f"Load resilience test failed: {success_rate:.2%} success rate, "
+            f"failed: {failed_journeys}"
         )
 
         # Validate reasonable performance under load

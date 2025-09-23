@@ -309,11 +309,16 @@ def performance_test_data():
             "What are the rate limiting policies?",
         ],
         "complex_queries": [
-            "Analyze the performance characteristics of the hybrid search implementation and recommend optimizations",
-            "Compare the effectiveness of different embedding models for technical documentation retrieval",
-            "Evaluate the security implications of the authentication system and suggest improvements",
-            "Design a comprehensive monitoring strategy for the vector database operations",
-            "Create a migration plan for upgrading the search infrastructure while maintaining availability",
+            "Analyze the performance characteristics of the hybrid search "
+            "implementation and recommend optimizations",
+            "Compare the effectiveness of different embedding models for "
+            "technical documentation retrieval",
+            "Evaluate the security implications of the authentication system "
+            "and suggest improvements",
+            "Design a comprehensive monitoring strategy for the vector database "
+            "operations",
+            "Create a migration plan for upgrading the search infrastructure "
+            "while maintaining availability",
         ],
         "expected_improvements": {
             "latency_reduction": 0.6,  # 60% reduction
