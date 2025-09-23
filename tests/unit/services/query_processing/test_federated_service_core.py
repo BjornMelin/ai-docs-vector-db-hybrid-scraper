@@ -1,6 +1,7 @@
 """Core service tests for the federated search service.
 
-Tests for service initialization, collection registration/unregistration, and basic search functionality.
+Tests for service initialization, collection registration/unregistration,
+and basic search functionality.
 """
 
 from datetime import datetime
@@ -181,7 +182,8 @@ class TestFederatedSearchServiceCore:
 
         request = FederatedSearchRequest(
             query="test query",
-            collection_selection_strategy=CollectionSelectionStrategy.ALL,  # Use ALL to ensure collections are selected
+            # Use ALL to ensure collections are selected
+            collection_selection_strategy=CollectionSelectionStrategy.ALL,
             limit=10,
         )
 
@@ -212,7 +214,8 @@ class TestFederatedSearchServiceCore:
         result = await service.search(request)
 
         assert isinstance(result, FederatedSearchResult)
-        # Should only search specified collections (though mock implementation searches all)
+        # Should only search specified collections
+        # (though mock implementation searches all)
         assert result.search_strategy == CollectionSelectionStrategy.EXPLICIT
 
     @pytest.mark.asyncio
@@ -226,14 +229,16 @@ class TestFederatedSearchServiceCore:
             request = FederatedSearchRequest(
                 query="test query",
                 search_mode=mode,
-                collection_selection_strategy=CollectionSelectionStrategy.ALL,  # Ensure collections are selected
+                # Ensure collections are selected
+                collection_selection_strategy=CollectionSelectionStrategy.ALL,
                 limit=5,
             )
 
             result = await service.search(request)
 
             assert isinstance(result, FederatedSearchResult)
-            # Note: The mock implementation may not preserve the exact search mode due to fallbacks
+            # Note: The mock implementation may not
+            # preserve the exact search mode due to fallbacks
             # but it should be one of the valid modes
             assert result.search_mode in SearchMode
             assert result._total_search_time_ms > 0

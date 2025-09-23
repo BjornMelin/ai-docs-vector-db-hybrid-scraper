@@ -264,7 +264,7 @@ class TestObservabilityConfigHandling:
             enabled=True, service_name="test-service", track_ai_operations=True
         )
 
-        # Test with valid config (will fail due to missing dependencies, but config is valid)
+        # Test with valid config (will fail due to missing deps, but config is valid)
         with patch("builtins.__import__", side_effect=ImportError("No OpenTelemetry")):
             result = initialize_observability(valid_config)
             assert result is False

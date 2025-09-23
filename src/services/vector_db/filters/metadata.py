@@ -1,4 +1,4 @@
-"""Metadata filtering with advanced boolean logic and nested expressions.
+"""Metadata filtering with boolean logic and nested expressions.
 
 This module provides sophisticated metadata filtering capabilities including
 complex boolean logic (AND, OR, NOT), nested expressions, flexible field matching,
@@ -136,7 +136,7 @@ class MetadataFilterCriteria(BaseModel):
         None, description="List of field conditions"
     )
 
-    # Boolean expression (advanced interface)
+    # Boolean expression interface
     expression: BooleanExpressionModel | None = Field(
         None, description="Complex boolean expression"
     )
@@ -190,7 +190,9 @@ class MetadataFilter(BaseFilter):
     def __init__(
         self,
         name: str = "metadata_filter",
-        description: str = "Filter documents using complex metadata conditions with boolean logic",
+        description: str = (
+            "Filter documents using metadata conditions with boolean logic"
+        ),
         enabled: bool = True,
         priority: int = 70,
     ):
@@ -332,7 +334,9 @@ class MetadataFilter(BaseFilter):
         if criteria.exclude_matches:
             for field, value in criteria.exclude_matches.items():
                 if isinstance(value, list):
-                    # Convert all values to strings if they're not string/int (but exclude bool even though it's int)
+                    # Convert all values to strings if
+                    # hey're not string/int (but exclude bool even though it's int)
+
                     exclude_values = [
                         (
                             str(v)
@@ -348,7 +352,8 @@ class MetadataFilter(BaseFilter):
                         )
                     )
                 else:
-                    # Convert value to string if it's not string/int (but exclude bool even though it's int)
+                    # Convert value to string if it's not
+                    # string/int (but exclude bool even though it's int)
                     exclude_value = (
                         str(value)
                         if isinstance(value, bool) or not isinstance(value, str | int)
@@ -422,7 +427,8 @@ class MetadataFilter(BaseFilter):
                     key=field, match=models.MatchValue(value=value)
                 )
             if operator == FieldOperator.NE:
-                # Convert value to string if it's not string/int (but exclude bool even though it's int)
+                # Convert value to string if it's not
+                # string/int (but exclude bool even though it's int)
                 exclude_value = (
                     str(value)
                     if isinstance(value, bool) or not isinstance(value, str | int)
@@ -448,7 +454,9 @@ class MetadataFilter(BaseFilter):
                     key=field, match=models.MatchAny(any=values)
                 )
             if operator == FieldOperator.NIN:
-                # Convert all values to strings if they're not string/int (but exclude bool even though it's int)
+                # Convert all values to strings if
+                # hey're not string/int (but exclude bool even though it's int)
+
                 exclude_values = [
                     str(v) if isinstance(v, bool) or not isinstance(v, str | int) else v
                     for v in values
@@ -589,7 +597,8 @@ class MetadataFilter(BaseFilter):
                     {"field": "category", "operator": "eq", "value": "tutorial"},
                     {
                         "or": [
-                            {"field": "difficulty", "operator": "eq", "value": "beginner"},
+                            {"field":
+                                "difficulty", "operator": "eq", "value": "beginner"},
                             {"field": "tags", "operator": "contains", "value": "easy"}
                         ]
                     }
@@ -728,7 +737,8 @@ class MetadataFilter(BaseFilter):
         # Explain field conditions
         if criteria.field_conditions:
             field_explanations = [
-                f"{condition.field} {condition.operator.value} {condition.value or condition.values}"
+                f"{condition.field} {condition.operator.value} "
+                f"{condition.value or condition.values}"
                 for condition in criteria.field_conditions
             ]
             explanations.append(f"Field conditions: [{', '.join(field_explanations)}]")
@@ -749,7 +759,8 @@ class MetadataFilter(BaseFilter):
         for condition in expression.conditions:
             if isinstance(condition, FieldConditionModel):
                 condition_explanations.append(
-                    f"{condition.field} {condition.operator.value} {condition.value or condition.values}"
+                    f"{condition.field} {condition.operator.value} "
+                    f"{condition.value or condition.values}"
                 )
             elif isinstance(condition, BooleanExpressionModel):
                 condition_explanations.append(

@@ -138,7 +138,9 @@ class TestObservabilityConfigIntegration:
             assert hasattr(main_config.observability, "enabled")
             assert hasattr(main_config.observability, "service_name")
 
-            # Test that get_observability_config returns a config with service name derived from main config
+            # Test that get_observability_config
+            # eturns a config with service name derived from main config
+
             obs_config = get_observability_config()
             assert obs_config.service_name == "ai-docs-vector-db"
 

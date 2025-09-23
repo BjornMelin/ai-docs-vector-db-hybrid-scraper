@@ -1,8 +1,4 @@
-"""Search with reranking tools implementing advanced result refinement and quality assessment.
-
-Provides intelligent search result reranking with ML-powered quality assessment,
-autonomous ranking optimization, and multi-criteria result evaluation.
-"""
+"""Search with reranking tools for result refinement and quality assessment."""
 
 import asyncio
 import logging
@@ -45,15 +41,15 @@ def register_tools(mcp, client_manager: ClientManager):
     ) -> dict[str, Any]:
         """Perform search with semantic reranking for improved result quality.
 
-        Implements advanced semantic reranking with multiple quality factors
-        and autonomous ranking optimization based on query characteristics.
+        Uses semantic reranking with quality factors based on query characteristics.
 
         Args:
             query: Search query text
             collection_name: Target collection for search
             initial_limit: Number of results to retrieve for reranking
             final_limit: Final number of results after reranking
-            reranking_strategy: Strategy for reranking (semantic_similarity, quality_score, hybrid)
+            reranking_strategy: Reranking strategy
+                (semantic_similarity, quality_score, hybrid)
             quality_factors: Optional weights for quality factors
             filters: Optional metadata filters
             ctx: MCP context for logging
@@ -65,7 +61,8 @@ def register_tools(mcp, client_manager: ClientManager):
         try:
             if ctx:
                 await ctx.info(
-                    f"Performing semantic reranking search: '{query}' with {reranking_strategy}"
+                    f"Performing semantic reranking search: '{query}' "
+                    f"with {reranking_strategy}"
                 )
 
             # Validate query
@@ -131,12 +128,14 @@ def register_tools(mcp, client_manager: ClientManager):
                     "quality_improvement": reranking_metrics["quality_improvement"],
                 },
                 "reranking_metrics": reranking_metrics,
-                "autonomous_optimization": optimization_insights,
+                "optimization_insights": optimization_insights,
             }
 
             if ctx:
                 await ctx.info(
-                    f"Reranking completed: {len(reranked_results)} results with {reranking_metrics['quality_improvement']:.2f} quality improvement"
+                    f"Reranking completed: {len(reranked_results)} "
+                    f"results with {reranking_metrics['quality_improvement']:.2f} "
+                    "quality improvement"
                 )
 
         except Exception as e:
@@ -166,8 +165,8 @@ def register_tools(mcp, client_manager: ClientManager):
     ) -> dict[str, Any]:
         """Perform multi-criteria reranking with adaptive weight optimization.
 
-        Implements comprehensive multi-criteria ranking with autonomous
-        weight adjustment based on query characteristics and result quality.
+        Uses multi-criteria ranking with weight adjustment based on query
+        characteristics.
 
         Args:
             query: Search query text
@@ -175,7 +174,7 @@ def register_tools(mcp, client_manager: ClientManager):
             initial_limit: Number of results to retrieve for reranking
             final_limit: Final number of results after reranking
             criteria_weights: Optional weights for ranking criteria
-            adaptive_weighting: Enable autonomous weight adaptation
+            adaptive_weighting: Enable weight adaptation
             filters: Optional metadata filters
             ctx: MCP context for logging
 
@@ -186,7 +185,8 @@ def register_tools(mcp, client_manager: ClientManager):
         try:
             if ctx:
                 await ctx.info(
-                    f"Performing multi-criteria reranking: '{query}' with adaptive weighting"
+                    f"Performing multi-criteria reranking: '{query}' "
+                    "with adaptive weighting"
                 )
 
             # Validate query
@@ -223,8 +223,8 @@ def register_tools(mcp, client_manager: ClientManager):
             else:
                 optimal_weights = criteria_weights or _get_default_criteria_weights()
 
-            # Apply comprehensive quality assessment
-            assessed_results = await _apply_comprehensive_assessment(
+            # Apply quality assessment
+            assessed_results = await _apply_quality_assessment(
                 initial_results["results"], validated_query, optimal_weights, ctx
             )
 
@@ -238,7 +238,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 criteria_weights, optimal_weights, assessed_results
             )
 
-            # Generate autonomous optimization insights
+            # Generate optimization insights
             optimization_insights = await _generate_multi_criteria_insights(
                 validated_query, optimal_weights, multi_ranked_results, ctx
             )
@@ -256,12 +256,13 @@ def register_tools(mcp, client_manager: ClientManager):
                     "ranking_confidence": adaptation_metrics["ranking_confidence"],
                 },
                 "adaptation_metrics": adaptation_metrics,
-                "autonomous_optimization": optimization_insights,
+                "optimization_insights": optimization_insights,
             }
 
             if ctx:
                 await ctx.info(
-                    f"Multi-criteria reranking completed with {len(multi_ranked_results)} results"
+                    f"Multi-criteria reranking completed with "
+                    f"{len(multi_ranked_results)} results"
                 )
 
         except Exception as e:
@@ -311,7 +312,8 @@ def register_tools(mcp, client_manager: ClientManager):
         try:
             if ctx:
                 await ctx.info(
-                    f"Performing contextual reranking: '{query}' with context weight {context_weight}"
+                    f"Performing contextual reranking: '{query}' "
+                    f"with context weight {context_weight}"
                 )
 
             # Validate queries
@@ -396,7 +398,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Contextual reranking completed with {contextual_metrics['context_influence']:.2f} context influence"
+                    f"Contextual reranking completed with "
+                    f"{contextual_metrics['context_influence']:.2f} context influence"
                 )
 
         except Exception as e:
@@ -462,7 +465,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 "context_weighting": True,
                 "multi_query_support": True,
             },
-            "autonomous_capabilities": {
+            "capabilities": {
                 "quality_assessment": True,
                 "weight_optimization": True,
                 "strategy_selection": True,
@@ -527,7 +530,7 @@ async def _perform_initial_search(
 
 
 async def _apply_quality_assessment(results: list[dict], query: str, ctx) -> list[dict]:
-    """Apply comprehensive quality assessment to search results."""
+    """Apply quality assessment to search results."""
     assessed_results = []
 
     for result in results:
@@ -959,10 +962,10 @@ def _get_default_criteria_weights() -> dict[str, float]:
     }
 
 
-async def _apply_comprehensive_assessment(
+async def _apply_quality_assessment(
     results: list[dict], query: str, weights: dict[str, float], ctx
 ) -> list[dict]:
-    """Apply comprehensive multi-criteria assessment."""
+    """Apply quality assessment with weights."""
     assessed_results = await _apply_quality_assessment(results, query, ctx)
 
     # Calculate weighted scores using optimal weights

@@ -1,4 +1,4 @@
-"""Playwright adapter for maximum control browser automation."""
+"""Playwright adapter for browser automation."""
 
 import asyncio
 import logging
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # Try to import Playwright, handle gracefully if not available
 try:
-    from playwright.async_api import Browser, BrowserContext, Page, async_playwright
+    from playwright.async_api import async_playwright
 
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
@@ -32,9 +32,9 @@ except ImportError:
 
 
 class PlaywrightAdapter(BaseService):
-    """Direct Playwright automation for maximum control.
+    """Playwright automation adapter.
 
-    Provides full programmatic control over browser automation.
+    Provides programmatic control over browser automation.
     Best for authentication scenarios and complex scripted interactions.
     """
 
@@ -43,7 +43,7 @@ class PlaywrightAdapter(BaseService):
 
         Args:
             config: Playwright configuration model
-            enable_anti_detection: Whether to enable enhanced anti-detection features
+            enable_anti_detection: Whether to enable anti-detection features
 
         """
         super().__init__(config)
@@ -126,9 +126,9 @@ class PlaywrightAdapter(BaseService):
     async def _get_browser_arguments(self) -> list[str]:
         """Get browser arguments based on anti-detection configuration."""
         if self.anti_detection:
-            # Use enhanced anti-detection args
+            # Use anti-detection args
             stealth_config = self.anti_detection.get_stealth_config()
-            self.logger.info("Using enhanced anti-detection browser configuration")
+            self.logger.info("Using anti-detection browser configuration")
             return stealth_config.extra_args
         # Use basic args
         return [
@@ -221,7 +221,7 @@ class PlaywrightAdapter(BaseService):
         self, _site_profile: str, stealth_config: Any, _timeout: int
     ) -> tuple[Any, Any]:
         """Create browser context and page with appropriate configuration."""
-        # Create browser context with enhanced settings
+        # Create browser context with settings
         if self.anti_detection and stealth_config:
             context = await self._browser.new_context(
                 viewport={
@@ -264,7 +264,7 @@ class PlaywrightAdapter(BaseService):
         site_profile: str,
     ) -> list[dict[str, Any]]:
         """Navigate to URL and execute all actions."""
-        # Inject stealth JavaScript patterns for enhanced anti-detection
+        # Inject stealth JavaScript patterns for anti-detection
         if self.anti_detection:
             stealth_config = self.anti_detection.get_stealth_config(site_profile)
             await self._inject_stealth_scripts(page, stealth_config)
@@ -480,7 +480,8 @@ class PlaywrightAdapter(BaseService):
         return """
         // Canvas fingerprinting protection
         const getContext = HTMLCanvasElement.prototype.getContext;
-        HTMLCanvasElement.prototype.getContext = function(contextType, contextAttributes) {
+        HTMLCanvasElement.prototype.getContext = function(contextType,
+            contextAttributes) {
             const context = getContext.call(this, contextType, contextAttributes);
             if (contextType === '2d') {
                 const getImageData = context.getImageData;
@@ -738,7 +739,9 @@ class PlaywrightAdapter(BaseService):
             return await page.evaluate("""
             () => {
                 const getMeta = (name) => {
-                    const meta = document.querySelector(`meta[name="${name}"], meta[property="${name}"]`);
+                    const meta = document.querySelector(
+                        `meta[name="${name}"], meta[property="${name}"]`
+                    );
                     return meta ? meta.content : null;
                 };
 
@@ -762,11 +765,15 @@ class PlaywrightAdapter(BaseService):
                     ogType: getMeta('og:type'),
                     twitterCard: getMeta('twitter:card'),
                     twitterTitle: getMeta('twitter:title'),
-                    canonical: document.querySelector('link[rel="canonical"]')?.href || null,
+                    canonical: document.querySelector(
+                        'link[rel="canonical"]'
+                    )?.href || null,
                     lastModified: document.lastModified,
                     language: document.documentElement.lang || null,
                     links: getLinks(),
-                    headings: Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6')).map(h => ({
+                    headings: Array.from(document.querySelectorAll(
+                        'h1, h2, h3, h4, h5, h6'
+                    )).map(h => ({
                         level: h.tagName.toLowerCase(),
                         text: h.textContent?.trim() || '',
                         id: h.id || null,
@@ -795,7 +802,7 @@ class PlaywrightAdapter(BaseService):
 
         """
         try:
-            return await page.evaluate("""
+            script = """
             () => {
                 if (!window.performance) return {};
 
@@ -804,14 +811,20 @@ class PlaywrightAdapter(BaseService):
 
                 return {
                     loadTime: navigation?.loadEventEnd - navigation?.loadEventStart || 0,
-                    domContentLoadedTime: navigation?.domContentLoadedEventEnd - navigation?.domContentLoadedEventStart || 0,
+                    domContentLoadedTime: (
+                        navigation?.domContentLoadedEventEnd -
+                        navigation?.domContentLoadedEventStart || 0
+                    ),
                     responseTime: navigation?.responseEnd - navigation?.responseStart || 0,
                     firstPaint: paint.find(p => p.name === 'first-paint')?.startTime || 0,
-                    firstContentfulPaint: paint.find(p => p.name === 'first-contentful-paint')?.startTime || 0,
+                    firstContentfulPaint: paint.find(
+                        p => p.name === 'first-contentful-paint'
+                    )?.startTime || 0,
                     resourceCount: performance.getEntriesByType('resource').length,
                 };
             }
-            """)
+            """  # noqa: E501
+            return await page.evaluate(script)
 
         except (OSError, PermissionError):
             self.logger.debug("Failed to get performance metrics")
@@ -826,7 +839,7 @@ class PlaywrightAdapter(BaseService):
         """
         return {
             "name": "playwright",
-            "description": "Full programmatic browser control with maximum flexibility",
+            "description": "Full programmatic browser control with flexibility",
             "advantages": [
                 "Complete control over browser",
                 "Excellent for authentication",

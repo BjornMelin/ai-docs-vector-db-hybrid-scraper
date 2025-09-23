@@ -159,7 +159,8 @@ class TestObservabilityInitialization:
 
             assert result is True
 
-            # Verify console exporter was configured (two span processors: OTLP + Console)
+            # Verify console exporter was configured
+            # (two span processors: OTLP + Console)
             assert mock_tracer_provider_instance.add_span_processor.call_count == 2
 
     def test_initialize_observability_exception_handling(self):
@@ -267,7 +268,8 @@ class TestAutoInstrumentation:
         """Test FastAPI instrumentation with import error."""
         config = ObservabilityConfig(instrument_fastapi=True)
 
-        # Without OpenTelemetry packages installed, ImportError should be handled gracefully
+        # Without OpenTelemetry packages
+        # installed, ImportError should be handled gracefully
         # Should not raise exception
         _setup_auto_instrumentation(config)
 

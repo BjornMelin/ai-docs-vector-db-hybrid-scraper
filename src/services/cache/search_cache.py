@@ -1,9 +1,5 @@
-import typing
+"""Specialized cache for search results with invalidation."""
 
-
-"""Specialized cache for search results with intelligent invalidation."""
-
-import asyncio
 import hashlib
 import json
 import logging
@@ -16,12 +12,12 @@ logger = logging.getLogger(__name__)
 
 
 class SearchResultCache:
-    """Cache search results with intelligent invalidation and popularity tracking.
+    """Cache search results with invalidation and popularity tracking.
 
-    Optimized for:
+    Features:
     - Medium TTL (1 hour) for search results
     - Popularity-based cache adjustment
-    - Intelligent invalidation by collection
+    - Invalidation by collection
     - Query parameter normalization
     - Efficient batch operations
     """
@@ -90,7 +86,7 @@ class SearchResultCache:
         ttl: int | None = None,
         **params: Any,
     ) -> bool:
-        """Cache search results with intelligent TTL adjustment.
+        """Cache search results with TTL adjustment.
 
         Args:
             query: Search query text
@@ -173,7 +169,8 @@ class SearchResultCache:
                     deleted_count += sum(results.values())
 
                 logger.info(
-                    f"Invalidated {deleted_count} search cache entries for collection: {collection_name}"
+                    f"Invalidated {deleted_count} search cache entries for collection: "
+                    f"{collection_name}"
                 )
                 return deleted_count
 
@@ -204,7 +201,8 @@ class SearchResultCache:
                 deleted_count = sum(results.values())
 
                 logger.info(
-                    f"Invalidated {deleted_count} search cache entries matching: {query_pattern}"
+                    f"Invalidated {deleted_count} search cache entries matching: "
+                    f"{query_pattern}"
                 )
                 return deleted_count
 
@@ -307,7 +305,7 @@ class SearchResultCache:
                         collection = parts[1]
                         collections[collection] = collections.get(collection, 0) + 1
 
-                except (OSError, PermissionError) as e:
+                except (OSError, PermissionError):
                     continue
 
             stats["by_collection"] = collections
@@ -358,7 +356,10 @@ class SearchResultCache:
         sorted_params = json.dumps(params, sort_keys=True)
 
         # Combine all parameters
-        key_data = f"{normalized_query}|{collection_name}|{sorted_filters}|{limit}|{search_type}|{sorted_params}"
+        key_data = (
+            f"{normalized_query}|{collection_name}|{sorted_filters}|{limit}|"
+            f"{search_type}|{sorted_params}"
+        )
         key_hash = hashlib.sha256(key_data.encode()).hexdigest()
 
         return f"search:{collection_name}:{key_hash}"

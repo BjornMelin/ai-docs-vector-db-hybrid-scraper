@@ -35,10 +35,10 @@ async def crawl_url(
     preferred_provider: str | None = None,
     crawling_client: Annotated[object, Depends(get_crawling_client)] = None,
 ) -> dict[str, Any]:
-    """Scrape URL with intelligent 5-tier AutomationRouter selection.
+    """Scrape URL with AutomationRouter selection.
 
     Pure function replacement for CrawlManager.scrape_url().
-    Uses enterprise circuit breaker for higher resilience.
+    Uses circuit breaker for resilience.
 
     Args:
         url: URL to scrape
@@ -65,10 +65,9 @@ async def crawl_url(
         )
 
         if result.get("success"):
-            logger.info(
-                f"Successfully crawled {url} using {result.get('tier_used', 'unknown')} "
-                f"in {result.get('automation_time_ms', 0)}ms",
-            )
+            tier = result.get("tier_used", "unknown")
+            time_ms = result.get("automation_time_ms", 0)
+            logger.info(f"Successfully crawled {url} using {tier} in {time_ms}ms")
         else:
             logger.warning(
                 f"Failed to crawl {url}: {result.get('error', 'Unknown error')}",
@@ -404,7 +403,7 @@ async def validate_url(url: str) -> dict[str, Any]:
 
         # Basic domain validation
         domain_pattern = re.compile(
-            r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$",
+            r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$"
         )
         if not domain_pattern.match(parsed.netloc.split(":")[0]):
             return {

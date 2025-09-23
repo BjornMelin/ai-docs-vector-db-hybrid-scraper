@@ -25,7 +25,9 @@ class TestRAGIntegration:
             {
                 "id": "doc_1",
                 "title": "FastAPI Documentation",
-                "content": "FastAPI is a modern web framework for building APIs with Python.",
+                "content": (
+                    "FastAPI is a modern web framework for building APIs with Python."
+                ),
                 "url": "https://fastapi.tiangolo.com/",
                 "score": 0.95,
                 "metadata": {"type": "documentation"},
@@ -33,7 +35,9 @@ class TestRAGIntegration:
             {
                 "id": "doc_2",
                 "title": "Pydantic Guide",
-                "content": "Pydantic provides data validation using Python type annotations.",
+                "content": (
+                    "Pydantic provides data validation using Python type annotations."
+                ),
                 "url": "https://docs.pydantic.dev/",
                 "score": 0.87,
                 "metadata": {"type": "documentation"},
@@ -55,7 +59,10 @@ class TestRAGIntegration:
     def mock_rag_result(self):
         """Mock RAG result for testing."""
         return RAGResult(
-            answer="FastAPI works seamlessly with Pydantic for automatic data validation and serialization.",
+            answer=(
+                "FastAPI works seamlessly with Pydantic for automatic data "
+                "validation and serialization."
+            ),
             confidence_score=0.85,
             sources=[
                 SourceAttribution(
@@ -262,7 +269,8 @@ class TestRAGIntegration:
     async def test_integration_with_circuit_breaker_pattern(self, rag_request):
         """Test integration with circuit breaker patterns."""
         # This test verifies that the RAG functions work with circuit breaker decorators
-        # In actual usage, the circuit breakers would be applied via the dependency injection
+        # In actual usage, the circuit breakers
+        # would be applied via the dependency injection
 
         mock_generator = AsyncMock()
         mock_generator.generate_answer.return_value = RAGResult(
@@ -275,7 +283,8 @@ class TestRAGIntegration:
             cached=False,
         )
 
-        # Test that function can be called (circuit breaker would be applied in production)
+        # Test that function can be called
+        # (circuit breaker would be applied in production)
         response = await generate_rag_answer(rag_request, mock_generator)
 
         assert response.answer == "Test answer"
