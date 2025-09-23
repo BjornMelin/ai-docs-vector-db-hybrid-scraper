@@ -136,6 +136,7 @@ class SearchAnalyticsDashboard(BaseService):
             results_count: Number of results returned
             cache_hit: Whether result was from cache
             **metadata: Additional metadata to track
+
         """
         try:
             query_data = {
@@ -184,6 +185,7 @@ class SearchAnalyticsDashboard(BaseService):
             metric_name: Name of the metric
             value: Metric value
             tags: Optional tags for categorization
+
         """
         try:
             metric = PerformanceMetric(
@@ -207,6 +209,7 @@ class SearchAnalyticsDashboard(BaseService):
 
         Returns:
             Dashboard data including metrics, patterns, and insights
+
         """
         try:
             # Ensure patterns are up to date
@@ -247,6 +250,7 @@ class SearchAnalyticsDashboard(BaseService):
 
         Returns:
             Detailed analytics data
+
         """
         try:
             cutoff_time = datetime.now(tz=UTC) - timedelta(hours=time_range_hours)
@@ -322,6 +326,7 @@ class SearchAnalyticsDashboard(BaseService):
 
         Returns:
             List of actionable optimization recommendations
+
         """
         try:
             recommendations = []

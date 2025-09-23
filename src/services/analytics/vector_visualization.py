@@ -144,6 +144,7 @@ class VectorVisualizationEngine(BaseService):
 
         Returns:
             Visualization data including points, clusters, and metrics
+
         """
         try:
             if not embeddings or not texts:
@@ -291,6 +292,7 @@ class VectorVisualizationEngine(BaseService):
 
         Returns:
             Comprehensive analysis of embedding space
+
         """
         try:
             if not embeddings or not texts:
@@ -363,6 +365,7 @@ class VectorVisualizationEngine(BaseService):
 
         Returns:
             Comparison analysis with similarity patterns
+
         """
         try:
             query_array = np.array(query_embeddings)
