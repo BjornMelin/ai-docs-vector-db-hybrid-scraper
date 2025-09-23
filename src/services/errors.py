@@ -695,7 +695,10 @@ def circuit_breaker(
             service_name = f"{func.__module__}.{func.__name__}"
 
         monitored_exceptions = expected_exceptions or (Exception,)
-        if expected_exception is not None and expected_exception not in monitored_exceptions:
+        if (
+            expected_exception is not None
+            and expected_exception not in monitored_exceptions
+        ):
             monitored_exceptions = (expected_exception, *monitored_exceptions)
 
         # Create or get existing circuit breaker for this service
@@ -868,9 +871,7 @@ def handle_mcp_errors(func: Callable[..., Any]) -> Callable[..., Any]:
                 ConfigurationError: "configuration",
             }
             error_type = error_type_map.get(type(e), "general")
-            message = (
-                f"{error_type.capitalize()} error in {func.__name__}: {e}"
-            )
+            message = f"{error_type.capitalize()} error in {func.__name__}: {e}"
             logger.warning(message)
             return safe_response(False, error=str(e), error_type=error_type)
         except (ConnectionError, OSError, PermissionError):

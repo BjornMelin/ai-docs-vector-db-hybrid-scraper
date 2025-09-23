@@ -391,6 +391,7 @@ class ConfigDriftService:
 
         Returns:
             List of drift events detected for the source
+
         """
         if self.drift_detector is None:
             return []
@@ -407,6 +408,7 @@ class ConfigDriftService:
 
         Returns:
             True if alert should be sent
+
         """
         if not hasattr(event, "severity"):
             return False
@@ -420,6 +422,7 @@ class ConfigDriftService:
 
         Args:
             event: Drift event that triggered the alert
+
         """
         try:
             # In a real implementation, this would send alerts via:

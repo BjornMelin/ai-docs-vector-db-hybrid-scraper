@@ -68,6 +68,7 @@ class LibraryMigrationManager:
             config: Application configuration
             migration_config: Migration-specific configuration
             redis_url: Redis URL for modern implementations
+
         """
         self.config = config
         self.migration_config = migration_config or MigrationConfig()
@@ -179,6 +180,7 @@ class LibraryMigrationManager:
 
         Returns:
             Circuit breaker instance (modern or legacy)
+
         """
         mode = self.migration_config.mode
 
@@ -213,6 +215,7 @@ class LibraryMigrationManager:
 
         Returns:
             Cache manager instance (modern or legacy)
+
         """
         mode = self.migration_config.mode
 
@@ -244,6 +247,7 @@ class LibraryMigrationManager:
 
         Returns:
             ModernRateLimiter instance or None
+
         """
         if self.migration_config.rate_limiting_enabled:
             return self._modern_rate_limiter
@@ -257,6 +261,7 @@ class LibraryMigrationManager:
 
         Returns:
             True if modern implementation should be used
+
         """
         # Check error rates and performance metrics
         modern_metrics = self.performance_metrics[service]["modern"]
@@ -285,6 +290,7 @@ class LibraryMigrationManager:
         Args:
             service: Service name
             operation: Operation being performed
+
         """
         # This would run both modern and legacy implementations
         # and compare their performance
@@ -334,6 +340,7 @@ class LibraryMigrationManager:
 
         Returns:
             Dictionary with migration status and performance metrics
+
         """
         return {
             "mode": self.migration_config.mode.value,
@@ -356,6 +363,7 @@ class LibraryMigrationManager:
 
         Returns:
             True if migration was successful
+
         """
         try:
             if service in self.migration_state:
@@ -404,6 +412,7 @@ def create_migration_manager(
 
     Returns:
         LibraryMigrationManager instance
+
     """
     migration_config = MigrationConfig(mode=mode)
     return LibraryMigrationManager(config, migration_config, redis_url)

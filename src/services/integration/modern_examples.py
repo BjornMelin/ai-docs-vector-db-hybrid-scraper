@@ -81,6 +81,7 @@ class EmbeddingServiceWithProtection:
 
         Returns:
             Embedding vector
+
         """
         # Circuit breaker protection for external API calls
         return await self.circuit_breaker_manager.protected_call(
@@ -145,6 +146,7 @@ class SearchServiceWithCaching:
 
         Returns:
             Search results
+
         """
         return await self._search_documents_impl(query, filters or {}, limit)
 
@@ -189,6 +191,7 @@ def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
 
     Returns:
         FastAPI app with modern features enabled
+
     """
     app = FastAPI(
         title="AI Docs API with Modern Libraries",
@@ -313,7 +316,6 @@ def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
 
 async def example_usage_patterns():
     """Example usage patterns for modern implementations."""
-
     # Example 1: Direct usage of modern cache manager
     cache_manager = ModernCacheManager("redis://localhost:6379")
 
