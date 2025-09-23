@@ -427,12 +427,13 @@ def cmd_services(args: argparse.Namespace) -> int:
             services=("qdrant", "dragonfly"),
         )
     else:
-        command = _compose_command(
-            compose_cmd,
-            file="docker-compose.monitoring.yml",
-            action=args.action,
-            services=(),
-        )
+        command = [*compose_cmd, "--profile", "monitoring", "-f", "docker-compose.yml"]
+        if args.action == "start":
+            command.extend(["up", "-d"])
+        elif args.action == "stop":
+            command.append("down")
+        else:
+            command.append("ps")
 
     exit_code = run_command(command)
     if (
