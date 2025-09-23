@@ -171,7 +171,7 @@ class LoadTestRunner:
     def run_pytest_load_tests(
         self, test_type: str = "all", markers: list[str] | None = None
     ) -> dict:
-        """Run load tests using pytest with comprehensive security validation."""
+        """Run load tests using pytest with security validation."""
         logger.info("Running pytest load tests: %s", test_type)
 
         # Security: Validate and sanitize all inputs
@@ -345,7 +345,7 @@ class LoadTestRunner:
     def _generate_test_report(
         self, env: Environment, config: dict, profile: str | None
     ) -> dict:
-        """Generate comprehensive test report."""
+        """Generate test report."""
         stats = env.stats
 
         if not stats or stats.total.num_requests == 0:
@@ -717,7 +717,7 @@ class LoadTestRunner:
         return cmd
 
     def _validate_command_security(self, cmd: list[str]) -> None:
-        """Perform comprehensive security validation on the command."""
+        """Perform security validation on the command."""
         if not isinstance(cmd, list):
             msg = "Command must be a list"
             raise TypeError(msg)

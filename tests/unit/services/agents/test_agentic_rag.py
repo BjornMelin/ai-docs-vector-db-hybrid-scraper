@@ -295,7 +295,7 @@ class TestQueryOrchestrator:
         assert context["orchestration_id"] == result["orchestration_id"]
         assert context["query"] in result["result"]["orchestration_plan"]
 
-    def test_recommend_tools_comprehensive(self):
+    def test_recommend_tools(self):
         """Test tool recommendation logic for all complexity/domain combinations."""
         orchestrator = QueryOrchestrator()
 
@@ -344,7 +344,7 @@ class TestQueryOrchestrator:
         tools = orchestrator._recommend_tools("invalid", "invalid")
         assert "hybrid_search" in tools
 
-    def test_estimate_completion_time_comprehensive(self):
+    def test_estimate_completion_time(self):
         """Test completion time estimation for all agent types and complexities."""
         orchestrator = QueryOrchestrator()
 

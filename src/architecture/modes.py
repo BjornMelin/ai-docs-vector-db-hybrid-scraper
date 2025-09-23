@@ -1,7 +1,8 @@
 """Application mode definitions and configurations.
 
 This module defines the core dual-mode architecture that resolves the Enterprise Paradox
-by providing distinct simple and enterprise modes with different feature sets and complexity levels.
+by providing distinct simple and enterprise modes with different feature sets and
+complexity levels.
 """
 
 import os
@@ -96,7 +97,7 @@ SIMPLE_MODE_CONFIG = ModeConfig(
     enable_comprehensive_observability=False,
 )
 
-# Enterprise Mode Configuration - Full feature set for portfolio demonstrations
+# Enterprise Mode Configuration - Full feature set
 ENTERPRISE_MODE_CONFIG = ModeConfig(
     enabled_services=[
         "qdrant_client",

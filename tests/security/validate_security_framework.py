@@ -47,7 +47,7 @@ class SecurityFrameworkValidator:
         }
 
     def run_validation(self) -> dict[str, Any]:
-        """Run comprehensive security validation."""
+        """Run security validation."""
         logger.info("🔒 Starting Security Framework Validation")
         logger.info("=" * 60)
 

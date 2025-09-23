@@ -392,16 +392,19 @@ class TestEnhancedAntiDetection:
                 assert isinstance(delay, float)
                 assert delay > 0
 
-            # Check that the average delay meets expectations (more robust than single test)
+            # Check that the average delay meets expectations (more robust than
+            # single test)
             avg_delay = sum(delays) / len(delays)
 
             if profile_name == "linkedin.com":
-                # Use a slightly lower threshold to account for jitter (was 3.0, now 2.5)
+                # Use a slightly lower threshold to account for jitter (was 3.0,
+                # now 2.5)
                 assert avg_delay > 2.5, (
                     f"LinkedIn average delay {avg_delay} should be > 2.5 seconds"
                 )
             elif profile_name == "github.com":
-                # Use a slightly lower threshold to account for jitter (was 2.0, now 1.5)
+                # Use a slightly lower threshold to account for jitter (was 2.0,
+                # now 1.5)
                 assert avg_delay > 1.5, (
                     f"GitHub average delay {avg_delay} should be > 1.5 seconds"
                 )

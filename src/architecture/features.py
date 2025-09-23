@@ -72,7 +72,10 @@ def enterprise_only(fallback_value: Any = None, log_access: bool = True):
 
             if log_access:
                 logger.info(
-                    "Enterprise feature '%s' accessed in simple mode, returning fallback value: %s",
+                    (
+                        "Enterprise feature '%s' accessed in simple mode, "
+                        "returning fallback value: %s"
+                    ),
                     func.__name__,
                     fallback_value,
                 )
@@ -86,7 +89,10 @@ def enterprise_only(fallback_value: Any = None, log_access: bool = True):
 
             if log_access:
                 logger.info(
-                    "Enterprise feature '%s' accessed in simple mode, returning fallback value: %s",
+                    (
+                        "Enterprise feature '%s' accessed in simple mode, "
+                        "returning fallback value: %s"
+                    ),
                     func.__name__,
                     fallback_value,
                 )
@@ -124,7 +130,10 @@ def conditional_feature(
 
             if log_access:
                 logger.info(
-                    "Feature '%s' (%s) disabled in current mode, returning fallback value: %s",
+                    (
+                        "Feature '%s' (%s) disabled in current mode, "
+                        "returning fallback value: %s"
+                    ),
                     feature_name,
                     func.__name__,
                     fallback_value,
@@ -139,7 +148,10 @@ def conditional_feature(
 
             if log_access:
                 logger.info(
-                    "Feature '%s' (%s) disabled in current mode, returning fallback value: %s",
+                    (
+                        "Feature '%s' (%s) disabled in current mode, "
+                        "returning fallback value: %s"
+                    ),
                     feature_name,
                     func.__name__,
                     fallback_value,
@@ -178,7 +190,10 @@ def service_required(
 
             if log_access:
                 logger.warning(
-                    "Service '%s' required for %s but not enabled in current mode, returning fallback: %s",
+                    (
+                        "Service '%s' required for %s but not enabled in current mode, "
+                        "returning fallback: %s"
+                    ),
                     service_name,
                     func.__name__,
                     fallback_value,
@@ -193,7 +208,10 @@ def service_required(
 
             if log_access:
                 logger.warning(
-                    "Service '%s' required for %s but not enabled in current mode, returning fallback: %s",
+                    (
+                        "Service '%s' required for %s but not enabled in current mode, "
+                        "returning fallback: %s"
+                    ),
                     service_name,
                     func.__name__,
                     fallback_value,
@@ -241,10 +259,10 @@ def mode_adaptive(simple_implementation: F, enterprise_implementation: F):
 
 
 class ModeAwareFeatureManager:
-    """Advanced feature manager with runtime mode switching capabilities."""
+    """Feature manager with runtime mode switching capabilities."""
 
     def __init__(self):
-        """Initialize the advanced feature manager."""
+        """Initialize the feature manager."""
         self._feature_flags = FeatureFlag()
         self._feature_registry: dict[str, dict[str, Any]] = {}
 

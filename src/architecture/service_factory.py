@@ -155,7 +155,10 @@ class ModeAwareServiceFactory:
             fallback_key = "simple" if mode_key == "enterprise" else "enterprise"
             if fallback_key in mode_implementations:
                 logger.warning(
-                    "Service '%s' not available for %s mode, falling back to %s implementation",
+                    (
+                        "Service '%s' not available for %s mode, "
+                        "falling back to %s implementation"
+                    ),
                     name,
                     mode_key,
                     fallback_key,
@@ -374,7 +377,8 @@ async def get_service(name: str) -> ServiceProtocol:
 
 
 async def get_service_optional(name: str) -> ServiceProtocol | None:
-    """Get a service from the global service factory, returning None if not available."""
+    """Get a service from the global service factory, returning None if not
+    available."""
     factory = get_service_factory()
     return await factory.get_service_optional(name)
 

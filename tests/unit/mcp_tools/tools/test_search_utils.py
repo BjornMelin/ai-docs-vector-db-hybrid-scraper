@@ -552,8 +552,8 @@ class TestSearchDocumentsCoreIntegration:
     @pytest.mark.asyncio
     async def test_search_with_all_parameters(self, mock_client_manager, mock_context):
         """Test search with all possible parameters set."""
-        comprehensive_request = SearchRequest(
-            query="comprehensive test query",
+        test_request = SearchRequest(
+            query="test query",
             collection="custom_collection",
             limit=25,
             strategy=SearchStrategy.HYBRID,
@@ -563,11 +563,11 @@ class TestSearchDocumentsCoreIntegration:
             cache_ttl=1200,
         )
 
-        # Add search_accuracy for comprehensive test
-        comprehensive_request.search_accuracy = "balanced"
+        # Add search_accuracy for test
+        test_request.search_accuracy = "balanced"
 
         results = await search_documents_core(
-            comprehensive_request, mock_client_manager, mock_context
+            test_request, mock_client_manager, mock_context
         )
 
         assert len(results) == 2
@@ -575,7 +575,7 @@ class TestSearchDocumentsCoreIntegration:
         # Verify all parameters used correctly
         mock_embedding = mock_client_manager.get_embedding_manager.return_value
         mock_embedding.generate_embeddings.assert_called_once_with(
-            texts=["comprehensive test query"],
+            texts=["test query"],
             generate_sparse=True,
             model="custom-model",
         )

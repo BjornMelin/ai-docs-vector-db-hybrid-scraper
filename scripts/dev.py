@@ -78,7 +78,7 @@ def run_command(
 
     normalized = _normalize_command(command)
     print(f"$ {shlex.join(normalized)}")
-    result = subprocess.run(normalized, cwd=cwd, env=env, check=False, shell=False)
+    result = subprocess.run(normalized, cwd=cwd, env=env, check=False, shell=False)  # noqa: S603
     if result.returncode != 0:
         print(f"Command exited with status {result.returncode}", file=sys.stderr)
     return result.returncode
@@ -227,7 +227,8 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
                 command.append(f"--benchmark-compare={baseline_path}")
             else:
                 print(
-                    f"⚠️ Baseline file '{baseline_path}' not found; skipping comparison.",
+                    f"⚠️ Baseline file '{baseline_path}' not found; "
+                    f"skipping comparison.",
                     file=sys.stderr,
                 )
 

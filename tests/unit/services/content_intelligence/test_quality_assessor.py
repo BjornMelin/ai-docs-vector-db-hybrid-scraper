@@ -21,7 +21,10 @@ class TestQualityAssessor:
     @pytest.mark.asyncio
     async def test_assess_simple_content(self, quality_assessor):
         """Test basic quality assessment with simple content."""
-        content = "This is a well-structured document with clear information and good readability."
+        content = (
+            "This is a well-structured document with clear information and "
+            "good readability."
+        )
 
         try:
             result = await quality_assessor.assess_quality(content)

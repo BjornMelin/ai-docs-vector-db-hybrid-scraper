@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Security test runner and reporting.
 
-This script runs comprehensive security tests and generates detailed reports
+This script runs security tests and generates reports
 for vulnerability assessment and compliance validation.
 """
 
@@ -44,7 +44,7 @@ class SecurityTestRunner:
     def run_all_security_tests(
         self, test_categories: list[str] | None = None
     ) -> dict[str, Any]:
-        """Run all security tests and generate comprehensive report.
+        """Run all security tests and generate report.
 
         Args:
             test_categories: Specific test categories to run (None for all)
@@ -52,7 +52,7 @@ class SecurityTestRunner:
         Returns:
             Comprehensive test results
         """
-        self.logger.info("Starting comprehensive security test suite")
+        self.logger.info("Starting security test suite")
         start_time = time.time()
 
         results = {
@@ -503,7 +503,7 @@ class SecurityTestRunner:
         return recommendations
 
     def _generate_reports(self, results: dict[str, Any]) -> None:
-        """Generate comprehensive security reports."""
+        """Generate security reports."""
         # JSON report
         json_report_file = self.output_dir / "security_test_results.json"
         with json_report_file.open("w") as f:
@@ -656,7 +656,7 @@ For visual summary, see: security_summary.html
 
 def main():
     """Main entry point for security test runner."""
-    parser = argparse.ArgumentParser(description="Run comprehensive security tests")
+    parser = argparse.ArgumentParser(description="Run security tests")
     parser.add_argument(
         "--project-root", type=Path, default=Path.cwd(), help="Project root directory"
     )
