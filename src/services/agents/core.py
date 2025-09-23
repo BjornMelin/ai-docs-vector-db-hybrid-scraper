@@ -35,6 +35,7 @@ def _check_api_key_availability() -> bool:
 
     Returns:
         bool: True if API keys are available, False otherwise
+
     """
     # Check for OpenAI API key (most common for agents)
     openai_key = os.getenv("OPENAI_API_KEY")
@@ -127,6 +128,7 @@ class BaseAgent(ABC):
             model: LLM model to use
             temperature: Generation temperature
             max_tokens: Maximum tokens per response
+
         """
         self.name = name
         self.model = model
@@ -177,6 +179,7 @@ class BaseAgent(ABC):
 
         Returns:
             System prompt string defining agent behavior and capabilities
+
         """
 
     @abstractmethod
@@ -185,6 +188,7 @@ class BaseAgent(ABC):
 
         Args:
             deps: Dependencies required for tool initialization
+
         """
 
     async def initialize(self, deps: BaseAgentDependencies) -> None:
@@ -192,6 +196,7 @@ class BaseAgent(ABC):
 
         Args:
             deps: Agent dependencies
+
         """
         if self._initialized:
             return
@@ -206,6 +211,7 @@ class BaseAgent(ABC):
 
         Returns:
             bool: True if agent is initialized and ready for use
+
         """
         return self._initialized
 
@@ -224,6 +230,7 @@ class BaseAgent(ABC):
 
         Returns:
             Task execution result
+
         """
         if not self._initialized:
             await self.initialize(deps)
@@ -306,6 +313,7 @@ class BaseAgent(ABC):
 
         Returns:
             Fallback execution result
+
         """
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
         logger.info(
@@ -335,6 +343,7 @@ class BaseAgent(ABC):
 
         Returns:
             Performance metrics dictionary
+
         """
         if self.execution_count == 0:
             return {
@@ -372,6 +381,7 @@ class AgentRegistry:
 
         Args:
             agent: Agent to register
+
         """
         self.agents[agent.name] = agent
         logger.info(f"Agent {agent.name} registered")
@@ -384,6 +394,7 @@ class AgentRegistry:
 
         Returns:
             Agent instance or None if not found
+
         """
         return self.agents.get(name)
 
@@ -392,6 +403,7 @@ class AgentRegistry:
 
         Returns:
             List of agent names
+
         """
         return list(self.agents.keys())
 
@@ -400,6 +412,7 @@ class AgentRegistry:
 
         Args:
             deps: Dependencies for initialization
+
         """
         for agent in self.agents.values():
             await agent.initialize(deps)
@@ -409,6 +422,7 @@ class AgentRegistry:
 
         Returns:
             Dictionary mapping agent names to their metrics
+
         """
         return {
             name: agent.get_performance_metrics() for name, agent in self.agents.items()
@@ -433,6 +447,7 @@ def create_agent_dependencies(
 
     Returns:
         Configured agent dependencies
+
     """
     config = get_config()
 

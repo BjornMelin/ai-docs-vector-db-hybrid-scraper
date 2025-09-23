@@ -73,6 +73,7 @@ class AgenticOrchestrator(BaseAgent):
         Args:
             model: LLM model for autonomous decisions
             temperature: Generation temperature for tool selection
+
         """
         super().__init__(
             name="agentic_orchestrator",
@@ -147,6 +148,7 @@ maintaining high performance and reliability. Always explain your reasoning."""
 
         Returns:
             Orchestration response with results and reasoning
+
         """
         if not self._initialized:
             await self.initialize(deps)

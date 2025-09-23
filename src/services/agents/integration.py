@@ -173,6 +173,7 @@ class UnifiedAgenticSystem:
         Args:
             client_manager: Client manager for resource access
             config: Optional system configuration
+
         """
         self.client_manager = client_manager
         self.config = config or {}
@@ -237,6 +238,7 @@ class UnifiedAgenticSystem:
 
         Returns:
             Unified agent response with results and metrics
+
         """
         if not self._initialized:
             await self.initialize()
@@ -411,6 +413,7 @@ class UnifiedAgenticSystem:
 
         Returns:
             Current system status and metrics
+
         """
         try:
             (

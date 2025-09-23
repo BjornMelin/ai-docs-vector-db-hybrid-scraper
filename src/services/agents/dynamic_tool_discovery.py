@@ -89,6 +89,7 @@ class DynamicToolDiscovery(BaseAgent):
         Args:
             model: LLM model for capability assessment
             temperature: Generation temperature for tool evaluation
+
         """
         super().__init__(
             name="dynamic_tool_discovery",
@@ -128,6 +129,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Args:
             deps: Agent dependencies for tool initialization
+
         """
         # Check if we're in fallback mode
         fallback_reason = getattr(self, "_fallback_reason", None)
@@ -143,6 +145,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Args:
             deps: Agent dependencies for tool scanning
+
         """
         if not self._initialized:
             await self.initialize(deps)
@@ -162,6 +165,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Args:
             deps: Agent dependencies for system access
+
         """
         # Core tools available in the system
         core_tools = {
@@ -271,6 +275,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Returns:
             List of suitable tools ranked by suitability score
+
         """
         # Check if we're in fallback mode
         fallback_reason = getattr(self, "_fallback_reason", None)
@@ -306,6 +311,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Returns:
             Suitability score between 0 and 1
+
         """
         score = 0.0
 
@@ -362,6 +368,7 @@ class DynamicToolDiscovery(BaseAgent):
         Args:
             tool_name: Name of the tool
             execution_metrics: Latest execution metrics
+
         """
         if tool_name in self.tool_performance_history:
             self.tool_performance_history[tool_name].append(execution_metrics)
@@ -390,6 +397,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Returns:
             Averaged tool metrics
+
         """
         if not metrics_list:
             return ToolMetrics(0.0, 0.0, 0.0, 0.0, 0.0)
@@ -417,6 +425,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Returns:
             Tool recommendations with reasoning
+
         """
         # Check if we're in fallback mode
         fallback_reason = getattr(self, "_fallback_reason", None)
@@ -473,6 +482,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Returns:
             List of recommended tool chains
+
         """
         chains = []
 
@@ -551,6 +561,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Returns:
             List of mock suitable tools
+
         """
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
         logger.info(f"Using fallback tool discovery (reason: {fallback_reason})")
@@ -652,6 +663,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Returns:
             Mock tool recommendations
+
         """
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
         logger.info(f"Using fallback tool recommendations (reason: {fallback_reason})")
@@ -727,6 +739,7 @@ async def discover_tools_for_task(
 
     Returns:
         List of suitable tools for the task
+
     """
     engine = get_discovery_engine()
     if not engine.is_initialized:

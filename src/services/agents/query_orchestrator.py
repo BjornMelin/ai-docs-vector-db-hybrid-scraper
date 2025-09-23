@@ -35,6 +35,7 @@ class QueryOrchestrator(BaseAgent):
 
         Args:
             model: LLM model to use for orchestration decisions
+
         """
         super().__init__(
             name="query_orchestrator",
@@ -82,6 +83,7 @@ class QueryOrchestrator(BaseAgent):
 
         Args:
             deps: Agent dependencies containing client manager and config
+
         """
         # Check fallback status
         fallback_reason = getattr(self, "_fallback_reason", None)
@@ -107,6 +109,7 @@ class QueryOrchestrator(BaseAgent):
 
             Returns:
                 Analysis results with strategy recommendations
+
             """
             # Update tool usage stats
             ctx.deps.session_state.increment_tool_usage("analyze_query_intent")
@@ -191,6 +194,7 @@ class QueryOrchestrator(BaseAgent):
 
             Returns:
                 Delegation result
+
             """
             ctx.deps.session_state.increment_tool_usage("delegate_to_specialist")
 
@@ -227,6 +231,7 @@ class QueryOrchestrator(BaseAgent):
 
             Returns:
                 Coordinated search results
+
             """
             ctx.deps.session_state.increment_tool_usage("coordinate_multi_stage_search")
 
@@ -280,6 +285,7 @@ class QueryOrchestrator(BaseAgent):
 
             Returns:
                 Performance evaluation
+
             """
             ctx.deps.session_state.increment_tool_usage("evaluate_strategy_performance")
 
@@ -338,6 +344,7 @@ class QueryOrchestrator(BaseAgent):
 
         Returns:
             List of recommended tool names
+
         """
         base_tools = ["hybrid_search"]
 
@@ -360,6 +367,7 @@ class QueryOrchestrator(BaseAgent):
 
         Returns:
             Estimated completion time in seconds
+
         """
         base_times = {
             "retrieval_specialist": 2.0,
@@ -385,6 +393,7 @@ class QueryOrchestrator(BaseAgent):
 
         Returns:
             Recommendation string
+
         """
         avg_performance = stats.get(
             "avg_performance", 0.5
@@ -412,6 +421,7 @@ class QueryOrchestrator(BaseAgent):
 
         Returns:
             Complete orchestration result
+
         """
         if not self._initialized:
             msg = "Agent not initialized"
@@ -465,6 +475,7 @@ class QueryOrchestrator(BaseAgent):
 
         Returns:
             Fallback orchestration result
+
         """
         query = context["query"]
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
