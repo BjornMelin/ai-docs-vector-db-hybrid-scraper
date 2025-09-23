@@ -474,7 +474,7 @@ class TestBreakingPointAnalysis:
                     0.8, base_error_rate + load_factor * 0.15 + cascade_error_rate
                 )
 
-                if random.random() < _total_error_rate:
+                if random.random() < _total_error_rate:  # noqa: S311
                     # Increase cascade level on error
                     msg = f"Cascading error (cascade level: {self.error_cascade_level:.1f}, load: {load_factor:.2f})"
                     raise TestError(msg)

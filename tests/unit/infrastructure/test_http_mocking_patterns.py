@@ -128,8 +128,10 @@ class TestModernHTTPMocking:
             <body>
                 <div class="content">
                     <h1>Main Title</h1>
-                    <p>This is a test paragraph with enough content to pass the threshold.</p>
-                    <p>Another paragraph to ensure we have sufficient text content for extraction.</p>
+                    <p>This is a test paragraph with enough content to pass the
+                        threshold.</p>
+                    <p>Another paragraph to ensure we have sufficient text content for
+                        extraction.</p>
                 </div>
             </body>
         </html>
@@ -293,7 +295,8 @@ class TestModernHTTPMocking:
             <head><title>Final Page</title></head>
             <body>
                 <h1>Redirected Content</h1>
-                <p>This is the final destination with sufficient content for processing.</p>
+                <p>This is the final destination with sufficient content for
+                    processing.</p>
             </body>
         </html>
         """

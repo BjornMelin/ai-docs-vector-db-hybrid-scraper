@@ -239,7 +239,8 @@ class TestCircuitBreaker:
             msg = "Test failure"
             raise TestError(msg)
 
-        # Fail multiple times - circuit breaker should pass through the original exception
+        # Fail multiple times - circuit breaker should pass through the original
+        # exception
         for _ in range(3):  # Fixture failure threshold is 3
             with pytest.raises(Exception, match="Test failure"):
                 await circuit_breaker.call(failing_func)
@@ -623,7 +624,8 @@ class TestClientManagerDatabaseIntegration:
     """Test database manager integration with ClientManager."""
 
     @pytest.mark.skip(
-        reason="Test infrastructure mocking complexity - client manager import caching issue"
+        reason="Test infrastructure mocking complexity - client manager import "
+        "caching issue"
     )
     @pytest.mark.asyncio
     async def test_get_database_manager_creation(self):

@@ -84,7 +84,7 @@ class EmbeddingTestUtils:
             list of embedding vectors
         """
         rng = (
-            np.random.default_rng(seed) if seed is not None else np.random.default_rng()
+            np.random.default_rng(seed) if seed is not None else np.random.default_rng()  # noqa: S311
         )
         embeddings = rng.random((count, dim)).astype(np.float32)
 
@@ -116,7 +116,7 @@ class EmbeddingTestUtils:
             list of similar embedding vectors
         """
         rng = (
-            np.random.default_rng(seed) if seed is not None else np.random.default_rng()
+            np.random.default_rng(seed) if seed is not None else np.random.default_rng()  # noqa: S311
         )
         base_arr = np.array(base_embedding)
         dim = len(base_embedding)

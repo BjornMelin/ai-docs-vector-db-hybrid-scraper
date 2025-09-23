@@ -478,7 +478,8 @@ class SecurityTestRunner:
                 high_severity = category_results.get("high_severity", 0)
                 if high_severity > 0:
                     recommendations.append(
-                        f"Fix {high_severity} high-severity security issues found by static analysis"
+                        f"Fix {high_severity} high-severity security issues found by "
+                        "static analysis"
                     )
 
             # Dependency recommendations
@@ -529,11 +530,13 @@ class SecurityTestRunner:
         body {{ font-family: Arial, sans-serif; margin: 20px; }}
         .header {{ background-color: #f4f4f4; padding: 20px; border-radius: 5px; }}
         .summary {{ margin: 20px 0; }}
-        .category {{ margin: 15px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }}
+        .category {{ margin: 15px 0; padding: 15px; border: 1px solid #ddd;
+                      border-radius: 5px; }}
         .pass {{ background-color: #d4edda; }}
         .fail {{ background-color: #f8d7da; }}
         .skip {{ background-color: #fff3cd; }}
-        .recommendations {{ background-color: #e2e3e5; padding: 15px; border-radius: 5px; }}
+        .recommendations {{ background-color: #e2e3e5; padding: 15px;
+                            border-radius: 5px; }}
         table {{ border-collapse: collapse; width: 100%; }}
         th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
         th {{ background-color: #f2f2f2; }}
@@ -543,8 +546,11 @@ class SecurityTestRunner:
     <div class="header">
         <h1>Security Test Results</h1>
         <p><strong>Execution Time:</strong> {results["execution_info"]["timestamp"]}</p>
-        <p><strong>Duration:</strong> {results["execution_info"].get("duration", 0):.2f} seconds</p>
-        <p><strong>Overall Status:</strong> <span class="{"pass" if results["summary"]["overall_status"] == "PASS" else "fail"}">{results["summary"]["overall_status"]}</span></p>
+        <p><strong>Duration:</strong> {results["execution_info"].get("duration", 0):.2f}
+            seconds</p>
+        <p><strong>Overall Status:</strong> <span class="{
+            "pass" if results["summary"]["overall_status"] == "PASS" else "fail"
+        }">{results["summary"]["overall_status"]}</span></p>
     </div>
 
     <div class="summary">
@@ -554,7 +560,8 @@ class SecurityTestRunner:
             <tr><td>Total Tests</td><td>{results["summary"]["_total_tests"]}</td></tr>
             <tr><td>Tests Passed</td><td>{results["summary"]["_total_passed"]}</td></tr>
             <tr><td>Tests Failed</td><td>{results["summary"]["_total_failed"]}</td></tr>
-            <tr><td>Tests Skipped</td><td>{results["summary"]["_total_skipped"]}</td></tr>
+            <tr><td>Tests Skipped</td><td>{results["summary"]["_total_skipped"]}
+                </td></tr>
             <tr><td>Success Rate</td><td>{results["summary"]["success_rate"]}%</td></tr>
         </table>
     </div>
@@ -572,8 +579,10 @@ class SecurityTestRunner:
             <h3>{category.title()}</h3>
             <p><strong>Status:</strong> {category_results.get("status", "unknown")}</p>
             <p><strong>Tests Run:</strong> {category_results.get("tests_run", 0)}</p>
-            <p><strong>Tests Passed:</strong> {category_results.get("tests_passed", 0)}</p>
-            <p><strong>Tests Failed:</strong> {category_results.get("tests_failed", 0)}</p>
+            <p><strong>Tests Passed:</strong> {category_results.get("tests_passed", 0)}
+                </p>
+            <p><strong>Tests Failed:</strong> {category_results.get("tests_failed", 0)}
+                </p>
         </div>"""
 
         html_content += """
@@ -629,7 +638,13 @@ KEY RECOMMENDATIONS:
 
         summary_content += f"""
 RISK ASSESSMENT:
-- Overall Risk Level: {"LOW" if results["summary"]["_total_failed"] == 0 else "MEDIUM" if results["summary"]["_total_failed"] < 5 else "HIGH"}
+- Overall Risk Level: {
+            "LOW"
+            if results["summary"]["_total_failed"] == 0
+            else "MEDIUM"
+            if results["summary"]["_total_failed"] < 5
+            else "HIGH"
+        }
 - Action Required: {"No" if results["summary"]["_total_failed"] == 0 else "Yes"}
 
 For detailed results, see: security_test_results.json
@@ -688,7 +703,8 @@ def main():
     print("Overall Status")
     print(f"Success Rate: {results['summary']['success_rate']}%")
     print(
-        f"Tests: {results['summary']['_total_passed']}/{results['summary']['_total_tests']} passed"
+        f"Tests: {results['summary']['_total_passed']}/"
+        f"{results['summary']['_total_tests']} passed"
     )
     print("Reports generated in")
 

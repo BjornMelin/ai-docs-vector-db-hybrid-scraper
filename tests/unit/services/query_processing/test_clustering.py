@@ -510,7 +510,7 @@ class TestResultClusteringService:
     @pytest.fixture
     def sample_results_with_embeddings(self):
         """Create sample results with embeddings."""
-        rng = np.random.default_rng(42)  # For reproducible tests
+        rng = np.random.default_rng(42)  # For reproducible tests  # noqa: S311
         return [
             SearchResult(
                 id=f"result_{i}",
@@ -620,7 +620,7 @@ class TestResultClusteringService:
     def test_select_clustering_method_auto(self, clustering_service):
         """Test automatic clustering method selection."""
         # Small dataset -> should select DBSCAN (since HDBSCAN disabled)
-        rng = np.random.default_rng(42)
+        rng = np.random.default_rng(42)  # noqa: S311
         small_embeddings = rng.random((10, 5))
         request = ResultClusteringRequest(
             results=[
@@ -635,7 +635,7 @@ class TestResultClusteringService:
         assert method == ClusteringMethod.DBSCAN
 
         # Medium dataset -> should select DBSCAN
-        rng = np.random.default_rng(42)
+        rng = np.random.default_rng(42)  # noqa: S311
         medium_embeddings = rng.random((80, 5))
         method = clustering_service._select_clustering_method(
             request, medium_embeddings
@@ -650,7 +650,7 @@ class TestResultClusteringService:
 
     def test_select_clustering_method_explicit(self, clustering_service):
         """Test explicit clustering method selection."""
-        rng = np.random.default_rng(42)
+        rng = np.random.default_rng(42)  # noqa: S311
         embeddings = rng.random((10, 5))
         request = ResultClusteringRequest(
             results=[
@@ -673,7 +673,7 @@ class TestResultClusteringService:
         mock_clusterer.n_iter_ = 5
         mock_kmeans_class.return_value = mock_clusterer
 
-        rng = np.random.default_rng(42)
+        rng = np.random.default_rng(42)  # noqa: S311
         embeddings = rng.random((5, 3))
         request = ResultClusteringRequest(
             results=[
@@ -703,7 +703,7 @@ class TestResultClusteringService:
         mock_clusterer.fit_predict.return_value = np.array([0, 0, 1, 1, -1])
         mock_dbscan_class.return_value = mock_clusterer
 
-        rng = np.random.default_rng(42)
+        rng = np.random.default_rng(42)  # noqa: S311
         embeddings = rng.random((5, 3))
         request = ResultClusteringRequest(
             results=[
@@ -734,7 +734,7 @@ class TestResultClusteringService:
         mock_clusterer.fit_predict.return_value = np.array([0, 0, 1, 1, 2])
         mock_agglomerative_class.return_value = mock_clusterer
 
-        rng = np.random.default_rng(42)
+        rng = np.random.default_rng(42)  # noqa: S311
         embeddings = rng.random((5, 3))
         request = ResultClusteringRequest(
             results=[
@@ -756,7 +756,7 @@ class TestResultClusteringService:
 
     def test_estimate_eps(self, clustering_service):
         """Test eps estimation for DBSCAN."""
-        rng = np.random.default_rng(42)
+        rng = np.random.default_rng(42)  # noqa: S311
         embeddings = rng.random((10, 5))
         min_cluster_size = 3
 
@@ -771,7 +771,7 @@ class TestResultClusteringService:
     ):
         """Test building cluster groups."""
         # Use controlled embeddings to ensure coherence stays within bounds
-        rng = np.random.default_rng(42)  # Set seed for reproducible test
+        rng = np.random.default_rng(42)  # Set seed for reproducible test  # noqa: S311
         embeddings = (
             rng.random((10, 5)) * 0.5
         )  # Smaller values to keep coherence reasonable
@@ -802,7 +802,7 @@ class TestResultClusteringService:
         self, clustering_service, sample_results_with_embeddings
     ):
         """Test identifying outliers."""
-        rng = np.random.default_rng(42)
+        rng = np.random.default_rng(42)  # noqa: S311
         embeddings = rng.random((10, 5))
         cluster_labels = np.array([0, 0, 1, 1, 2, 2, -1, -1, -1, 0])
         request = ResultClusteringRequest(results=sample_results_with_embeddings)
@@ -833,14 +833,14 @@ class TestResultClusteringService:
         assert coherence == 1.0
 
         # Random embeddings
-        rng = np.random.default_rng(42)
+        rng = np.random.default_rng(42)  # noqa: S311
         random_embeddings = rng.random((5, 3))
         coherence = clustering_service._calculate_coherence(random_embeddings)
         assert 0.0 <= coherence <= 1.0
 
     def test_calculate_cluster_confidence(self, clustering_service):
         """Test calculating cluster confidence."""
-        rng = np.random.default_rng(42)
+        rng = np.random.default_rng(42)  # noqa: S311
         cluster_embeddings = rng.random((5, 3))
         all_embeddings = rng.random((20, 3))
         request = ResultClusteringRequest(

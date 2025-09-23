@@ -18,7 +18,7 @@ class MinimalEmbeddingTestUtils:
     def generate_test_embeddings(
         count: int = 1, dim: int = 384, seed: int | None = None
     ) -> list[list[float]]:
-        """Generate test embeddings using standard library random.
+        """Generate test embeddings using standard library random.  # noqa: S311
 
         Args:
             count: Number of embeddings to generate
@@ -29,12 +29,12 @@ class MinimalEmbeddingTestUtils:
             list of embedding vectors
         """
         if seed is not None:
-            random.seed(seed)
+            random.seed(seed)  # noqa: S311
 
         embeddings = []
         for _ in range(count):
             # Generate random values and normalize to unit vector
-            raw_values = [random.gauss(0, 1) for _ in range(dim)]
+            raw_values = [random.gauss(0, 1) for _ in range(dim)]  # noqa: S311
 
             # Calculate magnitude
             magnitude = math.sqrt(sum(x * x for x in raw_values))
@@ -177,7 +177,7 @@ class MinimalVectorDatabaseTestUtils:
             list of vector points with IDs, vectors, and payloads
         """
         if seed is not None:
-            random.seed(seed)
+            random.seed(seed)  # noqa: S311
 
         embeddings = MinimalEmbeddingTestUtils.generate_test_embeddings(
             count=count, dim=vector_dim, seed=seed
@@ -190,7 +190,7 @@ class MinimalVectorDatabaseTestUtils:
                 "vector": embedding,
                 "payload": {
                     "text": f"Sample document {i}",
-                    "category": random.choice(["doc", "article", "note"]),
+                    "category": random.choice(["doc", "article", "note"]),  # noqa: S311
                     "timestamp": time.time(),
                 },
             }
@@ -396,7 +396,7 @@ class MinimalPerformanceTestUtils:
             label: Label for the snapshot
         """
         # Mock memory usage (in real implementation would use psutil or similar)
-        mock_memory_mb = random.uniform(10, 50)  # Mock 10-50 MB usage
+        mock_memory_mb = random.uniform(10, 50)  # Mock 10-50 MB usage  # noqa: S311
 
         snapshot = {
             "label": label,
@@ -452,7 +452,7 @@ class MinimalTestStrategies:
         Returns:
             list containing one embedding
         """
-        dim = random.randint(min_dim, max_dim)
+        dim = random.randint(min_dim, max_dim)  # noqa: S311
         return MinimalEmbeddingTestUtils.generate_test_embeddings(count=1, dim=dim)
 
     @staticmethod
@@ -469,7 +469,7 @@ class MinimalTestStrategies:
             "What are the benefits of RAG?",
             "How to implement semantic search?",
         ]
-        return random.choice(queries)
+        return random.choice(queries)  # noqa: S311
 
 
 if __name__ == "__main__":

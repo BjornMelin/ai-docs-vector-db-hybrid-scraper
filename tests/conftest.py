@@ -2,7 +2,8 @@
 
 This module provides the core testing infrastructure with standardized fixtures,
 configuration, and utilities that follow 2025 testing best practices.
-Implements session-scoped fixtures, parallel execution support, and boundary-only mocking.
+Implements session-scoped fixtures, parallel execution support, and
+boundary-only mocking.
 """
 
 import asyncio
@@ -632,7 +633,7 @@ except ImportError:
         dim = kwargs.get("max_dim", 384)
         normalized = kwargs.get("normalized", True)
 
-        values = [random.uniform(-1, 1) for _ in range(dim)]
+        values = [random.uniform(-1, 1) for _ in range(dim)]  # noqa: S311
         if normalized:
             norm = sum(x**2 for x in values) ** 0.5
             if norm > 0:
@@ -653,8 +654,8 @@ except ImportError:
             "analysis",
             "research",
         ]
-        word_count = random.randint(max(2, min_length // 5), max_length // 5)
-        text = " ".join(random.choices(words, k=word_count))
+        word_count = random.randint(max(2, min_length // 5), max_length // 5)  # noqa: S311
+        text = " ".join(random.choices(words, k=word_count))  # noqa: S311
 
         # Ensure length constraints
         if len(text) < min_length:
@@ -710,15 +711,15 @@ def ai_test_utilities():
             return dot_product / (norm1 * norm2)
 
         @staticmethod
-        def generate_test_embeddings(
+        def generate_test_embeddings(  # noqa: S311
             count: int = 10, dim: int = 1536
         ) -> list[list[float]]:
             """Generate deterministic test embeddings."""
             embeddings = []
 
             for i in range(count):
-                random.seed(42 + i)  # Deterministic
-                embedding = [random.uniform(-1, 1) for _ in range(dim)]
+                random.seed(42 + i)  # Deterministic  # noqa: S311
+                embedding = [random.uniform(-1, 1) for _ in range(dim)]  # noqa: S311
 
                 # Normalize
                 norm = sum(x**2 for x in embedding) ** 0.5
@@ -1073,7 +1074,8 @@ def pytest_configure(config):
         "local_only: mark test to run only locally",
         # GPU markers
         "gpu: marks tests requiring GPU acceleration",
-        "gpu_required: marks tests that require GPU and should be skipped if unavailable",
+        "gpu_required: marks tests that require GPU and should be skipped if "
+        "unavailable",
         "gpu_optional: marks tests that can use GPU but work without it",
         "gpu_memory: marks tests that require specific GPU memory amounts",
         "gpu_performance: marks tests for GPU performance benchmarking",

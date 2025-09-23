@@ -395,7 +395,7 @@ class TestPydanticSettingsPatterns:
         settings = RebuildableSettings()
         assert settings.basic_field == "basic"
 
-        # Test adding dynamic fields during initialization (simulating plugin-based config)
+        # Test adding dynamic fields during init (simulate plugin-based config)
         new_settings = RebuildableSettings(dynamic_field="custom-value")
         assert new_settings.basic_field == "basic"
         assert new_settings.dynamic_field == "custom-value"

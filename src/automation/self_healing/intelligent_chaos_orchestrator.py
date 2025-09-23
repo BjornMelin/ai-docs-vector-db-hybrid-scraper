@@ -8,6 +8,7 @@ continuous resilience validation and improvement.
 import asyncio
 import logging
 import random
+import secrets
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -356,7 +357,8 @@ class SystemWeaknessAnalyzer:
                 suggested_experiments=["service_unavailable", "network_partition"],
                 business_impact=0.7,
                 learning_objective="Test circuit breaker configuration and recovery",
-                hypothesis="Circuit breakers are properly configured and enable graceful degradation",
+                hypothesis="Circuit breakers are properly configured and "
+                "enable graceful degradation",
             )
             weaknesses.append(breaker_weakness)
 
@@ -376,13 +378,15 @@ class SystemWeaknessAnalyzer:
                 component="storage",
                 severity=min(1.0, metrics.disk_percent / 100),
                 confidence=0.9,
-                description=f"High disk utilization ({metrics.disk_percent:.1f}%) approaching capacity limits",
+                description=f"High disk utilization ({metrics.disk_percent:.1f}%) "
+                f"approaching capacity limits",
                 evidence=[f"Disk usage: {metrics.disk_percent:.1f}%"],
                 detection_time=timestamp,
                 suggested_experiments=["disk_fill", "log_explosion"],
                 business_impact=0.8,
                 learning_objective="Test disk space management and cleanup mechanisms",
-                hypothesis="System has adequate disk space monitoring and cleanup procedures",
+                hypothesis="System has adequate disk space monitoring and "
+                "cleanup procedures",
             )
             weaknesses.append(disk_weakness)
 
@@ -410,7 +414,8 @@ class SystemWeaknessAnalyzer:
                     1.0, len(unhealthy_services) / 3
                 ),  # Normalize to 3 services = 1.0
                 confidence=0.8,
-                description=f"Unhealthy services ({', '.join(unhealthy_services)}) indicate dependency risks",
+                description=f"Unhealthy services ({', '.join(unhealthy_services)}) "
+                f"indicate dependency risks",
                 evidence=[f"Unhealthy services: {', '.join(unhealthy_services)}"],
                 detection_time=timestamp,
                 suggested_experiments=[
@@ -454,7 +459,8 @@ class SystemWeaknessAnalyzer:
 
 
 class AdaptiveChaosTestGenerator:
-    """Generates targeted chaos experiments based on system weaknesses and learning objectives."""
+    """Generates targeted chaos experiments based on system weaknesses and
+    learning objectives."""
 
     def __init__(self):
         self.experiment_templates = self._initialize_experiment_templates()
@@ -470,7 +476,8 @@ class AdaptiveChaosTestGenerator:
                 category=ExperimentCategory.INFRASTRUCTURE,
                 failure_type=FailureType.RESOURCE_EXHAUSTION,
                 target_weakness_types=[WeaknessType.RESOURCE_CONTENTION],
-                description_template="CPU stress test targeting {component} to validate resource handling",
+                description_template="CPU stress test targeting {component} to "
+                "validate resource handling",
                 parameter_ranges={
                     "duration_seconds": (30, 300),
                     "cpu_load_percent": (80, 95),
@@ -493,7 +500,8 @@ class AdaptiveChaosTestGenerator:
                 category=ExperimentCategory.INFRASTRUCTURE,
                 failure_type=FailureType.MEMORY_EXHAUSTION,
                 target_weakness_types=[WeaknessType.RESOURCE_CONTENTION],
-                description_template="Memory exhaustion test for {component} to validate memory management",
+                description_template="Memory exhaustion test for {component} to "
+                "validate memory management",
                 parameter_ranges={
                     "duration_seconds": (60, 240),
                     "memory_mb": (512, 2048),
@@ -519,7 +527,8 @@ class AdaptiveChaosTestGenerator:
                     WeaknessType.PERFORMANCE_DEGRADATION,
                     WeaknessType.DEPENDENCY_FAILURE,
                 ],
-                description_template="Network latency injection for {component} dependencies",
+                description_template="Network latency injection for {component} "
+                "dependencies",
                 parameter_ranges={
                     "duration_seconds": (120, 600),
                     "latency_ms": (100, 2000),
@@ -549,7 +558,8 @@ class AdaptiveChaosTestGenerator:
                     WeaknessType.DEPENDENCY_FAILURE,
                     WeaknessType.ERROR_PROPAGATION,
                 ],
-                description_template="Service unavailable test for {component} to validate fallback mechanisms",
+                description_template="Service unavailable test for {component} to "
+                "validate fallback mechanisms",
                 parameter_ranges={
                     "duration_seconds": (60, 300),
                     "failure_rate": (0.5, 1.0),
@@ -717,7 +727,8 @@ class AdaptiveChaosTestGenerator:
 
             # Generate experiment
             return ChaosExperiment(
-                name=f"{template.name.lower().replace(' ', '_')}_{weakness.component}_{int(time.time())}",
+                name=f"{template.name.lower().replace(' ', '_')}_"
+                f"{weakness.component}_{int(time.time())}",
                 description=template.description_template.format(
                     component=weakness.component
                 ),
@@ -744,7 +755,7 @@ class AdaptiveChaosTestGenerator:
         experiments = []
 
         # Select random templates for exploration
-        available_templates = random.sample(
+        available_templates = random.sample(  # noqa: S311
             self.experiment_templates, min(count, len(self.experiment_templates))
         )
 
@@ -755,8 +766,9 @@ class AdaptiveChaosTestGenerator:
                 description=f"Exploratory {template.name} to discover system behavior",
                 failure_type=template.failure_type,
                 target_service="system",  # General system target
-                duration_seconds=random.randint(60, 180),  # Shorter for exploration
-                failure_rate=random.uniform(0.3, 0.7),  # Moderate failure rate
+                duration_seconds=secrets.randbelow(121) + 60,  # Shorter for exploration
+                failure_rate=0.3
+                + 0.4 * (secrets.randbelow(1000000) / 1000000),  # Moderate failure rate
                 blast_radius="single",
                 recovery_time_seconds=60,
                 success_criteria=template.success_criteria.copy(),
@@ -1063,7 +1075,8 @@ class RecoveryValidator:
         # Service-specific lessons
         if experiment.target_service != "system":
             lessons.append(
-                f"{experiment.target_service} component demonstrated resilience to {experiment.failure_type.value}"
+                f"{experiment.target_service} component demonstrated resilience to "
+                f"{experiment.failure_type.value}"
             )
 
         return lessons
@@ -1134,7 +1147,8 @@ class IntelligentChaosOrchestrator:
                     await self.update_resilience_model(experiment_results)
 
                     logger.info(
-                        f"Chaos session completed: {len(experiment_results)} experiments executed"
+                        f"Chaos session completed: {len(experiment_results)} "
+                        f"experiments executed"
                     )
                 else:
                     logger.info("Skipping chaos testing due to system state")
@@ -1571,14 +1585,16 @@ class IntelligentChaosOrchestrator:
         high_severity_weaknesses = [w for w in weaknesses if w.severity > 0.7]
         if high_severity_weaknesses:
             focus_areas.append(
-                f"High priority: {high_severity_weaknesses[0].component} {high_severity_weaknesses[0].weakness_type.value}"
+                f"High priority: {high_severity_weaknesses[0].component} "
+                f"{high_severity_weaknesses[0].weakness_type.value}"
             )
 
         # Focus on lowest scoring components
         sorted_components = sorted(component_scores.items(), key=lambda x: x[1])
         if sorted_components and sorted_components[0][1] < 0.6:
             focus_areas.append(
-                f"Component improvement: {sorted_components[0][0]} (score: {sorted_components[0][1]:.2f})"
+                f"Component improvement: {sorted_components[0][0]} "
+                f"(score: {sorted_components[0][1]:.2f})"
             )
 
         # Focus on high business impact weaknesses
@@ -1681,7 +1697,8 @@ class IntelligentChaosOrchestrator:
         vulnerabilities = []
         if not execution_result.success:
             vulnerabilities.append(
-                f"System failed to handle {experiment.failure_type.value} in {experiment.target_service}"
+                f"System failed to handle {experiment.failure_type.value} in "
+                f"{experiment.target_service}"
             )
 
         if recovery_analysis.get("total_recovery_time", 0) > 180:
@@ -1732,7 +1749,8 @@ class IntelligentChaosOrchestrator:
         execution_result,
         recovery_analysis: dict[str, Any],
     ) -> float:
-        """Calculate the impact of this experiment on overall system resilience understanding."""
+        """Calculate the impact of this experiment on overall system resilience
+        understanding."""
         base_impact = 0.5
 
         # Successful experiments provide more insight
@@ -1793,7 +1811,8 @@ class IntelligentChaosOrchestrator:
                 and metrics.response_time_p95 > pre_snapshot.response_time_p95 * 3
             ):
                 unexpected.append(
-                    f"Unexpected response time spike to {metrics.response_time_p95:.0f}ms"
+                    f"Unexpected response time spike to "
+                    f"{metrics.response_time_p95:.0f}ms"
                 )
 
         return list(set(unexpected))  # Remove duplicates
@@ -1870,7 +1889,8 @@ class IntelligentChaosOrchestrator:
                 1 for exp in recent_experiments if exp.experiment_result.success
             )
             logger.info(
-                f"Recent Chaos Testing: {successful}/{len(recent_experiments)} experiments successful"
+                f"Recent Chaos Testing: {successful}/{len(recent_experiments)} "
+                f"experiments successful"
             )
 
     async def get_orchestration_status(self) -> dict[str, Any]:

@@ -695,7 +695,7 @@ def mock_load_test_service():
 
             # Simulate failure
 
-            if random.random() < self.failure_rate:
+            if random.random() < self.failure_rate:  # noqa: S311
                 msg = f"Simulated failure (rate: {self.failure_rate})"
                 raise CustomError(msg)
 

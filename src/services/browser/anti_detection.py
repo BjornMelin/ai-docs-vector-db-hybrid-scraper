@@ -2,9 +2,11 @@
 
 This module provides sophisticated anti-detection capabilities for browser automation,
 including fingerprint management, behavioral patterns, and success rate monitoring.
-Designed to achieve 95%+ success rate on challenging sites while maintaining performance.
+Designed to achieve 95%+ success rate on challenging sites while
+maintaining performance.
 
-Note: Uses standard random module for anti-detection purposes (timing, user agents, etc.)
+Note: Uses standard random module for anti-detection purposes
+(timing, user agents, etc.)
 This is intentional and not cryptographically sensitive.
 """
 # Standard random is acceptable for anti-detection purposes
@@ -30,27 +32,38 @@ class UserAgentPool(BaseModel):
 
     chrome_agents: list[str] = Field(
         default_factory=lambda: [
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
         ]
     )
 
     firefox_agents: list[str] = Field(
         default_factory=lambda: [
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:122.0) Gecko/20100101 Firefox/122.0",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) "
+            "Gecko/20100101 Firefox/122.0",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:122.0) "
+            "Gecko/20100101 Firefox/122.0",
             "Mozilla/5.0 (X11; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) "
+            "Gecko/20100101 Firefox/121.0",
         ]
     )
 
     safari_agents: list[str] = Field(
         default_factory=lambda: [
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2.1 Safari/605.1.15",
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
+            "(KHTML, like Gecko) Version/17.2.1 Safari/605.1.15",
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2_1 like Mac OS X) "
+            "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 "
+            "Mobile/15E148 Safari/604.1",
         ]
     )
 
@@ -428,20 +441,20 @@ class EnhancedAntiDetection:
             self.user_agents.safari_agents,
         ]
 
-        selected_pool = random.choices(browser_pools, weights=browser_weights)[
+        selected_pool = random.choices(browser_pools, weights=browser_weights)[  # noqa: S311
             0
         ]  # Anti-detection randomization
-        return random.choice(selected_pool)  # Anti-detection randomization
+        return random.choice(selected_pool)  # noqa: S311  # Anti-detection randomization
 
     def _randomize_viewport(self) -> ViewportProfile:
         """Randomize viewport with common resolution patterns."""
         # Filter to non-mobile profiles for better compatibility
         desktop_profiles = [p for p in self.viewport_profiles if not p.is_mobile]
-        profile = random.choice(desktop_profiles)  # Anti-detection randomization
+        profile = random.choice(desktop_profiles)  # noqa: S311  # Anti-detection randomization
 
         # Add slight randomization to avoid exact pattern matching
-        width_variance = random.randint(-50, 50)  # Anti-detection randomization
-        height_variance = random.randint(-30, 30)  # Anti-detection randomization
+        width_variance = random.randint(-50, 50)  # noqa: S311  # Anti-detection randomization
+        height_variance = random.randint(-30, 30)  # noqa: S311  # Anti-detection randomization
 
         return ViewportProfile(
             width=max(1200, min(1920, profile.width + width_variance)),
@@ -462,11 +475,14 @@ class EnhancedAntiDetection:
         ]
 
         headers = {
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,"
+            "image/avif,image/webp,image/apng,*/*;q=0.8,"
+            "application/signed-exchange;v=b3;q=0.7",
             "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": random.choice(languages),  # Anti-detection randomization
+            "Accept-Language": random.choice(languages),  # noqa: S311  # Anti-detection randomization
             "Cache-Control": "max-age=0",
-            "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+            "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", '
+            '"Google Chrome";v="122"',
             "Sec-Ch-Ua-Mobile": "?0",
             "Sec-Ch-Ua-Platform": '"Windows"',
             "Sec-Fetch-Dest": "document",
@@ -477,7 +493,7 @@ class EnhancedAntiDetection:
         }
 
         # Add DNT header occasionally (privacy-conscious users)
-        if random.random() < 0.3:  # Anti-detection randomization
+        if random.random() < 0.3:  # noqa: S311  # Anti-detection randomization
             headers["DNT"] = "1"
 
         return headers
@@ -594,9 +610,9 @@ class EnhancedAntiDetection:
 
         # Add some randomness to avoid pattern detection
         base_delay = (
-            random.uniform(min_delay, max_delay) / 1000.0
+            random.uniform(min_delay, max_delay) / 1000.0  # noqa: S311
         )  # Anti-detection randomization
-        jitter = random.uniform(0.8, 1.2)  # Anti-detection randomization
+        jitter = random.uniform(0.8, 1.2)  # noqa: S311  # Anti-detection randomization
 
         return base_delay * jitter
 

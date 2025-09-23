@@ -74,7 +74,8 @@ class TestStressScenarios:
             )
 
             print(
-                f"Testing {stress_level['name']}: {stress_level['factor']}x CPU load, {stress_level['users']} users"
+                f"Testing {stress_level['name']}: {stress_level['factor']}x CPU "
+                f"load, {stress_level['users']} users"
             )
 
             result = await load_test_runner.run_load_test(
@@ -120,12 +121,14 @@ class TestStressScenarios:
         print("Stress test analysis:")
         for result in stress_results:
             print(
-                f"  {result['level']}: {result['success_rate']:.1f}% success, {result['avg_response_time']:.2f}ms avg response"
+                f"  {result['level']}: {result['success_rate']:.1f}% success, "
+                f"{result['avg_response_time']:.2f}ms avg response"
             )
 
         if breaking_point:
             print(
-                f"Breaking point identified at: {breaking_point['level']} ({breaking_point['cpu_factor']}x CPU load)"
+                f"Breaking point identified at: {breaking_point['level']} "
+                f"({breaking_point['cpu_factor']}x CPU load)"
             )
 
     @pytest.mark.asyncio
@@ -197,7 +200,8 @@ class TestStressScenarios:
             )
 
             print(
-                f"Testing {memory_level['name']}: {memory_level['data_mb']}MB per request, {memory_level['users']} users"
+                f"Testing {memory_level['name']}: {memory_level['data_mb']}MB per "
+                f"request, {memory_level['users']} users"
             )
 
             result = await load_test_runner.run_load_test(
@@ -232,7 +236,8 @@ class TestStressScenarios:
         print("Memory stress analysis:")
         for result in memory_results:
             print(
-                f"  {result['level']}: {result['success_rate']:.1f}% success, {result['simulated_memory_objects']} memory objects"
+                f"  {result['level']}: {result['success_rate']:.1f}% success, "
+                f"{result['simulated_memory_objects']} memory objects"
             )
 
     @pytest.mark.asyncio
@@ -252,7 +257,10 @@ class TestStressScenarios:
                 """Simulate connection-intensive operations."""
                 # Try to acquire connection
                 if self.active_connections >= self.max_connections:
-                    msg = f"Connection pool exhausted ({self.active_connections}/{self.max_connections})"
+                    msg = (
+                        f"Connection pool exhausted ({self.active_connections}/"
+                        f"{self.max_connections})"
+                    )
                     raise TestError(msg)
 
                 # Acquire connection
@@ -297,7 +305,7 @@ class TestStressScenarios:
                 requests_per_second=test["rps"],
                 duration_seconds=30.0,
                 success_criteria={
-                    "max_error_rate_percent": 70.0,  # Very lenient for connection stress
+                    "max_error_rate_percent": 70.0,  # Lenient for connection stress
                 },
             )
 
@@ -334,7 +342,8 @@ class TestStressScenarios:
         print("Connection stress analysis:")
         for result in connection_results:
             print(
-                f"  {result['test']}: {result['success_rate']:.1f}% success, {result['connection_failures']} connection failures"
+                f"  {result['test']}: {result['success_rate']:.1f}% success, "
+                f"{result['connection_failures']} connection failures"
             )
 
     @pytest.mark.asyncio
@@ -369,7 +378,7 @@ class TestStressScenarios:
                     0.3, current_load * 0.05 + self.failure_cascade_level * 0.1
                 )
 
-                if random.random() < failure_probability:
+                if random.random() < failure_probability:  # noqa: S311
                     self.consecutive_failures += 1
                     self.failure_cascade_level = min(
                         5, self.failure_cascade_level + 0.1
@@ -379,7 +388,10 @@ class TestStressScenarios:
                     if self.consecutive_failures > 10:
                         self.circuit_breaker_open = True
 
-                    msg = f"Cascading failure (level {self.failure_cascade_level:.1f}, consecutive: {self.consecutive_failures})"
+                    msg = (
+                        f"Cascading failure (level {self.failure_cascade_level:.1f}, "
+                        f"consecutive: {self.consecutive_failures})"
+                    )
                     raise TestError(msg)
                 # Success - reduce cascade level
                 self.failure_cascade_level = max(0, self.failure_cascade_level - 0.05)
@@ -455,7 +467,9 @@ class TestStressScenarios:
         print("Cascading failure analysis:")
         for result in cascade_results:
             print(
-                f"  {result['test']}: {result['success_rate']:.1f}% success, cascade level: {result['initial_cascade_level']:.1f} → {result['final_cascade_level']:.1f}"
+                f"  {result['test']}: {result['success_rate']:.1f}% success, "
+                f"cascade level: {result['initial_cascade_level']:.1f} → "
+                f"{result['final_cascade_level']:.1f}"
             )
 
     @pytest.mark.asyncio
@@ -478,7 +492,10 @@ class TestStressScenarios:
 
                 if self.resource_pool < resources_needed:
                     self.exhaustion_triggered = True
-                    msg = f"Resource exhaustion: {self.resource_pool}/{self.max_resources} available"
+                    msg = (
+                        f"Resource exhaustion: {self.resource_pool}/"
+                        f"{self.max_resources} available"
+                    )
                     raise TestError(msg)
 
                 # Consume resources
@@ -533,7 +550,8 @@ class TestStressScenarios:
             )
 
             print(
-                f"Testing {phase['phase']}: {phase['users']} users for {phase['duration']}s"
+                f"Testing {phase['phase']}: {phase['users']} users for "
+                f"{phase['duration']}s"
             )
 
             result = await load_test_runner.run_load_test(
@@ -580,7 +598,9 @@ class TestStressScenarios:
         print("Resource exhaustion analysis:")
         for result in exhaustion_results:
             print(
-                f"  {result['phase']}: {result['success_rate']:.1f}% success, resources: {result['initial_resources']} → {result['final_resources']}"
+                f"  {result['phase']}: {result['success_rate']:.1f}% success, "
+                f"resources: {result['initial_resources']} → "
+                f"{result['final_resources']}"
             )
 
         # Recovery should show improvement

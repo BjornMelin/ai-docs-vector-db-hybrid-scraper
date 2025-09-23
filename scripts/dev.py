@@ -187,9 +187,7 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
 
     workers = _auto_worker_count(args.workers)
     suites: tuple[str, ...] = (
-        ("performance", "integration")
-        if args.suite == "all"
-        else (args.suite,)
+        ("performance", "integration") if args.suite == "all" else (args.suite,)
     )
 
     if len(suites) > 1 and args.output and not args.output_dir:

@@ -323,11 +323,11 @@ class TestConfigurationLoadStress:
 
         # Add 20 listeners with varying processing times
         for i in range(20):
-            processing_time = random.uniform(0.01, 0.05)
+            processing_time = random.uniform(0.01, 0.05)  # noqa: S311
             reloader.add_change_listener(
                 name=f"stress_listener_{i}",
                 callback=create_stress_listener(f"listener_{i}", processing_time),
-                priority=random.randint(1, 10),
+                priority=random.randint(1, 10),  # noqa: S311
                 timeout_seconds=1.0,
             )
 
@@ -619,16 +619,16 @@ class TestConfigurationLoadStress:
             def make_listener(_idx):
                 def listener(_old_cfg, _new_cfg):
                     # Random processing time
-                    time.sleep(random.uniform(0.001, 0.01))
+                    time.sleep(random.uniform(0.001, 0.01))  # noqa: S311
                     # Random success
-                    return random.random() > 0.1  # 90% success rate
+                    return random.random() > 0.1  # 90% success rate  # noqa: S311
 
                 return listener
 
             reloader.add_change_listener(
                 name=f"prop_listener_{i}",
                 callback=make_listener(i),
-                priority=random.randint(1, 100),
+                priority=random.randint(1, 100),  # noqa: S311
                 timeout_seconds=listener_timeout,
             )
 

@@ -116,7 +116,7 @@ class TestConcurrentConfigurationAccess:
             """Reload a specific config version."""
             try:
                 # Add small random delay to increase contention
-                await asyncio.sleep(random.uniform(0, 0.1))
+                await asyncio.sleep(random.uniform(0, 0.1))  # noqa: S311
 
                 result = await config_reloader.reload_config(
                     trigger=ReloadTrigger.API,
@@ -190,12 +190,12 @@ class TestConcurrentConfigurationAccess:
 
         # Add multiple listeners with different delays
         for i in range(10):
-            delay = random.uniform(0.01, 0.1)
+            delay = random.uniform(0.01, 0.1)  # noqa: S311
             listener_delays[f"listener_{i}"] = delay
             config_reloader.add_change_listener(
                 name=f"listener_{i}",
                 callback=create_listener(f"listener_{i}", delay),
-                priority=random.randint(1, 10),
+                priority=random.randint(1, 10),  # noqa: S311
                 async_callback=False,
                 timeout_seconds=1.0,
             )
@@ -398,21 +398,21 @@ class TestConcurrentConfigurationAccess:
 
                 elif op_type == "drift":
                     # Simulate drift check
-                    await asyncio.sleep(random.uniform(0.01, 0.05))
+                    await asyncio.sleep(random.uniform(0.01, 0.05))  # noqa: S311
                     result["success"] = True
-                    result["drift_detected"] = random.choice([True, False])
+                    result["drift_detected"] = random.choice([True, False])  # noqa: S311
 
                 elif op_type == "backup":
                     # Simulate backup
-                    await asyncio.sleep(random.uniform(0.01, 0.05))
+                    await asyncio.sleep(random.uniform(0.01, 0.05))  # noqa: S311
                     result["success"] = True
-                    result["backup_size"] = random.randint(1000, 10000)
+                    result["backup_size"] = random.randint(1000, 10000)  # noqa: S311
 
                 elif op_type == "validate":
                     # Simulate validation
-                    await asyncio.sleep(random.uniform(0.01, 0.05))
+                    await asyncio.sleep(random.uniform(0.01, 0.05))  # noqa: S311
                     result["success"] = True
-                    result["valid"] = random.choice([True, False])
+                    result["valid"] = random.choice([True, False])  # noqa: S311
 
                 result["duration_ms"] = (time.time() - start_time) * 1000
 

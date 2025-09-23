@@ -1,6 +1,6 @@
 """Real database performance benchmarks using pytest-benchmark.
 
-These benchmarks test actual database operations to validate our BJO-134 performance achievements:
+These benchmarks test actual database operations:
 - 887.9% throughput improvement
 - 50.9% P95 latency reduction
 - 95% ML prediction accuracy
@@ -45,8 +45,9 @@ except ImportError:
 
 # Safe imports for optional dependencies
 try:
-    import docker
     from testcontainers.core.container import DockerContainer
+
+    import docker
 
     _DOCKER_IMPORTS_AVAILABLE = True
 except ImportError:
@@ -134,7 +135,8 @@ class RealPerformanceMonitor:
 
 
 class MockQdrantClientForCI:
-    """CI-compatible mock Qdrant client that provides realistic performance characteristics."""
+    """CI-compatible mock Qdrant client that provides realistic performance
+    characteristics."""
 
     def __init__(self, url=None):
         self.url = url
@@ -520,7 +522,8 @@ class TestDatabasePerformance:
         client, _qdrant_url = await qdrant_fixture.start_qdrant_container()
 
         try:
-            # For CI mode, create a simplified service that just uses the client directly
+            # For CI mode, create a simplified service that just uses the
+            # client directly
             if CI_MODE:
                 # Create a simplified service-like object for benchmarks
                 service = type(
@@ -572,7 +575,8 @@ class TestDatabasePerformance:
                     TimeoutError,
                     OSError,
                 ):
-                    # If service initialization fails, fall back to simple client-only approach
+                    # If service initialization fails, fall back to simple
+                    # client-only approach
                     service = type(
                         "QdrantService",
                         (),
@@ -596,7 +600,7 @@ class TestDatabasePerformance:
         vectors = []
         for i in range(100):
             # Generate 384-dimensional vectors (FastEmbed default)
-            vector = [random.uniform(-1.0, 1.0) for _ in range(384)]
+            vector = [random.uniform(-1.0, 1.0) for _ in range(384)]  # noqa: S311
             vectors.append(
                 {
                     "id": i,
@@ -737,7 +741,8 @@ class TestDatabasePerformance:
 
         # Log performance metrics
         print(
-            f"\n📊 Vector Upsert: {result['throughput_vectors_per_second']:.1f} vectors/sec"
+            f"\n📊 Vector Upsert: "
+            f"{result['throughput_vectors_per_second']:.1f} vectors/sec"
         )
 
     @pytest.mark.asyncio
@@ -821,7 +826,8 @@ class TestDatabasePerformance:
 
         # Log search metrics
         print(
-            f"\n🔍 Search Performance: {result['avg_search_time']:.3f}s avg, {result['search_throughput']:.1f} searches/sec"
+            f"\n🔍 Search Performance: {result['avg_search_time']:.3f}s avg, "
+            f"{result['search_throughput']:.1f} searches/sec"
         )
 
     @pytest.mark.slow
@@ -919,7 +925,8 @@ class TestDatabasePerformance:
 
         # Log concurrency metrics
         print(
-            f"\n⚡ Concurrent DB: {result['operations_per_second']:.1f} ops/sec, {result['success_rate']:.1%} success"
+            f"\n⚡ Concurrent DB: {result['operations_per_second']:.1f} ops/sec, "
+            f"{result['success_rate']:.1%} success"
         )
 
     @pytest.mark.asyncio
@@ -1024,7 +1031,8 @@ class TestDatabasePerformance:
 
         # Log indexing metrics
         print(
-            f"\n🔗 Payload Indexing: {result['index_creation_time']:.2f}s creation, {result['filtered_search_time']:.3f}s search"
+            f"\n🔗 Payload Indexing: {result['index_creation_time']:.2f}s creation, "
+            f"{result['filtered_search_time']:.3f}s search"
         )
 
 
@@ -1074,7 +1082,8 @@ class TestEnterpriseFeatures:
         )
 
         print(
-            f"\n🎯 Connection affinity hit rate: {affinity_rate:.1%} (target: >{min_affinity:.1%})"
+            f"\n🎯 Connection affinity hit rate: {affinity_rate:.1%} "
+            f"(target: >{min_affinity:.1%})"
         )
 
     @pytest.mark.asyncio
@@ -1122,7 +1131,8 @@ async def test_benchmark_performance_targets(database_manager, expected_performa
 
     # Assert all targets are met
     assert results["ml_accuracy"] >= expected_performance["min_ml_accuracy"], (
-        f"ML accuracy below target: {results['ml_accuracy']:.3f} < {expected_performance['min_ml_accuracy']:.3f}"
+        f"ML accuracy below target: {results['ml_accuracy']:.3f} < "
+        f"{expected_performance['min_ml_accuracy']:.3f}"
     )
 
     assert results["circuit_breaker_healthy"], "Circuit breaker should be healthy"
@@ -1131,6 +1141,7 @@ async def test_benchmark_performance_targets(database_manager, expected_performa
     print("\n✅ All BJO-134 performance targets validated!")
     print(f"   ML Accuracy: {results['ml_accuracy']:.1%}")
     print(
-        f"   Circuit Breaker: {'Healthy' if results['circuit_breaker_healthy'] else 'Degraded'}"
+        f"   Circuit Breaker: "
+        f"{'Healthy' if results['circuit_breaker_healthy'] else 'Degraded'}"
     )
     print(f"   Monitoring: {'Active' if results['monitoring_active'] else 'Inactive'}")

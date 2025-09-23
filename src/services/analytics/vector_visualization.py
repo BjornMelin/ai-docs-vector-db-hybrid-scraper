@@ -21,7 +21,7 @@ from src.services.base import BaseService
 
 
 # Initialize numpy random generator
-rng = np.random.default_rng()
+rng = np.random.default_rng()  # noqa: S311
 
 
 logger = logging.getLogger(__name__)

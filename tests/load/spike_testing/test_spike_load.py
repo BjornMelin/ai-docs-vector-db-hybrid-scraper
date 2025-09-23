@@ -437,10 +437,10 @@ class TestSpikeLoad:
 
         if concurrent_users > 300:  # During spike
             # Increased processing time during spike
-            processing_time = random.uniform(0.1, 0.3)
+            processing_time = random.uniform(0.1, 0.3)  # noqa: S311
         else:
             # Normal processing time
-            processing_time = random.uniform(0.05, 0.15)
+            processing_time = random.uniform(0.05, 0.15)  # noqa: S311
 
         return asyncio.sleep(processing_time)
 

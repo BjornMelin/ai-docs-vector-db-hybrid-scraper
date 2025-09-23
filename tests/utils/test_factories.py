@@ -23,12 +23,12 @@ class DocumentFactory:
     ) -> dict[str, Any]:
         """Create a test document with realistic data."""
         return {
-            "title": title or f"Test Document {random.randint(1, 1000)}",
+            "title": title or f"Test Document {random.randint(1, 1000)}",  # noqa: S311
             "content": content or DocumentFactory._generate_content(),
-            "url": url or f"https://example.com/doc{random.randint(1, 100)}",
+            "url": url or f"https://example.com/doc{random.randint(1, 100)}",  # noqa: S311
             "metadata": metadata
             or {
-                "author": f"Author {random.randint(1, 50)}",
+                "author": f"Author {random.randint(1, 50)}",  # noqa: S311
                 "created_at": "2024-01-01T00:00:00Z",
                 "tags": ["test", "sample"],
             },
@@ -60,9 +60,9 @@ class ChunkFactory:
         """Create a test document chunk."""
         return {
             "content": content or "This is a sample document chunk for testing.",
-            "title": title or f"Chunk Title {random.randint(1, 100)}",
-            "metadata": metadata or {"chunk_id": random.randint(1, 1000)},
-            "score": score or round(random.uniform(0.1, 1.0), 3),
+            "title": title or f"Chunk Title {random.randint(1, 100)}",  # noqa: S311
+            "metadata": metadata or {"chunk_id": random.randint(1, 1000)},  # noqa: S311
+            "score": score or round(random.uniform(0.1, 1.0), 3),  # noqa: S311
         }
 
 
@@ -74,7 +74,7 @@ class VectorFactory:
     def create_vector(dimensions: int = 1536) -> list[float]:
         """Create a test embedding vector."""
         # Generate normalized vector (-1 to 1 range)
-        return [round(random.uniform(-1, 1), 4) for _ in range(dimensions)]
+        return [round(random.uniform(-1, 1), 4) for _ in range(dimensions)]  # noqa: S311
 
     @staticmethod
     def create_vectors(count: int, dimensions: int = 1536) -> list[list[float]]:
@@ -227,7 +227,7 @@ class SearchTestFactory:
             "document": document,
             "score": score,
             "highlights": highlights or [],
-            "rank": random.randint(1, 100),
+            "rank": random.randint(1, 100),  # noqa: S311
         }
 
 
@@ -283,19 +283,19 @@ class RandomDataGenerator:
     @staticmethod
     def random_string(length: int = 10) -> str:
         """Generate a random string."""
-        return "".join(random.choices(string.ascii_letters + string.digits, k=length))
+        return "".join(random.choices(string.ascii_letters + string.digits, k=length))  # noqa: S311
 
     @staticmethod
     def random_email() -> str:
         """Generate a random email address."""
         username = RandomDataGenerator.random_string(8)
-        domain = random.choice(["example.com", "test.org", "sample.net"])
+        domain = random.choice(["example.com", "test.org", "sample.net"])  # noqa: S311
         return f"{username}@{domain}"
 
     @staticmethod
     def random_url() -> str:
         """Generate a random URL."""
-        domain = random.choice(["example.com", "test.org", "sample.net"])
+        domain = random.choice(["example.com", "test.org", "sample.net"])  # noqa: S311
         path = f"/{RandomDataGenerator.random_string(5)}"
         return f"https://{domain}{path}"
 

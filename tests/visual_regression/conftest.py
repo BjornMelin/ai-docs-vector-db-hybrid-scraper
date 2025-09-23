@@ -1,8 +1,8 @@
 """Visual regression testing fixtures and configuration.
 
-This module provides pytest fixtures for comprehensive visual regression testing including
-screenshot capture, baseline management, visual comparison, responsive testing,
-and UI component validation.
+This module provides pytest fixtures for comprehensive visual regression testing
+including screenshot capture, baseline management, visual comparison, responsive
+testing, and UI component validation.
 """
 
 import base64
@@ -179,13 +179,15 @@ def screenshot_manager():
             # Hide elements if specified
             for selector in config.hide_selectors:
                 await page.evaluate(
-                    f"document.querySelectorAll('{selector}').forEach(el => el.style.visibility = 'hidden')"
+                    f"document.querySelectorAll('{selector}').forEach(el => "
+                    f"el.style.visibility = 'hidden')"
                 )
 
             # Mask elements if specified
             for selector in config.mask_selectors:
                 await page.evaluate(
-                    f"document.querySelectorAll('{selector}').forEach(el => el.style.background = '#000000')"
+                    f"document.querySelectorAll('{selector}').forEach(el => "
+                    f"el.style.background = '#000000')"
                 )
 
             # Capture screenshot
@@ -545,7 +547,8 @@ def responsive_tester():
             overlap_check = await page.evaluate("""
                 () => {
                     // Simplified overlap detection
-                    const elements = Array.from(document.querySelectorAll('div, span, p, a, button'));
+                    const elements = Array.from(document.querySelectorAll(
+                        'div, span, p, a, button'));
                     const overlaps = [];
                     for (let i = 0; i < elements.length - 1; i++) {
                         const rect1 = elements[i].getBoundingClientRect();
@@ -554,8 +557,11 @@ def responsive_tester():
                         if (rect1.left < rect2.right && rect2.left < rect1.right &&
                             rect1.top < rect2.bottom && rect2.top < rect1.bottom) {
                             overlaps.push({
-                                element1: elements[i].tagName + (elements[i].className ? '.' + elements[i].className.split(' ')[0] : ''),
-                                element2: elements[i + 1].tagName + (elements[i + 1].className ? '.' + elements[i + 1].className.split(' ')[0] : '')
+                                element1: elements[i].tagName + (elements[i].className ?
+                                    '.' + elements[i].className.split(' ')[0] : ''),
+                                element2: elements[i + 1].tagName +
+                                    (elements[i + 1].className ?
+                                    '.' + elements[i + 1].className.split(' ')[0] : '')
                             });
                         }
                     }
@@ -587,7 +593,8 @@ def responsive_tester():
             # Find clickable elements
             clickable_elements = await page.evaluate("""
                 () => {
-                    const clickable = document.querySelectorAll('button, a, input[type="submit"], [onclick], [role="button"]');
+                    const clickable = document.querySelectorAll(
+                        'button, a, input[type="submit"], [onclick], [role="button"]');
                     return Array.from(clickable).map(el => {
                         const rect = el.getBoundingClientRect();
                         return {
@@ -627,7 +634,8 @@ def responsive_tester():
                     try {
                         for (let sheet of styles) {
                             for (let rule of sheet.cssRules || []) {
-                                if (rule.selectorText && rule.selectorText.includes(':hover')) {
+                                if (rule.selectorText &&
+                                    rule.selectorText.includes(':hover')) {
                                     hoverRules++;
                                 }
                             }

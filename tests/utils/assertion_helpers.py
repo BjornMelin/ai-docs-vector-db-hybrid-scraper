@@ -60,13 +60,15 @@ def assert_error_response_standardized(
 
     if isinstance(error_info, dict):
         assert error_info.get("code") == expected_error_code, (
-            f"Expected error code '{expected_error_code}', got '{error_info.get('code')}'"
+            f"Expected error code '{expected_error_code}', got "
+            f"'{error_info.get('code')}'"
         )
 
         if expected_message_fragment:
             message = error_info.get("message", "")
             assert expected_message_fragment.lower() in message.lower(), (
-                f"Expected message fragment '{expected_message_fragment}' not found in '{message}'"
+                f"Expected message fragment '{expected_message_fragment}' not found "
+                f"in '{message}'"
             )
     else:
         # Fallback for simple string error messages
@@ -153,7 +155,8 @@ def assert_mock_called_with_pattern(
                     f"Expected kwarg '{key}' not found in call {i}"
                 )
                 assert actual_kwargs[key] == value, (
-                    f"Call {i} kwarg '{key}' mismatch: expected {value}, got {actual_kwargs[key]}"
+                    f"Call {i} kwarg '{key}' mismatch: expected {value}, got "
+                    f"{actual_kwargs[key]}"
                 )
 
 

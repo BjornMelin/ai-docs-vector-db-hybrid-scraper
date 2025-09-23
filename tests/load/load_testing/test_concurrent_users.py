@@ -351,7 +351,7 @@ class TestConcurrentUsersLoad:
             async def mixed_workload(self, **_kwargs):
                 """Simulate mixed workload."""
 
-                if random.random() < 0.7:  # 70% search operations
+                if random.random() < 0.7:  # 70% search operations  # noqa: S311
                     return await self.search_workload(**_kwargs)
                 # 30% document operations
                 return await self.document_workload(**_kwargs)
