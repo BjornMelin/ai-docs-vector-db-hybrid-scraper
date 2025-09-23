@@ -1,3 +1,19 @@
+---
+title: "V2 Roadmap Notes (TODO-V2)"
+audience: "developers"
+status: "archived"
+owner: "development"
+last_reviewed: "2025-09-22"
+archived_date: "2025-09-22"
+archive_reason: "V2 planning document moved to archive for historical reference"
+---
+
+# Archive Notice
+
+This document is a historical development reference and is no longer actively maintained. It contains the original V2 roadmap and feature planning from the post-V1 development cycle for reference purposes only.
+
+---
+
 # AI Documentation Scraper - V2 Feature Roadmap
 
 > **Created:** 2025-05-22

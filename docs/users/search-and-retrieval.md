@@ -1,3 +1,11 @@
+---
+title: Search And Retrieval
+audience: users
+status: active
+owner: product-education
+last_reviewed: 2025-03-13
+---
+
 # Search & Retrieval Guide
 
 > **Status**: Active  
@@ -305,7 +313,7 @@ query: "performance optimization" weights: documentation=0.5,benchmarks=0.8,exam
 - **[Examples & Recipes](./examples-and-recipes.md)**: Real-world search scenarios
 - **[Troubleshooting](./troubleshooting.md)**: Common issues and solutions
 - **[Web Scraping](./web-scraping.md)**: Finding and extracting content from the web
-- **Developer Resources**: See [../developers/](../developers/README.md) for API integration
+- **Developer Resources**: See [../developers/index.md](../developers/index.md) for API integration
 
 ---
 

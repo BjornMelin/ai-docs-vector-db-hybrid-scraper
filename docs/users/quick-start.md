@@ -1,3 +1,11 @@
+---
+title: Quick Start
+audience: users
+status: active
+owner: product-education
+last_reviewed: 2025-03-13
+---
+
 # Quick Start Guide
 
 > **Status**: Active  
@@ -350,8 +358,8 @@ Once you're up and running:
 
 - **User Issues**: Check [troubleshooting guide](./troubleshooting.md)
 - **Examples**: See [examples and recipes](./examples-and-recipes.md)
-- **Developer Integration**: Visit [../developers/](../developers/README.md)
-- **Deployment**: See [../operators/](../operators/README.md)
+- **Developer Integration**: Visit [../developers/index.md](../developers/index.md)
+- **Deployment**: See [../operators/index.md](../operators/index.md)
 
 ---
 

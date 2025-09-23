@@ -1,0 +1,1690 @@
+{
+  "CONTRIBUTING.md": [
+    {
+      "exists": "false",
+      "resolved": "#database-optimization-research",
+      "target": "#database-optimization-research"
+    },
+    {
+      "exists": "true",
+      "resolved": "LICENSE",
+      "target": "LICENSE"
+    },
+    {
+      "exists": "false",
+      "resolved": "CODE_OF_CONDUCT.md",
+      "target": "CODE_OF_CONDUCT.md"
+    }
+  ],
+  "README.md": [
+    {
+      "exists": "false",
+      "resolved": "docs/portfolio/demo-video.md",
+      "target": "docs/portfolio/demo-video.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/quick-start.md",
+      "target": "docs/users/quick-start.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/search-and-retrieval.md",
+      "target": "docs/users/search-and-retrieval.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/web-scraping.md",
+      "target": "docs/users/web-scraping.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/examples-and-recipes.md",
+      "target": "docs/users/examples-and-recipes.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/api-reference.md",
+      "target": "docs/developers/api-reference.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/integration-guide.md",
+      "target": "docs/developers/integration-guide.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/architecture.md",
+      "target": "docs/developers/architecture.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/configuration.md",
+      "target": "docs/developers/configuration.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/operations.md",
+      "target": "docs/operators/operations.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/monitoring.md",
+      "target": "docs/operators/monitoring.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/configuration.md",
+      "target": "docs/operators/configuration.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/security.md",
+      "target": "docs/operators/security.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/research",
+      "target": "docs/research/"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/research/browser-use",
+      "target": "docs/research/browser-use/"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/research/transformation",
+      "target": "docs/research/transformation/"
+    },
+    {
+      "exists": "true",
+      "resolved": "CONTRIBUTING.md",
+      "target": "CONTRIBUTING.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "LICENSE",
+      "target": "LICENSE"
+    }
+  ],
+  "TODO-V2.md": [],
+  "TODO.md": [
+    {
+      "exists": "true",
+      "resolved": "TODO-V2.md",
+      "target": "TODO-V2.md"
+    }
+  ],
+  "docs/api/benchmarks.rst": [],
+  "docs/api/chunking.rst": [],
+  "docs/api/cli.commands.rst": [],
+  "docs/api/cli.rst": [],
+  "docs/api/cli_worker.rst": [],
+  "docs/api/config.rst": [],
+  "docs/api/core.rst": [],
+  "docs/api/crawl4ai_bulk_embedder.rst": [],
+  "docs/api/infrastructure.database.rst": [],
+  "docs/api/infrastructure.rst": [],
+  "docs/api/manage_vector_db.rst": [],
+  "docs/api/mcp_tools.models.rst": [],
+  "docs/api/mcp_tools.rst": [],
+  "docs/api/mcp_tools.tools.helpers.rst": [],
+  "docs/api/mcp_tools.tools.rst": [],
+  "docs/api/models.rst": [],
+  "docs/api/modules.rst": [],
+  "docs/api/security.rst": [],
+  "docs/api/services.browser.rst": [],
+  "docs/api/services.cache.rst": [],
+  "docs/api/services.content_intelligence.rst": [],
+  "docs/api/services.core.rst": [],
+  "docs/api/services.crawling.rst": [],
+  "docs/api/services.embeddings.rst": [],
+  "docs/api/services.fastapi.dependencies.rst": [],
+  "docs/api/services.fastapi.middleware.rst": [],
+  "docs/api/services.fastapi.rst": [],
+  "docs/api/services.hyde.rst": [],
+  "docs/api/services.monitoring.rst": [],
+  "docs/api/services.query_processing.rst": [],
+  "docs/api/services.rst": [],
+  "docs/api/services.task_queue.rst": [],
+  "docs/api/services.utilities.rst": [],
+  "docs/api/services.vector_db.filters.rst": [],
+  "docs/api/services.vector_db.rst": [],
+  "docs/api/src.api.routers.rst": [],
+  "docs/api/src.api.routers.simple.rst": [],
+  "docs/api/src.api.rst": [],
+  "docs/api/src.architecture.rst": [],
+  "docs/api/src.automation.rst": [],
+  "docs/api/src.automation.self_healing.rst": [],
+  "docs/api/src.benchmarks.rst": [],
+  "docs/api/src.cli.commands.rst": [],
+  "docs/api/src.cli.rst": [],
+  "docs/api/src.cli.wizard.rst": [],
+  "docs/api/src.config.rst": [],
+  "docs/api/src.config.security.rst": [],
+  "docs/api/src.core.rst": [],
+  "docs/api/src.infrastructure.clients.rst": [],
+  "docs/api/src.infrastructure.database.rst": [],
+  "docs/api/src.infrastructure.rst": [],
+  "docs/api/src.mcp_services.rst": [],
+  "docs/api/src.mcp_tools.models.rst": [],
+  "docs/api/src.mcp_tools.rst": [],
+  "docs/api/src.mcp_tools.tools.helpers.rst": [],
+  "docs/api/src.mcp_tools.tools.rst": [],
+  "docs/api/src.models.rst": [],
+  "docs/api/src.rst": [],
+  "docs/api/src.security.rst": [],
+  "docs/api/src.services.agents.rst": [],
+  "docs/api/src.services.analytics.rst": [],
+  "docs/api/src.services.auto_detection.rst": [],
+  "docs/api/src.services.browser.rst": [],
+  "docs/api/src.services.cache.rst": [],
+  "docs/api/src.services.circuit_breaker.rst": [],
+  "docs/api/src.services.content_intelligence.rst": [],
+  "docs/api/src.services.core.rst": [],
+  "docs/api/src.services.crawling.rst": [],
+  "docs/api/src.services.deployment.rst": [],
+  "docs/api/src.services.embeddings.rst": [],
+  "docs/api/src.services.enterprise.rst": [],
+  "docs/api/src.services.fastapi.dependencies.rst": [],
+  "docs/api/src.services.fastapi.middleware.rst": [],
+  "docs/api/src.services.fastapi.routers.rst": [],
+  "docs/api/src.services.fastapi.rst": [],
+  "docs/api/src.services.functional.rst": [],
+  "docs/api/src.services.hyde.rst": [],
+  "docs/api/src.services.integration.rst": [],
+  "docs/api/src.services.managers.rst": [],
+  "docs/api/src.services.middleware.rst": [],
+  "docs/api/src.services.migration.rst": [],
+  "docs/api/src.services.monitoring.rst": [],
+  "docs/api/src.services.observability.rst": [],
+  "docs/api/src.services.performance.rst": [],
+  "docs/api/src.services.processing.rst": [],
+  "docs/api/src.services.query_processing.rst": [],
+  "docs/api/src.services.rag.rst": [],
+  "docs/api/src.services.rst": [],
+  "docs/api/src.services.security.rst": [],
+  "docs/api/src.services.simple.rst": [],
+  "docs/api/src.services.task_queue.rst": [],
+  "docs/api/src.services.utilities.rst": [],
+  "docs/api/src.services.vector_db.filters.rst": [],
+  "docs/api/src.services.vector_db.rst": [],
+  "docs/api/src.utils.rst": [],
+  "docs/api/unified_mcp_server.rst": [],
+  "docs/api/utils.rst": [],
+  "docs/benchmark-fixes-summary.md": [],
+  "docs/build-config/README.md": [],
+  "docs/build-config/index.rst": [],
+  "docs/community-guidelines.md": [],
+  "docs/developers/README.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/developers/getting-started.md",
+      "target": "./getting-started.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/integration-guide.md",
+      "target": "./integration-guide.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/contributing.md",
+      "target": "./contributing.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/api-reference.md",
+      "target": "./api-reference.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/architecture.md",
+      "target": "./architecture.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/configuration.md",
+      "target": "./configuration.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/deployment-strategies.md",
+      "target": "./deployment-strategies.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/service-layer-modernization.md",
+      "target": "./service-layer-modernization.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/integration-guide.md",
+      "target": "./integration-guide.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/api-reference.md",
+      "target": "./api-reference.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/getting-started.md",
+      "target": "./getting-started.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/contributing.md",
+      "target": "./contributing.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/architecture.md",
+      "target": "./architecture.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/README.md",
+      "target": "../operators/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/api-reference.md",
+      "target": "./api-reference.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/configuration.md",
+      "target": "./configuration.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/getting-started.md",
+      "target": "./getting-started.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/api-reference.md",
+      "target": "./api-reference.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/integration-guide.md",
+      "target": "./integration-guide.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/contributing.md",
+      "target": "./contributing.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/architecture.md",
+      "target": "./architecture.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/configuration.md",
+      "target": "./configuration.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/operations.md",
+      "target": "../operators/operations.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/README.md",
+      "target": "../users/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/quick-start.md",
+      "target": "../users/quick-start.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/README.md",
+      "target": "../operators/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/monitoring.md",
+      "target": "../operators/monitoring.md"
+    }
+  ],
+  "docs/developers/adrs/ADR-0001-documentation-platform.md": [],
+  "docs/developers/adrs/ADR-0002-traceability-methodology.md": [],
+  "docs/developers/adrs/adr-template.md": [],
+  "docs/developers/ai-ml-testing-guide.md": [],
+  "docs/developers/api-reference.md": [],
+  "docs/developers/architecture-diagrams.md": [
+    {
+      "exists": "false",
+      "resolved": "docs/developers/#high-level-system-architecture",
+      "target": "#high-level-system-architecture"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/developers/#detailed-technical-architecture",
+      "target": "#detailed-technical-architecture"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/developers/#security-architecture",
+      "target": "#security-architecture"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/developers/#monitoring-and-observability",
+      "target": "#monitoring-and-observability"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/developers/#performance-optimization-flow",
+      "target": "#performance-optimization-flow"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/developers/#database-connection-pool-architecture",
+      "target": "#database-connection-pool-architecture"
+    }
+  ],
+  "docs/developers/architecture.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/developers/deployment-strategies.md",
+      "target": "./deployment-strategies.md"
+    }
+  ],
+  "docs/developers/benchmarking-and-performance.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/developers/api-reference.md",
+      "target": "../developers/api-reference.md"
+    }
+  ],
+  "docs/developers/browser-automation-ci.md": [],
+  "docs/developers/ci/MIGRATION_GUIDE.md": [],
+  "docs/developers/ci/OPTIMIZATION_MIGRATION_GUIDE.md": [],
+  "docs/developers/config-consolidation-validation-report.md": [],
+  "docs/developers/configuration-best-practices.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/developers/configuration.md",
+      "target": "./configuration.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/architecture.md",
+      "target": "./architecture.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/contributing.md",
+      "target": "./contributing.md"
+    }
+  ],
+  "docs/developers/configuration.md": [],
+  "docs/developers/contributing-docs.md": [],
+  "docs/developers/contributing.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/developers/getting-started.md",
+      "target": "../developers/getting-started.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/README.md",
+      "target": "./README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/architecture.md",
+      "target": "./architecture.md"
+    }
+  ],
+  "docs/developers/database-connection-pool-technical-reference.md": [],
+  "docs/developers/deployment-strategies.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/developers/configuration.md",
+      "target": "./configuration.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/benchmarking-and-performance.md",
+      "target": "./benchmarking-and-performance.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/security.md",
+      "target": "../operators/security.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/monitoring.md",
+      "target": "../operators/monitoring.md"
+    }
+  ],
+  "docs/developers/developer-experience.md": [],
+  "docs/developers/getting-started.md": [
+    {
+      "exists": "false",
+      "resolved": "docs/developers/#first-contribution",
+      "target": "#first-contribution"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/architecture.md",
+      "target": "./architecture.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/api-reference.md",
+      "target": "./api-reference.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/contributing.md",
+      "target": "../developers/contributing.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/architecture.md",
+      "target": "./architecture.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/api-reference.md",
+      "target": "./api-reference.md"
+    }
+  ],
+  "docs/developers/integration-guide.md": [],
+  "docs/developers/ml-model-documentation.md": [],
+  "docs/developers/ml-security-recommendation.md": [],
+  "docs/developers/performance-benchmarking-methodology.md": [],
+  "docs/developers/performance-testing-guide.md": [],
+  "docs/developers/performance-validation-report.md": [],
+  "docs/developers/query-api-optimization.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/developers/api-reference.md",
+      "target": "../developers/api-reference.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/benchmarking-and-performance.md",
+      "target": "../developers/benchmarking-and-performance.md"
+    }
+  ],
+  "docs/developers/query-processing.md": [],
+  "docs/developers/research-collaboration.md": [
+    {
+      "exists": "false",
+      "resolved": "docs/developers/#current-research-opportunities",
+      "target": "#current-research-opportunities"
+    }
+  ],
+  "docs/developers/reviews/performance-review.md": [],
+  "docs/developers/reviews/security-review.md": [],
+  "docs/developers/service-layer-modernization.md": [],
+  "docs/developers/summaries/docker-build-solution.md": [],
+  "docs/developers/summaries/documentation-audit-validation-report.md": [],
+  "docs/developers/summaries/documentation-pipeline-fixes.md": [],
+  "docs/developers/summaries/implementation-summary.md": [],
+  "docs/developers/summaries/orchestrator-tests-summary.md": [],
+  "docs/developers/test-cleanup-plan.md": [],
+  "docs/developers/test-cleanup-summary.md": [],
+  "docs/developers/test-execution-guide.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/developers/testing-best-practices.md",
+      "target": "./testing-best-practices.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/ai-ml-testing-guide.md",
+      "target": "./ai-ml-testing-guide.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/performance-testing-guide.md",
+      "target": "./performance-testing-guide.md"
+    }
+  ],
+  "docs/developers/test-performance-optimization.md": [
+    {
+      "exists": "false",
+      "resolved": "docs/developers/\n        fetch_data=AsyncMock(return_value={\"result\": \"success\"}",
+      "target": "\n        fetch_data=AsyncMock(return_value={\"result\": \"success\"}"
+    }
+  ],
+  "docs/developers/testing-best-practices.md": [],
+  "docs/developers/thread-safety-fixes.md": [],
+  "docs/dual-mode-architecture.md": [],
+  "docs/index.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/users/quick-start.md",
+      "target": "users/quick-start.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/configuration-management.md",
+      "target": "users/configuration-management.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/examples-and-recipes.md",
+      "target": "users/examples-and-recipes.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/troubleshooting.md",
+      "target": "users/troubleshooting.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/getting-started.md",
+      "target": "developers/getting-started.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/architecture.md",
+      "target": "developers/architecture.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/api-reference.md",
+      "target": "developers/api-reference.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/contributing.md",
+      "target": "developers/contributing.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/operations.md",
+      "target": "operators/operations.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/configuration.md",
+      "target": "operators/configuration.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/monitoring.md",
+      "target": "operators/monitoring.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/security.md",
+      "target": "operators/security.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/quick-start.md",
+      "target": "users/quick-start.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/getting-started.md",
+      "target": "developers/getting-started.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/operations.md",
+      "target": "operators/operations.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/contributing.md",
+      "target": "developers/contributing.md"
+    }
+  ],
+  "docs/operators/README.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/operators/configuration.md",
+      "target": "./configuration.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/operations.md",
+      "target": "./operations.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/operations.md",
+      "target": "./operations.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/monitoring.md",
+      "target": "./monitoring.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/security.md",
+      "target": "./security.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/README.md",
+      "target": "../developers/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/architecture.md",
+      "target": "../developers/architecture.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/README.md",
+      "target": "../users/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/quick-start.md",
+      "target": "../users/quick-start.md"
+    }
+  ],
+  "docs/operators/config-simplification.md": [],
+  "docs/operators/configuration-error-handling.md": [],
+  "docs/operators/configuration-migration-guide.md": [
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#troubleshooting",
+      "target": "#troubleshooting"
+    }
+  ],
+  "docs/operators/configuration-reloading.md": [],
+  "docs/operators/configuration.md": [
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#overview",
+      "target": "#overview"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#configuration-architecture",
+      "target": "#configuration-architecture"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#environment-management",
+      "target": "#environment-management"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#production-configuration",
+      "target": "#production-configuration"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#development-configuration",
+      "target": "#development-configuration"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#security-configuration",
+      "target": "#security-configuration"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#performance-tuning",
+      "target": "#performance-tuning"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#configuration-validation",
+      "target": "#configuration-validation"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#change-management",
+      "target": "#change-management"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#troubleshooting",
+      "target": "#troubleshooting"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#best-practices",
+      "target": "#best-practices"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#monitoring-and-alerting",
+      "target": "#monitoring-and-alerting"
+    }
+  ],
+  "docs/operators/cross-platform-compatibility.md": [],
+  "docs/operators/database-connection-pool-performance.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/operators/configuration.md",
+      "target": "../operators/configuration.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/monitoring.md",
+      "target": "../operators/monitoring.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/troubleshooting.md",
+      "target": "../users/troubleshooting.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/api-reference.md",
+      "target": "../developers/api-reference.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/monitoring.md",
+      "target": "../operators/monitoring.md"
+    }
+  ],
+  "docs/operators/deployment.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/operators/operations.md",
+      "target": "./operations.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/monitoring.md",
+      "target": "./monitoring.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/security.md",
+      "target": "./security.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/configuration.md",
+      "target": "./configuration.md"
+    }
+  ],
+  "docs/operators/monitoring.md": [],
+  "docs/operators/operations.md": [
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#daily-operations",
+      "target": "#daily-operations"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#system-administration",
+      "target": "#system-administration"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#maintenance-procedures",
+      "target": "#maintenance-procedures"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#backup-and-recovery",
+      "target": "#backup-and-recovery"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#user-and-access-management",
+      "target": "#user-and-access-management"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#configuration-management",
+      "target": "#configuration-management"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#incident-response",
+      "target": "#incident-response"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#resource-management",
+      "target": "#resource-management"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#security-operations",
+      "target": "#security-operations"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#task-queue-operations",
+      "target": "#task-queue-operations"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#performance-management",
+      "target": "#performance-management"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#disaster-recovery",
+      "target": "#disaster-recovery"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#troubleshooting",
+      "target": "#troubleshooting"
+    }
+  ],
+  "docs/operators/remaining_tasks/README.md": [],
+  "docs/operators/remaining_tasks/backlog.md": [],
+  "docs/operators/remaining_tasks/decision_log.md": [],
+  "docs/operators/remaining_tasks/migration_notes.md": [],
+  "docs/operators/remaining_tasks/risk_register.md": [],
+  "docs/operators/remaining_tasks/traceability.md": [],
+  "docs/operators/security-architecture.md": [],
+  "docs/operators/security.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/operators/configuration.md",
+      "target": "./configuration.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/operations.md",
+      "target": "./operations.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/monitoring.md",
+      "target": "./monitoring.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#security-architecture",
+      "target": "#security-architecture"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#authentication-and-authorization",
+      "target": "#authentication-and-authorization"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#api-security-and-access-control",
+      "target": "#api-security-and-access-control"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#data-protection-and-encryption",
+      "target": "#data-protection-and-encryption"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#network-security",
+      "target": "#network-security"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#security-configuration-management",
+      "target": "#security-configuration-management"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#security-monitoring-and-alerting",
+      "target": "#security-monitoring-and-alerting"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#incident-response-procedures",
+      "target": "#incident-response-procedures"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#vulnerability-management",
+      "target": "#vulnerability-management"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#compliance-and-audit-procedures",
+      "target": "#compliance-and-audit-procedures"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#security-best-practices",
+      "target": "#security-best-practices"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/operators/#security-checklists",
+      "target": "#security-checklists"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/configuration.md",
+      "target": "./configuration.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/operations.md",
+      "target": "./operations.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/monitoring.md",
+      "target": "./monitoring.md"
+    }
+  ],
+  "docs/operators/windows-compatibility.md": [],
+  "docs/portfolio/api-documentation.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/portfolio/technical-deep-dive.md",
+      "target": "../portfolio/technical-deep-dive.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/portfolio/performance-analysis.md",
+      "target": "../portfolio/performance-analysis.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/operations.md",
+      "target": "../operators/operations.md"
+    }
+  ],
+  "docs/portfolio/career-positioning.md": [],
+  "docs/portfolio/performance-analysis.md": [],
+  "docs/portfolio/presentation-guide.md": [],
+  "docs/portfolio/technical-deep-dive.md": [],
+  "docs/reports/doc-modernization/phase0/compliance_candidates.md": [],
+  "docs/reports/doc-modernization/phase0/generator_report.md": [],
+  "docs/reports/doc-modernization/phase0/orphan_candidates.md": [],
+  "docs/reports/doc-modernization/phase0/summary.md": [],
+  "docs/requirements/REQ-TEMPLATE.md": [],
+  "docs/requirements/master-requirements.md": [],
+  "docs/research/README.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/research/browser-use/README.md",
+      "target": "./browser-use/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/research/transformation/README.md",
+      "target": "./transformation/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/research/browser-use/README.md",
+      "target": "./browser-use/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/research/transformation/README.md",
+      "target": "./transformation/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/research/transformation/README.md",
+      "target": "./transformation/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/research/browser-use/README.md",
+      "target": "./browser-use/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/research/transformation/README.md",
+      "target": "./transformation/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/README.md",
+      "target": "../users/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/README.md",
+      "target": "../developers/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/README.md",
+      "target": "../operators/README.md"
+    }
+  ],
+  "docs/research/browser-use/README.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/research/browser-use/browser-use-v3-solo-dev-master-guide.md",
+      "target": "./browser-use-v3-solo-dev-master-guide.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/research/browser-use/browser-use-v3-solo-dev-quick-start-plan.md",
+      "target": "./browser-use-v3-solo-dev-quick-start-plan.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/research/transformation/README.md",
+      "target": "../transformation/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/integration-guide.md",
+      "target": "../../developers/integration-guide.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/research/README.md",
+      "target": "../README.md"
+    }
+  ],
+  "docs/research/browser-use/archive/v1-original/browser-use-0-2-6-analysis.md": [],
+  "docs/research/browser-use/archive/v1-original/browser-use-enhancement-prd.md": [],
+  "docs/research/browser-use/archive/v1-original/comprehensive-todo.md": [],
+  "docs/research/browser-use/archive/v1-original/github-issues.md": [],
+  "docs/research/browser-use/archive/v2-enterprise/browser-use-v2-enterprise-comprehensive-prd.md": [],
+  "docs/research/browser-use/archive/v2-enterprise/browser-use-v2-enterprise-detailed-todo.md": [],
+  "docs/research/browser-use/archive/v2-enterprise/browser-use-v2-enterprise-github-issues.md": [],
+  "docs/research/browser-use/browser-use-v3-solo-dev-master-guide.md": [],
+  "docs/research/browser-use/browser-use-v3-solo-dev-quick-start-plan.md": [],
+  "docs/research/transformation/README.md": [],
+  "docs/roadmap.md": [],
+  "docs/security/compliance-privacy-strategy.md": [],
+  "docs/security/cost-effective-security-tools.md": [],
+  "docs/security/enhanced-security-config-implementation.md": [],
+  "docs/security/essential-security-checklist.md": [],
+  "docs/security/redis-rate-limiting-implementation.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/security/security-architecture-assessment.md",
+      "target": "./security-architecture-assessment.md"
+    }
+  ],
+  "docs/security/security-architecture-assessment.md": [],
+  "docs/security/security-config-implementation.md": [],
+  "docs/security/security-testing-framework.md": [],
+  "docs/security/security-testing-playbook.md": [],
+  "docs/security/security-validation-report.md": [],
+  "docs/testing/README.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/testing/test-modernization-completion-report.md",
+      "target": "./test-modernization-completion-report.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/testing/performance-improvements.md",
+      "target": "./performance-improvements.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/testing/modern-test-practices-guide.md",
+      "target": "./modern-test-practices-guide.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/testing/quality-metrics-benchmarks.md",
+      "target": "./quality-metrics-benchmarks.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/testing/test-migration-guide.md",
+      "target": "./test-migration-guide.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/testing/test-infrastructure-documentation.md",
+      "target": "./test-infrastructure-documentation.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/testing/pytest-xdist-optimization.md",
+      "target": "./pytest-xdist-optimization.md"
+    }
+  ],
+  "docs/testing/modern-test-practices-guide.md": [
+    {
+      "exists": "false",
+      "resolved": "docs/testing/#core-principles",
+      "target": "#core-principles"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/testing/#test-organization",
+      "target": "#test-organization"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/testing/#writing-effective-tests",
+      "target": "#writing-effective-tests"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/testing/#fixture-best-practices",
+      "target": "#fixture-best-practices"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/testing/#async-testing",
+      "target": "#async-testing"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/testing/#mocking-strategies",
+      "target": "#mocking-strategies"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/testing/#performance-testing",
+      "target": "#performance-testing"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/testing/#common-patterns",
+      "target": "#common-patterns"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/testing/#anti-patterns-to-avoid",
+      "target": "#anti-patterns-to-avoid"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/testing/#troubleshooting",
+      "target": "#troubleshooting"
+    }
+  ],
+  "docs/testing/performance-improvements.md": [],
+  "docs/testing/pytest-xdist-optimization.md": [],
+  "docs/testing/quality-metrics-benchmarks.md": [],
+  "docs/testing/test-infrastructure-documentation.md": [],
+  "docs/testing/test-migration-guide.md": [
+    {
+      "exists": "false",
+      "resolved": "docs/testing/#migration-overview",
+      "target": "#migration-overview"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/testing/#legacy-test-assessment",
+      "target": "#legacy-test-assessment"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/testing/#migration-process",
+      "target": "#migration-process"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/testing/#writing-new-tests",
+      "target": "#writing-new-tests"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/testing/#common-migration-patterns",
+      "target": "#common-migration-patterns"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/testing/#tools-and-scripts",
+      "target": "#tools-and-scripts"
+    },
+    {
+      "exists": "false",
+      "resolved": "docs/testing/#validation-checklist",
+      "target": "#validation-checklist"
+    }
+  ],
+  "docs/testing/test-modernization-completion-report.md": [],
+  "docs/users/README.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/users/quick-start.md",
+      "target": "./quick-start.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/configuration-management.md",
+      "target": "./configuration-management.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/search-and-retrieval.md",
+      "target": "./search-and-retrieval.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/web-scraping.md",
+      "target": "./web-scraping.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/examples-and-recipes.md",
+      "target": "./examples-and-recipes.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/troubleshooting.md",
+      "target": "./troubleshooting.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/README.md",
+      "target": "../developers/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/README.md",
+      "target": "../operators/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/troubleshooting.md",
+      "target": "./troubleshooting.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/examples-and-recipes.md",
+      "target": "./examples-and-recipes.md"
+    }
+  ],
+  "docs/users/cli-interface.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/developers/integration-guide.md",
+      "target": "../developers/integration-guide.md"
+    }
+  ],
+  "docs/users/configuration-management.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/developers/configuration.md",
+      "target": "../developers/configuration.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/operations.md",
+      "target": "../operators/operations.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/security.md",
+      "target": "../operators/security.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/troubleshooting.md",
+      "target": "./troubleshooting.md"
+    }
+  ],
+  "docs/users/content-intelligence.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/developers/api-reference.md",
+      "target": "../developers/api-reference.md"
+    }
+  ],
+  "docs/users/examples-and-recipes.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/users/quick-start.md",
+      "target": "./quick-start.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/quick-start.md",
+      "target": "./quick-start.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/search-and-retrieval.md",
+      "target": "./search-and-retrieval.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/web-scraping.md",
+      "target": "./web-scraping.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/troubleshooting.md",
+      "target": "./troubleshooting.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/README.md",
+      "target": "../developers/README.md"
+    }
+  ],
+  "docs/users/quick-start.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/users/search-and-retrieval.md",
+      "target": "./search-and-retrieval.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/web-scraping.md",
+      "target": "./web-scraping.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/examples-and-recipes.md",
+      "target": "./examples-and-recipes.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/troubleshooting.md",
+      "target": "./troubleshooting.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/troubleshooting.md",
+      "target": "./troubleshooting.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/examples-and-recipes.md",
+      "target": "./examples-and-recipes.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/README.md",
+      "target": "../developers/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/README.md",
+      "target": "../operators/README.md"
+    }
+  ],
+  "docs/users/search-and-retrieval.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/users/examples-and-recipes.md",
+      "target": "./examples-and-recipes.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/troubleshooting.md",
+      "target": "./troubleshooting.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/web-scraping.md",
+      "target": "./web-scraping.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/README.md",
+      "target": "../developers/README.md"
+    }
+  ],
+  "docs/users/system-overview.md": [],
+  "docs/users/troubleshooting.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/users/quick-start.md",
+      "target": "./quick-start.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/search-and-retrieval.md",
+      "target": "./search-and-retrieval.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/web-scraping.md",
+      "target": "./web-scraping.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/examples-and-recipes.md",
+      "target": "./examples-and-recipes.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/README.md",
+      "target": "../developers/README.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/operators/README.md",
+      "target": "../operators/README.md"
+    }
+  ],
+  "docs/users/web-scraping.md": [
+    {
+      "exists": "true",
+      "resolved": "docs/users/search-and-retrieval.md",
+      "target": "./search-and-retrieval.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/examples-and-recipes.md",
+      "target": "./examples-and-recipes.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/users/troubleshooting.md",
+      "target": "./troubleshooting.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "docs/developers/README.md",
+      "target": "../developers/README.md"
+    }
+  ],
+  "planning/COMPREHENSIVE_SYNTHESIS_REPORT.md": [],
+  "planning/MAIN_TRACKING_RESEARCH_REPORT.md": [],
+  "planning/README.md": [
+    {
+      "exists": "true",
+      "resolved": "planning/COMPREHENSIVE_SYNTHESIS_REPORT.md",
+      "target": "COMPREHENSIVE_SYNTHESIS_REPORT.md"
+    },
+    {
+      "exists": "true",
+      "resolved": "planning/MAIN_TRACKING_RESEARCH_REPORT.md",
+      "target": "MAIN_TRACKING_RESEARCH_REPORT.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/planned-research/A1_pydantic_ai_integration_analysis.md",
+      "target": "planned-research/A1_pydantic_ai_integration_analysis.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/planned-research/A2_pydantic_ai_integration_analysis_dual.md",
+      "target": "planned-research/A2_pydantic_ai_integration_analysis_dual.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/planned-research/B1_mcp_framework_optimization_analysis.md",
+      "target": "planned-research/B1_mcp_framework_optimization_analysis.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/planned-research/B2_mcp_framework_optimization_dual.md",
+      "target": "planned-research/B2_mcp_framework_optimization_dual.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/planned-research/C1_fastmcp_integration_analysis.md",
+      "target": "planned-research/C1_fastmcp_integration_analysis.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/planned-research/C2_fastmcp_integration_analysis_dual.md",
+      "target": "planned-research/C2_fastmcp_integration_analysis_dual.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/foundation-research/G1_pydantic_ai_native_composition.md",
+      "target": "foundation-research/G1_pydantic_ai_native_composition.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/foundation-research/G2_lightweight_alternatives.md",
+      "target": "foundation-research/G2_lightweight_alternatives.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/foundation-research/G3_code_reduction_analysis.md",
+      "target": "foundation-research/G3_code_reduction_analysis.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/foundation-research/G4_integration_simplification.md",
+      "target": "foundation-research/G4_integration_simplification.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/foundation-research/G5_enterprise_readiness.md",
+      "target": "foundation-research/G5_enterprise_readiness.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/infrastructure-research/H1_fastmcp_modernization_analysis.md",
+      "target": "infrastructure-research/H1_fastmcp_modernization_analysis.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/infrastructure-research/H2_mcp_protocol_optimization_analysis.md",
+      "target": "infrastructure-research/H2_mcp_protocol_optimization_analysis.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/infrastructure-research/H3_middleware_architecture_optimization.md",
+      "target": "infrastructure-research/H3_middleware_architecture_optimization.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/infrastructure-research/H4_integration_patterns_optimization.md",
+      "target": "infrastructure-research/H4_integration_patterns_optimization.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/infrastructure-research/H5_code_modernization_opportunities.md",
+      "target": "infrastructure-research/H5_code_modernization_opportunities.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/agentic-capabilities/I1_ADVANCED_BROWSER_AUTOMATION_RESEARCH_REPORT.md",
+      "target": "agentic-capabilities/I1_ADVANCED_BROWSER_AUTOMATION_RESEARCH_REPORT.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/agentic-capabilities/I2_AGENTIC_RAG_AUTO_RAG_SELF_HEALING_RESEARCH_REPORT.md",
+      "target": "agentic-capabilities/I2_AGENTIC_RAG_AUTO_RAG_SELF_HEALING_RESEARCH_REPORT.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/agentic-capabilities/I3_5_TIER_CRAWLING_ENHANCEMENT_RESEARCH_REPORT.md",
+      "target": "agentic-capabilities/I3_5_TIER_CRAWLING_ENHANCEMENT_RESEARCH_REPORT.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/agentic-capabilities/I4_VECTOR_DATABASE_AGENTIC_MODERNIZATION_REPORT.md",
+      "target": "agentic-capabilities/I4_VECTOR_DATABASE_AGENTIC_MODERNIZATION_REPORT.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/agentic-capabilities/I5_WEB_SEARCH_TOOL_ORCHESTRATION_REPORT.md",
+      "target": "agentic-capabilities/I5_WEB_SEARCH_TOOL_ORCHESTRATION_REPORT.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/agentic-capabilities/J1_ENTERPRISE_AGENTIC_OBSERVABILITY_REPORT.md",
+      "target": "agentic-capabilities/J1_ENTERPRISE_AGENTIC_OBSERVABILITY_REPORT.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/agentic-capabilities/J2_AGENTIC_SECURITY_PERFORMANCE_OPTIMIZATION_REPORT.md",
+      "target": "agentic-capabilities/J2_AGENTIC_SECURITY_PERFORMANCE_OPTIMIZATION_REPORT.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/agentic-capabilities/J3_DYNAMIC_TOOL_COMPOSITION_ENGINE_REPORT.md",
+      "target": "agentic-capabilities/J3_DYNAMIC_TOOL_COMPOSITION_ENGINE_REPORT.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/agentic-capabilities/J4_PARALLEL_AGENT_COORDINATION_ARCHITECTURE_REPORT.md",
+      "target": "agentic-capabilities/J4_PARALLEL_AGENT_COORDINATION_ARCHITECTURE_REPORT.md"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/infrastructure-research",
+      "target": "infrastructure-research/"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/foundation-research",
+      "target": "foundation-research/"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/agentic-capabilities",
+      "target": "agentic-capabilities/"
+    },
+    {
+      "exists": "false",
+      "resolved": "planning/agentic-capabilities",
+      "target": "agentic-capabilities/"
+    }
+  ],
+  "planning/docs/project-context.md": [],
+  "planning/done/P2/I1_ADVANCED_BROWSER_AUTOMATION_RESEARCH_REPORT.md": [],
+  "planning/done/P2/I2_AGENTIC_RAG_AUTO_RAG_SELF_HEALING_RESEARCH_REPORT.md": [],
+  "planning/done/P2/I3_5_TIER_CRAWLING_ENHANCEMENT_RESEARCH_REPORT.md": [],
+  "planning/done/P2/I4_VECTOR_DATABASE_AGENTIC_MODERNIZATION_REPORT.md": [],
+  "planning/done/P2/I5_WEB_SEARCH_TOOL_ORCHESTRATION_REPORT.md": [],
+  "planning/done/P2/J1_ENTERPRISE_AGENTIC_OBSERVABILITY_REPORT.md": [],
+  "planning/done/P2/J2_AGENTIC_SECURITY_PERFORMANCE_OPTIMIZATION_REPORT.md": [],
+  "planning/done/P2/J3_DYNAMIC_TOOL_COMPOSITION_ENGINE_REPORT.md": [],
+  "planning/done/P2/J4_PARALLEL_AGENT_COORDINATION_ARCHITECTURE_REPORT.md": [],
+  "planning/done/P3/A1_pydantic_ai_integration_analysis.md": [],
+  "planning/done/P3/A2_pydantic_ai_integration_analysis_dual.md": [],
+  "planning/done/P3/B1_mcp_framework_optimization_analysis.md": [],
+  "planning/done/P3/B2_mcp_framework_optimization_dual.md": [],
+  "planning/done/P3/C1_fastmcp_integration_analysis.md": [],
+  "planning/done/P3/C2_fastmcp_integration_analysis_dual.md": [],
+  "planning/master_report.md": [],
+  "planning/templates/adr-template.md": [],
+  "planning/templates/agent-report-template.md": [],
+  "tests/TEST_CLEANUP_ACTION_PLAN.md": [],
+  "tests/TEST_PATTERNS_STYLE_GUIDE.md": [
+    {
+      "exists": "false",
+      "resolved": "tests/\"service\"",
+      "target": "\"service\""
+    }
+  ],
+  "tests/benchmarks/README.md": [],
+  "tests/data_quality/README.md": [],
+  "tests/integration/README.md": [],
+  "tests/integration/end_to_end/README.md": [],
+  "tests/integration/mcp_services/README.md": [],
+  "tests/load/README.md": [],
+  "tests/load/stress_testing/README.md": [],
+  "tests/performance/README.md": [],
+  "tests/scripts/README.md": [],
+  "tests/security/README.md": [],
+  "tests/security/SECURITY_TESTING_PLAYBOOK.md": [],
+  "tests/unit/README.md": [],
+  "tests/unit/mcp_services/README.md": [],
+  "tests/unit/services/agents/DYNAMIC_TOOL_DISCOVERY_TESTS.md": [],
+  "tests/visual_regression/README.md": []
+}

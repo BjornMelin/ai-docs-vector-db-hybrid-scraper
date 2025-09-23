@@ -9,7 +9,7 @@ with Qdrant vector database for Claude Desktop/Code integration.
    :caption: Contents:
 
    ../users/README
-   ../developers/README
+   ../developers/index
    ../operators/README
    ../api/modules
 

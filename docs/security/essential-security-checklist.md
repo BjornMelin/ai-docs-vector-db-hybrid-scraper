@@ -1,3 +1,11 @@
+---
+title: Security Checklist
+audience: operators
+status: active
+owner: security
+last_reviewed: 2025-03-13
+---
+
 # Essential Security Checklist for Public AI Documentation System Deployment
 
 ## Overview

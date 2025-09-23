@@ -1,3 +1,11 @@
+---
+title: Performance Benchmarking Methodology
+audience: general
+status: active
+owner: documentation
+last_reviewed: 2025-03-13
+---
+
 # Performance Benchmarking Methodology - Enhanced Database Connection Pool
 
 ## Executive Summary

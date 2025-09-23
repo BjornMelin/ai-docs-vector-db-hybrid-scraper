@@ -70,7 +70,7 @@ All required feature areas thoroughly documented:
 #### 📝 Major Updates
 
 - `README.md` - Added configuration management section with examples
-- `docs/users/README.md` - Added navigation to new configuration guide
+- `docs/users/index.md` - Added navigation to new configuration guide
 - `docs/developers/configuration.md` - Extensive API documentation (~500 lines added)
 - `docs/operators/configuration.md` - Production procedures (~800 lines added)
 

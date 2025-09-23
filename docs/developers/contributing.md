@@ -11,7 +11,7 @@ Welcome to the AI Documentation Vector DB project! This guide covers everything 
 
 ### Before You Start
 
-1. ✅ Read the [Getting Started Guide](../developers/getting-started.md) and set up your environment
+1. ✅ Read the [Getting Started Guide](./getting-started.md) and set up your environment
 2. ✅ Check existing [GitHub Issues](https://github.com/project/issues) for work opportunities
 3. ✅ Join our discussions to connect with the community
 4. ✅ Review this guide for detailed workflow instructions
@@ -894,7 +894,7 @@ git push origin v1.1.0
 
 - **[GitHub Issues](https://github.com/project/issues)**: Bug reports and feature requests
 - **[GitHub Discussions](https://github.com/project/discussions)**: Questions and community help
-- **[Documentation](./README.md)**: Technical documentation
+- **[Documentation](./index.md)**: Technical documentation
 - **[Architecture Guide](./architecture.md)**: System design information
 
 ### Community Guidelines
@@ -917,4 +917,6 @@ When reporting bugs or requesting features:
 
 ---
 
-*🤝 Thank you for contributing to the AI Documentation Vector DB project! Your contributions help make this system better for everyone. Whether you're fixing bugs, adding features, improving documentation, or helping other contributors, every contribution is valuable.*
+Thank you for contributing to the AI Docs Vector DB project. If any part of this guide becomes
+outdated, please file an issue or send a pull request so the documentation stays accurate for the
+next contributor.

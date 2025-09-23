@@ -1,3 +1,19 @@
+---
+title: "V1 Development Notes (TODO)"
+audience: "developers"
+status: "archived"
+owner: "development"
+last_reviewed: "2025-09-22"
+archived_date: "2025-09-22"
+archive_reason: "Development tasks completed, moved to archive for historical reference"
+---
+
+# Archive Notice
+
+This document is a historical development reference and is no longer actively maintained. It contains the original TODO list from the V1 development cycle for reference purposes only.
+
+---
+
 # TODO - V1 REMAINING TASKS
 
 **Status**: Active development towards V1 release

@@ -1,43 +1,33 @@
-# Browser-Use Integration Research
-
-> **Status**: V3 Solo Developer Enhancement - Active Research
-> **Last Updated**: 2025-01-09
-> **Purpose**: Browser automation integration for enhanced documentation scraping
-
-## 📋 Overview
-
-This directory contains research and development documentation for integrating browser-use technology to enhance the V3 Solo Developer workflow with advanced browser automation capabilities.
-
-## 📁 Directory Contents
-
-### Core Documentation
-- **[V3 Solo Developer Master Guide](./browser-use-v3-solo-dev-master-guide.md)** - Comprehensive integration guide
-- **[Quick Start Plan](./browser-use-v3-solo-dev-quick-start-plan.md)** - Rapid implementation approach
-
-### Archive Structure
-- **archive/**: Historical versions and deprecated documentation
-  - **v1-original/**: Initial browser-use integration concepts
-  - **v2-enterprise/**: Enterprise-focused implementation plans
-
-## 🎯 Research Objectives
-
-1. **Browser Automation Enhancement**: Integrate advanced browser automation for complex documentation sites
-2. **V3 Solo Developer Workflow**: Streamline developer experience with automated browser tasks
-3. **Documentation Scraping**: Improve extraction from JavaScript-heavy documentation sites
-4. **Workflow Integration**: Seamless integration with existing MCP tools and Claude Desktop
-
-## 🔬 Research Status
-
-- **Planning**: Complete
-- **Proof of Concept**: In Progress  
-- **Integration**: Planned
-- **Documentation**: Active
-
-## 🔗 Related Research
-
-- [Transformation Research](../transformation/README.md) - System-wide modernization efforts
-- [MCP Tools Integration](../../developers/integration-guide.md) - Development integration patterns
-
+---
+title: Browser Automation Research
+audience: developers
+status: active
+owner: research
+last_reviewed: 2025-03-13
 ---
 
-*This research supports the broader V3 Solo Developer transformation initiative documented in the [main research directory](../README.md).*
+# Browser Automation Research
+
+Summary of ongoing investigations into browser automation improvements, especially the migration to
+browser-use v0.3.x and its integration with the tiered automation manager.
+
+## Current Objectives
+
+- Evaluate browser-use v0.3.2 capabilities and API changes.
+- Measure reliability and performance across scripted browsing scenarios.
+- Determine fallbacks and guardrails before promoting v0.3.x to production tiers.
+
+## Key Documents
+
+- `browser-use-v3-solo-dev-master-guide.md` – Detailed migration plan (local evaluation focus)
+- `browser-use-v3-solo-dev-quick-start-plan.md` – Abbreviated setup instructions
+- `archive/` – Historical research and PRDs for earlier versions
+
+## Next Steps
+
+1. Complete compatibility testing across the five-tier automation pipeline.
+2. Document configuration changes needed for enterprise deployments.
+3. Update the operator runbooks once the new version is validated.
+
+When promotion criteria are met, move stable guidance into the main operator/developer docs and
+reference it from this summary.
