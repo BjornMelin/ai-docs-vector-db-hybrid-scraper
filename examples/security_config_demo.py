@@ -347,7 +347,8 @@ def demo_security_monitoring_integration():
             f"  Key Version: {security_status.get('key_version')}"
         )  # TODO: Convert f-string to logging format
         logger.info(
-            f"  Security Monitoring: {security_status.get('security_monitoring_integration')}"
+            f"  Security Monitoring: "
+            f"{security_status.get('security_monitoring_integration')}"
         )
         logger.info(
             f"  Threat Detection: {security_status.get('threat_detection_enabled')}"
@@ -357,7 +358,7 @@ def demo_security_monitoring_integration():
         logger.info("\nSimulating security events for monitoring correlation...")
 
         # Simulate failed decryption attempt (potential security incident)
-        failed_data = config_manager.decrypt_configuration(
+        config_manager.decrypt_configuration(
             config_path="nonexistent_config",
             user_id="potential_attacker",
             client_ip="10.0.0.1",
