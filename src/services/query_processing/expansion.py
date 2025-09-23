@@ -221,6 +221,7 @@ class QueryExpansionService:
 
         Returns:
             Expanded query string
+
         """
         # Create a request with default parameters
         request = QueryExpansionRequest(

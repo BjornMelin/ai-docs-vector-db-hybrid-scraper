@@ -600,5 +600,6 @@ Provide a clear, accurate answer based solely on the information provided above.
 
         Returns:
             bool: True if LLM client is initialized and available
+
         """
         return self._llm_client is not None
