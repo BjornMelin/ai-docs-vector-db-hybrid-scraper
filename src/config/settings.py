@@ -1159,6 +1159,7 @@ def get_settings() -> Settings:
 
     Returns:
         The global settings instance, creating it if it doesn't exist.
+
     """
     global _settings_instance
     if _settings_instance is None:
@@ -1170,7 +1171,9 @@ def get_settings() -> Settings:
             )
 
             if sync_observability_config:
-                sync_observability_config(main_config=_settings_instance, force_refresh=True)
+                sync_observability_config(
+                    main_config=_settings_instance, force_refresh=True
+                )
         except ImportError:
             # Observability module not available during early bootstrap.
             pass
@@ -1182,6 +1185,7 @@ def set_settings(new_settings: Settings) -> None:
 
     Args:
         new_settings: The settings instance to set globally.
+
     """
     global _settings_instance
     _settings_instance = new_settings
@@ -1198,6 +1202,7 @@ def create_settings_from_env() -> Settings:
 
     Returns:
         A new settings instance loaded from environment variables.
+
     """
     return Settings()
 
@@ -1247,6 +1252,7 @@ def create_simple_config() -> Settings:
 
     Returns:
         Settings instance configured for simple mode.
+
     """
     return Settings(mode=ApplicationMode.SIMPLE)
 
@@ -1256,6 +1262,7 @@ def create_enterprise_config() -> Settings:
 
     Returns:
         Settings instance configured for enterprise mode.
+
     """
     return Settings(mode=ApplicationMode.ENTERPRISE)
 

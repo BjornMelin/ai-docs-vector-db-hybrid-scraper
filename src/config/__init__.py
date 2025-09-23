@@ -182,6 +182,7 @@ def is_using_modern_config() -> bool:
 
     Returns:
         True - Always returns True since we're using the unified system.
+
     """
     return True
 
@@ -196,6 +197,7 @@ def get_migration_status() -> dict[str, Any]:
 
     Returns:
         Dictionary with migration status information.
+
     """
     config = get_config()
     return {
@@ -345,6 +347,7 @@ class EnvironmentDetector:
 
         Returns:
             Mock detected environment
+
         """
         return DetectedEnvironment(
             environment=Environment.DEVELOPMENT,
