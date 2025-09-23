@@ -45,8 +45,8 @@ def register_pipeline_health_tool(mcp, factory: QueryProcessingPipelineFactory):
             health_status = await pipeline.health_check()
 
             await ctx.info(
-                f"Pipeline health check {request_id} completed: "
-                f"status={'healthy' if health_status.get('pipeline_healthy') else 'unhealthy'}"
+                f"Pipeline health check {request_id} completed: status="
+                f"{'healthy' if health_status.get('pipeline_healthy') else 'unhealthy'}"
             )
 
         except Exception as e:

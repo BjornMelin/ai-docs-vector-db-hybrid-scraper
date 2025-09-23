@@ -1,7 +1,6 @@
 """Main benchmark orchestrator for Hybrid Search system.
 
-This module provides the primary benchmarking interface for comprehensive
-performance testing of the hybrid search implementation.
+Provides benchmarking interface for performance testing of hybrid search.
 """
 
 import asyncio
@@ -119,7 +118,7 @@ class BenchmarkResults(BaseModel):
 
 
 class HybridSearchBenchmark:
-    """Main orchestrator for comprehensive Hybrid Search benchmarks."""
+    """Main orchestrator for Hybrid Search benchmarks."""
 
     def __init__(
         self,
@@ -184,15 +183,18 @@ class HybridSearchBenchmark:
             ("CAP theorem implications for distributed systems", "conceptual"),
             # Complex multi-hop queries
             (
-                "How to implement OAuth2 flow in React with Node.js backend and PostgreSQL database?",
+                "How to implement OAuth2 flow in React with Node.js backend and "
+                "PostgreSQL database?",
                 "complex",
             ),
             (
-                "Best practices for scaling microservices with Kubernetes, monitoring, and CI/CD pipeline?",
+                "Best practices for scaling microservices with Kubernetes, "
+                "monitoring, and CI/CD pipeline?",
                 "complex",
             ),
             (
-                "Optimize database performance with indexing, caching, and query optimization techniques?",
+                "Optimize database performance with indexing, caching, and "
+                "query optimization techniques?",
                 "complex",
             ),
         ]
@@ -222,16 +224,14 @@ class HybridSearchBenchmark:
         return queries[:target_count]
 
     async def run_comprehensive_benchmark(self) -> BenchmarkResults:
-        """Run complete benchmark suite and return results.
+        """Run benchmark suite and return results.
 
         Returns:
-            Comprehensive benchmark results with performance metrics and recommendations
+            Benchmark results with performance metrics and recommendations
 
         """
         start_time = time.time()
-        logger.info(
-            f"Starting comprehensive benchmark: {self.benchmark_config.name}"
-        )  # TODO: Convert f-string to logging format
+        logger.info(f"Starting comprehensive benchmark: {self.benchmark_config.name}")
 
         results = BenchmarkResults(
             benchmark_name=self.benchmark_config.name,
@@ -295,14 +295,10 @@ class HybridSearchBenchmark:
             logger.info(
                 f"Benchmark completed in {results.duration_seconds:.2f} seconds"
             )
-            logger.info(
-                f"Meets targets: {results.meets_targets}"
-            )  # TODO: Convert f-string to logging format
+            logger.info(f"Meets targets: {results.meets_targets}")
 
         except Exception as e:
-            logger.exception(
-                "Benchmark failed: "
-            )  # TODO: Convert f-string to logging format
+            logger.exception("Benchmark failed: ")
             results.duration_seconds = time.time() - start_time
             results.failed_targets.append(f"Benchmark execution failed: {e!s}")
         else:
@@ -322,9 +318,7 @@ class HybridSearchBenchmark:
         load_results = {}
 
         for concurrent_users in self.benchmark_config.concurrent_users:
-            logger.info(
-                f"Running load test with {concurrent_users} concurrent users"
-            )  # TODO: Convert f-string to logging format
+            logger.info(f"Running load test with {concurrent_users} concurrent users")
 
             load_config = LoadTestConfig(
                 concurrent_users=concurrent_users,
@@ -394,9 +388,7 @@ class HybridSearchBenchmark:
                 total_predictions += 1
 
             except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-                logger.warning(
-                    f"Classification failed for query '{query_text}': {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.warning(f"Classification failed for query '{query_text}': {e}")
                 total_predictions += 1
 
         return correct_predictions / max(total_predictions, 1)
@@ -437,9 +429,7 @@ class HybridSearchBenchmark:
                 total_selections += 1
 
             except (ValueError, TypeError, UnicodeDecodeError) as e:
-                logger.warning(
-                    f"Model selection failed for query '{query_text}': {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.warning(f"Model selection failed for query '{query_text}': {e}")
                 total_selections += 1
 
         return appropriate_selections / max(total_selections, 1)
@@ -457,8 +447,10 @@ class HybridSearchBenchmark:
                         query.query
                     )
                 )
-                weights = await self.search_service.adaptive_fusion_tuner.compute_adaptive_weights(
-                    classification, f"benchmark_{total_fusions}"
+                weights = await (
+                    self.search_service.adaptive_fusion_tuner.compute_adaptive_weights(
+                        classification, f"benchmark_{total_fusions}"
+                    )
                 )
 
                 # Check if weights are reasonable (not extreme)
@@ -467,9 +459,7 @@ class HybridSearchBenchmark:
                 total_fusions += 1
 
             except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-                logger.warning(
-                    f"Fusion tuning failed for query '{query.query}': {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.warning(f"Fusion tuning failed for query '{query.query}': {e}")
                 total_fusions += 1
 
         return effective_fusions / max(total_fusions, 1)
@@ -484,9 +474,11 @@ class HybridSearchBenchmark:
         # Latency analysis
         p95_latency = results.latency_metrics.get("p95_ms", 0)
         if p95_latency > self.benchmark_config.target_latency_p95_ms:
-            bottlenecks.append(
-                f"High p95 latency: {p95_latency:.1f}ms > {self.benchmark_config.target_latency_p95_ms}ms"
+            latency_msg = (
+                f"High p95 latency: {p95_latency:.1f}ms > "
+                f"{self.benchmark_config.target_latency_p95_ms}ms"
             )
+            bottlenecks.append(latency_msg)
             recommendations.append("Consider caching frequently accessed embeddings")
             recommendations.append(
                 "Optimize model selection logic for faster decisions"
@@ -499,9 +491,11 @@ class HybridSearchBenchmark:
             else 0
         )
         if max_qps < self.benchmark_config.target_throughput_qps:
-            bottlenecks.append(
-                f"Low throughput: {max_qps:.1f} QPS < {self.benchmark_config.target_throughput_qps} QPS"
+            throughput_msg = (
+                f"Low throughput: {max_qps:.1f} QPS < "
+                f"{self.benchmark_config.target_throughput_qps} QPS"
             )
+            bottlenecks.append(throughput_msg)
             recommendations.append(
                 "Implement connection pooling for database operations"
             )
@@ -512,9 +506,11 @@ class HybridSearchBenchmark:
         # Memory analysis
         peak_memory = results.resource_metrics.get("peak_memory_mb", 0)
         if peak_memory > self.benchmark_config.target_memory_mb:
-            bottlenecks.append(
-                f"High memory usage: {peak_memory:.1f}MB > {self.benchmark_config.target_memory_mb}MB"
+            memory_msg = (
+                f"High memory usage: {peak_memory:.1f}MB > "
+                f"{self.benchmark_config.target_memory_mb}MB"
             )
+            bottlenecks.append(memory_msg)
             recommendations.append("Implement LRU cache for SPLADE embeddings")
             recommendations.append("Optimize model registry memory footprint")
 
@@ -523,9 +519,11 @@ class HybridSearchBenchmark:
             len(results.accuracy_metrics), 1
         )
         if avg_accuracy < self.benchmark_config.target_accuracy:
-            bottlenecks.append(
-                f"Low ML accuracy: {avg_accuracy:.3f} < {self.benchmark_config.target_accuracy}"
+            accuracy_msg = (
+                f"Low ML accuracy: {avg_accuracy:.3f} < "
+                f"{self.benchmark_config.target_accuracy}"
             )
+            bottlenecks.append(accuracy_msg)
             recommendations.append(
                 "Retrain query classification with more diverse data"
             )
@@ -541,7 +539,8 @@ class HybridSearchBenchmark:
         p95_latency = results.latency_metrics.get("p95_ms", float("inf"))
         if p95_latency > self.benchmark_config.target_latency_p95_ms:
             failed_targets.append(
-                f"Latency target: {p95_latency:.1f}ms > {self.benchmark_config.target_latency_p95_ms}ms"
+                f"Latency target: {p95_latency:.1f}ms > "
+                f"{self.benchmark_config.target_latency_p95_ms}ms"
             )
 
         # Check throughput target
@@ -552,14 +551,16 @@ class HybridSearchBenchmark:
         )
         if max_qps < self.benchmark_config.target_throughput_qps:
             failed_targets.append(
-                f"Throughput target: {max_qps:.1f} < {self.benchmark_config.target_throughput_qps} QPS"
+                f"Throughput target: {max_qps:.1f} < "
+                f"{self.benchmark_config.target_throughput_qps} QPS"
             )
 
         # Check memory target
         peak_memory = results.resource_metrics.get("peak_memory_mb", float("inf"))
         if peak_memory > self.benchmark_config.target_memory_mb:
             failed_targets.append(
-                f"Memory target: {peak_memory:.1f}MB > {self.benchmark_config.target_memory_mb}MB"
+                f"Memory target: {peak_memory:.1f}MB > "
+                f"{self.benchmark_config.target_memory_mb}MB"
             )
 
         # Check accuracy target
@@ -568,7 +569,8 @@ class HybridSearchBenchmark:
         )
         if avg_accuracy < self.benchmark_config.target_accuracy:
             failed_targets.append(
-                f"Accuracy target: {avg_accuracy:.3f} < {self.benchmark_config.target_accuracy}"
+                f"Accuracy target: {avg_accuracy:.3f} < "
+                f"{self.benchmark_config.target_accuracy}"
             )
 
         return {
@@ -591,8 +593,6 @@ class HybridSearchBenchmark:
         with html_file.open("w") as f:
             f.write(html_report)
 
-        logger.info(
-            f"Results saved to {output_dir}"
-        )  # TODO: Convert f-string to logging format
-        logger.info(f"JSON: {json_file}")  # TODO: Convert f-string to logging format
-        logger.info(f"HTML: {html_file}")  # TODO: Convert f-string to logging format
+        logger.info(f"Results saved to {output_dir}")
+        logger.info(f"JSON: {json_file}")
+        logger.info(f"HTML: {html_file}")

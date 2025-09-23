@@ -181,9 +181,9 @@ async def async_timeout_manager():
             try:
                 async with asyncio.timeout(timeout_value):
                     yield
-            except TimeoutError:
+            except TimeoutError as e:
                 timeout_message = f"Operation timed out after {timeout_value}s"
-                raise AssertionError(timeout_message)
+                raise AssertionError(timeout_message) from e
 
         async def wait_for(self, coro, timeout_seconds: float | None = None) -> Any:
             """Wait for a coroutine with timeout."""
@@ -191,9 +191,9 @@ async def async_timeout_manager():
 
             try:
                 return await asyncio.wait_for(coro, timeout=timeout_value)
-            except TimeoutError:
+            except TimeoutError as e:
                 timeout_message = f"Operation timed out after {timeout_value}s"
-                raise AssertionError(timeout_message)
+                raise AssertionError(timeout_message) from e
 
     return TimeoutManager()
 

@@ -55,7 +55,8 @@ def register_tools(mcp, client_manager: ClientManager):
         """
         if ctx:
             await ctx.info(
-                f"Starting similarity search for document {query_id} in collection {collection}"
+                f"Starting similarity search for document {query_id} in collection "
+                f"{collection}"
             )
 
         try:

@@ -128,7 +128,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Workspace '{workspace_name}' created with {len(created_collections)} collections"
+                    f"Workspace '{workspace_name}' created with "
+                    f"{len(created_collections)} collections"
                 )
 
             return {
@@ -171,7 +172,8 @@ def register_tools(mcp, client_manager: ClientManager):
         try:
             if ctx:
                 await ctx.info(
-                    f"Managing document lifecycle: {lifecycle_action} for {collection_name}"
+                    f"Managing document lifecycle: {lifecycle_action} for "
+                    f"{collection_name}"
                 )
 
             qdrant_service = await client_manager.get_qdrant_service()
@@ -221,7 +223,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Lifecycle action '{lifecycle_action}' completed for {collection_name}"
+                    f"Lifecycle action '{lifecycle_action}' completed for "
+                    f"{collection_name}"
                 )
 
         except Exception as e:
@@ -254,7 +257,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Args:
             collection_name: Target collection for organization
-            organization_strategy: Strategy to use (semantic, topical, quality, temporal)
+            organization_strategy: Strategy to use (semantic, topical, quality,
+            temporal)
             parameters: Optional strategy parameters
             ctx: MCP context for logging
 
@@ -265,7 +269,8 @@ def register_tools(mcp, client_manager: ClientManager):
         try:
             if ctx:
                 await ctx.info(
-                    f"Organizing documents in {collection_name} using {organization_strategy} strategy"
+                    f"Organizing documents in {collection_name} using "
+                    f"{organization_strategy} strategy"
                 )
 
             qdrant_service = await client_manager.get_qdrant_service()
@@ -328,7 +333,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Organization completed: {len(documents)} documents processed using {organization_strategy}"
+                    f"Organization completed: {len(documents)} "
+                    f"documents processed using {organization_strategy}"
                 )
 
         except Exception as e:
@@ -414,7 +420,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Generated analytics for {analytics['global_metrics']['total_workspaces']} workspaces"
+                    f"Generated analytics for "
+                    f"{analytics['global_metrics']['total_workspaces']} workspaces"
                 )
 
         except Exception as e:

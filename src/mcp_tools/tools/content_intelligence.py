@@ -54,9 +54,9 @@ def register_tools(mcp, client_manager: ClientManager):
     ) -> ContentIntelligenceResult:
         """Perform comprehensive AI-powered content intelligence analysis.
 
-        Provides semantic content classification, quality assessment, metadata enrichment,
-        and site-specific adaptation recommendations using local models for improved
-        web scraping extraction quality.
+        Provides semantic content classification, quality assessment, metadata
+        enrichment, and site-specific adaptation recommendations using local models
+        for improved web scraping extraction quality.
 
         Features:
         - Content type classification (documentation, code, FAQ, tutorial, etc.)
@@ -165,7 +165,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             await ctx.info(
                 f"Content classified as: {result.primary_type.value} "
-                f"(confidence: {result.confidence_scores.get(result.primary_type, 0.0):.2f})"
+                "(confidence: "
+                f"{result.confidence_scores.get(result.primary_type, 0.0):.2f})"
             )
 
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
@@ -226,7 +227,8 @@ def register_tools(mcp, client_manager: ClientManager):
             )
 
             await ctx.info(
-                f"Quality assessment completed: overall score {result.overall_score:.2f} "
+                f"Quality assessment completed: overall score "
+                f"{result.overall_score:.2f} "
                 f"(meets threshold: {result.meets_threshold})"
             )
 

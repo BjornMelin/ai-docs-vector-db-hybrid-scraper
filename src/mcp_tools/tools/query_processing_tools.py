@@ -1,7 +1,8 @@
 """Advanced query processing tools for MCP server.
 
-This module exposes advanced query processing capabilities through the Model Context Protocol,
-including query expansion, clustering, federated search, personalization, and orchestration.
+This module exposes advanced query processing capabilities through the Model Context
+Protocol, including query expansion, clustering, federated search, personalization,
+and orchestration.
 """
 
 import logging
@@ -456,7 +457,10 @@ async def _execute_orchestrated_search(
     # Convert results
     converted_results = []
     for r in result.results:
-        pipeline_info = f"Features: {', '.join(result.features_used) if result.features_used else 'basic'}"
+        pipeline_info = (
+            "Features: "
+            f"{', '.join(result.features_used) if result.features_used else 'basic'}"
+        )
         search_result = SearchResult(
             id=r.get("id", ""),
             content=r.get("content", ""),

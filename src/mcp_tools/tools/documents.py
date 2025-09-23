@@ -105,7 +105,8 @@ def register_tools(mcp, client_manager: ClientManager):
                         enriched_content = analysis_result.enriched_content
                         await ctx.info(
                             f"Content intelligence analysis completed for {doc_id}: "
-                            f"type={enriched_content.classification.primary_type.value}, "
+                            "type="
+                            f"{enriched_content.classification.primary_type.value}, "
                             f"quality={enriched_content.quality_score.overall_score:.2f}"
                         )
                     else:
@@ -135,7 +136,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 ):
                     chunk_config.strategy = ChunkingStrategy.ENHANCED
                     await ctx.debug(
-                        f"Upgraded chunking strategy to ENHANCED for {content_type} content"
+                        f"Upgraded chunking strategy to ENHANCED for "
+                        f"{content_type} content"
                     )
 
             # Chunk the document
@@ -179,14 +181,26 @@ def register_tools(mcp, client_manager: ClientManager):
                 if enriched_content:
                     payload.update(
                         {
-                            "content_type": enriched_content.classification.primary_type.value,
-                            "content_confidence": enriched_content.classification.confidence_scores.get(
-                                enriched_content.classification.primary_type, 0.0
+                            "content_type": (
+                                enriched_content.classification.primary_type.value
                             ),
-                            "quality_overall": enriched_content.quality_score.overall_score,
-                            "quality_completeness": enriched_content.quality_score.completeness,
-                            "quality_relevance": enriched_content.quality_score.relevance,
-                            "quality_confidence": enriched_content.quality_score.confidence,
+                            "content_confidence": (
+                                enriched_content.classification.confidence_scores.get(
+                                    enriched_content.classification.primary_type, 0.0
+                                )
+                            ),
+                            "quality_overall": (
+                                enriched_content.quality_score.overall_score
+                            ),
+                            "quality_completeness": (
+                                enriched_content.quality_score.completeness
+                            ),
+                            "quality_relevance": (
+                                enriched_content.quality_score.relevance
+                            ),
+                            "quality_confidence": (
+                                enriched_content.quality_score.confidence
+                            ),
                             "ci_word_count": enriched_content.metadata.word_count,
                             "ci_char_count": enriched_content.metadata.char_count,
                             "ci_language": enriched_content.metadata.language,
@@ -243,7 +257,9 @@ def register_tools(mcp, client_manager: ClientManager):
             if enriched_content:
                 response_kwargs.update(
                     {
-                        "content_type": enriched_content.classification.primary_type.value,
+                        "content_type": (
+                            enriched_content.classification.primary_type.value
+                        ),
                         "quality_score": enriched_content.quality_score.overall_score,
                         "content_intelligence_analyzed": True,
                     }

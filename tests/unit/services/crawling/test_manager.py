@@ -258,7 +258,10 @@ class TestCrawlManager:
         mock_unified_manager.scrape.assert_called_once()
 
     @pytest.mark.skip(
-        reason="Test uses obsolete provider-based architecture - needs update for UnifiedBrowserManager"
+        reason=(
+            "Test uses obsolete provider-based architecture - needs update "
+            "for UnifiedBrowserManager"
+        )
     )
     @pytest.mark.asyncio
     async def test_scrape_url_with_preferred_provider(self):
@@ -282,7 +285,10 @@ class TestCrawlManager:
         assert len(crawl4ai.scrape_calls) == 0
 
     @pytest.mark.skip(
-        reason="Test uses obsolete provider-based architecture - needs update for UnifiedBrowserManager"
+        reason=(
+            "Test uses obsolete provider-based architecture - needs update "
+            "for UnifiedBrowserManager"
+        )
     )
     @pytest.mark.asyncio
     async def test_scrape_url_fallback(self):
@@ -307,7 +313,10 @@ class TestCrawlManager:
         assert len(working_provider.scrape_calls) == 1
 
     @pytest.mark.skip(
-        reason="Test uses obsolete provider-based architecture - needs update for UnifiedBrowserManager"
+        reason=(
+            "Test uses obsolete provider-based architecture - needs update "
+            "for UnifiedBrowserManager"
+        )
     )
     @pytest.mark.asyncio
     async def test_scrape_url_all_providers_fail(self):
@@ -328,7 +337,9 @@ class TestCrawlManager:
         assert result["url"] == "https://example.com"
 
     @pytest.mark.skip(
-        reason="Test uses obsolete API - scrape_url no longer accepts formats parameter"
+        reason=(
+            "Test uses obsolete API - scrape_url no longer accepts formats parameter"
+        )
     )
     @pytest.mark.asyncio
     async def test_scrape_url_with_formats(self):
@@ -356,7 +367,10 @@ class TestCrawlManager:
             await manager.crawl_site("https://example.com")
 
     @pytest.mark.skip(
-        reason="Test uses obsolete provider-based architecture - needs update for UnifiedBrowserManager"
+        reason=(
+            "Test uses obsolete provider-based architecture - needs update "
+            "for UnifiedBrowserManager"
+        )
     )
     @pytest.mark.asyncio
     async def test_crawl_site_success(self):
@@ -378,7 +392,10 @@ class TestCrawlManager:
         assert provider.crawl_calls[0]["max_pages"] == 25
 
     @pytest.mark.skip(
-        reason="Test uses obsolete provider-based architecture - needs update for UnifiedBrowserManager"
+        reason=(
+            "Test uses obsolete provider-based architecture - needs update "
+            "for UnifiedBrowserManager"
+        )
     )
     @pytest.mark.asyncio
     async def test_crawl_site_prefers_crawl4ai(self):
@@ -400,7 +417,10 @@ class TestCrawlManager:
         assert len(firecrawl.crawl_calls) == 0
 
     @pytest.mark.skip(
-        reason="Test uses obsolete provider-based architecture - needs update for UnifiedBrowserManager"
+        reason=(
+            "Test uses obsolete provider-based architecture - needs update "
+            "for UnifiedBrowserManager"
+        )
     )
     @pytest.mark.asyncio
     async def test_crawl_site_with_fallback(self):
@@ -435,7 +455,10 @@ class TestCrawlManager:
         assert result["provider"] == "firecrawl"
 
     @pytest.mark.skip(
-        reason="Test uses obsolete provider-based architecture - needs update for UnifiedBrowserManager"
+        reason=(
+            "Test uses obsolete provider-based architecture - needs update "
+            "for UnifiedBrowserManager"
+        )
     )
     @pytest.mark.asyncio
     async def test_crawl_site_all_fail(self):
@@ -456,7 +479,10 @@ class TestCrawlManager:
         assert result["_total"] == 0
 
     @pytest.mark.skip(
-        reason="Test uses obsolete provider-based architecture - needs update for UnifiedBrowserManager"
+        reason=(
+            "Test uses obsolete provider-based architecture - needs update "
+            "for UnifiedBrowserManager"
+        )
     )
     def test_get_provider_info(self):
         """Test getting provider information."""
@@ -488,7 +514,10 @@ class TestCrawlManager:
             await manager.map_url("https://example.com")
 
     @pytest.mark.skip(
-        reason="Test uses obsolete provider-based architecture - needs update for UnifiedBrowserManager"
+        reason=(
+            "Test uses obsolete provider-based architecture - needs update "
+            "for UnifiedBrowserManager"
+        )
     )
     @pytest.mark.asyncio
     async def test_map_url_no_firecrawl(self):
@@ -507,7 +536,10 @@ class TestCrawlManager:
         assert result["_total"] == 0
 
     @pytest.mark.skip(
-        reason="Test uses obsolete provider-based architecture - needs update for UnifiedBrowserManager"
+        reason=(
+            "Test uses obsolete provider-based architecture - needs update "
+            "for UnifiedBrowserManager"
+        )
     )
     @pytest.mark.asyncio
     async def test_map_url_with_firecrawl(self):
@@ -556,7 +588,10 @@ class TestCrawlManager:
             mock_unified_manager_instance.initialize.assert_called_once()
 
     @pytest.mark.skip(
-        reason="Test uses obsolete provider-based architecture - needs update for UnifiedBrowserManager"
+        reason=(
+            "Test uses obsolete provider-based architecture - needs update "
+            "for UnifiedBrowserManager"
+        )
     )
     @pytest.mark.asyncio
     async def test_provider_order_logic(self):
@@ -585,7 +620,10 @@ class TestCrawlManager:
         assert len(firecrawl.scrape_calls) == 0
 
     @pytest.mark.skip(
-        reason="Test uses obsolete provider-based architecture - needs update for UnifiedBrowserManager"
+        reason=(
+            "Test uses obsolete provider-based architecture - needs update "
+            "for UnifiedBrowserManager"
+        )
     )
     @pytest.mark.asyncio
     async def test_invalid_preferred_provider(self):

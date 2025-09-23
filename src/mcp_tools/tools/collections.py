@@ -60,7 +60,8 @@ def register_tools(mcp, client_manager: ClientManager):
                     )
                     if ctx:
                         await ctx.debug(
-                            f"Retrieved info for collection {collection_name}: {info.vectors_count} vectors"
+                            f"Retrieved info for collection {collection_name}: "
+                            f"{info.vectors_count} vectors"
                         )
                 except Exception as e:
                     logger.exception(
@@ -74,7 +75,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Successfully retrieved information for {len(collection_info)} collections"
+                    f"Successfully retrieved information for "
+                    f"{len(collection_info)} collections"
                 )
 
             return [CollectionInfo(**c) for c in collection_info]

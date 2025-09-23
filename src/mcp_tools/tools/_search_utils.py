@@ -40,7 +40,10 @@ async def search_documents_core(
         qdrant_service = await client_manager.get_qdrant_service()
 
         # Check cache first
-        cache_key = f"search:{request.collection}:{request.query}:{request.strategy}:{request.limit}"
+        cache_key = (
+            f"search:{request.collection}:{request.query}:"
+            f"{request.strategy}:{request.limit}"
+        )
         cached = await cache_manager.get(cache_key)
         if cached:
             if ctx:
