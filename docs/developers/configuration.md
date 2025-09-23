@@ -1,81 +1,108 @@
----
-title: Configuration Guide
-audience: developers
-status: active
-owner: platform-engineering
-last_reviewed: 2025-03-13
----
-
-# Configuration Guide
-
-Reference for configuring services and environments when developing or deploying the AI Docs Vector
-DB platform.
+# Unified Configuration Guide
 
 ## Configuration Layout
 
-```text
 config/
-├── settings.py              # Pydantic settings entry point
-├── environments/
-│   ├── simple.toml          # Local/dev defaults
-│   └── enterprise.toml      # Production defaults
-└── secrets.toml.example     # Example secrets structure
-```
+├── base.py              # Shared configuration
+├── simple.py           # Development settings
+├── enterprise.py       # Production settings
+├── test.py             # Testing settings
+├── secrets.py          # Secret management
+└── __init__.py
 
-- **settings.py** stitches environment variables, config files, and defaults into a single Pydantic
-  model.
-- The `AI_DOCS_ENV` variable selects the active configuration profile.
-- Secrets are expected from environment variables (or a secrets manager in production) rather than
-  hard-coded files.
+## Essential Environment Variables
 
-## Key Settings
-
-| Setting | Description |
-| --- | --- |
-| `API_HOST`, `API_PORT` | FastAPI application binding |
-| `QDRANT_URL`, `QDRANT_API_KEY` | Vector database connection parameters |
-| `EMBEDDING_PROVIDER` | Dense embedding provider (`openai`, `fastembed`, etc.) |
-| `SPARSE_PROVIDER` | Sparse embedding provider (e.g., `bge-small-en`) |
-| `CACHE_URL` | Dragonfly cache endpoint |
-| `BROWSER_AUTOMATION_MODE` | Preferred automation tier override |
-| `TELEMETRY_ENABLED` | Enables metrics/log forwarding |
-
-Refer to `src/config/settings.py` for the full schema and default values.
+| Variable | Purpose | Example |
+|---------|---------|---------|
+| API_HOST | API server host | localhost |
+| API_PORT | API server port | 8000 |
+| QDRANT_URL | Vector database URL | http://localhost:6333 |
+| DATABASE_URL | Primary database | postgresql://user:pass@host:5432/db |
+| REDIS_URL | Cache/queue backend | redis://localhost:6379 |
+| LOG_LEVEL | Application logging | INFO |
+| SECRET_KEY | Cryptographic key | your-secret-key-here |
+| DEBUG | Debug mode toggle | False |
 
 ## Environment Profiles
 
-- **simple** – Minimal stack for local development. Uses in-process services and relaxed timeouts.
-- **enterprise** – Production-ready configuration enabling observability, high concurrency limits, and
-  expanded automation tiers.
-- **test** – Fixtures for integration/unit tests with deterministic behaviour.
+### Simple (Development)
+- Single node setup
+- SQLite database
+- Debug enabled
+- Local Qdrant instance
+- Console logging
 
-Switch profiles by exporting `AI_DOCS_ENV` or by invoking `UnifiedConfig.with_env("enterprise")` from
-code.
+### Enterprise (Production)
+- Multi-node deployment
+- PostgreSQL database
+- Redis caching
+- External Qdrant service
+- Structured logging
+
+### Test
+- In-memory database
+- Mock external services
+- Verbose logging
+- Test-specific ports
+
+## Core Tool Configurations
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I"]
+ignore = ["E501"]
+target-version = "py39"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.0",
+    "ruff>=0.1",
+    "black>=23.0"
+]
+
+## Database Connection Settings
+
+PostgreSQL:
+postgresql://username:password@host:port/database
+
+SQLite (dev):
+sqlite:///./local.db
+
+Redis (cache):
+redis://localhost:6379/0
 
 ## Secrets Management
 
-- Store credentials in environment variables or a secrets manager (e.g., Vault, AWS Secrets Manager).
-- Avoid committing `.toml` files containing secrets; template any required structure in
-  `secrets.toml.example`.
-- Rotate sensitive keys regularly and ensure the configuration loader can refresh secrets without
-  restarts if needed.
+1. Use environment variables for all secrets
+2. Never commit secrets to version control
+3. Use secret management tools (Vault, AWS Secrets Manager)
+4. Rotate secrets regularly
+5. Encrypt secrets at rest
+
+Example secrets.py:
+import os
+SECRET_KEY = os.environ.get("SECRET_KEY")
+DATABASE_PASSWORD = os.environ.get("DB_PASSWORD")
 
 ## Configuration Overrides
 
-Use environment variables to override individual settings without editing configuration files:
+Override via environment variables:
+export API_HOST=production-server
+export DATABASE_URL=postgresql://prod-user:pass@db-host:5432/prod-db
 
-```bash
-export AI_DOCS_ENV=enterprise
-export EMBEDDING_PROVIDER=openai
-export OPENAI_API_KEY=sk-...
-python -m src.app
-```
+Override in profile files:
+# enterprise.py
+from .base import *
+DEBUG = False
+ALLOWED_HOSTS = ["production-domain.com"]
 
-For temporary overrides in code, call `UnifiedConfig().copy(update={"embedding_provider": "openai"})`
-within scoped contexts.
-
-## Related Material
-
-- [System Architecture](./architecture.md)
-- [Operations Configuration](../operators/configuration.md)
-- [Security Checklist](../security/essential-security-checklist.md)
+Runtime override example:
+# In application code
+config.API_HOST = os.getenv("API_HOST", config.API_HOST)
