@@ -6,20 +6,23 @@ owner: documentation
 last_reviewed: 2025-03-13
 ---
 
-# AI Docs Vector DB Hybrid Scraper
+## AI Docs Vector DB Hybrid Scraper
 
-The platform ingests documentation from the web, enriches it with browser automation, stores hybrid
-embeddings in Qdrant, and exposes retrieval workflows through a unified API surface. This page
-summarises the core capabilities and points to the detailed guides for users, developers, and
-operators.
+The platform ingests documentation from the web, enriches it with browser
+automation, stores hybrid embeddings in Qdrant, and exposes retrieval workflows
+through a unified API surface. This page summarises the core capabilities and
+points to the detailed guides for users, developers, and operators.
 
 ## Platform Highlights
 
-- **Hybrid search pipeline** – Dense + sparse embeddings, HyDE augmentation, and reranking
-- **Five-tier browser automation** – Selects the lightest tool that can load and extract a page
-- **Unified configuration** – Single Pydantic settings module controls both simple and enterprise
-  deployments
-- **Observability and security** – Built-in metrics, logging, authentication, and rate limiting
+- **Hybrid search pipeline** – Dense + sparse embeddings, HyDE augmentation, and
+  reranking
+- **Five-tier browser automation** – Selects the lightest tool that can load and
+  extract a page
+- **Unified configuration** – Single Pydantic settings module controls both simple
+  and enterprise deployments
+- **Observability and security** – Built-in metrics, logging, authentication, and
+  rate limiting
 
 ## Architecture Snapshot
 
@@ -34,12 +37,12 @@ graph LR
     Rerank --> API[Unified API]
 ```
 
-- **Ingestion** – A tiered browser manager fetches pages, extractors clean them, and chunking
-  normalises structure.
-- **Processing** – Dense and sparse embedding providers run in parallel; HyDE expansion and caching
-  keep retrieval responsive.
-- **Retrieval** – Qdrant stores vectors and payloads; the API orchestrates filtering, reranking, and
-  response formatting (REST, MCP, browser integrations).
+- **Ingestion** – A tiered browser manager fetches pages, extractors clean them,
+  and chunking normalises structure.
+- **Processing** – Dense and sparse embedding providers run in parallel; HyDE
+  expansion and caching keep retrieval responsive.
+- **Retrieval** – Qdrant stores vectors and payloads; the API orchestrates
+  filtering, reranking, and response formatting (REST, MCP, browser integrations).
 
 ## Choose Your Guide
 
@@ -70,5 +73,5 @@ graph LR
 - [Testing and Modernization Report](testing/test-modernization-completion-report.md)
 - [Doc Modernization Summary](reports/doc-modernization/phase0/summary.md)
 
-Questions or improvements? Open an issue or contribute a pull request so that these docs stay up to
-date.
+Questions or improvements? Open an issue or contribute a pull request so that
+these docs stay up to date.
