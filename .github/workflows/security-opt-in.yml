@@ -4,21 +4,21 @@ on:
   workflow_dispatch:
     inputs:
       include_bandit:
-        description: 'Run Bandit static analysis'
+        description: "Run Bandit static analysis"
         required: false
-        default: 'true'
+        default: "true"
       include_safety:
-        description: 'Run Safety vulnerability check'
+        description: "Run Safety vulnerability check"
         required: false
-        default: 'true'
+        default: "true"
   pull_request:
     branches: [main, develop]
     paths:
-      - 'pyproject.toml'
-      - 'uv.lock'
-      - 'requirements*.txt'
-      - 'src/**'
-      - '.github/workflows/security-opt-in.yml'
+      - "pyproject.toml"
+      - "uv.lock"
+      - "requirements*.txt"
+      - "src/**"
+      - ".github/workflows/security-opt-in.yml"
 
 permissions:
   contents: read
@@ -39,8 +39,8 @@ jobs:
       - name: Setup environment
         uses: ./.github/actions/setup-environment
         with:
-          python-version: '3.12'
-          cache-suffix: '-security'
+          python-version: "3.12"
+          cache-suffix: "-security"
 
       - name: Install audit tooling
         run: |
@@ -81,8 +81,8 @@ jobs:
       - name: Setup environment
         uses: ./.github/actions/setup-environment
         with:
-          python-version: '3.12'
-          cache-suffix: '-bandit'
+          python-version: "3.12"
+          cache-suffix: "-bandit"
           install-dev: false
 
       - name: Install Bandit
@@ -93,15 +93,15 @@ jobs:
           set -euo pipefail
           uv tool run bandit -r src -lll -ii -o bandit-report.json -f json
           python3 - <<'PY'
-import json, sys
-with open('bandit-report.json', 'r', encoding='utf-8') as fh:
-    data = json.load(fh)
-issues = [item for item in data.get('results', []) if item.get('issue_severity', '').lower() in {'high', 'medium'}]
-if issues:
-    print(f"Found {len(issues)} potential security issues")
-    sys.exit(1)
-print('No medium/high severity Bandit issues found')
-PY
+          import json, sys
+          with open('bandit-report.json', 'r', encoding='utf-8') as fh:
+            data = json.load(fh)
+          issues = [item for item in data.get('results', []) if item.get('issue_severity', '').lower() in {'high', 'medium'}]
+          if issues:
+            print(f"Found {len(issues)} potential security issues")
+            sys.exit(1)
+          print('No medium/high severity Bandit issues found')
+          PY
 
       - name: Upload bandit report
         if: always()
