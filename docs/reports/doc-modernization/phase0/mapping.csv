@@ -1,8 +1,0 @@
-source_path,new_path,action,rationale
-"docs/api/**","docs/archive/api/","archive","Auto-generated Sphinx stubs; regenerate on demand, remove from MkDocs nav"
-"docs/developers/architecture-diagrams.md","docs/developers/design/architecture-diagrams.md","migrate","Relevant to new IA design section"
-"docs/developers/config-consolidation-validation-report.md","docs/archive/reports/config-consolidation-validation-report.md","archive","Historical validation report, retain for reference"
-"docs/operators/configuration.md","docs/operators/runbooks/configuration.md","merge","Content to be merged into updated operator runbook"
-"planning/done/**","docs/archive/planning/","archive","Compliance-relevant planning dossiers"
-"docs/security/**","docs/developers/security/","migrate","Fold into security handbook; keep compliance-sensitive copies in archive"
-"docs/portfolio/**","docs/archive/legacy-messaging/","archive","Legacy marketing collateral"
