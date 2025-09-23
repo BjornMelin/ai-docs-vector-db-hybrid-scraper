@@ -139,7 +139,7 @@ class BenchmarkReporter:
         {self._generate_charts_javascript(results)}
     </script>
 </body>
-</html>"""
+</html>"""  # noqa: E501
 
     def _get_css_styles(self) -> str:
         """Get CSS styles for HTML report."""
@@ -374,7 +374,7 @@ class BenchmarkReporter:
                 grid-template-columns: 1fr;
             }
         }
-        """
+        """  # noqa: E501
 
     def _format_latency_metrics(self, latency_metrics: dict[str, float]) -> str:
         """Format latency metrics for display."""
@@ -408,7 +408,11 @@ class BenchmarkReporter:
     def _format_throughput_metrics(self, throughput_metrics: dict[str, float]) -> str:
         """Format throughput metrics for display."""
         if not throughput_metrics:
-            return "<div class='metric-item'><span>No throughput data available</span></div>"
+            return (
+                "<div class='metric-item'><span>"
+                "No throughput data available"
+                "</span></div>"
+            )
 
         items = []
         for metric, value in throughput_metrics.items():
@@ -591,7 +595,8 @@ class BenchmarkReporter:
                     </div>
                     <div class="metric-item">
                         <span>Success Rate:</span>
-                        <span class="metric-value metric-good">{((successful_requests / max(total_requests, 1)) * 100):.1f}%</span>
+                        <span class="metric-value
+                        metric-good">{((successful_requests / max(total_requests, 1)) * 100):.1f}%</span>
                     </div>
                     <div class="metric-item">
                         <span>Avg Response Time:</span>
@@ -602,7 +607,7 @@ class BenchmarkReporter:
                         <span class="metric-value">{requests_per_second:.1f} QPS</span>
                     </div>
                 </div>
-            """)
+            """)  # noqa: E501
 
         return f'<div class="load-test-grid">{"".join(cards)}</div>'
 
@@ -636,7 +641,8 @@ class BenchmarkReporter:
 
         if not content:
             content.append(
-                "<p>No specific recommendations available. System performance appears to be within acceptable ranges.</p>"
+                "<p>No specific recommendations available. "
+                "System performance appears to be within acceptable ranges.</p>"
             )
 
         return "".join(content)
@@ -732,7 +738,7 @@ class BenchmarkReporter:
                 }}
             }}
         }});
-        """
+        """  # noqa: E501
 
     def generate_json_report(self, results: Any) -> str:
         """Generate JSON report from benchmark results.

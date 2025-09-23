@@ -609,14 +609,34 @@ class ContentClassifier:
         """
         # Reference texts for each content type (used for semantic similarity)
         reference_texts = {
-            ContentType.DOCUMENTATION: "This is documentation that explains how to use a software system or API.",
-            ContentType.CODE: "This is source code with functions, classes, and programming logic.",
-            ContentType.FAQ: "This is a frequently asked questions section with questions and answers.",
-            ContentType.TUTORIAL: "This is a step-by-step tutorial that teaches how to accomplish a task.",
-            ContentType.REFERENCE: "This is an API reference with technical specifications and parameters.",
-            ContentType.BLOG: "This is a blog post or article written by an author on a specific topic.",
-            ContentType.NEWS: "This is a news article reporting on recent events or announcements.",
-            ContentType.FORUM: "This is a forum discussion with posts, replies, and community interaction.",
+            ContentType.DOCUMENTATION: (
+                "This is documentation that explains how to use a software system or "
+                "API."
+            ),
+            ContentType.CODE: (
+                "This is source code with functions, classes, and programming logic."
+            ),
+            ContentType.FAQ: (
+                "This is a frequently asked questions section with "
+                "questions and answers."
+            ),
+            ContentType.TUTORIAL: (
+                "This is a step-by-step tutorial that teaches how to accomplish a task."
+            ),
+            ContentType.REFERENCE: (
+                "This is an API reference with technical specifications and parameters."
+            ),
+            ContentType.BLOG: (
+                "This is a blog post or article written by an author "
+                "on a specific topic."
+            ),
+            ContentType.NEWS: (
+                "This is a news article reporting on recent events or announcements."
+            ),
+            ContentType.FORUM: (
+                "This is a forum discussion with posts, replies, and "
+                "community interaction."
+            ),
         }
 
         try:
@@ -883,7 +903,8 @@ class ContentClassifier:
         """
         content_lower = content.lower()
 
-        # Forum vs Code disambiguation: forums often contain code but have discussion patterns
+        # Forum vs Code disambiguation: forums
+        # often contain code but have discussion patterns
         if (
             type_scores.get(ContentType.CODE, 0) > 0.3
             and type_scores.get(ContentType.FORUM, 0) > 0.1
