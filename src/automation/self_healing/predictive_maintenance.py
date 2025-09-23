@@ -343,7 +343,6 @@ class ComponentHealthAnalyzer:
         self, component: str, metrics: dict[str, float]
     ) -> ComponentHealthAssessment:
         """Assess health of a system component based on current metrics."""
-
         # Initialize baseline if not exists
         if component not in self.component_baselines:
             self.component_baselines[component] = metrics.copy()
@@ -634,7 +633,8 @@ class ComponentHealthAnalyzer:
 
 class PredictiveMaintenanceScheduler:
     """Schedules predictive maintenance based on ML predictions and business
-    constraints."""
+    constraints.
+    """
 
     def __init__(
         self,
@@ -830,7 +830,8 @@ class PredictiveMaintenanceScheduler:
         anomalies: list[AnomalyDetection],
     ) -> list[MaintenanceRecommendation]:
         """Generate maintenance recommendations based on health assessments and
-        anomalies."""
+        anomalies.
+        """
         recommendations = []
         current_time = datetime.now(tz=datetime.UTC)
 

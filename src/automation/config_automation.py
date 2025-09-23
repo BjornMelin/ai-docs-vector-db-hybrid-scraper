@@ -179,6 +179,7 @@ class AutoConfigManager:
     """Automatically manages configuration with smart defaults and validation."""
 
     def __init__(self):
+        """Initialize the auto config manager."""
         self.config: ZeroMaintenanceConfig | None = None
         self._config_hash: str | None = None
 
@@ -280,6 +281,7 @@ class ConfigDriftHealer:
     """Automatically detects and heals configuration drift."""
 
     def __init__(self, config_manager: AutoConfigManager):
+        """Initialize the config drift detector."""
         self.config_manager = config_manager
         self.drift_patterns: dict[str, Any] = {}
         self.healing_enabled = True
