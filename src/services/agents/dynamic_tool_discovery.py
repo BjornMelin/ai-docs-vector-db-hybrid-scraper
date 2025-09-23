@@ -1,7 +1,8 @@
-"""Dynamic Tool Discovery Engine - J3 Research Implementation.
+"""
+Dynamic Tool Discovery Engine - J3 Research Implementation.
 
-This module implements intelligent tool discovery and capability assessment
-based on J3 research findings for autonomous tool orchestration.
+This module implements tool discovery and capability assessment
+based on J3 research findings for tool orchestration.
 """
 
 import asyncio
@@ -77,10 +78,10 @@ class ToolCapability(BaseModel):
 
 
 class DynamicToolDiscovery(BaseAgent):
-    """Dynamic tool discovery engine with intelligent capability assessment.
+    """Dynamic tool discovery engine with capability assessment.
 
-    Based on J3 research findings for autonomous tool orchestration with
-    performance-driven selection and real-time capability evaluation.
+    Based on J3 research findings for tool orchestration with
+    performance-based selection and capability evaluation.
     """
 
     def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.1):
@@ -103,11 +104,11 @@ class DynamicToolDiscovery(BaseAgent):
         self.capability_cache: dict[str, ToolCapability] = {}
 
     def get_system_prompt(self) -> str:
-        """Define autonomous tool discovery behavior."""
+        """Define tool discovery behavior."""
         return (
-            "You are an autonomous tool discovery engine with the following "
+            "You are a tool discovery engine with the following "
             "capabilities:\n\n"
-            "1. INTELLIGENT TOOL ASSESSMENT\n"
+            "1. TOOL ASSESSMENT\n"
             "   - Analyze tool capabilities and performance characteristics\n"
             "   - Assess compatibility between different tools for chaining\n"
             "   - Evaluate tool suitability for specific task requirements\n\n"
@@ -119,8 +120,8 @@ class DynamicToolDiscovery(BaseAgent):
             "   - Select optimal tools based on performance requirements\n"
             "   - Balance speed, quality, cost, and reliability constraints\n"
             "   - Recommend tool combinations for complex workflows\n\n"
-            "Your goal is to provide intelligent tool discovery and capability "
-            "assessment for autonomous agent systems, enabling optimal tool "
+            "Your goal is to provide tool discovery and capability "
+            "assessment for agent systems, enabling optimal tool "
             "selection and orchestration."
         )
 
@@ -135,7 +136,8 @@ class DynamicToolDiscovery(BaseAgent):
         fallback_reason = getattr(self, "_fallback_reason", None)
         if fallback_reason:
             logger.info(
-                f"DynamicToolDiscovery tools initialized in fallback mode (reason: {fallback_reason})"
+                f"DynamicToolDiscovery tools initialized in fallback mode "
+                f"(reason: {fallback_reason})"
             )
         else:
             logger.info("DynamicToolDiscovery tools initialized (discovery-based)")

@@ -168,7 +168,10 @@ class _DependencyContainerSingleton:
     def get_instance(cls) -> DependencyContainer:
         """Get the singleton dependency container instance."""
         if cls._instance is None:
-            msg = "Dependency container not initialized. Call initialize_dependencies() first."
+            msg = (
+                "Dependency container not initialized. "
+                "Call initialize_dependencies() first."
+            )
             raise RuntimeError(msg)
         return cls._instance
 

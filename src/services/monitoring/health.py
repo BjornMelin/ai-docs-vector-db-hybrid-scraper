@@ -1,6 +1,6 @@
 """Health check system for monitoring service dependencies and application health.
 
-This module provides comprehensive health checking for all system dependencies
+This module provides health checking for all system dependencies
 including Qdrant, Redis, external APIs, and internal services.
 """
 
@@ -431,7 +431,10 @@ class HTTPHealthCheck(HealthCheck):
         return HealthCheckResult(
             name=self.name,
             status=HealthStatus.UNHEALTHY,
-            message=f"HTTP endpoint returned status {response.status}, expected {self.expected_status}",
+            message=(
+                f"HTTP endpoint returned status {response.status}, "
+                f"expected {self.expected_status}"
+            ),
             duration_ms=0.0,
             metadata={"status_code": response.status},
         )

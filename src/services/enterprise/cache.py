@@ -1,6 +1,6 @@
 """Enterprise mode cache service implementation.
 
-Full-featured caching service with distributed caching, analytics, and advanced features
+Caching service with distributed caching, analytics, and features
 for enterprise deployments.
 """
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class EnterpriseCacheService(BaseService):
-    """Full-featured cache service for enterprise deployments.
+    """Cache service for enterprise deployments.
 
     Features:
     - Multi-tier caching (memory + distributed)

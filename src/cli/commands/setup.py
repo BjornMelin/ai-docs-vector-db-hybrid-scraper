@@ -80,9 +80,7 @@ class ConfigurationWizard:
         welcome_text.append(
             "• 🎯 Profile-based configuration templates\n", style="cyan"
         )
-        welcome_text.append(
-            "• ⚡ Validation with helpful feedback\n", style="cyan"
-        )
+        welcome_text.append("• ⚡ Validation with helpful feedback\n", style="cyan")
         welcome_text.append("• 🛠️ Customization options\n", style="cyan")
         welcome_text.append("• 📋 Template preview and comparison\n", style="cyan")
         welcome_text.append("• 🔧 Environment-specific optimizations", style="cyan")

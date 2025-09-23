@@ -136,7 +136,7 @@ class MonitoringConfig(BaseModel):
 
 
 class BrowserAutomationMonitor:
-    """Comprehensive monitoring system for 5-tier browser automation."""
+    """Monitoring system for 5-tier browser automation."""
 
     def __init__(self, config: MonitoringConfig = None):
         """Initialize monitoring system.
@@ -333,7 +333,10 @@ class BrowserAutomationMonitor:
                 {
                     "alert_type": AlertType.HIGH_ERROR_RATE,
                     "severity": AlertSeverity.HIGH,
-                    "message": f"High error rate in {tier}: {(1 - metrics.success_rate) * 100:.1f}%",
+                    "message": (
+                        f"High error rate in {tier}: "
+                        f"{(1 - metrics.success_rate) * 100:.1f}%"
+                    ),
                     "metadata": {
                         "success_rate": metrics.success_rate,
                         "threshold": self.config.error_rate_threshold,
@@ -347,7 +350,10 @@ class BrowserAutomationMonitor:
                 {
                     "alert_type": AlertType.SLOW_RESPONSE_TIME,
                     "severity": AlertSeverity.MEDIUM,
-                    "message": f"Slow response time in {tier}: {metrics.avg_response_time_ms:.0f}ms",
+                    "message": (
+                        f"Slow response time in {tier}: "
+                        f"{metrics.avg_response_time_ms:.0f}ms"
+                    ),
                     "metadata": {
                         "response_time_ms": metrics.avg_response_time_ms,
                         "threshold": self.config.response_time_threshold_ms,
@@ -361,7 +367,10 @@ class BrowserAutomationMonitor:
                 {
                     "alert_type": AlertType.CACHE_MISS_RATE,
                     "severity": AlertSeverity.LOW,
-                    "message": f"Low cache hit rate in {tier}: {metrics.cache_hit_rate * 100:.1f}%",
+                    "message": (
+                        f"Low cache hit rate in {tier}: "
+                        f"{metrics.cache_hit_rate * 100:.1f}%"
+                    ),
                     "metadata": {
                         "cache_hit_rate": metrics.cache_hit_rate,
                         "threshold": self.config.cache_miss_threshold,

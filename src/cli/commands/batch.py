@@ -229,7 +229,8 @@ def index_documents(
                 # Process batch with parallel workers
                 # Note: Document indexing not implemented yet
                 rich_cli.console.print(
-                    "[yellow]Document indexing functionality will be implemented in a future update.[/yellow]"
+                    "[yellow]Document indexing functionality will be "
+                    "implemented in a future update.[/yellow]"
                 )
 
                 # Update progress for all items in batch

@@ -412,7 +412,7 @@ def create_noop_meter() -> _NoOpMeter:
 class PerformanceTracker:
     """Performance tracking for agentic systems with OpenTelemetry integration.
 
-    Provides comprehensive performance monitoring for agent coordination,
+    Provides performance monitoring for agent coordination,
     tool execution, and system health metrics.
     """
 

@@ -1,6 +1,6 @@
 """Result clustering service for semantic grouping of search results.
 
-This module provides advanced result clustering capabilities using various algorithms
+This module provides result clustering capabilities using various algorithms
 including HDBSCAN, DBSCAN, K-means, and agglomerative clustering to semantically
 group search results for better organization and presentation.
 """

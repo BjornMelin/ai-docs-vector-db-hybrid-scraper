@@ -1,7 +1,7 @@
-"""Optimized text analysis algorithms for high-performance processing.
+"""Text analysis algorithms for processing.
 
 This module implements O(n) text analysis algorithms to replace O(n²) implementations,
-achieving 80% performance improvement through efficient algorithms and caching.
+achieving performance improvement through efficient algorithms and caching.
 """
 
 import functools

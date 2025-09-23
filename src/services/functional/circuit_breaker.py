@@ -134,8 +134,9 @@ class CircuitBreaker:
         self._lock = asyncio.Lock()
 
         logger.info(
-            f"Circuit breaker initialized: {config.failure_threshold} threshold, "
-            f"{config.recovery_timeout}s recovery",
+            "Circuit breaker initialized: %s threshold, %ss recovery",
+            config.failure_threshold,
+            config.recovery_timeout,
         )
 
     async def call(
@@ -288,8 +289,9 @@ class CircuitBreaker:
             self.state = CircuitBreakerState.OPEN
             self.metrics.state_changes += 1
             logger.warning(
-                f"Circuit breaker OPEN: {self.failure_count} failures, "
-                f"failure_rate={self.metrics.failure_rate:.2%}",
+                "Circuit breaker OPEN: %d failures, failure_rate=%.2f%%",
+                self.failure_count,
+                self.metrics.failure_rate * 100,
             )
 
     async def _close_circuit(self) -> None:
@@ -300,8 +302,9 @@ class CircuitBreaker:
             self.failure_count = 0
             self.metrics.state_changes += 1
             logger.info(
-                f"Circuit breaker CLOSED: recovered from {old_state.value}",
-            )  # TODO: Convert f-string to logging format
+                "Circuit breaker CLOSED: recovered from %s",
+                old_state.value,
+            )
 
     async def _transition_to_half_open(self) -> None:
         """Transition to HALF_OPEN state."""

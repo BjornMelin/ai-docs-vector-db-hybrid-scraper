@@ -1,4 +1,4 @@
-"""Parallel ML processing engine for high-performance embedding generation.
+"""Parallel ML processing engine for embedding generation.
 
 This module implements parallel processing capabilities for ML components including
 embeddings, content classification, and metadata extraction to achieve 3-5x speedup
@@ -51,7 +51,7 @@ class ProcessingMetrics:
 
 
 class ParallelProcessor:
-    """High-performance parallel processor for ML operations."""
+    """Parallel processor for ML operations."""
 
     def __init__(
         self,
@@ -77,7 +77,7 @@ class ParallelProcessor:
         items: list[T],
         enable_caching: bool = True,
     ) -> tuple[list[R], ProcessingMetrics]:
-        """Process items in parallel with optimal batching and caching.
+        """Process items in parallel with batching and caching.
 
         Args:
             items: List of items to process
@@ -215,8 +215,10 @@ class ParallelProcessor:
         if not self.config.adaptive_batching:
             return {
                 "batch_size": self.config.batch_size_per_worker,
-                "num_batches": (total_items + self.config.batch_size_per_worker - 1)
-                // self.config.batch_size_per_worker,
+                "num_batches": (
+                    (total_items + self.config.batch_size_per_worker - 1)
+                    // self.config.batch_size_per_worker
+                ),
                 "reasoning": "Static configuration",
             }
 
@@ -285,7 +287,7 @@ class ParallelProcessor:
         end_time: float,
         batch_config: dict[str, Any],
     ) -> ProcessingMetrics:
-        """Calculate comprehensive performance metrics.
+        """Calculate performance metrics.
 
         Args:
             items: Original items processed

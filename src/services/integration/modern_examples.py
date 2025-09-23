@@ -195,7 +195,9 @@ def create_fastapi_app_with_modern_features(config: Config) -> FastAPI:
     """
     app = FastAPI(
         title="AI Docs API with Modern Libraries",
-        description="Example API using modern circuit breaker, caching, and rate limiting",
+        description=(
+            "Example API using modern circuit breaker, caching, and rate limiting"
+        ),
     )
 
     # Determine Redis URL

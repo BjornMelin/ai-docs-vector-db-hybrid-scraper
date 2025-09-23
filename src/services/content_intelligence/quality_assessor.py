@@ -1,6 +1,6 @@
 """Content quality assessment with multi-metric scoring system.
 
-This module provides comprehensive quality assessment for extracted content,
+This module provides quality assessment for extracted content,
 including completeness, relevance, confidence, freshness, structure quality,
 readability, and duplicate detection with similarity thresholds.
 """
@@ -750,7 +750,8 @@ class QualityAssessor:
             word_count = len(content.split())
             if word_count < self._quality_config["min_word_count"]:
                 issues.append(
-                    f"Content too short ({word_count} words, minimum {self._quality_config['min_word_count']})"
+                    f"Content too short ({word_count} words, "
+                    f"minimum {self._quality_config['min_word_count']})"
                 )
             else:
                 issues.append("Content appears incomplete")

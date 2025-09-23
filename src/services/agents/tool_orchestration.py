@@ -172,14 +172,14 @@ class ToolExecutionResult(BaseModel):
 
 
 class AdvancedToolOrchestrator:
-    """Advanced orchestrator for intelligent tool composition and execution.
+    """Orchestrator for tool composition and execution.
 
-    Implements sophisticated orchestration patterns including:
-    - Intelligent tool selection based on capabilities and performance
+    Implements orchestration patterns including:
+    - Tool selection based on capabilities and performance
     - Dynamic workflow composition based on goals and constraints
     - Parallel and pipeline execution with dependency management
-    - Adaptive execution with fallback and recovery mechanisms
-    - Real-time performance optimization and resource management
+    - Execution with fallback and recovery mechanisms
+    - Performance optimization and resource management
     """
 
     def __init__(
@@ -218,7 +218,7 @@ class AdvancedToolOrchestrator:
         self.tool_avg_durations: dict[str, float] = {}
         self.capability_performance: dict[ToolCapability, list[str]] = {}
 
-        logger.info("AdvancedToolOrchestrator initialized")
+        logger.info("ToolOrchestrator initialized")
 
     async def register_tool(self, tool_def: ToolDefinition) -> None:
         """Register a tool for orchestrated execution.
@@ -245,7 +245,8 @@ class AdvancedToolOrchestrator:
             self.capability_performance[capability].append(tool_def.tool_id)
 
         logger.info(
-            f"Registered tool {tool_def.tool_id} with capabilities: {tool_def.capabilities}"
+            f"Registered tool {tool_def.tool_id} with capabilities: "
+            f"{tool_def.capabilities}"
         )
 
     async def compose_tool_chain(
@@ -305,7 +306,7 @@ class AdvancedToolOrchestrator:
 
             logger.info(f"Composed tool chain {plan_id} with {len(nodes)} tools")
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Failed to compose tool chain")
             raise
 
@@ -396,10 +397,11 @@ class AdvancedToolOrchestrator:
             }
 
             logger.info(
-                f"Tool chain execution {execution_id} completed with {success_rate * 100:.2f}%% success rate"
+                f"Tool chain execution {execution_id} completed with "
+                f"{success_rate * 100:.2f}%% success rate"
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             execution_time = time.time() - start_time
 
             logger.exception(f"Tool chain execution {execution_id} failed")
@@ -840,7 +842,11 @@ class AdvancedToolOrchestrator:
             try:
                 result = await self._execute_node(node, execution_state)
                 results[node.node_id] = result
-            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
+            except (
+                asyncio.CancelledError,
+                TimeoutError,
+                RuntimeError,
+            ) as e:  # noqa: BLE001
                 results[node.node_id] = {"error": str(e)}
 
         return results
@@ -865,7 +871,11 @@ class AdvancedToolOrchestrator:
             try:
                 result = await self._execute_node(node, execution_state)
                 results[node.node_id] = result
-            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
+            except (
+                asyncio.CancelledError,
+                TimeoutError,
+                RuntimeError,
+            ) as e:  # noqa: BLE001
                 results[node.node_id] = {"error": str(e)}
 
         return results
@@ -882,7 +892,11 @@ class AdvancedToolOrchestrator:
             return await self._execute_parallel_nodes(
                 plan, execution_state, timeout_seconds / 2
             )
-        except (OSError, PermissionError, RuntimeError):
+        except (
+            OSError,
+            PermissionError,
+            RuntimeError,
+        ):  # noqa: BLE001
             return await self._execute_sequential_nodes(
                 plan, execution_state, timeout_seconds / 2
             )
@@ -930,7 +944,7 @@ class AdvancedToolOrchestrator:
                 node.error = result.error
                 execution_state["failed_nodes"].add(node.node_id)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             node.end_time = datetime.now(tz=UTC)
             node.status = "failed"
             node.error = str(e)
@@ -951,7 +965,8 @@ class AdvancedToolOrchestrator:
     ) -> ToolExecutionResult:
         """Execute a fallback tool."""
         logger.info(
-            f"Executing fallback tool {fallback_tool_id} for execution {original_execution_id}"
+            f"Executing fallback tool {fallback_tool_id} for execution "
+            f"{original_execution_id}"
         )
 
         result = await self.execute_single_tool(

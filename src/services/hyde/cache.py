@@ -478,13 +478,14 @@ class HyDECache(BaseService):
                     results[query] = False  # Needs generation
 
             except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-                logger.warning(
-                    f"Cache warm-up error for query '{query}': {e}"
-                )  # TODO: Convert f-string to logging format
+                logger.warning("Cache warm-up error for query '%s': %s", query, e)
                 results[query] = False
 
+        already_cached = sum(results.values())
         logger.info(
-            f"Cache warm-up completed: {sum(results.values())}/{len(results)} already cached"
+            "Cache warm-up completed: %d/%d already cached",
+            already_cached,
+            len(results),
         )
 
         return results
@@ -518,13 +519,11 @@ class HyDECache(BaseService):
             success_count = sum(1 for result in results if result is True)
 
             logger.debug(
-                f"Invalidated {success_count} cache entries for query: {query}"
+                "Invalidated %d cache entries for query: %s", success_count, query
             )
 
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            logger.warning(
-                f"Cache invalidation error for query '{query}': {e}"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Cache invalidation error for query '%s': %s", query, e)
             return False
 
         else:

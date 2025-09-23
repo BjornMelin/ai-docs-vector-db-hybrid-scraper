@@ -200,8 +200,10 @@ class CompressionMiddleware(BaseHTTPMiddleware):
         # Log compression ratio
         compression_ratio = len(original_body) / len(compressed_body)
         logger.debug(
-            f"Compressed response: {len(original_body)} -> {len(compressed_body)} bytes "
-            f"(ratio: {compression_ratio:.2f}x)"
+            "Compressed response: %s -> %s bytes (ratio: %.2f)x",
+            len(original_body),
+            len(compressed_body),
+            compression_ratio,
         )
 
         return compressed_response
@@ -410,8 +412,10 @@ class BrotliCompressionMiddleware(BaseHTTPMiddleware):
         # Log compression ratio
         compression_ratio = len(original_body) / len(compressed_body)
         logger.debug(
-            f"Brotli compressed response: {len(original_body)} -> {len(compressed_body)} bytes "
-            f"(ratio: {compression_ratio:.2f}x)"
+            "Brotli compressed response: %s -> %s bytes (ratio: %.2f)x",
+            len(original_body),
+            len(compressed_body),
+            compression_ratio,
         )
 
         return compressed_response

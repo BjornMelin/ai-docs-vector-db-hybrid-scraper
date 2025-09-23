@@ -1,4 +1,4 @@
-"""Main Content Intelligence Service for AI-powered adaptive extraction.
+"""Main Content Intelligence Service for adaptive extraction.
 
 This module provides the main ContentIntelligenceService class that orchestrates
 all content intelligence components: classification, quality assessment,
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 
 class ContentIntelligenceService(BaseService):
-    """AI-powered Content Intelligence Service for adaptive extraction.
+    """Content Intelligence Service for adaptive extraction.
 
     Provides lightweight semantic analysis, quality assessment, and automatic
     adaptation for improved web scraping extraction quality using local models
@@ -84,8 +84,12 @@ class ContentIntelligenceService(BaseService):
                     strategy=AdaptationStrategy.EXTRACT_MAIN_CONTENT,
                     priority="high",
                     confidence=0.9,
-                    reasoning="GitHub content is well-structured with consistent selectors",
-                    implementation_notes="Use .markdown-body or .blob-wrapper selectors",
+                    reasoning=(
+                        "GitHub content is well-structured with consistent selectors"
+                    ),
+                    implementation_notes=(
+                        "Use .markdown-body or .blob-wrapper selectors"
+                    ),
                     estimated_improvement=0.3,
                     site_domain="github.com",
                     selector_patterns=[".markdown-body", ".blob-wrapper", ".readme"],
@@ -96,8 +100,10 @@ class ContentIntelligenceService(BaseService):
                     strategy=AdaptationStrategy.FOLLOW_SCHEMA,
                     priority="high",
                     confidence=0.85,
-                    reasoning="Stack Overflow uses consistent question/answer schema",
-                    implementation_notes="Use .question and .answer selectors with vote counts",
+                    reasoning=("Stack Overflow uses consistent question/answer schema"),
+                    implementation_notes=(
+                        "Use .question and .answer selectors with vote counts"
+                    ),
                     estimated_improvement=0.4,
                     site_domain="stackoverflow.com",
                     selector_patterns=[".question", ".answer", ".post-text"],
@@ -150,7 +156,7 @@ class ContentIntelligenceService(BaseService):
         request: ContentAnalysisRequest,
         existing_content: list[str] | None = None,
     ) -> ContentAnalysisResponse:
-        """Analyze content with comprehensive intelligence assessment.
+        """Analyze content with intelligence assessment.
 
         Args:
             request: Content analysis request with content and options
@@ -519,35 +525,47 @@ class ContentIntelligenceService(BaseService):
         """
         recommendations = []
 
-        # Low completeness recommendations
+        # Low completeness
+        # recommendations
         if quality_score.completeness < 0.5:
             recommendations.append(
                 AdaptationRecommendation(
                     strategy=AdaptationStrategy.EXTRACT_MAIN_CONTENT,
                     priority="high",
                     confidence=0.8,
-                    reasoning="Low completeness detected, may need better content extraction",
-                    implementation_notes="Try extracting main content area or waiting for dynamic content",
+                    reasoning=(
+                        "Low completeness detected, may need better content extraction"
+                    ),
+                    implementation_notes=(
+                        "Try extracting main content area or waiting for "
+                        "dynamic content"
+                    ),
                     estimated_improvement=0.3,
                     fallback_strategies=[AdaptationStrategy.WAIT_FOR_LOAD],
                 )
             )
 
-        # Low confidence recommendations
+        # Low confidence
+        # recommendations
         if quality_score.confidence < 0.6:
             recommendations.append(
                 AdaptationRecommendation(
                     strategy=AdaptationStrategy.HANDLE_DYNAMIC,
                     priority="medium",
                     confidence=0.7,
-                    reasoning="Low extraction confidence, content may be dynamically loaded",
-                    implementation_notes="Use JavaScript execution or wait for content to load",
+                    reasoning=(
+                        "Low extraction confidence, content may be dynamically loaded"
+                    ),
+                    implementation_notes=(
+                        "Use JavaScript execution or wait for content to load"
+                    ),
                     estimated_improvement=0.25,
                     fallback_strategies=[AdaptationStrategy.SCROLL_TO_LOAD],
                 )
             )
 
-        # Structure quality recommendations
+        # Structure quality
+        # recommendations
         if quality_score.structure_quality < 0.5:
             recommendations.append(
                 AdaptationRecommendation(
@@ -555,7 +573,9 @@ class ContentIntelligenceService(BaseService):
                     priority="medium",
                     confidence=0.6,
                     reasoning="Poor content structure detected",
-                    implementation_notes="Look for structured data or consistent selectors",
+                    implementation_notes=(
+                        "Look for structured data or consistent selectors"
+                    ),
                     estimated_improvement=0.2,
                 )
             )
@@ -620,9 +640,11 @@ class ContentIntelligenceService(BaseService):
         # Create hash from content and key parameters
         content_hash = hashlib.sha256(request.content.encode()).hexdigest()
         options_hash = hashlib.sha256(
-            f"{request.enable_classification}-{request.enable_quality_assessment}-"
-            f"{request.enable_metadata_extraction}-{request.enable_adaptations}-"
-            f"{request.confidence_threshold}".encode()
+            (
+                f"{request.enable_classification}-{request.enable_quality_assessment}-"
+                f"{request.enable_metadata_extraction}-{request.enable_adaptations}-"
+                f"{request.confidence_threshold}"
+            ).encode()
         ).hexdigest()
 
         return f"content_intelligence:{content_hash}:{options_hash}"

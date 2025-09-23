@@ -67,8 +67,9 @@ async def generate_embeddings(
         )
 
         logger.info(
-            f"Generated embeddings for {len(texts)} texts "
-            f"using {result.get('provider', 'unknown')} provider",
+            "Generated embeddings for %d texts using %s provider",
+            len(texts),
+            result.get("provider", "unknown"),
         )
 
     except Exception as e:
@@ -109,9 +110,7 @@ async def rerank_results(
             return results
 
         reranked = await embedding_client.rerank_results(query, results)
-        logger.info(
-            f"Reranked {len(results)} results",
-        )  # TODO: Convert f-string to logging format
+        logger.info("Reranked %d results", len(results))
 
     except (AttributeError, ConnectionError, OSError):
         logger.exception("Reranking failed")
@@ -147,9 +146,10 @@ async def analyze_text_characteristics(
         analysis = embedding_client.analyze_text_characteristics(texts)
 
         logger.debug(
-            f"Analyzed {len(texts)} texts: "
-            f"type={analysis.text_type}, "
-            f"complexity={analysis.complexity_score:.2f}",
+            "Analyzed %d texts: type=%s, complexity=%.2f",
+            len(texts),
+            analysis.text_type,
+            analysis.complexity_score,
         )
 
     except Exception as e:
@@ -188,9 +188,7 @@ async def estimate_embedding_cost(
 
     try:
         costs = embedding_client.estimate_cost(texts, provider_name)
-        logger.debug(
-            f"Estimated costs for {len(texts)} texts",
-        )  # TODO: Convert f-string to logging format
+        logger.debug("Estimated costs for %d texts", len(texts))
 
     except Exception as e:
         logger.exception("Cost estimation failed")
@@ -224,9 +222,7 @@ async def get_provider_info(
             return {}
 
         info = embedding_client.get_provider_info()
-        logger.debug(
-            f"Retrieved info for {len(info)} providers",
-        )  # TODO: Convert f-string to logging format
+        logger.debug("Retrieved info for %d providers", len(info))
 
     except Exception as e:
         logger.exception("Provider info retrieval failed")
@@ -279,8 +275,11 @@ async def get_smart_recommendation(
         )
 
         logger.info(
-            f"Smart recommendation: {recommendation['provider']}/{recommendation['model']} "
-            f"(${recommendation['estimated_cost']:.4f}) - {recommendation['reasoning']}",
+            "Smart recommendation: %s/%s ($%.4f) - %s",
+            recommendation["provider"],
+            recommendation["model"],
+            recommendation["estimated_cost"],
+            recommendation["reasoning"],
         )
 
     except Exception as e:
@@ -376,9 +375,7 @@ async def batch_generate_embeddings(
         processed_results = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                logger.error(
-                    f"Batch {i} failed: {result}",
-                )  # TODO: Convert f-string to logging format
+                logger.error("Batch %d failed: %s", i, result)
                 processed_results.append(
                     {
                         "success": False,
@@ -389,9 +386,11 @@ async def batch_generate_embeddings(
             else:
                 processed_results.append(result)
 
+        success_count = sum(1 for r in processed_results if r.get("success", True))
         logger.info(
-            f"Processed {len(text_batches)} batches with "
-            f"{sum(1 for r in processed_results if r.get('success', True))} successes",
+            "Processed %d batches with %d successes",
+            len(text_batches),
+            success_count,
         )
 
     except Exception as e:

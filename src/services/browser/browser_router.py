@@ -81,7 +81,7 @@ class TierCircuitBreaker:
 
 
 class EnhancedAutomationRouter(AutomationRouter):
-    """Enhanced automation router with advanced routing capabilities."""
+    """Automation router with routing capabilities."""
 
     def __init__(self, config: Config):
         """Initialize enhanced router with configuration."""
@@ -162,10 +162,16 @@ class EnhancedAutomationRouter(AutomationRouter):
                         break
                 else:
                     # No available fallback, will fail
-                    msg = f"Circuit breaker open for {selected_tier} and no fallbacks available"
+                    msg = (
+                        f"Circuit breaker open for {selected_tier} and "
+                        "no fallbacks available"
+                    )
                     raise CrawlServiceError(msg)
             else:
-                msg = f"Circuit breaker open for {selected_tier} with no fallback configured"
+                msg = (
+                    f"Circuit breaker open for {selected_tier} with "
+                    "no fallback configured"
+                )
                 raise CrawlServiceError(msg)
 
         # Execute scraping with rate limiting
@@ -627,7 +633,8 @@ class EnhancedAutomationRouter(AutomationRouter):
                 ):
                     analysis.health_status = "degraded"
                     analysis.health_reasons.append(
-                        f"Average response time {analysis.average_response_time_ms:.0f}ms "
+                        f"Average response time "
+                        f"{analysis.average_response_time_ms:.0f}ms "
                         f"above threshold {thresholds.max_avg_response_time_ms:.0f}ms"
                     )
 
@@ -675,9 +682,15 @@ class EnhancedAutomationRouter(AutomationRouter):
                 "circuit_breakers": circuit_status,
                 "history_size": len(self.performance_history),
                 "config": {
-                    "performance_routing_enabled": self.routing_config.enable_performance_routing,
-                    "intelligent_fallback_enabled": self.routing_config.enable_intelligent_fallback,
-                    "cost_optimization_enabled": self.routing_config.enable_cost_optimization,
+                    "performance_routing_enabled": (
+                        self.routing_config.enable_performance_routing
+                    ),
+                    "intelligent_fallback_enabled": (
+                        self.routing_config.enable_intelligent_fallback
+                    ),
+                    "cost_optimization_enabled": (
+                        self.routing_config.enable_cost_optimization
+                    ),
                 },
             }
 

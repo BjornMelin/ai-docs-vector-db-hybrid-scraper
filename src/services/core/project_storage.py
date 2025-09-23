@@ -36,8 +36,9 @@ class ProjectStorage:
 
         Args:
             data_dir: Required base data directory from UnifiedConfig. Must be provided.
-            storage_path: Optional custom path to storage file. If not provided, defaults to data_dir/projects.json.
-                When both storage_path and data_dir are provided, storage_path takes precedence.
+            storage_path: Optional custom path to storage file. If not provided,
+                defaults to data_dir/projects.json. When both storage_path and
+                data_dir are provided, storage_path takes precedence.
 
         """
         if storage_path is None:

@@ -1,7 +1,8 @@
 """Shared extraction utilities for web crawling providers.
 
 This module provides reusable components for JavaScript execution and
-documentation extraction that can be used across different crawling providers.
+documentation extraction that can be used across different crawling
+providers.
 """
 
 from urllib.parse import urlparse

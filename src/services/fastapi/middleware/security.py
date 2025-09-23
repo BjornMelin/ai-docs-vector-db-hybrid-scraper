@@ -1,8 +1,8 @@
 """Security middleware for production-grade security headers and protection.
 
-This middleware adds essential security headers and provides basic protection
-against common web vulnerabilities in production deployments, including
-Redis-backed rate limiting for distributed deployment scenarios.
+This middleware adds essential security headers and provides
+basic protection against common web vulnerabilities in production deployments,
+including Redis-backed rate limiting for distributed deployment scenarios.
 """
 
 import logging

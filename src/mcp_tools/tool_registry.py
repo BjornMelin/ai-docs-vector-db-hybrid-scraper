@@ -54,15 +54,15 @@ async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") ->
     tools.projects.register_tools(mcp, client_manager)
     registered_tools.append("projects")
 
-    # Advanced features
-    logger.info("Registering advanced tools...")
+    # Additional features
+    logger.info("Registering additional tools...")
     tools.search_tools.register_tools(mcp, client_manager)
     registered_tools.append("search_tools")
 
     tools.query_processing.register_tools(mcp, client_manager)
     registered_tools.append("query_processing")
 
-    # New advanced filtering and query processing capabilities
+    # Additional filtering and query processing capabilities
     tools.filtering_tools.register_filtering_tools(mcp, client_manager)
     registered_tools.append("filtering_tools")
 
@@ -88,16 +88,17 @@ async def register_all_tools(mcp: "FastMCP", client_manager: "ClientManager") ->
     tools.content_intelligence.register_tools(mcp, client_manager)
     registered_tools.append("content_intelligence")
 
-    # Agentic RAG (NEW - Pydantic-AI based autonomous agents)
-    logger.info("Registering agentic RAG tools...")
+    # RAG (Pydantic-AI based agents)
+    logger.info("Registering RAG tools...")
     try:
         tools.agentic_rag.register_tools(mcp, client_manager)
         registered_tools.append("agentic_rag")
     except ImportError as e:
-        logger.warning(f"Agentic RAG tools not available (missing dependencies): {e}")
-    except Exception:
-        logger.exception("Failed to register agentic RAG tools")
+        logger.warning("RAG tools not available (missing dependencies): %s", e)
+    except Exception:  # noqa: BLE001
+        logger.exception("Failed to register RAG tools")
 
+    tool_list = ", ".join(registered_tools)
     logger.info(
-        f"Successfully registered {len(registered_tools)} tool modules: {', '.join(registered_tools)}"
+        f"Successfully registered {len(registered_tools)} tool modules: {tool_list}"
     )

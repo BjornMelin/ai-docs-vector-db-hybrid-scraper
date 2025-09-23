@@ -1,6 +1,6 @@
-"""Advanced Query Intent Classification.
+"""Query Intent Classification.
 
-This module provides comprehensive query intent classification using both
+This module provides query intent classification using both
 rule-based patterns and semantic analysis to categorize queries into 14
 distinct intent categories for optimal search strategy selection.
 """

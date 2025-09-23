@@ -1,6 +1,6 @@
 """Consolidated error classes for all services and MCP server.
 
-This module provides a comprehensive error hierarchy for the AI Documentation Vector DB project,
+This module provides an error hierarchy for the AI Documentation Vector DB project,
 following best practices from Pydantic 2.0 and FastMCP 2.0.
 
 Error Hierarchy:
@@ -811,7 +811,7 @@ def tenacity_circuit_breaker(
                         # Log retry attempt
                         logger.warning(
                             f"Tenacity retry attempt {attempt.retry_state.attempt_number}/"
-                            "{max_attempts} failed for {service_name}"
+                            f"{max_attempts} failed for {service_name}"
                         )
                         raise
                     else:

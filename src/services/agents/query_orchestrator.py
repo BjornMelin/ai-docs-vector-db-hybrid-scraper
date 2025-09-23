@@ -1,7 +1,8 @@
-"""Query Orchestrator Agent for intelligent query processing coordination.
+"""
+Query Orchestrator Agent for query processing coordination.
 
 This agent serves as the master coordinator for query processing workflows,
-analyzing queries, delegating to specialists, and ensuring optimal results.
+analyzing queries, delegating to specialists, and ensuring results.
 """
 
 import logging
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 class QueryOrchestrator(BaseAgent):
     """Master agent that coordinates query processing workflow.
 
-    This agent analyzes incoming queries, determines optimal processing strategies,
+    This agent analyzes incoming queries, determines processing strategies,
     delegates tasks to specialized agents, and coordinates multi-stage retrieval
     when needed.
     """
@@ -51,9 +52,9 @@ class QueryOrchestrator(BaseAgent):
         """Define system prompt for the Query Orchestrator."""
         return (
             "You are a Query Orchestrator responsible for coordinating "
-            "intelligent query processing.\n\n"
+            "query processing.\n\n"
             "Your core responsibilities:\n"
-            "1. Analyze incoming queries to determine complexity, intent, and optimal "
+            "1. Analyze incoming queries to determine complexity, intent, and "
             "processing strategy\n"
             "2. Delegate to specialized agents based on query characteristics and "
             "performance requirements\n"
@@ -89,9 +90,8 @@ class QueryOrchestrator(BaseAgent):
         fallback_reason = getattr(self, "_fallback_reason", None)
 
         if not PYDANTIC_AI_AVAILABLE or self.agent is None:
-            logger.warning(
-                f"QueryOrchestrator using fallback mode (reason: {fallback_reason or 'pydantic_ai_unavailable'})"
-            )
+            reason = fallback_reason or "pydantic_ai_unavailable"
+            logger.warning(f"QueryOrchestrator using fallback mode (reason: {reason})")
             return
 
         @self.agent.tool
@@ -259,7 +259,7 @@ class QueryOrchestrator(BaseAgent):
                     "processing_time_ms": 0.0,
                 }
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.exception("Multi-stage search coordination failed")
                 return {
                     "status": "failed",
@@ -459,7 +459,7 @@ class QueryOrchestrator(BaseAgent):
             # Fallback orchestration logic
             return await self._fallback_orchestration(execution_context)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.exception("Query orchestration failed")
             return {
                 "success": False,
@@ -503,7 +503,8 @@ class QueryOrchestrator(BaseAgent):
             recommended_tools = ["hybrid_search", "content_analysis"]
 
         # Determine domain
-        if any(keyword in query_lower for keyword in ["code", "programming", "api"]):
+        keywords_tech = ["code", "programming", "api"]
+        if any(keyword in query_lower for keyword in keywords_tech):
             domain = "technical"
             recommended_tools.append("technical_analyzer")
         elif any(

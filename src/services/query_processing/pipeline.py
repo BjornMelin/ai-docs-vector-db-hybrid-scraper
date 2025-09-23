@@ -1,6 +1,6 @@
-"""Advanced Query Processing Pipeline.
+"""Query Processing Pipeline.
 
-This module provides the main unified interface for the advanced query
+This module provides the main unified interface for the query
 processing system, orchestrating all components through a single entry point.
 """
 
@@ -73,9 +73,12 @@ class QueryProcessingPipeline(BaseService):
 
         Args:
             query_or_request: Either a string query or QueryProcessingRequest object
-            collection_name: Target collection for search (used only if query_or_request is string)
-            limit: Maximum number of results to return (used only if query_or_request is string)
-            **kwargs: Additional processing options (used only if query_or_request is string)
+            collection_name: Target collection for search (used only if
+            query_or_request is string)
+            limit: Maximum number of results to return (used only if
+            query_or_request is string)
+            **kwargs: Additional processing options (used only if
+            query_or_request is string)
 
         Returns:
             QueryProcessingResponse: Complete processing results

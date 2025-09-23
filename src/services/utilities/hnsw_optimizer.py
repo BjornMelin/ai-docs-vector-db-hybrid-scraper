@@ -202,7 +202,8 @@ class HNSWOptimizer(BaseService):
         """Get optimized HNSW config for collection type.
 
         Args:
-            collection_type: Type of collection (api_reference, tutorials, blog_posts, etc.)
+            collection_type: Type of collection (api_reference, tutorials,
+            blog_posts, etc.)
 
         Returns:
             HNSW configuration dictionary
@@ -282,7 +283,8 @@ class HNSWOptimizer(BaseService):
 
         """
         self.logger.info(
-            f"Optimizing HNSW parameters for collection {collection_name} (type: {collection_type})"
+            f"Optimizing HNSW parameters for collection {collection_name} "
+            f"(type: {collection_type})"
         )
 
         # Get recommended configuration
@@ -331,7 +333,9 @@ class HNSWOptimizer(BaseService):
             )
             optimization_result["update_recommendation"] = {
                 "action": "no_update_needed",
-                "reason": "Current configuration is already optimal or close to recommended",
+                "reason": (
+                    "Current configuration is already optimal or close to recommended"
+                ),
             }
 
         return optimization_result

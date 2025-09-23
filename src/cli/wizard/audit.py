@@ -177,8 +177,9 @@ class ConfigAuditor:
         console.print(f"• Total wizard sessions: {total_sessions}")
         console.print(f"• Profiles used: {', '.join(sorted(profiles_used))}")
         last_activity = (
-            recent_activity[-1].get('timestamp', 'Unknown')
-            if recent_activity else 'None'
+            recent_activity[-1].get("timestamp", "Unknown")
+            if recent_activity
+            else "None"
         )
         console.print(f"• Last activity: {last_activity}")
 

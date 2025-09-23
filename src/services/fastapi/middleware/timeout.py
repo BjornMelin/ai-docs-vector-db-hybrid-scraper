@@ -193,8 +193,9 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
                 stats.state = CircuitState.HALF_OPEN
                 stats.half_open_calls = 0
                 logger.info(
-                    f"Circuit breaker entering HALF_OPEN state for {endpoint}"
-                )  # TODO: Convert f-string to logging format
+                    "Circuit breaker entering HALF_OPEN state for %s",
+                    endpoint,
+                )
             else:
                 # Circuit is still open, reject request
                 return JSONResponse(
@@ -238,7 +239,8 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
             stats.failure_count = 0
             stats.half_open_calls = 0
             logger.info(
-                f"Circuit breaker CLOSED for {endpoint} after successful recovery"
+                "Circuit breaker CLOSED for %s after successful recovery",
+                endpoint,
             )
 
         elif stats.state == CircuitState.CLOSED:
@@ -262,7 +264,8 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
             # Failure in half-open state - open the circuit again
             stats.state = CircuitState.OPEN
             logger.warning(
-                f"Circuit breaker re-OPENED for {endpoint} after failure in half-open state"
+                "Circuit breaker re-OPENED for %s after failure in half-open state",
+                endpoint,
             )
 
         elif stats.state == CircuitState.CLOSED:
@@ -270,7 +273,9 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
             if stats.failure_count >= self.config.failure_threshold:
                 stats.state = CircuitState.OPEN
                 logger.warning(
-                    f"Circuit breaker OPENED for {endpoint} after {stats.failure_count} failures"
+                    "Circuit breaker OPENED for %s after %d failures",
+                    endpoint,
+                    stats.failure_count,
                 )
 
         self._circuit_stats[endpoint] = stats
@@ -307,8 +312,9 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
         if endpoint in self._circuit_stats:
             self._circuit_stats[endpoint] = CircuitBreakerStats()
             logger.info(
-                f"Manually reset circuit breaker for {endpoint}"
-            )  # TODO: Convert f-string to logging format
+                "Manually reset circuit breaker for %s",
+                endpoint,
+            )
             return True
         return False
 

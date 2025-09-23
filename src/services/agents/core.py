@@ -1,7 +1,8 @@
-"""Core agent architecture for Pydantic-AI based agentic RAG.
+"""
+Core agent architecture for Pydantic-AI based agent RAG.
 
 This module provides the foundational classes and patterns for building
-autonomous agents that can intelligently process queries, compose tools,
+agents that can process queries, compose tools,
 and coordinate with other agents.
 """
 
@@ -112,7 +113,7 @@ class BaseAgentDependencies(BaseModel):
 
 
 class BaseAgent(ABC):
-    """Base class for all autonomous agents in the system."""
+    """Base class for all agents in the system."""
 
     def __init__(
         self,
@@ -157,7 +158,12 @@ class BaseAgent(ABC):
                 )
                 self._fallback_reason = None
                 logger.info(f"Agent {name} initialized with Pydantic-AI")
-            except (ValueError, TypeError, RuntimeError, ImportError) as e:
+            except (
+                ValueError,
+                TypeError,
+                RuntimeError,
+                ImportError,
+            ) as e:  # noqa: BLE001
                 logger.warning(
                     "Failed to initialize Pydantic-AI agent %s: %s. "
                     "Using fallback mode.",
@@ -276,7 +282,7 @@ class BaseAgent(ABC):
             execution_time = time.time() - start_time
             self.total_execution_time += execution_time
 
-            logger.exception("Agent {self.name} execution failed: ")
+            logger.exception(f"Agent {self.name} execution failed")
 
             return {
                 "success": False,
@@ -317,7 +323,8 @@ class BaseAgent(ABC):
         """
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
         logger.info(
-            f"Using fallback execution for agent {self.name} (reason: {fallback_reason})"
+            f"Using fallback execution for agent {self.name} "
+            f"(reason: {fallback_reason})"
         )
 
         # Enhanced fallback logic with context-aware responses
@@ -451,7 +458,8 @@ def create_agent_dependencies(
     """
     config = get_config()
 
-    session_state = AgentState(session_id=session_id or str(uuid4()), user_id=user_id)
+    session_id_value = session_id or str(uuid4())
+    session_state = AgentState(session_id=session_id_value, user_id=user_id)
 
     return BaseAgentDependencies(
         client_manager=client_manager, config=config, session_state=session_state
