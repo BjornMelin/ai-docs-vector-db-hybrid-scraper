@@ -1,7 +1,7 @@
 """Minimal AI Testing Utilities - Dependency-Free Implementation.
 
-This module provides essential AI/ML testing utilities using only Python standard library,
-demonstrating  testing patterns without external dependencies.
+This module provides essential AI/ML testing utilities using only Python standard
+library, demonstrating testing patterns without external dependencies.
 """
 
 import math
