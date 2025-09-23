@@ -261,7 +261,8 @@ class TestAPISecurityFramework:
                 }
 
                 assert not critical_violations, (
-                    f"Critical security header violations on {endpoint}: {critical_violations}"
+                    f"Critical security header violations on {endpoint}: "
+                    f"{critical_violations}"
                 )
 
                 # Log non-critical violations
@@ -317,7 +318,8 @@ class TestAPISecurityFramework:
         # Should see some rate limiting with high request volume
         if rate_limited_count == 0:
             print(
-                f"Warning: No rate limiting detected with {num_requests} concurrent requests"
+                f"Warning: No rate limiting detected with {num_requests} "
+                f"concurrent requests"
             )
         else:
             print(f"Rate limiting working: {rate_limited_count} requests rate limited")
@@ -471,7 +473,8 @@ class TestAPISecurityFramework:
 
             for pattern in sensitive_patterns:
                 assert pattern not in error_content, (
-                    f"Error response contains sensitive info '{pattern}' for {method} {endpoint}: {error_content[:200]}"
+                    f"Error response contains sensitive info '{pattern}' for "
+                    f"{method} {endpoint}: {error_content[:200]}"
                 )
 
     @security_test
@@ -578,11 +581,13 @@ class TestAPISecurityFramework:
 
         # Timing difference should be minimal to prevent information leakage
         assert time_difference < 0.1, (
-            f"Timing difference too large: {time_difference:.3f}s - potential timing attack vector"
+            f"Timing difference too large: {time_difference:.3f}s - "
+            f"potential timing attack vector"
         )
 
         print(
-            f"Timing analysis: valid={avg_valid_time:.3f}s, invalid={avg_invalid_time:.3f}s, diff={time_difference:.3f}s"
+            f"Timing analysis: valid={avg_valid_time:.3f}s, "
+            f"invalid={avg_invalid_time:.3f}s, diff={time_difference:.3f}s"
         )
 
 

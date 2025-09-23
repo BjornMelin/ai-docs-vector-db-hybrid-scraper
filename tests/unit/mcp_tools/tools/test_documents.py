@@ -54,7 +54,8 @@ def mock_client_manager():
     mock_crawl = AsyncMock()
     mock_crawl.scrape_url = AsyncMock(
         return_value={
-            "content": "Sample document content for testing. This is a comprehensive document with multiple paragraphs.",
+            "content": "Sample document content for testing. This is a "
+            "comprehensive document with multiple paragraphs.",
             "title": "Test Document",
             "url": "https://example.com/test-doc",
             "metadata": {

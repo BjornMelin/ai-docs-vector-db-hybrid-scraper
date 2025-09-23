@@ -58,7 +58,8 @@ class TestSQLInjectionPrevention:
             "' HAVING 1=1--",
             "'; CREATE TABLE temp (col1 VARCHAR(50))--",
             "'; ALTER TABLE users ADD COLUMN isadmin BOOLEAN--",
-            "' AND (SELECT * FROM (SELECT COUNT(*),CONCAT(version(),FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a)--",
+            "' AND (SELECT * FROM (SELECT COUNT(*),CONCAT(version(),"
+            "FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a)--",
             "admin' AND EXTRACTVALUE(1, CONCAT(0x7e, (SELECT version()), 0x7e))--",
             "' AND (SELECT SUBSTRING(@@version,1,1))='5'--",
         ]
@@ -107,7 +108,9 @@ class TestSQLInjectionPrevention:
         # For now, we'll mock the database layer
         with patch("src.infrastructure.database.connection_manager") as mock_db:
             mock_cursor = AsyncMock()
-            mock_db.get_connection.return_value.__aenter__.return_value.cursor.return_value = mock_cursor
+            (
+                mock_db.get_connection.return_value.__aenter__.return_value.cursor.return_value
+            ) = mock_cursor
 
             # Simulate a search query that should use parameters
 
@@ -134,8 +137,10 @@ class TestSQLInjectionPrevention:
     async def test_blind_sql_injection_prevention(self):
         """Test prevention of blind SQL injection attacks."""
         blind_payloads = [
-            "' AND (SELECT SUBSTRING(password,1,1) FROM users WHERE username='admin')='a'--",
-            "' AND (SELECT COUNT(*) FROM users WHERE username='admin' AND password LIKE 'a%')>0--",
+            "' AND (SELECT SUBSTRING(password,1,1) FROM users WHERE "
+            "username='admin')='a'--",
+            "' AND (SELECT COUNT(*) FROM users WHERE username='admin' AND "
+            "password LIKE 'a%')>0--",
             "' AND SLEEP(5)--",
             "'; WAITFOR DELAY '00:00:05'--",
             "' AND (SELECT COUNT(*) FROM information_schema.tables)>0--",
@@ -183,7 +188,8 @@ class TestSQLInjectionPrevention:
         """Test prevention of error-based SQL injection attacks."""
         error_payloads = [
             "' AND EXTRACTVALUE(1, CONCAT(0x7e, (SELECT version()), 0x7e))--",
-            "' AND (SELECT * FROM (SELECT COUNT(*),CONCAT(version(),FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a)--",
+            "' AND (SELECT * FROM (SELECT COUNT(*),CONCAT(version(),FLOOR(RAND(0)*2))"
+            "x FROM information_schema.tables GROUP BY x)a)--",
             "' AND UPDATEXML(1,CONCAT(0x7e,(SELECT version()),0x7e),1)--",
             "' AND 1=CAST((SELECT version()) AS int)--",
         ]
@@ -236,11 +242,13 @@ class TestSQLInjectionPrevention:
             mock_connect.return_value.cursor.return_value = mock_cursor
 
             # Test that parameterized queries are used
-            # In the actual implementation, verify that execute() is called with parameters
+            # In the actual implementation, verify that execute()
+            # is called with parameters
 
             # The implementation should use parameterized queries like:
             # cursor.execute("SELECT * FROM users WHERE name = ?", (dangerous_input,))
-            # Not: cursor.execute(f"SELECT * FROM users WHERE name = '{dangerous_input}'")
+            # Not: cursor.execute(f"SELECT * FROM users WHERE name = "
+            # '{dangerous_input}'")
 
             # Verify parameterized query usage
             # mock_cursor.execute.assert_called_with(

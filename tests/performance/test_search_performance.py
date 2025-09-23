@@ -174,7 +174,8 @@ class TestSearchPerformance:
             if concurrent_requests <= 50:
                 # For lower concurrency, expect higher throughput per request
                 assert throughput >= 15.0, (
-                    f"Throughput {throughput:.1f} RPS too low for concurrency {concurrent_requests}"
+                    f"Throughput {throughput:.1f} RPS too low for concurrency "
+                    f"{concurrent_requests}"
                 )
 
         # Verify throughput scaling characteristics
@@ -290,7 +291,8 @@ class TestSearchPerformance:
         # For 20x dataset increase, latency should not increase more than 3x
         latency_growth_factor = max_latency / base_latency
         assert latency_growth_factor <= 3.0, (
-            f"Latency growth factor {latency_growth_factor:.2f} indicates poor scalability"
+            f"Latency growth factor {latency_growth_factor:.2f} indicates "
+            f"poor scalability"
         )
 
         print("\nScalability Analysis:")

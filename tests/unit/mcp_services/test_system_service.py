@@ -79,7 +79,8 @@ class TestSystemService:
 
     @pytest.mark.asyncio
     async def test_initialize_logs_success_message(self, mock_client_manager, caplog):
-        """Test that initialization logs success message with self-healing capabilities."""
+        """Test that initialization logs success message with
+        self-healing capabilities."""
         service = SystemService()
 
         with (

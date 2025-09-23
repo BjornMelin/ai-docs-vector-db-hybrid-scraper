@@ -765,7 +765,8 @@ class TestOWASPTop10Compliance:
                 for check in self.automated_checks:
                     if check["enabled"]:
                         try:
-                            # In real implementation, this would call the actual check function
+                            # In real implementation, this would call
+                            # the actual check function
                             results[check["name"]] = {
                                 "status": "pass",
                                 "execution_time": "0.5s",

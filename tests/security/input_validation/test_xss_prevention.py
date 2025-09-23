@@ -326,7 +326,8 @@ class TestXSSPrevention:
         mathml_payloads = [
             "<math><mi//xlink:href='data:x,<script>alert(1)</script>'>",
             "<math><mo>alert(1)</mo></math>",
-            "<math><annotation-xml encoding='text/html'><script>alert(1)</script></annotation-xml></math>",
+            "<math><annotation-xml encoding='text/html'><script>alert(1)</script>"
+            "</annotation-xml></math>",
         ]
 
         for payload in mathml_payloads:

@@ -238,7 +238,8 @@ class SecurityFrameworkValidator:
                 self.results["tests_passed"] += 1
             else:
                 logger.warning(
-                    f"⚠️  Load testing security integration: PARTIAL (code: {result.returncode})"
+                    f"⚠️  Load testing security integration: PARTIAL "
+                    f"(code: {result.returncode})"
                 )
                 # Don't count as failure since tests might not exist yet
 

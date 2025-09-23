@@ -386,7 +386,8 @@ class TestMainExecutionLogic:
 
 
 class TestServerConfiguration:
-    """Test cases for server configuration and initialization with boundary-only mocking."""
+    """Test cases for server configuration and initialization with
+    boundary-only mocking."""
 
     def test_mcp_server_exists(self):
         """Test that MCP server instance exists."""

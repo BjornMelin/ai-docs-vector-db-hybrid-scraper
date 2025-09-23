@@ -600,7 +600,8 @@ class TestAPISecurity:
         time_difference = abs(avg_valid_time - avg_invalid_time)
 
         # Allow some variance but should not be dramatically different
-        # (This is a simplified test - real timing attack testing requires more precision)
+        # (This is a simplified test - real timing attack testing
+        # requires more precision)
         assert time_difference < 0.1  # Less than 100ms difference
 
     @pytest.mark.asyncio
@@ -1288,7 +1289,8 @@ class TestInputValidationEnhanced:
             # XSS + SQL Injection polyglot
             "';alert(String.fromCharCode(88,83,83))//';alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//--></SCRIPT>\">'><SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT>",
             # JSON + XML polyglot
-            '{"test":"<script>alert(1)</script>","xml":"<?xml version=\\"1.0\\"?><root><![CDATA[<script>alert(2)</script>]]></root>"}',
+            '{"test":"<script>alert(1)</script>","xml":"<?xml version=\\"1.0\\"?>'
+            '<root><![CDATA[<script>alert(2)</script>]]></root>"}',
             # URL + HTML polyglot
             "javascript:alert(1)%22%3E%3Cscript%3Ealert(2)%3C/script%3E",
             # Command injection + XSS polyglot
@@ -1313,7 +1315,8 @@ class TestInputValidationEnhanced:
             for context in contexts:
                 result = validation_test_client.validate_input(payload, context)
                 assert not result["valid"], (
-                    f"Polyglot payload should be blocked in {context} context: {payload[:100]}..."
+                    f"Polyglot payload should be blocked in {context} context: "
+                    f"{payload[:100]}..."
                 )
 
     def test_mutation_testing_for_validation_bypass(self, validation_test_client):
@@ -1350,7 +1353,8 @@ class TestInputValidationEnhanced:
             assert not result["valid"], f"Mutation should be blocked: {mutation}"
 
     def test_context_aware_validation(self, validation_test_client):
-        """Test that validation is context-aware and appropriate for different input types."""
+        """Test that validation is context-aware and appropriate for
+        different input types."""
 
         test_cases = [
             # URL validation

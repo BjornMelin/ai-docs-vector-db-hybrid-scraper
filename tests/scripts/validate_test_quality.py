@@ -70,7 +70,8 @@ class TestQualityValidator:
                     {
                         "type": "structure",
                         "severity": "warning",
-                        "message": f"File exceeds {MAX_FILE_LINES} lines ({len(lines)} lines)",
+                        "message": f"File exceeds {MAX_FILE_LINES} lines "
+                        f"({len(lines)} lines)",
                         "file": str(file_path),
                     }
                 )
@@ -82,7 +83,8 @@ class TestQualityValidator:
                     {
                         "type": "structure",
                         "severity": "error",
-                        "message": f"Directory depth exceeds {MAX_DIRECTORY_DEPTH} ({depth} levels)",
+                        "message": f"Directory depth exceeds "
+                        f"{MAX_DIRECTORY_DEPTH} ({depth} levels)",
                         "file": str(file_path),
                     }
                 )
@@ -100,7 +102,8 @@ class TestQualityValidator:
                                 else "patterns",
                                 "severity": "error",
                                 "pattern": pattern_name,
-                                "message": f"Found '{match.group()}' at line {line_num}",
+                                "message": f"Found '{match.group()}' at line "
+                                f"{line_num}",
                                 "file": str(file_path),
                                 "line": line_num,
                             }
@@ -148,7 +151,8 @@ class TestQualityValidator:
                         {
                             "type": "mocking",
                             "severity": "warning",
-                            "message": f"High mock density detected around line {mock_lines[i]}",
+                            "message": f"High mock density detected around "
+                            f"line {mock_lines[i]}",
                             "file": str(file_path),
                             "line": mock_lines[i],
                         }
@@ -190,7 +194,9 @@ class TestQualityValidator:
                     {
                         "type": "structure",
                         "severity": "warning",
-                        "message": f"Test function exceeds {MAX_TEST_FUNCTION_LINES} lines ({function_lines} lines)",
+                        "message": f"Test function exceeds "
+                        f"{MAX_TEST_FUNCTION_LINES} lines "
+                        f"({function_lines} lines)",
                         "file": str(file_path),
                         "line": start_line,
                         "function": match.group().strip(),

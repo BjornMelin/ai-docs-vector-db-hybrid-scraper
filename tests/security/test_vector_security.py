@@ -185,7 +185,8 @@ def test_vector_security():
     secure_max_vector = SecureVectorModel(values=max_vector)
     stage_max = SearchStage(stage_name="max-test", query_vector=secure_max_vector)
     print(
-        f"✅ Maximum vector size accepted: {len(stage_max.query_vector.values)} dimensions"
+        f"✅ Maximum vector size accepted: "
+        f"{len(stage_max.query_vector.values)} dimensions"
     )
 
     # Optional vector field test (skip for now due to dependency issues)
