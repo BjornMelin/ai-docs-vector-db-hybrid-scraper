@@ -26,11 +26,11 @@ contributing to our research-backed advanced documentation scraping system.
    ```bash
    # Install uv if not already available
    curl -LsSf https://astral.sh/uv/install.sh | sh
-   
+
    # Run setup script
    chmod +x setup.sh
    ./setup.sh
-   
+
    # Create development environment
    cp .env.example .env
    # Edit .env with your API keys
@@ -41,7 +41,7 @@ contributing to our research-backed advanced documentation scraping system.
    ```bash
    # Start Qdrant database
    docker-compose up -d
-   
+
    # Verify setup
    curl http://localhost:6333/health
    ```
@@ -82,25 +82,25 @@ from pydantic import BaseModel, Field
 
 class ExampleConfig(BaseModel):
     """Example configuration following modern patterns.
-    
+
     Args:
         param1: Description of parameter
         param2: Another parameter with default
     """
-    
+
     param1: str = Field(..., description="Required parameter")
     param2: int = Field(default=100, description="Optional parameter")
 
 
 async def example_function(config: ExampleConfig) -> dict[str, Any]:
     """Example function following modern conventions.
-    
+
     Args:
         config: Configuration object
-        
+
     Returns:
         Dictionary with processed results
-        
+
     Raises:
         ValueError: If configuration is invalid
     """
@@ -113,7 +113,7 @@ async def example_function(config: ExampleConfig) -> dict[str, Any]:
 #### Branch Naming
 
 - `feat/feature-name` - New features
-- `fix/bug-description` - Bug fixes  
+- `fix/bug-description` - Bug fixes
 - `docs/update-topic` - Documentation updates
 - `perf/optimization-area` - Performance improvements
 - `test/test-area` - Test additions/improvements
@@ -146,6 +146,7 @@ change: code
    ```
 
 2. **Make Changes**
+
    - Follow coding standards
    - Add/update tests
    - Update documentation
@@ -156,16 +157,16 @@ change: code
    ```bash
    # Run full test suite
    uv run pytest --cov=src
-   
+
    # Code quality checks
    ruff check . --fix
    ruff format .
-   
+
    # Type checking
    uv run mypy src/
-   
+
    # Documentation build test
-   uv run mkdocs build -f docs/build-config/mkdocs.yml
+   uv run mkdocs build -f docs/build_config/mkdocs.yml
    ```
 
 4. **Submit Pull Request**
@@ -184,10 +185,10 @@ change: code
 Two additional workflows are available on demand when you need deeper
 validation:
 
-| Workflow | How to run | Inputs |
-| --- | --- | --- |
-| **Security Scan (On-Demand)**<br>`security-opt-in.yml` | 1. Open the **Actions** tab  → **Security Scan (On-Demand)**.<br>2. Click **Run workflow** and pick your branch.<br>3. Toggle the optional inputs as needed.<br>4. Review the uploaded artifacts (`dependency-security-reports`, `bandit-report`). | `include_bandit` (default `true`)<br>`include_safety` (default `true`) |
-| **Extended Tests (On-Demand)**<br>`regression-opt-in.yml` | 1. Navigate to **Actions** → **Extended Tests (On-Demand)**.<br>2. Choose your branch and press **Run workflow**.<br>3. Enable benchmark execution if required.<br>4. Inspect artifacts (`regression-coverage`, `benchmark-results`). | `run_full_tests` (default `true`)<br>`run_benchmarks` (default `false`) |
+| Workflow                                                  | How to run                                                                                                                                                                                                                                        | Inputs                                                                  |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **Security Scan (On-Demand)**<br>`security-opt-in.yml`    | 1. Open the **Actions** tab → **Security Scan (On-Demand)**.<br>2. Click **Run workflow** and pick your branch.<br>3. Toggle the optional inputs as needed.<br>4. Review the uploaded artifacts (`dependency-security-reports`, `bandit-report`). | `include_bandit` (default `true`)<br>`include_safety` (default `true`)  |
+| **Extended Tests (On-Demand)**<br>`regression-opt-in.yml` | 1. Navigate to **Actions** → **Extended Tests (On-Demand)**.<br>2. Choose your branch and press **Run workflow**.<br>3. Enable benchmark execution if required.<br>4. Inspect artifacts (`regression-coverage`, `benchmark-results`).             | `run_full_tests` (default `true`)<br>`run_benchmarks` (default `false`) |
 
 Both workflows also trigger automatically on pull requests when their path
 filters match (e.g., dependency manifest or test suite changes). Use them before
@@ -223,7 +224,7 @@ async def test_embedding_config_validation():
         enable_reranking=True,
         rerank_top_k=20
     )
-    
+
     assert config.provider == EmbeddingProvider.HYBRID
     assert config.enable_reranking is True
     assert config.rerank_top_k == 20
@@ -249,7 +250,7 @@ def test_embedding_generation_speed(benchmark):
     def create_embedding():
         # Implementation
         pass
-    
+
     result = benchmark(create_embedding)
     assert result.duration < 0.1  # <100ms target
 ```
@@ -304,10 +305,10 @@ uv run pytest --benchmark-only
 uv pip install -e ".[docs]"
 
 # Serve documentation locally
-uv run mkdocs serve -f docs/build-config/mkdocs.yml
+uv run mkdocs serve -f docs/build_config/mkdocs.yml
 
 # Build documentation
-uv run mkdocs build -f docs/build-config/mkdocs.yml
+uv run mkdocs build -f docs/build_config/mkdocs.yml
 ```
 
 ## 🎯 Contribution Areas
@@ -379,32 +380,40 @@ uv run mkdocs build -f docs/build-config/mkdocs.yml
 
 ```markdown
 ## Bug Description
+
 Clear and concise description of the bug.
 
 ## Environment
+
 - OS: [e.g., Ubuntu 22.04, Windows 11, macOS 14]
 - Python Version: [e.g., 3.13.1]
 - Package Versions: [output of `uv pip list`]
 - Docker Version: [if applicable]
 
 ## Steps to Reproduce
+
 1. Step 1
 2. Step 2
 3. Step 3
 
 ## Expected Behavior
+
 What you expected to happen.
 
 ## Actual Behavior
+
 What actually happened.
 
 ## Code/Configuration
+
 Relevant code snippets or configuration files.
 
 ## Error Messages
+
 Complete error messages and stack traces.
 
 ## Additional Context
+
 Any other relevant information.
 ```
 
@@ -414,21 +423,27 @@ Any other relevant information.
 
 ```markdown
 ## Feature Description
+
 Clear description of the proposed feature.
 
 ## Problem Statement
+
 What problem does this solve?
 
 ## Proposed Solution
+
 How would you like this feature to work?
 
 ## Alternatives Considered
+
 Other approaches you've considered.
 
 ## Research References
+
 Links to papers, benchmarks, or implementations.
 
 ## Implementation Notes
+
 Technical considerations or constraints.
 ```
 
@@ -439,7 +454,7 @@ Technical considerations or constraints.
 All contributors are recognized in our:
 
 - **README.md**: Major contributors section
-- **Release Notes**: Feature and fix acknowledgments  
+- **Release Notes**: Feature and fix acknowledgments
 - **Documentation**: Author attribution
 - **Social Media**: Community highlights
 
@@ -542,15 +557,16 @@ Our community has achieved remarkable database optimization results:
    ```bash
    # Run performance benchmarks
    uv run python scripts/benchmark_query_api.py
-   
+
    # Test database connection optimization
    uv run pytest tests/integration/test_database_connection_pool_optimization.py -v
-   
+
    # Profile specific components
    uv run python -m cProfile -o profile.stats your_optimization.py
    ```
 
 2. **ML Model Enhancements**
+
    - Contribute new prediction models for connection scaling
    - Improve feature engineering for workload classification
    - Experiment with different optimization algorithms
@@ -561,7 +577,7 @@ Our community has achieved remarkable database optimization results:
    ```bash
    # Run comprehensive benchmarks
    uv run python scripts/run_hybrid_search_benchmark.py
-   
+
    # Generate performance reports
    uv run python scripts/benchmark_lightweight_tier.py --output-report
    ```
@@ -612,12 +628,13 @@ When contributing research-related issues, use these labels:
    ```bash
    # Install additional research dependencies
    uv add pytest-benchmark memory-profiler line-profiler
-   
+
    # Run baseline benchmarks
    uv run python scripts/benchmark_query_api.py --baseline
    ```
 
 2. **Explore current optimizations**
+
    - Review `src/infrastructure/database/connection_manager.py`
    - Study the ML models in `src/infrastructure/database/load_monitor.py`
    - Examine performance tests in `tests/integration/`
