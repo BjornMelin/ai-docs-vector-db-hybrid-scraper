@@ -1,6 +1,6 @@
 """Model selector for dynamic embedding model selection.
 
-This module implements intelligent embedding model selection based on query
+This module implements embedding model selection based on query
 characteristics, performance history, and cost optimization.
 """
 
@@ -17,8 +17,11 @@ from src.config import (
 )
 
 
-# TODO: Fix imports - Any  # TODO: Replace with proper ModelSelectionStrategy type and Any  # TODO: Replace with proper QueryClassification type don't exist
-# from src.models.vector_search import Any  # TODO: Replace with proper ModelSelectionStrategy type, Any  # TODO: Replace with proper QueryClassification type
+# TODO: Fix imports - Any  # TODO: Replace with proper ModelSelectionStrategy
+# ype and Any  # TODO: Replace with proper QueryClassification type don't exist
+
+# from src.models.vector_search import Any  # TODO: Replace with proper
+# odelSelectionStrategy type, Any  # TODO: Replace with proper QueryClassification type
 
 
 logger = logging.getLogger(__name__)
@@ -136,11 +139,14 @@ class ModelSelector:
 
         Args:
             query_classification: Classification results for the query
-            optimization_strategy: Optimization strategy (speed, quality, cost, balanced)
+            optimization_strategy: Optimization strategy
+                (speed, quality, cost, balanced)
             context: Additional context (user preferences, system constraints)
 
         Returns:
-            Any  # TODO: Replace with proper ModelSelectionStrategy type with selected model and rationale
+            Any
+            # TODO: Replace with proper ModelSelectionStrateg type with
+            # selected model and rationale
 
         """
         try:

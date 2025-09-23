@@ -1,6 +1,3 @@
-import typing
-
-
 """Request models for MCP server tools."""
 
 from typing import Any
@@ -295,7 +292,7 @@ class ContentIntelligenceMetadataRequest(BaseModel):
 
 
 class AdvancedQueryProcessingRequest(BaseModel):
-    """Advanced query processing request with intent classification and strategy selection"""
+    """Query processing request with intent classification and strategy selection"""
 
     query: str = Field(..., min_length=1, description="Query to process")
     collection: str = Field(

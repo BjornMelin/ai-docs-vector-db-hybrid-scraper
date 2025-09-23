@@ -1,9 +1,8 @@
-import typing
 
 
 """Response models for MCP server tools."""
 
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field

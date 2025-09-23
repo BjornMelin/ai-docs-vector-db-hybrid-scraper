@@ -221,7 +221,6 @@ dev-debug.log
 .windsurf
 
 # Project specific
-!src/models/
 ruff_errors.json
 security_validation_report_*.json
 
