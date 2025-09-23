@@ -70,6 +70,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Workspace creation results with management metadata
+
         """
         try:
             if ctx:
@@ -165,6 +166,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Lifecycle management results with policy application details
+
         """
         try:
             if ctx:
@@ -258,6 +260,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Organization results with clustering and categorization metadata
+
         """
         try:
             if ctx:
@@ -348,6 +351,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive workspace analytics and health metrics
+
         """
         try:
             cache_manager = await client_manager.get_cache_manager()

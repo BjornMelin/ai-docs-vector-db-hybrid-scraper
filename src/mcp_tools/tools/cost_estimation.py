@@ -53,6 +53,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive cost analysis with optimization recommendations
+
         """
         try:
             return await _execute_intelligent_cost_analysis(
@@ -95,6 +96,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Budget optimization results with autonomous allocation recommendations
+
         """
         try:
             return await _execute_autonomous_budget_optimization(
@@ -133,6 +135,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Predictive cost models with scenario analysis and confidence metrics
+
         """
         try:
             return await _execute_predictive_cost_modeling(
@@ -158,6 +161,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive capabilities information for cost estimation system
+
         """
         return {
             "analysis_scopes": {
@@ -666,7 +670,6 @@ async def _generate_cost_insights(
 
 def _get_timestamp() -> str:
     """Get current timestamp."""
-
     return datetime.datetime.now(tz=datetime.UTC).isoformat()
 
 

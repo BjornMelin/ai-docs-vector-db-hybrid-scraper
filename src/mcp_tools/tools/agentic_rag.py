@@ -156,6 +156,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
         Raises:
             ValueError: If request parameters are invalid
             RuntimeError: If search processing fails
+
         """
         try:
             # Create or retrieve session
@@ -271,6 +272,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
         Raises:
             ValueError: If request parameters are invalid
             RuntimeError: If analysis fails
+
         """
         analysis_id = str(uuid4())
 
@@ -378,6 +380,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
 
         Returns:
             Dict[str, Any]: Comprehensive performance metrics
+
         """
         try:
             # This would integrate with actual agent registry and monitoring
@@ -451,6 +454,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
 
         Returns:
             Dict[str, str]: Reset operation results
+
         """
         try:
             # This would reset actual agent learning data
@@ -485,6 +489,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
 
         Returns:
             Dict[str, Any]: Optimization results and new configuration
+
         """
         try:
             constraints = constraints or {}
@@ -536,6 +541,7 @@ def register_tools(mcp: FastMCP, client_manager: ClientManager) -> None:
 
         Returns:
             Dict[str, Any]: Orchestration metrics and insights
+
         """
         try:
             # This would integrate with the actual orchestrator instance

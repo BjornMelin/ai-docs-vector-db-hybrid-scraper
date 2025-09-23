@@ -63,6 +63,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Tier selection results with reasoning and optimization metadata
+
         """
         try:
             # Validate URL
@@ -149,6 +150,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Enhanced crawling results with quality metrics and optimization data
+
         """
         try:
             # Validate URL
@@ -239,6 +241,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive capabilities information for 5-tier crawling system
+
         """
         try:
             # browser_manager = await client_manager.get_browser_manager()

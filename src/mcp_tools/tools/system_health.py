@@ -53,6 +53,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive health assessment with autonomous diagnostics
+
         """
         try:
             return await _execute_comprehensive_health_assessment(
@@ -95,6 +96,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Self-healing results with applied remediation actions
+
         """
         try:
             return await _execute_autonomous_self_healing(
@@ -136,6 +138,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Predictive monitoring results with forecasts and anomaly detection
+
         """
         try:
             return await _execute_predictive_health_monitoring(
@@ -162,6 +165,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive capabilities information for health monitoring system
+
         """
         return {
             "assessment_scopes": {

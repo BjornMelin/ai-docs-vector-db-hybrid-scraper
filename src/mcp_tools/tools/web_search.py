@@ -57,6 +57,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Autonomous web search results with orchestration metadata
+
         """
         try:
             if ctx:
@@ -203,6 +204,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Adaptively optimized web search results with learning metadata
+
         """
         try:
             if ctx:
@@ -356,6 +358,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Synthesized results with deduplication and quality correlation metadata
+
         """
         try:
             if ctx:
@@ -448,6 +451,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive capabilities information for web search orchestration system
+
         """
         return {
             "search_providers": {

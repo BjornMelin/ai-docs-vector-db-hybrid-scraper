@@ -60,6 +60,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Hybrid search results with fusion metadata and performance metrics
+
         """
         try:
             if ctx:
@@ -192,6 +193,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Optimized hybrid search results with adaptation metadata
+
         """
         try:
             if ctx:
@@ -280,6 +282,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Multi-collection hybrid search results with cross-collection metadata
+
         """
         try:
             if ctx:
@@ -375,6 +378,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive capabilities information for hybrid search system
+
         """
         return {
             "fusion_strategies": {

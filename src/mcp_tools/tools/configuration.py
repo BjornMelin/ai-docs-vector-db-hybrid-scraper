@@ -53,6 +53,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Configuration optimization results with autonomous recommendations
+
         """
         try:
             if ctx:
@@ -171,6 +172,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Configuration monitoring results with drift analysis and remediation actions
+
         """
         try:
             if ctx:
@@ -273,6 +275,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Configuration profile management results with optimization metadata
+
         """
         try:
             if ctx:
@@ -341,6 +344,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive capabilities information for configuration management system
+
         """
         return {
             "optimization_targets": {

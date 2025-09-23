@@ -60,6 +60,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Reranked search results with quality assessment and ranking metadata
+
         """
         try:
             if ctx:
@@ -180,6 +181,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Multi-criteria reranked results with adaptation metadata
+
         """
         try:
             if ctx:
@@ -304,6 +306,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Contextually reranked search results with context influence metadata
+
         """
         try:
             if ctx:
@@ -416,6 +419,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive capabilities information for reranking system
+
         """
         return {
             "reranking_strategies": {

@@ -60,6 +60,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             HyDE search results with generation metadata and quality metrics
+
         """
         try:
             if ctx:
@@ -230,6 +231,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Optimized HyDE search results with adaptation metadata
+
         """
         try:
             if ctx:
@@ -360,6 +362,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Expanded queries with quality and diversity metrics
+
         """
         try:
             if ctx:
@@ -438,6 +441,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive capabilities information for HyDE search system
+
         """
         return {
             "generation_strategies": {

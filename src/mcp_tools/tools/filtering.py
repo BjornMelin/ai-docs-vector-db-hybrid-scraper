@@ -56,6 +56,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Optimized filters with enhancement metadata and performance predictions
+
         """
         try:
             if ctx:
@@ -177,6 +178,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Composed filters with optimization metadata and validation results
+
         """
         try:
             if ctx:
@@ -290,6 +292,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Learned filter patterns with adaptation metadata and confidence scores
+
         """
         try:
             if ctx:
@@ -390,6 +393,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive capabilities information for filtering system
+
         """
         return {
             "filter_types": {
@@ -1050,7 +1054,6 @@ async def _select_optimal_composition_strategy(
     ctx,
 ) -> dict[str, Any]:
     """Select optimal strategy for filter composition."""
-
     if requested_strategy == "adaptive":
         # Adaptive strategy selection based on analysis
         if filter_analysis["filter_count"] <= 2:
@@ -1076,7 +1079,6 @@ async def _apply_filter_composition(
     filters: list[dict], strategy: dict, quality_threshold: float, ctx
 ) -> dict[str, Any]:
     """Apply filter composition using selected strategy."""
-
     if strategy["strategy"] == "intelligent":
         composed = await _intelligent_filter_composition(
             filters, quality_threshold, ctx
@@ -1159,7 +1161,6 @@ async def _optimize_composed_filter_performance(
     composed_filters: dict, performance_target: float | None, ctx
 ) -> dict[str, Any]:
     """Optimize performance of composed filters."""
-
     optimizations_applied = []
 
     # Apply index optimization
@@ -1187,7 +1188,6 @@ async def _validate_composition_quality(
     composed_filters: dict, quality_threshold: float, filter_analysis: dict, ctx
 ) -> dict[str, Any]:
     """Validate quality of filter composition."""
-
     # Mock quality validation
     quality_factors = {
         "logical_consistency": 0.92,
@@ -1544,7 +1544,6 @@ async def _apply_learning_updates(
     filter_templates: list[dict], learned_rules: list[dict], update_frequency: str, ctx
 ) -> dict[str, Any]:
     """Apply learning updates based on frequency setting."""
-
     if update_frequency == "real_time":
         # Apply immediately
         updates_applied = len(filter_templates)

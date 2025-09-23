@@ -62,6 +62,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Multi-stage search results with refinement metadata and quality metrics
+
         """
         try:
             if ctx:
@@ -238,6 +239,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Optimized multi-stage search results with adaptation metadata
+
         """
         try:
             if ctx:
@@ -323,6 +325,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Contextually refined search results with source attribution
+
         """
         try:
             if ctx:
@@ -448,6 +451,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive capabilities information for multi-stage search system
+
         """
         return {
             "refinement_strategies": {

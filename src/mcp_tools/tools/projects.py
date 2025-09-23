@@ -358,6 +358,7 @@ def register_tools(mcp, client_manager: ClientManager):
         Args:
             project_id: Project ID to delete
             delete_collection: Whether to delete the associated Qdrant collection
+            ctx: MCP context for status updates
 
         Returns:
             Status message
@@ -422,6 +423,7 @@ def register_tools(mcp, client_manager: ClientManager):
         Args:
             project_id: Project ID to export
             format_type: Export format ('json' or 'yaml')
+            ctx: MCP context for status updates
 
         Returns:
             Dictionary containing status, format, and exported data
