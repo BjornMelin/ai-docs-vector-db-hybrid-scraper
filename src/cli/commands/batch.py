@@ -1,6 +1,6 @@
 """Batch operations with Rich progress tracking and confirmations.
 
-This module provides comprehensive batch processing capabilities with
+This module provides batch processing capabilities with
 Rich progress visualization, operation queuing, and interactive confirmations.
 """
 

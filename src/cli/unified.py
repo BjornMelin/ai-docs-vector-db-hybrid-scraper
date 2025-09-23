@@ -47,7 +47,7 @@ def _run_command(
         msg = "shell execution is not permitted for CLI commands"
         raise ValueError(msg)
     normalized = _normalize_command(command)
-    return subprocess.run(  # Secure: normalized command, no shell, validated input
+    return subprocess.run(  # noqa: S603
         normalized,
         check=check,
         capture_output=capture_output,

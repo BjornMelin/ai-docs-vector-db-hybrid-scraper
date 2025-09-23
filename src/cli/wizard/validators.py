@@ -1,6 +1,6 @@
-"""Real-time validation for configuration wizard.
+"""Validation for configuration wizard.
 
-Provides immediate validation feedback during wizard interaction
+Provides validation feedback during wizard interaction
 using Pydantic models and user-friendly error messages.
 """
 
@@ -21,7 +21,7 @@ console = Console()
 
 
 class WizardValidator:
-    """Provides real-time validation for wizard inputs."""
+    """Provides validation for wizard inputs."""
 
     def __init__(self):
         """Initialize validator."""
@@ -44,15 +44,18 @@ class WizardValidator:
         validation_rules = {
             "openai": {
                 "pattern": r"^sk-[a-zA-Z0-9_-]{20,}$",
-                "message": "OpenAI API key must start with 'sk-' and be at least 20 characters",
+                "message": "OpenAI API key must start with 'sk-' and be at least "
+                "20 characters",
             },
             "firecrawl": {
                 "pattern": r"^fc-[a-zA-Z0-9_-]{20,}$",
-                "message": "Firecrawl API key must start with 'fc-' and be at least 20 characters",
+                "message": "Firecrawl API key must start with 'fc-' and be at least "
+                "20 characters",
             },
             "anthropic": {
                 "pattern": r"^sk-ant-[a-zA-Z0-9_-]{20,}$",
-                "message": "Anthropic API key must start with 'sk-ant-' and be at least 20 characters",
+                "message": "Anthropic API key must start with 'sk-ant-' "
+                "and be at least 20 characters",
             },
         }
 
@@ -346,7 +349,8 @@ class WizardValidator:
         if hasattr(config, "qdrant"):
             if hasattr(config.qdrant, "host"):
                 summary_text.append(
-                    f"• Database: Qdrant at {config.qdrant.host}:{config.qdrant.port}\n",
+                    f"• Database: Qdrant at {config.qdrant.host}:"
+                    f"{config.qdrant.port}\n",
                     style="cyan",
                 )
             elif hasattr(config.qdrant, "url"):

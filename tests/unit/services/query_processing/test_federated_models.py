@@ -1,6 +1,7 @@
 """Model tests for the federated search service.
 
-Tests for CollectionMetadata, CollectionSearchResult, FederatedSearchRequest, and FederatedSearchResult.
+Tests for CollectionMetadata, CollectionSearchResult, FederatedSearchRequest,
+and FederatedSearchResult.
 """
 
 from datetime import UTC, datetime

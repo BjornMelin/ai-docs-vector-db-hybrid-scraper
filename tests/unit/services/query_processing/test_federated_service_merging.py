@@ -1,6 +1,7 @@
 """Result merging tests for the federated search service.
 
-Tests for result merging strategies, deduplication, quality metrics, and caching functionality.
+Tests for result merging strategies, deduplication, quality metrics, and
+caching functionality.
 """
 
 import pytest

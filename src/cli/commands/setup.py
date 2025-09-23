@@ -2,7 +2,7 @@
 
 This module provides a step-by-step configuration wizard that guides
 users through setting up their AI Documentation Scraper instance.
-Modern template-driven approach with real-time validation.
+Template-driven approach with validation.
 """
 
 import json
@@ -43,13 +43,14 @@ def _abort_validation_errors() -> None:
 def _abort_profile_not_found(profile: str, available_profiles: list[str]) -> None:
     """Helper function to abort when profile is not found."""
     console.print(
-        f"[red]Profile '{profile}' not found. Available: {', '.join(available_profiles)}[/red]"
+        f"[red]Profile '{profile}' not found. "
+        f"Available: {', '.join(available_profiles)}[/red]"
     )
     raise click.Abort
 
 
 class ConfigurationWizard:
-    """Modern template-driven configuration wizard with real-time validation."""
+    """Template-driven configuration wizard with validation."""
 
     def __init__(self, config_dir: Path | None = None):
         """Initialize the configuration wizard.
@@ -71,18 +72,18 @@ class ConfigurationWizard:
     def welcome(self):
         """Display welcome message for the wizard."""
         welcome_text = Text()
-        welcome_text.append("🧙 Modern Configuration Wizard\n", style="bold magenta")
+        welcome_text.append("🧙 Configuration Wizard\n", style="bold magenta")
         welcome_text.append(
             "Welcome to the AI Documentation Scraper setup wizard!\n\n", style="dim"
         )
-        welcome_text.append("This modern wizard offers:\n", style="")
+        welcome_text.append("This wizard offers:\n", style="")
         welcome_text.append(
             "• 🎯 Profile-based configuration templates\n", style="cyan"
         )
         welcome_text.append(
-            "• ⚡ Real-time validation with helpful feedback\n", style="cyan"
+            "• ⚡ Validation with helpful feedback\n", style="cyan"
         )
-        welcome_text.append("• 🛠️ Smart customization options\n", style="cyan")
+        welcome_text.append("• 🛠️ Customization options\n", style="cyan")
         welcome_text.append("• 📋 Template preview and comparison\n", style="cyan")
         welcome_text.append("• 🔧 Environment-specific optimizations", style="cyan")
 
@@ -179,7 +180,7 @@ class ConfigurationWizard:
             ("API Keys", self._customize_api_keys),
             ("Database Connection", self._customize_database),
             ("Performance Settings", self._customize_performance),
-            ("Advanced Options", self._customize_template),
+            ("Options", self._customize_template),
         ]
 
         for section_name, customize_func in customization_sections:
@@ -354,12 +355,12 @@ class ConfigurationWizard:
             return config_path
 
     def run_setup(self) -> Path:
-        """Run the complete modern template-driven setup wizard."""
+        """Run the complete template-driven setup wizard."""
         self.welcome()
 
         # Check if user wants to proceed
         ready = questionary.confirm(
-            "Ready to start the modern configuration wizard?", default=True
+            "Ready to start the configuration wizard?", default=True
         ).ask()
 
         if not ready:
@@ -422,9 +423,10 @@ class ConfigurationWizard:
     def _show_success_message(self, config_path: Path) -> None:
         """Show final success message with next steps."""
         success_text = Text()
-        success_text.append("🎉 Modern Setup Complete!\n\n", style="bold green")
+        success_text.append("🎉 Setup Complete!\n\n", style="bold green")
         success_text.append(
-            f"Your '{self.selected_profile}' profile is now configured and ready to use.\n\n",
+            f"Your '{self.selected_profile}' profile is now configured "
+            "and ready to use.\n\n",
             style="",
         )
 
@@ -432,7 +434,8 @@ class ConfigurationWizard:
         success_text.append(f"• Profile: {self.selected_profile}\n", style="cyan")
         success_text.append(f"• Config file: {config_path}\n", style="cyan")
         success_text.append(
-            f"• Template: {self.profile_manager.profile_templates.get(self.selected_profile)}\n",
+            f"• Template: "
+            f"{self.profile_manager.profile_templates.get(self.selected_profile)}\n",
             style="cyan",
         )
 
@@ -449,12 +452,14 @@ class ConfigurationWizard:
             style="cyan",
         )
         success_text.append(
-            "4. Create your first collection: uv run python -m src.cli.main database create my-docs\n",
+            "4. Create your first collection: uv run python -m src.cli.main "
+            "database create my-docs\n",
             style="cyan",
         )
 
         success_text.append(
-            f"\n💡 To use this profile again: ./setup.sh --profile {self.selected_profile}",
+            f"\n💡 To use this profile again: "
+            f"./setup.sh --profile {self.selected_profile}",
             style="dim",
         )
 
@@ -483,7 +488,7 @@ class ConfigurationWizard:
 )
 @click.pass_context
 def setup(ctx: click.Context, profile: str | None, config_dir: Path):
-    r"""🧙 Modern template-driven configuration wizard.
+    r"""🧙 Template-driven configuration wizard.
 
     This wizard uses configuration profiles and templates to guide you through
     setting up your AI Documentation Scraper with best practices and validation.
@@ -491,8 +496,8 @@ def setup(ctx: click.Context, profile: str | None, config_dir: Path):
     \b
     Features:
     • 🎯 Profile-based templates (personal, development, production)
-    • ⚡ Real-time validation with helpful error messages
-    • 🛠️ Smart customization with questionary interactions
+    • ⚡ Validation with helpful error messages
+    • 🛠️ Customization with questionary interactions
     • 📋 Template preview and comparison
     • 🔧 Environment-specific optimizations
 
@@ -529,7 +534,8 @@ def setup(ctx: click.Context, profile: str | None, config_dir: Path):
             else:
                 # Fallback validation using our wizard validator
                 console.print(
-                    "[yellow]Using wizard validation (config command not available)[/yellow]"
+                    "[yellow]Using wizard validation "
+                    "(config command not available)[/yellow]"
                 )
                 config_data = json.loads(config_path.read_text())
                 wizard.validator.validate_and_show_errors(config_data)

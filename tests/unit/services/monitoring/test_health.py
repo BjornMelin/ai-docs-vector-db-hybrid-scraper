@@ -260,7 +260,10 @@ class TestSystemResourceHealthCheck:
             return HealthCheckResult(
                 name="system_resources",
                 status=HealthStatus.DEGRADED,
-                message="High CPU usage: 85.0%; High memory usage: 90.0%; High disk usage: 95.0%",
+                message=(
+                    "High CPU usage: 85.0%; High memory usage: 90.0%; "
+                    "High disk usage: 95.0%"
+                ),
                 duration_ms=30.0,
                 metadata={
                     "cpu_percent": 85.0,

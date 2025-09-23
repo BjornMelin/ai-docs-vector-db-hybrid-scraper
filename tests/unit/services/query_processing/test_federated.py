@@ -1,6 +1,7 @@
 """Tests for federated search service.
 
-This file imports tests from split modules to maintain organization while keeping file sizes manageable.
+This file imports tests from split modules to maintain organization while
+keeping file sizes manageable.
 """
 
 import pytest
