@@ -1,5 +1,4 @@
-"""
-Comprehensive Vector Search Models - Security-First Implementation
+"""Comprehensive Vector Search Models - Security-First Implementation
 
 This module provides production-ready Pydantic v2 models for vector search operations
 with comprehensive security validation, performance optimization, and type safety.
