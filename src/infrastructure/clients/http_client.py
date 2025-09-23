@@ -16,6 +16,7 @@ class HTTPClientProvider:
         self,
         http_client: aiohttp.ClientSession,
     ):
+        """Initialize the HTTP client provider."""
         self._client = http_client
         self._healthy = True
 
@@ -60,6 +61,7 @@ class HTTPClientProvider:
 
         Raises:
             RuntimeError: If client is unhealthy
+
         """
         if not self.client:
             msg = "HTTP client is not available or unhealthy"
@@ -89,6 +91,7 @@ class HTTPClientProvider:
 
         Raises:
             RuntimeError: If client is unhealthy
+
         """
         if not self.client:
             msg = "HTTP client is not available or unhealthy"
@@ -120,6 +123,7 @@ class HTTPClientProvider:
 
         Raises:
             RuntimeError: If client is unhealthy
+
         """
         if not self.client:
             msg = "HTTP client is not available or unhealthy"
@@ -144,6 +148,7 @@ class HTTPClientProvider:
 
         Raises:
             RuntimeError: If client is unhealthy
+
         """
         if not self.client:
             msg = "HTTP client is not available or unhealthy"
@@ -167,6 +172,7 @@ class HTTPClientProvider:
 
         Raises:
             RuntimeError: If client is unhealthy
+
         """
         if not self.client:
             msg = "HTTP client is not available or unhealthy"

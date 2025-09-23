@@ -61,6 +61,7 @@ class OpenAIClientProvider:
 
         Raises:
             RuntimeError: If client is unhealthy
+
         """
         if not self.client:
             msg = "OpenAI client is not available or unhealthy"
@@ -84,6 +85,7 @@ class OpenAIClientProvider:
 
         Raises:
             RuntimeError: If client is unhealthy
+
         """
         if not self.client:
             msg = "OpenAI client is not available or unhealthy"

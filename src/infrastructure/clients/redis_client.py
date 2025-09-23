@@ -64,6 +64,7 @@ class RedisClientProvider:
 
         Raises:
             RuntimeError: If client is unhealthy
+
         """
         if not self.client:
             msg = "Redis client is not available or unhealthy"
@@ -84,6 +85,7 @@ class RedisClientProvider:
 
         Raises:
             RuntimeError: If client is unhealthy
+
         """
         if not self.client:
             msg = "Redis client is not available or unhealthy"
@@ -102,6 +104,7 @@ class RedisClientProvider:
 
         Raises:
             RuntimeError: If client is unhealthy
+
         """
         if not self.client:
             msg = "Redis client is not available or unhealthy"
@@ -120,6 +123,7 @@ class RedisClientProvider:
 
         Raises:
             RuntimeError: If client is unhealthy
+
         """
         if not self.client:
             msg = "Redis client is not available or unhealthy"
