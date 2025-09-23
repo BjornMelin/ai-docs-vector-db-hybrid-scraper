@@ -6,6 +6,7 @@ trace and metric data while maintaining backward compatibility.
 """
 
 import logging
+from collections.abc import Callable
 from typing import Any
 
 import httpx
@@ -31,7 +32,44 @@ class OpenTelemetryMetricsBridge:
         self.prometheus_registry = prometheus_registry
         self.meter = metrics.get_meter(__name__)
         self._instruments: dict[str, Any] = {}
+        self._prometheus_get_metric = self._resolve_prometheus_getter()
         self._setup_otel_metrics()
+
+    def _resolve_prometheus_getter(self) -> Callable[[str], Any] | None:
+        """Return a callable that resolves Prometheus metrics by name."""
+
+        if not self.prometheus_registry:
+            return None
+
+        if hasattr(self.prometheus_registry, "_metrics"):
+            return None
+
+        getter = getattr(self.prometheus_registry, "get_metric", None)
+        if callable(getter):
+            return getter
+
+        logger.debug(
+            "Prometheus registry does not expose get_metric; skipping direct bridge"
+        )
+        return None
+
+    def _get_prometheus_metric(self, name: str) -> Any | None:
+        """Safely fetch a Prometheus metric from the registry."""
+
+        if not self._prometheus_get_metric:
+            registry_metrics = getattr(
+                self.prometheus_registry, "_metrics", None
+            )
+            if isinstance(registry_metrics, dict):
+                metric = registry_metrics.get(name)
+                if metric is not None:
+                    return metric
+            return None
+        try:
+            return self._prometheus_get_metric(name)
+        except (KeyError, AttributeError, TypeError):
+            logger.debug("Failed to resolve Prometheus metric: %s", name)
+            return None
 
     def _setup_otel_metrics(self) -> None:
         """Set up OpenTelemetry metric instruments."""
@@ -218,8 +256,7 @@ class OpenTelemetryMetricsBridge:
             try:
                 status = "success" if success else "error"
 
-                # Use public interface to get metrics
-                search_requests_metric = self.prometheus_registry.get_metric(
+                search_requests_metric = self._get_prometheus_metric(
                     "search_requests"
                 )
                 if search_requests_metric:
@@ -227,17 +264,21 @@ class OpenTelemetryMetricsBridge:
                         collection=collection, status=status
                     ).inc()
 
-                search_duration_metric = self.prometheus_registry.get_metric(
+                search_duration_metric = self._get_prometheus_metric(
                     "search_duration"
                 )
                 if search_duration_metric:
                     search_duration_metric.labels(
                         collection=collection, query_type=query_type
                     ).observe(duration_ms / 1000)  # Convert to seconds for Prometheus
-            except (httpx.HTTPError, httpx.TimeoutException, ConnectionError) as e:
+            except (httpx.HTTPError, httpx.TimeoutException, ConnectionError) as exc:
                 logger.warning(
-                    f"Failed to update Prometheus metrics: {e}"
-                )  # TODO: Convert f-string to logging format
+                    "Failed to update Prometheus metrics: %s", exc
+                )
+            except Exception as exc:  # noqa: BLE001 - Prometheus bridge is best-effort
+                logger.warning(
+                    "Failed to update Prometheus metrics: %s", exc
+                )
 
     def record_cache_operation(
         self,
@@ -245,7 +286,6 @@ class OpenTelemetryMetricsBridge:
         operation: str,
         duration_ms: float,
         hit: bool,
-        *,
         cache_name: str = "default",
     ) -> None:
         """Record cache operation metrics.
@@ -316,7 +356,9 @@ class OpenTelemetryMetricsBridge:
     def record_error(
         self,
         error_type: str,
-        component: str,
+        component: str | None = None,
+        *,
+        service_name: str | None = None,
         severity: str = "error",
         user_impact: str = "medium",
     ) -> None:
@@ -331,10 +373,13 @@ class OpenTelemetryMetricsBridge:
         """
         labels = {
             "error_type": error_type,
-            "component": component,
+            "component": component or service_name or "unknown",
             "severity": severity,
             "user_impact": user_impact,
         }
+
+        if service_name:
+            labels["service_name"] = service_name
 
         # Record OpenTelemetry metrics
         self._instruments["error_count"].add(1, labels)
@@ -412,10 +457,14 @@ class OpenTelemetryMetricsBridge:
                     elif hasattr(instrument, "set"):
                         instrument.set(value, labels)
 
-            except (ValueError, TypeError, UnicodeDecodeError) as e:
+            except (ValueError, TypeError, UnicodeDecodeError) as exc:
                 logger.warning(
-                    f"Failed to record metric {metric_name}: {e}"
-                )  # TODO: Convert f-string to logging format
+                    "Failed to record metric %s: %s", metric_name, exc
+                )
+            except Exception as exc:  # noqa: BLE001 - batch metrics should be best-effort
+                logger.warning(
+                    "Failed to record metric %s: %s", metric_name, exc
+                )
 
     def create_custom_counter(
         self, name: str, description: str, unit: str = ""

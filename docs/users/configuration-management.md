@@ -1,3 +1,11 @@
+---
+title: Configuration Management
+audience: users
+status: active
+owner: product-education
+last_reviewed: 2025-03-13
+---
+
 # Configuration Management Guide
 
 > **Status**: Active  

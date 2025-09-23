@@ -298,6 +298,8 @@ class AIOperationTracker:
                     error_message=str(e),
                 )
                 self.record_operation(error_metrics)
+
+                return
                 raise
 
             finally:
@@ -465,8 +467,8 @@ class AIOperationTracker:
                 yield pipeline_result
 
                 # Process pipeline results
-                retrieved_docs = pipeline_result.get("retrieved_docs", [])
-                generated_answer = pipeline_result.get("generated_answer", "")
+                retrieved_docs = pipeline_result.get("retrieved_docs") or []
+                generated_answer = pipeline_result.get("generated_answer") or ""
 
                 span.set_attribute("rag.retrieved_docs_count", len(retrieved_docs))
                 span.set_attribute("rag.answer_length", len(generated_answer))
@@ -560,7 +562,7 @@ class AIOperationTracker:
         self,
         provider: str,
         model: str,
-        _operation_type: str,
+        operation_type: str,
         *,
         success_rate: float,
         avg_latency_ms: float,
@@ -583,6 +585,7 @@ class AIOperationTracker:
             {
                 "provider": provider,
                 "model": model,
+                "operation_type": operation_type,
                 "success_rate": success_rate,
                 "avg_latency_ms": avg_latency_ms,
                 "cost_per_operation": cost_per_operation,

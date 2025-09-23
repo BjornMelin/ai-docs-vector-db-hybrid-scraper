@@ -79,6 +79,7 @@ def instrument_function(
                         if isinstance(value, str | int | float | bool):
                             span.set_attribute(f"function.args.{key}", str(value))
 
+                result = None
                 try:
                     start_time = time.time()
                     result = await func(*args, **kwargs)
@@ -104,6 +105,8 @@ def instrument_function(
                     duration = time.time() - start_time
                     span.set_attribute("operation.duration_ms", duration * 1000)
 
+                return result
+
         @functools.wraps(func)
         def sync_wrapper(*args, **kwargs):
             tracer = get_tracer()
@@ -127,6 +130,7 @@ def instrument_function(
                         if isinstance(value, str | int | float | bool):
                             span.set_attribute(f"function.args.{key}", str(value))
 
+                result = None
                 try:
                     start_time = time.time()
                     result = func(*args, **kwargs)
@@ -153,6 +157,8 @@ def instrument_function(
                     # Add performance metrics
                     duration = time.time() - start_time
                     span.set_attribute("operation.duration_ms", duration * 1000)
+
+                return result
 
         return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
 

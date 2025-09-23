@@ -1,3 +1,11 @@
+---
+title: Web Scraping
+audience: users
+status: active
+owner: product-education
+last_reviewed: 2025-03-13
+---
+
 # Web Scraping Guide
 
 > **Status**: Active  
@@ -392,7 +400,7 @@ Our system automatically analyzes each website and chooses the optimal scraping 
 - **[Search & Retrieval](./search-and-retrieval.md)**: Finding information in scraped content
 - **[Examples & Recipes](./examples-and-recipes.md)**: Real-world scraping scenarios
 - **[Troubleshooting](./troubleshooting.md)**: Solutions for common issues
-- **Developer Integration**: See [../developers/](../developers/README.md) for API usage
+- **Developer Integration**: See [../developers/index.md](../developers/index.md) for API usage
 
 ---
 

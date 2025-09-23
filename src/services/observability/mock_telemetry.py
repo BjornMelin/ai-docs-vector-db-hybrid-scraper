@@ -10,21 +10,21 @@ logger = logging.getLogger(__name__)
 class OTLPSpanExporter:
     """Mock OTLP span exporter."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *_args, **_kwargs):
         pass
 
 
 class MeterProvider:
     """Mock meter provider."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *_args, **_kwargs):
         pass
 
 
 class PeriodicExportingMetricReader:
     """Mock periodic exporting metric reader."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *_args, **_kwargs):
         pass
 
 
@@ -39,29 +39,41 @@ class Resource:
 class TracerProvider:
     """Mock tracer provider."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *_args, **_kwargs):
         pass
 
 
 class BatchSpanProcessor:
     """Mock batch span processor."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *_args, **_kwargs):
         pass
 
 
 class MockMetrics:
     """Mock metrics API."""
 
-    def set_meter_provider(self, *args, **kwargs):
-        pass
+    def __init__(self) -> None:
+        self._provider = None
+
+    def set_meter_provider(self, provider, *_args, **_kwargs):
+        self._provider = provider
+
+    def get_meter_provider(self):
+        return self._provider
 
 
 class MockTrace:
     """Mock trace API."""
 
-    def set_tracer_provider(self, *args, **kwargs):
-        pass
+    def __init__(self) -> None:
+        self._provider = None
+
+    def set_tracer_provider(self, provider, *_args, **_kwargs):
+        self._provider = provider
+
+    def get_tracer_provider(self):
+        return self._provider
 
 
 def create_mock_telemetry() -> tuple[Any, ...]:

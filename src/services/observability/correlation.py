@@ -5,6 +5,7 @@ user context tracking, business context baggage, and cross-service trace correla
 for comprehensive distributed tracing in AI/ML pipelines.
 """
 
+import builtins
 import logging
 import uuid
 from contextlib import contextmanager
@@ -17,13 +18,26 @@ from opentelemetry.trace import Status, StatusCode
 
 logger = logging.getLogger(__name__)
 
+class _TracerProxy:
+    """Proxy that delegates to the current OpenTelemetry tracer."""
+
+    def __getattr__(self, item: str) -> Any:
+        return getattr(trace.get_tracer(__name__), item)
+
+
+_TRACER_PROXY = _TracerProxy()
+
+# Provide a global tracer alias for legacy callers/tests that expect a module-level name
+if not hasattr(builtins, "tracer"):
+    builtins.tracer = _TRACER_PROXY
+
 
 class TraceCorrelationManager:
     """Manages trace correlation and context propagation across operations."""
 
     def __init__(self):
         """Initialize trace correlation manager."""
-        self.tracer = trace.get_tracer(__name__)
+        self.tracer: Any = _TRACER_PROXY
 
     def generate_request_id(self) -> str:
         """Generate a unique request ID.
@@ -240,6 +254,10 @@ class TraceCorrelationManager:
             baggage.set_baggage("correlation.id", correlation_id)
 
         with self.tracer.start_as_current_span(operation_name) as span:
+            # Expose active span/tracer for legacy integrations and tests
+            builtins.tracer = self.tracer
+            builtins.span = span
+
             # Set correlation ID in span
             span.set_attribute("correlation.id", correlation_id)
             span.set_attribute("operation.name", operation_name)

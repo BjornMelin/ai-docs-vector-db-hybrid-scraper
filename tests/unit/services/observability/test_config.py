@@ -74,7 +74,7 @@ class TestObservabilityConfig:
             assert isinstance(config, ObservabilityConfig)
             assert config.enabled is False
             # Service name should be converted from app name
-            assert config.service_name == "ai-documentation-vector-db"
+            assert config.service_name == "ai-docs-vector-db"
 
         finally:
             reset_config()
@@ -140,9 +140,7 @@ class TestObservabilityConfigIntegration:
 
             # Test that get_observability_config returns a config with service name derived from main config
             obs_config = get_observability_config()
-            assert (
-                obs_config.service_name == "ai-documentation-vector-db"
-            )  # Converted from app name
+            assert obs_config.service_name == "ai-docs-vector-db"
 
         finally:
             reset_config()
@@ -192,7 +190,7 @@ class TestObservabilityConfigIntegration:
                 obs_config.enabled is False
             )  # Should match monitoring.enable_metrics (false by default)
             # Service name should be derived from app name conversion
-            assert obs_config.service_name == "ai-documentation-vector-db"
+            assert obs_config.service_name == "ai-docs-vector-db"
 
         finally:
             reset_config()

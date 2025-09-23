@@ -5,17 +5,18 @@ and cost tracking that integrates seamlessly with the existing configuration.
 """
 
 import logging
-from functools import lru_cache
+import os
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, TypeAdapter
 
 
-# Try to import config function - may not be available in all contexts
+# Try to import config helpers - may not be available in all contexts
 try:
-    from src.config import get_config
+    from src.config import get_config, reset_config
 except ImportError:
     get_config = None
+    reset_config = None
 
 
 logger = logging.getLogger(__name__)
@@ -30,19 +31,12 @@ def _raise_config_system_unavailable() -> None:
 class ObservabilityConfig(BaseModel):
     """Configuration for OpenTelemetry observability features."""
 
-    # Core observability toggle
-    enabled: bool = Field(
-        default=False, description="Enable OpenTelemetry observability"
-    )
-
-    # Service identification
+    enabled: bool = Field(default=False, description="Enable OpenTelemetry observability")
     service_name: str = Field(
         default="ai-docs-vector-db", description="Service name for traces"
     )
     service_version: str = Field(default="1.0.0", description="Service version")
     service_namespace: str = Field(default="ai-docs", description="Service namespace")
-
-    # OTLP Exporter configuration
     otlp_endpoint: str = Field(
         default="http://localhost:4317",
         description="OTLP gRPC endpoint for trace export",
@@ -50,33 +44,21 @@ class ObservabilityConfig(BaseModel):
     otlp_headers: dict[str, str] = Field(
         default_factory=dict, description="Headers for OTLP export"
     )
-    otlp_insecure: bool = Field(
-        default=True, description="Use insecure OTLP connection"
-    )
-
-    # Sampling configuration
+    otlp_insecure: bool = Field(default=True, description="Use insecure OTLP connection")
     trace_sample_rate: float = Field(
-        default=1.0, ge=0.0, le=1.0, description="Trace sampling rate (0.0-1.0)"
+        default=1.0, ge=0.0, le=1.0, description="Trace sampling rate"
     )
-
-    # Resource attributes
     deployment_environment: str = Field(
         default="development", description="Deployment environment"
     )
-
-    # AI/ML specific configuration
     track_ai_operations: bool = Field(
-        default=True, description="Track AI operations (embeddings, LLM calls)"
+        default=True, description="Track AI operations"
     )
     track_costs: bool = Field(default=True, description="Track AI service costs")
     track_performance: bool = Field(
         default=True, description="Track performance metrics"
     )
-
-    # Instrumentation configuration
-    instrument_fastapi: bool = Field(
-        default=True, description="Auto-instrument FastAPI"
-    )
+    instrument_fastapi: bool = Field(default=True, description="Auto-instrument FastAPI")
     instrument_httpx: bool = Field(
         default=True, description="Auto-instrument HTTP clients"
     )
@@ -84,13 +66,9 @@ class ObservabilityConfig(BaseModel):
     instrument_sqlalchemy: bool = Field(
         default=True, description="Auto-instrument SQLAlchemy"
     )
-
-    # Console debugging (development)
     console_exporter: bool = Field(
         default=False, description="Export traces to console (development)"
     )
-
-    # Batch span processor configuration
     batch_schedule_delay: int = Field(
         default=5000, description="Batch schedule delay in milliseconds"
     )
@@ -105,8 +83,30 @@ class ObservabilityConfig(BaseModel):
     )
 
 
-@lru_cache
-def get_observability_config() -> ObservabilityConfig:
+_CACHED_OBSERVABILITY_CONFIG: ObservabilityConfig | None = None
+_CONFIG_RESET_REQUIRED = False
+
+
+def clear_observability_cache() -> None:
+    """Clear cached observability configuration."""
+
+    global _CACHED_OBSERVABILITY_CONFIG
+    _CACHED_OBSERVABILITY_CONFIG = None
+    global _CONFIG_RESET_REQUIRED
+    _CONFIG_RESET_REQUIRED = True
+
+
+def _slugify_app_name(value: str) -> str:
+    """Convert application name to a slug suitable for service identifiers."""
+
+    return "-".join(value.lower().split())
+
+
+def get_observability_config(
+    main_config: Any | None = None,
+    *,
+    force_refresh: bool = False,
+) -> ObservabilityConfig:
     """Get observability configuration from unified config system.
 
     Integrates with the existing configuration to add observability settings
@@ -116,40 +116,105 @@ def get_observability_config() -> ObservabilityConfig:
         ObservabilityConfig instance with settings
 
     """
+    global _CACHED_OBSERVABILITY_CONFIG, _CONFIG_RESET_REQUIRED
+
+    if _CONFIG_RESET_REQUIRED and main_config is None and reset_config is not None:
+        try:
+            reset_config()
+        except Exception:  # noqa: BLE001 - reset best-effort; skip on failure
+            logger.debug("Failed to reset main configuration before refresh")
+        finally:
+            _CONFIG_RESET_REQUIRED = False
+    elif _CONFIG_RESET_REQUIRED and main_config is not None:
+        _CONFIG_RESET_REQUIRED = False
+
+    if main_config is None and not force_refresh and _CACHED_OBSERVABILITY_CONFIG:
+        return _CACHED_OBSERVABILITY_CONFIG
+
     try:
-        # Try to get from main config if available
-        if get_config is None:
-            _raise_config_system_unavailable()
+        if main_config is None:
+            if get_config is None:
+                _raise_config_system_unavailable()
+            main_config = get_config()
 
-        main_config = get_config()
+        config_dict: dict[str, Any] = ObservabilityConfig().model_dump()
 
-        # Extract observability settings from environment or create defaults
-        config_dict: dict[str, Any] = {}
+        if hasattr(main_config, "observability") and main_config.observability:
+            try:
+                config_dict.update(main_config.observability.model_dump())
+            except AttributeError:
+                config_dict.update(main_config.observability.__dict__)
 
-        # Use monitoring config if available
-        if hasattr(main_config, "monitoring") and main_config.monitoring:
-            config_dict["enabled"] = main_config.monitoring.enable_metrics
-
-        # Environment-based configuration
         if hasattr(main_config, "environment"):
             config_dict["deployment_environment"] = main_config.environment.value
 
-        # Service metadata
-        if hasattr(main_config, "app_name"):
-            # Convert app name to service name format
-            service_name = main_config.app_name.lower().replace(" ", "-")
-            config_dict["service_name"] = service_name
+        env_overrides: dict[str, Any] = {}
+        for field_name, field_info in ObservabilityConfig.model_fields.items():
+            env_key = f"AI_DOCS_OBSERVABILITY__{field_name.upper()}"
+            raw_value = os.getenv(env_key)
+            if raw_value is None:
+                continue
 
-        if hasattr(main_config, "version"):
-            config_dict["service_version"] = main_config.version
+            adapter = TypeAdapter(field_info.annotation or Any)
+            try:
+                env_overrides[field_name] = adapter.validate_python(raw_value)
+            except ValueError:
+                # Fallback handling for common boolean string values
+                if field_info.annotation in {bool, bool | None}:
+                    env_overrides[field_name] = raw_value.strip().lower() in {
+                        "1",
+                        "true",
+                        "yes",
+                        "on",
+                    }
+                else:
+                    logger.debug(
+                        "Failed to parse environment override for %s", field_name
+                    )
 
-        return ObservabilityConfig(**config_dict)
+        if "service_name" not in env_overrides and "service_name" in config_dict:
+            app_name_override = os.getenv("AI_DOCS_APP_NAME")
+            if app_name_override:
+                env_overrides["service_name"] = _slugify_app_name(app_name_override)
 
-    except (ValueError, TypeError, UnicodeDecodeError) as e:
+        if "service_version" not in env_overrides and os.getenv("AI_DOCS_VERSION"):
+            env_overrides["service_version"] = os.getenv("AI_DOCS_VERSION")
+
+        if "enabled" not in env_overrides:
+            monitoring_toggle = os.getenv("AI_DOCS_MONITORING__ENABLE_METRICS")
+            if monitoring_toggle is not None:
+                env_overrides["enabled"] = monitoring_toggle.strip().lower() in {
+                    "1",
+                    "true",
+                    "yes",
+                    "on",
+                }
+
+        config_dict.update(env_overrides)
+
+        result = ObservabilityConfig(**config_dict)
+
+    except (ImportError, ValueError, TypeError, UnicodeDecodeError) as exc:
         logger.warning(
-            f"Could not load from main config, using defaults: {e}"
-        )  # TODO: Convert f-string to logging format
+            "Could not load from main config, using defaults: %s", exc
+        )
+        if main_config is None:
+            _CACHED_OBSERVABILITY_CONFIG = ObservabilityConfig()
+            return _CACHED_OBSERVABILITY_CONFIG
         return ObservabilityConfig()
+    else:
+        if main_config is not None and hasattr(main_config, "observability"):
+            try:
+                object.__setattr__(main_config, "observability", result)
+            except (AttributeError, TypeError):
+                main_config.observability = result
+
+        _CACHED_OBSERVABILITY_CONFIG = result
+
+        return result
+
+
+get_observability_config.cache_clear = clear_observability_cache  # type: ignore[attr-defined]
 
 
 def get_resource_attributes(config: ObservabilityConfig) -> dict[str, str]:

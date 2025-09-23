@@ -1,3 +1,11 @@
+---
+title: Troubleshooting
+audience: users
+status: active
+owner: product-education
+last_reviewed: 2025-03-13
+---
+
 # User Troubleshooting Guide
 
 > **Status**: Active  
@@ -577,8 +585,8 @@ Before asking for help, try these:
 
 ### Technical Resources
 
-- **[Developer Documentation](../developers/README.md)**: For integration and API issues
-- **[Operator Documentation](../operators/README.md)**: For deployment and infrastructure issues
+- **[Developer Documentation](../developers/index.md)**: For integration and API issues
+- **[Operator Documentation](../operators/index.md)**: For deployment and infrastructure issues
 
 ### External Resources
 

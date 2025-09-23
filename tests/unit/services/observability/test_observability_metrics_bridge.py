@@ -1,6 +1,6 @@
 """Tests for OpenTelemetry metrics bridge module."""
 
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 

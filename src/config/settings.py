@@ -14,6 +14,7 @@ Features:
 """
 
 from enum import Enum
+from importlib import import_module
 from pathlib import Path
 from typing import Any, Self
 
@@ -1162,6 +1163,17 @@ def get_settings() -> Settings:
     global _settings_instance
     if _settings_instance is None:
         _settings_instance = Settings()
+        try:
+            observability_module = import_module("src.services.observability.config")
+            sync_observability_config = getattr(
+                observability_module, "get_observability_config", None
+            )
+
+            if sync_observability_config:
+                sync_observability_config(main_config=_settings_instance, force_refresh=True)
+        except ImportError:
+            # Observability module not available during early bootstrap.
+            pass
     return _settings_instance
 
 

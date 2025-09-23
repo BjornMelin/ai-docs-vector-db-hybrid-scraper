@@ -32,6 +32,7 @@ theme:
     - navigation.sections
     - navigation.expand
     - navigation.top
+    - navigation.indexes
     - search.highlight
     - search.share
     - content.code.annotate
@@ -39,27 +40,40 @@ theme:
 
 nav:
   - Home: index.md
-  - Users:
-      - Overview: users/README.md
+  - Getting Started:
       - Quick Start: users/quick-start.md
-      - Configuration: users/configuration-management.md
-      - Examples: users/examples-and-recipes.md
+      - Configuration Basics: users/configuration-management.md
+      - Examples & Recipes: users/examples-and-recipes.md
       - Troubleshooting: users/troubleshooting.md
-  - Developers:
-      - Overview: developers/README.md
-      - Getting Started: developers/getting-started.md
-      - Architecture: developers/architecture.md
-      - API Reference: developers/api-reference.md
+  - Architecture & API:
+      - Developer Hub: developers/index.md
+      - System Architecture: developers/architecture.md
+      - Configuration Reference: developers/configuration.md
       - Integration Guide: developers/integration-guide.md
-      - Contributing: developers/contributing.md
-  - Operators:
-      - Overview: operators/README.md
+      - API Reference: developers/api-reference.md
+  - Operations:
+      - Operator Hub: operators/index.md
       - Deployment: operators/deployment.md
       - Configuration: operators/configuration.md
       - Monitoring: operators/monitoring.md
-      - Security: operators/security.md
-      - Operations: operators/operations.md
-      - Windows Compatibility: operators/windows-compatibility.md
+      - Operations Runbook: operators/operations.md
+  - Security:
+      - Architecture Assessment: security/security-architecture-assessment.md
+      - Configuration Hardening: security/security-config-implementation.md
+      - Essential Checklist: security/essential-security-checklist.md
+  - Testing & Performance:
+      - Testing Strategy: testing/test-modernization-completion-report.md
+      - Test Infrastructure: testing/test-infrastructure-documentation.md
+      - Performance Benchmarking: developers/performance-benchmarking-methodology.md
+  - Research & Reports:
+      - Browser Research: research/browser-use/README.md
+      - Transformation Research: research/transformation/README.md
+      - Doc Modernization Summary: reports/doc-modernization/phase0/summary.md
+  - Governance:
+      - Community Guidelines: community-guidelines.md
+      - Remaining Work Backlog: operators/remaining_tasks/README.md
+      - Documentation Metadata: contributing/document-metadata.md
+      - Roadmap: roadmap.md
 
 markdown_extensions:
   - toc:
@@ -91,21 +105,10 @@ markdown_extensions:
 
 plugins:
   - search
-  - mkdocstrings:
-      handlers:
-        python:
-          paths: [src]
-          options:
-            docstring_style: google
-            show_source: false
-            show_bases: true
-            show_inheritance_diagram: true
 
 extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper
-  version:
-    provider: mike
 
-strict: false
+strict: true

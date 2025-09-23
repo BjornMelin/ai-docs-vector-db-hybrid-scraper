@@ -2,7 +2,7 @@
 
 import asyncio
 import time
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -233,8 +233,9 @@ class TestFastAPIObservabilityMiddleware:
             msg = "Test error"
             raise ValueError(msg)
 
-        with pytest.raises(ValueError, match="Test error"):
-            await middleware.dispatch(request, mock_call_next)
+        response = await middleware.dispatch(request, mock_call_next)
+
+        assert response.status_code == 500
 
         # Verify error was recorded
         mock_span.record_exception.assert_called_once()

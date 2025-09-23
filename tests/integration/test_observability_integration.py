@@ -1,7 +1,7 @@
 """Integration tests for OpenTelemetry observability with boundary-only mocking."""
 
 import asyncio
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import FastAPI

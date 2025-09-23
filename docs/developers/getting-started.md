@@ -1,666 +1,199 @@
-# Developer Getting Started Guide
+# Developer Setup Guide
 
-> **Status**: Active  
-> **Last Updated**: 2025-01-09  
-> **Purpose**: Complete setup guide for developers  
-> **Audience**: New developers joining the project
+## Prerequisites
 
-Get your development environment set up and make your first contribution!
-This guide takes you from zero to productive development in about 30 minutes.
+### Python 3.11-3.12
 
-## 🚀 Quick Start (5 minutes)
-
-### Prerequisites Check
+#### Ubuntu/Debian
 
 ```bash
-# Required tools - install if missing
-python --version    # Need 3.11-3.12 (3.13 not supported yet)
-uv --version       # Need latest uv package manager
-docker --version   # Need Docker Desktop
-git --version      # Need Git
+sudo apt update
+sudo apt install python3.11 python3.11-venv python3.11-dev
 ```
 
-### Fast Setup
+#### macOS with Homebrew
 
 ```bash
-# Clone and setup
-git clone <repository-url>
-cd ai-docs-vector-db
-uv sync
-
-# Start services and test
-python scripts/dev.py services start
-uv run pytest tests/unit/ --tb=short -q
+brew install python@3.11
 ```
 
-If everything passes, you're ready to develop! Skip to [First Contribution](#first-contribution).
-
-## 📋 Detailed Setup
-
-### 1. System Prerequisites
-
-#### Python 3.11-3.12
+#### Windows with Chocolatey
 
 ```bash
-# Check version (must be 3.11 or 3.12)
-python --version
-
-# Install Python 3.12 (recommended)
-# Linux/macOS:
-curl -sSL https://install.python.org/python-3.12.sh | bash
-
-# Windows: Download Python 3.12 from python.org
-# Note: Python 3.13 not yet supported due to browser-use library compatibility
+choco install python --version=3.11.9
 ```
 
-#### UV Package Manager
+### uv (package manager)
+
+#### Linux/macOS
 
 ```bash
-# Install uv (10-100x faster than pip)
 curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Or using pip
-pip install uv
 ```
 
-#### Docker Desktop
-
-- **Linux**: `sudo apt install docker.io` or use Docker Engine
-- **macOS/Windows**: Download Docker Desktop
-- **Verify**: `docker run hello-world`
-
-#### Git Configuration
+#### Windows with PowerShell
 
 ```bash
-# Set up Git identity
-git config --global user.name "Your Name"
-git config --global user.email "your.email@example.com"
-
-# Enable helpful Git settings
-git config --global init.defaultBranch main
-git config --global pull.rebase false
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-### 2. Repository Setup
+### Docker
 
-#### Clone Repository
+#### Ubuntu/Debian
+
+```bash
+sudo apt install docker.io docker-compose
+```
+
+#### macOS with Homebrew
+
+```bash
+brew install docker docker-compose
+```
+
+#### Windows
+
+Download Docker Desktop from https://www.docker.com/products/docker-desktop
+
+### Git
+
+#### Ubuntu/Debian
+
+```bash
+sudo apt install git
+```
+
+#### macOS with Homebrew
+
+```bash
+brew install git
+```
+
+#### Windows
+
+Download Git from https://git-scm.com/download/win
+
+## Repository Setup
+
+### Clone repository
 
 ```bash
 git clone https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper.git
 cd ai-docs-vector-db-hybrid-scraper
 ```
 
-#### Environment Setup
+### Install dependencies
 
 ```bash
-# Install all dependencies
 uv sync
-
-# Activate virtual environment (automatic with uv commands)
-source .venv/bin/activate  # Optional: for direct python usage
-
-# Install pre-commit hooks
-uv run pre-commit install
 ```
 
-#### Environment Variables
+### Copy environment file
 
 ```bash
-# Copy example environment file
 cp .env.example .env
-
-# Edit with your API keys (required for full functionality)
-nano .env  # or your preferred editor
 ```
 
-**Required environment variables:**
+## Essential Environment Variables
+
+### Edit .env with required keys
 
 ```bash
-# .env file
-OPENAI_API_KEY=sk-your-openai-key-here
-ANTHROPIC_API_KEY=sk-ant-your-anthropic-key-here
+# Required variables only - add to .env file
 
-# Enhanced Database Connection Pool (BJO-134) Configuration
-# Production-ready ML-driven database optimization achieving:
-# • 50.9% latency reduction (2500ms → 1200ms average)
-# • 887.9% throughput increase (50 → 494 RPS)
-# • 95% ML model accuracy for predictive scaling
-
-# Core Connection Pool Settings
-DATABASE_POOL_MIN_SIZE=15
-DATABASE_POOL_MAX_SIZE=75
-DATABASE_POOL_MAX_OVERFLOW=25
-DATABASE_POOL_RECYCLE=1800
-
-# ML-Based Predictive Load Monitoring
-ENABLE_ML_SCALING=true
-ML_PREDICTION_CONFIDENCE=0.85
-ML_TRAINING_INTERVAL_HOURS=6
-ML_PREDICTION_WINDOW_MINUTES=10
-ML_MODEL_TYPE=random_forest
-
-# Multi-Level Circuit Breaker
-CIRCUIT_BREAKER_ENABLED=true
-CONNECTION_FAILURE_THRESHOLD=5
-TIMEOUT_FAILURE_THRESHOLD=8
-QUERY_FAILURE_THRESHOLD=15
-SECURITY_FAILURE_THRESHOLD=2
-RECOVERY_TIMEOUT_SECONDS=30
-
-# Connection Affinity Management
-CONNECTION_AFFINITY_ENABLED=true
-AFFINITY_MAX_PATTERNS=2000
-AFFINITY_PATTERN_EXPIRY_MINUTES=60
-AFFINITY_SCORE_THRESHOLD=0.75
-
-# Adaptive Configuration Management
-ENABLE_ADAPTIVE_CONFIGURATION=true
-ADAPTIVE_STRATEGY=moderate
-CONVERGENCE_TIMEOUT_MINUTES=10
-
-# Performance Monitoring
-ENABLE_PREDICTIVE_MONITORING=true
-PERFORMANCE_BASELINE_TRACKING=true
-ENABLE_PERFORMANCE_COMPARISON=true
-
-# Other keys are optional for basic development
+OPENAI_API_KEY=your_openai_api_key_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+DATABASE_URL=postgresql://user:password@localhost:5432/aidocs
+REDIS_URL=redis://localhost:6379/0
 ```
 
-### Enhanced Database Setup Instructions (BJO-134)
+## Service Startup
 
-After configuring the environment variables above, follow these additional steps to enable the enhanced database features:
-
-#### 1. Verify Enhanced Database Features
+### Start all services
 
 ```bash
-# Test enhanced database connection pool
-uv run python -c "
-from src.infrastructure.database.connection_manager import DatabaseConnectionManager
-from src.config import get_config
-
-config = get_config()
-print(f'Enhanced features enabled: {config.database.enable_enhanced_features}')
-print(f'ML scaling: {config.database.enable_ml_scaling}')
-print(f'Circuit breaker: {config.database.enable_circuit_breaker}')
-print(f'Connection affinity: {config.database.enable_connection_affinity}')
-"
+docker-compose up -d
 ```
 
-#### 2. Initialize ML Model for Predictive Scaling
+### Start specific services
 
 ```bash
-# Set up ML model for database load prediction
-uv run python scripts/initialize_ml_model.py
-
-# Expected output:
-# ✓ ML model initialized with 95% target accuracy
-# ✓ Training data collection enabled
-# ✓ Predictive scaling configured
+docker-compose up -d postgres redis
 ```
 
-#### 3. Validate Performance Improvements
+### View service status
 
 ```bash
-# Run BJO-134 performance validation
-uv run python scripts/validate_performance_targets.py
-
-# Expected improvements:
-# ✓ Latency reduction: >50% (target: 50.9%)
-# ✓ Throughput increase: >800% (target: 887.9%)
-# ✓ ML model accuracy: >90% (target: 95%)
+docker-compose ps
 ```
 
-#### 4. Monitor Enhanced Features
+### View service logs
 
 ```bash
-# Check enhanced database health
-curl localhost:8000/admin/db-stats
-
-# Monitor ML model performance
-curl localhost:8000/admin/ml-model-stats
-
-# View connection affinity patterns
-curl localhost:8000/admin/connection-affinity-patterns
+docker-compose logs -f
 ```
 
-### 3. Service Dependencies
+## Verification
 
-#### Start Core Services
+### Run tests
 
 ```bash
-# Start Qdrant (vector database) and DragonflyDB (cache)
-python scripts/dev.py services start
-
-# Verify services are running
-curl localhost:6333/health        # Qdrant health check
-curl localhost:6379/ping          # DragonflyDB ping
-```
-
-#### Service Configuration
-
-The system uses Docker Compose for service orchestration:
-
-- **Qdrant**: Vector database on port 6333
-- **DragonflyDB**: Redis-compatible cache on port 6379
-- **Optional**: Additional services for specific features
-
-### 4. Development Environment
-
-#### VS Code Setup (Recommended)
-
-```bash
-# Install recommended extensions
-code --install-extension ms-python.python
-code --install-extension ms-python.black-formatter
-code --install-extension charliermarsh.ruff
-
-# Open project
-code .
-```
-
-**VS Code settings (automatically configured):**
-
-- Python interpreter: `.venv/bin/python`
-- Linter: Ruff (fast Python linter)
-- Formatter: Ruff (fast Python formatter)
-- Type checker: Mypy integration
-
-#### IDE Configuration
-
-```json
-// .vscode/settings.json (created automatically)
-{
-  "python.defaultInterpreterPath": ".venv/bin/python",
-  "python.linting.enabled": true,
-  "python.linting.ruffEnabled": true,
-  "python.formatting.provider": "ruff",
-  "editor.formatOnSave": true
-}
-```
-
-### 5. Verify Installation
-
-#### Run Test Suite
-
-```bash
-# Quick test run (should complete in <30 seconds)
-uv run pytest tests/unit/ --tb=short -q
-
-# Full test suite with coverage
-uv run pytest --cov=src --cov-report=term-missing
-
-# Expected output: 500+ tests, 90%+ coverage
-```
-
-#### Code Quality Checks
-
-```bash
-# Linting and formatting (should pass without errors)
-ruff check . --fix
-ruff format .
-
-# Type checking
-uv run mypy src/
-
-# All quality checks
-make check  # or run individually
-```
-
-#### API Health Check
-
-```bash
-# Start the MCP server (in another terminal)
-uv run python src/unified_mcp_server.py
-
-# Test API endpoints
-curl -X POST localhost:8000/search \
-  -H "Content-Type: application/json" \
-  -d '{"query": "test search", "limit": 5}'
-```
-
-## 🛠️ Development Workflow
-
-### 1. Creating a Feature Branch
-
-```bash
-# Always start from main
-git checkout main
-git pull origin main
-
-# Create feature branch
-git checkout -b feature/your-feature-name
-
-# Start development
-```
-
-### 2. Development Loop
-
-```bash
-# 1. Write tests first (TDD approach)
-uv run pytest tests/unit/test_your_feature.py -v
-
-# 2. Implement feature
-# Edit src/ files
-
-# 3. Run tests to verify
-uv run pytest tests/unit/test_your_feature.py -v
-
-# 4. Run quality checks
-ruff check . --fix && ruff format .
-uv run mypy src/
-
-# 5. Commit when ready
-git add .
-git commit -m "feat(module): implement new feature"
-```
-
-### 3. Pre-Commit Validation
-
-The project automatically runs quality checks before commits:
-
-```bash
-# Automatic checks on git commit:
-# 1. Ruff linting and formatting
-# 2. Fast test suite
-# 3. Import sorting
-# 4. Basic type checking
-
-# Manual validation
-make check
-```
-
-## 📖 Understanding the Codebase
-
-### Project Structure
-
-```bash
-src/
-├── config/          # Configuration management
-│   ├── models.py    # Pydantic configuration models
-│   ├── loader.py    # Environment loading
-│   └── validators.py # Config validation
-├── models/          # API data models
-│   ├── api_contracts.py    # Request/response models
-│   ├── document_processing.py # Document models
-│   └── vector_search.py    # Search models
-├── services/        # Business logic layer
-│   ├── embeddings/  # Embedding generation
-│   ├── vector_db/   # Database operations
-│   ├── crawling/    # Web scraping
-│   └── cache/       # Caching layer
-├── mcp_tools/       # MCP protocol tools
-├── infrastructure/ # Client management
-└── utils/          # Shared utilities
-```
-
-### Key Technologies
-
-- **FastAPI**: Modern async web framework
-- **Pydantic v2**: Data validation and serialization
-- **Qdrant**: Vector similarity search database
-- **AsyncIO**: Asynchronous programming
-- **UV**: Fast Python package management
-- **Ruff**: Fast Python linting and formatting
-
-### Coding Standards
-
-```python
-# Example code style
-from __future__ import annotations
-
-import asyncio
-from typing import Optional
-
-from pydantic import BaseModel, Field
-from src.models.api_contracts import SearchRequest
-
-
-class ExampleService:
-    """Example service following project patterns."""
-
-    def __init__(self, config: dict[str, Any]) -> None:
-        self.config = config
-        self.logger = logging.getLogger(__name__)
-
-    async def process_request(
-        self,
-        request: SearchRequest,
-        *,
-        timeout: float = 30.0
-    ) -> SearchResponse:
-        """Process search request with proper typing and docs.
-
-        Args:
-            request: Validated search request
-            timeout: Request timeout in seconds
-
-        Returns:
-            Search response with results
-
-        Raises:
-            ValidationError: If request is invalid
-            ServiceError: If processing fails
-        """
-        # Implementation here
-        pass
-```
-
-## 🧪 Testing Philosophy
-
-### Test-Driven Development (TDD)
-
-```bash
-# 1. Write a failing test
-uv run pytest tests/unit/test_feature.py::test_new_functionality -v
-# Expected: FAILED (test doesn't exist yet)
-
-# 2. Write minimal code to pass
-# Add just enough implementation
-
-# 3. Verify test passes
-uv run pytest tests/unit/test_feature.py::test_new_functionality -v
-# Expected: PASSED
-
-# 4. Refactor and add more tests
-# Add edge cases, error scenarios
-```
-
-### Testing Best Practices
-
-1. **Comprehensive Coverage**: Test all public APIs
-2. **Edge Cases**: Test boundary conditions and errors
-3. **Fast Execution**: Unit tests should run in milliseconds
-4. **Clear Assertions**: Make test failures informative
-5. **Isolated Tests**: No shared state between tests
-
-### Test Categories
-
-```bash
-# Model validation tests (Pydantic)
-uv run pytest tests/unit/models/ -v
-
-# Configuration tests
-uv run pytest tests/unit/config/ -v
-
-# Service integration tests
-uv run pytest tests/unit/services/ -v
-
-# Security validation tests
-uv run pytest tests/unit/test_security.py -v
-```
-
-## 🔧 Common Development Tasks
-
-### Adding a New API Endpoint
-
-1. **Define models** in `src/models/api_contracts.py`
-2. **Write tests** for request/response validation
-3. **Implement logic** in appropriate service
-4. **Add endpoint** to MCP tools
-5. **Test integration** with full request cycle
-
-### Adding a New Service
-
-1. **Create service class** inheriting from `BaseService`
-2. **Write comprehensive tests** for all methods
-3. **Add configuration** models if needed
-4. **Register service** in dependency injection
-5. **Document** public APIs
-
-### Debugging Issues
-
-```bash
-# Run specific test with detailed output
-uv run pytest tests/unit/path/to/test.py::test_name -vvv
-
-# Debug with Python debugger
-uv run python -m pytest --pdb tests/unit/test_file.py
-
-# Check logs
-tail -f logs/application.log
-
-# Profile performance
-uv run pytest --profile tests/unit/
-```
-
-## 📚 First Contribution
-
-### 1. Pick an Issue
-
-- Look for "good first issue" labels
-- Check existing GitHub issues
-- Ask in discussions for guidance
-
-### 2. Development Process
-
-```bash
-# Create branch
-git checkout -b fix/issue-description
-
-# Make changes following TDD
-# 1. Write tests
-# 2. Implement feature
-# 3. Verify tests pass
-
-# Quality check
-make check
-
-# Commit and push
-git commit -m "fix(module): resolve issue description"
-git push origin fix/issue-description
-```
-
-### 3. Pull Request
-
-1. **Create PR** with descriptive title
-2. **Reference issue** number if applicable
-3. **Include tests** for all changes
-4. **Update documentation** if needed
-5. **Respond to feedback** promptly
-
-### 4. PR Requirements
-
-- [ ] All tests pass
-- [ ] Code follows linting standards
-- [ ] New tests added for new functionality
-- [ ] Documentation updated if needed
-- [ ] No secrets or credentials committed
-- [ ] Commit messages follow conventional format
-
-## 🔗 Development Resources
-
-### Documentation
-
-- **[Architecture Guide](./architecture.md)**: System design and components
-- **[API Reference](./api-reference.md)**: Complete API documentation
-- **[Contributing Guide](../developers/contributing.md)**: Detailed contribution guidelines
-
-### External Resources
-
-- **[FastAPI Documentation](https://fastapi.tiangolo.com/)**: Web framework
-- **[Pydantic Documentation](https://docs.pydantic.dev/)**: Data validation
-- **[Qdrant Documentation](https://qdrant.tech/documentation/)**: Vector database
-- **[UV Documentation](https://docs.astral.sh/uv/)**: Package manager
-
-### Community
-
-- **GitHub Issues**: Bug reports and feature requests
-- **GitHub Discussions**: Questions and community help
-- **Pull Requests**: Code review and collaboration
-
-## 🆘 Troubleshooting
-
-### Common Setup Issues
-
-#### "uv: command not found"
-
-```bash
-# Install uv package manager
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source ~/.bashrc  # or restart terminal
-```
-
-#### "Docker daemon not running"
-
-```bash
-# Start Docker service
-sudo systemctl start docker  # Linux
-# Or start Docker Desktop application
-```
-
-#### "pytest: command not found"
-
-```bash
-# Use uv to run pytest
 uv run pytest
-# Instead of just: pytest
 ```
 
-#### Test failures due to missing services
+### Run specific test file
 
 ```bash
-# Ensure services are running
-python scripts/dev.py services start
-
-# Check service status
-docker ps
-curl localhost:6333/health
+uv run pytest tests/test_scraper.py
 ```
 
-### Getting Help
+### Run linting
 
-1. **Check existing issues** on GitHub
-2. **Search documentation** for answers
-3. **Ask in discussions** for community help
-4. **Create detailed issue** with reproduction steps
+```bash
+uv run ruff check .
+```
 
-## 🎯 Next Steps
+### Format code
 
-### Immediate Next Steps
+```bash
+uv run ruff format .
+```
 
-1. ✅ Complete setup verification
-2. ✅ Run full test suite successfully
-3. ✅ Make a small test change and commit
-4. ✅ Read [Architecture Guide](./architecture.md)
-5. ✅ Review [API Reference](./api-reference.md)
+### Type checking
 
-### Learning Path
+```bash
+uv run mypy .
+```
 
-1. **Week 1**: Understand project structure and make first PR
-2. **Week 2**: Contribute to existing features and tests
-3. **Week 3**: Design and implement new features
-4. **Week 4**: Review and mentor other contributions
+## Basic Development Workflow
 
-### Advanced Topics
+### Create and switch to new branch
 
-- **Performance Optimization**: Profiling and optimization techniques
-- **Security Practices**: Secure coding and vulnerability assessment
-- **Deployment**: Docker, Kubernetes, and cloud deployment
-- **Monitoring**: Logging, metrics, and observability
+```bash
+git checkout -b feature/new-feature
+```
 
----
+### Make changes and run tests
 
-_🛠️ You're ready to start developing! The codebase is well-structured,
-thoroughly tested, and designed for easy contribution.
-Start with small changes to get familiar with the workflow,
-then tackle larger features as you build confidence._
+```bash
+uv run pytest
+```
+
+### Commit changes
+
+```bash
+git add .
+git commit -m "Add new feature"
+```
+
+### Push branch
+
+```bash
+git push origin feature/new-feature
+```
+
+### Run pre-commit checks before commit
+
+```bash
+uv run pre-commit run --all-files
+```

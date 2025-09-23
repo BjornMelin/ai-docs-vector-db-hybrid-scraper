@@ -1,3 +1,11 @@
+---
+title: Examples And Recipes
+audience: users
+status: active
+owner: product-education
+last_reviewed: 2025-03-13
+---
+
 # Examples & Recipes
 
 > **Status**: Active  
@@ -584,7 +592,7 @@ mcp scrape --url-list "sites.txt" --delay 2s --respectful
 - **[Search & Retrieval](./search-and-retrieval.md)**: Master search techniques
 - **[Web Scraping](./web-scraping.md)**: Understand the scraping system
 - **[Troubleshooting](./troubleshooting.md)**: Solve common problems
-- **Developer Resources**: See [../developers/](../developers/README.md) for API integration
+- **Developer Resources**: See [../developers/index.md](../developers/index.md) for API integration
 
 ---
 
