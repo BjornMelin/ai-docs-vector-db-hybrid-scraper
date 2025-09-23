@@ -91,7 +91,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.debug(
-                    f"Creating collection with vector size {vector_size}, hybrid: {enable_hybrid}"
+                    f"Creating collection with vector size {vector_size}, "
+                    f"hybrid: {enable_hybrid}"
                 )
 
             try:
@@ -147,12 +148,14 @@ def register_tools(mcp, client_manager: ClientManager):
 
                 if ctx:
                     await ctx.debug(
-                        f"Processed {successful_count}/{len(request.urls)} URLs successfully"
+                        f"Processed {successful_count}/{len(request.urls)} "
+                        f"URLs successfully"
                     )
 
             if ctx:
                 await ctx.info(
-                    f"Project {request.name} created successfully with collection {project['collection']}"
+                    f"Project {request.name} created successfully with "
+                    f"collection {project['collection']}"
                 )
 
             return ProjectInfo(**project)
@@ -257,7 +260,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.debug(
-                    f"Generated embeddings: dense={len(query_vector)} dims, sparse={sparse_vector is not None}"
+                    f"Generated embeddings: dense={len(query_vector)} dims, "
+                    f"sparse={sparse_vector is not None}"
                 )
 
             # Perform search
@@ -290,7 +294,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Project search completed: {len(search_results)} results for project {project_id}"
+                    f"Project search completed: {len(search_results)} results "
+                    f"for project {project_id}"
                 )
 
         except Exception as e:
@@ -358,6 +363,7 @@ def register_tools(mcp, client_manager: ClientManager):
         Args:
             project_id: Project ID to delete
             delete_collection: Whether to delete the associated Qdrant collection
+            ctx: MCP context for status updates
 
         Returns:
             Status message
@@ -422,6 +428,7 @@ def register_tools(mcp, client_manager: ClientManager):
         Args:
             project_id: Project ID to export
             format_type: Export format ('json' or 'yaml')
+            ctx: MCP context for status updates
 
         Returns:
             Dictionary containing status, format, and exported data
@@ -547,7 +554,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Added {urls_added} URLs to project {project_id}. Total URLs: {len(updated_urls)}"
+                    f"Added {urls_added} URLs to project {project_id}. "
+                    f"Total URLs: {len(updated_urls)}"
                 )
 
             return {
@@ -596,7 +604,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 project["indexed_count"] = info.indexed_vectors_count
                 if ctx:
                     await ctx.debug(
-                        f"Project {project.get('name', project_id)}: {info.vectors_count} vectors"
+                        f"Project {project.get('name', project_id)}: "
+                        f"{info.vectors_count} vectors"
                     )
             except (ValueError, ConnectionError, TimeoutError, RuntimeError) as e:
                 project["vector_count"] = 0

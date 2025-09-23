@@ -57,6 +57,7 @@ class DistributedRateLimiter:
         Args:
             redis_url: Redis connection URL. If None, only local fallback is used.
             security_config: Security configuration for rate limiting settings.
+
         """
         self.security_config = security_config or SecurityConfig()
         self.redis_client: redis.Redis | None = None
@@ -104,6 +105,7 @@ class DistributedRateLimiter:
             Tuple of (is_allowed, rate_limit_info)
             - is_allowed: Whether request is allowed
             - rate_limit_info: Dictionary with rate limit status info
+
         """
         current_time = time.time()
         burst_limit = int(limit * burst_factor)
@@ -165,6 +167,7 @@ class DistributedRateLimiter:
 
         Returns:
             Tuple of (is_allowed, rate_limit_info)
+
         """
         key = f"rate_limit:{identifier}:{window}"
         window_start = current_time - window
@@ -233,6 +236,7 @@ class DistributedRateLimiter:
 
         Returns:
             Tuple of (is_allowed, rate_limit_info)
+
         """
         async with self._cache_lock:
             window_start = current_time - window
@@ -289,6 +293,7 @@ class DistributedRateLimiter:
 
         Returns:
             Dictionary with current rate limit status
+
         """
         current_time = time.time()
 
@@ -355,6 +360,7 @@ class DistributedRateLimiter:
 
         Returns:
             True if reset was successful
+
         """
         try:
             await self._execute_rate_limit_reset(identifier, window)
@@ -397,6 +403,7 @@ class DistributedRateLimiter:
 
         Returns:
             Number of entries cleaned up
+
         """
         if not self.local_cache:
             return 0
@@ -442,6 +449,7 @@ class DistributedRateLimiter:
 
         Returns:
             Dictionary with health status information
+
         """
         status = {
             "local_cache_enabled": True,

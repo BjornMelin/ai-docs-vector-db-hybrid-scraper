@@ -77,6 +77,7 @@ class EmbeddingManager:
         Args:
             config: Configuration from DI container
             client_manager: Client manager from DI container
+
         """
         if self._initialized:
             return
@@ -126,6 +127,7 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If manager not initialized or generation fails
+
         """
         if not self._initialized or not self._core_manager:
             msg = "Embedding manager not initialized"
@@ -181,6 +183,7 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If manager not initialized
+
         """
         if not self._initialized or not self._core_manager:
             msg = "Embedding manager not initialized"
@@ -211,6 +214,7 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If manager not initialized
+
         """
         if not self._initialized or not self._core_manager:
             msg = "Embedding manager not initialized"
@@ -226,6 +230,7 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If manager not initialized
+
         """
         if not self._initialized or not self._core_manager:
             msg = "Embedding manager not initialized"
@@ -252,6 +257,7 @@ class EmbeddingManager:
         Raises:
             EmbeddingServiceError: If manager not initialized or no provider meets
                 constraints
+
         """
         if not self._initialized or not self._core_manager:
             msg = "Embedding manager not initialized"
@@ -274,6 +280,7 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If manager not initialized
+
         """
         if not self._initialized or not self._core_manager:
             msg = "Embedding manager not initialized"
@@ -311,6 +318,7 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If manager not initialized
+
         """
         if not self._initialized or not self._core_manager:
             msg = "Embedding manager not initialized"
@@ -354,6 +362,7 @@ class EmbeddingManager:
 
         Raises:
             EmbeddingServiceError: If manager not initialized
+
         """
         if not self._initialized or not self._core_manager:
             msg = "Embedding manager not initialized"
@@ -366,6 +375,7 @@ class EmbeddingManager:
 
         Returns:
             Status information for providers and usage
+
         """
         status = {
             "initialized": self._initialized,
@@ -390,5 +400,6 @@ class EmbeddingManager:
 
         Returns:
             Core EmbeddingManager instance or None
+
         """
         return self._core_manager

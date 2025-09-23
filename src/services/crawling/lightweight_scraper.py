@@ -232,7 +232,8 @@ class LightweightScraper(CrawlProvider):
                 or len(extracted.get("text", "")) < self.config.content_threshold
             ):
                 logger.info(
-                    f"Insufficient content extracted from {url}, escalating to next tier"
+                    f"Insufficient content extracted from {url}, "
+                    f"escalating to next tier"
                 )
                 return {
                     "success": False,

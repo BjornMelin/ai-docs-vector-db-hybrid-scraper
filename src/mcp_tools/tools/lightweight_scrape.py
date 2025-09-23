@@ -115,13 +115,13 @@ async def _handle_scrape_failure(result: dict, url: str, ctx: Context | None) ->
         await ctx.error(f"Failed to scrape {url}: {error_msg}")
         if "lightweight" in failed_tiers:
             await ctx.info(
-                "Lightweight tier failed. This content requires browser-based scraping. "
-                "Consider using standard search or crawl tools."
+                "Lightweight tier failed. This content requires browser-based "
+                "scraping. Consider using standard search or crawl tools."
             )
 
     msg = (
         f"Lightweight scraping failed: {error_msg}. "
-        f"{'Try browser-based tools for this content.' if 'lightweight' in failed_tiers else ''}"
+        f"{'Try browser-based tools for this content.' if 'lightweight' in failed_tiers else ''}"  # noqa: E501
     )
     raise CrawlServiceError(msg)
 
@@ -135,10 +135,10 @@ def register_tools(mcp, client_manager: ClientManager):
         formats: list[Literal["markdown", "html", "text"]] | None = None,
         ctx: Context | None = None,
     ) -> dict:
-        """Ultra-fast web scraping for simple static pages using httpx + BeautifulSoup.
+        """Web scraping for simple static pages using httpx + BeautifulSoup.
 
-        This tool provides 5-10x faster scraping for static content compared to
-        browser-based scrapers. It's ideal for:
+        This tool provides faster scraping for static content compared to
+        browser-based scrapers. Suitable for:
         - Documentation sites
         - Raw text/markdown files (GitHub raw content)
         - Simple HTML pages without JavaScript
@@ -202,7 +202,8 @@ def register_tools(mcp, client_manager: ClientManager):
             if result.get("success"):
                 if ctx:
                     await ctx.info(
-                        f"Successfully scraped {url} in {elapsed_ms:.0f}ms using {result.get('tier_used', 'unknown')} tier"
+                        f"Successfully scraped {url} in {elapsed_ms:.0f}ms using "
+                        f"{result.get('tier_used', 'unknown')} tier"
                     )
                 return _build_success_response(
                     result, url, formats, elapsed_ms, can_handle

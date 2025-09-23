@@ -32,6 +32,7 @@ def validate_api_key_common(
 
     Raises:
         ValueError: If validation fails
+
     """
     if value is None:
         return value
@@ -83,6 +84,7 @@ def validate_url_format(value: str) -> str:
 
     Raises:
         ValueError: If URL format is invalid
+
     """
     if not value.startswith(("http://", "https://")):
         msg = "URL must start with http:// or https://"
@@ -102,6 +104,7 @@ def validate_positive_int(value: int, field_name: str = "value") -> int:
 
     Raises:
         ValueError: If value is not positive
+
     """
     if value <= 0:
         msg = f"{field_name} must be positive"
@@ -121,6 +124,7 @@ def validate_percentage(value: float, field_name: str = "value") -> float:
 
     Raises:
         ValueError: If value is not a valid percentage
+
     """
     if not 0.0 <= value <= 1.0:
         msg = f"{field_name} must be between 0.0 and 1.0"
@@ -141,6 +145,7 @@ def validate_rate_limit_config(
 
     Raises:
         ValueError: If configuration structure is invalid
+
     """
     for provider, limits in value.items():
         if not isinstance(limits, dict):
@@ -179,6 +184,7 @@ def validate_chunk_sizes(
 
     Raises:
         ValueError: If size relationships are invalid
+
     """
     if chunk_overlap >= chunk_size:
         msg = "chunk_overlap must be less than chunk_size"
@@ -203,6 +209,7 @@ def validate_scoring_weights(
 
     Raises:
         ValueError: If weights don't sum to 1.0
+
     """
     total = quality_weight + speed_weight + cost_weight
     if abs(total - 1.0) > 0.01:  # Allow small floating point errors
@@ -222,6 +229,7 @@ def validate_vector_dimensions(value: int) -> int:
 
     Raises:
         ValueError: If dimensions are invalid
+
     """
     if value <= 0:
         msg = "Vector dimensions must be positive"
@@ -251,6 +259,7 @@ def validate_model_benchmark_consistency(key: str, model_name: str) -> str:
 
     Raises:
         ValueError: If key doesn't match model name
+
     """
     if key != model_name:
         msg = (
@@ -273,6 +282,7 @@ def validate_collection_name(value: str) -> str:
 
     Raises:
         ValueError: If name format is invalid
+
     """
     if not value:
         msg = "Collection name cannot be empty"
@@ -309,6 +319,7 @@ def validate_embedding_model_name(value: str) -> str:
 
     Raises:
         ValueError: If model name is invalid
+
     """
     if not value:
         msg = "Model name cannot be empty"
@@ -340,6 +351,7 @@ def validate_cache_ttl(value: int, min_ttl: int = 60, max_ttl: int = 86400) -> i
 
     Raises:
         ValueError: If TTL is out of range
+
     """
     if value < min_ttl:
         msg = f"Cache TTL must be at least {min_ttl} seconds"

@@ -57,7 +57,8 @@ async def demonstrate_rag_patterns():
 
     print(f"✅ RAG enabled with model: {config.rag.model}")
     print(
-        f"🔧 Configuration: {config.rag.max_tokens} max tokens, {config.rag.temperature} temperature"
+        f"🔧 Configuration: {config.rag.max_tokens} max tokens, "
+        f"{config.rag.temperature} temperature"
     )
     print()
 
@@ -87,7 +88,12 @@ async def demonstrate_rag_patterns():
             {
                 "id": "doc_1",
                 "title": "FastAPI Documentation - Getting Started",
-                "content": "FastAPI is a modern, fast (high-performance), web framework for building APIs with Python 3.7+ based on standard Python type hints. It provides automatic API documentation, data validation, and serialization.",
+                "content": (
+                    "FastAPI is a modern, fast (high-performance), web framework "
+                    "for building APIs with Python 3.7+ based on standard Python "
+                    "type hints. It provides automatic API documentation, data "
+                    "validation, and serialization."
+                ),
                 "url": "https://fastapi.tiangolo.com/tutorial/",
                 "score": 0.95,
                 "metadata": {"type": "documentation", "framework": "fastapi"},
@@ -95,7 +101,12 @@ async def demonstrate_rag_patterns():
             {
                 "id": "doc_2",
                 "title": "Pydantic Models and Validation",
-                "content": "Pydantic provides runtime type checking and data validation using Python type annotations. It automatically validates data, converts types, and provides detailed error messages for invalid data.",
+                "content": (
+                    "Pydantic provides runtime type checking and data validation "
+                    "using Python type annotations. It automatically validates "
+                    "data, converts types, and provides detailed error messages "
+                    "for invalid data."
+                ),
                 "url": "https://docs.pydantic.dev/",
                 "score": 0.87,
                 "metadata": {"type": "documentation", "framework": "pydantic"},
@@ -103,7 +114,12 @@ async def demonstrate_rag_patterns():
             {
                 "id": "doc_3",
                 "title": "Python Type Hints Best Practices",
-                "content": "Type hints in Python help with code clarity, IDE support, and static analysis. They don't affect runtime performance but significantly improve developer experience and code maintainability.",
+                "content": (
+                    "Type hints in Python help with code clarity, IDE support, "
+                    "and static analysis. They don't affect runtime performance "
+                    "but significantly improve developer experience and code "
+                    "maintainability."
+                ),
                 "url": "https://docs.python.org/3/library/typing.html",
                 "score": 0.82,
                 "metadata": {"type": "documentation", "language": "python"},
@@ -112,7 +128,9 @@ async def demonstrate_rag_patterns():
 
         # Create RAG request
         rag_request = RAGRequest(
-            query="How do I use type hints with FastAPI and Pydantic for API validation?",
+            query=(
+                "How do I use type hints with FastAPI and Pydantic for API validation?"
+            ),
             search_results=sample_search_results,
             include_sources=True,
             require_high_confidence=False,
@@ -150,7 +168,8 @@ async def demonstrate_rag_patterns():
                 print("-" * 20)
                 for i, source in enumerate(response.sources, 1):
                     print(
-                        f"{i}. {source['title']} (Score: {source['relevance_score']:.2f})"
+                        f"{i}. {source['title']} "
+                        f"(Score: {source['relevance_score']:.2f})"
                     )
                     print(f"   {source['excerpt'][:100]}...")
                     if source["url"]:

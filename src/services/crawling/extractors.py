@@ -1,7 +1,8 @@
 """Shared extraction utilities for web crawling providers.
 
 This module provides reusable components for JavaScript execution and
-documentation extraction that can be used across different crawling providers.
+documentation extraction that can be used across different crawling
+providers.
 """
 
 from urllib.parse import urlparse
@@ -43,7 +44,9 @@ class JavaScriptExecutor:
             """,
             "click_show_more": """
                 // Click all "show more" buttons
-                const buttons = document.querySelectorAll('[class*="show-more"], [class*="load-more"]');
+                const buttons = document.querySelectorAll(
+                    '[class*="show-more"], [class*="load-more"]'
+                );
                 for (const button of buttons) {
                     button.click();
                     await new Promise(r => setTimeout(r, 500));
@@ -123,7 +126,8 @@ class DocumentationExtractor:
         """Create extraction schema based on documentation type.
 
         Args:
-            doc_type: Type of documentation ("api_reference", "tutorial", "guide", "general")
+            doc_type: Type of documentation ("api_reference", "tutorial",
+            "guide", "general")
 
         Returns:
             Dictionary containing CSS selectors for structured extraction

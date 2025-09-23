@@ -40,6 +40,7 @@ class AnalyticsService:
 
         Args:
             name: Service name for MCP registration
+
         """
         self.mcp = FastMCP(
             name,
@@ -64,7 +65,7 @@ class AnalyticsService:
             - Extends existing OpenTelemetry infrastructure
             - Integrates with AIOperationTracker for agent-specific metrics
             - Leverages existing correlation and performance monitoring
-            """,
+            """,  # noqa: E501
         )
         self.client_manager: ClientManager | None = None
 
@@ -78,6 +79,7 @@ class AnalyticsService:
 
         Args:
             client_manager: Shared client manager instance
+
         """
         self.client_manager = client_manager
 
@@ -92,13 +94,13 @@ class AnalyticsService:
         )
 
     async def _initialize_observability_integration(self) -> None:
-        """Initialize integration with existing enterprise observability infrastructure."""
+        """Initialize integration with existing enterprise observability infra."""
         # Get existing observability components
         self.ai_tracker = get_ai_tracker()
         self.correlation_manager = get_correlation_manager()
         self.performance_monitor = get_performance_monitor()
 
-        logger.info("Integrated with existing enterprise observability infrastructure")
+        logger.info("Integrated with existing enterprise observability infra")
 
     async def _register_analytics_tools(self) -> None:
         """Register all analytics-related MCP tools."""
@@ -113,11 +115,13 @@ class AnalyticsService:
         # Register agentic RAG analytics tools (J1 research)
         agentic_rag.register_tools(self.mcp, self.client_manager)
 
-        # Register enhanced observability tools that integrate with existing infrastructure
+        # Register enhanced observability tools
+        # that integrate with existing infrastructure
         await self._register_enhanced_observability_tools()
 
         logger.info(
-            "Registered analytics tools with agentic observability capabilities and enterprise integration"
+            "Registered analytics tools with agentic "
+            "observability capabilities and enterprise integration"
         )
 
     async def _register_enhanced_observability_tools(self) -> None:
@@ -127,7 +131,7 @@ class AnalyticsService:
         async def get_agentic_decision_metrics(
             agent_id: str | None = None, time_range_minutes: int = 60
         ) -> dict[str, Any]:
-            """Get agent decision quality metrics using existing AI tracking infrastructure.
+            """Get agent decision quality metrics using existing AI tracking infra.
 
             Args:
                 agent_id: Specific agent ID to filter by
@@ -135,6 +139,7 @@ class AnalyticsService:
 
             Returns:
                 Agent decision metrics integrated with existing observability
+
             """
             if not self.ai_tracker:
                 return {"error": "AI tracker not available"}
@@ -168,10 +173,11 @@ class AnalyticsService:
 
         @self.mcp.tool()
         async def get_multi_agent_workflow_visualization() -> dict[str, Any]:
-            """Get multi-agent workflow visualization using existing correlation infrastructure.
+            """Get multi-agent workflow visualization using existing correlation infra.
 
             Returns:
                 Workflow visualization data leveraging existing correlation manager
+
             """
             if not self.correlation_manager:
                 return {"error": "Correlation manager not available"}
@@ -207,10 +213,11 @@ class AnalyticsService:
 
         @self.mcp.tool()
         async def get_auto_rag_performance_monitoring() -> dict[str, Any]:
-            """Get Auto-RAG performance monitoring using existing performance infrastructure.
+            """Get Auto-RAG performance monitoring using existing performance infra.
 
             Returns:
                 Auto-RAG performance data leveraging existing performance monitor
+
             """
             if not self.performance_monitor:
                 return {"error": "Performance monitor not available"}
@@ -245,6 +252,7 @@ class AnalyticsService:
 
         Returns:
             Configured FastMCP server for this service
+
         """
         return self.mcp
 
@@ -253,6 +261,7 @@ class AnalyticsService:
 
         Returns:
             Service metadata and capability information
+
         """
         return {
             "service": "analytics",
@@ -280,5 +289,7 @@ class AnalyticsService:
                 "no_duplicate_infrastructure": True,
             },
             "status": "active",
-            "research_basis": "J1_ENTERPRISE_AGENTIC_OBSERVABILITY_WITH_EXISTING_INTEGRATION",
+            "research_basis": (
+                "J1_ENTERPRISE_AGENTIC_OBSERVABILITY_WITH_EXISTING_INTEGRATION"
+            ),
         }

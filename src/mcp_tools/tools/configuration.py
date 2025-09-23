@@ -46,18 +46,20 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Args:
             config_scope: Scope of configuration (system, service, collection)
-            optimization_target: Target for optimization (performance, cost, quality, balanced)
+            optimization_target: Target for optimization (perf, cost, quality, balanced)
             learning_enabled: Enable ML-powered learning from optimization history
             safe_mode: Enable safety mechanisms to prevent destructive changes
             ctx: MCP context for logging
 
         Returns:
             Configuration optimization results with autonomous recommendations
+
         """
         try:
             if ctx:
                 await ctx.info(
-                    f"Starting intelligent config optimization for {config_scope} targeting {optimization_target}"
+                    f"Starting intelligent config optimization for {config_scope} "
+                    f"targeting {optimization_target}"
                 )
 
             # Get current configuration state
@@ -133,7 +135,9 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Config optimization completed: {len(optimization_recommendations['recommendations'])} recommendations generated"
+                    f"Config optimization completed: "
+                    f"{len(optimization_recommendations['recommendations'])} "
+                    "recommendations generated"
                 )
 
         except Exception as e:
@@ -157,9 +161,9 @@ def register_tools(mcp, client_manager: ClientManager):
         monitoring_duration: int = 3600,
         ctx: Context = None,
     ) -> dict[str, Any]:
-        """Monitor configuration drift with adaptive detection and autonomous remediation.
+        """Monitor config drift with adaptive detection and autonomous remediation.
 
-        Implements intelligent configuration monitoring with drift detection,
+        Implements intelligent config monitoring with drift detection,
         anomaly identification, and autonomous remediation capabilities.
 
         Args:
@@ -171,6 +175,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Configuration monitoring results with drift analysis and remediation actions
+
         """
         try:
             if ctx:
@@ -236,7 +241,9 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Config monitoring completed: drift={drift_analysis['drift_detected']}, anomalies={anomaly_detection['anomalies_detected']}"
+                    "Config monitoring completed: "
+                    f"drift={drift_analysis['drift_detected']}, "
+                    f"anomalies={anomaly_detection['anomalies_detected']}"
                 )
 
         except Exception as e:
@@ -273,11 +280,13 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Configuration profile management results with optimization metadata
+
         """
         try:
             if ctx:
                 await ctx.info(
-                    f"Managing configuration profile: action='{action}', profile='{profile_name}'"
+                    f"Managing configuration profile: action='{action}', "
+                    f"profile='{profile_name}'"
                 )
 
             # Handle different profile management actions
@@ -322,7 +331,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Profile management completed: action='{action}', success={result.get('success', False)}"
+                    f"Profile management completed: action='{action}', "
+                    f"success={result.get('success', False)}"
                 )
 
         except Exception as e:
@@ -341,6 +351,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive capabilities information for configuration management system
+
         """
         return {
             "optimization_targets": {
@@ -629,7 +640,8 @@ async def _apply_configuration_change(
 
         if ctx:
             await ctx.debug(
-                f"Applying config change: {recommendation['parameter']} = {recommendation['recommended_value']}"
+                f"Applying config change: {recommendation['parameter']} = "
+                f"{recommendation['recommended_value']}"
             )
 
         # Simulate validation
@@ -807,7 +819,9 @@ async def _detect_configuration_anomalies(
     detected_anomalies = [
         {
             "type": "performance_degradation",
-            "description": "Query latency increased by 35% without configuration changes",
+            "description": (
+                "Query latency increased by 35% without configuration changes"
+            ),
             "severity": "high",
             "confidence": 0.92,
             "affected_metrics": ["query_latency", "user_satisfaction"],

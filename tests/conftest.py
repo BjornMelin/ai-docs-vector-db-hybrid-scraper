@@ -2,7 +2,8 @@
 
 This module provides the core testing infrastructure with standardized fixtures,
 configuration, and utilities that follow 2025 testing best practices.
-Implements session-scoped fixtures, parallel execution support, and boundary-only mocking.
+Implements session-scoped fixtures, parallel execution support, and
+boundary-only mocking.
 """
 
 import asyncio
@@ -34,6 +35,35 @@ try:
 except ImportError:  # pragma: no cover
     respx = None
 
+# GPU utilities for testing
+try:
+    from src.utils.gpu import (
+        get_gpu_device,
+        get_gpu_memory_info,
+        get_gpu_stats,
+        is_gpu_available,
+    )
+
+    GPU_UTILS_AVAILABLE = True
+except ImportError:
+    GPU_UTILS_AVAILABLE = False
+
+    def is_gpu_available():
+        return False
+
+    def get_gpu_device(*args, **kwargs):
+        return None
+
+    def get_gpu_memory_info(*args, **kwargs):
+        return {
+            "total": 0.0,
+            "used": 0.0,
+            "free": 0.0,
+        }
+
+    def get_gpu_stats():
+        return {"gpu_available": False}
+
 
 # Add project root to path for src imports
 project_root = str(Path(__file__).parent.parent)
@@ -55,8 +85,13 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for offline envs
 
 
 try:
-    from qdrant_client.models import Distance, PointStruct, VectorParams
-    from qdrant_client.models.models import CollectionInfo, CollectionStatus
+    from qdrant_client.models import (
+        CollectionInfo,
+        CollectionStatus,
+        Distance,
+        PointStruct,
+        VectorParams,
+    )
 except ModuleNotFoundError:  # pragma: no cover - basic fallback
     from dataclasses import dataclass
     from enum import Enum
@@ -598,7 +633,7 @@ except ImportError:
         dim = kwargs.get("max_dim", 384)
         normalized = kwargs.get("normalized", True)
 
-        values = [random.uniform(-1, 1) for _ in range(dim)]
+        values = [random.uniform(-1, 1) for _ in range(dim)]  # noqa: S311
         if normalized:
             norm = sum(x**2 for x in values) ** 0.5
             if norm > 0:
@@ -619,8 +654,8 @@ except ImportError:
             "analysis",
             "research",
         ]
-        word_count = random.randint(max(2, min_length // 5), max_length // 5)
-        text = " ".join(random.choices(words, k=word_count))
+        word_count = random.randint(max(2, min_length // 5), max_length // 5)  # noqa: S311
+        text = " ".join(random.choices(words, k=word_count))  # noqa: S311
 
         # Ensure length constraints
         if len(text) < min_length:
@@ -676,15 +711,15 @@ def ai_test_utilities():
             return dot_product / (norm1 * norm2)
 
         @staticmethod
-        def generate_test_embeddings(
+        def generate_test_embeddings(  # noqa: S311
             count: int = 10, dim: int = 1536
         ) -> list[list[float]]:
             """Generate deterministic test embeddings."""
             embeddings = []
 
             for i in range(count):
-                random.seed(42 + i)  # Deterministic
-                embedding = [random.uniform(-1, 1) for _ in range(dim)]
+                random.seed(42 + i)  # Deterministic  # noqa: S311
+                embedding = [random.uniform(-1, 1) for _ in range(dim)]  # noqa: S311
 
                 # Normalize
                 norm = sum(x**2 for x in embedding) ** 0.5
@@ -985,6 +1020,30 @@ def ci_environment_config(app_config):
     return ci_config
 
 
+@pytest.fixture
+def gpu_available():
+    """Check if GPU acceleration is available for testing."""
+    return is_gpu_available()
+
+
+@pytest.fixture
+def gpu_device():
+    """Get optimal GPU device for testing."""
+    return get_gpu_device()
+
+
+@pytest.fixture
+def gpu_memory_info(gpu_device):
+    """Get GPU memory information for testing."""
+    return get_gpu_memory_info(gpu_device)
+
+
+@pytest.fixture
+def gpu_stats():
+    """Get comprehensive GPU statistics for testing."""
+    return get_gpu_stats()
+
+
 def pytest_configure(config):
     """Configure pytest with  settings for  testing."""
     # Core test markers
@@ -1013,6 +1072,13 @@ def pytest_configure(config):
         # CI/Platform markers
         "ci_only: mark test to run only in CI",
         "local_only: mark test to run only locally",
+        # GPU markers
+        "gpu: marks tests requiring GPU acceleration",
+        "gpu_required: marks tests that require GPU and should be skipped if "
+        "unavailable",
+        "gpu_optional: marks tests that can use GPU but work without it",
+        "gpu_memory: marks tests that require specific GPU memory amounts",
+        "gpu_performance: marks tests for GPU performance benchmarking",
     ]
 
     for marker in markers:
@@ -1053,6 +1119,10 @@ def pytest_runtest_setup(item):
 
     if item.get_closest_marker("local_only") and is_ci_environment():
         pytest.skip("Test only runs in local environment")
+
+    # Skip GPU tests if GPU not available
+    if item.get_closest_marker("gpu_required") and not is_gpu_available():
+        pytest.skip("Test requires GPU acceleration which is not available")
 
     # Check for required external services
     if item.get_closest_marker("network"):

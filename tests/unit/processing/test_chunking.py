@@ -274,7 +274,10 @@ End text.
         )
         chunker = DocumentChunker(config)
 
-        content = "This is a test content that should be chunked into smaller pieces based on the chunk size configuration."
+        content = (
+            "This is a test content that should be "
+            "chunked into smaller pieces based on the chunk size configuration."
+        )
 
         chunks = chunker._basic_chunking(content)
         assert len(chunks) > 1

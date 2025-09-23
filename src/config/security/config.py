@@ -24,7 +24,7 @@ class ConfigDataClassification(str, Enum):
     PUBLIC = "public"
     INTERNAL = "internal"
     CONFIDENTIAL = "confidential"
-    SECRET = "secret"
+    SECRET = "secret"  # noqa: S105
 
 
 class ConfigOperationType(str, Enum):

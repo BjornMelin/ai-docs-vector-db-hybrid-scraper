@@ -22,6 +22,7 @@ class FirecrawlClientProvider:
         self,
         firecrawl_client: AsyncFirecrawlApp,
     ):
+        """Initialize the Firecrawl client provider."""
         self._client = firecrawl_client
         self._healthy = True
 
@@ -62,6 +63,7 @@ class FirecrawlClientProvider:
 
         Raises:
             RuntimeError: If client is unhealthy
+
         """
         if not self.client:
             msg = "Firecrawl client is not available or unhealthy"
@@ -83,6 +85,7 @@ class FirecrawlClientProvider:
 
         Raises:
             RuntimeError: If client is unhealthy
+
         """
         if not self.client:
             msg = "Firecrawl client is not available or unhealthy"
@@ -101,6 +104,7 @@ class FirecrawlClientProvider:
 
         Raises:
             RuntimeError: If client is unhealthy
+
         """
         if not self.client:
             msg = "Firecrawl client is not available or unhealthy"
@@ -122,6 +126,7 @@ class FirecrawlClientProvider:
 
         Raises:
             RuntimeError: If client is unhealthy
+
         """
         if not self.client:
             msg = "Firecrawl client is not available or unhealthy"

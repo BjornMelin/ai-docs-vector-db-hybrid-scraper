@@ -209,7 +209,9 @@ class DataMockFactory:
         response = {
             "url": url,
             "status_code": 200,
-            "html": f"<html><body><h1>Test Page</h1><p>Content for {url}</p></body></html>",
+            "html": (
+                f"<html><body><h1>Test Page</h1><p>Content for {url}</p></body></html>"
+            ),
             "cleaned_html": f"<h1>Test Page</h1><p>Content for {url}</p>",
             "markdown": f"# Test Page\n\nContent for {url}",
             "text": f"Test Page\nContent for {url}",

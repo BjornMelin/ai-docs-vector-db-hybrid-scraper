@@ -148,7 +148,8 @@ def print_validation_report(results: dict):
     print(f"Valid Test Files: {summary['valid_files']}")
     print(f"Total Test Functions: {summary['_total_tests']}")
     print(
-        f"Complete Categories: {summary['categories_complete']}/{len(results['categories'])}"
+        f"Complete Categories: {summary['categories_complete']}/"
+        f"{len(results['categories'])}"
     )
     print()
 

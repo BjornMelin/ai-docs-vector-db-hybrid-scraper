@@ -24,11 +24,11 @@ class AutomationRouter(BaseService):
     """Intelligently route scraping tasks to appropriate automation tool.
 
     Implements a five-tier automation hierarchy:
-    0. Lightweight HTTP (httpx + BeautifulSoup) - 5-10x faster for static content, $0 cost
+    0. Lightweight HTTP (httpx + BS4) - 5-10x faster for static content, $0 cost
     1. Crawl4AI Basic (90% of sites) - 4-6x faster, $0 cost
     2. Crawl4AI Enhanced (Interactive content) - Custom JavaScript, $0 cost
     3. browser-use (Complex interactions) - AI-powered automation with multi-LLM support
-    4. Playwright + Firecrawl (Maximum control) - Full programmatic control + API fallback
+    4. Playwright + Firecrawl (Maximum control) - Programmatic control + API fallback
     """
 
     def __init__(self, config: Config):
@@ -462,7 +462,12 @@ class AutomationRouter(BaseService):
         if custom_actions:
             task = self._convert_to_task(custom_actions)
         else:
-            task = "Extract all documentation content including code examples. Expand any collapsed sections or interactive elements. Click on any 'show more' or 'load more' buttons and wait for dynamic content to load."
+            task = (
+                "Extract all documentation content including code examples. "
+                "Expand any collapsed sections or interactive elements. "
+                "Click on any 'show more' or 'load more' buttons and wait for "
+                "dynamic content to load."
+            )
 
         return await adapter.scrape(
             url=url,
@@ -598,7 +603,7 @@ class AutomationRouter(BaseService):
         // Scroll to load lazy content
         window.scrollTo(0, document.body.scrollHeight);
         await new Promise(r => setTimeout(r, 1000));
-        """
+        """  # noqa: E501
 
     def _convert_actions_to_js(self, actions: list[dict]) -> str:
         """Convert custom actions to JavaScript code.
@@ -679,8 +684,14 @@ class AutomationRouter(BaseService):
                 task_parts.append("expand any collapsed sections or menus")
 
         if task_parts:
-            return f"Navigate to the page, then {', '.join(task_parts)}, and finally extract all documentation content including code examples."
-        return "Navigate to the page and extract all documentation content including code examples."
+            return (
+                f"Navigate to the page, then {', '.join(task_parts)}, and finally "
+                "extract all documentation content including code examples."
+            )
+        return (
+            "Navigate to the page and extract all documentation "
+            "content including code examples."
+        )
 
     def _update_metrics(self, tool: str, success: bool, elapsed: float) -> None:
         """Update performance metrics for a tool.

@@ -211,13 +211,14 @@ class Crawl4AIAdapter(BaseService):
         """
         return {
             "name": "crawl4ai",
-            "description": "High-performance web crawling with basic JavaScript support",
+            "description": "High-performance web crawling with "
+            "basic JavaScript support",
             "advantages": [
                 "4-6x faster than alternatives",
                 "Zero cost",
                 "Excellent for static content",
                 "Good parallel processing",
-                "Advanced content extraction",
+                "Content extraction",
             ],
             "limitations": [
                 "Limited complex JavaScript interaction",

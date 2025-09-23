@@ -388,7 +388,8 @@ class TestBreakingPointAnalysis:
                     # Stop if response times become completely unacceptable
                     if avg_response_time > 30.0:  # 30 second average
                         print(
-                            f"Stopping test due to extreme response times: {avg_response_time:.2f}s"
+                            "Stopping test due to extreme response times: "
+                            f"{avg_response_time:.2f}s"
                         )
                         break
 
@@ -434,13 +435,16 @@ class TestBreakingPointAnalysis:
         if analysis["last_acceptable_load"]:
             last_ok = analysis["last_acceptable_load"]
             print(
-                f"Last acceptable load: {last_ok['users']} users ({last_ok['avg_response_time_ms']:.1f}ms avg)"
+                f"Last acceptable load: {last_ok['users']} users "
+                f"({last_ok['avg_response_time_ms']:.1f}ms avg)"
             )
 
         if analysis["first_unacceptable_load"]:
             first_bad = analysis["first_unacceptable_load"]
             print(
-                f"First unacceptable load: {first_bad['users']} users ({first_bad['avg_response_time_ms']:.1f}ms avg)"
+                f"First unacceptable load: "
+                f"{first_bad['users']} users "
+                f"({first_bad['avg_response_time_ms']:.1f}ms avg)"
             )
             print(f"Degradation factor: {first_bad['degradation_factor']:.1f}x")
 
@@ -448,8 +452,10 @@ class TestBreakingPointAnalysis:
         for result in analysis["all_results"]:
             performance = "✓ GOOD" if result["acceptable_performance"] else "✗ POOR"
             print(
-                f"  {result['load_level']:15s}: avg={result['avg_response_time_ms']:6.1f}ms, "
-                f"p95={result['p95_response_time_ms']:6.1f}ms, degradation={result['degradation_factor']:4.1f}x - {performance}"
+                f"  {result['load_level']:15s}: "
+                f"avg={result['avg_response_time_ms']:6.1f}ms, "
+                f"p95={result['p95_response_time_ms']:6.1f}ms, "
+                f"degradation={result['degradation_factor']:4.1f}x - {performance}"
             )
 
     @pytest.mark.asyncio
@@ -474,9 +480,13 @@ class TestBreakingPointAnalysis:
                     0.8, base_error_rate + load_factor * 0.15 + cascade_error_rate
                 )
 
-                if random.random() < _total_error_rate:
+                if random.random() < _total_error_rate:  # noqa: S311
                     # Increase cascade level on error
-                    msg = f"Cascading error (cascade level: {self.error_cascade_level:.1f}, load: {load_factor:.2f})"
+                    msg = (
+                        f"Cascading error (cascade level: "
+                        f"{self.error_cascade_level:.1f}, "
+                        f"load: {load_factor:.2f})"
+                    )
                     raise TestError(msg)
                 # Decrease cascade level on success
                 self.error_cascade_level = max(0.0, self.error_cascade_level - 0.05)
@@ -508,12 +518,13 @@ class TestBreakingPointAnalysis:
                         requests_per_second=level["rps"],
                         duration_seconds=60.0,
                         success_criteria={
-                            "max_error_rate_percent": 90.0,  # Very lenient - we expect errors
+                            "max_error_rate_percent": 90.0,  # Lenient - expect errors
                         },
                     )
 
                     print(
-                        f"Testing error cascade at {level['name']}: {level['users']} users, {level['rps']} RPS"
+                        f"Testing error cascade at {level['name']}: "
+                        f"{level['users']} users, {level['rps']} RPS"
                     )
 
                     result = await load_test_runner.run_load_test(
@@ -549,7 +560,8 @@ class TestBreakingPointAnalysis:
                     # Stop if system has completely failed
                     if success_rate < 10.0:
                         print(
-                            f"System complete failure at {level['name']} ({success_rate:.1f}% success rate)"
+                            f"System complete failure at {level['name']} "
+                            f"({success_rate:.1f}% success rate)"
                         )
                         break
 
@@ -581,7 +593,8 @@ class TestBreakingPointAnalysis:
             print(f"Cascade triggered at: {cbp['level']} ({cbp['users']} users)")
             print(f"  Error rate: {cbp['error_rate']:.1f}%")
             print(
-                f"  Cascade level: {cbp['initial_cascade_level']:.1f} → {cbp['final_cascade_level']:.1f}"
+                f"  Cascade level: {cbp['initial_cascade_level']:.1f} → "
+                f"{cbp['final_cascade_level']:.1f}"
             )
 
         if analysis["system_failure_point"]:
@@ -595,7 +608,8 @@ class TestBreakingPointAnalysis:
             failure_status = "FAILED" if result["system_failed"] else "OPERATIONAL"
             print(
                 f"  {result['level']:10s}: {result['success_rate']:5.1f}% success, "
-                f"cascade {result['initial_cascade_level']:4.1f}→{result['final_cascade_level']:4.1f}, "
+                f"cascade {result['initial_cascade_level']:4.1f}→"
+                f"{result['final_cascade_level']:4.1f}, "
                 f"{cascade_status}, {failure_status}"
             )
 

@@ -194,7 +194,8 @@ def data_quality_validator():
                         if not isinstance(value, expected_type):
                             failed_records += 1
                             validation_errors.append(
-                                f"Type mismatch: expected {expected_type}, got {type(value)}"
+                                f"Type mismatch: expected {expected_type}, "
+                                f"got {type(value)}"
                             )
                             continue
 
@@ -324,17 +325,20 @@ def data_quality_validator():
                                 if relationship == "greater" and val1 <= val2:
                                     failed_records += 1
                                     consistency_errors.append(
-                                        f"{field1} ({val1}) should be greater than {field2} ({val2})"
+                                        f"{field1} ({val1}) should be greater than "
+                                        f"{field2} ({val2})"
                                     )
                                 elif relationship == "equal" and val1 != val2:
                                     failed_records += 1
                                     consistency_errors.append(
-                                        f"{field1} ({val1}) should equal {field2} ({val2})"
+                                        f"{field1} ({val1}) should equal "
+                                        f"{field2} ({val2})"
                                     )
                                 elif relationship == "less" and val1 >= val2:
                                     failed_records += 1
                                     consistency_errors.append(
-                                        f"{field1} ({val1}) should be less than {field2} ({val2})"
+                                        f"{field1} ({val1}) should be less than "
+                                        f"{field2} ({val2})"
                                     )
 
             passed_records = _total_records - failed_records
@@ -464,7 +468,8 @@ def data_quality_validator():
                         set(record.keys()) == all_fields for record in data
                     ),
                     "common_fields": list(all_fields),
-                    "variable_fields": [],  # Fields that appear in some but not all records
+                    # Fields that appear in some but not all records
+                    "variable_fields": [],
                 },
             }
 
@@ -530,7 +535,8 @@ def data_integrity_checker():
                         violations.append(
                             {
                                 "record": record,
-                                "violation": f"Foreign key {foreign_value} not found in reference data",
+                                "violation": f"Foreign key {foreign_value} not found "
+                                f"in reference data",
                             }
                         )
 
@@ -559,7 +565,8 @@ def data_integrity_checker():
                         violations.append(
                             {
                                 "record": record,
-                                "violation": f"Value '{value}' not in allowed domain: {allowed_values}",
+                                "violation": f"Value '{value}' not in allowed domain: "
+                                f"{allowed_values}",
                             }
                         )
 
@@ -593,7 +600,8 @@ def data_integrity_checker():
                         violations.append(
                             {
                                 "record": record,
-                                "violation": f"Value '{value}' does not match pattern {pattern}",
+                                "violation": f"Value '{value}' does not match pattern "
+                                f"{pattern}",
                             }
                         )
 
@@ -653,7 +661,7 @@ def mock_data_generator():
     class MockDataGenerator:
         def __init__(self):
             self.seed = 42
-            random.seed(self.seed)
+            random.seed(self.seed)  # noqa: S311
 
         def generate_document_records(
             self, count: int = 100, introduce_quality_issues: bool = False
@@ -667,49 +675,49 @@ def mock_data_generator():
                     "url": f"https://example.com/doc/{i}",
                     "title": f"Document {i}",
                     "content": f"This is the content of document {i}. "
-                    * random.randint(5, 20),
+                    * random.randint(5, 20),  # noqa: S311
                     "created_at": datetime.now(tz=UTC)
-                    - timedelta(days=random.randint(0, 365)),
+                    - timedelta(days=random.randint(0, 365)),  # noqa: S311
                     "updated_at": datetime.now(tz=UTC)
-                    - timedelta(days=random.randint(0, 30)),
-                    "collection": random.choice(
+                    - timedelta(days=random.randint(0, 30)),  # noqa: S311
+                    "collection": random.choice(  # noqa: S311
                         ["tech", "science", "business", "general"]
                     ),
-                    "status": random.choice(["active", "archived", "pending"]),
-                    "word_count": random.randint(100, 2000),
+                    "status": random.choice(["active", "archived", "pending"]),  # noqa: S311
+                    "word_count": random.randint(100, 2000),  # noqa: S311
                     "embedding_model": "text-embedding-ada-002",
                     "metadata": {
-                        "source": random.choice(["web", "api", "upload"]),
+                        "source": random.choice(["web", "api", "upload"]),  # noqa: S311
                         "language": "en",
-                        "tags": random.sample(
+                        "tags": random.sample(  # noqa: S311
                             ["ai", "ml", "data", "tech", "science"],
-                            random.randint(1, 3),
+                            random.randint(1, 3),  # noqa: S311
                         ),
                     },
                 }
 
                 # Introduce quality issues if requested
                 if introduce_quality_issues:
-                    issue_type = random.choice(
+                    issue_type = random.choice(  # noqa: S311
                         ["missing_field", "invalid_format", "duplicate", "inconsistent"]
                     )
 
-                    if issue_type == "missing_field" and random.random() < 0.1:
+                    if issue_type == "missing_field" and random.random() < 0.1:  # noqa: S311
                         # Remove a required field
-                        field_to_remove = random.choice(["title", "url", "content"])
+                        field_to_remove = random.choice(["title", "url", "content"])  # noqa: S311
                         record.pop(field_to_remove, None)
 
-                    elif issue_type == "invalid_format" and random.random() < 0.05:
+                    elif issue_type == "invalid_format" and random.random() < 0.05:  # noqa: S311
                         # Invalid URL format
                         record["url"] = f"invalid-url-{i}"
 
-                    elif issue_type == "duplicate" and random.random() < 0.02:
+                    elif issue_type == "duplicate" and random.random() < 0.02:  # noqa: S311
                         # Duplicate ID
                         record["id"] = records[-1]["id"] if records else "doc_0000"
 
-                    elif issue_type == "inconsistent" and random.random() < 0.05:
+                    elif issue_type == "inconsistent" and random.random() < 0.05:  # noqa: S311
                         # Inconsistent dates (updated before created)
-                        record["updated_at"] = record["created_at"] - timedelta(days=1)
+                        record["updated_at"] = record["created_at"] - timedelta(days=1)  # noqa: S311
 
                 records.append(record)
 
@@ -724,15 +732,15 @@ def mock_data_generator():
                     "user_id": f"user_{i:04d}",
                     "email": f"user{i}@example.com",
                     "name": f"User {i}",
-                    "role": random.choice(["admin", "user", "viewer"]),
+                    "role": random.choice(["admin", "user", "viewer"]),  # noqa: S311
                     "created_at": datetime.now(tz=UTC)
-                    - timedelta(days=random.randint(30, 730)),
+                    - timedelta(days=random.randint(30, 730)),  # noqa: S311
                     "last_login": datetime.now(tz=UTC)
-                    - timedelta(days=random.randint(0, 30)),
-                    "active": random.choice([True, False]),
+                    - timedelta(days=random.randint(0, 30)),  # noqa: S311
+                    "active": random.choice([True, False]),  # noqa: S311
                     "preferences": {
-                        "theme": random.choice(["light", "dark"]),
-                        "notifications": random.choice([True, False]),
+                        "theme": random.choice(["light", "dark"]),  # noqa: S311
+                        "notifications": random.choice([True, False]),  # noqa: S311
                     },
                 }
                 records.append(record)

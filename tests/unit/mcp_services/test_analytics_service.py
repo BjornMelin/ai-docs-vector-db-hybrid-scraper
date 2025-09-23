@@ -231,8 +231,8 @@ class TestAnalyticsService:
             await service._register_analytics_tools()
 
             assert (
-                "Registered analytics tools with agentic observability capabilities and enterprise integration"
-                in caplog.text
+                "Registered analytics tools with agentic observability capabilities "
+                "and enterprise integration" in caplog.text
             )
 
     def test_get_mcp_server_returns_configured_instance(self):
@@ -409,7 +409,8 @@ class TestAnalyticsServiceEnhancedObservabilityTools:
     async def test_get_multi_agent_workflow_visualization_tool(
         self, mock_client_manager
     ):
-        """Test get_multi_agent_workflow_visualization tool with correlation manager integration."""
+        """Test get_multi_agent_workflow_visualization tool with correlation
+        manager integration."""
         service = AnalyticsService()
         service.client_manager = mock_client_manager
         service.correlation_manager = Mock()
@@ -454,7 +455,8 @@ class TestAnalyticsServiceEnhancedObservabilityTools:
 
     @pytest.mark.asyncio
     async def test_get_auto_rag_performance_monitoring_tool(self, mock_client_manager):
-        """Test get_auto_rag_performance_monitoring tool with performance monitor integration."""
+        """Test get_auto_rag_performance_monitoring tool with performance
+        monitor integration."""
         service = AnalyticsService()
         service.client_manager = mock_client_manager
         service.performance_monitor = Mock()

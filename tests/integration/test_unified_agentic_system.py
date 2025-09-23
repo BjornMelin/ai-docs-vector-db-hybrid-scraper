@@ -604,7 +604,10 @@ class TestAdvancedIntegrationScenarios:
         """Test complex multi-stage workflow execution."""
         complex_request = UnifiedAgentRequest(
             request_id="complex_workflow_001",
-            goal="Perform comprehensive document analysis with multiple optimization stages",
+            goal=(
+                "Perform comprehensive document analysis with multiple "
+                "optimization stages"
+            ),
             context={
                 "documents": ["doc1", "doc2", "doc3"],
                 "analysis_types": ["semantic", "sentiment", "classification"],
@@ -777,7 +780,9 @@ async def test_end_to_end_realistic_scenario(mock_client_manager):
     # Realistic research request
     research_request = UnifiedAgentRequest(
         request_id="research_scenario_001",
-        goal="Research current trends in AI safety and provide comprehensive analysis",
+        goal=(
+            "Research current trends in AI safety and provide comprehensive analysis"
+        ),
         context={
             "research_domain": "ai_safety",
             "time_range": "2023-2024",

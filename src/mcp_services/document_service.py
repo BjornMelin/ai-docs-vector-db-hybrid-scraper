@@ -34,6 +34,7 @@ class DocumentService:
 
         Args:
             name: Service name for MCP registration
+
         """
         self.mcp = FastMCP(
             name,
@@ -62,6 +63,7 @@ class DocumentService:
 
         Args:
             client_manager: Shared client manager instance
+
         """
         self.client_manager = client_manager
 
@@ -94,6 +96,7 @@ class DocumentService:
 
         Returns:
             Configured FastMCP server for this service
+
         """
         return self.mcp
 
@@ -102,6 +105,7 @@ class DocumentService:
 
         Returns:
             Service metadata and capability information
+
         """
         return {
             "service": "document",

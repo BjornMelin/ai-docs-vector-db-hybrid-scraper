@@ -103,6 +103,7 @@ class SecurityMonitor:
         Args:
             security_config: Security configuration
             log_dir: Directory for security logs
+
         """
         self.config = security_config or SecurityConfig()
         self.log_dir = log_dir or Path("logs/security")
@@ -179,6 +180,7 @@ class SecurityMonitor:
             event_data: Additional event data
             severity: Event severity level
             user_id: User ID if authenticated
+
         """
         try:
             # Determine event type enum
@@ -251,6 +253,7 @@ class SecurityMonitor:
 
         Returns:
             Appropriate severity level
+
         """
         severity_mapping = {
             SecurityEventType.RATE_LIMIT_EXCEEDED: SecuritySeverity.MEDIUM,
@@ -276,6 +279,7 @@ class SecurityMonitor:
 
         Returns:
             Client IP address
+
         """
         # Check for forwarded headers
         forwarded_for = request.headers.get("x-forwarded-for")
@@ -297,6 +301,7 @@ class SecurityMonitor:
 
         Returns:
             list of threat indicators
+
         """
         indicators = []
 
@@ -327,6 +332,7 @@ class SecurityMonitor:
 
         Args:
             event: Security event to log
+
         """
         # Convert to JSON for structured logging
         event_json = json.dumps(event.to_dict(), default=str)
@@ -352,6 +358,7 @@ class SecurityMonitor:
 
         Args:
             event: Security event to count
+
         """
         self.metrics["total_events"] += 1
 
@@ -380,6 +387,7 @@ class SecurityMonitor:
 
         Args:
             event: Security event to analyze
+
         """
         # Add to recent events (keep last 1000)
         self.recent_events.append(event)
@@ -402,6 +410,7 @@ class SecurityMonitor:
 
         Args:
             event: Latest security event
+
         """
         current_time = time.time()
 
@@ -451,6 +460,7 @@ class SecurityMonitor:
 
         Args:
             event: Security event to evaluate
+
         """
         # Auto-block IPs with critical threats
         if event.severity == SecuritySeverity.CRITICAL and event.event_type in (
@@ -491,6 +501,7 @@ class SecurityMonitor:
         Args:
             request: HTTP request that exceeded rate limit
             limit: Rate limit that was exceeded
+
         """
         self.log_security_event(
             SecurityEventType.RATE_LIMIT_EXCEEDED.value,
@@ -512,6 +523,7 @@ class SecurityMonitor:
         Args:
             activity_type: type of suspicious activity
             details: Activity details
+
         """
         self.log_security_event(
             SecurityEventType.SUSPICIOUS_ACTIVITY.value,
@@ -525,6 +537,7 @@ class SecurityMonitor:
         Args:
             request: Successful HTTP request
             processing_time: Request processing time in seconds
+
         """
         # Only log sample of successful requests to avoid log flooding
         if hash(request.url.path) % 100 == 0:  # Log 1% of successful requests
@@ -544,6 +557,7 @@ class SecurityMonitor:
 
         Returns:
             Dictionary with security metrics
+
         """
         current_time = time.time()
 
@@ -589,6 +603,7 @@ class SecurityMonitor:
 
         Returns:
             Threat analysis report
+
         """
         current_time = time.time()
         cutoff_time = current_time - (hours * 3600)
@@ -650,6 +665,7 @@ class SecurityMonitor:
 
         Returns:
             Exported log data as string
+
         """
         current_time = time.time()
         cutoff_time = current_time - (hours * 3600)
@@ -685,6 +701,7 @@ class SecurityMonitor:
 
         Returns:
             Number of events cleaned up
+
         """
         current_time = time.time()
         cutoff_time = current_time - (days * 86400)

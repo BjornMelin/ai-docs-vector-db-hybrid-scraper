@@ -1,6 +1,7 @@
 """Adaptive fusion tuner for optimizing hybrid search weight combinations.
 
-This module implements machine learning-based tuning of fusion weights for hybrid search,
+This module implements machine learning-based tuning of fusion weights
+for hybrid search,
 optimizing the combination of dense and sparse vector search results.
 """
 

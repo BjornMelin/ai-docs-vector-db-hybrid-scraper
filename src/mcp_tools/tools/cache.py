@@ -82,7 +82,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Cache statistics retrieved: hit_rate={stats.get('hit_rate', 0)}, size={stats.get('size', 0)}"
+                    f"Cache statistics retrieved: hit_rate={stats.get('hit_rate', 0)}, "
+                    f"size={stats.get('size', 0)}"
                 )
 
             # Cache manager may return additional fields; allow them via **stats

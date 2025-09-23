@@ -1,7 +1,8 @@
-"""Core agent architecture for Pydantic-AI based agentic RAG.
+"""
+Core agent architecture for Pydantic-AI based agent RAG.
 
 This module provides the foundational classes and patterns for building
-autonomous agents that can intelligently process queries, compose tools,
+agents that can process queries, compose tools,
 and coordinate with other agents.
 """
 
@@ -35,6 +36,7 @@ def _check_api_key_availability() -> bool:
 
     Returns:
         bool: True if API keys are available, False otherwise
+
     """
     # Check for OpenAI API key (most common for agents)
     openai_key = os.getenv("OPENAI_API_KEY")
@@ -111,7 +113,7 @@ class BaseAgentDependencies(BaseModel):
 
 
 class BaseAgent(ABC):
-    """Base class for all autonomous agents in the system."""
+    """Base class for all agents in the system."""
 
     def __init__(
         self,
@@ -127,6 +129,7 @@ class BaseAgent(ABC):
             model: LLM model to use
             temperature: Generation temperature
             max_tokens: Maximum tokens per response
+
         """
         self.name = name
         self.model = model
@@ -155,7 +158,12 @@ class BaseAgent(ABC):
                 )
                 self._fallback_reason = None
                 logger.info(f"Agent {name} initialized with Pydantic-AI")
-            except (ValueError, TypeError, RuntimeError, ImportError) as e:
+            except (
+                ValueError,
+                TypeError,
+                RuntimeError,
+                ImportError,
+            ) as e:  # noqa: BLE001
                 logger.warning(
                     "Failed to initialize Pydantic-AI agent %s: %s. "
                     "Using fallback mode.",
@@ -177,6 +185,7 @@ class BaseAgent(ABC):
 
         Returns:
             System prompt string defining agent behavior and capabilities
+
         """
 
     @abstractmethod
@@ -185,6 +194,7 @@ class BaseAgent(ABC):
 
         Args:
             deps: Dependencies required for tool initialization
+
         """
 
     async def initialize(self, deps: BaseAgentDependencies) -> None:
@@ -192,6 +202,7 @@ class BaseAgent(ABC):
 
         Args:
             deps: Agent dependencies
+
         """
         if self._initialized:
             return
@@ -206,6 +217,7 @@ class BaseAgent(ABC):
 
         Returns:
             bool: True if agent is initialized and ready for use
+
         """
         return self._initialized
 
@@ -224,6 +236,7 @@ class BaseAgent(ABC):
 
         Returns:
             Task execution result
+
         """
         if not self._initialized:
             await self.initialize(deps)
@@ -269,7 +282,7 @@ class BaseAgent(ABC):
             execution_time = time.time() - start_time
             self.total_execution_time += execution_time
 
-            logger.exception("Agent {self.name} execution failed: ")
+            logger.exception(f"Agent {self.name} execution failed")
 
             return {
                 "success": False,
@@ -306,10 +319,12 @@ class BaseAgent(ABC):
 
         Returns:
             Fallback execution result
+
         """
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
         logger.info(
-            f"Using fallback execution for agent {self.name} (reason: {fallback_reason})"
+            f"Using fallback execution for agent {self.name} "
+            f"(reason: {fallback_reason})"
         )
 
         # Enhanced fallback logic with context-aware responses
@@ -335,6 +350,7 @@ class BaseAgent(ABC):
 
         Returns:
             Performance metrics dictionary
+
         """
         if self.execution_count == 0:
             return {
@@ -372,6 +388,7 @@ class AgentRegistry:
 
         Args:
             agent: Agent to register
+
         """
         self.agents[agent.name] = agent
         logger.info(f"Agent {agent.name} registered")
@@ -384,6 +401,7 @@ class AgentRegistry:
 
         Returns:
             Agent instance or None if not found
+
         """
         return self.agents.get(name)
 
@@ -392,6 +410,7 @@ class AgentRegistry:
 
         Returns:
             List of agent names
+
         """
         return list(self.agents.keys())
 
@@ -400,6 +419,7 @@ class AgentRegistry:
 
         Args:
             deps: Dependencies for initialization
+
         """
         for agent in self.agents.values():
             await agent.initialize(deps)
@@ -409,6 +429,7 @@ class AgentRegistry:
 
         Returns:
             Dictionary mapping agent names to their metrics
+
         """
         return {
             name: agent.get_performance_metrics() for name, agent in self.agents.items()
@@ -433,10 +454,12 @@ def create_agent_dependencies(
 
     Returns:
         Configured agent dependencies
+
     """
     config = get_config()
 
-    session_state = AgentState(session_id=session_id or str(uuid4()), user_id=user_id)
+    session_id_value = session_id or str(uuid4())
+    session_state = AgentState(session_id=session_id_value, user_id=user_id)
 
     return BaseAgentDependencies(
         client_manager=client_manager, config=config, session_state=session_state

@@ -1,8 +1,8 @@
 """Enterprise Observability Platform for Unified Monitoring.
 
-This module provides comprehensive observability for all enterprise features,
+This module provides observability for all enterprise features,
 implementing distributed tracing, metrics collection, log aggregation,
-intelligent alerting, and AI-powered anomaly detection.
+alerting, and anomaly detection.
 """
 
 import asyncio
@@ -866,7 +866,8 @@ class EnterpriseObservabilityPlatform:
     def _handle_alert_notification(self, alert: Alert) -> None:
         """Handle alert notifications."""
         logger.warning(
-            f"ALERT TRIGGERED: {alert.name} - {alert.description} (Severity: {alert.severity.value})"
+            f"ALERT TRIGGERED: {alert.name} - {alert.description} "
+            f"(Severity: {alert.severity.value})"
         )
 
         # Here you would integrate with notification systems:

@@ -563,6 +563,7 @@ class MetricsRegistry:
             provider: Embedding provider name
             model: Model name
             result: Embedding result
+
         """
         self._metrics["embedding_requests"].labels(
             provider=provider, model=model, status="success"
@@ -580,6 +581,7 @@ class MetricsRegistry:
         Args:
             provider: Embedding provider name
             model: Model name
+
         """
         self._metrics["embedding_requests"].labels(
             provider=provider, model=model, status="error"
@@ -594,6 +596,7 @@ class MetricsRegistry:
             provider: Embedding provider name
             model: Model name
             start_time: Request start time
+
         """
         duration = time.time() - start_time
         self._metrics["embedding_duration"].labels(
@@ -607,6 +610,7 @@ class MetricsRegistry:
             cache_type: Type of cache
             cache_name: Name of cache
             result: Cache operation result
+
         """
         if result is not None:
             self._metrics["cache_hits"].labels(
@@ -623,6 +627,7 @@ class MetricsRegistry:
         Args:
             cache_type: Type of cache
             cache_name: Name of cache
+
         """
         self._metrics["cache_misses"].labels(
             cache_type=cache_type, cache_name=cache_name
@@ -634,6 +639,7 @@ class MetricsRegistry:
         Args:
             cache_type: Type of cache
             operation: Cache operation
+
         """
         self._metrics["cache_operations"].labels(
             cache_type=cache_type, operation=operation, result="success"
@@ -645,6 +651,7 @@ class MetricsRegistry:
         Args:
             cache_type: Type of cache
             operation: Cache operation
+
         """
         self._metrics["cache_operations"].labels(
             cache_type=cache_type, operation=operation, result="error"
@@ -659,6 +666,7 @@ class MetricsRegistry:
             cache_type: Type of cache
             operation: Cache operation
             start_time: Operation start time
+
         """
         duration = time.time() - start_time
         self._metrics["cache_duration"].labels(
@@ -670,6 +678,7 @@ class MetricsRegistry:
 
         Args:
             cache_manager: Cache manager instance
+
         """
         if hasattr(cache_manager, "local_cache") and cache_manager.local_cache:
             local_stats = cache_manager.local_cache.get_stats()
@@ -682,6 +691,7 @@ class MetricsRegistry:
 
         Args:
             cache_manager: Cache manager instance
+
         """
         if (
             hasattr(cache_manager, "distributed_cache")

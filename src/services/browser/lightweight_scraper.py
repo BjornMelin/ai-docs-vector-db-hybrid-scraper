@@ -118,8 +118,14 @@ class LightweightScraper(BaseService):
                 limits=limits,
                 timeout=timeout,
                 headers={
-                    "User-Agent": "Mozilla/5.0 (compatible; LightweightScraper/1.0; +https://github.com/ai-docs-vector-db)",
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7",
+                    "User-Agent": (
+                        "Mozilla/5.0 (compatible; LightweightScraper/1.0; "
+                        "+https://github.com/ai-docs-vector-db)"
+                    ),
+                    "Accept": (
+                        "text/html,application/xhtml+xml,application/xml;q=0.9,"
+                        "text/plain;q=0.8,*/*;q=0.7"
+                    ),
                     "Accept-Encoding": "gzip, deflate",
                     "Accept-Language": "en-US,en;q=0.9",
                     "Cache-Control": "no-cache",
@@ -160,7 +166,8 @@ class LightweightScraper(BaseService):
                 analysis.can_handle = True
                 analysis.confidence = url_confidence
                 analysis.reasons.append(
-                    f"URL pattern indicates static content (confidence: {url_confidence:.2f})"
+                    "URL pattern indicates static content "
+                    f"(confidence: {url_confidence:.2f})"
                 )
                 return analysis
 

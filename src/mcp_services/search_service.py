@@ -34,6 +34,7 @@ class SearchService:
 
         Args:
             name: Service name for MCP registration
+
         """
         self.mcp = FastMCP(
             name,
@@ -62,6 +63,7 @@ class SearchService:
 
         Args:
             client_manager: Shared client manager instance
+
         """
         self.client_manager = client_manager
 
@@ -92,6 +94,7 @@ class SearchService:
 
         Returns:
             Configured FastMCP server for this service
+
         """
         return self.mcp
 
@@ -100,6 +103,7 @@ class SearchService:
 
         Returns:
             Service metadata and capability information
+
         """
         return {
             "service": "search",

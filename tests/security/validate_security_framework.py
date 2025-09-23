@@ -47,7 +47,7 @@ class SecurityFrameworkValidator:
         }
 
     def run_validation(self) -> dict[str, Any]:
-        """Run comprehensive security validation."""
+        """Run security validation."""
         logger.info("🔒 Starting Security Framework Validation")
         logger.info("=" * 60)
 
@@ -217,7 +217,7 @@ class SecurityFrameworkValidator:
 
         # Test secure pytest execution
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603  # Secure: validated executable, no shell, no user input
                 [  # noqa: S607
                     "python",
                     str(project_root / "tests/load/run_load_tests.py"),
@@ -238,7 +238,8 @@ class SecurityFrameworkValidator:
                 self.results["tests_passed"] += 1
             else:
                 logger.warning(
-                    f"⚠️  Load testing security integration: PARTIAL (code: {result.returncode})"
+                    f"⚠️  Load testing security integration: PARTIAL "
+                    f"(code: {result.returncode})"
                 )
                 # Don't count as failure since tests might not exist yet
 
@@ -259,7 +260,7 @@ class SecurityFrameworkValidator:
         """Run pytest command and return results."""
         try:
             cmd = ["uv", "run", "pytest", *args]
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603  # Secure: validated executable, no shell, no user input
                 cmd,
                 capture_output=True,
                 text=True,

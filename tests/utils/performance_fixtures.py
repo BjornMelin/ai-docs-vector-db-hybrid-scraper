@@ -258,7 +258,8 @@ def performance_monitor():
             """Assert that _total time is under threshold."""
             _total_time = self.get__total_time()
             assert _total_time <= max_time, (
-                f"Performance assertion failed: {_total_time:.3f}s > {max_time:.3f}s. {message}"
+                f"Performance assertion failed: {_total_time:.3f}s > "
+                f"{max_time:.3f}s. {message}"
             )
 
     return TestPerformanceMonitor()

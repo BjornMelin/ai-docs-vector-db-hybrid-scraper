@@ -322,7 +322,7 @@ class TestCircuitBreakers:
                 requests_per_second=10,
                 duration_seconds=scenario["duration"],
                 success_criteria={
-                    "max_error_rate_percent": 80.0,  # Allow high error rates for testing
+                    "max_error_rate_percent": 80.0,  # Allow high error rates
                 },
             )
 
@@ -354,7 +354,8 @@ class TestCircuitBreakers:
             )
 
             logger.info(
-                "Scenario %d: Failure rate %.1f%%, Circuit opened: %s, Error rate: %.2f%%, Rejections: %d",
+                "Scenario %d: Failure rate %.1f%%, Circuit opened: %s, "
+                "Error rate: %.2f%%, Rejections: %d",
                 i + 1,
                 scenario["rate"] * 100,
                 circuit_opened,
@@ -371,13 +372,15 @@ class TestCircuitBreakers:
         for result in scenario_results:
             if result["expected_open"]:
                 assert result["circuit_opened"], (
-                    f"Circuit breaker should have opened at {result['failure_rate']:.1%} failure rate"
+                    f"Circuit breaker should have opened at "
+                    f"{result['failure_rate']:.1%} failure rate"
                 )
             else:
                 # Low failure rates shouldn't trigger circuit breaker
                 if result["failure_rate"] < 0.5:
                     assert not result["circuit_opened"], (
-                        f"Circuit breaker opened unnecessarily at {result['failure_rate']:.1%} failure rate"
+                        f"Circuit breaker opened unnecessarily at "
+                        f"{result['failure_rate']:.1%} failure rate"
                     )
 
         # Verify progressive behavior
@@ -558,7 +561,8 @@ class TestCircuitBreakers:
             p["phase_metrics"]["state_changes"] for p in phase_results
         )
         assert _total_state_changes >= 2, (
-            f"Expected at least 2 state changes (open -> half-open -> closed), got {_total_state_changes}"
+            f"Expected at least 2 state changes (open -> half-open -> "
+            f"closed), got {_total_state_changes}"
         )
 
         logger.info("Circuit breaker recovery completed successfully")
@@ -671,7 +675,8 @@ class TestRateLimiters:
             )
 
             logger.info(
-                "Pattern %s: %.2f%% rejected, Actual rate: %.1f req/min, Peak rate: %.1f req/min",
+                "Pattern %s: %.2f%% rejected, Actual rate: %.1f req/min, "
+                "Peak rate: %.1f req/min",
                 pattern["name"],
                 rejection_rate,
                 actual_rate,
@@ -685,12 +690,14 @@ class TestRateLimiters:
 
         # Under limit should have minimal rejections
         assert under_limit["rejection_rate"] < 10, (
-            f"Too many rejections under rate limit: {under_limit['rejection_rate']:.2f}%"
+            f"Too many rejections under rate limit: "
+            f"{under_limit['rejection_rate']:.2f}%"
         )
 
         # Over limit should have significant rejections
         assert over_limit["rejection_rate"] > 30, (
-            f"Insufficient rejections over rate limit: {over_limit['rejection_rate']:.2f}%"
+            f"Insufficient rejections over rate limit: "
+            f"{over_limit['rejection_rate']:.2f}%"
         )
 
         # Burst should be partially handled by burst allowance
@@ -704,7 +711,8 @@ class TestRateLimiters:
                 # Allow some tolerance for timing variations
                 max_allowed_rate = rl_config.max_requests * 1.2  # 20% tolerance
                 assert result["actual_rate"] <= max_allowed_rate, (
-                    f"Rate limit exceeded: {result['actual_rate']:.1f} > {max_allowed_rate:.1f} req/min"
+                    f"Rate limit exceeded: {result['actual_rate']:.1f} > "
+                    f"{max_allowed_rate:.1f} req/min"
                 )
 
     @pytest.mark.stress
@@ -790,7 +798,8 @@ class TestRateLimiters:
 
         # Assertions for thundering herd protection
         assert rejection_rate > 70, (
-            f"Insufficient rate limiting for thundering herd: {rejection_rate:.2f}% rejected"
+            f"Insufficient rate limiting for thundering herd: "
+            f"{rejection_rate:.2f}% rejected"
         )
 
         assert expensive_service.max_concurrent <= 10, (
@@ -798,7 +807,8 @@ class TestRateLimiters:
         )
 
         assert expensive_service._total_executions <= 50, (
-            f"Too many expensive operations executed: {expensive_service._total_executions}"
+            f"Too many expensive operations executed: "
+            f"{expensive_service._total_executions}"
         )
 
         # Verify service performance wasn't degraded
@@ -807,7 +817,8 @@ class TestRateLimiters:
                 expensive_service.execution_times
             )
             assert avg_execution_time < 5.0, (
-                f"Expensive service performance degraded: {avg_execution_time:.2f}s average"
+                f"Expensive service performance degraded: "
+                f"{avg_execution_time:.2f}s average"
             )
 
         logger.info("Thundering herd protection successful:")

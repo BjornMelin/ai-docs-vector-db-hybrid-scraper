@@ -306,7 +306,6 @@ class MemoryLeakRemediationStrategy(RemediationStrategy):
         self, action: RemediationAction, checkpoint: SystemCheckpoint, start_time: float
     ) -> RemediationResult:
         """Execute garbage collection remediation."""
-
         aggressive = action.parameters.get("aggressive", False)
 
         # Force garbage collection
@@ -968,7 +967,8 @@ class RollbackManager:
 
 class AutoRemediationEngine:
     """Intelligent automated remediation engine with safety constraints and rollback
-    capabilities."""
+    capabilities.
+    """
 
     def __init__(
         self,
@@ -980,6 +980,7 @@ class AutoRemediationEngine:
         Args:
             health_manager: Health check manager for service monitoring
             circuit_breaker_manager: Circuit breaker manager for failure protection
+
         """
         self.health_manager = health_manager
         self.circuit_breaker_manager = circuit_breaker_manager
@@ -1072,7 +1073,6 @@ class AutoRemediationEngine:
         _safety_result: SafetyValidationResult,
     ) -> RemediationResult:
         """Execute remediation actions with safety measures."""
-
         # Create system checkpoint
         checkpoint = await self.rollback_manager.create_checkpoint(
             f"Before remediation of {issue.issue_type}"

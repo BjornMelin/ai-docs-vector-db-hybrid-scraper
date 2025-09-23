@@ -1,6 +1,7 @@
 """Enum tests for the federated search service.
 
-Tests for SearchMode, CollectionSelectionStrategy, ResultMergingStrategy, and FederatedSearchScope enums.
+Tests for SearchMode, CollectionSelectionStrategy, ResultMergingStrategy,
+and FederatedSearchScope enums.
 """
 
 import pytest

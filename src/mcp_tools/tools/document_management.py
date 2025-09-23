@@ -1,7 +1,6 @@
-"""Advanced document management tools for MCP server.
+"""Document management tools for MCP server.
 
-Provides comprehensive document lifecycle management with autonomous
-processing and intelligent organization capabilities.
+Provides document lifecycle management with processing and organization capabilities.
 """
 
 import datetime
@@ -59,8 +58,8 @@ def register_tools(mcp, client_manager: ClientManager):
     ) -> dict[str, Any]:
         """Create a managed document workspace with collections and configuration.
 
-        Implements autonomous document organization with intelligent defaults
-        and workspace-level configuration management.
+        Implements document organization with defaults and workspace-level
+        configuration management.
 
         Args:
             workspace_name: Name for the document workspace
@@ -70,6 +69,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Workspace creation results with management metadata
+
         """
         try:
             if ctx:
@@ -127,7 +127,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Workspace '{workspace_name}' created with {len(created_collections)} collections"
+                    f"Workspace '{workspace_name}' created with "
+                    f"{len(created_collections)} collections"
                 )
 
             return {
@@ -152,10 +153,10 @@ def register_tools(mcp, client_manager: ClientManager):
         filters: dict[str, Any] | None = None,
         ctx: Context = None,
     ) -> dict[str, Any]:
-        """Manage document lifecycle with autonomous policies.
+        """Manage document lifecycle with policies.
 
-        Implements intelligent document lifecycle management including
-        archival, cleanup, and optimization policies.
+        Implements document lifecycle management including archival, cleanup,
+        and optimization policies.
 
         Args:
             collection_name: Target collection for lifecycle management
@@ -165,11 +166,13 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Lifecycle management results with policy application details
+
         """
         try:
             if ctx:
                 await ctx.info(
-                    f"Managing document lifecycle: {lifecycle_action} for {collection_name}"
+                    f"Managing document lifecycle: {lifecycle_action} for "
+                    f"{collection_name}"
                 )
 
             qdrant_service = await client_manager.get_qdrant_service()
@@ -219,7 +222,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Lifecycle action '{lifecycle_action}' completed for {collection_name}"
+                    f"Lifecycle action '{lifecycle_action}' completed for "
+                    f"{collection_name}"
                 )
 
         except Exception as e:
@@ -245,24 +249,27 @@ def register_tools(mcp, client_manager: ClientManager):
         parameters: dict[str, Any] | None = None,
         ctx: Context = None,
     ) -> dict[str, Any]:
-        """Intelligently organize documents using ML-powered strategies.
+        """Organize documents using strategies.
 
-        Implements autonomous document organization with semantic clustering,
-        topic modeling, and intelligent categorization.
+        Implements document organization with clustering, topic modeling,
+        and categorization.
 
         Args:
             collection_name: Target collection for organization
-            organization_strategy: Strategy to use (semantic, topical, quality, temporal)
+            organization_strategy: Strategy to use (semantic, topical, quality,
+            temporal)
             parameters: Optional strategy parameters
             ctx: MCP context for logging
 
         Returns:
             Organization results with clustering and categorization metadata
+
         """
         try:
             if ctx:
                 await ctx.info(
-                    f"Organizing documents in {collection_name} using {organization_strategy} strategy"
+                    f"Organizing documents in {collection_name} using "
+                    f"{organization_strategy} strategy"
                 )
 
             qdrant_service = await client_manager.get_qdrant_service()
@@ -325,7 +332,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Organization completed: {len(documents)} documents processed using {organization_strategy}"
+                    f"Organization completed: {len(documents)} "
+                    f"documents processed using {organization_strategy}"
                 )
 
         except Exception as e:
@@ -348,6 +356,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive workspace analytics and health metrics
+
         """
         try:
             cache_manager = await client_manager.get_cache_manager()
@@ -410,7 +419,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Generated analytics for {analytics['global_metrics']['total_workspaces']} workspaces"
+                    f"Generated analytics for "
+                    f"{analytics['global_metrics']['total_workspaces']} workspaces"
                 )
 
         except Exception as e:

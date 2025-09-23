@@ -1,6 +1,6 @@
 """Enterprise mode cache service implementation.
 
-Full-featured caching service with distributed caching, analytics, and advanced features
+Caching service with distributed caching, analytics, and features
 for enterprise deployments.
 """
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class EnterpriseCacheService(BaseService):
-    """Full-featured cache service for enterprise deployments.
+    """Cache service for enterprise deployments.
 
     Features:
     - Multi-tier caching (memory + distributed)
@@ -111,6 +111,7 @@ class EnterpriseCacheService(BaseService):
 
         Returns:
             Cached value or None if not found/expired
+
         """
         start_time = time.time()
 
@@ -145,13 +146,14 @@ class EnterpriseCacheService(BaseService):
     async def set(
         self, key: str, value: Any, ttl: int | None = None, tier: str = "both"
     ) -> None:
-        """set value in cache with multi-tier storage.
+        """Set value in cache with multi-tier storage.
 
         Args:
             key: Cache key
             value: Value to cache
             ttl: Time to live in seconds
             tier: Cache tier ("local", "distributed", or "both")
+
         """
         start_time = time.time()
 
@@ -198,6 +200,7 @@ class EnterpriseCacheService(BaseService):
 
         Returns:
             True if key was deleted from any tier
+
         """
         start_time = time.time()
         deleted = False
@@ -249,6 +252,7 @@ class EnterpriseCacheService(BaseService):
 
         Args:
             tier: Cache tier to clear ("local", "distributed", or "both")
+
         """
         # Clear appropriate tiers
         if tier in ("local", "both"):
@@ -285,6 +289,7 @@ class EnterpriseCacheService(BaseService):
 
         Returns:
             True if key exists and is valid
+
         """
         # Check local cache first
         if await self._exists_local(key):
@@ -301,6 +306,7 @@ class EnterpriseCacheService(BaseService):
 
         Args:
             keys: list of cache keys to warm
+
         """
         if not self.distributed_cache:
             return
@@ -325,6 +331,7 @@ class EnterpriseCacheService(BaseService):
 
         Returns:
             list of hot keys sorted by access frequency
+
         """
         sorted_keys = sorted(
             self._access_patterns.items(), key=lambda x: x[1], reverse=True
@@ -370,7 +377,7 @@ class EnterpriseCacheService(BaseService):
         return entry["value"]
 
     async def _set_local(self, key: str, value: Any, ttl: int) -> None:
-        """set value in local cache."""
+        """Set value in local cache."""
         # Evict if needed
         await self._evict_local_if_needed()
 
@@ -404,7 +411,7 @@ class EnterpriseCacheService(BaseService):
             return None
 
     async def _set_distributed(self, key: str, value: Any, ttl: int) -> None:
-        """set value in distributed cache."""
+        """Set value in distributed cache."""
         if not self.distributed_cache:
             return
 
@@ -561,7 +568,8 @@ class EnterpriseCacheService(BaseService):
             recommendations.append("Consider increasing cache TTL or size")
         if memory_usage > 90:
             recommendations.append(
-                "Consider increasing cache size or implementing more aggressive eviction"
+                "Consider increasing cache size or implementing more aggressive "
+                "eviction"
             )
         if len(self._hot_keys) > 100:
             recommendations.append(

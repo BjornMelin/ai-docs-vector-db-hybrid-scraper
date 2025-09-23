@@ -298,10 +298,11 @@ class HyDEQueryEngine(BaseService):
         """Perform search using Query API with HyDE prefetch."""
         try:
             # Use the existing hyde_search method in QdrantService
-            # but we need to call it differently since it expects hypothetical_embeddings as a list
+            # but we need to call it differently since
+            # it expects hypothetical_embeddings as a list
             return await self.qdrant_service.hyde_search(
                 collection_name=collection_name,
-                query="HyDE search",  # This parameter isn't actually used in the implementation
+                query="HyDE search",  # Parameter not used in implementation
                 query_embedding=query_embedding,
                 hypothetical_embeddings=[hyde_embedding],  # Pass as list
                 limit=limit,
@@ -473,7 +474,7 @@ class HyDEQueryEngine(BaseService):
         return processed_results
 
     def get_performance_metrics(self) -> dict[str, Any]:
-        """Get comprehensive performance metrics."""
+        """Get performance metrics."""
         # Basic metrics
         avg_search_time = (
             self.total_search_time / self.search_count if self.search_count > 0 else 0.0

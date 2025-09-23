@@ -432,7 +432,8 @@ class TestComplexityReduction:
         # Simple mode should have at least 50% fewer services
         reduction_ratio = simple_services / enterprise_services
         assert reduction_ratio <= 0.5, (
-            f"Simple mode has {reduction_ratio:.2%} of enterprise services, should be ≤50%"
+            f"Simple mode has {reduction_ratio:.2%} of enterprise services, "
+            "should be ≤50%"
         )
 
     def test_resource_limit_reduction(self):
@@ -465,7 +466,8 @@ class TestComplexityReduction:
             simple_enabled / enterprise_enabled if enterprise_enabled > 0 else 0
         )
         assert feature_reduction_ratio <= 0.3, (
-            f"Simple mode has {feature_reduction_ratio:.2%} of enterprise features enabled"
+            f"Simple mode has {feature_reduction_ratio:.2%} of enterprise "
+            "features enabled"
         )
 
     def test_middleware_stack_reduction(self):

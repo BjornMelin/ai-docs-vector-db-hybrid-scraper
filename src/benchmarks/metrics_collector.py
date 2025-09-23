@@ -101,7 +101,8 @@ class MetricsCollector:
         summary["total_metric_points"] = len(self.metric_points)
 
         logger.info(
-            f"Stopped metrics collection. Duration: {collection_duration:.2f}s, Points: {len(self.metric_points)}"
+            f"Stopped metrics collection. Duration: "
+            f"{collection_duration:.2f}s, Points: {len(self.metric_points)}"
         )
 
         return summary

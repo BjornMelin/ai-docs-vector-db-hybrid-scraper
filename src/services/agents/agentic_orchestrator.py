@@ -1,11 +1,11 @@
-"""Pure Pydantic-AI native agentic orchestrator.
+"""
+Pydantic-AI orchestrator.
 
-This module implements the clean, optimal solution defined in our
-comprehensive research,
-replacing the 950-line ToolCompositionEngine with ~150-300 lines of native patterns.
+This module implements the clean solution defined in our research,
+replacing the 950-line ToolCompositionEngine with ~150-300 lines of patterns.
 
 Based on research findings:
-- G1-G5: Pydantic-AI native capabilities validation (98% confidence)
+- G1-G5: Pydantic-AI capabilities validation (98% confidence)
 - J3: Dynamic Tool Composition Engine research (96% confidence)
 - COMPREHENSIVE_SYNTHESIS_REPORT.md: Complete modernization strategy
 """
@@ -61,10 +61,10 @@ class ToolResponse(BaseModel):
 
 
 class AgenticOrchestrator(BaseAgent):
-    """Pure Pydantic-AI native orchestrator for autonomous tool composition.
+    """Pydantic-AI orchestrator for tool composition.
 
-    This replaces the 950-line ToolCompositionEngine with intelligent,
-    autonomous orchestration using native Pydantic-AI patterns only.
+    This replaces the 950-line ToolCompositionEngine with orchestration
+    using Pydantic-AI patterns only.
     """
 
     def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.1):
@@ -73,6 +73,7 @@ class AgenticOrchestrator(BaseAgent):
         Args:
             model: LLM model for autonomous decisions
             temperature: Generation temperature for tool selection
+
         """
         super().__init__(
             name="agentic_orchestrator",
@@ -82,24 +83,24 @@ class AgenticOrchestrator(BaseAgent):
         )
 
     def get_system_prompt(self) -> str:
-        """Define autonomous orchestration behavior."""
-        return """You are an autonomous tool orchestrator with the following
+        """Define orchestration behavior."""
+        return """You are a tool orchestrator with the following
 capabilities:
 
-1. INTELLIGENT ANALYSIS
-   - Analyze user requests to understand intent and requirements
-   - Assess available tools and their capabilities dynamically
-   - Select optimal tool combinations based on context and constraints
+1. ANALYSIS
+    - Analyze user requests to understand intent and requirements
+    - Assess available tools and their capabilities dynamically
+    - Select tool combinations based on context and constraints
 
-2. AUTONOMOUS EXECUTION
-   - Choose execution strategies (sequential, parallel, or hybrid)
-   - Make real-time decisions based on intermediate results
-   - Adapt approach if initial tools don't provide expected results
+2. EXECUTION
+    - Choose execution strategies (sequential, parallel, or hybrid)
+    - Make real-time decisions based on intermediate results
+    - Adapt approach if initial tools don't provide expected results
 
 3. PERFORMANCE OPTIMIZATION
-   - Balance speed, quality, and resource constraints
-   - Learn from execution patterns to improve future decisions
-   - Provide clear reasoning for tool selection and orchestration choices
+    - Balance speed, quality, and resource constraints
+    - Learn from execution patterns to improve future decisions
+    - Provide clear reasoning for tool selection and orchestration choices
 
 Your goal is to provide the most effective tool orchestration for each task while
 maintaining high performance and reliability. Always explain your reasoning."""
@@ -111,14 +112,15 @@ maintaining high performance and reliability. Always explain your reasoning."""
 
         if not PYDANTIC_AI_AVAILABLE or self.agent is None:
             logger.warning(
-                f"AgenticOrchestrator using fallback mode (reason: {fallback_reason or 'pydantic_ai_unavailable'})"
+                "AgenticOrchestrator using fallback mode (reason: "
+                f"{fallback_reason or 'pydantic_ai_unavailable'})"
             )
             return
 
-        # Set up native Pydantic-AI tool discovery and orchestration
+        # Set up Pydantic-AI tool discovery and orchestration
         @self.agent.tool_plain
         async def orchestrate_tools(request: ToolRequest) -> ToolResponse:
-            """Main orchestration tool for autonomous task execution."""
+            """Main orchestration tool for task execution."""
             return await self._orchestrate_autonomous(request, deps)
 
         @self.agent.tool_plain
@@ -130,15 +132,15 @@ maintaining high performance and reliability. Always explain your reasoning."""
         async def execute_tool_chain(
             tools: list[str], input_data: dict[str, Any]
         ) -> dict[str, Any]:
-            """Execute selected tools with intelligent chaining."""
+            """Execute selected tools with chaining."""
             return await self._execute_chain(tools, input_data, deps)
 
-        logger.info("AgenticOrchestrator initialized with native Pydantic-AI patterns")
+        logger.info("AgenticOrchestrator initialized with Pydantic-AI patterns")
 
     async def orchestrate(
         self, task: str, constraints: dict[str, Any], deps: BaseAgentDependencies
     ) -> ToolResponse:
-        """Main entry point for autonomous tool orchestration.
+        """Main entry point for tool orchestration.
 
         Args:
             task: Task description or query
@@ -147,6 +149,7 @@ maintaining high performance and reliability. Always explain your reasoning."""
 
         Returns:
             Orchestration response with results and reasoning
+
         """
         if not self._initialized:
             await self.initialize(deps)
@@ -174,8 +177,8 @@ maintaining high performance and reliability. Always explain your reasoning."""
                 response = ToolResponse(
                     success=True,
                     results={"agent_response": str(result.data)},
-                    tools_used=["autonomous_agent"],
-                    reasoning="Native Pydantic-AI agent orchestration",
+                    tools_used=["agent"],
+                    reasoning="Pydantic-AI agent orchestration",
                     latency_ms=0.0,
                     confidence=0.8,
                 )
@@ -192,8 +195,8 @@ maintaining high performance and reliability. Always explain your reasoning."""
                 },
             )
 
-        except Exception as e:
-            logger.exception("Autonomous orchestration failed")
+        except Exception as e:  # noqa: BLE001
+            logger.exception("Orchestration failed")
             return ToolResponse(
                 success=False,
                 results={"error": str(e)},
@@ -208,14 +211,14 @@ maintaining high performance and reliability. Always explain your reasoning."""
     async def _orchestrate_autonomous(
         self, request: ToolRequest, deps: BaseAgentDependencies
     ) -> ToolResponse:
-        """Core autonomous orchestration logic."""
+        """Core orchestration logic."""
         start_time = time.time()
 
         try:
             # Step 1: Analyze task and discover tools
             available_tools = await self._discover_tools(deps)
 
-            # Step 2: Intelligent tool selection based on task
+            # Step 2: Tool selection based on task
             selected_tools = self._select_tools_for_task(
                 request.task, available_tools, request.constraints
             )
@@ -244,7 +247,11 @@ maintaining high performance and reliability. Always explain your reasoning."""
                 confidence=self._calculate_confidence(results, selected_tools),
             )
 
-        except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
+        except (
+            asyncio.CancelledError,
+            TimeoutError,
+            RuntimeError,
+        ) as e:  # noqa: BLE001
             latency_ms = (time.time() - start_time) * 1000
             return ToolResponse(
                 success=False,
@@ -280,20 +287,23 @@ maintaining high performance and reliability. Always explain your reasoning."""
     def _select_tools_for_task(
         self, task: str, _available_tools: dict[str, Any], constraints: dict[str, Any]
     ) -> list[str]:
-        """Intelligent tool selection based on task analysis."""
+        """Tool selection based on task analysis."""
         task_lower = task.lower()
         selected = []
 
         # Rule-based tool selection (would be enhanced with ML in production)
-        if any(keyword in task_lower for keyword in ["search", "find", "lookup"]):
+        keywords_search = ["search", "find", "lookup"]
+        if any(keyword in task_lower for keyword in keywords_search):
             selected.append("hybrid_search")
 
-        if any(keyword in task_lower for keyword in ["generate", "answer", "explain"]):
+        keywords_generate = ["generate", "answer", "explain"]
+        if any(keyword in task_lower for keyword in keywords_generate):
             if "hybrid_search" not in selected:
                 selected.append("hybrid_search")
             selected.append("rag_generation")
 
-        if any(keyword in task_lower for keyword in ["analyze", "classify", "assess"]):
+        keywords_analyze = ["analyze", "classify", "assess"]
+        if any(keyword in task_lower for keyword in keywords_analyze):
             selected.append("content_analysis")
 
         # Fallback to search if no specific tools selected
@@ -310,7 +320,7 @@ maintaining high performance and reliability. Always explain your reasoning."""
     async def _execute_chain(
         self, tools: list[str], input_data: dict[str, Any], deps: BaseAgentDependencies
     ) -> dict[str, Any]:
-        """Execute selected tools with intelligent chaining."""
+        """Execute selected tools with chaining."""
         results = {}
         context = input_data.copy()
 
@@ -323,7 +333,11 @@ maintaining high performance and reliability. Always explain your reasoning."""
                 # Update context for next tool
                 context.update(tool_result)
 
-            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
+            except (
+                asyncio.CancelledError,
+                TimeoutError,
+                RuntimeError,
+            ) as e:  # noqa: BLE001
                 logger.warning(f"Tool {tool_name} failed: {e}")
                 results[f"{tool_name}_error"] = str(e)
 
@@ -397,7 +411,8 @@ maintaining high performance and reliability. Always explain your reasoning."""
         task_lower = request.task.lower()
 
         # Determine appropriate fallback response based on task type
-        if any(keyword in task_lower for keyword in ["search", "find", "retrieve"]):
+        keywords_search = ["search", "find", "retrieve"]
+        if any(keyword in task_lower for keyword in keywords_search):
             fallback_tools = ["mock_search_tool"]
             result_data = {
                 "search_results": f"Mock search results for: {request.task}",

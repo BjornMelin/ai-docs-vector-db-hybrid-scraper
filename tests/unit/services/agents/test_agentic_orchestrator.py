@@ -1,4 +1,4 @@
-"""Comprehensive tests for AgenticOrchestrator implementation.
+"""AgenticOrchestrator implementation tests.
 
 This test suite covers:
 - AgenticOrchestrator initialization and setup
@@ -8,9 +8,6 @@ This test suite covers:
 - Performance metrics and confidence scoring
 - Error handling and fallback scenarios
 - Integration with BaseAgent framework
-
-The AgenticOrchestrator replaced a 950-line ToolCompositionEngine with ~200 lines
-of native patterns, so tests focus on clean autonomous capabilities.
 """
 
 import asyncio
@@ -1148,14 +1145,18 @@ class TestIntegrationWithBaseAgent:
             result1 = await orchestrator.execute("test task 1", deps)
             result2 = await orchestrator.execute("test task 2", deps)
 
-            # Executions should complete in fallback mode (base agent fallback doesn't have 'success' key)
+            # Executions should complete in fallback
+            # ode (base agent fallback doesn't have 'success' key)
+
             assert "result" in result1 or "error" in result1
             assert "result" in result2 or "error" in result2
 
         # Check updated metrics
         metrics = orchestrator.get_performance_metrics()
         assert metrics["execution_count"] == 2
-        # The execution time may be 0 for base agent fallback, but execution count should be tracked
+        # The execution time may be 0 for base
+        # gent fallback, but execution count should be tracked
+
         assert metrics["execution_count"] > 0
 
     @pytest.mark.asyncio

@@ -39,6 +39,7 @@ class CrawlingManager:
 
         Args:
             config: Configuration from DI container
+
         """
         if self._initialized:
             return
@@ -92,6 +93,7 @@ class CrawlingManager:
 
         Raises:
             CrawlServiceError: If manager not initialized or scraping fails
+
         """
         if not self._initialized or not self._core_manager:
             msg = "Crawling manager not initialized"
@@ -133,6 +135,7 @@ class CrawlingManager:
 
         Raises:
             CrawlServiceError: If manager not initialized
+
         """
         if not self._initialized or not self._core_manager:
             msg = "Crawling manager not initialized"
@@ -167,6 +170,7 @@ class CrawlingManager:
 
         Raises:
             CrawlServiceError: If manager not initialized
+
         """
         if not self._initialized or not self._core_manager:
             msg = "Crawling manager not initialized"
@@ -198,6 +202,7 @@ class CrawlingManager:
 
         Raises:
             CrawlServiceError: If manager not initialized
+
         """
         if not self._initialized or not self._core_manager:
             msg = "Crawling manager not initialized"
@@ -224,6 +229,7 @@ class CrawlingManager:
 
         Raises:
             CrawlServiceError: If manager not initialized
+
         """
         if not self._initialized or not self._core_manager:
             return {}
@@ -244,6 +250,7 @@ class CrawlingManager:
 
         Raises:
             CrawlServiceError: If manager not initialized
+
         """
         if not self._initialized or not self._core_manager:
             return {}
@@ -264,6 +271,7 @@ class CrawlingManager:
 
         Raises:
             CrawlServiceError: If manager not initialized
+
         """
         if not self._initialized or not self._core_manager:
             return {}
@@ -281,6 +289,7 @@ class CrawlingManager:
 
         Returns:
             Status information for providers and metrics
+
         """
         status = {
             "initialized": self._initialized,
@@ -307,6 +316,7 @@ class CrawlingManager:
 
         Returns:
             Core CrawlManager instance or None
+
         """
         return self._core_manager
 
@@ -326,6 +336,7 @@ class CrawlingManager:
 
         Returns:
             Extracted content with metadata
+
         """
         if not self._initialized or not self._core_manager:
             msg = "Crawling manager not initialized"
@@ -393,6 +404,7 @@ class CrawlingManager:
 
         Returns:
             List of scraping results for each URL
+
         """
         if not self._initialized or not self._core_manager:
             msg = "Crawling manager not initialized"

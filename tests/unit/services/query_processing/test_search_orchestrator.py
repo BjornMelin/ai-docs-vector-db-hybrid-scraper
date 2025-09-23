@@ -1074,7 +1074,8 @@ class TestEdgeCasesAndErrorHandling:
         """Test all features working together successfully."""
         # Mock all services to succeed
         with patch("src.config.get_config") as mock_get_config:
-            # Mock federated search to return results that will be processed by other features
+            # Mock federated search to return results that will be processed by other
+            # features
             # Need more than 5 results for clustering to trigger
             mock_federated_service = Mock()
             mock_fed_result = Mock()

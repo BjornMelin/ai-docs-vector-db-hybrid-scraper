@@ -32,7 +32,7 @@ class MockFactory:
         self.data_generator = TestDataGenerator(seed)
         self.seed = seed
         if seed is not None:
-            random.seed(seed)
+            random.seed(seed)  # noqa: S311
 
     def create_mock_response(
         self,
@@ -86,11 +86,11 @@ class MockFactory:
 
         async def mock_coroutine(*_args, **__kwargs):
             # Simulate processing delay
-            delay = random.uniform(*delay_range)
+            delay = random.uniform(*delay_range)  # noqa: S311
             await asyncio.sleep(delay)
 
             # Simulate random failures
-            if random.random() < failure_rate:
+            if random.random() < failure_rate:  # noqa: S311
                 msg = "Simulated failure"
                 raise exception_type(msg)
 
@@ -168,11 +168,11 @@ def create_mock_vector_db(
         # Simple similarity based on random scoring
         results = []
         doc_ids = list(mock_documents.keys())
-        random.shuffle(doc_ids)
+        random.shuffle(doc_ids)  # noqa: S311
 
         for doc_id in doc_ids[:limit]:
             doc = mock_documents[doc_id]
-            score = random.uniform(0.6, 0.95)
+            score = random.uniform(0.6, 0.95)  # noqa: S311
             results.append(
                 {
                     "id": doc_id,
@@ -284,11 +284,11 @@ def create_mock_web_scraper(
     async def mock_scrape_url(url: str, **__kwargs) -> dict[str, Any]:
         """Mock URL scraping."""
         # Simulate processing delay
-        delay = random.uniform(*processing_delay_range)
+        delay = random.uniform(*processing_delay_range)  # noqa: S311
         await asyncio.sleep(delay)
 
         # Simulate failures
-        if random.random() > success_rate:
+        if random.random() > success_rate:  # noqa: S311
             msg = f"Failed to scrape URL: {url}"
             raise CustomError(msg)
 
@@ -297,7 +297,7 @@ def create_mock_web_scraper(
 
         return {
             "url": url,
-            "title": generator.fake.sentence(nb_words=random.randint(3, 8)).rstrip("."),
+            "title": generator.fake.sentence(nb_words=random.randint(3, 8)).rstrip("."),  # noqa: S311
             "content": content,
             "metadata": {
                 "scraped_at": datetime.now(tz=UTC).isoformat(),
@@ -307,8 +307,8 @@ def create_mock_web_scraper(
                 "language": "en",
                 "status_code": 200,
             },
-            "links": [generator.fake.url() for _ in range(random.randint(0, 10))],
-            "images": [generator.fake.image_url() for _ in range(random.randint(0, 5))],
+            "links": [generator.fake.url() for _ in range(random.randint(0, 10))],  # noqa: S311
+            "images": [generator.fake.image_url() for _ in range(random.randint(0, 5))],  # noqa: S311
         }
 
     async def mock_scrape_batch(urls: list[str], **_kwargs) -> list[dict[str, Any]]:
@@ -353,7 +353,7 @@ def create_mock_cache_service(hit_rate: float = 0.8, storage_limit: int = 1000) 
     def mock_get(key: str) -> Any | None:
         """Mock cache get."""
         # Simulate cache misses
-        if random.random() > hit_rate:
+        if random.random() > hit_rate:  # noqa: S311
             return None
 
         if key in cache_storage:
@@ -461,7 +461,7 @@ def create_mock_api_client(
             raise CustomError(msg)
 
         # Simulate network delay
-        await asyncio.sleep(random.uniform(0.1, 0.3))
+        await asyncio.sleep(random.uniform(0.1, 0.3))  # noqa: S311
 
         # Return mock response based on endpoint
         if endpoint.startswith("/search"):
@@ -472,9 +472,9 @@ def create_mock_api_client(
                         "title": f"Result {i}",
                         "score": 0.9 - i * 0.1,
                     }
-                    for i in range(random.randint(1, 10))
+                    for i in range(random.randint(1, 10))  # noqa: S311
                 ],
-                "_total": random.randint(10, 100),
+                "_total": random.randint(10, 100),  # noqa: S311
                 "query": params.get("q", "") if params else "",
             }
         if endpoint.startswith("/documents"):
@@ -487,7 +487,7 @@ def create_mock_api_client(
             return {
                 "documents": [
                     {"id": str(uuid.uuid4()), "title": f"Document {i}"}
-                    for i in range(random.randint(1, 5))
+                    for i in range(random.randint(1, 5))  # noqa: S311
                 ]
             }
         return {"message": "Mock response", "endpoint": endpoint}

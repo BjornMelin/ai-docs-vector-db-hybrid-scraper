@@ -1,7 +1,9 @@
 """SPLADE provider for sparse vector generation.
 
-This module implements SPLADE (Sparse Lexical And Expansion model for Passage retrieval)
-for generating high-quality sparse vectors that combine keyword matching with semantic expansion.
+This module implements SPLADE (Sparse Lexical And Expansion model
+for Passage retrieval)
+for generating high-quality sparse vectors that combine keyword matching
+with semantic expansion.
 """
 
 import logging
@@ -58,8 +60,12 @@ class SPLADEProvider:
             # from transformers import AutoModelForMaskedLM, AutoTokenizer
             # import torch
 
-            # self._tokenizer = AutoTokenizer.from_pretrained(self.splade_config.model_name)
-            # self._model = AutoModelForMaskedLM.from_pretrained(self.splade_config.model_name)
+            # self._tokenizer = AutoTokenizer.from_pretrained(
+            #     self.splade_config.model_name
+            # )
+            # self._model = AutoModelForMaskedLM.from_pretrained(
+            #     self.splade_config.model_name
+            # )
             # self._model.eval()
 
             # For now, use fallback implementation

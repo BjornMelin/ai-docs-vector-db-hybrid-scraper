@@ -165,22 +165,38 @@ class HyDEPromptConfig(BaseModel):
 
     # Base prompts for different document types
     technical_prompt: str = Field(
-        default="You are a technical documentation expert. Answer this question with a detailed, accurate response:\n\nQuestion: {query}\n\nProvide a comprehensive answer that would appear in high-quality technical documentation:",
+        default=(
+            "You are a technical documentation expert. Answer this question with a "
+            "detailed, accurate  response:"
+            "\n\nQuestion: {query}\n\nProvide a comprehensive "
+            "answer that would appear in high-quality technical documentation:"
+        ),
         description="Prompt template for technical queries",
     )
 
     code_prompt: str = Field(
-        default="You are a code documentation expert. Answer this programming question:\n\nQuestion: {query}\n\nProvide a detailed answer with code examples as would appear in API documentation:",
+        default=(
+            "You are a code documentation expert. Answer this programming "
+            "question:\n\nQuestion: {query}\n\nProvide a detailed "
+            "answer with code examples as would appear in API documentation:"
+        ),
         description="Prompt template for code-related queries",
     )
 
     tutorial_prompt: str = Field(
-        default="You are a tutorial writer. Answer this question as if explaining to someone learning:\n\nQuestion: {query}\n\nProvide a step-by-step explanation with examples:",
+        default=(
+            "You are a tutorial writer. Answer this question as if explaining to "
+            "someone learning:"
+            "\n\nQuestion: {query}\n\nProvide a step-by-step explanation with examples:"
+        ),
         description="Prompt template for tutorial queries",
     )
 
     general_prompt: str = Field(
-        default="Answer the following question accurately and comprehensively:\n\nQuestion: {query}\n\nAnswer:",
+        default=(
+            "Answer the following question accurately and comprehensively:"
+            "\n\nQuestion: {query}\n\nAnswer:"
+        ),
         description="General prompt template for other queries",
     )
 

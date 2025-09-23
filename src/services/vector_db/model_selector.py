@@ -1,6 +1,6 @@
 """Model selector for dynamic embedding model selection.
 
-This module implements intelligent embedding model selection based on query
+This module implements embedding model selection based on query
 characteristics, performance history, and cost optimization.
 """
 
@@ -17,8 +17,11 @@ from src.config import (
 )
 
 
-# TODO: Fix imports - Any  # TODO: Replace with proper ModelSelectionStrategy type and Any  # TODO: Replace with proper QueryClassification type don't exist
-# from src.models.vector_search import Any  # TODO: Replace with proper ModelSelectionStrategy type, Any  # TODO: Replace with proper QueryClassification type
+# TODO: Fix imports - Any  # TODO: Replace with proper ModelSelectionStrategy
+# ype and Any  # TODO: Replace with proper QueryClassification type don't exist
+
+# from src.models.vector_search import Any  # TODO: Replace with proper
+# odelSelectionStrategy type, Any  # TODO: Replace with proper QueryClassification type
 
 
 logger = logging.getLogger(__name__)
@@ -42,7 +45,7 @@ class ModelSelector:
         )  # Monthly budget in USD
 
     def _initialize_model_registry(self) -> dict[str, dict[str, Any]]:
-        """Initialize registry of available embedding models with their characteristics."""
+        """Initialize registry of available embedding models."""
         return {
             # OpenAI Models (API-based)
             EmbeddingModel.TEXT_EMBEDDING_3_SMALL.value: {
@@ -136,11 +139,14 @@ class ModelSelector:
 
         Args:
             query_classification: Classification results for the query
-            optimization_strategy: Optimization strategy (speed, quality, cost, balanced)
+            optimization_strategy: Optimization strategy
+                (speed, quality, cost, balanced)
             context: Additional context (user preferences, system constraints)
 
         Returns:
-            Any  # TODO: Replace with proper ModelSelectionStrategy type with selected model and rationale
+            Any
+            # TODO: Replace with proper ModelSelectionStrateg type with
+            # selected model and rationale
 
         """
         try:
@@ -226,8 +232,10 @@ class ModelSelector:
             requirements = query_type_requirements.get(current_query_type)
 
             if requirements:
-                # A model is a candidate if its type matches OR it has a required specialization.
-                # set.isdisjoint() checks for overlap. `not isdisjoint` means there is an overlap.
+                # A model is a candidate if its type matches OR it has a
+                # required specialization.
+                # set.isdisjoint() checks for overlap. `not isdisjoint` means
+                # there is an overlap.
                 has_required_specialization = not set(specializations).isdisjoint(
                     requirements["specializations"]
                 )
@@ -459,9 +467,10 @@ class ModelSelector:
             rationale_parts.append(
                 f"for fastest response ({model_info['latency_ms']}ms latency)"
             )
-        elif optimization_strategy == OptimizationStrategy.COST_OPTIMIZED:
+        elif optimization_strategy == OptimizationStrategy.COST_OPTIMIZED:  # noqa: E501
             rationale_parts.append(
-                f"for cost efficiency (${model_info['cost_per_1k_tokens']:.5f}/1k tokens)"
+                f"for cost efficiency "
+                f"(${model_info['cost_per_1k_tokens']:.5f}/1k tokens)"
             )
         else:
             rationale_parts.append(
@@ -495,7 +504,9 @@ class ModelSelector:
             "model_type": ModelType.GENERAL_PURPOSE,
             "fallback_models": [EmbeddingModel.TEXT_EMBEDDING_3_SMALL.value],
             "model_weights": {},
-            "selection_rationale": "Fallback to reliable general-purpose model due to selection error",
+            "selection_rationale": (
+                "Fallback to reliable general-purpose model due to selection error"
+            ),
             "expected_performance": 0.7,
             "cost_efficiency": 0.8,
             "query_classification": query_classification,
@@ -509,7 +520,10 @@ class ModelSelector:
     ) -> None:
         """Update performance history for a model on a specific query type."""
         try:
-            query_type_key = f"{query_classification.query_type}_{query_classification.complexity_level}"
+            query_type_key = (
+                f"{query_classification.query_type}_"
+                f"{query_classification.complexity_level}"
+            )
 
             if model_id not in self.performance_history:
                 self.performance_history[model_id] = {}
@@ -522,7 +536,8 @@ class ModelSelector:
             self.performance_history[model_id][query_type_key] = updated_score
 
             logger.debug(
-                f"Updated performance history for {model_id} on {query_type_key}: {updated_score:.3f}"
+                f"Updated performance history for {model_id} on "
+                f"{query_type_key}: {updated_score:.3f}"
             )
 
         except Exception:

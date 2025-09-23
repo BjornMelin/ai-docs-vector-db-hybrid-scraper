@@ -171,7 +171,7 @@ class LoadTestRunner:
     def run_pytest_load_tests(
         self, test_type: str = "all", markers: list[str] | None = None
     ) -> dict:
-        """Run load tests using pytest with comprehensive security validation."""
+        """Run load tests using pytest with security validation."""
         logger.info("Running pytest load tests: %s", test_type)
 
         # Security: Validate and sanitize all inputs
@@ -186,7 +186,7 @@ class LoadTestRunner:
 
         # Run tests with security constraints
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # noqa: S603  # Secure: validated executable, no shell, no user input
                 cmd,
                 capture_output=True,
                 text=True,
@@ -345,7 +345,7 @@ class LoadTestRunner:
     def _generate_test_report(
         self, env: Environment, config: dict, profile: str | None
     ) -> dict:
-        """Generate comprehensive test report."""
+        """Generate test report."""
         stats = env.stats
 
         if not stats or stats.total.num_requests == 0:
@@ -559,11 +559,13 @@ class LoadTestRunner:
         avg_response_time = stats.total.avg_response_time
         if avg_response_time > 1000:
             recommendations.append(
-                "High response times detected - consider optimizing database queries and adding caching"
+                "High response times detected - consider optimizing database "
+                "queries and adding caching"
             )
         elif avg_response_time > 500:
             recommendations.append(
-                "Moderate response times - review application logic for performance bottlenecks"
+                "Moderate response times - review application logic for "
+                "performance bottlenecks"
             )
 
         # Error rate recommendations
@@ -574,14 +576,16 @@ class LoadTestRunner:
             )
         elif error_rate > 1:
             recommendations.append(
-                "Some errors detected - review error logs and improve system reliability"
+                "Some errors detected - review error logs and "
+                "improve system reliability"
             )
 
         # Throughput recommendations
         rps = stats.total.current_rps
         if rps < 10:
             recommendations.append(
-                "Low throughput - consider horizontal scaling or performance optimization"
+                "Low throughput - consider horizontal scaling or "
+                "performance optimization"
             )
 
         if not recommendations:
@@ -713,7 +717,7 @@ class LoadTestRunner:
         return cmd
 
     def _validate_command_security(self, cmd: list[str]) -> None:
-        """Perform comprehensive security validation on the command."""
+        """Perform security validation on the command."""
         if not isinstance(cmd, list):
             msg = "Command must be a list"
             raise TypeError(msg)
@@ -984,7 +988,8 @@ def main():
                     f"Success Rate: {summary.get('success_rate_percent', 'N/A'):.1f}%"
                 )
                 print(
-                    f"Avg Response Time: {summary.get('avg_response_time_ms', 'N/A'):.1f}ms"
+                    "Avg Response Time: "
+                    f"{summary.get('avg_response_time_ms', 'N/A'):.1f}ms"
                 )
                 print(
                     f"Requests/Second: {summary.get('requests_per_second', 'N/A'):.1f}"

@@ -198,8 +198,10 @@ class TestLightweightScraper:
             <body>
                 <div class="content">
                     <h1>Main Title</h1>
-                    <p>This is a test paragraph with enough content to pass the threshold.</p>
-                    <p>Another paragraph to ensure we have sufficient text content for extraction.</p>
+                    <p>This is a test paragraph with enough content to pass the
+                    threshold.</p>
+                    <p>Another paragraph to ensure we have sufficient text content
+                    for extraction.</p>
                 </div>
             </body>
         </html>
@@ -374,7 +376,8 @@ class TestLightweightScraper:
                 </div>
                 <article class="main-content">
                     <h1>Main Article</h1>
-                    <p>This is a long paragraph with lots of text content that should be identified as the main content area of the page.</p>
+                    <p>This is a long paragraph with lots of text content that should be
+                    identified as the main content area of the page.</p>
                     <p>Another paragraph to add more content.</p>
                 </article>
             </body>
@@ -446,8 +449,12 @@ class TestLightweightScraper:
             <body>
                 <div class="content">
                     <h1>Test</h1>
-                    <p>Content with enough text to pass the threshold check for extraction. This paragraph contains sufficient content to ensure we meet the minimum character requirement for successful extraction.</p>
-                    <p>Additional content to ensure we have enough text for the content threshold validation.</p>
+                    <p>Content with enough text to pass the threshold check for
+                    extraction. This paragraph contains sufficient content to ensure we
+                    meet the minimum character requirement for successful
+                    extraction.</p>
+                    <p>Additional content to ensure we have enough text for the
+                    content threshold validation.</p>
                 </div>
             </body>
         </html>

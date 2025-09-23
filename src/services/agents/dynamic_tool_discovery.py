@@ -1,7 +1,8 @@
-"""Dynamic Tool Discovery Engine - J3 Research Implementation.
+"""
+Dynamic Tool Discovery Engine - J3 Research Implementation.
 
-This module implements intelligent tool discovery and capability assessment
-based on J3 research findings for autonomous tool orchestration.
+This module implements tool discovery and capability assessment
+based on J3 research findings for tool orchestration.
 """
 
 import asyncio
@@ -77,10 +78,10 @@ class ToolCapability(BaseModel):
 
 
 class DynamicToolDiscovery(BaseAgent):
-    """Dynamic tool discovery engine with intelligent capability assessment.
+    """Dynamic tool discovery engine with capability assessment.
 
-    Based on J3 research findings for autonomous tool orchestration with
-    performance-driven selection and real-time capability evaluation.
+    Based on J3 research findings for tool orchestration with
+    performance-based selection and capability evaluation.
     """
 
     def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.1):
@@ -89,6 +90,7 @@ class DynamicToolDiscovery(BaseAgent):
         Args:
             model: LLM model for capability assessment
             temperature: Generation temperature for tool evaluation
+
         """
         super().__init__(
             name="dynamic_tool_discovery",
@@ -102,11 +104,11 @@ class DynamicToolDiscovery(BaseAgent):
         self.capability_cache: dict[str, ToolCapability] = {}
 
     def get_system_prompt(self) -> str:
-        """Define autonomous tool discovery behavior."""
+        """Define tool discovery behavior."""
         return (
-            "You are an autonomous tool discovery engine with the following "
+            "You are a tool discovery engine with the following "
             "capabilities:\n\n"
-            "1. INTELLIGENT TOOL ASSESSMENT\n"
+            "1. TOOL ASSESSMENT\n"
             "   - Analyze tool capabilities and performance characteristics\n"
             "   - Assess compatibility between different tools for chaining\n"
             "   - Evaluate tool suitability for specific task requirements\n\n"
@@ -118,8 +120,8 @@ class DynamicToolDiscovery(BaseAgent):
             "   - Select optimal tools based on performance requirements\n"
             "   - Balance speed, quality, cost, and reliability constraints\n"
             "   - Recommend tool combinations for complex workflows\n\n"
-            "Your goal is to provide intelligent tool discovery and capability "
-            "assessment for autonomous agent systems, enabling optimal tool "
+            "Your goal is to provide tool discovery and capability "
+            "assessment for agent systems, enabling optimal tool "
             "selection and orchestration."
         )
 
@@ -128,12 +130,14 @@ class DynamicToolDiscovery(BaseAgent):
 
         Args:
             deps: Agent dependencies for tool initialization
+
         """
         # Check if we're in fallback mode
         fallback_reason = getattr(self, "_fallback_reason", None)
         if fallback_reason:
             logger.info(
-                f"DynamicToolDiscovery tools initialized in fallback mode (reason: {fallback_reason})"
+                f"DynamicToolDiscovery tools initialized in fallback mode "
+                f"(reason: {fallback_reason})"
             )
         else:
             logger.info("DynamicToolDiscovery tools initialized (discovery-based)")
@@ -143,6 +147,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Args:
             deps: Agent dependencies for tool scanning
+
         """
         if not self._initialized:
             await self.initialize(deps)
@@ -162,6 +167,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Args:
             deps: Agent dependencies for system access
+
         """
         # Core tools available in the system
         core_tools = {
@@ -271,6 +277,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Returns:
             List of suitable tools ranked by suitability score
+
         """
         # Check if we're in fallback mode
         fallback_reason = getattr(self, "_fallback_reason", None)
@@ -306,6 +313,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Returns:
             Suitability score between 0 and 1
+
         """
         score = 0.0
 
@@ -362,6 +370,7 @@ class DynamicToolDiscovery(BaseAgent):
         Args:
             tool_name: Name of the tool
             execution_metrics: Latest execution metrics
+
         """
         if tool_name in self.tool_performance_history:
             self.tool_performance_history[tool_name].append(execution_metrics)
@@ -390,6 +399,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Returns:
             Averaged tool metrics
+
         """
         if not metrics_list:
             return ToolMetrics(0.0, 0.0, 0.0, 0.0, 0.0)
@@ -417,6 +427,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Returns:
             Tool recommendations with reasoning
+
         """
         # Check if we're in fallback mode
         fallback_reason = getattr(self, "_fallback_reason", None)
@@ -473,6 +484,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Returns:
             List of recommended tool chains
+
         """
         chains = []
 
@@ -551,6 +563,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Returns:
             List of mock suitable tools
+
         """
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
         logger.info(f"Using fallback tool discovery (reason: {fallback_reason})")
@@ -652,6 +665,7 @@ class DynamicToolDiscovery(BaseAgent):
 
         Returns:
             Mock tool recommendations
+
         """
         fallback_reason = getattr(self, "_fallback_reason", "unknown")
         logger.info(f"Using fallback tool recommendations (reason: {fallback_reason})")
@@ -727,6 +741,7 @@ async def discover_tools_for_task(
 
     Returns:
         List of suitable tools for the task
+
     """
     engine = get_discovery_engine()
     if not engine.is_initialized:

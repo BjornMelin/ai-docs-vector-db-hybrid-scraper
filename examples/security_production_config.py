@@ -141,7 +141,7 @@ def create_production_app() -> FastAPI:
     security_config = create_production_security_config()
 
     # Setup comprehensive security
-    security_manager = setup_application_security(app, security_config)
+    setup_application_security(app, security_config)
 
     # Add sample endpoints
     @app.get("/")
@@ -228,7 +228,8 @@ async def test_security_features():
 
     if blocked_count > 0:
         logger.info(
-            f"✓ Input validation working ({blocked_count}/{len(malicious_inputs)} blocked)"
+            f"✓ Input validation working "
+            f"({blocked_count}/{len(malicious_inputs)} blocked)"
         )
     else:
         logger.warning("⚠ Input validation not blocking malicious inputs")
@@ -245,7 +246,8 @@ async def test_security_features():
             working_endpoints += 1
 
     logger.info(
-        f"✓ Security monitoring ({working_endpoints}/{len(endpoints_to_test)} endpoints working)"
+        f"✓ Security monitoring "
+        f"({working_endpoints}/{len(endpoints_to_test)} endpoints working)"
     )
 
     # Test 6: CORS configuration

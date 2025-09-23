@@ -109,7 +109,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 }
 
             await ctx.info(
-                f"Analytics collection completed for {len(analytics['collections'])} collections"
+                f"Analytics collection completed for "
+                f"{len(analytics['collections'])} collections"
             )
             return AnalyticsResponse(**analytics)
 
@@ -161,7 +162,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 "provider": provider_info.get("name", "unknown"),
             }
             await ctx.debug(
-                f"Embeddings healthy with provider: {provider_info.get('name', 'unknown')}"
+                f"Embeddings healthy with provider: "
+                f"{provider_info.get('name', 'unknown')}"
             )
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
             health["services"]["embeddings"] = {

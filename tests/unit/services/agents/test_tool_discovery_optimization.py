@@ -1,6 +1,7 @@
 """Optimization tests for Dynamic Tool Discovery Engine.
 
-Tests for self-learning optimization, tool compatibility analysis, and edge case handling.
+Tests for self-learning optimization, tool compatibility analysis,
+and edge case handling.
 """
 
 from unittest.mock import Mock
@@ -46,7 +47,9 @@ class TestSelfLearningOptimization:
         )
         initial_best = initial_tools[0]
 
-        # Simulate moderately worse performance for the best tool (not so bad it gets filtered out)
+        # Simulate moderately worse performance
+        # or the best tool (not so bad it gets filtered out)
+
         poor_metrics = ToolMetrics(
             average_latency_ms=300.0,  # Worse but still reasonable
             success_rate=0.8,  # Worse but not terrible
@@ -71,7 +74,9 @@ class TestSelfLearningOptimization:
             # Tool should have lower score due to performance degradation
             assert updated_best.confidence_score < initial_best.confidence_score
         else:
-            # Tool fell below threshold due to poor performance - that's also valid learning behavior
+            # Tool fell below threshold due to
+            # oor performance - that's also valid learning behavior
+
             assert len(updated_tools) == 0 or updated_tools[0].name != initial_best.name
 
 
@@ -134,7 +139,7 @@ class TestToolCompatibilityAnalysis:
 
         # Get all suitable tools to enable chain generation
         tools = await engine.discover_tools_for_task(
-            "search and generate comprehensive analysis",
+            "search and generate analysis",
             {"max_latency_ms": 2000},
         )
 
@@ -175,7 +180,7 @@ class TestToolCompatibilityAnalysis:
 
         # Get tools that include all types for complex chaining
         tools = await engine.discover_tools_for_task(
-            "analyze search and generate comprehensive report",
+            "analyze search and generate report",
             {"max_latency_ms": 5000},
         )
 

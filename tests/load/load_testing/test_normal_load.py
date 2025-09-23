@@ -178,7 +178,7 @@ class TestNormalLoad:
         async def cached_search_workload(**_kwargs):
             """Workload that repeats queries to test caching."""
 
-            query = random.choice(repeated_queries)
+            query = random.choice(repeated_queries)  # noqa: S311
             return await mock_load_test_service.search_documents(query=query, **_kwargs)
 
         result = load_test_runner.run_load_test(
@@ -209,14 +209,14 @@ class TestNormalLoad:
         ]
 
         # Select operation based on probability
-        rand = random.random()
+        rand = random.random()  # noqa: S311
         cumulative = 0
 
         for _op, prob in operations:
             cumulative += prob
             if rand <= cumulative:
                 # Simulate operation
-                return asyncio.sleep(random.uniform(0.05, 0.2))
+                return asyncio.sleep(random.uniform(0.05, 0.2))  # noqa: S311
 
         return asyncio.sleep(0.1)
 
@@ -242,7 +242,8 @@ class TestNormalLoad:
 
     def _analyze_operation_mix(self, _result) -> dict:
         """Analyze the mix of operations performed."""
-        # Simplified analysis - would parse actual operation types in real implementation
+        # Simplified analysis - would parse actual operation types in real
+        # implementation
 
         return {
             "read_ratio": 0.7,  # Placeholder
@@ -264,7 +265,8 @@ class TestNormalLoad:
 
     def _calculate_cache_metrics(self, result) -> dict:
         """Calculate cache effectiveness metrics."""
-        # Simplified calculation - would analyze actual cache hits in real implementation
+        # Simplified calculation - would analyze actual cache hits in real
+        # implementation
         response_times = result.metrics.response_times
 
         # Assume first 30% are uncached, rest are potentially cached

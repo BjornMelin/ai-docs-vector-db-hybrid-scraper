@@ -53,6 +53,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive cost analysis with optimization recommendations
+
         """
         try:
             return await _execute_intelligent_cost_analysis(
@@ -88,13 +89,15 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Args:
             budget_limit: Maximum budget limit for optimization
-            optimization_strategy: Strategy for optimization (aggressive, balanced, conservative)
+            optimization_strategy: Strategy for optimization
+                (aggressive, balanced, conservative)
             auto_apply: Enable automatic application of optimization recommendations
             safety_margin: Safety margin percentage for budget allocation
             ctx: MCP context for logging
 
         Returns:
             Budget optimization results with autonomous allocation recommendations
+
         """
         try:
             return await _execute_autonomous_budget_optimization(
@@ -119,13 +122,14 @@ def register_tools(mcp, client_manager: ClientManager):
         growth_assumptions: dict[str, float] | None = None,
         ctx: Context = None,
     ) -> dict[str, Any]:
-        """Generate predictive cost models with scenario analysis and confidence intervals.
+        """Predictive cost models with scenario analysis and confidence intervals.
 
         Implements advanced predictive modeling with ML-powered forecasting,
         scenario analysis, and confidence interval estimation.
 
         Args:
-            prediction_horizon: Time horizon for predictions (monthly, quarterly, yearly)
+            prediction_horizon: Time horizon for predictions
+                (monthly, quarterly, yearly)
             scenario_analysis: Include scenario-based predictions
             confidence_intervals: Include confidence interval calculations
             growth_assumptions: Optional growth rate assumptions by category
@@ -133,6 +137,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Predictive cost models with scenario analysis and confidence metrics
+
         """
         try:
             return await _execute_predictive_cost_modeling(
@@ -158,6 +163,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive capabilities information for cost estimation system
+
         """
         return {
             "analysis_scopes": {
@@ -168,7 +174,9 @@ def register_tools(mcp, client_manager: ClientManager):
             },
             "optimization_strategies": {
                 "aggressive": {
-                    "description": "Maximum cost reduction with acceptable performance trade-offs",
+                    "description": (
+                        "Maximum cost reduction with acceptable performance trade-offs"
+                    ),
                     "typical_savings": "30-50%",
                     "risk_level": "medium",
                 },
@@ -178,7 +186,9 @@ def register_tools(mcp, client_manager: ClientManager):
                     "risk_level": "low",
                 },
                 "conservative": {
-                    "description": "Minimal risk optimization with guaranteed performance",
+                    "description": (
+                        "Minimal risk optimization with guaranteed performance"
+                    ),
                     "typical_savings": "5-15%",
                     "risk_level": "very_low",
                 },
@@ -227,7 +237,8 @@ async def _execute_intelligent_cost_analysis(
     """Execute intelligent cost analysis with organized error handling."""
     if ctx:
         await ctx.info(
-            f"Starting intelligent cost analysis for {analysis_scope} over {time_period}"
+            f"Starting intelligent cost analysis for {analysis_scope} over "
+            f"{time_period}"
         )
 
     # Collect current cost data
@@ -280,7 +291,8 @@ async def _execute_intelligent_cost_analysis(
 
     if ctx:
         await ctx.info(
-            f"Cost analysis completed: ${current_costs['total_cost']:.2f} current, ${potential_savings['total_savings']:.2f} potential savings"
+            f"Cost analysis completed: ${current_costs['total_cost']:.2f} current, "
+            f"${potential_savings['total_savings']:.2f} potential savings"
         )
 
     return final_results
@@ -294,9 +306,11 @@ async def _execute_autonomous_budget_optimization(
     ctx,
 ) -> dict[str, Any]:
     """Execute autonomous budget optimization with organized error handling."""
+
     if ctx:
         await ctx.info(
-            f"Starting autonomous budget optimization: ${budget_limit:.2f} limit with {optimization_strategy} strategy"
+            f"Starting autonomous budget optimization: "
+            f"${budget_limit:.2f} limit with {optimization_strategy} strategy"
         )
 
     # Analyze current resource allocation
@@ -346,7 +360,8 @@ async def _execute_autonomous_budget_optimization(
 
     if ctx:
         await ctx.info(
-            f"Budget optimization completed: {optimization_plan['estimated_savings']:.1f}% potential savings"
+            f"Budget optimization completed: "
+            f"{optimization_plan['estimated_savings']:.1f}% potential savings"
         )
 
     return final_results
@@ -414,7 +429,8 @@ async def _execute_predictive_cost_modeling(
 
     if ctx:
         await ctx.info(
-            f"Predictive modeling completed: {base_predictions['total_predicted_cost']:.2f} predicted cost"
+            f"Predictive modeling completed: "
+            f"{base_predictions['total_predicted_cost']:.2f} predicted cost"
         )
 
     return final_results
@@ -588,7 +604,9 @@ async def _identify_optimization_opportunities(
         },
         {
             "category": "embedding_generation",
-            "opportunity": "Batch embedding operations and cache frequently used embeddings",
+            "opportunity": (
+                "Batch embedding operations and cache frequently used embeddings"
+            ),
             "potential_savings": 39.95,
             "savings_percentage": 0.300,  # 30%
             "implementation_effort": "medium",
@@ -666,7 +684,6 @@ async def _generate_cost_insights(
 
 def _get_timestamp() -> str:
     """Get current timestamp."""
-
     return datetime.datetime.now(tz=datetime.UTC).isoformat()
 
 
@@ -878,7 +895,8 @@ async def _generate_budget_recommendations(
 ) -> list[str]:
     """Generate autonomous budget recommendations."""
     recommendations = [
-        f"Apply {optimization_plan['strategy']} optimization strategy for {optimization_plan['estimated_savings']:.1f}% savings",
+        f"Apply {optimization_plan['strategy']} optimization "
+        f"strategy for {optimization_plan['estimated_savings']:.1f}% savings",
         "Implement automated cost monitoring with weekly reports",
         "Set up budget alerts at 80% and 95% thresholds",
     ]
@@ -1097,7 +1115,9 @@ async def _generate_predictive_insights(
             {
                 "priority": 1,
                 "category": "compute_resources",
-                "rationale": "Highest cost category with significant optimization potential",
+                "rationale": (
+                    "Highest cost category with significant optimization potential"
+                ),
             },
             {
                 "priority": 2,

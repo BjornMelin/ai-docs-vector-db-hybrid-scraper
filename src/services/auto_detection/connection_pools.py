@@ -380,8 +380,10 @@ class ConnectionPoolManager:
                         "max_connections": pool.max_connections,
                         "connection_kwargs": pool.connection_kwargs,
                     }
-                    # Use public methods to get pool statistics instead of private attributes
-                    # Note: Redis ConnectionPool doesn't expose connection counts publicly
+                    # Use public methods to get pool statistics instead of
+                    # private attributes
+                    # Note: Redis ConnectionPool doesn't expose connection counts
+                    # publicly
                     # so we'll only include what's available through the public API
                     pool_info["pool_type"] = "redis_connection_pool"
 

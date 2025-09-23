@@ -1,6 +1,7 @@
 """Advanced tests for Dynamic Tool Discovery Engine.
 
-Tests for advanced algorithms, performance characteristics, robustness, and comprehensive scenarios.
+Tests for algorithms, performance characteristics, robustness,
+and complex scenarios.
 """
 
 import asyncio
@@ -287,7 +288,9 @@ class TestPropertyBasedValidation:
                 tool, task_description, requirements
             )
 
-            # Score should always be between 0 and 1 (allowing for small negative values due to penalties)
+            # Score should always be between 0 and 1
+            # allowing for small negative values due to penalties)
+
             assert -0.2 <= score <= 1.0, f"Invalid score {score} for tool {tool_name}"
 
             # Score should be deterministic (same inputs = same output)
@@ -337,7 +340,9 @@ class TestPropertyBasedValidation:
             <= max_latency + tolerance
         ), "Average outside input range"
 
-        # Other metrics should remain consistent (all same values) with small tolerance for floating point
+        # Other metrics should remain consistent
+        # all same values) with small tolerance for floating point
+
         assert abs(avg_metrics.success_rate - 0.9) < 1e-10
         assert abs(avg_metrics.accuracy_score - 0.8) < 1e-10
         assert abs(avg_metrics.cost_per_execution - 0.01) < 1e-10
@@ -345,7 +350,7 @@ class TestPropertyBasedValidation:
 
 
 class TestAdvancedToolDiscoveryAlgorithms:
-    """Test advanced tool discovery algorithms and complex scenarios."""
+    """Test tool discovery algorithms and complex scenarios."""
 
     @pytest.mark.asyncio
     async def test_multi_criteria_tool_selection(self):
@@ -412,7 +417,9 @@ class TestAdvancedToolDiscoveryAlgorithms:
         # Verify performance learning adaptation
         updated_tool = engine.discovered_tools[tool_name]
         assert updated_tool.metrics.average_latency_ms < initial_latency
-        # Success rate should be improved or at least maintained (account for floating point precision)
+        # Success rate should be improved or at
+        # east maintained (account for floating point precision)
+
         assert (
             updated_tool.metrics.success_rate
             >= initial_tool.metrics.success_rate - 0.001
@@ -492,7 +499,7 @@ class TestRobustnessAndEdgeCases:
         )
         assert min_metrics.average_latency_ms == 0.0
 
-        # Test maximum typical values
+        # Test typical maximum values
         max_metrics = ToolMetrics(
             average_latency_ms=999999.0,
             success_rate=1.0,

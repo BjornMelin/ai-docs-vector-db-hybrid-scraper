@@ -53,7 +53,8 @@ def register_tools(mcp, client_manager: ClientManager):
             query: Original search query
             collection_name: Target collection for search
             stages: Number of search stages to perform
-            refinement_strategy: Strategy for query refinement (adaptive, semantic, contextual)
+            refinement_strategy: Strategy for query refinement
+                (adaptive, semantic, contextual)
             quality_threshold: Minimum quality threshold for results
             limit_per_stage: Maximum results to retrieve per stage
             final_limit: Final number of results to return
@@ -62,6 +63,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Multi-stage search results with refinement metadata and quality metrics
+
         """
         try:
             if ctx:
@@ -133,7 +135,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
                 if ctx:
                     await ctx.debug(
-                        f"Stage {stage_num + 1}: {len(quality_filtered)} quality results added"
+                        f"Stage {stage_num + 1}: {len(quality_filtered)} quality "
+                        "results added"
                     )
 
                 # Early termination if sufficient quality results found
@@ -143,7 +146,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 ):
                     if ctx:
                         await ctx.info(
-                            f"Early termination at stage {stage_num + 1}: sufficient quality results"
+                            f"Early termination at stage {stage_num + 1}: "
+                            "sufficient quality results"
                         )
                     break
 
@@ -157,7 +161,8 @@ def register_tools(mcp, client_manager: ClientManager):
                         current_query = refinement_result["refined_query"]
                         if ctx:
                             await ctx.debug(
-                                f"Query refined for stage {stage_num + 2}: '{current_query}'"
+                                f"Query refined for stage {stage_num + 2}: "
+                                f"'{current_query}'"
                             )
 
             # Fuse and rank cumulative results
@@ -193,7 +198,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Multi-stage search completed: {len(stage_results)} stages, {len(fused_results['results'])} final results"
+                    f"Multi-stage search completed: {len(stage_results)} stages, "
+                    f"{len(fused_results['results'])} final results"
                 )
 
         except Exception as e:
@@ -238,11 +244,13 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Optimized multi-stage search results with adaptation metadata
+
         """
         try:
             if ctx:
                 await ctx.info(
-                    f"Starting adaptive multi-stage search targeting {performance_target}"
+                    f"Starting adaptive multi-stage search targeting "
+                    f"{performance_target}"
                 )
 
             # Analyze query for optimal parameters
@@ -280,7 +288,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Adaptive multi-stage search completed with {optimal_params['stages']} stages"
+                    f"Adaptive multi-stage search completed with "
+                    f"{optimal_params['stages']} stages"
                 )
 
         except Exception as e:
@@ -323,11 +332,13 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Contextually refined search results with source attribution
+
         """
         try:
             if ctx:
                 await ctx.info(
-                    f"Starting contextual refinement search with {len(context_sources)} context sources"
+                    "Starting contextual refinement search with "
+                    f"{len(context_sources)} context sources"
                 )
 
             # Validate query
@@ -340,7 +351,11 @@ def register_tools(mcp, client_manager: ClientManager):
 
             # Gather context from multiple sources
             context_data = await _gather_contextual_data(
-                qdrant_service, embedding_manager, validated_query, context_sources, ctx
+                qdrant_service,
+                embedding_manager,
+                validated_query,
+                context_sources,
+                ctx,
             )
 
             # Perform iterative refinement
@@ -387,7 +402,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
                     if ctx:
                         await ctx.debug(
-                            f"Refinement {iteration + 1}: '{current_query}' -> {len(search_result.get('results', []))} results"
+                            f"Refinement {iteration + 1}: '{current_query}' -> "
+                            f"{len(search_result.get('results', []))} results"
                         )
 
             # Final search with best refined query
@@ -425,7 +441,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Contextual refinement completed: {refinement_depth} iterations, {len(final_results['results'])} final results"
+                    f"Contextual refinement completed: {refinement_depth} iterations, "
+                    f"{len(final_results['results'])} final results"
                 )
 
         except Exception as e:
@@ -448,11 +465,15 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive capabilities information for multi-stage search system
+
         """
         return {
             "refinement_strategies": {
                 "adaptive": {
-                    "description": "Adapts refinement based on result quality and query characteristics",
+                    "description": (
+                        "Adapts refinement based on result quality and query "
+                        "characteristics"
+                    ),
                     "best_for": ["general_queries", "unknown_domains"],
                     "complexity": "high",
                     "effectiveness": "optimal",

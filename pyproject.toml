@@ -1,13 +1,11 @@
 [project]
 name = "ai-docs-vector-db-hybrid-scraper"
 version = "0.1.0"
-description = "🚀 Hybrid AI documentation scraping system combining Crawl4AI (bulk) + Firecrawl MCP (on-demand) with Qdrant vector database for Claude Desktop/Code integration"
+description = "Hybrid AI documentation scraping system combining Crawl4AI (bulk) + Firecrawl MCP (on-demand) with Qdrant vector database for Claude Desktop/Code integration"
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.11,<3.14"
-authors = [{ name = "BjornMelin", email = "your-email@example.com" }]
-# Add dynamic version support for future releases
-# dynamic = ["version"]
+requires-python = ">=3.11,<3.13"
+authors = [{ name = "Bjorn Melin" }]
 keywords = [
     "ai",
     "vector-database",
@@ -27,7 +25,9 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
+    # Python 3.13 temporarily unsupported due to upstream GPU stack
+    # compatibility (vLLM/Torch/TorchVision). Keep classifiers aligned
+    # with requires-python to avoid resolver splits.
     "Topic :: Software Development :: Documentation",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
@@ -35,46 +35,46 @@ classifiers = [
 
 dependencies = [
     # Core web framework & API
-    "fastapi[standard]>=0.117.1,<0.118.0", # Align with FastAPI 0.117 performance updates
-    "starlette>=0.48.0,<0.49.0", # Sync with Starlette 0.48 compatibility window
+    "fastapi[standard]>=0.117.1,<0.118.0",
+    "starlette>=0.48.0,<0.49.0",
     "uvicorn[standard]>=0.36.0,<1.0.0",
-    "python-multipart>=0.0.20,<0.1.0", # For FastAPI file uploads
+    "python-multipart>=0.0.20,<0.1.0",
     # Data validation & configuration
-    "pydantic>=2.11.9,<3.0.0", # browser-use 0.2.6 compatibility
+    "pydantic>=2.11.9,<3.0.0",          # browser-use 0.2.6 compatibility
     "pydantic-settings>=2.10.1,<3.0.0",
     "python-dotenv>=1.1.1,<2.0.0",
     "pyyaml>=6.0.2,<7.0.0",
     # Core web scraping
     "crawl4ai[all]>=0.7.4,<0.8.0",
-    "firecrawl-py>=4.3.6,<5.0.0", # Adopt Firecrawl v4 async client
+    "firecrawl-py>=4.3.6,<5.0.0",
     # Vector database & embeddings
     "qdrant-client[fastembed]>=1.15.1,<2.0.0",
     "openai>=1.108.1,<2.0.0",
-    "fastembed>=0.7.3,<0.8.0", # Python 3.13 compatibility verified in v0.7.x
+    "fastembed>=0.7.3,<0.8.0",
     "FlagEmbedding>=1.3.5,<2.0.0",
-    # Data processing & ML (Python 3.13 compatible)
-    "numpy>=2.3.3,<3.0.0", # Allow NumPy 2.x for better Python 3.13 performance
-    "scipy>=1.16.2,<2.0.0", # Python 3.13 support from SciPy 1.16+
-    "defusedxml>=0.7.1,<0.8.0", # Secure XML parsing
-    # HTTP & async (optimized for performance)
-    "aiohttp>=3.12.15,<4.0.0", # Includes resolver fixes and Python 3.13 support
+    # Data processing & ML
+    "numpy>=2.3.3,<3.0.0",
+    "scipy>=1.16.2,<2.0.0",
+    "defusedxml>=0.7.1,<0.8.0",
+    # HTTP & async
+    "aiohttp>=3.12.15,<4.0.0",
     "asyncio-throttle>=1.0.2,<2.0.0",
     "aiofiles>=24.1.0,<25.0.0",
     # Circuit breaker & retry patterns
-    "tenacity>=9.1.2,<10.0.0", # Advanced retry and circuit breaker patterns
+    "tenacity>=9.1.2,<10.0.0",
     # MCP framework
     "mcp>=1.14.1,<2.0.0",
     "fastmcp>=2.12.3,<3.0.0",
     # Caching & task queue
-    "redis[hiredis]>=5.3.1,<6.0.0", # Constrained by arq redis<6 requirement
+    "redis[hiredis]>=5.3.1,<6.0.0",
     "arq>=0.26.3,<0.27.0",
-    "cachetools>=5.5.2,<6.0.0", # Bound by google-auth<6 cachetools constraint
+    "cachetools>=5.5.2,<6.0.0",
     # Modern libraries for optimization
-    "slowapi>=0.1.9,<0.2.0", # Rate limiting
-    "purgatory-circuitbreaker>=0.7.2,<0.8.0", # Distributed circuit breaker
-    "aiocache>=0.12.3,<0.13.0", # Modern async caching
+    "slowapi>=0.1.9,<0.2.0",
+    "purgatory-circuitbreaker>=0.7.2,<0.8.0",
+    "aiocache>=0.12.3,<0.13.0",
     # CLI & user interface
-    "click>=8.2.1,<8.2.2", # Pinned by mkdocs-material 9.6.x requirement
+    "click>=8.2.1,<8.2.2",
     "rich>=14.1.0,<15.0.0",
     "colorlog>=6.9.0,<7.0.0",
     "tqdm>=4.67.1,<5.0.0",
@@ -82,7 +82,7 @@ dependencies = [
     # Monitoring & observability
     "prometheus-client>=0.23.1,<0.24.0",
     "prometheus-fastapi-instrumentator>=7.1.0,<8.0.0",
-    "psutil>=6.1.1,<7.0.0", # Capped for taskipy compatibility (crawl4ai now requires >=6.1.1)
+    "psutil>=6.1.1,<7.0.0",                            # Capped for taskipy compatibility (crawl4ai now requires >=6.1.1)
     # Database & ORM
     "sqlalchemy>=2.0.43,<3.0.0",
     # Utility libraries
@@ -93,76 +93,86 @@ dependencies = [
     "respx>=0.22.0,<0.23.0",
     "watchdog>=6.0.0,<7.0.0",
     "tool>=0.8.0",
+    "httpx>=0.28.1,<0.29.0",
+    "opentelemetry-instrumentation-fastapi>=0.58b0,<0.59.0",
+    # Development and utility tools
     "ruff>=0.13.1,<0.14.0",
     "taskipy>=1.14.1,<2.0.0",
     "dependency-injector>=4.48.2",
     "pydeps>=3.0.1",
     "pydantic-ai>=0.2.20,<0.3.0",
     "scikit-learn>=1.7.2,<2.0.0",
-    "httpx>=0.28.1,<0.29.0",
-    "opentelemetry-instrumentation-fastapi>=0.58b0,<0.59.0",
-    "pytest-benchmark>=5.1.0,<6.0.0",
 ]
 
 [project.optional-dependencies]
-# Development tools
+# Development dependencies
 dev = [
     "pytest>=8.4.2,<9.0.0",
     "pytest-asyncio>=1.2.0,<2.0.0",
     "pytest-cov>=7.0.0,<8.0.0",
     "pytest-mock>=3.15.1,<4.0.0",
     "pytest-timeout>=2.4.0,<3.0.0",
-    "pytest-xdist>=3.8.0,<4.0.0",   # Parallel test execution - latest performance improvements
-    "hypothesis>=6.140.0,<7.0.0",   # Property-based testing - latest features
-    "mutmut>=3.3.1,<4.0.0",         # Mutation testing
+    "pytest-xdist>=3.8.0,<4.0.0",
+    "pytest-benchmark>=5.1.0,<6.0.0",
+    "hypothesis>=6.140.0,<7.0.0",
+    "mutmut>=3.3.1,<4.0.0",
+    "testcontainers>=4.8.1,<5.0.0",
     "fakeredis>=2.31.3,<3.0.0",
+    "coverage>=7.6.0,<8.0.0",
     "ruff>=0.13.1,<0.14.0",
-    "black>=25.9.0,<26.0.0",
+    "mypy>=1.16.1,<2.0.0",
+    "locust>=2.37.10,<3.0.0",
+    "pyjwt>=2.10.1,<3.0.0",
+]
+
+# Documentation
+docs = [
+    "mkdocs>=1.6.1,<2.0.0",
+    "mkdocs-material>=9.6.20,<10.0.0",
+    "mkdocstrings>=0.30.1,<1.0.0",
+    "mkdocstrings-python>=1.18.2,<2.0.0",
 ]
 
 # Contract testing tools
 contract = [
-    "schemathesis>=3.39.16,<4.0.0",          # OpenAPI property-based testing (tomli compatibility)
-    "openapi-spec-validator>=0.7.2,<0.9.0", # OpenAPI spec validation
-    "jsonschema>=4.25.1,<5.0.0",            # JSON schema validation
-    # "pact-python>=2.3.1,<3.0.0",         # Pact consumer-driven contracts - temporarily disabled due to psutil conflict
-    "responses>=0.25.8,<0.26.0", # HTTP request mocking
-    "httpx>=0.28.1,<0.29.0",     # HTTP client for testing
-    "factory-boy>=3.3.3,<4.0.0", # Test data generation
-    "faker>=37.8.0,<38.0.0",     # Fake data generation
+    "schemathesis>=3.39.16,<4.0.0",
+    "openapi-spec-validator>=0.7.2,<0.9.0",
+    "jsonschema>=4.25.1,<5.0.0",
+    "responses>=0.25.8,<0.26.0",
+    "httpx>=0.28.1,<0.29.0",
+    "factory-boy>=3.3.3,<4.0.0",
+    "faker>=37.8.0,<38.0.0",
 ]
 
 # Accessibility testing tools
 accessibility = [
-    "axe-core-python>=0.1.0,<1.0.0", # Python bindings for axe-core (using available version)
-    "selenium>=4.35.0,<5.0.0",       # For browser automation
-    "playwright>=1.55.0,<2.0.0",     # Alternative browser automation
-    "beautifulsoup4>=4.13.5,<5.0.0", # HTML parsing for static analysis
-    "lxml>=5.3.0,<5.4.0",            # XML/HTML parser (crawl4ai pins to ~=5.3)
+    "axe-core-python>=0.1.0,<1.0.0",
+    "selenium>=4.35.0,<5.0.0",
+    "playwright>=1.55.0,<2.0.0",
+    "beautifulsoup4>=4.13.5,<5.0.0",
+    "lxml>=5.3.0,<5.4.0",
 ]
 
-# Browser automation (optional heavy dependencies)
-browser = [
-    "playwright>=1.55.0,<2.0.0", # Python 3.13 compatibility (memory module optional in 0.3.0+)
-]
+# Browser automation (essential for web scraping)
+browser = ["playwright>=1.55.0,<2.0.0"]
 
-# LangChain integrations (optional AI features)  
+# LLM integrations (core AI functionality)
 llm = [
     "langchain-openai>=0.3.33,<1.0.0",
     "langchain-anthropic>=0.3.20,<1.0.0",
     "langchain-google-genai>=2.1.12,<3.0.0",
 ]
 
-# Observability and tracing (optional monitoring features)
+# Observability and monitoring
 observability = [
     "opentelemetry-api>=1.37.0,<2.0.0",
     "opentelemetry-sdk>=1.37.0,<2.0.0",
     "opentelemetry-instrumentation-fastapi>=0.58b0,<0.59.0",
     "opentelemetry-exporter-prometheus>=0.58b0,<0.59.0",
-    "opentelemetry-instrumentation-starlette>=0.58b0,<0.59.0", # For Starlette instrumentation
+    "opentelemetry-instrumentation-starlette>=0.58b0,<0.59.0",
 ]
 
-# Code parsing tools (optional development features)
+# Code parsing tools
 parsing = [
     "tree-sitter>=0.25.1,<0.26.0",
     "tree-sitter-python>=0.25.0,<0.26.0",
@@ -170,35 +180,36 @@ parsing = [
     "tree-sitter-typescript>=0.23.2,<0.24.0",
 ]
 
-# High-performance data processing (optional replacement for pandas)
-dataframe = [
-    "polars>=1.33.1,<2.0.0",   # High-performance DataFrame library (pandas replacement)
-    "pyarrow>=21.0.0,<22.0.0", # Columnar data format for better performance
+# High-performance data processing
+dataframe = ["polars>=1.33.1,<2.0.0", "pyarrow>=21.0.0,<22.0.0"]
+
+# GPU acceleration (optional AI/ML performance boost)
+gpu = [
+    # Core PyTorch stack (aligned with official compatibility matrix)
+    "torch>=2.8.0,<2.9.0",
+    "torchvision>=0.23.0,<0.24.0",
+    "torchaudio>=2.8.0,<2.9.0",
+    # Inference libraries
+    "transformers>=4.44.0,<5.0.0",
+    "accelerate>=0.34.0,<1.0.0",
+    "vllm>=0.10.0,<0.11.0",
+    # Optional optimization libs (may compile from source depending on platform)
+    "bitsandbytes>=0.44.0,<1.0.0",
+    "xformers>=0.0.28,<1.0.0",
+    "triton>=3.0.0,<4.0.0",
+    "flash-attn>=2.6.0,<3.0.0",
+    "deepspeed>=0.14.0,<1.0.0",
 ]
 
-# Documentation tools (moved from docs/requirements.txt)
-docs = [
-    "mkdocs>=1.6.1,<2.0.0",
-    "mkdocs-material>=9.6.20,<10.0.0",
-    "mkdocstrings>=0.30.1,<1.0.0",
-    "mkdocstrings-python>=1.18.2,<2.0.0",
-    "pdoc3>=0.11.6,<1.0.0",
-    "sphinx>=8.2.3,<9.0.0",
-    "sphinx-rtd-theme>=3.0.2,<4.0.0",
-    "interrogate>=1.7.0,<2.0.0",
-]
-
-# All optional dependencies combined
+# All optional dependencies
 all = [
-    "ai-docs-vector-db-hybrid-scraper[dev,accessibility,browser,llm,observability,parsing,docs,dataframe]",
+    "ai-docs-vector-db-hybrid-scraper[dev,contract,accessibility,browser,llm,observability,parsing,dataframe,docs]",
 ]
 
 [project.urls]
 Homepage = "https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper"
 Repository = "https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper"
 Issues = "https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/issues"
-Documentation = "https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/tree/main/docs"
-Changelog = "https://github.com/BjornMelin/ai-docs-vector-db-hybrid-scraper/blob/main/CHANGELOG.md"
 
 [project.scripts]
 ai-docs = "src.cli.main:main"
@@ -207,245 +218,66 @@ mcp-server = "src.unified_mcp_server:main"
 task-worker = "src.cli_worker:main"
 
 [build-system]
-requires = ["hatchling>=1.25.0", "setuptools>=70.0.0", "wheel>=0.43.0"]
+requires = ["hatchling>=1.25.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
 
-[tool.uv]
-managed = true
-package = true
-# UV performance optimizations
-compile-bytecode = true
-link-mode = "copy" # Better for Docker builds
-upgrade-package = [
-    "pip",
-    "setuptools",
-    "wheel",
-    "hatchling",
-] # Keep core tools updated
-resolution = "highest" # Prefer latest compatible versions
-python-preference = "managed" # Better Python version management
+# ===== Tool Configurations =====
 
-# Python 3.11-3.13 compatibility constraints
-constraint-dependencies = [
-    "setuptools>=70.0.0", # Ensure Python 3.13 compatible setuptools
-    "hatchling>=1.25.0",  # Ensure Python 3.13 compatible hatchling
-]
-
-# ===== Enterprise-Grade Ruff Configuration for Zero Violations =====
 [tool.ruff]
 line-length = 88
-target-version = "py313"
-src = ["src", "tests", "examples", "docs"]
-exclude = [
-    "scripts", 
-    ".venv", 
-    "venv", 
-    "__pycache__", 
-    ".git",
-    "cache/",
-    "logs/",
-    "htmlcov/",
-    ".mypy_cache/",
-    ".pytest_cache/",
-    ".ruff_cache/"
-]
-# Performance optimization
-show-fixes = true         # Show what was fixed
-cache-dir = ".ruff_cache" # Enable caching
-respect-gitignore = true  # Skip ignored files
-
-# Dedicated formatting configuration
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-skip-magic-trailing-comma = false
-line-ending = "auto"
-docstring-code-format = true
-docstring-code-line-length = 72
+target-version = "py312"
+include = ["*.py", "*.pyi"]
+extend-exclude = [".github", "**/*.md", "**/*.yml", "**/*.yaml"]
 
 [tool.ruff.lint]
-# Comprehensive rule selection for enterprise-grade 2025 standards
 select = [
-    "E",     # pycodestyle errors
-    "W",     # pycodestyle warnings  
-    "F",     # pyflakes
-    "I",     # isort
-    "N",     # pep8-naming
-    "UP",    # pyupgrade
-    "YTT",   # flake8-2020
-    "BLE",   # flake8-blind-except
-    "B",     # flake8-bugbear
-    "A",     # flake8-builtins
-    "C4",    # flake8-comprehensions
-    "DTZ",   # flake8-datetimez
-    "T10",   # flake8-debugger
-    "EM",    # flake8-errmsg
-    "FA",    # flake8-future-annotations
-    "ISC",   # flake8-implicit-str-concat
-    "ICN",   # flake8-import-conventions
-    "G",     # flake8-logging-format
-    "INP",   # flake8-no-pep420
-    "PIE",   # flake8-pie
-    "T20",   # flake8-print
-    "PYI",   # flake8-pyi
-    "PT",    # flake8-pytest-style
-    "Q",     # flake8-quotes
-    "RSE",   # flake8-raise
-    "RET",   # flake8-return
-    "SLF",   # flake8-self
-    "SLOT",  # flake8-slots
-    "SIM",   # flake8-simplify
-    "TID",   # flake8-tidy-imports
-    "TCH",   # flake8-type-checking
-    "ARG",   # flake8-unused-arguments
-    "PTH",   # flake8-use-pathlib
-    "TD",    # flake8-todos
-    "FIX",   # flake8-fixme
-    "ERA",   # eradicate
-    "PD",    # pandas-vet
-    "PGH",   # pygrep-hooks
-    "PL",    # pylint
-    "TRY",   # tryceratops
-    "FLY",   # flynt
-    "NPY",   # NumPy-specific rules
-    "PERF",  # Perflint
-    "FURB",  # refurb
-    "LOG",   # flake8-logging
-    "RUF",   # Ruff-specific rules
-    "S",     # flake8-bandit (security)
-    "ASYNC", # flake8-async
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "T10", # flake8-debugger
+    "S",   # flake8-bandit (security)
 ]
 
 ignore = [
-    # Formatter conflicts (universal ignores)
-    "COM812", "COM819",  # Comma rules
-    "D206", "D300",      # Docstring formatting  
-    "E111", "E114", "E117",  # Indentation
-    "Q000", "Q001", "Q002", "Q003",  # Quote rules
-    "W191",              # Tab indentation
-
-    # Documentation rules (for incremental adoption)
-    "D100", "D101", "D102", "D103", "D104", "D105",  # Missing docstrings
-    "D200", "D205", "D212", "D400", "D401", "D415",  # Docstring formatting
-
-    # Complexity rules (project-specific tolerances)
-    "PLR0911", # Too many return statements (>6)
-    "PLR0912", # Too many branches (>12) 
-    "PLR0913", # Too many arguments (>5)
-    "PLR0915", # Too many statements (>50)
-    "PLR2004", # Magic value used in comparison
-    "TRY002",  # Reraise exception instead of throwing a new one (project pattern)
-
-    # Test-specific overrides
-    "S101",    # Use of assert (needed for tests)
-    "S311",    # Standard pseudo-random generators (tests)
-    "PT009",   # Use regular assert for simple comparisons
-    "PT011",   # pytest.raises() should be specific
-    
-    # Development-specific ignores  
-    "T20",     # Print statements (examples/dev scripts)
-    "ERA001",  # Commented-out code (temporary)
-    "FIX002",  # TODO comments should be more descriptive
-    "TD002", "TD003",  # TODO formatting
-
-    # Performance exceptions (where needed)
-    "PERF203", # try-except in loop (when necessary)
-    
-    # Security exceptions (where reviewed)
-    "S108",    # Temp file usage (when secure)
-    "S603",    # subprocess call (when secure)
-    
-    # Temporary ignores for systematic fixing (REMOVE THESE GRADUALLY)
-    "E501",    # Line too long (handled by formatter during migration)
-    "G004",    # Logging f-string (will be fixed systematically by subagents)
-    "F821",    # Undefined name (missing model imports - will be fixed systematically)
-]
-
-# Prevent auto-fixing these rules for safety
-unfixable = [
-    "F401",    # Don't auto-remove unused imports (manual review needed)
-    "F841",    # Don't auto-remove unused variables (manual review needed)
-    "ERA001",  # Don't auto-remove commented code (manual review needed)
+    "S101",   # assert statements in tests
+    "S108",   # insecure temp file usage (acceptable in tests)
+    "S311",   # pseudo-random generators (acceptable for tests/non-crypto)
+    "T20",    # print statements in CLI
+    "COM812", # trailing comma missing (formatter handles)
+    "COM819", # trailing comma prohibited
 ]
 
 [tool.ruff.lint.per-file-ignores]
 # Test files - more permissive
 "tests/**/*" = [
-    "D",       # Skip all docstring rules for tests
-    "ANN",     # Skip type annotations for tests
-    "S101",    # Allow assert statements
-    "S311",    # Allow standard pseudo-random generators
-    "PLR",     # Skip complexity rules for tests
-    "ARG",     # Skip unused argument rules for fixtures
-    "B904",    # Allow raise without from in tests
-    "TRY401",  # Allow simple error logging in tests
-    "PT019",   # Allow fixtures as parameters (false positives in pytest)
-    "SLF001",  # Private member access allowed in tests
+    "S101",   # Allow assert statements
+    "ARG001", # Allow unused arguments
+    "F821",   # Allow undefined names in test mocking contexts
 ]
-
-# Example files - demonstration code
-"examples/**/*" = [
-    "D",       # Skip docstring rules for examples
-    "ANN",     # Skip type annotations for examples  
-    "T20",     # Allow print statements
-    "F841",    # Allow unused variables for demonstration
-    "ARG",     # Allow unused arguments for examples
-    "S101",    # Allow assert statements
-    "PLR",     # Skip complexity rules for examples
-]
-
-# Documentation files - interactive/demo code
-"docs/**/*" = [
-    "D",       # Skip docstring rules for docs
-    "ANN",     # Skip type annotations for docs
-    "T20",     # Allow print statements
-    "F841",    # Allow unused variables 
-    "ARG",     # Allow unused arguments
-    "S101",    # Allow assert statements
-    "PLR",     # Skip complexity rules
-    "UP035",   # Allow deprecated typing for compatibility
-    "N999",    # Allow invalid module names (e.g., build-config)
-]
-
-# Configuration modules - allow global patterns
-"src/config/**/*" = [
-    "PLW0603", # Allow global statements for singleton patterns
-    "S105",    # Allow hardcoded passwords in config (environment-based)
-]
-
-# Observability modules - allow instrumentation patterns
-"src/services/observability/**/*" = [
-    "PLW0603", # Allow global statements for observability singletons
-    "S106",    # Allow hardcoded passwords for instrumentation keys
-]
-
-# Specific service files requiring singleton patterns
-"src/services/config_drift_service.py" = ["PLW0603"]
-"src/infrastructure/shared.py" = ["PLW0603"]
-"src/services/monitoring/initialization.py" = ["PLW0603"]
-
-# CLI and utility scripts - allow flexibility
+# CLI and utility scripts
 "src/cli/**/*" = [
-    "T20",     # Allow print statements in CLI
-    "PLR0913", # Allow many arguments for CLI commands
+    "T20", # Allow print statements
 ]
-
-# MCP tools - allow MCP-specific patterns
+# MCP tools - protocol-specific patterns
 "src/mcp_tools/**/*" = [
-    "ARG001",  # Allow unused arguments for MCP protocol
-    "PLR0913", # Allow many arguments for tool functions
+    "ARG001", # Allow unused arguments for MCP protocol
 ]
-
-# Legacy or migration files (temporary)
-"src/manage_vector_db.py" = [
-    "T20",     # Allow print statements in management script
-    "S603",    # Allow subprocess calls in management
+# GPU utilities - optional dependencies that may not be installed
+"src/utils/gpu.py" = [
+    "F401", # Allow unused imports for optional GPU libraries
 ]
-"src/cli_worker.py" = [
-    "ARG001",  # Allow unused arguments for worker interface
+# Chaos orchestrator - development modules that don't exist yet
+"src/automation/self_healing/intelligent_chaos_orchestrator.py" = [
+    "F401", # Allow imports of non-existent chaos testing modules
 ]
 
 [tool.ruff.lint.isort]
@@ -459,11 +291,66 @@ section-order = [
     "first-party",
     "local-folder",
 ]
-lines-after-imports = 2 # Standard spacing after imports
+lines-after-imports = 2
 
-# ===== Modern Pytest Configuration =====
+[tool.mypy]
+python_version = "3.12"
+# Gradual adoption - start permissive, enable stricter checking over time
+strict = false
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+show_error_codes = true
+pretty = true
+
+# Per-module overrides for gradual type adoption
+[[tool.mypy.overrides]]
+module = ["tests.*", "examples.*", "scripts.*"]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["docs.*"]
+ignore_errors = true
+
+# Core modules - stricter checking
+[[tool.mypy.overrides]]
+module = ["src.core.*", "src.models.*", "src.config.*"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+# Service modules - medium strictness
+[[tool.mypy.overrides]]
+module = ["src.services.*", "src.infrastructure.*"]
+disallow_incomplete_defs = true
+
+# Third-party libraries that are commonly untyped
+[[tool.mypy.overrides]]
+module = [
+    "crawl4ai.*",
+    "firecrawl.*",
+    "qdrant_client.*",
+    "fastembed.*",
+    "browser_use.*",
+    "playwright.*",
+    "uvicorn.*",
+    "arq.*",
+    "slowapi.*",
+    "tenacity.*",
+    "cachetools.*",
+    "prometheus_client.*",
+    "psutil.*",
+    "httpx.*",
+    "respx.*",
+    "aiofiles.*",
+    "aiohttp.*",
+    "redis.*",
+    "dependency_injector.*",
+    "opentelemetry.*",
+]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
-# Modern asyncio configuration
+# Modern asyncio configuration - essential for async testing
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
@@ -478,15 +365,14 @@ minversion = "8.4"
 considerfailures = true # Re-run failed tests first
 tb_native = true        # Use Python's native traceback
 
-# Modern test execution configuration
+# Essential pytest flags for development workflow
 addopts = [
     "--strict-markers",              # Treat unknown markers as errors
     "--strict-config",               # Error on unknown config keys
     "--tb=short",                    # Shorter traceback format
-    "--verbose",                     # Verbose output for better debugging
+    "--verbose",                     # Verbose output for debugging
     "--cov=src",                     # Coverage collection
     "--cov-report=term-missing",     # Show missing lines in terminal
-    "--cov-report=html:htmlcov",     # Generate HTML coverage report
     "--cov-fail-under=80",           # Fail if coverage below 80%
     "--durations=10",                # Show 10 slowest tests
     "--maxfail=5",                   # Stop after 5 failures
@@ -495,10 +381,17 @@ addopts = [
     "--doctest-modules",             # Run doctests in modules
     "--doctest-continue-on-failure", # Continue after doctest failures
     "--disable-warnings",            # Clean output
-    "-ra",                           # Show short test summary for all except passed
+    "-ra",                           # Show summary for all except passed
 ]
 
-# Enhanced test markers for modern AI/ML testing
+# Warning filters for clean test output
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::UserWarning:.*playwright.*",
+]
+
+# Custom test markers for AI/vector DB/web scraping project
 markers = [
     "accessibility: mark test as accessibility test",
     "ai: mark test as AI/ML specific",
@@ -541,460 +434,56 @@ log_cli_level = "WARNING"
 log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
-# Test execution profiles for optimized CI/CD
-filterwarnings = [
-    "ignore::DeprecationWarning",
-    "ignore::PendingDeprecationWarning",
-    "ignore::UserWarning:.*playwright.*",
-]
-
-# Parallel execution settings
+# Parallel execution settings for CI/CD
 addopts_parallel = ["--dist=worksteal", "--tx=auto", "-q"]
 
-# ===== Enhanced Coverage Configuration =====
 [tool.coverage.run]
 source = ["src"]
 branch = true
-parallel = true # Enable parallel coverage collection
-context = "${CONTEXT}" # Add context to coverage data
-concurrency = ["thread", "multiprocessing", "greenlet"]
-omit = [
-    "*/tests/*",
-    "*/test_*",
-    "*/__pycache__/*",
-    "*/migrations/*",
-    "*/venv/*",
-    "*/.venv/*",
-    "*/site-packages/*",
-    "*/distutils/*",
-]
-relative_files = true # Store relative paths for portability
 
 [tool.coverage.report]
 show_missing = true
-skip_covered = false
-fail_under = 80.0  # Updated to match modern testing standards
-precision = 2
-sort = "Cover" # Sort by coverage percentage
-skip_empty = true # Skip files with no executable code
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "if self.debug:",
-    "if settings.DEBUG",
-    "raise AssertionError",
-    "raise NotImplementedError",
-    "if 0:",
-    "if __name__ == .__main__.:",
-    "class .*\\bProtocol\\):",
-    "@(abc\\.)?abstractmethod",
-    "\\.\\.\\.",
+fail_under = 80.0
+
+# ===== UV Package Manager Configuration =====
+[tool.uv]
+managed = true
+package = true
+# UV performance optimizations
+compile-bytecode = true
+link-mode = "copy" # Better for Docker builds
+upgrade-package = [
+    "pip",
+    "setuptools",
+    "wheel",
+    "hatchling",
+] # Keep core tools updated
+resolution = "highest" # Prefer latest compatible versions
+python-preference = "managed" # Better Python version management
+
+# Python 3.11-3.13 compatibility constraints
+constraint-dependencies = [
+    "setuptools>=70.0.0", # Ensure Python 3.13 compatible setuptools
+    "hatchling>=1.25.0",  # Ensure Python 3.13 compatible hatchling
 ]
 
-[tool.coverage.html]
-directory = "htmlcov"
-
-[tool.coverage.xml]
-output = "coverage.xml"
-
+# ===== Dependency Groups =====
 [dependency-groups]
-contract = [
-    "schemathesis>=3.39.16",
-]
+contract = ["schemathesis>=3.39.16,<4.0.0"]
 dev = [
-    "pytest>=8.3.5",
-    "pytest-asyncio>=1.0.0",
-    "pytest-cov>=6.1.1",
-    "pytest-mock>=3.14.1",
-    "coverage>=7.6.0",
-    "ruff>=0.13.1,<0.14.0",
+    "pytest>=8.3.5,<9.0.0",
+    "pytest-asyncio>=1.0.0,<2.0.0",
+    "pytest-cov>=6.1.1,<8.0.0",
+    "pytest-mock>=3.14.1,<4.0.0",
+    "coverage>=7.6.0,<8.0.0",
     "pytest-benchmark>=5.1.0,<6.0.0",
-    "testcontainers>=4.8.1",
+    "testcontainers>=4.8.1,<5.0.0",
     "hypothesis>=6.135.0,<7.0.0",
-    "pytest-xdist>=3.7.0",
-    "mutmut>=2.5.1",
-    "locust>=2.37.10",
-    "pyjwt>=2.10.1",
-    "mypy>=1.16.1",
-    "bandit>=1.8.5",
-    "safety>=3.2.4",
-    "semgrep>=1.79.0",
-    "pylint>=3.3.7",
-    "pytest-timeout>=2.4.0",
-    "pytest-env>=1.1.5",
+    "pytest-xdist>=3.7.0,<4.0.0",
+    "mutmut>=2.5.1,<4.0.0",
+    "locust>=2.37.10,<3.0.0",
+    "pyjwt>=2.10.1,<3.0.0",
+    "mypy>=1.16.1,<2.0.0",
+    "pytest-timeout>=2.4.0,<3.0.0",
+    "pytest-env>=1.1.5,<2.0.0",
 ]
-
-# ===== Production-Ready Pylint Configuration =====
-[tool.pylint.main]
-jobs = 0  # Use all CPU cores
-persistent = true
-load-plugins = [
-    "pylint.extensions.broad_try_clause",
-    "pylint.extensions.code_style",
-    "pylint.extensions.typing",
-    "pylint.extensions.docparams"
-]
-
-# Disable overly pedantic rules for production AI/ML code
-disable = [
-    # Documentation (handle separately)
-    "missing-module-docstring",
-    "missing-function-docstring",
-    "missing-class-docstring",
-    
-    # Design patterns (too restrictive for AI/ML)
-    "too-few-public-methods",
-    "too-many-instance-attributes",
-    "too-many-public-methods",
-    "too-many-arguments",
-    "too-many-locals",
-    "too-many-branches",
-    "too-many-statements",
-    
-    # Modern Python patterns
-    "consider-using-f-string",
-    "use-implicit-booleaness-not-comparison-to-string",
-    "use-implicit-booleaness-not-comparison-to-zero",
-    
-    # AI/ML common patterns
-    "invalid-name",  # Single letter variables common in ML
-    "global-statement",  # Sometimes needed for model loading
-    "protected-access",  # Common in ML libraries
-    
-    # Noise in production
-    "fixme",
-    "locally-disabled",
-    "file-ignored",
-    "suppressed-message"
-]
-
-# Enable critical checks
-enable = [
-    "useless-suppression"  # Clean up unused disables
-]
-
-[tool.pylint.format]
-max-line-length = 100
-ignore-long-lines = "^\\s*(# )?<?https?://\\S+>?$"
-
-[tool.pylint.design]
-# Relaxed limits for AI/ML code
-max-args = 8
-max-attributes = 15
-max-bool-expr = 8
-max-branches = 15
-max-locals = 20
-max-parents = 10
-max-public-methods = 25
-max-returns = 8
-max-statements = 60
-min-public-methods = 1
-
-[tool.pylint.typecheck]
-# Common AI/ML libraries that generate members dynamically
-generated-members = [
-    "numpy.*",
-    "torch.*",
-    "tensorflow.*",
-    "cv2.*",
-    "pandas.*",
-    "redis.Redis.*"
-]
-
-# Ignore missing members for common ML/async libraries
-ignored-classes = [
-    "optparse.Values",
-    "thread._local",
-    "_thread._local",
-    "argparse.Namespace",
-    "asyncio.*",
-    "aioredis.*",
-    "qdrant_client.*"
-]
-
-[tool.pylint.variables]
-# Allow single-letter vars common in ML
-good-names = ["i", "j", "k", "x", "y", "z", "X", "Y", "df", "ax", "ex", "_"]
-dummy-variables-rgx = "_+$|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?$)|dummy|^ignored_|^unused_"
-
-[tool.pylint.imports]
-# Allow wildcard imports for ML libraries where it's common
-allow-wildcard-with-all = true
-known-third-party = [
-    "numpy", "pandas", "torch", "tensorflow",
-    "fastapi", "pydantic", "redis", "qdrant_client"
-]
-
-[tool.pylint.exceptions]
-# Only warn about overly broad exceptions
-overgeneral-exceptions = ["builtins.BaseException"]
-
-[tool.pylint.logging]
-# Use old-style formatting (matches current codebase)
-logging-format-style = "old"
-
-[tool.pylint.miscellaneous]
-# Don't check for FIXMEs in production
-notes = []
-
-[tool.pylint.similarities]
-# Relax duplicate code detection for ML pipelines
-min-similarity-lines = 8
-ignore-comments = true
-ignore-docstrings = true
-ignore-imports = true
-
-# ===== Enhanced Mypy Configuration for Enterprise Type Safety =====
-[tool.mypy]
-python_version = "3.13"
-# Core strictness settings
-strict = false  # Start with False and gradually enable
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = false       # Gradually enable
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = false # Gradually enable
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = true
-
-# Error handling
-ignore_missing_imports = true
-show_error_context = true
-show_error_codes = true
-show_column_numbers = true
-pretty = true
-color_output = true
-error_summary = true
-
-# Advanced type checking features
-disallow_any_unimported = false     # Enable gradually
-disallow_any_expr = false           # Enable gradually
-disallow_any_decorated = false      # Enable gradually
-disallow_any_explicit = false       # Enable gradually
-disallow_any_generics = true        # Enable stricter generics
-disallow_subclassing_any = true     # Prevent Any subclassing
-
-# Performance optimizations
-cache_dir = ".mypy_cache"
-incremental = true
-follow_imports = "normal"           # Changed from skip for better analysis
-follow_imports_for_stubs = true
-skip_version_check = true
-
-
-# Additional checks
-warn_incomplete_stub = true
-
-# Per-module overrides for gradual adoption
-[[tool.mypy.overrides]]
-module = ["tests.*", "examples.*", "scripts.*"]
-ignore_errors = false
-disallow_untyped_defs = false
-# More permissive for test/example code
-
-[[tool.mypy.overrides]]
-module = ["docs.*"]
-ignore_errors = true
-# Skip docs for now
-
-# Third-party library overrides
-[[tool.mypy.overrides]]
-module = [
-    "crawl4ai.*", 
-    "firecrawl.*", 
-    "qdrant_client.*", 
-    "fastembed.*",
-    "browser_use.*",
-    "playwright.*",
-    "uvicorn.*",
-    "arq.*",
-    "slowapi.*",
-    "tenacity.*",
-    "cachetools.*",
-    "prometheus_client.*",
-    "psutil.*",
-    "httpx.*",
-    "respx.*",
-    "aiofiles.*",
-    "aiohttp.*",
-    "redis.*",
-    "dependency_injector.*",
-    "opentelemetry.*"
-]
-ignore_missing_imports = true
-
-# Core source modules - stricter checking
-[[tool.mypy.overrides]]
-module = ["src.core.*", "src.models.*", "src.config.*"]
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-disallow_untyped_decorators = true
-warn_return_any = true
-
-# Service modules - medium strictness  
-[[tool.mypy.overrides]]
-module = ["src.services.*", "src.infrastructure.*"]
-disallow_incomplete_defs = true
-check_untyped_defs = true
-
-# ===== Bandit Security Configuration =====
-[tool.bandit]
-skips = ["B101", "B601", "B602"]                                 # Skip assert_used, shell usage
-exclude_dirs = ["/tests/", "/scripts/"]
-tests = ["B201", "B301", "B302", "B303", "B304", "B305", "B306"]
-
-# ===== isort Configuration (if not using ruff) =====
-[tool.isort]
-profile = "black"
-line_length = 88
-known_first_party = ["src"]
-known_third_party = ["fastapi", "pydantic", "pytest"]
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-ensure_newline_before_comments = true
-
-# ===== Hatch Configuration =====
-[tool.hatch.version]
-# source = "vcs"  # Use git tags for versioning
-fallback-version = "0.1.0"
-
-# [tool.hatch.build.hooks.vcs]
-# version-file = "src/_version.py"
-
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[tool.hatch.build]
-# Performance: exclude unnecessary files from builds
-exclude = [
-    "/.github",
-    "/docs",
-    "/tests",
-    "/scripts",
-    "/.vscode",
-    "/.idea",
-    "*.pyc",
-    "__pycache__",
-    ".coverage*",
-    ".pytest_cache",
-    ".mypy_cache",
-    ".ruff_cache",
-    "*.egg-info",
-]
-
-# ===== UV-specific workspace configuration =====
-# [tool.uv.workspace]
-# members = ["src/*"]  # If using workspace structure
-
-# ===== Performance and optimization settings =====
-[tool.performance]
-# Custom performance settings for the project
-embedding_batch_size = 100
-crawl_concurrency = 10
-vector_db_connections = 20
-cache_ttl = 3600
-max_memory_mb = 1000
-
-# ===== Enterprise Code Quality Tools Configuration =====
-
-# Docstring coverage analysis
-[tool.interrogate]
-ignore-init-method = true
-ignore-init-module = true
-ignore-magic = false
-ignore-semiprivate = false
-ignore-private = false
-ignore-property-decorators = false
-ignore-module = false
-ignore-nested-functions = false
-ignore-nested-classes = true
-ignore-setters = false
-fail-under = 85  # Increased for enterprise standards
-exclude = ["setup.py", "docs", "build", "tests", "examples", "scripts"]
-verbose = 1
-quiet = false
-whitelist-regex = []
-color = true
-omit-covered-files = false
-
-# Code complexity measurement
-[tool.radon]
-# Complexity thresholds for enterprise grade
-cc_min = "C"  # Show complexity C and above
-mi_min = "B"  # Show maintainability index B and above  
-show_complexity = true
-show_mi = true
-exclude = ["tests/*", "docs/*", "examples/*", "scripts/*", ".venv/*"]
-
-# Additional quality gates
-[tool.vulture]
-min_confidence = 80
-sort_by_size = true
-exclude = ["tests/", "docs/", "examples/", "scripts/"]
-ignore_decorators = ["@app.route", "@click.command", "@pytest.fixture"]
-ignore_names = ["setUp", "tearDown", "_*"]
-
-# Dead code detection configuration  
-[tool.dead]
-exclude = ["tests/", "docs/", "examples/", "scripts/", "__pycache__/"]
-ignore_decorators = true
-
-# ===== Task runner configuration =====
-[tool.taskipy.tasks]
-# Core Development
-dev = "uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000"
-dev-simple = "AI_DOCS__MODE=simple uvicorn src.api.main:app --reload --port 8000"
-dev-enterprise = "AI_DOCS__MODE=enterprise uvicorn src.api.main:app --reload --port 8000"
-
-# Testing & Quality
-test = "python scripts/dev.py test --profile quick"
-test-unit = "python scripts/dev.py test --profile unit"
-test-integration = "python scripts/dev.py test --profile integration"
-test-full = "python scripts/dev.py test --profile full"
-test-performance = "python scripts/dev.py benchmark --suite performance"
-coverage = "python scripts/dev.py test --profile full --coverage"
-
-# Code Quality
-lint = "python scripts/dev.py lint --fix"
-format = "python scripts/dev.py format"
-typecheck = "python scripts/dev.py typecheck"
-quality = "python scripts/dev.py quality --fix-lint"
-docstring-check = "interrogate src/ --fail-under=85"
-security-check = "bandit -r src/ -f json -o security_report.json"
-
-# Documentation
-docs-build = "mkdocs build"
-docs-serve = "mkdocs serve --host 0.0.0.0 --port 8001"
-docs-deploy = "mkdocs gh-deploy"
-
-# Services & Operations
-services-start = "python scripts/dev.py services start"
-services-stop = "python scripts/dev.py services stop"
-monitoring-start = "python scripts/dev.py services start --stack monitoring"
-monitoring-stop = "python scripts/dev.py services stop --stack monitoring"
-benchmark = "python scripts/dev.py benchmark"
-
-# Utilities
-clean = "find . -type d -name __pycache__ -exec rm -rf {} + && find . -type f -name '*.pyc' -delete"
-security = "bandit -r src/"
-deps-check = "uv pip compile pyproject.toml --universal --upgrade"
-validate-config = "python scripts/dev.py validate --check-docs"
-
-# ===== Versioning and release configuration =====
-[tool.commitizen]
-version = "0.1.0"
-tag_format = "v$version"
-version_files = ["pyproject.toml:version", "src/__init__.py:__version__"]
-
-# ===== Python bytecode optimization =====
-[tool.py-compile]
-optimize = 2                     # -OO level optimization
-source = "src/"
-exclude = ["tests/", "scripts/"]

@@ -348,7 +348,9 @@ class SiteAdapter:
         patterns = []
         url_lower = url.lower()
 
-        # Check for common URL patterns (use if statements instead of elif to detect multiple patterns)
+        # Check for common URL patterns (use if
+        # tatements instead of elif to detect multiple patterns)
+
         if "/api/" in url_lower or url_lower.startswith(
             ("https://api.", "http://api.")
         ):
@@ -430,8 +432,12 @@ class SiteAdapter:
                     strategy=AdaptationStrategy.WAIT_FOR_LOAD,
                     priority="high",
                     confidence=0.85,
-                    reasoning="Single Page Application detected - content loads dynamically",
-                    implementation_notes="Wait for content to be rendered by JavaScript",
+                    reasoning=(
+                        "Single Page Application detected - content loads dynamically"
+                    ),
+                    implementation_notes=(
+                        "Wait for content to be rendered by JavaScript"
+                    ),
                     estimated_improvement=0.4,
                     wait_conditions=[
                         "[data-testid]",
@@ -477,7 +483,9 @@ class SiteAdapter:
                     priority="medium",
                     confidence=0.7,
                     reasoning="Dynamic content loading patterns detected",
-                    implementation_notes="Use JavaScript execution to handle dynamic content",
+                    implementation_notes=(
+                        "Use JavaScript execution to handle dynamic content"
+                    ),
                     estimated_improvement=0.25,
                     fallback_strategies=[AdaptationStrategy.WAIT_FOR_LOAD],
                 )
@@ -491,7 +499,9 @@ class SiteAdapter:
                     priority="medium",
                     confidence=0.8,
                     reasoning="Structured data markup detected",
-                    implementation_notes="Extract data using schema.org or microdata patterns",
+                    implementation_notes=(
+                        "Extract data using schema.org or microdata patterns"
+                    ),
                     estimated_improvement=0.2,
                 )
             )
@@ -539,7 +549,9 @@ class SiteAdapter:
                     priority="high",
                     confidence=0.8,
                     reasoning="Incomplete content detected - better extraction needed",
-                    implementation_notes="Focus on main content areas, avoid navigation/ads",
+                    implementation_notes=(
+                        "Focus on main content areas, avoid navigation/ads"
+                    ),
                     estimated_improvement=0.4,
                     selector_patterns=[".main", ".content", "article", ".post"],
                 )
@@ -555,8 +567,12 @@ class SiteAdapter:
                     strategy=AdaptationStrategy.FOLLOW_SCHEMA,
                     priority="medium",
                     confidence=0.7,
-                    reasoning="Poor content structure - schema-based extraction may help",
-                    implementation_notes="Look for semantic HTML elements and structured data",
+                    reasoning=(
+                        "Poor content structure - schema-based extraction may help"
+                    ),
+                    implementation_notes=(
+                        "Look for semantic HTML elements and structured data"
+                    ),
                     estimated_improvement=0.3,
                 )
             )

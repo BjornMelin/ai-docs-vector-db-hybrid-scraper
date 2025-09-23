@@ -48,7 +48,8 @@ class SecurityValidator:
         """
         self.config = security_config or get_config().security
         logger.info(
-            f"SecurityValidator initialized with {len(self.config.allowed_domains)} allowed domains"
+            f"SecurityValidator initialized with "
+            f"{len(self.config.allowed_domains)} allowed domains"
         )
 
     @classmethod
@@ -152,7 +153,10 @@ class SecurityValidator:
 
         # Check for valid characters (alphanumeric, underscore, hyphen)
         if not re.match(r"^[a-zA-Z0-9_-]+$", name):
-            msg = "Collection name can only contain letters, numbers, underscore, and hyphen"
+            msg = (
+                "Collection name can only contain letters, numbers, "
+                "underscore, and hyphen"
+            )
             raise SecurityError(msg)
 
         return name

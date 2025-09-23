@@ -23,8 +23,7 @@ async def search_documents_core(
 ) -> list[SearchResult]:
     """Core search documents functionality without MCP dependencies.
 
-    Supports dense, sparse, and hybrid search strategies with optional
-    BGE reranking for improved accuracy.
+    Supports dense, sparse, and hybrid search strategies with optional reranking.
     """
     # Generate request ID for tracking
     request_id = str(uuid4())
@@ -40,7 +39,10 @@ async def search_documents_core(
         qdrant_service = await client_manager.get_qdrant_service()
 
         # Check cache first
-        cache_key = f"search:{request.collection}:{request.query}:{request.strategy}:{request.limit}"
+        cache_key = (
+            f"search:{request.collection}:{request.query}:"
+            f"{request.strategy}:{request.limit}"
+        )
         cached = await cache_manager.get(cache_key)
         if cached:
             if ctx:

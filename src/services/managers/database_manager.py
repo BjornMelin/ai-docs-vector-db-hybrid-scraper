@@ -64,6 +64,7 @@ class DatabaseManager:
         Args:
             qdrant_client: Qdrant client from DI container
             redis_client: Redis client from DI container
+
         """
         if self._initialized:
             return
@@ -120,6 +121,7 @@ class DatabaseManager:
 
         Raises:
             APIError: If Qdrant client not available
+
         """
         if not self._qdrant_client:
             msg = "Qdrant client not available"
@@ -149,6 +151,7 @@ class DatabaseManager:
 
         Raises:
             APIError: If storage fails
+
         """
         if not self._qdrant_service:
             msg = "Qdrant service not available"
@@ -184,6 +187,7 @@ class DatabaseManager:
 
         Raises:
             APIError: If search fails
+
         """
         if not self._qdrant_service:
             msg = "Qdrant service not available"
@@ -217,6 +221,7 @@ class DatabaseManager:
 
         Returns:
             Cached value or default
+
         """
         if not self._cache_manager:
             return default
@@ -244,6 +249,7 @@ class DatabaseManager:
 
         Returns:
             True if successful
+
         """
         if not self._cache_manager:
             return False
@@ -267,6 +273,7 @@ class DatabaseManager:
 
         Returns:
             True if successful
+
         """
         if not self._cache_manager:
             return False
@@ -283,6 +290,7 @@ class DatabaseManager:
 
         Returns:
             True if Redis is responsive
+
         """
         if not self._redis_client:
             return False
@@ -308,6 +316,7 @@ class DatabaseManager:
 
         Returns:
             True if successful
+
         """
         if not self._redis_client:
             return False
@@ -331,6 +340,7 @@ class DatabaseManager:
 
         Returns:
             Value or None if not found
+
         """
         if not self._redis_client:
             return None
@@ -349,6 +359,7 @@ class DatabaseManager:
 
         Returns:
             Status information for all components
+
         """
         status = {
             "initialized": self._initialized,
@@ -392,6 +403,7 @@ class DatabaseManager:
 
         Returns:
             CacheManager instance or None
+
         """
         return self._cache_manager
 
@@ -400,5 +412,6 @@ class DatabaseManager:
 
         Returns:
             QdrantService instance or None
+
         """
         return self._qdrant_service

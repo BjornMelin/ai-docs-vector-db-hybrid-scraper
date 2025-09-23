@@ -1,6 +1,6 @@
-"""Advanced OpenTelemetry instrumentation for AI/ML operations and custom business logic.
+"""OpenTelemetry instrumentation for AI/ML operations and custom business logic.
 
-This module provides comprehensive auto-instrumentation that builds upon OpenTelemetry's
+This module provides auto-instrumentation that builds upon OpenTelemetry's
 standard instrumentors with AI/ML specific monitoring for vector operations, embeddings,
 LLM calls, and complex search pipelines.
 """

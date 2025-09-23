@@ -2,29 +2,31 @@
 
 import pytest
 from pydantic import ValidationError
-from src.models.api_contracts import SearchRequest
-from src.models.api_contracts import AnalyticsRequest
-from src.models.api_contracts import AnalyticsResponse
-from src.models.api_contracts import BulkDocumentRequest
-from src.models.api_contracts import BulkDocumentResponse
-from src.models.api_contracts import CacheRequest
-from src.models.api_contracts import CacheResponse
-from src.models.api_contracts import CollectionInfo
-from src.models.api_contracts import CollectionRequest
-from src.models.api_contracts import CollectionResponse
-from src.models.api_contracts import DocumentRequest
-from src.models.api_contracts import DocumentResponse
-from src.models.api_contracts import ErrorResponse
-from src.models.api_contracts import HealthCheckResponse
-from src.models.api_contracts import ListCollectionsResponse
-from src.models.api_contracts import MCPRequest
-from src.models.api_contracts import MCPResponse
-from src.models.api_contracts import MetricData
-from src.models.api_contracts import SearchRequest
-from src.models.api_contracts import SearchResponse
-from src.models.api_contracts import SearchResultItem
-from src.models.api_contracts import ValidationRequest
-from src.models.api_contracts import ValidationResponse
+
+from src.models.api_contracts import (
+    AnalyticsRequest,
+    AnalyticsResponse,
+    BulkDocumentRequest,
+    BulkDocumentResponse,
+    CacheRequest,
+    CacheResponse,
+    CollectionInfo,
+    CollectionRequest,
+    CollectionResponse,
+    DocumentRequest,
+    DocumentResponse,
+    ErrorResponse,
+    HealthCheckResponse,
+    ListCollectionsResponse,
+    MCPRequest,
+    MCPResponse,
+    MetricData,
+    SearchRequest,
+    SearchResponse,
+    SearchResultItem,
+    ValidationRequest,
+    ValidationResponse,
+)
 
 
 class TestMCPRequest:
@@ -96,61 +98,6 @@ class TestErrorResponse:
         """Test that ErrorResponse inherits from MCPResponse."""
         response = ErrorResponse(error="Test", timestamp=123.45)
         assert isinstance(response, MCPResponse)
-
-
-class TestSearchRequest:
-    """Test SearchRequest model."""
-
-    def test_default_values(self):
-        """Test default field values."""
-        request = SearchRequest(query="test")
-        assert request.query == "test"
-        assert request.collection_name == "documents"
-        assert request.limit == 10
-        assert request.score_threshold == 0.0
-        assert request.enable_hyde is False
-        assert request.filters is None
-
-    def test_query_validation(self):
-        """Test query field validation."""
-        # Empty query not allowed
-        with pytest.raises(ValidationError):
-            SearchRequest(query="")
-
-        # Valid query
-        request = SearchRequest(query="search term")
-        assert request.query == "search term"
-
-    def test_limit_constraints(self):
-        """Test limit field constraints."""
-        # Valid limits
-        SearchRequest(query="test", limit=1)
-        SearchRequest(query="test", limit=100)
-
-        # Invalid limits
-        with pytest.raises(ValidationError):
-            SearchRequest(query="test", limit=0)
-        with pytest.raises(ValidationError):
-            SearchRequest(query="test", limit=101)
-
-    def test_score_threshold_constraints(self):
-        """Test score_threshold field constraints."""
-        # Valid thresholds
-        SearchRequest(query="test", score_threshold=0.0)
-        SearchRequest(query="test", score_threshold=0.5)
-        SearchRequest(query="test", score_threshold=1.0)
-
-        # Invalid thresholds
-        with pytest.raises(ValidationError):
-            SearchRequest(query="test", score_threshold=-0.1)
-        with pytest.raises(ValidationError):
-            SearchRequest(query="test", score_threshold=1.1)
-
-    def test_filters_field(self):
-        """Test filters field accepts any dict."""
-        filters = {"status": "active", "category": ["tech", "science"]}
-        request = SearchRequest(query="test", filters=filters)
-        assert request.filters == filters
 
 
 class TestSearchRequest:

@@ -193,6 +193,7 @@ class AISecurityValidator:
 
         Args:
             security_config: Security configuration for validation settings.
+
         """
         self.config = security_config or SecurityConfig()
         self.max_query_length = 10000  # Default max query length
@@ -212,6 +213,7 @@ class AISecurityValidator:
 
         Raises:
             HTTPException: If query contains security threats
+
         """
         if not query or not isinstance(query, str):
             raise HTTPException(
@@ -269,6 +271,7 @@ class AISecurityValidator:
 
         Returns:
             list of detected security threats
+
         """
         threats = []
         text_lower = text.lower()
@@ -325,6 +328,7 @@ class AISecurityValidator:
 
         Returns:
             True if repetition attack is detected
+
         """
         words = text.split()
         if len(words) < 10:
@@ -349,6 +353,7 @@ class AISecurityValidator:
 
         Returns:
             Sanitized query
+
         """
         sanitized = query
 
@@ -386,6 +391,7 @@ class AISecurityValidator:
 
         Returns:
             tuple of (is_valid, list_of_threats)
+
         """
         threats = []
 
@@ -433,6 +439,7 @@ class AISecurityValidator:
 
         Returns:
             list of security threats found in filename
+
         """
         threats = []
 
@@ -483,6 +490,7 @@ class AISecurityValidator:
 
         Returns:
             Sanitized metadata dictionary
+
         """
         if not isinstance(metadata, dict):
             logger.warning("Invalid metadata type, returning empty dict")
@@ -518,6 +526,7 @@ class AISecurityValidator:
 
         Returns:
             Sanitized key or None if key should be rejected
+
         """
         # Check for suspicious patterns
         for pattern in self.SUSPICIOUS_METADATA_PATTERNS:
@@ -538,6 +547,7 @@ class AISecurityValidator:
 
         Returns:
             Sanitized value
+
         """
         if isinstance(value, str):
             # Limit string length and remove dangerous patterns
@@ -569,6 +579,7 @@ class AISecurityValidator:
 
         Raises:
             HTTPException: If query contains security threats
+
         """
         # Combine query and context for comprehensive validation
         # full_text = f"{query} {context or ''}"
@@ -602,6 +613,7 @@ class AISecurityValidator:
 
         Returns:
             Summary dictionary with threat statistics
+
         """
         if not threats:
             return {"total_threats": 0, "risk_level": "none"}
@@ -645,6 +657,7 @@ class AISecurityValidator:
 
         Returns:
             list of recommended actions
+
         """
         recommendations = []
 

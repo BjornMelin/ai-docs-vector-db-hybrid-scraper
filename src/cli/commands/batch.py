@@ -1,6 +1,6 @@
 """Batch operations with Rich progress tracking and confirmations.
 
-This module provides comprehensive batch processing capabilities with
+This module provides batch processing capabilities with
 Rich progress visualization, operation queuing, and interactive confirmations.
 """
 
@@ -153,7 +153,7 @@ class OperationQueue:
 
 @click.group()
 def batch():
-    """📦 Batch operations with enhanced progress tracking.
+    """📦 Batch operations with progress tracking.
 
     Perform bulk operations on collections, documents, and configurations
     with Rich progress visualization and operation queuing.
@@ -229,7 +229,8 @@ def index_documents(
                 # Process batch with parallel workers
                 # Note: Document indexing not implemented yet
                 rich_cli.console.print(
-                    "[yellow]Document indexing functionality will be implemented in a future update.[/yellow]"
+                    "[yellow]Document indexing functionality will be "
+                    "implemented in a future update.[/yellow]"
                 )
 
                 # Update progress for all items in batch

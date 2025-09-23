@@ -68,6 +68,7 @@ class LibraryMigrationManager:
             config: Application configuration
             migration_config: Migration-specific configuration
             redis_url: Redis URL for modern implementations
+
         """
         self.config = config
         self.migration_config = migration_config or MigrationConfig()
@@ -94,7 +95,8 @@ class LibraryMigrationManager:
         self._legacy_services: dict[str, Any] = {}
 
         logger.info(
-            f"LibraryMigrationManager initialized with mode: {self.migration_config.mode.value}",
+            "LibraryMigrationManager initialized with mode: %s",
+            self.migration_config.mode.value,
         )
 
     async def initialize(self) -> None:
@@ -155,9 +157,7 @@ class LibraryMigrationManager:
             logger.info("Legacy services initialized successfully")
 
         except (redis.RedisError, ConnectionError, TimeoutError, ValueError) as e:
-            logger.warning(
-                f"Failed to initialize legacy services: {e}",
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Failed to initialize legacy services: %s", e)
             # Continue without legacy services if they fail
 
     async def _setup_monitoring(self) -> None:
@@ -179,6 +179,7 @@ class LibraryMigrationManager:
 
         Returns:
             Circuit breaker instance (modern or legacy)
+
         """
         mode = self.migration_config.mode
 
@@ -213,6 +214,7 @@ class LibraryMigrationManager:
 
         Returns:
             Cache manager instance (modern or legacy)
+
         """
         mode = self.migration_config.mode
 
@@ -244,6 +246,7 @@ class LibraryMigrationManager:
 
         Returns:
             ModernRateLimiter instance or None
+
         """
         if self.migration_config.rate_limiting_enabled:
             return self._modern_rate_limiter
@@ -257,6 +260,7 @@ class LibraryMigrationManager:
 
         Returns:
             True if modern implementation should be used
+
         """
         # Check error rates and performance metrics
         modern_metrics = self.performance_metrics[service]["modern"]
@@ -266,8 +270,10 @@ class LibraryMigrationManager:
         modern_error_rate = modern_metrics.get("error_rate", 0)
         if modern_error_rate > self.migration_config.rollback_threshold:
             logger.warning(
-                f"High error rate for modern {service}: {modern_error_rate}",
-            )  # TODO: Convert f-string to logging format
+                "High error rate for modern %s: %s",
+                service,
+                modern_error_rate,
+            )
             return False
 
         # Use modern if performance is comparable or better
@@ -285,6 +291,7 @@ class LibraryMigrationManager:
         Args:
             service: Service name
             operation: Operation being performed
+
         """
         # This would run both modern and legacy implementations
         # and compare their performance
@@ -325,7 +332,8 @@ class LibraryMigrationManager:
 
             if error_rate > self.migration_config.rollback_threshold:
                 logger.warning(
-                    f"Triggering rollback for {service} due to high error rate",
+                    "Triggering rollback for %s due to high error rate",
+                    service,
                 )
                 self.migration_state[f"{service}_migrated"] = False
 
@@ -334,6 +342,7 @@ class LibraryMigrationManager:
 
         Returns:
             Dictionary with migration status and performance metrics
+
         """
         return {
             "mode": self.migration_config.mode.value,
@@ -356,19 +365,20 @@ class LibraryMigrationManager:
 
         Returns:
             True if migration was successful
+
         """
         try:
             if service in self.migration_state:
                 self.migration_state[f"{service}_migrated"] = to_modern
                 logger.info(
-                    f"Forced migration of {service} to {'modern' if to_modern else 'legacy'}",
+                    "Forced migration of %s to %s",
+                    service,
+                    "modern" if to_modern else "legacy",
                 )
                 return True
-            logger.error(
-                f"Unknown service for migration: {service}",
-            )  # TODO: Convert f-string to logging format
+            logger.error("Unknown service for migration: %s", service)
         except Exception:
-            logger.exception("Error forcing migration of {service}")
+            logger.exception("Error forcing migration of %s", service)
             return False
 
         else:
@@ -404,6 +414,7 @@ def create_migration_manager(
 
     Returns:
         LibraryMigrationManager instance
+
     """
     migration_config = MigrationConfig(mode=mode)
     return LibraryMigrationManager(config, migration_config, redis_url)

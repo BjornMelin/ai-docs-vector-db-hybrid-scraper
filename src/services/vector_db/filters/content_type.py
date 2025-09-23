@@ -208,7 +208,9 @@ class ContentTypeFilter(BaseFilter):
     def __init__(
         self,
         name: str = "content_type_filter",
-        description: str = "Filter documents by type, category, intent, and semantic characteristics",
+        description: str = (
+            "Filter documents by type, category, intent, and semantic characteristics"
+        ),
         enabled: bool = True,
         priority: int = 80,
     ):

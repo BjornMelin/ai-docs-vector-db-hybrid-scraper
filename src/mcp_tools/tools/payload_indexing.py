@@ -37,15 +37,16 @@ def register_tools(mcp, client_manager: ClientManager):
     async def create_payload_indexes(
         collection_name: str, ctx: Context
     ) -> "GenericDictResponse":
-        """Create payload indexes on a collection for 10-100x faster filtering.
+        """Create payload indexes on a collection for faster filtering.
 
         Creates indexes on key metadata fields like site_name, embedding_model,
-        title, word_count, crawl_timestamp, etc. for dramatic performance improvements.
+        title, word_count, crawl_timestamp, etc. for performance improvements.
         """
         # Generate request ID for tracking
         request_id = str(uuid4())
         await ctx.info(
-            f"Creating payload indexes for collection: {collection_name} (Request: {request_id})"
+            f"Creating payload indexes for collection: {collection_name} "
+            f"(Request: {request_id})"
         )
 
         try:
@@ -70,7 +71,8 @@ def register_tools(mcp, client_manager: ClientManager):
             )
 
             await ctx.info(
-                f"Successfully created {stats['indexed_fields_count']} payload indexes for {collection_name}"
+                f"Successfully created {stats['indexed_fields_count']} payload indexes "
+                f"for {collection_name}"
             )
 
             return GenericDictResponse(
@@ -110,7 +112,8 @@ def register_tools(mcp, client_manager: ClientManager):
             )
 
             await ctx.info(
-                f"Found {stats['indexed_fields_count']} indexed fields in {collection_name}"
+                f"Found {stats['indexed_fields_count']} indexed fields in "
+                f"{collection_name}"
             )
 
             return GenericDictResponse(**stats)
@@ -132,7 +135,8 @@ def register_tools(mcp, client_manager: ClientManager):
         # Generate request ID for tracking
         request_id = str(uuid4())
         await ctx.info(
-            f"Starting full reindex for collection: {collection_name} (Request: {request_id})"
+            f"Starting full reindex for collection: {collection_name} "
+            f"(Request: {request_id})"
         )
 
         try:
@@ -230,7 +234,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Filtered search completed in {search_time:.2f}ms with {len(results)} results"
+                    f"Filtered search completed in {search_time:.2f}ms with "
+                    f"{len(results)} results"
                 )
 
             return GenericDictResponse(

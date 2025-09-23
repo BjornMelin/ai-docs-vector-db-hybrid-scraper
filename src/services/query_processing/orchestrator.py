@@ -1,7 +1,8 @@
 """Search orchestrator with essential features.
 
 This module provides a streamlined search orchestrator that maintains core functionality
-and valuable V2 features. Includes query expansion, clustering, personalization, and federation.
+and valuable V2 features. Includes query expansion, clustering,
+personalization, and federation.
 """
 
 import logging
@@ -307,7 +308,8 @@ class SearchOrchestrator(BaseService):
                 request, features_used
             )
 
-            # Determine the processed query (use expanded if available, otherwise original)
+            # Determine the processed query (use expanded if available,
+            # otherwise original)
             processed_query = expanded_query if expanded_query else request.query
 
             # Step 3: Post-processing (clustering, ranking, etc.)
@@ -364,7 +366,8 @@ class SearchOrchestrator(BaseService):
                 try:
                     config = get_config()
 
-                    # Only generate RAG answer if globally enabled or explicitly requested
+                    # Only generate RAG answer if globally enabled or
+                    # explicitly requested
                     if config.rag.enable_rag or request.enable_rag:
                         rag_request = RAGRequest(
                             query=request.query,
@@ -458,11 +461,13 @@ class SearchOrchestrator(BaseService):
         # Start with pipeline defaults - these should take precedence
         config = self.pipeline_configs.get(request.pipeline, {}).copy()
 
-        # Check which fields were explicitly set using Pydantic's __pydantic_fields_set__
+        # Check which fields were explicitly set using Pydantic's
+        # __pydantic_fields_set__
         if hasattr(request, "__pydantic_fields_set__"):
             explicitly_set = request.__pydantic_fields_set__
         else:
-            # Fallback: assume fields that differ from pipeline defaults were explicitly set
+            # Fallback: assume fields that differ from pipeline defaults
+            # were explicitly set
             explicitly_set = set()
             pipeline_defaults = self.pipeline_configs.get(request.pipeline, {})
             for field in [
@@ -595,12 +600,14 @@ class SearchOrchestrator(BaseService):
                 }
             )
 
-        # Add feature utilization metrics for analytics dashboard
+        # Add feature utilization metrics for analytics
+        # dashboard
         feature_stats = {}
         if self.stats["total_searches"] > 0:
             # Calculate feature usage percentages
             feature_stats = {
-                "query_expansion_usage": 0.8,  # Mock data - would be calculated from actual usage
+                "query_expansion_usage": 0.8,  # Mock data - would be
+                # calculated from actual usage
                 "clustering_usage": 0.3,
                 "personalization_usage": 0.4,
                 "federation_usage": 0.2,
@@ -611,10 +618,12 @@ class SearchOrchestrator(BaseService):
             {
                 "feature_utilization": feature_stats,
                 "performance_trends": {
-                    "avg_latency_trend": "improving",  # Would be calculated from historical data
+                    "avg_latency_trend": "improving",  # Would be calculated
+                    # from historical data
                     "cache_hit_rate": self.stats.get("cache_hits", 0)
                     / max(self.stats.get("total_searches", 1), 1),
-                    "error_rate": 0.02,  # Mock - would be calculated from error tracking
+                    "error_rate": 0.02,  # Mock - would be calculated
+                    # from error tracking
                 },
             }
         )

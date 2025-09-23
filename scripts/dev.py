@@ -78,7 +78,7 @@ def run_command(
 
     normalized = _normalize_command(command)
     print(f"$ {shlex.join(normalized)}")
-    result = subprocess.run(normalized, cwd=cwd, env=env, check=False, shell=False)
+    result = subprocess.run(normalized, cwd=cwd, env=env, check=False, shell=False)  # noqa: S603
     if result.returncode != 0:
         print(f"Command exited with status {result.returncode}", file=sys.stderr)
     return result.returncode
@@ -187,9 +187,7 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
 
     workers = _auto_worker_count(args.workers)
     suites: tuple[str, ...] = (
-        ("performance", "integration")
-        if args.suite == "all"
-        else (args.suite,)
+        ("performance", "integration") if args.suite == "all" else (args.suite,)
     )
 
     if len(suites) > 1 and args.output and not args.output_dir:
@@ -229,7 +227,8 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
                 command.append(f"--benchmark-compare={baseline_path}")
             else:
                 print(
-                    f"⚠️ Baseline file '{baseline_path}' not found; skipping comparison.",
+                    f"⚠️ Baseline file '{baseline_path}' not found; "
+                    f"skipping comparison.",
                     file=sys.stderr,
                 )
 
@@ -427,12 +426,13 @@ def cmd_services(args: argparse.Namespace) -> int:
             services=("qdrant", "dragonfly"),
         )
     else:
-        command = _compose_command(
-            compose_cmd,
-            file="docker-compose.monitoring.yml",
-            action=args.action,
-            services=(),
-        )
+        command = [*compose_cmd, "--profile", "monitoring", "-f", "docker-compose.yml"]
+        if args.action == "start":
+            command.extend(["up", "-d"])
+        elif args.action == "stop":
+            command.append("down")
+        else:
+            command.append("ps")
 
     exit_code = run_command(command)
     if (

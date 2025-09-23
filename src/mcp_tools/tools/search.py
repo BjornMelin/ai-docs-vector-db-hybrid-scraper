@@ -34,10 +34,9 @@ def register_tools(mcp, client_manager: ClientManager):
     async def search_documents(
         request: SearchRequest, ctx: Context
     ) -> list[SearchResult]:
-        """Search documents with advanced hybrid search and reranking.
+        """Search documents with hybrid search and reranking.
 
-        Supports dense, sparse, and hybrid search strategies with optional
-        BGE reranking for improved accuracy.
+        Supports dense, sparse, and hybrid search strategies with optional reranking.
         """
         return await search_documents_core(request, client_manager, ctx)
 
@@ -55,7 +54,8 @@ def register_tools(mcp, client_manager: ClientManager):
         """
         if ctx:
             await ctx.info(
-                f"Starting similarity search for document {query_id} in collection {collection}"
+                f"Starting similarity search for document {query_id} in collection "
+                f"{collection}"
             )
 
         try:

@@ -87,7 +87,9 @@ class DriftEventResponse(BaseModel):
     "/status",
     response_model=DriftServiceStatusResponse,
     summary="Get configuration drift service status",
-    description="Retrieve current status and configuration of the drift detection service",
+    description=(
+        "Retrieve current status and configuration of the drift detection service"
+    ),
 )
 async def get_drift_status():
     """Get current status of the configuration drift detection service."""
@@ -297,18 +299,30 @@ async def get_drift_config():
 
             return {
                 "enabled": config.drift_detection.enabled,
-                "snapshot_interval_minutes": config.drift_detection.snapshot_interval_minutes,
-                "comparison_interval_minutes": config.drift_detection.comparison_interval_minutes,
+                "snapshot_interval_minutes": (
+                    config.drift_detection.snapshot_interval_minutes
+                ),
+                "comparison_interval_minutes": (
+                    config.drift_detection.comparison_interval_minutes
+                ),
                 "monitored_paths": config.drift_detection.monitored_paths,
                 "excluded_paths": config.drift_detection.excluded_paths,
                 "alert_on_severity": config.drift_detection.alert_on_severity,
                 "max_alerts_per_hour": config.drift_detection.max_alerts_per_hour,
-                "snapshot_retention_days": config.drift_detection.snapshot_retention_days,
-                "events_retention_days": config.drift_detection.events_retention_days,
-                "auto_remediation_enabled": config.drift_detection.enable_auto_remediation,
+                "snapshot_retention_days": (
+                    config.drift_detection.snapshot_retention_days
+                ),
+                "events_retention_days": (config.drift_detection.events_retention_days),
+                "auto_remediation_enabled": (
+                    config.drift_detection.enable_auto_remediation
+                ),
                 "integrations": {
-                    "task20_anomaly": config.drift_detection.integrate_with_task20_anomaly,
-                    "performance_monitoring": config.drift_detection.use_performance_monitoring,
+                    "task20_anomaly": (
+                        config.drift_detection.integrate_with_task20_anomaly
+                    ),
+                    "performance_monitoring": (
+                        config.drift_detection.use_performance_monitoring
+                    ),
                 },
             }
 

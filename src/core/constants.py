@@ -29,18 +29,6 @@ MAX_CONCURRENT_REQUESTS = 10
 MAX_MEMORY_USAGE_MB = 1000.0
 GC_THRESHOLD = 0.8  # 80%
 
-# NOTE: Rate limiting configuration has been moved to PerformanceConfig.default_rate_limits
-# in src/config/models.py for better organization and configuration management.
-
-# NOTE: Cache configuration has been moved to CacheConfig.cache_key_patterns
-# and CacheConfig.cache_ttl_seconds in src/config/models.py
-
-# NOTE: HNSW and vector search configuration has been moved to:
-# - HNSWConfig and CollectionHNSWConfigs in src/config/models.py for HNSW settings
-# - VectorSearchConfig.search_accuracy_params for search accuracy parameters
-# - VectorSearchConfig.prefetch_multipliers and max_prefetch_limits for prefetch settings
-
-# NOTE: Chunking configuration has been moved to ChunkingConfig in src/config/models.py
 
 # Language detection patterns
 PROGRAMMING_LANGUAGES = [
@@ -168,13 +156,6 @@ MAX_VECTOR_DIMENSIONS = 10000
 
 # Common vector dimensions for validation
 COMMON_VECTOR_DIMENSIONS = [128, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096]
-
-# NOTE: Status codes, logging levels, environments, and status types have been moved to enums:
-# - HttpStatus enum in src/config/enums.py for HTTP status codes
-# - LogLevel enum in src/config/enums.py for logging levels
-# - Environment enum in src/config/enums.py for environment types
-# - CollectionStatus enum in src/config/enums.py for collection statuses
-# - DocumentStatus enum in src/config/enums.py for document statuses
 
 __all__ = [
     # Budget and performance thresholds

@@ -1,7 +1,7 @@
-"""Optimized text analysis algorithms for high-performance processing.
+"""Text analysis algorithms for processing.
 
 This module implements O(n) text analysis algorithms to replace O(n²) implementations,
-achieving 80% performance improvement through efficient algorithms and caching.
+achieving performance improvement through efficient algorithms and caching.
 """
 
 import functools
@@ -176,8 +176,8 @@ class OptimizedTextAnalyzer:
 
         Returns:
             Comprehensive analysis results
-        """
 
+        """
         start_time = time.time()
 
         if not text:
@@ -275,6 +275,7 @@ class OptimizedTextAnalyzer:
 
         Returns:
             Average syllables per word
+
         """
         if not words:
             return 0.0
@@ -305,6 +306,7 @@ class OptimizedTextAnalyzer:
 
         Returns:
             Dictionary of keywords with density scores
+
         """
         if not words:
             return {}
@@ -338,6 +340,7 @@ class OptimizedTextAnalyzer:
 
         Returns:
             Dictionary of content type confidence scores
+
         """
         text_lower = text.lower()
         type_scores = {}
@@ -361,6 +364,7 @@ class OptimizedTextAnalyzer:
 
         Returns:
             Language confidence score (0-1)
+
         """
         if not words:
             return 0.0
@@ -393,6 +397,7 @@ class OptimizedTextAnalyzer:
 
         Returns:
             Document similarity analysis
+
         """
         # Extract keywords from both documents
         words_a = set(self._word_pattern.findall(text_a.lower()))
@@ -452,6 +457,7 @@ class OptimizedTextAnalyzer:
 
         Returns:
             List of analysis results
+
         """
         return [self.analyze_text_optimized(text) for text in texts]
 
@@ -463,8 +469,8 @@ class OptimizedTextAnalyzer:
 
         Returns:
             Performance benchmark results
-        """
 
+        """
         results = {
             "algorithm_complexity": "O(n)",
             "cache_enabled": True,
@@ -499,6 +505,7 @@ class OptimizedTextAnalyzer:
 
         Returns:
             Cache statistics before clearing
+
         """
         # Get cache info before clearing
         analyze_cache_info = self.analyze_text_optimized.cache_info()
@@ -536,6 +543,7 @@ def extract_entities_optimized(text: str) -> dict[str, list[str]]:
 
     Returns:
         Dictionary of entity types and extracted entities
+
     """
     entities = {
         "urls": [],
@@ -577,6 +585,7 @@ def classify_text_complexity_fast(text: str) -> dict[str, Any]:
 
     Returns:
         Complexity classification results
+
     """
     words = text.split()
     word_count = len(words)
@@ -622,5 +631,8 @@ def classify_text_complexity_fast(text: str) -> dict[str, Any]:
             "vocabulary_ratio": vocabulary_ratio,
             "avg_sentence_length": avg_sentence_length,
         },
-        "reasoning": f"Based on {word_count} words with {vocabulary_ratio:.2f} vocabulary diversity",
+        "reasoning": (
+            f"Based on {word_count} words with {vocabulary_ratio:.2f} "
+            "vocabulary diversity"
+        ),
     }

@@ -2,11 +2,13 @@
 
 This module provides essential ML security features without over-engineering:
 - Basic input validation to prevent common attacks (XSS, SQL injection)
-- Integration with standard security tools (pip-audit for dependencies, trivy for containers)
+- Integration with standard security tools (pip-audit for dependencies,
+  trivy for containers)
 - Simple monitoring and logging hooks
 - Placeholder for rate limiting (should be handled by nginx/CloudFlare in production)
 
-Philosophy: Use existing, proven security infrastructure rather than building ML-specific solutions.
+Philosophy: Use existing, proven security infrastructure rather than building
+ML-specific solutions.
 """
 
 import importlib.util
@@ -197,7 +199,7 @@ class MLSecurityValidator:
                     f"pip-audit found in unexpected location: {pip_audit_path}"
                 )
 
-            result = subprocess.run(  # Validated executable path
+            result = subprocess.run(  # Validated executable path  # noqa: S603
                 [pip_audit_path, "--format", "json"],
                 capture_output=True,
                 text=True,
@@ -296,7 +298,7 @@ class MLSecurityValidator:
                 self.checks_performed.append(result)
                 return result
 
-            result = subprocess.run(  # Validated executable path
+            result = subprocess.run(  # Validated executable path  # noqa: S603
                 [
                     trivy_path,
                     "image",

@@ -56,6 +56,7 @@ class SimpleCacheService(BaseService):
 
         Returns:
             Cached value or None if not found/expired
+
         """
         if key not in self.cache:
             return None
@@ -79,6 +80,7 @@ class SimpleCacheService(BaseService):
             key: Cache key
             value: Value to cache
             ttl: Time to live in seconds (optional)
+
         """
         if ttl is None:
             ttl = self.default_ttl
@@ -108,6 +110,7 @@ class SimpleCacheService(BaseService):
 
         Returns:
             True if key was deleted, False if not found
+
         """
         if key in self.cache:
             del self.cache[key]
@@ -130,6 +133,7 @@ class SimpleCacheService(BaseService):
 
         Returns:
             True if key exists and is valid
+
         """
         if key not in self.cache:
             return False

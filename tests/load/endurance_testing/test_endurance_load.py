@@ -98,10 +98,12 @@ class TestEnduranceLoad:
         # Assertions
         assert result.success, f"Endurance test failed: {result.bottlenecks_identified}"
         assert not endurance_analysis["memory_leak_detected"], (
-            f"Memory leak detected: {endurance_analysis['memory_growth_rate_mb_per_hour']} MB/hour"
+            f"Memory leak detected: "
+            f"{endurance_analysis['memory_growth_rate_mb_per_hour']} MB/hour"
         )
         assert endurance_analysis["performance_degradation_percent"] < 20, (
-            f"Performance degraded by {endurance_analysis['performance_degradation_percent']}%"
+            f"Performance degraded by "
+            f"{endurance_analysis['performance_degradation_percent']}%"
         )
         assert endurance_analysis["stability_score"] > 0.9, (
             f"Low stability score: {endurance_analysis['stability_score']}"
@@ -155,7 +157,8 @@ class TestEnduranceLoad:
             f"Excessive memory usage: {memory_analysis['peak_memory_mb']} MB"
         )
         assert memory_analysis["growth_rate_mb_per_minute"] < 5, (
-            f"High memory growth rate: {memory_analysis['growth_rate_mb_per_minute']} MB/min"
+            f"High memory growth rate: "
+            f"{memory_analysis['growth_rate_mb_per_minute']} MB/min"
         )
         assert memory_analysis["cleanup_effectiveness"] > 0.7, (
             "Poor memory cleanup effectiveness"
@@ -260,7 +263,7 @@ class TestEnduranceLoad:
             """Operation that uses cache."""
 
             # Generate cache key from operation parameters
-            query = _kwargs.get("query", f"query_{random.randint(1, 100)}")
+            query = _kwargs.get("query", f"query_{random.randint(1, 100)}")  # noqa: S311
             cache_key = hashlib.sha256(query.encode()).hexdigest()[:8]
 
             # Try cache first
@@ -493,7 +496,7 @@ class TestEnduranceLoad:
 
         # Consistent, predictable operation
         base_time = 0.05
-        variation = random.uniform(-0.01, 0.01)  # Small variation
+        variation = random.uniform(-0.01, 0.01)  # Small variation  # noqa: S311
 
         return asyncio.sleep(base_time + variation)
 
@@ -642,7 +645,7 @@ class MemoryLeakSimulator:
         """Simulate memory allocation."""
 
         # Simulate memory allocation (using list as proxy)
-        data = [random.random() for _ in range(int(size_mb * 1000))]
+        data = [random.random() for _ in range(int(size_mb * 1000))]  # noqa: S311
         self.allocated_memory.append(
             {
                 "data": data,
@@ -666,7 +669,7 @@ class MemoryLeakSimulator:
         if self.allocated_memory:
             # Remove 10-30% of allocations
 
-            cleanup_count = random.randint(1, max(1, len(self.allocated_memory) // 3))
+            cleanup_count = random.randint(1, max(1, len(self.allocated_memory) // 3))  # noqa: S311
 
             for _ in range(min(cleanup_count, len(self.allocated_memory))):
                 self.allocated_memory.pop(0)  # Remove oldest

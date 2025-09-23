@@ -68,7 +68,9 @@ class TestRAGPipelineIntegration:
         text_generator = MagicMock()
         text_generator.generate_response = AsyncMock(
             return_value={
-                "response": "This is a generated response based on the retrieved context.",
+                "response": (
+                    "This is a generated response based on the retrieved context."
+                ),
                 "confidence": 0.85,
                 "sources_used": 3,
             }

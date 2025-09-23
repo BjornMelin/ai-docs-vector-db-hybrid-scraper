@@ -1,9 +1,22 @@
 """Utilities package for the AI documentation vector database system."""
 
 # Re-export functions from parent utils.py and local imports module
+# GPU utilities (optional)
+from contextlib import suppress
 from pathlib import Path
 
 from .imports import resolve_imports, setup_import_paths
+
+
+with suppress(ImportError):
+    from .gpu import (
+        get_gpu_device,
+        get_gpu_memory_info,
+        get_gpu_stats,
+        is_gpu_available,
+        optimize_gpu_memory,
+        safe_gpu_operation,
+    )
 
 
 # Get parent directory and import directly from utils.py
@@ -36,6 +49,12 @@ else:
 __all__ = [
     "async_command",
     "async_to_sync_click",
+    "get_gpu_device",
+    "get_gpu_memory_info",
+    "get_gpu_stats",
+    "is_gpu_available",
+    "optimize_gpu_memory",
     "resolve_imports",
+    "safe_gpu_operation",
     "setup_import_paths",
 ]

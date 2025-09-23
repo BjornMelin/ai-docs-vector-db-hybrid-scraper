@@ -650,5 +650,5 @@ class TestObservabilityDataConsistency:
                     result["cost"] = cost
                     _total_cost += cost
 
-        # Verify _total cost is consistent (use approximate comparison for floating point)
+        # Verify _total cost is consistent (use approx comparison for FP)
         assert abs(_total_cost - 0.022) < 0.000001

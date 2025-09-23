@@ -502,7 +502,9 @@ class TestProjectStorage:
 
         project_data = {
             "name": "Special Characters Test",
-            "description": "Contains special chars: àáâãäåæçèéêë 中文 🚀 \"quotes\" 'apostrophes'",
+            "description": (
+                "Contains special chars: àáâãäåæçèéêë 中文 🚀 \"quotes\" 'apostrophes'"
+            ),
             "unicode_field": "тест на кириллице",
             "emoji": "😀🎉🔥",
         }

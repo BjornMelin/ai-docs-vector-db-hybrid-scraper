@@ -161,6 +161,7 @@ class ParallelAgentCoordinator:
             default_strategy: Default coordination strategy
             enable_circuit_breaker: Enable circuit breaker for fault tolerance
             health_check_interval_ms: Interval for agent health checks
+
         """
         self.max_parallel_agents = max_parallel_agents
         self.default_strategy = default_strategy
@@ -190,7 +191,8 @@ class ParallelAgentCoordinator:
         self._coordination_task: asyncio.Task | None = None
 
         logger.info(
-            f"ParallelAgentCoordinator initialized with max_parallel={max_parallel_agents}"
+            "ParallelAgentCoordinator initialized with "
+            f"max_parallel={max_parallel_agents}"
         )
 
     async def register_agent(
@@ -205,6 +207,7 @@ class ParallelAgentCoordinator:
             agent: Agent instance to register
             capabilities: List of agent capabilities
             role: Agent role in coordination
+
         """
         agent_name = agent.name
 
@@ -220,7 +223,8 @@ class ParallelAgentCoordinator:
             )
 
         logger.info(
-            f"Agent {agent_name} registered with capabilities: {capabilities}, role: {role}"
+            f"Agent {agent_name} registered with capabilities: {capabilities}, "
+            f"role: {role}"
         )
 
     async def unregister_agent(self, agent_name: str) -> None:
@@ -228,6 +232,7 @@ class ParallelAgentCoordinator:
 
         Args:
             agent_name: Name of agent to unregister
+
         """
         # Cancel any running tasks for this agent
         tasks_to_cancel = [
@@ -256,6 +261,7 @@ class ParallelAgentCoordinator:
 
         Returns:
             Task ID for tracking
+
         """
         self.pending_tasks.append(task)
         self.metrics.total_tasks += 1
@@ -314,13 +320,15 @@ class ParallelAgentCoordinator:
 
         Returns:
             Workflow execution results
+
         """
         workflow_id = str(uuid4())
         strategy = strategy or self.default_strategy
         start_time = time.time()
 
         logger.info(
-            f"Starting coordinated workflow {workflow_id} with {len(tasks)} tasks using {strategy} strategy"
+            f"Starting coordinated workflow {workflow_id} with {len(tasks)} tasks "
+            f"using {strategy} strategy"
         )
 
         try:
@@ -385,6 +393,7 @@ class ParallelAgentCoordinator:
 
         Returns:
             Comprehensive status information
+
         """
         return {
             "coordination_active": self._coordination_active,
@@ -506,6 +515,7 @@ class ParallelAgentCoordinator:
         Args:
             task: Task to execute
             assignment: Agent assignment details
+
         """
         agent_name = assignment.agent_name
         agent = self.available_agents[agent_name]
@@ -602,6 +612,7 @@ class ParallelAgentCoordinator:
 
         Returns:
             True if all dependencies are completed
+
         """
         if not task.dependencies:
             return True
@@ -618,6 +629,7 @@ class ParallelAgentCoordinator:
 
         Returns:
             Agent name if suitable agent found, None otherwise
+
         """
         # Filter by health status and availability
         healthy_agents = [
@@ -717,6 +729,7 @@ class ParallelAgentCoordinator:
         Args:
             task_id: ID of task to cancel
             reason: Cancellation reason
+
         """
         if task_id in self.running_tasks:
             assignment = self.running_tasks[task_id]
@@ -829,6 +842,7 @@ class ParallelAgentCoordinator:
 
         Returns:
             Optimal coordination strategy
+
         """
         if not tasks:
             return CoordinationStrategy.SEQUENTIAL

@@ -40,12 +40,14 @@ def mock_embedding_manager():
                 and "error" in text.lower()
                 and "problem" in text.lower()
             ):
-                # This is the troubleshooting reference: "How to fix this error and resolve the problem?"
+                # This is the troubleshooting
+                # eference: "How to fix this error and resolve the problem?"
+
                 embedding = [
                     0.9 if j == 3 else 0.1 for j in range(768)
                 ]  # Match query embedding
             elif "step by step" in text.lower() and "implement" in text.lower():
-                # This is the procedural reference: "How do I implement this step by step?"
+                # Procedural reference: "How do I implement this step by step?"
                 embedding = [
                     0.9 if j == 1 else 0.1 for j in range(768)
                 ]  # Different from query
@@ -277,7 +279,8 @@ class TestQueryProcessingIntegration:
 
         # Complex query
         complex_request = QueryProcessingRequest(
-            query="How to design a distributed microservices architecture with event sourcing and CQRS patterns?",
+            query="How to design distributed microservices with event sourcing and "
+            "CQRS patterns?",
             collection_name="architecture",
             limit=10,
             enable_preprocessing=True,
@@ -441,8 +444,8 @@ class TestQueryProcessingIntegration:
         assert len(set(intent_types)) > 1  # Should have different intents
 
     @pytest.mark.asyncio
-    async def test_comprehensive_pipeline_metrics(self, complete_pipeline):
-        """Test comprehensive pipeline metrics collection."""
+    async def test_pipeline_metrics(self, complete_pipeline):
+        """Test pipeline metrics collection."""
         # Process various queries
         queries = [
             "What is Python?",
@@ -552,7 +555,7 @@ class TestQueryProcessingIntegration:
     @pytest.mark.asyncio
     async def test_intent_detection_integration(self, complete_pipeline):
         """Test detection of  intent categories."""
-        advanced_queries = [
+        complex_queries = [
             (
                 "How to design scalable microservices architecture?",
                 QueryIntent.ARCHITECTURAL,
@@ -565,7 +568,7 @@ class TestQueryProcessingIntegration:
             ("Configure Django for production deployment", QueryIntent.CONFIGURATION),
         ]
 
-        for query, expected_intent in advanced_queries:
+        for query, expected_intent in complex_queries:
             request = QueryProcessingRequest(
                 query=query,
                 collection_name="advanced",

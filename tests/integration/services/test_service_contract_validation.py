@@ -295,25 +295,29 @@ class TestAPIEndpointContracts:
                             expected_type = properties[field].get("type")
                             if expected_type == "string" and not isinstance(value, str):
                                 errors.append(
-                                    f"Field {field} must be string, got {type(value).__name__}"
+                                    f"Field {field} must be string, got "
+                                    f"{type(value).__name__}"
                                 )
                             elif expected_type == "integer" and not isinstance(
                                 value, int
                             ):
                                 errors.append(
-                                    f"Field {field} must be integer, got {type(value).__name__}"
+                                    f"Field {field} must be integer, got "
+                                    f"{type(value).__name__}"
                                 )
                             elif expected_type == "array" and not isinstance(
                                 value, list
                             ):
                                 errors.append(
-                                    f"Field {field} must be array, got {type(value).__name__}"
+                                    f"Field {field} must be array, got "
+                                    f"{type(value).__name__}"
                                 )
                             elif expected_type == "object" and not isinstance(
                                 value, dict
                             ):
                                 errors.append(
-                                    f"Field {field} must be object, got {type(value).__name__}"
+                                    f"Field {field} must be object, got "
+                                    f"{type(value).__name__}"
                                 )
 
                 return {
@@ -456,7 +460,8 @@ class TestAPIEndpointContracts:
                     # Check if producer endpoint exists
                     if producer_endpoint not in producer_contract.endpoints:
                         compatibility_issues.append(
-                            f"Producer endpoint {producer_endpoint} not found in {producer_contract.service_name}"
+                            f"Producer endpoint {producer_endpoint} not found in "
+                            f"{producer_contract.service_name}"
                         )
                         compatibility_score -= 0.5
                         continue
@@ -480,7 +485,8 @@ class TestAPIEndpointContracts:
                     for field in expected_fields:
                         if field not in producer_properties:
                             compatibility_issues.append(
-                                f"Consumer expects field '{field}' in {producer_endpoint} response"
+                                f"Consumer expects field '{field}' in "
+                                f"{producer_endpoint} response"
                             )
                             compatibility_score -= 0.2
 
@@ -756,7 +762,8 @@ class TestDataSchemaValidation:
                         field_schema = properties[field]
                         if "enum" in field_schema and value not in field_schema["enum"]:
                             errors.append(
-                                f"Field '{field}' has invalid value '{value}', must be one of {field_schema['enum']}"
+                                f"Field '{field}' has invalid value '{value}', "
+                                f"must be one of {field_schema['enum']}"
                             )
 
                 return {"valid": len(errors) == 0, "errors": errors}
@@ -1086,7 +1093,8 @@ class TestVersionCompatibility:
                         new_type = new_props[field].get("type")
                         if old_type != new_type:
                             breaking_changes.append(
-                                f"Field '{field}' type changed from {old_type} to {new_type}"
+                                f"Field '{field}' type changed from {old_type} to "
+                                f"{new_type}"
                             )
 
                 return {

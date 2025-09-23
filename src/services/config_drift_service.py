@@ -1,7 +1,8 @@
 """Configuration drift detection background service.
 
-Integrates with existing Task 20 infrastructure to provide automated configuration
-drift monitoring and alerting using the application's task queue system.
+Integrates with existing Task 20 infrastructure to provide automated
+configuration drift monitoring and alerting using the application's task
+queue system.
 """
 
 import asyncio
@@ -391,6 +392,7 @@ class ConfigDriftService:
 
         Returns:
             List of drift events detected for the source
+
         """
         if self.drift_detector is None:
             return []
@@ -407,6 +409,7 @@ class ConfigDriftService:
 
         Returns:
             True if alert should be sent
+
         """
         if not hasattr(event, "severity"):
             return False
@@ -420,6 +423,7 @@ class ConfigDriftService:
 
         Args:
             event: Drift event that triggered the alert
+
         """
         try:
             # In a real implementation, this would send alerts via:
@@ -442,9 +446,11 @@ class ConfigDriftService:
                         {
                             "event_id": getattr(event, "id", "unknown"),
                             "source": getattr(event, "source", "unknown"),
-                            "severity": getattr(event, "severity", {}).value
-                            if hasattr(getattr(event, "severity", None), "value")
-                            else "unknown",
+                            "severity": (
+                                getattr(event, "severity", {}).value
+                                if hasattr(getattr(event, "severity", None), "value")
+                                else "unknown"
+                            ),
                             "description": getattr(
                                 event, "description", "Configuration drift detected"
                             ),
@@ -470,10 +476,16 @@ class ConfigDriftService:
             "detector_initialized": self.drift_detector is not None,
             "monitored_paths_count": len(self.config.drift_detection.monitored_paths),
             "config": {
-                "snapshot_interval_minutes": self.config.drift_detection.snapshot_interval_minutes,
-                "comparison_interval_minutes": self.config.drift_detection.comparison_interval_minutes,
-                "alert_on_severity": self.config.drift_detection.alert_on_severity,
-                "auto_remediation_enabled": self.config.drift_detection.enable_auto_remediation,
+                "snapshot_interval_minutes": (
+                    self.config.drift_detection.snapshot_interval_minutes
+                ),
+                "comparison_interval_minutes": (
+                    self.config.drift_detection.comparison_interval_minutes
+                ),
+                "alert_on_severity": (self.config.drift_detection.alert_on_severity),
+                "auto_remediation_enabled": (
+                    self.config.drift_detection.enable_auto_remediation
+                ),
             },
         }
 

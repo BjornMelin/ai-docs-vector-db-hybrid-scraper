@@ -47,6 +47,7 @@ def _validate_dynamic_import(module_name: str, function_name: str) -> bool:
 
     Raises:
         ValueError: If module or function is not whitelisted
+
     """
     if module_name not in ALLOWED_PERSIST_MODULES:
         msg = f"Module '{module_name}' not in security whitelist"
@@ -442,6 +443,7 @@ async def create_task(
 
     Returns:
         Job ID if successful, None otherwise
+
     """
     try:
         # Get task queue manager

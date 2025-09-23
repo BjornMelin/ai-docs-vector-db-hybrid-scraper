@@ -130,7 +130,8 @@ def register_tools(mcp, client_manager: ClientManager):
         # Generate request ID for tracking
         request_id = str(uuid4())
         await ctx.info(
-            f"Starting multi-stage search {request_id} with {len(request.stages)} stages"
+            f"Starting multi-stage search {request_id} with "
+            f"{len(request.stages)} stages"
         )
 
         try:
@@ -189,7 +190,8 @@ def register_tools(mcp, client_manager: ClientManager):
             ]
 
             await ctx.info(
-                f"Multi-stage search {request_id} completed: {len(search_results)} results"
+                f"Multi-stage search {request_id} completed: "
+                f"{len(search_results)} results"
             )
 
         except (ConnectionError, OSError, PermissionError):
@@ -324,7 +326,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 search_results = search_results[: request.limit]
 
             await ctx.info(
-                f"HyDE search {request_id} completed: {len(search_results)} results found"
+                f"HyDE search {request_id} completed: {len(search_results)} "
+                "results found"
             )
 
         except Exception as e:
@@ -486,7 +489,8 @@ def register_tools(mcp, client_manager: ClientManager):
                 formatted_results = [r["original"] for r in reranked[:limit]]
                 if ctx:
                     await ctx.debug(
-                        f"Reranking complete, returning top {len(formatted_results)} results"
+                        f"Reranking complete, returning top {len(formatted_results)} "
+                        "results"
                     )
 
             # Collect metrics
@@ -506,7 +510,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Advanced HyDE search {request_id} completed: {len(formatted_results)} results in {search_time:.2f}ms"
+                    f"Advanced HyDE search {request_id} completed: "
+                    f"{len(formatted_results)} results in {search_time:.2f}ms"
                 )
 
             return HyDEAdvancedResponse(**result_dict)

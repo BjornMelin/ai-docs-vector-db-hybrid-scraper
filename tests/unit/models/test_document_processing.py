@@ -1,24 +1,23 @@
 """Unit tests for document processing models."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
-from src.config import (
-    ChunkingConfig,
-    ChunkingStrategy,
-    DocumentStatus
+
+from src.config import ChunkingConfig, ChunkingStrategy, DocumentStatus
+from src.models.document_processing import (
+    Chunk,
+    ChunkType,
+    CodeBlock,
+    CodeLanguage,
+    ContentFilter,
+    DocumentBatch,
+    DocumentMetadata,
+    ProcessedDocument,
+    ScrapingStats,
+    VectorMetrics,
 )
-from src.models.document_processing import Chunk
-from src.models.document_processing import ChunkType
-from src.models.document_processing import CodeBlock
-from src.models.document_processing import CodeLanguage
-from src.models.document_processing import ContentFilter
-from src.models.document_processing import DocumentBatch
-from src.models.document_processing import DocumentMetadata
-from src.models.document_processing import ProcessedDocument
-from src.models.document_processing import ScrapingStats
-from src.models.document_processing import VectorMetrics
 
 
 class TestCodeLanguage:
@@ -150,9 +149,9 @@ class TestDocumentMetadata:
 
     def test_default_values(self):
         """Test default field values."""
-        before = datetime.now(tz=timezone.utc)
+        before = datetime.now(tz=UTC)
         metadata = DocumentMetadata(url="https://example.com")
-        after = datetime.now(tz=timezone.utc)
+        after = datetime.now(tz=UTC)
 
         assert metadata.title is None
         assert metadata.doc_type is None
@@ -172,8 +171,8 @@ class TestDocumentMetadata:
 
     def test_custom_values(self):
         """Test custom field values."""
-        crawled_at = datetime.now(tz=timezone.utc)
-        last_modified = datetime.now(tz=timezone.utc)
+        crawled_at = datetime.now(tz=UTC)
+        last_modified = datetime.now(tz=UTC)
         metadata = DocumentMetadata(
             title="Python Tutorial",
             url="https://example.com/tutorial.py",
@@ -450,8 +449,8 @@ class TestScrapingStats:
 
     def test_with_timing_data(self):
         """Test stats with timing data."""
-        start_time = datetime.now(tz=timezone.utc)
-        end_time = datetime.now(tz=timezone.utc)
+        start_time = datetime.now(tz=UTC)
+        end_time = datetime.now(tz=UTC)
 
         stats = ScrapingStats(
             _total_processed=50,
@@ -538,9 +537,9 @@ class TestDocumentBatch:
 
     def test_default_values(self):
         """Test default field values."""
-        before = datetime.now(tz=timezone.utc)
+        before = datetime.now(tz=UTC)
         batch = DocumentBatch(id="batch123")
-        after = datetime.now(tz=timezone.utc)
+        after = datetime.now(tz=UTC)
 
         assert batch.documents == []
         assert batch.batch_size == 0

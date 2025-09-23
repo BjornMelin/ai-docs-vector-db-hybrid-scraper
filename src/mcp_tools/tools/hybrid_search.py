@@ -1,8 +1,4 @@
-"""Hybrid search tools combining vector and text search with DBSF score fusion.
-
-Implements advanced hybrid search with multiple fusion strategies,
-autonomous optimization, and performance correlation analysis.
-"""
+"""Hybrid search tools combining vector and text search with score fusion."""
 
 import asyncio
 import logging
@@ -45,8 +41,7 @@ def register_tools(mcp, client_manager: ClientManager):
     ) -> dict[str, Any]:
         """Perform hybrid search combining vector similarity and text matching.
 
-        Implements DBSF (Distribution-Based Score Fusion) and other advanced
-        fusion strategies with autonomous optimization based on query characteristics.
+        Uses DBSF and other fusion strategies based on query characteristics.
 
         Args:
             query: Search query text
@@ -60,6 +55,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Hybrid search results with fusion metadata and performance metrics
+
         """
         try:
             if ctx:
@@ -144,12 +140,13 @@ def register_tools(mcp, client_manager: ClientManager):
                     "fusion_confidence": fused_results["confidence"],
                 },
                 "performance_metrics": performance_metrics,
-                "autonomous_optimization": optimization_insights,
+                "optimization_insights": optimization_insights,
             }
 
             if ctx:
                 await ctx.info(
-                    f"Hybrid search completed: {len(fused_results['results'])} results with {fusion_strategy} fusion"
+                    f"Hybrid search completed: {len(fused_results['results'])} "
+                    f"results with {fusion_strategy} fusion"
                 )
 
         except Exception as e:
@@ -176,27 +173,28 @@ def register_tools(mcp, client_manager: ClientManager):
         filters: dict[str, Any] | None = None,
         ctx: Context = None,
     ) -> dict[str, Any]:
-        """Perform adaptive hybrid search with ML-powered parameter optimization.
+        """Perform adaptive hybrid search with parameter optimization.
 
-        Automatically selects optimal fusion strategy and weights based on
-        query characteristics and performance targets.
+        Selects optimal fusion strategy and weights based on query characteristics.
 
         Args:
             query: Search query text
             collection_name: Target collection for search
             limit: Maximum number of results to return
-            auto_optimize: Enable autonomous parameter optimization
+            auto_optimize: Enable parameter optimization
             performance_target: Target optimization (speed, relevance, balanced)
             filters: Optional metadata filters
             ctx: MCP context for logging
 
         Returns:
             Optimized hybrid search results with adaptation metadata
+
         """
         try:
             if ctx:
                 await ctx.info(
-                    f"Performing adaptive hybrid search: '{query}' targeting {performance_target}"
+                    f"Performing adaptive hybrid search: '{query}' "
+                    f"targeting {performance_target}"
                 )
 
             # Analyze query characteristics
@@ -239,7 +237,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Adaptive search completed with {optimal_params['fusion_strategy']} fusion"
+                    f"Adaptive search completed with "
+                    f"{optimal_params['fusion_strategy']} fusion"
                 )
 
         except Exception as e:
@@ -265,10 +264,7 @@ def register_tools(mcp, client_manager: ClientManager):
         fusion_strategy: str = "dbsf",
         ctx: Context = None,
     ) -> dict[str, Any]:
-        """Perform hybrid search across multiple collections with intelligent result fusion.
-
-        Implements cross-collection search with weighted fusion and
-        autonomous collection importance scoring.
+        """Perform hybrid search across multiple collections with result fusion.
 
         Args:
             query: Search query text
@@ -280,11 +276,13 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Multi-collection hybrid search results with cross-collection metadata
+
         """
         try:
             if ctx:
                 await ctx.info(
-                    f"Performing multi-collection hybrid search across {len(collections)} collections"
+                    f"Performing multi-collection hybrid search across "
+                    f"{len(collections)} collections"
                 )
 
             collection_results = {}
@@ -307,7 +305,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
                         if ctx:
                             await ctx.debug(
-                                f"Collection {collection}: {len(collection_result['results'])} results"
+                                f"Collection {collection}: "
+                                f"{len(collection_result['results'])} results"
                             )
 
                 except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
@@ -339,7 +338,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Multi-collection search completed: {len(fused_results['results'])} final results"
+                    f"Multi-collection search completed: "
+                    f"{len(fused_results['results'])} final results"
                 )
 
             return {
@@ -375,6 +375,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive capabilities information for hybrid search system
+
         """
         return {
             "fusion_strategies": {
@@ -404,15 +405,14 @@ def register_tools(mcp, client_manager: ClientManager):
                 "query_analysis": True,
                 "parameter_optimization": True,
                 "performance_targeting": True,
-                "ml_powered_selection": True,
             },
             "performance_targets": ["speed", "relevance", "balanced"],
             "multi_collection_support": {
                 "cross_collection_fusion": True,
                 "weighted_collections": True,
-                "intelligent_routing": True,
+                "routing": True,
             },
-            "autonomous_capabilities": {
+            "capabilities": {
                 "optimization_insights": True,
                 "parameter_adaptation": True,
                 "performance_correlation": True,
@@ -706,7 +706,7 @@ def _calculate_search_performance(
 async def _generate_optimization_insights(
     query: str, vector_results: dict, text_results: dict, fused_results: dict, ctx
 ) -> dict[str, Any]:
-    """Generate autonomous optimization insights."""
+    """Generate optimization insights."""
     vector_count = len(vector_results.get("points", []))
     text_count = len(text_results.get("points", []))
 

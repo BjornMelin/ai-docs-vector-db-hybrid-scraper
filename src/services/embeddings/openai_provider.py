@@ -218,7 +218,10 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             # Provide specific error messages based on error type
             error_msg = str(e)
             if "rate_limit_exceeded" in error_msg.lower():
-                msg = f"OpenAI rate limit exceeded. Please try again later or reduce batch size. Error: {e}"
+                msg = (
+                    f"OpenAI rate limit exceeded. Please try again later or reduce "
+                    f"batch size. Error: {e}"
+                )
                 raise EmbeddingServiceError(msg) from e
             if "insufficient_quota" in error_msg.lower():
                 msg = (
@@ -226,10 +229,17 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 )
                 raise EmbeddingServiceError(msg) from e
             if "invalid_api_key" in error_msg.lower():
-                msg = f"Invalid OpenAI API key. Please check your configuration. Error: {e}"
+                msg = (
+                    f"Invalid OpenAI API key. Please check your configuration. "
+                    f"Error: {e}"
+                )
                 raise EmbeddingServiceError(msg) from e
             if "context_length_exceeded" in error_msg.lower():
-                msg = f"Text too long for model {self.model_name}. Max tokens: {self.max_tokens_per_request}. Error: {e}"
+                msg = (
+                    f"Text too long for model "
+                    f"{self.model_name}. Max tokens: {self.max_tokens_per_request}. "
+                    f"Error: {e}"
+                )
                 raise EmbeddingServiceError(msg) from e
             msg = f"Failed to generate embeddings: {e}"
             raise EmbeddingServiceError(msg) from e
@@ -344,9 +354,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 file_response.id, "/v1/embeddings", "24h"
             )
 
-            logger.info(
-                f"Created batch job {batch_response.id} for {len(texts)} texts"
-            )  # TODO: Convert f-string to logging format
+            logger.info(f"Created batch job {batch_response.id} for {len(texts)} texts")
 
         except Exception as e:
             msg = f"Failed to create batch job: {e}"

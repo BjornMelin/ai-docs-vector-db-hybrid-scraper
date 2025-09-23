@@ -748,7 +748,7 @@ class TestSystemMonitoring:
                     current_latency = self.base_latency * self.degradation_factor
 
                     # Add some randomness
-                    actual_latency = current_latency * random.uniform(0.8, 1.5)
+                    actual_latency = current_latency * random.uniform(0.8, 1.5)  # noqa: S311
 
                     start_time = time.perf_counter()
                     await asyncio.sleep(actual_latency)
@@ -762,7 +762,7 @@ class TestSystemMonitoring:
 
                     # Introduce errors as performance degrades
                     error_probability = max(0, (self.degradation_factor - 2.0) / 10)
-                    if random.random() < error_probability:
+                    if random.random() < error_probability:  # noqa: S311
                         msg = "Service degraded - operation failed"
                         raise TestError(msg)
                         msg = "Service degraded - operation failed"
@@ -784,7 +784,7 @@ class TestSystemMonitoring:
                 requests_per_second=15,
                 duration_seconds=300,  # 5 minutes to see degradation
                 success_criteria={
-                    "max_error_rate_percent": 30.0,  # Allow failures as service degrades
+                    "max_error_rate_percent": 30.0,  # Allow failures when degrading
                     "max_avg_response_time_ms": 8000.0,
                 },
             )
@@ -818,7 +818,9 @@ class TestSystemMonitoring:
                                 {
                                     "timestamp": time.time(),
                                     "call_count": degrading_service.call_count,
-                                    "degradation_factor": degrading_service.degradation_factor,
+                                    "degradation_factor": (
+                                        degrading_service.degradation_factor
+                                    ),
                                     "avg_response_time_ms": avg_response_time,
                                     "p95_response_time_ms": p95_response_time,
                                 }
@@ -855,7 +857,8 @@ class TestSystemMonitoring:
                 / first_sample["avg_response_time_ms"]
             )
             assert degradation_ratio > 1.5, (
-                f"Insufficient performance degradation detected: {degradation_ratio:.2f}x"
+                f"Insufficient performance degradation detected: "
+                f"{degradation_ratio:.2f}x"
             )
 
             # Verify degradation factor increased

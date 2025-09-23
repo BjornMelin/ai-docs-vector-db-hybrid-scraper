@@ -25,7 +25,6 @@ BENCHMARK_SUITES: dict[str, str] = {
 
 def _normalize_command(command: Sequence[str | os.PathLike[str]]) -> list[str]:
     """Convert command arguments into safe string tokens."""
-
     normalized: list[str] = []
     for token in command:
         token_str = os.fspath(token)
@@ -44,12 +43,11 @@ def _run_command(
     **kwargs: Any,
 ) -> subprocess.CompletedProcess[Any]:
     """Execute a subprocess with defensively normalised arguments."""
-
     if "shell" in kwargs:
         msg = "shell execution is not permitted for CLI commands"
         raise ValueError(msg)
     normalized = _normalize_command(command)
-    return subprocess.run(
+    return subprocess.run(  # noqa: S603
         normalized,
         check=check,
         capture_output=capture_output,
@@ -60,7 +58,6 @@ def _run_command(
 
 def _dev_script_command(*args: str) -> list[str | os.PathLike[str]]:
     """Build an invocation of the shared dev helper script."""
-
     return [sys.executable, DEV_SCRIPT, *args]
 
 
@@ -76,7 +73,6 @@ def cli():
 @click.option("--port", default=8000)
 def dev(mode: str, reload: bool, host: str, port: int):
     """Start development server"""
-
     os.environ["AI_DOCS__MODE"] = mode
     click.echo(f"🚀 Starting development server in {mode} mode")
     click.echo(f"📍 Server: http://{host}:{port}")
@@ -104,7 +100,6 @@ def test(
     extra_args: tuple[str, ...],
 ):
     """Run test suite with optimized feedback loops."""
-
     cmd: list[str | os.PathLike[str]] = _dev_script_command(
         "test", "--profile", profile
     )
@@ -160,7 +155,6 @@ def setup():
 @click.option("--fix-lint/--no-fix-lint", default=True)
 def quality(skip_format: bool, fix_lint: bool):
     """Run code quality checks (format, lint, typecheck)."""
-
     cmd: list[str | os.PathLike[str]] = _dev_script_command("quality")
     if skip_format:
         cmd.append("--skip-format")
@@ -196,7 +190,6 @@ def docs(host: str, port: int):
 @click.option("--skip-health-check/--no-skip-health-check", default=False)
 def services(action: str, stack: str, skip_health_check: bool):
     """Manage local services (Qdrant, monitoring stack)."""
-
     cmd: list[str | os.PathLike[str]] = _dev_script_command(
         "services",
         action,
@@ -216,7 +209,6 @@ def services(action: str, stack: str, skip_health_check: bool):
 )
 def benchmark(profile: str):
     """Run performance benchmarks."""
-
     click.echo(f"⚡ Running {profile} benchmark profile...")
     suite = BENCHMARK_SUITES.get(profile, "performance")
     _run_command(_dev_script_command("benchmark", "--suite", suite))
@@ -225,7 +217,6 @@ def benchmark(profile: str):
 @cli.command()
 def validate():
     """Validate project configuration and health."""
-
     click.echo("🔍 Validating project configuration...")
 
     result = _run_command(

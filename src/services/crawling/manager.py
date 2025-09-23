@@ -85,11 +85,11 @@ class CrawlManager:
         """Scrape URL with intelligent 5-tier AutomationRouter selection.
 
         Uses AutomationRouter's 5-tier approach:
-        - Tier 0: Lightweight HTTP (httpx + BeautifulSoup) - 5-10x faster for static content
+        - Tier 0: Lightweight HTTP (httpx + BS4) - 5-10x faster for static content
         - Tier 1: Crawl4AI Basic (90% of sites) - 4-6x faster, browser automation
         - Tier 2: Crawl4AI Enhanced (Interactive content) - Custom JavaScript execution
-        - Tier 3: browser-use (Complex interactions) - AI-powered automation with multi-LLM support
-        - Tier 4: Playwright + Firecrawl (Maximum control) - Full programmatic control + API fallback
+        - Tier 3: browser-use (Complex interactions) - AI-automation; multi-LLM support
+        - Tier 4: Playwright + Firecrawl (Maximum control) - Programmatic; API fallback
 
         Args:
             url: URL to scrape
@@ -322,12 +322,16 @@ class CrawlManager:
         # This would require direct access to Firecrawl adapter
         # For now, use crawl_site as an alternative approach
         logger.warning(
-            "URL mapping not supported through AutomationRouter. Use crawl_site() instead."
+            "URL mapping not supported through AutomationRouter. "
+            "Use crawl_site() instead."
         )
 
         return {
             "success": False,
-            "error": "URL mapping not supported through 5-tier AutomationRouter. Use crawl_site() method instead.",
+            "error": (
+                "URL mapping not supported through 5-tier AutomationRouter. "
+                "Use crawl_site() method instead."
+            ),
             "urls": [],
             "total": 0,
         }

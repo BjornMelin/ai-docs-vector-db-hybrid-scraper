@@ -124,6 +124,7 @@ def initialize_drift_detector(
 
     Returns:
         ConfigDriftDetector instance
+
     """
     global _drift_detector
 

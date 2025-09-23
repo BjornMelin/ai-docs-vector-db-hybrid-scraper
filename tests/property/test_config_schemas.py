@@ -56,7 +56,8 @@ class TestCacheConfigProperties:
 
     @given(cache_configurations())
     def test_cache_config_valid_properties(self, config_data: dict[str, Any]):
-        """Test that valid cache configurations always create valid CacheConfig objects."""
+        """Test that valid cache configurations always create valid
+        CacheConfig objects."""
         config = CacheConfig(**config_data)
 
         # Verify basic constraints
@@ -515,7 +516,9 @@ class TestCompleteConfigProperties:
     def test_complete_config_valid_properties(self, config_data: dict[str, Any]):
         """Test that valid complete configurations create valid objects."""
         note(
-            f"Testing configuration with providers: {config_data.get('embedding_provider')}, {config_data.get('crawl_provider')}"
+            f"Testing configuration with providers: "
+            f"{config_data.get('embedding_provider')}, "
+            f"{config_data.get('crawl_provider')}"
         )
 
         # Ensure API keys are provided for providers that require them

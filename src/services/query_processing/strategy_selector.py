@@ -37,85 +37,117 @@ class SearchStrategySelector:
                 "primary": SearchStrategy.SEMANTIC,
                 "fallbacks": [SearchStrategy.HYBRID, SearchStrategy.MULTI_STAGE],
                 "dimension": MatryoshkaDimension.MEDIUM,
-                "reasoning": "Conceptual queries benefit from semantic understanding",
+                "reasoning": ("Conceptual queries benefit from semantic understanding"),
             },
             QueryIntent.PROCEDURAL: {
                 "primary": SearchStrategy.HYDE,
                 "fallbacks": [SearchStrategy.SEMANTIC, SearchStrategy.HYBRID],
                 "dimension": MatryoshkaDimension.LARGE,
-                "reasoning": "Step-by-step queries benefit from hypothetical document generation",
+                "reasoning": (
+                    "Step-by-step queries benefit from hypothetical document generation"
+                ),
             },
             QueryIntent.FACTUAL: {
                 "primary": SearchStrategy.HYBRID,
                 "fallbacks": [SearchStrategy.SEMANTIC, SearchStrategy.FILTERED],
                 "dimension": MatryoshkaDimension.SMALL,
-                "reasoning": "Factual queries benefit from precise keyword + semantic matching",
+                "reasoning": (
+                    "Factual queries benefit from precise keyword + semantic matching"
+                ),
             },
             QueryIntent.TROUBLESHOOTING: {
                 "primary": SearchStrategy.RERANKED,
                 "fallbacks": [SearchStrategy.HYBRID, SearchStrategy.SEMANTIC],
                 "dimension": MatryoshkaDimension.LARGE,
-                "reasoning": "Problem-solving queries need comprehensive reranking for relevance",
+                "reasoning": (
+                    "Problem-solving queries need comprehensive reranking for relevance"
+                ),
             },
             QueryIntent.COMPARATIVE: {
                 "primary": SearchStrategy.MULTI_STAGE,
                 "fallbacks": [SearchStrategy.RERANKED, SearchStrategy.HYBRID],
                 "dimension": MatryoshkaDimension.LARGE,
-                "reasoning": "Comparison queries benefit from multi-stage retrieval analysis",
+                "reasoning": (
+                    "Comparison queries benefit from multi-stage retrieval analysis"
+                ),
             },
             QueryIntent.ARCHITECTURAL: {
                 "primary": SearchStrategy.HYDE,
                 "fallbacks": [SearchStrategy.MULTI_STAGE, SearchStrategy.RERANKED],
                 "dimension": MatryoshkaDimension.LARGE,
-                "reasoning": "Architecture queries need comprehensive hypothetical document analysis",
+                "reasoning": (
+                    "Architecture queries need comprehensive hypothetical "
+                    "document analysis"
+                ),
             },
             QueryIntent.PERFORMANCE: {
                 "primary": SearchStrategy.RERANKED,
                 "fallbacks": [SearchStrategy.HYBRID, SearchStrategy.MULTI_STAGE],
                 "dimension": MatryoshkaDimension.LARGE,
-                "reasoning": "Performance queries require high-quality ranking for optimization insights",
+                "reasoning": (
+                    "Performance queries require high-quality ranking for "
+                    "optimization insights"
+                ),
             },
             QueryIntent.SECURITY: {
                 "primary": SearchStrategy.FILTERED,
                 "fallbacks": [SearchStrategy.RERANKED, SearchStrategy.HYBRID],
                 "dimension": MatryoshkaDimension.LARGE,
-                "reasoning": "Security queries benefit from filtered search with strict relevance",
+                "reasoning": (
+                    "Security queries benefit from filtered search with "
+                    "strict relevance"
+                ),
             },
             QueryIntent.INTEGRATION: {
                 "primary": SearchStrategy.HYBRID,
                 "fallbacks": [SearchStrategy.SEMANTIC, SearchStrategy.FILTERED],
                 "dimension": MatryoshkaDimension.MEDIUM,
-                "reasoning": "Integration queries need balanced keyword and semantic matching",
+                "reasoning": (
+                    "Integration queries need balanced keyword and semantic matching"
+                ),
             },
             QueryIntent.BEST_PRACTICES: {
                 "primary": SearchStrategy.RERANKED,
                 "fallbacks": [SearchStrategy.SEMANTIC, SearchStrategy.HYDE],
                 "dimension": MatryoshkaDimension.MEDIUM,
-                "reasoning": "Best practice queries benefit from quality-focused reranking",
+                "reasoning": (
+                    "Best practice queries benefit from quality-focused reranking"
+                ),
             },
             QueryIntent.CODE_REVIEW: {
                 "primary": SearchStrategy.MULTI_STAGE,
                 "fallbacks": [SearchStrategy.RERANKED, SearchStrategy.SEMANTIC],
                 "dimension": MatryoshkaDimension.LARGE,
-                "reasoning": "Code review queries need multi-stage analysis for comprehensive feedback",
+                "reasoning": (
+                    "Code review queries need multi-stage analysis for "
+                    "comprehensive feedback"
+                ),
             },
             QueryIntent.MIGRATION: {
                 "primary": SearchStrategy.HYDE,
                 "fallbacks": [SearchStrategy.MULTI_STAGE, SearchStrategy.RERANKED],
                 "dimension": MatryoshkaDimension.LARGE,
-                "reasoning": "Migration queries benefit from hypothetical scenario generation",
+                "reasoning": (
+                    "Migration queries benefit from hypothetical scenario generation"
+                ),
             },
             QueryIntent.DEBUGGING: {
                 "primary": SearchStrategy.FILTERED,
                 "fallbacks": [SearchStrategy.RERANKED, SearchStrategy.HYBRID],
                 "dimension": MatryoshkaDimension.LARGE,
-                "reasoning": "Debugging queries need precise filtering for specific problem solutions",
+                "reasoning": (
+                    "Debugging queries need precise filtering for specific "
+                    "problem solutions"
+                ),
             },
             QueryIntent.CONFIGURATION: {
                 "primary": SearchStrategy.FILTERED,
                 "fallbacks": [SearchStrategy.HYBRID, SearchStrategy.SEMANTIC],
                 "dimension": MatryoshkaDimension.MEDIUM,
-                "reasoning": "Configuration queries benefit from filtered search with specific parameters",
+                "reasoning": (
+                    "Configuration queries benefit from filtered search with "
+                    "specific parameters"
+                ),
             },
         }
 

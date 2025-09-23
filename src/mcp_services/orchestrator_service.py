@@ -1,4 +1,4 @@
-"""Orchestrator Service - Central coordination service for multi-service MCP architecture.
+"""Orchestrator Service - Central coordination service for multi-service MCP.
 
 This service coordinates between domain-specific services and provides
 composer functionality for complex multi-service workflows.
@@ -29,8 +29,8 @@ logger = logging.getLogger(__name__)
 class OrchestratorService:
     """FastMCP 2.0+ orchestrator service with multi-service coordination.
 
-    Implements autonomous coordination between domain-specific services
-    for complex multi-agent workflows and service composition.
+    Implements coordination between domain-specific services
+    for multi-agent workflows and service composition.
     """
 
     def __init__(self, name: str = "orchestrator-service"):
@@ -38,6 +38,7 @@ class OrchestratorService:
 
         Args:
             name: Service name for MCP registration
+
         """
         self.mcp = FastMCP(
             name,
@@ -46,16 +47,16 @@ class OrchestratorService:
 
             Features:
             - Multi-service workflow orchestration and coordination
-            - Autonomous service selection and load balancing
+            - Service selection and load balancing
             - Cross-service state management and synchronization
-            - Intelligent service composition for complex workflows
+            - Service composition for complex workflows
             - Performance optimization across service boundaries
             - Unified error handling and fault tolerance
 
-            Autonomous Capabilities:
+            Capabilities:
             - Dynamic service discovery and capability assessment
-            - Intelligent workflow decomposition and service routing
-            - Self-healing multi-service coordination
+            - Workflow decomposition and service routing
+            - Fault-tolerant multi-service coordination
             - Performance correlation and optimization across services
             """,
         )
@@ -76,6 +77,7 @@ class OrchestratorService:
 
         Args:
             client_manager: Shared client manager instance
+
         """
         self.client_manager = client_manager
 
@@ -176,11 +178,12 @@ class OrchestratorService:
 
             Returns:
                 Workflow execution results with service coordination details
+
             """
             if not self.agentic_orchestrator:
                 return {"error": "Agentic orchestrator not initialized"}
 
-            # Use AgenticOrchestrator for intelligent workflow coordination
+            # Use AgenticOrchestrator for workflow coordination
             deps = create_agent_dependencies(
                 client_manager=self.client_manager, session_id="multi_service_workflow"
             )
@@ -208,6 +211,7 @@ class OrchestratorService:
 
             Returns:
                 Dictionary with service capabilities and status
+
             """
             capabilities = {"services": {}}
 
@@ -224,7 +228,11 @@ class OrchestratorService:
                         capabilities["services"][
                             service_name
                         ] = await self._get_service_info_safely(service)
-                    except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
+                    except (
+                        asyncio.CancelledError,
+                        TimeoutError,
+                        RuntimeError,
+                    ) as e:  # noqa: BLE001
                         capabilities["services"][service_name] = {
                             "status": "error",
                             "error": str(e),
@@ -242,6 +250,7 @@ class OrchestratorService:
 
             Returns:
                 Optimization results and recommendations
+
             """
             if not self.discovery_engine:
                 return {"error": "Discovery engine not available"}
@@ -272,6 +281,7 @@ class OrchestratorService:
 
         Returns:
             Configured FastMCP server for this service
+
         """
         return self.mcp
 
@@ -280,6 +290,7 @@ class OrchestratorService:
 
         Returns:
             Service metadata and capability information
+
         """
         return {
             "service": "orchestrator",
@@ -290,12 +301,12 @@ class OrchestratorService:
                 "service_composition",
                 "cross_service_optimization",
                 "unified_error_handling",
-                "agentic_coordination",
+                "coordination",
             ],
             "autonomous_features": [
                 "service_discovery",
-                "intelligent_routing",
-                "self_healing_coordination",
+                "routing",
+                "fault_tolerant_coordination",
                 "performance_optimization",
             ],
             "status": "active",
@@ -313,6 +324,7 @@ class OrchestratorService:
 
         Returns:
             Information about all domain-specific services
+
         """
         services_info = {}
 
@@ -327,7 +339,11 @@ class OrchestratorService:
             if service:
                 try:
                     services_info[service_name] = await service.get_service_info()
-                except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
+                except (
+                    asyncio.CancelledError,
+                    TimeoutError,
+                    RuntimeError,
+                ) as e:  # noqa: BLE001
                     services_info[service_name] = {"status": "error", "error": str(e)}
             else:
                 services_info[service_name] = {"status": "not_initialized"}

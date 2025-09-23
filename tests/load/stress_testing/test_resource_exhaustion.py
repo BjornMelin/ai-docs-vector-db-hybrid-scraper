@@ -243,7 +243,7 @@ class TestResourceExhaustion:
                 duration_seconds=120,
                 data_size_mb=50.0,  # Large documents
                 success_criteria={
-                    "max_error_rate_percent": 20.0,  # Allow some failures due to memory constraints
+                    "max_error_rate_percent": 20.0,  # Allow some failures
                     "max_avg_response_time_ms": 10000.0,  # Allow slower processing
                 },
             )
@@ -285,7 +285,8 @@ class TestResourceExhaustion:
     @pytest.mark.stress
     @pytest.mark.asyncio
     async def test_cpu_saturation_parallel_embeddings(self, load_test_runner):
-        """Test system behavior under CPU saturation from parallel embedding generation."""
+        """Test system behavior under CPU saturation from parallel
+        embedding generation."""
         monitor = ResourceMonitor(interval=0.5)
         monitor.start_monitoring()
 
@@ -360,7 +361,8 @@ class TestResourceExhaustion:
                     int(len(result.metrics.response_times) * 0.95)
                 ]
                 assert p95_response_time < 10.0, (
-                    f"P95 response time too high under CPU load: {p95_response_time:.2f}s"
+                    f"P95 response time too high under CPU load: "
+                    f"{p95_response_time:.2f}s"
                 )
 
         finally:
@@ -519,7 +521,7 @@ class TestResourceExhaustion:
                 requests_per_second=15,
                 duration_seconds=60,
                 success_criteria={
-                    "max_error_rate_percent": 30.0,  # Allow failures due to pool exhaustion
+                    "max_error_rate_percent": 30.0,  # Allow failures
                     "max_avg_response_time_ms": 3000.0,
                 },
             )
@@ -611,7 +613,7 @@ class TestResourceExhaustion:
                     requests_per_second=10,
                     duration_seconds=30,  # Shorter test due to resource constraints
                     success_criteria={
-                        "max_error_rate_percent": 50.0,  # Allow many failures due to FD limits
+                        "max_error_rate_percent": 50.0,  # Allow many failures
                         "max_avg_response_time_ms": 2000.0,
                     },
                 )
@@ -766,7 +768,7 @@ class TestResourceExhaustion:
                 requests_per_second=12,
                 duration_seconds=90,
                 success_criteria={
-                    "max_error_rate_percent": 40.0,  # Allow failures from resource exhaustion
+                    "max_error_rate_percent": 40.0,  # Allow failures
                     "max_avg_response_time_ms": 8000.0,
                 },
             )

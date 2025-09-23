@@ -401,20 +401,18 @@ class _NoOpCounter:
 
 def create_noop_tracer() -> _NoOpTracer:
     """Create a NoOp tracer instance for disabled observability paths."""
-
     return _NoOpTracer()
 
 
 def create_noop_meter() -> _NoOpMeter:
     """Create a NoOp meter instance for disabled observability paths."""
-
     return _NoOpMeter()
 
 
 class PerformanceTracker:
     """Performance tracking for agentic systems with OpenTelemetry integration.
 
-    Provides comprehensive performance monitoring for agent coordination,
+    Provides performance monitoring for agent coordination,
     tool execution, and system health metrics.
     """
 
@@ -423,6 +421,7 @@ class PerformanceTracker:
 
         Args:
             component_name: Name of the component being tracked
+
         """
         self.component_name = component_name
         self.tracer = get_tracer(f"performance.{component_name}")
@@ -472,8 +471,10 @@ class PerformanceTracker:
 
         Args:
             operation_id: Unique identifier for the operation
-            operation_type: Type of operation (e.g., 'tool_execution', 'agent_coordination')
+            operation_type:
+                Type of operation (e.g., 'tool_execution', 'agent_coordination')
             metadata: Additional metadata for the operation
+
         """
         current_time = time.time()
 
@@ -514,6 +515,7 @@ class PerformanceTracker:
 
         Returns:
             Operation performance data or None if operation not found
+
         """
         if operation_id not in self.current_operations:
             logger.warning("Operation %s not found in current operations", operation_id)
@@ -587,6 +589,7 @@ class PerformanceTracker:
 
         Returns:
             Performance summary statistics
+
         """
         # Filter operations
         operations = self.execution_history
@@ -648,6 +651,7 @@ class PerformanceTracker:
 
         Returns:
             List of recent operation records
+
         """
         operations = self.execution_history
         if operation_type:
@@ -668,6 +672,7 @@ class PerformanceTracker:
 
         Returns:
             Dictionary of active operations
+
         """
         current_time = time.time()
 

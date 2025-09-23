@@ -1,8 +1,8 @@
-"""Search Analytics Dashboard for Real-time Query Insights.
+"""Search Analytics Dashboard for Query Insights.
 
-This module provides a comprehensive analytics dashboard for tracking search patterns,
-performance metrics, user behavior, and optimization opportunities in real-time.
-Portfolio feature showcasing data analytics and visualization capabilities.
+This module provides an analytics dashboard for tracking search patterns,
+performance metrics, user behavior, and optimization opportunities.
+Showcasing data analytics and visualization capabilities.
 """
 
 import asyncio
@@ -55,14 +55,14 @@ class UserBehaviorInsight(BaseModel):
 
 
 class SearchAnalyticsDashboard(BaseService):
-    """Real-time search analytics dashboard for query patterns and performance insights.
+    """Search analytics dashboard for query patterns and performance insights.
 
-    This portfolio feature demonstrates:
-    - Real-time data analytics and pattern recognition
+    This demonstrates:
+    - Data analytics and pattern recognition
     - Performance monitoring and optimization insights
     - User behavior analysis and recommendation systems
     - Data visualization preparation and metrics aggregation
-    - Business intelligence capabilities for search systems
+    - Capabilities for search systems
     """
 
     def __init__(self):
@@ -82,7 +82,7 @@ class SearchAnalyticsDashboard(BaseService):
         self.pattern_detection_interval = 300  # 5 minutes
         self.last_pattern_analysis = 0
 
-        # Real-time metrics
+        # Metrics
         self.realtime_stats = {
             "queries_last_hour": 0,
             "avg_response_time": 0.0,
@@ -136,6 +136,7 @@ class SearchAnalyticsDashboard(BaseService):
             results_count: Number of results returned
             cache_hit: Whether result was from cache
             **metadata: Additional metadata to track
+
         """
         try:
             query_data = {
@@ -169,7 +170,7 @@ class SearchAnalyticsDashboard(BaseService):
             if len(self.query_history) > 1000:
                 self.query_history = self.query_history[-1000:]
 
-            # Update real-time stats
+            # Update stats
             await self._update_realtime_stats()
 
         except (TimeoutError, OSError, PermissionError):
@@ -184,6 +185,7 @@ class SearchAnalyticsDashboard(BaseService):
             metric_name: Name of the metric
             value: Metric value
             tags: Optional tags for categorization
+
         """
         try:
             metric = PerformanceMetric(
@@ -207,6 +209,7 @@ class SearchAnalyticsDashboard(BaseService):
 
         Returns:
             Dashboard data including metrics, patterns, and insights
+
         """
         try:
             # Ensure patterns are up to date
@@ -228,7 +231,9 @@ class SearchAnalyticsDashboard(BaseService):
                 "feature_utilization": await self._calculate_feature_utilization(),
                 "query_volume_timeline": await self._get_query_volume_timeline(),
                 "top_performing_queries": await self._get_top_performing_queries(),
-                "optimization_opportunities": await self._identify_optimization_opportunities(),
+                "optimization_opportunities": (
+                    await self._identify_optimization_opportunities()
+                ),
                 "last_updated": datetime.now(tz=UTC).isoformat(),
             }
 
@@ -247,6 +252,7 @@ class SearchAnalyticsDashboard(BaseService):
 
         Returns:
             Detailed analytics data
+
         """
         try:
             cutoff_time = datetime.now(tz=UTC) - timedelta(hours=time_range_hours)
@@ -322,6 +328,7 @@ class SearchAnalyticsDashboard(BaseService):
 
         Returns:
             List of actionable optimization recommendations
+
         """
         try:
             recommendations = []
@@ -348,7 +355,10 @@ class SearchAnalyticsDashboard(BaseService):
                             "type": "performance",
                             "priority": "high",
                             "title": "High Query Processing Time",
-                            "description": f"Average processing time is {avg_time:.0f}ms, consider optimization",
+                            "description": (
+                                f"Average processing time is {avg_time:.0f}ms, "
+                                "consider optimization"
+                            ),
                             "actions": [
                                 "Enable result caching for frequent queries",
                                 "Optimize vector index parameters",
@@ -365,7 +375,10 @@ class SearchAnalyticsDashboard(BaseService):
                             "type": "caching",
                             "priority": "medium",
                             "title": "Low Cache Hit Rate",
-                            "description": f"Cache hit rate is {cache_rate:.1%}, caching strategy could be improved",
+                            "description": (
+                                f"Cache hit rate is {cache_rate:.1%}, "
+                                "caching strategy could be improved"
+                            ),
                             "actions": [
                                 "Increase cache size",
                                 "Improve cache key generation",
@@ -386,13 +399,18 @@ class SearchAnalyticsDashboard(BaseService):
                             "type": "patterns",
                             "priority": "medium",
                             "title": "Frequent Query Patterns Detected",
-                            "description": f"Found {len(frequent_patterns)} frequent query patterns",
+                            "description": (
+                                f"Found {len(frequent_patterns)} "
+                                "frequent query patterns"
+                            ),
                             "actions": [
                                 "Create optimized search templates for common patterns",
                                 "Pre-compute results for frequent queries",
                                 "Consider auto-completion based on patterns",
                             ],
-                            "impact": "Could improve user experience and reduce server load",
+                            "impact": (
+                                "Could improve user experience and reduce server load"
+                            ),
                         }
                     )
 
@@ -538,7 +556,9 @@ class SearchAnalyticsDashboard(BaseService):
                         insights.append(
                             UserBehaviorInsight(
                                 insight_type="query_complexity",
-                                description="Users are asking increasingly complex questions",
+                                description=(
+                                    "Users are asking increasingly complex questions"
+                                ),
                                 impact_score=0.7,
                                 recommendations=[
                                     "Consider adding query assistance features",
@@ -549,9 +569,8 @@ class SearchAnalyticsDashboard(BaseService):
                                     "recent_avg_length": recent_avg,
                                     "previous_avg_length": older_avg,
                                     "increase_percentage": (
-                                        (recent_avg - older_avg) / older_avg
-                                    )
-                                    * 100,
+                                        (recent_avg - older_avg) / older_avg * 100
+                                    ),
                                 },
                             )
                         )
@@ -574,7 +593,8 @@ class SearchAnalyticsDashboard(BaseService):
                             description=f"High adoption of '{most_used[0]}' feature",
                             impact_score=0.6,
                             recommendations=[
-                                f"Optimize {most_used[0]} performance for better user experience",
+                                f"Optimize {most_used[0]} performance "
+                                "for better user experience",
                                 "Consider making this feature more prominent",
                                 "Explore similar features users might find valuable",
                             ],
@@ -636,20 +656,18 @@ class SearchAnalyticsDashboard(BaseService):
                         "recent_avg": recent_avg_time,
                         "previous_avg": older_avg_time,
                         "change_percent": (
-                            (recent_avg_time - older_avg_time) / older_avg_time
-                        )
-                        * 100,
+                            (recent_avg_time - older_avg_time) / older_avg_time * 100
+                        ),
                     },
                     "success_rate": {
                         "trend": success_trend,
                         "recent_rate": recent_success,
                         "previous_rate": older_success,
                         "change_percent": (
-                            (recent_success - older_success) / older_success
-                        )
-                        * 100
-                        if older_success > 0
-                        else 0,
+                            (recent_success - older_success) / older_success * 100
+                            if older_success > 0
+                            else 0
+                        ),
                     },
                 }
 
@@ -902,12 +920,14 @@ class SearchAnalyticsDashboard(BaseService):
                 "hourly_distribution": hour_counts,
                 "weekday_distribution": weekday_distribution,
                 "query_span_hours": (
-                    max(q["timestamp"] for q in queries)
-                    - min(q["timestamp"] for q in queries)
-                ).total_seconds()
-                / 3600
-                if len(queries) > 1
-                else 0,
+                    (
+                        max(q["timestamp"] for q in queries)
+                        - min(q["timestamp"] for q in queries)
+                    ).total_seconds()
+                    / 3600
+                    if len(queries) > 1
+                    else 0
+                ),
             }
 
         except (ConnectionError, OSError, PermissionError):

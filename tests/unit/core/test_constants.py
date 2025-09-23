@@ -279,19 +279,19 @@ class TestMigratedConfigModels:
         assert config.max_chunk_size >= config.chunk_size
 
     def test_hnsw_config_migration(self):
-        """Test HNSW configuration - these configs are no longer in the main config module."""
+        """Test HNSW config - not present in current config."""
         # HNSW configuration has been moved or reorganized
-        # This test is skipped as HNSWConfig is not available in current config
+        # Skipped as HNSWConfig is not available in current config
 
     def test_collection_hnsw_configs_migration(self):
-        """Test collection HNSW configs - these configs are no longer available."""
+        """Test collection HNSW configs - not present in current config."""
         # Collection HNSW configs have been moved or reorganized
-        # This test is skipped as CollectionHNSWConfigs is not available in current config
+        # Skipped as CollectionHNSWConfigs is not available in current config
 
     def test_vector_search_config_migration(self):
-        """Test vector search config - these configs are no longer in the main config module."""
+        """Test vector search config - not present in current config."""
         # Vector search configuration has been moved or reorganized
-        # This test is skipped as VectorSearchConfig is not available in current config
+        # Skipped as VectorSearchConfig is not available in current config
 
     def test_performance_config_migration(self):
         """Test performance configuration (migrated from RATE_LIMITS)."""

@@ -1,6 +1,7 @@
-"""Advanced service tests for the federated search service.
+"""Service tests for the federated search service.
 
-Tests for collection selection strategies, search modes, result merging strategies, and advanced search functionality.
+Tests for collection selection strategies, search modes, result merging strategies,
+and search functionality.
 """
 
 import asyncio

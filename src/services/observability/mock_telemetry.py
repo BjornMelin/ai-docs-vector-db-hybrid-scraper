@@ -81,6 +81,7 @@ def create_mock_telemetry() -> tuple[Any, ...]:
 
     Returns:
         Tuple of mock telemetry components
+
     """
     return (
         OTLPSpanExporter,

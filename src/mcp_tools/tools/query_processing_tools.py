@@ -1,7 +1,8 @@
-"""Advanced query processing tools for MCP server.
+"""Query processing tools for MCP server.
 
-This module exposes advanced query processing capabilities through the Model Context Protocol,
-including query expansion, clustering, federated search, personalization, and orchestration.
+This module exposes query processing capabilities through the Model Context
+Protocol, including query expansion, clustering, federated search, personalization,
+and orchestration.
 """
 
 import logging
@@ -260,10 +261,10 @@ def register_query_processing_tools(mcp, _client_manager: ClientManager):
     async def search_orchestrated(
         request: OrchestrationRequest, ctx: Context
     ) -> list[SearchResult]:
-        """Search with intelligent orchestration.
+        """Search with orchestration.
 
-        Automatically select and coordinate multiple processing stages
-        based on query characteristics and time/quality constraints.
+        Select and coordinate multiple processing stages based on query
+        characteristics and time/quality constraints.
         """
         return await orchestrated_search_tool(request, ctx, orchestrator)
 
@@ -456,7 +457,10 @@ async def _execute_orchestrated_search(
     # Convert results
     converted_results = []
     for r in result.results:
-        pipeline_info = f"Features: {', '.join(result.features_used) if result.features_used else 'basic'}"
+        pipeline_info = (
+            "Features: "
+            f"{', '.join(result.features_used) if result.features_used else 'basic'}"
+        )
         search_result = SearchResult(
             id=r.get("id", ""),
             content=r.get("content", ""),

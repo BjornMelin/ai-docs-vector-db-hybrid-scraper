@@ -20,7 +20,7 @@ from qdrant_client.models import (
 
 
 # Initialize numpy random generator
-rng = np.random.default_rng()
+rng = np.random.default_rng()  # noqa: S311
 
 
 logger = logging.getLogger(__name__)
@@ -286,7 +286,8 @@ class QdrantOptimizer:
 
             if not has_quantization:
                 recommendations.append(
-                    "Enable quantization to reduce memory usage and improve cache efficiency"
+                    "Enable quantization to reduce memory usage and improve cache "
+                    "efficiency"
                 )
 
             recommendations.append(
@@ -301,7 +302,8 @@ class QdrantOptimizer:
         # Memory optimization recommendations
         if not has_quantization:
             recommendations.append(
-                "Enable int8 quantization for 83% memory reduction with minimal quality loss"
+                "Enable int8 quantization for 83% memory reduction with minimal "
+                "quality loss"
             )
 
         return recommendations

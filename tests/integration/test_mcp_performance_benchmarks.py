@@ -52,7 +52,7 @@ def _get_performance_thresholds():
     # Use very lenient thresholds for test/CI environments
     if is_ci or is_test_env:
         return {
-            "degradation_threshold": 60.0,  # Very lenient for test environments (60% vs 20%)
+            "degradation_threshold": 60.0,  # lenient for test envs (60% vs 20%)
             "min_success_rate": 0.95,  # Slightly lower for CI
             "min_rps_multiplier": 0.6,  # More lenient RPS target
             "spike_recovery_threshold": 20.0,  # More lenient spike recovery
@@ -327,7 +327,8 @@ class TestMCPPerformanceBenchmarks:
 
             # Performance assertions with environment-based thresholds
             assert metrics.success_rate >= thresholds["min_success_rate"], (
-                f"Success rate {metrics.success_rate:.3f} < {thresholds['min_success_rate']:.3f}"
+                f"Success rate {metrics.success_rate:.3f} < "
+                f"{thresholds['min_success_rate']:.3f}"
             )
 
             # Adjust RPS expectations based on environment
@@ -339,7 +340,8 @@ class TestMCPPerformanceBenchmarks:
             # P95 response time should be reasonable
             max_p95_time = 0.15 if thresholds["degradation_threshold"] > 30 else 0.1
             assert metrics.p95_response_time < max_p95_time, (
-                f"P95 response time {metrics.p95_response_time:.3f}s > {max_p95_time:.3f}s"
+                f"P95 response time {metrics.p95_response_time:.3f}s > "
+                f"{max_p95_time:.3f}s"
             )
 
     @pytest.mark.asyncio
@@ -371,7 +373,8 @@ class TestMCPPerformanceBenchmarks:
 
         # Performance assertions with environment-based thresholds
         assert metrics.success_rate >= thresholds["min_success_rate"], (
-            f"Success rate {metrics.success_rate:.3f} < {thresholds['min_success_rate']:.3f}"
+            f"Success rate {metrics.success_rate:.3f} < "
+            f"{thresholds['min_success_rate']:.3f}"
         )
 
         min_rps = 50 * thresholds["min_rps_multiplier"]
@@ -427,7 +430,8 @@ class TestMCPPerformanceBenchmarks:
 
         # Mixed workload should still perform well with environment-based thresholds
         assert metrics.success_rate >= thresholds["min_success_rate"], (
-            f"Mixed workload success rate {metrics.success_rate:.3f} < {thresholds['min_success_rate']:.3f}"
+            f"Mixed workload success rate {metrics.success_rate:.3f} < "
+            f"{thresholds['min_success_rate']:.3f}"
         )
 
         min_rps = 80 * thresholds["min_rps_multiplier"]
@@ -615,18 +619,23 @@ class TestMCPPerformanceBenchmarks:
 
         # System should handle spikes gracefully with environment-appropriate thresholds
         assert spike_metrics.success_rate >= thresholds["min_success_rate"], (
-            f"Too many failures during spike: {spike_metrics.success_rate:.3f} < {thresholds['min_success_rate']:.3f}"
+            f"Too many failures during spike: "
+            f"{spike_metrics.success_rate:.3f} < "
+            f"{thresholds['min_success_rate']:.3f}"
         )
 
-        # Be more lenient with recovery performance in test environments due to timing variability
-        # If recovery degradation is extreme (>100%), it's likely a timing artifact, so we allow it
+        # Be more lenient with recovery perf in test envs due to timing var
+        # If recovery degradation is extreme (>100%) - likely a timing artifact, allow
         if recovery_degradation <= 100:  # Only enforce threshold for reasonable values
             assert recovery_degradation < thresholds["spike_recovery_threshold"], (
-                f"System did not recover properly after spike: {recovery_degradation:.1f}% >= {thresholds['spike_recovery_threshold']:.1f}%"
+                f"System did not recover properly after spike: "
+                f"{recovery_degradation:.1f}% >= "
+                f"{thresholds['spike_recovery_threshold']:.1f}%"
             )
         else:
             print(
-                f"Note: Recovery degradation ({recovery_degradation:.1f}%) likely due to timing artifacts in test environment"
+                f"Note: Recovery degradation ({recovery_degradation:.1f}%) likely "
+                "due to timing artifacts in test environment"
             )
 
     @pytest.mark.asyncio
@@ -853,8 +862,8 @@ class TestMCPResourceOptimization:
         print(f"Total connection overhead: {_total_conn_time:.2f}s")
         print(f"Connection overhead %: {conn_overhead_percent:.1f}%")
 
-        # With mock services, the overhead should be close to 100% since all time is "connection"
-        # In a real system with actual DB connections, pooling would reduce this significantly
+        # Mock services - the overhead should be ~100% since all time is "connection"
+        # In a real system with actual DB connections, pooling would reduce this
         assert avg_conn_time < 0.01, (
             f"Average connection time too high: {avg_conn_time * 1000:.2f}ms"
         )

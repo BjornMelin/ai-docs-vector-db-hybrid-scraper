@@ -1,7 +1,8 @@
 """Enhanced fixtures for  CLI testing.
 
 This module provides comprehensive fixtures for testing CLI components including
-mocked dependencies, Rich console capturing, questionary mocking, and async testing support.
+mocked dependencies, Rich console capturing, questionary mocking, and async
+testing support.
 Now includes  Rich CLI testing patterns and interactive flow simulation.
 """
 

@@ -65,7 +65,9 @@ class TestDocumentIngestionDataFlow:
             crawl_result = {
                 "success": True,
                 "url": url,
-                "content": f"<html><body><h1>Document {i + 1}</h1><p>Content for document {i + 1}</p></body></html>",
+                "content": f"<html><body><h1>Document {
+                    i + 1
+                }</h1><p>Content for document {i + 1}</p></body></html>",
                 "metadata": {
                     "status_code": 200,
                     "content_type": "text/html",
@@ -544,7 +546,10 @@ class TestSearchPipelineDataFlow:
                     "deep learning",
                     "supervised learning",
                 ],
-                "expanded_query": "machine learning ML algorithms text classification NLP neural networks",
+                "expanded_query": (
+                    "machine learning ML algorithms text classification "
+                    "NLP neural networks"
+                ),
             },
             "search_strategy": "hybrid_with_reranking",
         }
@@ -586,7 +591,9 @@ class TestSearchPipelineDataFlow:
                     "score": 0.85,
                     "payload": {
                         "title": "Supervised Learning Techniques",
-                        "content": "Supervised learning approaches for classification...",
+                        "content": (
+                            "Supervised learning approaches for classification..."
+                        ),
                         "url": "https://example.com/supervised-learning",
                         "metadata": {"author": "Dr. Williams", "date": "2024-03-10"},
                     },
@@ -610,7 +617,9 @@ class TestSearchPipelineDataFlow:
                     "url": "https://example.com/ml-classification",
                     "metadata": {"author": "Dr. Smith", "date": "2024-01-15"},
                     "highlights": ["machine learning", "classification algorithms"],
-                    "relevance_explanation": "Direct match for ML classification concepts",
+                    "relevance_explanation": (
+                        "Direct match for ML classification concepts"
+                    ),
                 },
                 {
                     "id": "doc_456",
@@ -644,7 +653,12 @@ class TestSearchPipelineDataFlow:
 
         # Stage 5: RAG answer generation (optional)
         rag_response = {
-            "answer": "Machine learning algorithms for text classification include various approaches such as neural networks, support vector machines, and ensemble methods. These algorithms analyze text features to categorize documents into predefined classes.",
+            "answer": (
+                "Machine learning algorithms for text classification include "
+                "various approaches such as neural networks, support vector "
+                "machines, and ensemble methods. These algorithms analyze text "
+                "features to categorize documents into predefined classes."
+            ),
             "source_documents": ["doc_123", "doc_456", "doc_789"],
             "confidence": 0.91,
             "answer_type": "comprehensive",

@@ -77,6 +77,7 @@ def create_app(mode: ApplicationMode | None = None) -> FastAPI:
 
     Returns:
         Configured FastAPI application instance
+
     """
     if mode is None:
         mode = get_current_mode()

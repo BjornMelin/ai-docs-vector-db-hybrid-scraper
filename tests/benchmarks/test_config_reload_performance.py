@@ -26,7 +26,7 @@ from src.config import Config, SecurityConfig
 
 
 def run_async(coro: Awaitable[Any]) -> Any:
-    """Execute coroutine in isolated event loop for synchronous benchmarking wrappers."""
+    """Execute coroutine in isolated event loop for sync benchmarking wrappers."""
     loop = asyncio.new_event_loop()
     try:
         return loop.run_until_complete(coro)
@@ -573,7 +573,8 @@ class TestDriftDetectionPerformance:
 
         # Should complete quickly even with multiple files
         print(
-            f"\n✅ Full drift detection cycle: Completed for {len(temp_config_files)} files"
+            f"\n✅ Full drift detection cycle: Completed for "
+            f"{len(temp_config_files)} files"
         )
 
     def test_drift_alert_performance(self, benchmark, drift_detector):
@@ -760,7 +761,8 @@ class TestWatchdogOptimization:
             _ = benchmark(watch_specific_files)
 
             print(
-                f"\n✅ File watch optimization: Monitoring {len(watched_files)} files efficiently"
+                f"\n✅ File watch optimization: Monitoring "
+                f"{len(watched_files)} files efficiently"
             )
 
         finally:
@@ -798,7 +800,8 @@ class TestWatchdogOptimization:
             assert result == 3  # Only checked 3 config files, not 23 _total files
 
             print(
-                f"\n✅ Optimized watching: Only {result} files checked (not {len(list(temp_path.iterdir()))})"
+                f"\n✅ Optimized watching: Only {result} files checked (not "
+                f"{len(list(temp_path.iterdir()))})"
             )
 
 

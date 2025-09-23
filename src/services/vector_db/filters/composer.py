@@ -2,7 +2,7 @@
 
 This module provides sophisticated filter composition capabilities including
 boolean logic operations (AND, OR, NOT), filter orchestration, performance optimization,
-and intelligent result merging for complex filtering scenarios.
+and result merging for complex filtering scenarios.
 """
 
 import asyncio
@@ -136,7 +136,9 @@ class FilterComposer(BaseFilter):
     def __init__(
         self,
         name: str = "filter_composer",
-        description: str = "Compose multiple filters using boolean logic and optimization",
+        description: str = (
+            "Compose multiple filters using boolean logic and optimization"
+        ),
         enabled: bool = True,
         priority: int = 50,
         max_cache_size: int = 1000,
@@ -210,7 +212,8 @@ class FilterComposer(BaseFilter):
             )
 
             self._logger.info(
-                f"Applied filter composition with {len(criteria.composition_rule.filters)} filters "
+                f"Applied filter composition with "
+                f"{len(criteria.composition_rule.filters)} filters "
                 f"using {criteria.composition_rule.operator.value} operator"
             )
 
@@ -712,7 +715,10 @@ class FilterComposer(BaseFilter):
                     else ""
                 )
                 required_info = "" if filter_ref.required else " (optional)"
-                explanation += f"{prefix}  - {filter_ref.filter_instance.name}{weight_info}{required_info}\n"
+                explanation += (
+                    f"{prefix}  - {filter_ref.filter_instance.name}"
+                    f"{weight_info}{required_info}\n"
+                )
 
             if rule.nested_rules:
                 for nested_rule in rule.nested_rules:

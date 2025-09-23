@@ -1,4 +1,5 @@
-"""Enhanced Crawl4AI provider with Memory-Adaptive Dispatcher for intelligent concurrency control."""
+"""Enhanced Crawl4AI provider with Memory-Adaptive
+Dispatcher for intelligent concurrency control."""
 
 import asyncio
 import logging
@@ -39,7 +40,8 @@ logger = logging.getLogger(__name__)
 
 
 class Crawl4AIProvider(BaseService, CrawlProvider):
-    """High-performance web crawling with Memory-Adaptive Dispatcher for intelligent concurrency control."""
+    """High-performance web crawling with
+    Memory-Adaptive Dispatcher for intelligent concurrency control."""
 
     def __init__(self, config: Crawl4AIConfig, rate_limiter: object = None):
         """Initialize Crawl4AI provider with Memory-Adaptive Dispatcher."""
@@ -146,7 +148,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
         # Cleanup Memory-Adaptive Dispatcher first
         if self.use_memory_dispatcher and self.dispatcher:
             try:
-                # MemoryAdaptiveDispatcher doesn't have cleanup method, just reset reference
+                # MemoryAdaptiveDispatcher doesn't have cleanup method, just reset ref
                 self.dispatcher = None
                 self.logger.info("MemoryAdaptiveDispatcher reference cleared")
             except (ConnectionError, OSError, PermissionError):
@@ -517,7 +519,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
             run_config = self._create_run_config(wait_for, js_code, extraction_strategy)
             run_config.stream = True
 
-            # Stream crawl results (MemoryAdaptiveDispatcher handles concurrency internally)
+            # Stream crawl results (MemoryAdaptiveDispatcher handles concur internally)
             # Note: AsyncWebCrawler doesn't have arun_stream, using arun instead
             result = await self._crawler.arun(url=url, config=run_config)
             if result:
@@ -611,11 +613,12 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
 
                         # Memory optimization: trim visited_urls if it gets too large
                         if len(visited_urls) > max_visited_urls:
-                            # Keep only the most recent 80% of URLs (simple LRU approximation)
+                            # Keep only the most recent 80% of URLs (simple LRU approx)
                             keep_count = int(max_visited_urls * 0.8)
                             visited_urls = set(list(visited_urls)[-keep_count:])
                             self.logger.debug(
-                                f"Trimmed visited_urls from {max_visited_urls} to {keep_count} for memory optimization"
+                                f"Trimmed visited_urls from {max_visited_urls} to "
+                                f"{keep_count} for memory optimization"
                             )
 
                 if not batch_urls:
@@ -647,9 +650,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
                                 ):
                                     to_visit.append(link_url)
 
-                self.logger.info(
-                    f"Crawled {len(pages)}/{max_pages} pages from {url}"
-                )  # TODO: Convert f-string to logging format
+                self.logger.info(f"Crawled {len(pages)}/{max_pages} pages from {url}")
 
             return {
                 "success": True,
@@ -801,5 +802,7 @@ class Crawl4AIProvider(BaseService, CrawlProvider):
 # - Two-tier caching (local + DragonflyDB)
 # - Better memory management and compression
 #
-# CrawlBenchmark functionality should be moved to scripts/benchmark_crawl4ai_performance.py
+# CrawlBenchmark functionality should be
+# moved to scripts/benchmark_crawl4ai_performance.py
+
 # for standalone performance testing.

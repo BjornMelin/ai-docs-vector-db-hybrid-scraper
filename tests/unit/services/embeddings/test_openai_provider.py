@@ -94,8 +94,9 @@ class TestOpenAIProviderInitialization:
 
     @pytest.mark.asyncio
     async def test_initialization_client_manager_fallback(self, mock_client_manager):
-        """Test initialization when ClientManager returns None (fallback to direct client)."""
-        # ClientManager returns None, so provider should fail since it requires ClientManager
+        """Test init when ClientManager returns None (fallback to direct client)."""
+        # ClientManager returns None, so provider
+        # should fail since it requires ClientManager
         mock_client_manager.get_openai_client.return_value = None
 
         provider = OpenAIEmbeddingProvider(
@@ -250,7 +251,7 @@ class TestOpenAIProviderEmbeddingGeneration:
     ):
         """Test embedding generation with large batch requiring multiple API calls."""
 
-        # Mock responses for each batch - need to return the correct number of embeddings
+        # Mock responses for each batch - must return the correct number of embeddings
         def mock_create_embeddings(*_args, **_kwargs):
             # Get the input text count from the request
             input_texts = _kwargs.get("input", [])
@@ -282,7 +283,7 @@ class TestOpenAIProviderEmbeddingGeneration:
     async def test_generate_embeddings_with_dimensions(
         self, mock_client_manager, mock_openai_client
     ):
-        """Test embedding generation with custom dimensions for text-embedding-3 models."""
+        """Test embedding gen with custom dimensions for text-embedding-3 models."""
         mock_client_manager.get_openai_client.return_value = mock_openai_client
 
         provider = OpenAIEmbeddingProvider(

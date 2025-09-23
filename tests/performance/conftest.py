@@ -659,7 +659,7 @@ def mock_search_manager():
     async def mock_search(query: str):
         """Mock search implementation with realistic timing."""
         # Simulate realistic search latency (20-80ms)
-        await asyncio.sleep(random.uniform(0.02, 0.08))
+        await asyncio.sleep(random.uniform(0.02, 0.08))  # noqa: S311
 
         return {
             "query": query,
@@ -671,7 +671,7 @@ def mock_search_manager():
                 }
                 for i in range(5)
             ],
-            "total_time": random.uniform(0.02, 0.08),
+            "total_time": random.uniform(0.02, 0.08),  # noqa: S311
         }
 
     search_manager.search = mock_search
@@ -690,7 +690,9 @@ def mock_qdrant_client():
 
     # Mock search operations
     async def mock_search(*args, **kwargs):
-        await asyncio.sleep(random.uniform(0.01, 0.05))  # Simulate search time
+        await asyncio.sleep(
+            random.uniform(0.01, 0.05)
+        )  # Simulate search time  # noqa: S311
         return [
             {
                 "id": f"point_{i}",
@@ -708,7 +710,7 @@ def mock_qdrant_client():
                     vectors=MagicMock(
                         size=384,
                         distance=MagicMock(value="Cosine"),
-                        quantization_config=MagicMock(),  # Simulates quantization enabled
+                        quantization_config=MagicMock(),  # Simulates enabled
                         hnsw_config=MagicMock(m=32, ef_construct=200),
                     )
                 )
@@ -776,9 +778,9 @@ def performance_test_vectors():
     """Generate test vectors for performance testing."""
     if np is not None:
         # Generate 100 test vectors of dimension 384
-        return [np.random.random(384).tolist() for _ in range(100)]
+        return [np.random.random(384).tolist() for _ in range(100)]  # noqa: S311
     # Fallback to Python random if numpy not available
-    return [[random.random() for _ in range(384)] for _ in range(100)]
+    return [[random.random() for _ in range(384)] for _ in range(100)]  # noqa: S311
 
 
 @pytest.fixture

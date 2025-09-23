@@ -1,8 +1,8 @@
 """Security middleware for production-grade security headers and protection.
 
-This middleware adds essential security headers and provides basic protection
-against common web vulnerabilities in production deployments, including
-Redis-backed rate limiting for distributed deployment scenarios.
+This middleware adds essential security headers and provides
+basic protection against common web vulnerabilities in production deployments,
+including Redis-backed rate limiting for distributed deployment scenarios.
 """
 
 import logging
@@ -60,7 +60,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         # Security headers to inject
         self._security_headers = self._build_security_headers()
 
-        # Note: Redis initialization is done lazily or explicitly via _initialize_redis()
+        # Note: Redis init is done lazily or explicitly via _initialize_redis()
 
     async def _initialize_redis(self) -> None:
         """Initialize Redis connection for distributed rate limiting.
@@ -224,6 +224,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             True if request is allowed, False if rate limited
+
         """
         try:
             # Create rate limiting key
@@ -293,6 +294,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             True if Redis is healthy, False otherwise
+
         """
         if not self.redis_client:
             return False

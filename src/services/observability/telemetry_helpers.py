@@ -101,9 +101,9 @@ except ImportError:
 
 def _validate_telemetry_components() -> bool:
     """Validate required telemetry components are available."""
-
     if not OPENTELEMETRY_AVAILABLE:
         try:
+
             def _resolve(module_name: str, attr: str | None = None):
                 module = sys.modules.get(module_name)
                 if module is None:
@@ -150,6 +150,7 @@ def _validate_telemetry_components() -> bool:
             raise
 
     if globals().get("metrics") is None:
+
         class _MetricsStub:
             def __init__(self) -> None:
                 self._provider = None
@@ -163,6 +164,7 @@ def _validate_telemetry_components() -> bool:
         globals()["metrics"] = _MetricsStub()
 
     if globals().get("trace") is None:
+
         class _TraceStub:
             def __init__(self) -> None:
                 self._provider = None
@@ -193,7 +195,6 @@ def _validate_telemetry_components() -> bool:
 
 def _load_instrumentor(module_name: str, attr_name: str):
     """Load instrumentation class dynamically if not already imported."""
-
     module = sys.modules.get(module_name)
     if module is None:
         try:
@@ -212,6 +213,7 @@ def _create_resource(config: "ObservabilityConfig") -> object | None:
 
     Returns:
         Resource object or None if creation fails
+
     """
     try:
         if get_resource_attributes is None:
@@ -235,6 +237,7 @@ def _initialize_tracing(
 
     Returns:
         True if initialization successful, False otherwise
+
     """
     try:
         tracer_provider = TracerProvider(resource=resource)
@@ -271,7 +274,9 @@ def _initialize_tracing(
         return tracer_provider
 
 
-def _initialize_metrics(config: "ObservabilityConfig", resource: object) -> object | None:
+def _initialize_metrics(
+    config: "ObservabilityConfig", resource: object
+) -> object | None:
     """Initialize OpenTelemetry metrics.
 
     Args:
@@ -280,6 +285,7 @@ def _initialize_metrics(config: "ObservabilityConfig", resource: object) -> obje
 
     Returns:
         True if initialization successful, False otherwise
+
     """
     try:
         # Initialize metrics
@@ -311,6 +317,7 @@ def _setup_fastapi_instrumentation(config: "ObservabilityConfig") -> bool:
 
     Args:
         config: Observability configuration
+
     """
     if not config.instrument_fastapi:
         return False
@@ -349,6 +356,7 @@ def _setup_httpx_instrumentation(config: "ObservabilityConfig") -> bool:
 
     Args:
         config: Observability configuration
+
     """
     if not config.instrument_httpx:
         return False
@@ -387,6 +395,7 @@ def _setup_redis_instrumentation(config: "ObservabilityConfig") -> bool:
 
     Args:
         config: Observability configuration
+
     """
     if not config.instrument_redis:
         return False
@@ -425,6 +434,7 @@ def _setup_sqlalchemy_instrumentation(config: "ObservabilityConfig") -> bool:
 
     Args:
         config: Observability configuration
+
     """
     if not config.instrument_sqlalchemy:
         return False

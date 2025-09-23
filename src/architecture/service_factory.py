@@ -52,6 +52,7 @@ class ModeAwareServiceFactory:
 
         Args:
             mode: Application mode to use. If None, detects from environment.
+
         """
         self.mode = mode or get_current_mode()
         self.mode_config = get_mode_config(self.mode)
@@ -71,6 +72,7 @@ class ModeAwareServiceFactory:
             name: Service name
             simple_impl: Implementation for simple mode
             enterprise_impl: Implementation for enterprise mode
+
         """
         if name not in self._service_registry:
             self._service_registry[name] = {}
@@ -90,6 +92,7 @@ class ModeAwareServiceFactory:
         Args:
             name: Service name
             implementation: Service implementation for both modes
+
         """
         self.register_service(name, implementation, implementation)
 
@@ -106,6 +109,7 @@ class ModeAwareServiceFactory:
             ServiceNotEnabledError: If service not enabled in current mode
             ServiceNotFoundError: If service not registered
             ServiceInitializationError: If service initialization fails
+
         """
         # Check if service is enabled in current mode
         if name not in self.mode_config.enabled_services:
@@ -151,7 +155,10 @@ class ModeAwareServiceFactory:
             fallback_key = "simple" if mode_key == "enterprise" else "enterprise"
             if fallback_key in mode_implementations:
                 logger.warning(
-                    "Service '%s' not available for %s mode, falling back to %s implementation",
+                    (
+                        "Service '%s' not available for %s mode, "
+                        "falling back to %s implementation"
+                    ),
                     name,
                     mode_key,
                     fallback_key,
@@ -171,6 +178,7 @@ class ModeAwareServiceFactory:
 
         Returns:
             Service instance or None if not available
+
         """
         try:
             return await self.get_service(name)
@@ -190,6 +198,7 @@ class ModeAwareServiceFactory:
 
         Returns:
             True if service is available and can be instantiated
+
         """
         try:
             # Check if enabled in current mode
@@ -209,6 +218,7 @@ class ModeAwareServiceFactory:
 
         Returns:
             list of service names available in current mode
+
         """
         return [
             service_name
@@ -224,6 +234,7 @@ class ModeAwareServiceFactory:
 
         Returns:
             Dictionary with service status information
+
         """
         return {
             "name": name,
@@ -241,6 +252,7 @@ class ModeAwareServiceFactory:
 
         Returns:
             True if service is registered
+
         """
         return name in self._service_registry
 
@@ -257,6 +269,7 @@ class ModeAwareServiceFactory:
 
         Raises:
             ServiceNotFoundError: If service not registered
+
         """
         if name not in self._service_registry:
             msg = f"Service '{name}' not registered"
@@ -281,6 +294,7 @@ class ModeAwareServiceFactory:
 
         Returns:
             Dictionary with mode information
+
         """
         return {
             "mode": self.mode.value,
@@ -297,6 +311,7 @@ class BaseService(ABC):
     """Abstract base class for mode-aware services."""
 
     def __init__(self):
+        """Initialize the mode-aware service."""
         self._initialized = False
         self._cleanup_called = False
 
@@ -362,7 +377,8 @@ async def get_service(name: str) -> ServiceProtocol:
 
 
 async def get_service_optional(name: str) -> ServiceProtocol | None:
-    """Get a service from the global service factory, returning None if not available."""
+    """Get a service from the global service factory, returning None if not
+    available."""
     factory = get_service_factory()
     return await factory.get_service_optional(name)
 

@@ -1,6 +1,6 @@
 """Health check system for monitoring service dependencies and application health.
 
-This module provides comprehensive health checking for all system dependencies
+This module provides health checking for all system dependencies
 including Qdrant, Redis, external APIs, and internal services.
 """
 
@@ -164,6 +164,7 @@ class QdrantHealthCheck(HealthCheck):
 
         Returns:
             Health check result
+
         """
         try:
             cluster_info = await self._get_cluster_info()
@@ -178,6 +179,7 @@ class QdrantHealthCheck(HealthCheck):
 
         Returns:
             Cluster info object
+
         """
         return await self.client.get_cluster_info()
 
@@ -189,6 +191,7 @@ class QdrantHealthCheck(HealthCheck):
 
         Returns:
             Health check result
+
         """
         if cluster_info and hasattr(cluster_info, "status"):
             return HealthCheckResult(
@@ -218,6 +221,7 @@ class QdrantHealthCheck(HealthCheck):
 
         Returns:
             Unhealthy health check result
+
         """
         return HealthCheckResult(
             name=self.name,
@@ -258,6 +262,7 @@ class RedisHealthCheck(HealthCheck):
 
         Returns:
             Health check result
+
         """
         redis_client = None
         try:
@@ -275,6 +280,7 @@ class RedisHealthCheck(HealthCheck):
 
         Returns:
             Redis client instance
+
         """
         return redis.from_url(self.redis_url)
 
@@ -286,6 +292,7 @@ class RedisHealthCheck(HealthCheck):
 
         Returns:
             Health check result
+
         """
         pong = await redis_client.ping()
         if not pong:
@@ -312,6 +319,7 @@ class RedisHealthCheck(HealthCheck):
 
         Returns:
             Unhealthy health check result
+
         """
         return HealthCheckResult(
             name=self.name,
@@ -325,6 +333,7 @@ class RedisHealthCheck(HealthCheck):
 
         Args:
             redis_client: Redis client to clean up
+
         """
         if redis_client:
             await redis_client.aclose()
@@ -375,6 +384,7 @@ class HTTPHealthCheck(HealthCheck):
 
         Returns:
             Health check result
+
         """
         try:
             return await self._make_http_request()
@@ -388,6 +398,7 @@ class HTTPHealthCheck(HealthCheck):
 
         Returns:
             Health check result
+
         """
         timeout = aiohttp.ClientTimeout(total=self.timeout_seconds)
         async with (
@@ -404,6 +415,7 @@ class HTTPHealthCheck(HealthCheck):
 
         Returns:
             Health check result
+
         """
         if response.status == self.expected_status:
             return HealthCheckResult(
@@ -419,7 +431,10 @@ class HTTPHealthCheck(HealthCheck):
         return HealthCheckResult(
             name=self.name,
             status=HealthStatus.UNHEALTHY,
-            message=f"HTTP endpoint returned status {response.status}, expected {self.expected_status}",
+            message=(
+                f"HTTP endpoint returned status {response.status}, "
+                f"expected {self.expected_status}"
+            ),
             duration_ms=0.0,
             metadata={"status_code": response.status},
         )
@@ -432,6 +447,7 @@ class HTTPHealthCheck(HealthCheck):
 
         Returns:
             Unhealthy health check result
+
         """
         return HealthCheckResult(
             name=self.name,
@@ -482,6 +498,7 @@ class SystemResourceHealthCheck(HealthCheck):
 
         Returns:
             Health check result
+
         """
         if psutil is None:
             return self._create_psutil_unavailable_result()
@@ -499,6 +516,7 @@ class SystemResourceHealthCheck(HealthCheck):
 
         Returns:
             Degraded health check result
+
         """
         return HealthCheckResult(
             name=self.name,
@@ -513,6 +531,7 @@ class SystemResourceHealthCheck(HealthCheck):
 
         Returns:
             Dictionary of resource metrics
+
         """
         cpu_percent = psutil.cpu_percent(interval=1)
         memory = psutil.virtual_memory()
@@ -534,6 +553,7 @@ class SystemResourceHealthCheck(HealthCheck):
 
         Returns:
             Health check result
+
         """
         issues = []
         status = HealthStatus.HEALTHY
@@ -579,6 +599,7 @@ class SystemResourceHealthCheck(HealthCheck):
 
         Returns:
             Unhealthy health check result
+
         """
         return HealthCheckResult(
             name=self.name,

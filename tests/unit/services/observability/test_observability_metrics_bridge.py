@@ -230,7 +230,9 @@ class TestOpenTelemetryMetricsBridge:
         cache_hit_ratio_gauge = Mock()
 
         # Order matches the metrics bridge setup:
-        # histograms: ai_operation_duration, vector_search_duration, vector_search_results, vector_search_quality, cache_latency
+        # histograms: ai_operation_duration, vector_search_duration,
+        # vector_search_results, vector_search_quality, cache_latency
+
         histograms = [Mock(), Mock(), Mock(), Mock(), cache_latency_hist] + [
             Mock()
         ] * 10
@@ -268,8 +270,9 @@ class TestOpenTelemetryMetricsBridge:
         request_size = Mock()
         response_size = Mock()
 
-        # Order: ai_operation_duration, vector_search_duration, vector_search_results, vector_search_quality,
-        # cache_latency, request_duration, request_size, response_size
+        # Order: ai_operation_duration, vector_search_duration,
+        # vector_search_results, vector_search_quality, cache_latency,
+        # request_duration, request_size, response_size
         histograms = [
             Mock(),
             Mock(),
@@ -358,7 +361,8 @@ class TestOpenTelemetryMetricsBridge:
         mock_metrics.get_meter.return_value = meter
 
         queue_depth = Mock()
-        # Order: cache_hit_ratio, error_rate, queue_depth, service_health, dependency_health
+        # Order: cache_hit_ratio, error_rate, queue_depth, service_health,
+        # dependency_health
         gauges = [Mock(), Mock(), queue_depth] + [Mock()] * 10
 
         meter.create_histogram.side_effect = [Mock()] * 15
@@ -379,7 +383,8 @@ class TestOpenTelemetryMetricsBridge:
         mock_metrics.get_meter.return_value = meter
 
         service_health = Mock()
-        # Order: cache_hit_ratio, error_rate, queue_depth, service_health, dependency_health
+        # Order: cache_hit_ratio, error_rate, queue_depth, service_health,
+        # dependency_health
         gauges = [Mock(), Mock(), Mock(), service_health] + [Mock()] * 10
 
         meter.create_histogram.side_effect = [Mock()] * 15
@@ -412,7 +417,8 @@ class TestOpenTelemetryMetricsBridge:
         mock_metrics.get_meter.return_value = meter
 
         dependency_health = Mock()
-        # Order: cache_hit_ratio, error_rate, queue_depth, service_health, dependency_health
+        # Order: cache_hit_ratio, error_rate, queue_depth, service_health,
+        # dependency_health
         gauges = [Mock(), Mock(), Mock(), Mock(), dependency_health] + [Mock()] * 10
 
         meter.create_histogram.side_effect = [Mock()] * 15

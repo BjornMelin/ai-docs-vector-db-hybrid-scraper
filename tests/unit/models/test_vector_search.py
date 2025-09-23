@@ -1,12 +1,9 @@
 """Unit tests for secure vector search models."""
 
-from datetime import datetime
-
 import pytest
 from pydantic import ValidationError
 
 from src.models.vector_search import (
-    AdvancedFilteredSearchRequest,
     AdvancedHybridSearchRequest,
     BasicSearchRequest,
     DimensionError,
@@ -18,12 +15,9 @@ from src.models.vector_search import (
     SearchResponse,
     SearchStage,
     SecureFilterModel,
-    SecureMetadataModel,
     SecurePayloadModel,
-    SecureSearchParamsModel,
     SecureSearchResult,
     SecureVectorModel,
-    VectorType,
 )
 
 
@@ -47,7 +41,7 @@ class TestSecureVectorModel:
         large_vector = [0.1] * 5000  # Exceeds 4096 limit
         with pytest.raises(DimensionError) as exc_info:
             SecureVectorModel(values=large_vector)
-        assert "Vector dimensions exceed maximum allowed" in str(exc_info.value)
+        assert "Vector dimensions exceed allowed" in str(exc_info.value)
 
     def test_invalid_values_rejected(self):
         """Test invalid values are rejected."""
@@ -66,9 +60,7 @@ class TestSecureFilterModel:
     def test_valid_filter(self):
         """Test valid filter creation."""
         filter_model = SecureFilterModel(
-            field="category",
-            operator="eq",
-            value="documentation"
+            field="category", operator="eq", value="documentation"
         )
         assert filter_model.field == "category"
         assert filter_model.operator == "eq"
@@ -77,20 +69,14 @@ class TestSecureFilterModel:
     def test_invalid_field_name_rejected(self):
         """Test invalid field names are rejected."""
         with pytest.raises(ValidationError) as exc_info:
-            SecureFilterModel(
-                field="invalid-field-name!",
-                operator="eq",
-                value="test"
-            )
+            SecureFilterModel(field="invalid-field-name!", operator="eq", value="test")
         assert "String should match pattern" in str(exc_info.value)
 
     def test_sql_injection_prevented(self):
         """Test SQL injection patterns are prevented."""
         with pytest.raises(FilterValidationError) as exc_info:
             SecureFilterModel(
-                field="category",
-                operator="eq",
-                value="'; DROP TABLE users; --"
+                field="category", operator="eq", value="'; DROP TABLE users; --"
             )
         assert "Potentially dangerous pattern" in str(exc_info.value)
 
@@ -109,15 +95,8 @@ class TestBasicSearchRequest:
     def test_with_filters(self):
         """Test request with filters."""
         vector = SecureVectorModel(values=[0.1, 0.2, 0.3])
-        filter_model = SecureFilterModel(
-            field="category",
-            operator="eq",
-            value="docs"
-        )
-        request = BasicSearchRequest(
-            query_vector=vector,
-            filters=[filter_model]
-        )
+        filter_model = SecureFilterModel(field="category", operator="eq", value="docs")
+        request = BasicSearchRequest(query_vector=vector, filters=[filter_model])
         assert len(request.filters) == 1
         assert request.filters[0] == filter_model
 
@@ -131,7 +110,7 @@ class TestAdvancedHybridSearchRequest:
         request = AdvancedHybridSearchRequest(
             query_vector=vector,
             dense_weight=0.6,
-            sparse_weight=0.6  # Total > 1.0, should be normalized
+            sparse_weight=0.6,  # Total > 1.0, should be normalized
         )
         # Weights should be normalized to sum to 1.0
         assert abs(request.dense_weight + request.sparse_weight - 1.0) < 0.01
@@ -143,11 +122,7 @@ class TestSearchStage:
     def test_valid_stage(self):
         """Test valid search stage creation."""
         vector = SecureVectorModel(values=[0.1, 0.2, 0.3])
-        stage = SearchStage(
-            stage_name="test_stage",
-            query_vector=vector,
-            weight=0.8
-        )
+        stage = SearchStage(stage_name="test_stage", query_vector=vector, weight=0.8)
         assert stage.stage_name == "test_stage"
         assert stage.query_vector == vector
         assert stage.weight == 0.8
@@ -158,7 +133,7 @@ class TestSearchStage:
         with pytest.raises(ValidationError) as exc_info:
             SearchStage(
                 stage_name="invalid stage name!",  # Contains spaces and special chars
-                query_vector=vector
+                query_vector=vector,
             )
         assert "String should match pattern" in str(exc_info.value)
 
@@ -170,13 +145,9 @@ class TestSecureSearchResult:
         """Test valid search result creation."""
         # Build the model to resolve forward references
         SecurePayloadModel.model_rebuild()
-        
+
         payload = SecurePayloadModel(content="Test content")
-        result = SecureSearchResult(
-            id="test-id",
-            score=0.95,
-            payload=payload
-        )
+        result = SecureSearchResult(id="test-id", score=0.95, payload=payload)
         assert result.id == "test-id"
         assert result.score == 0.95
         assert result.relevance_tier == "high"
@@ -185,17 +156,17 @@ class TestSecureSearchResult:
         """Test relevance tier calculation."""
         # Build the model to resolve forward references
         SecurePayloadModel.model_rebuild()
-        
+
         payload = SecurePayloadModel(content="Test content")
-        
+
         # High relevance
         result_high = SecureSearchResult(id="1", score=0.9, payload=payload)
         assert result_high.relevance_tier == "high"
-        
+
         # Medium relevance
         result_medium = SecureSearchResult(id="2", score=0.7, payload=payload)
         assert result_medium.relevance_tier == "medium"
-        
+
         # Low relevance
         result_low = SecureSearchResult(id="3", score=0.4, payload=payload)
         assert result_low.relevance_tier == "low"
@@ -208,15 +179,15 @@ class TestSearchResponse:
         """Test valid search response creation."""
         # Build the model to resolve forward references
         SecurePayloadModel.model_rebuild()
-        
+
         payload = SecurePayloadModel(content="Test content")
         result = SecureSearchResult(id="1", score=0.9, payload=payload)
-        
+
         response = SearchResponse(
             results=[result],
             total_count=1,
             search_time_ms=150,
-            accuracy=SearchAccuracy.HIGH
+            accuracy=SearchAccuracy.HIGH,
         )
         assert len(response.results) == 1
         assert response.total_count == 1
@@ -227,10 +198,10 @@ class TestSearchResponse:
         """Test performance score calculation."""
         # Build the model to resolve forward references
         SecurePayloadModel.model_rebuild()
-        
+
         payload = SecurePayloadModel(content="Test content")
         result = SecureSearchResult(id="1", score=0.9, payload=payload)
-        
+
         # Fast search with good cache efficiency
         response = SearchResponse(
             results=[result],
@@ -238,7 +209,7 @@ class TestSearchResponse:
             search_time_ms=100,  # Fast search
             accuracy=SearchAccuracy.HIGH,
             vector_ops=10,
-            cache_hits=8  # Good cache efficiency
+            cache_hits=8,  # Good cache efficiency
         )
         performance_score = response.performance_score
         assert 0.0 <= performance_score <= 1.0
@@ -252,15 +223,14 @@ class TestMultiStageSearchRequest:
         """Test stage weight normalization."""
         vector1 = SecureVectorModel(values=[0.1, 0.2, 0.3])
         vector2 = SecureVectorModel(values=[0.4, 0.5, 0.6])
-        
+
         stage1 = SearchStage(stage_name="stage1", query_vector=vector1, weight=0.3)
         stage2 = SearchStage(stage_name="stage2", query_vector=vector2, weight=0.9)
-        
+
         request = MultiStageSearchRequest(
-            stages=[stage1, stage2],
-            fusion_algorithm=FusionAlgorithm.RRF
+            stages=[stage1, stage2], fusion_algorithm=FusionAlgorithm.RRF
         )
-        
+
         # Weights should be normalized to sum to 1.0
         total_weight = sum(stage.weight for stage in request.stages)
         assert abs(total_weight - 1.0) < 0.01
@@ -273,9 +243,7 @@ class TestHyDESearchRequest:
         """Test valid HyDE search request creation."""
         vector = SecureVectorModel(values=[0.1, 0.2, 0.3])
         request = HyDESearchRequest(
-            query_vector=vector,
-            query_text="What is vector search?",
-            num_hypotheses=5
+            query_vector=vector, query_text="What is vector search?", num_hypotheses=5
         )
         assert request.query_text == "What is vector search?"
         assert request.num_hypotheses == 5
@@ -288,6 +256,6 @@ class TestHyDESearchRequest:
             HyDESearchRequest(
                 query_vector=vector,
                 query_text="hi",  # Too short
-                num_hypotheses=3
+                num_hypotheses=3,
             )
         assert "Query too short for meaningful search" in str(exc_info.value)

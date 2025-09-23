@@ -1,7 +1,7 @@
 """Background task management for FastAPI production deployment.
 
-This module provides comprehensive background task management including
-task scheduling, monitoring, and lifecycle management for production environments.
+This module provides background task management including task scheduling,
+monitoring, and lifecycle management for production environments.
 """
 
 import asyncio
@@ -152,8 +152,9 @@ class BackgroundTaskManager:
             self._workers.append(worker)
 
         logger.info(
-            f"Background task manager started with {self.max_workers} workers"
-        )  # TODO: Convert f-string to logging format
+            "Background task manager started with %s workers",
+            self.max_workers,
+        )
 
     async def stop(self, timeout: float = 30.0) -> None:  # noqa: ASYNC109
         """Stop the background task manager gracefully.
@@ -337,9 +338,7 @@ class BackgroundTaskManager:
             if result and not result.is_complete:
                 result.status = TaskStatus.CANCELLED
                 result.end_time = datetime.now(tz=UTC)
-                logger.debug(
-                    f"Task {task_id} cancelled"
-                )  # TODO: Convert f-string to logging format
+                logger.debug("Task %s cancelled", task_id)
                 return True
         return False
 
@@ -350,9 +349,7 @@ class BackgroundTaskManager:
             worker_name: Name of the worker for logging
 
         """
-        logger.debug(
-            f"Worker {worker_name} started"
-        )  # TODO: Convert f-string to logging format
+        logger.debug("Worker %s started", worker_name)
 
         while self._running:
             try:
@@ -369,9 +366,7 @@ class BackgroundTaskManager:
             except (OSError, PermissionError):
                 logger.exception("Worker {worker_name} error")
 
-        logger.debug(
-            f"Worker {worker_name} stopped"
-        )  # TODO: Convert f-string to logging format
+        logger.debug("Worker %s stopped", worker_name)
 
     async def _execute_task(self, task_id: str, worker_name: str) -> None:
         """Execute a single task.
@@ -386,9 +381,7 @@ class BackgroundTaskManager:
             result = self._results.get(task_id)
 
         if not task or not result:
-            logger.warning(
-                f"Task {task_id} not found for execution"
-            )  # TODO: Convert f-string to logging format
+            logger.warning("Task %s not found for execution", task_id)
             return
 
         # Check if task was cancelled
@@ -399,9 +392,7 @@ class BackgroundTaskManager:
         result.status = TaskStatus.RUNNING
         result.start_time = datetime.now(tz=UTC)
 
-        logger.debug(
-            f"Worker {worker_name} executing task {task_id}"
-        )  # TODO: Convert f-string to logging format
+        logger.debug("Worker %s executing task %s", worker_name, task_id)
 
         try:
             # Execute task with timeout
@@ -434,9 +425,7 @@ class BackgroundTaskManager:
             with self._task_lock:
                 self._completed_tasks += 1
 
-            logger.debug(
-                f"Task {task_id} completed successfully"
-            )  # TODO: Convert f-string to logging format
+            logger.debug("Task %s completed successfully", task_id)
 
         except TimeoutError:
             # Task timeout
@@ -478,7 +467,11 @@ class BackgroundTaskManager:
             delay = task.retry_delay * (2 ** (task.retry_count - 1))
 
             logger.info(
-                f"Retrying task {task.task_id} (attempt {task.retry_count}/{task.max_retries}) after {delay}s"
+                "Retrying task %s (attempt %d/%d) after %s",
+                task.task_id,
+                task.retry_count,
+                task.max_retries,
+                delay,
             )
 
             # Schedule retry
@@ -492,8 +485,10 @@ class BackgroundTaskManager:
             with self._task_lock:
                 self._failed_tasks += 1
             logger.error(
-                f"Task {task.task_id} failed after {task.max_retries} retries"
-            )  # TODO: Convert f-string to logging format
+                "Task %s failed after %d retries",
+                task.task_id,
+                task.max_retries,
+            )
 
     async def _schedule_retry(self, task_id: str, delay: float) -> None:
         """Schedule a task retry after delay.
@@ -509,7 +504,7 @@ class BackgroundTaskManager:
             try:
                 await self._task_queue.put(task_id)
             except asyncio.QueueFull:
-                logger.exception(f"Failed to retry task {task_id}: queue is full")
+                logger.exception("Failed to retry task %s: queue is full", task_id)
 
     def get_statistics(self) -> dict[str, Any]:
         """Get task manager statistics.
@@ -553,15 +548,15 @@ class BackgroundTaskManager:
                         "task_id": task_id,
                         "status": result.status.value,
                         "created_at": task.created_at.isoformat() if task else None,
-                        "start_time": result.start_time.isoformat()
-                        if result.start_time
-                        else None,
-                        "end_time": result.end_time.isoformat()
-                        if result.end_time
-                        else None,
-                        "duration": result.duration.total_seconds()
-                        if result.duration
-                        else None,
+                        "start_time": (
+                            result.start_time.isoformat() if result.start_time else None
+                        ),
+                        "end_time": (
+                            result.end_time.isoformat() if result.end_time else None
+                        ),
+                        "duration": (
+                            result.duration.total_seconds() if result.duration else None
+                        ),
                         "retry_count": task.retry_count if task else 0,
                         "error": result.error,
                     }

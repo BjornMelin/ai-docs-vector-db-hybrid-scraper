@@ -658,7 +658,8 @@ class TestRollingAveragePerformanceTracking:
         updated_metrics = updated_tool.metrics
 
         # Should be closer to recent values (last 10) than early values
-        # The average of last 10 latencies: 105, 106, 107, 108, 109, 110, 111, 112, 113, 114
+        # The average of last 10 latencies: 105,
+        # 106, 107, 108, 109, 110, 111, 112, 113, 114
         expected_recent_avg = sum(range(105, 115)) / 10  # 109.5
         assert abs(updated_metrics.average_latency_ms - expected_recent_avg) < 1.0
 
@@ -759,7 +760,7 @@ class TestSelfLearningOptimization:
         )
         initial_best = initial_tools[0]
 
-        # Simulate moderately worse performance for the best tool (not so bad it gets filtered out)
+        # Simulate worse perf or the best tool (not so bad it gets filtered out)
         poor_metrics = ToolMetrics(
             average_latency_ms=300.0,  # Worse but still reasonable
             success_rate=0.8,  # Worse but not terrible
@@ -784,7 +785,7 @@ class TestSelfLearningOptimization:
             # Tool should have lower score due to performance degradation
             assert updated_best.confidence_score < initial_best.confidence_score
         else:
-            # Tool fell below threshold due to poor performance - that's also valid learning behavior
+            # Tool fell below threshold due to poor perf - valid learning behavior
             assert len(updated_tools) == 0 or updated_tools[0].name != initial_best.name
 
 
@@ -1385,7 +1386,8 @@ class TestPropertyBasedValidation:
                 tool, task_description, requirements
             )
 
-            # Score should always be between 0 and 1 (allowing for small negative values due to penalties)
+            # Score should always be between 0 and 1
+            # allowing for small negative values due to penalties)
             assert -0.2 <= score <= 1.0, f"Invalid score {score} for tool {tool_name}"
 
             # Score should be deterministic (same inputs = same output)
@@ -1435,7 +1437,7 @@ class TestPropertyBasedValidation:
             <= max_latency + tolerance
         ), "Average outside input range"
 
-        # Other metrics should remain consistent (all same values) with small tolerance for floating point
+        # Other metrics should remain consistent with small tolerance for fp
         assert abs(avg_metrics.success_rate - 0.9) < 1e-10
         assert abs(avg_metrics.accuracy_score - 0.8) < 1e-10
         assert abs(avg_metrics.cost_per_execution - 0.01) < 1e-10
@@ -1540,7 +1542,7 @@ class TestAdvancedToolDiscoveryAlgorithms:
         # Verify performance learning adaptation
         updated_tool = engine.discovered_tools[tool_name]
         assert updated_tool.metrics.average_latency_ms < initial_latency
-        # Success rate should be improved or at least maintained (account for floating point precision)
+        # Success rate should be improved/maintained (account for fp precision)
         assert (
             updated_tool.metrics.success_rate
             >= initial_tool.metrics.success_rate - 0.001
@@ -1932,7 +1934,9 @@ class TestToolDiscoveryComprehensiveScenarios:
 
         # Test complex research workflow
         recommendations = await engine.get_tool_recommendations(
-            "Conduct comprehensive research: search academic papers, analyze sentiment, extract key insights, generate executive summary with citations",
+            "Conduct comprehensive research: search academic papers, analyze "
+            "sentiment, extract key insights, generate executive summary with "
+            "citations",
             {
                 "max_latency_ms": 5000,
                 "min_accuracy": 0.85,

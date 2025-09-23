@@ -87,7 +87,8 @@ class HealthTrend:
 
 class FailurePredictionEngine:
     """ML-based failure prediction using time-series analysis and pattern
-    recognition."""
+    recognition.
+    """
 
     def __init__(self):
         self.metric_history: dict[str, list[float]] = {}
@@ -584,7 +585,8 @@ class FailurePredictionEngine:
 
 class AutonomousHealthMonitor:
     """AI-driven health monitoring with predictive failure detection and autonomous
-    remediation."""
+    remediation.
+    """
 
     def __init__(
         self,
@@ -596,6 +598,7 @@ class AutonomousHealthMonitor:
         Args:
             health_manager: Health check manager for service monitoring
             circuit_breaker_manager: Circuit breaker manager for failure protection
+
         """
         self.health_manager = health_manager
         self.circuit_breaker_manager = circuit_breaker_manager
@@ -895,7 +898,8 @@ class AutonomousHealthMonitor:
             f"DB Connections: {metrics.database_connections}",
             (
                 f"Active Predictions: {len(predictions)} | "
-                f"High Risk: {len([p for p in predictions if p.risk_level == FailureRiskLevel.HIGH])}"
+                f"High Risk: "
+                f"{len([p for p in predictions if p.risk_level == FailureRiskLevel.HIGH])}"  # noqa: E501
             ),
             f"System Stability: {insights['system_stability']}",
             "=== End Summary ===",

@@ -70,7 +70,8 @@ class TestCommandInjectionPrevention:
         return [
             # Encoded payloads
             "$(echo 'Y2F0IC9ldGMvcGFzc3dk' | base64 -d)",  # cat /etc/passwd
-            "`printf '\\x63\\x61\\x74\\x20\\x2f\\x65\\x74\\x63\\x2f\\x70\\x61\\x73\\x73\\x77\\x64'`",
+            "`printf '\\x63\\x61\\x74\\x20\\x2f\\x65\\x74\\x63"
+            "\\x2f\\x70\\x61\\x73\\x73\\x77\\x64'`",
             # Nested command substitution
             "$(cat $(echo '/etc/passwd'))",
             "`cat `echo '/etc/shadow'``",
@@ -80,7 +81,8 @@ class TestCommandInjectionPrevention:
             "| python -c 'import time; time.sleep(60)'",
             # Python code execution
             "; python -c 'import os; os.system(\"ls\")'",
-            '| python3 -c \'exec("import subprocess; subprocess.run([\\"whoami\\"])")\'',
+            "| python3 -c 'exec(\"import subprocess; "
+            'subprocess.run([\\"whoami\\"])")\'',
             # Perl code execution
             "; perl -e 'system(\"id\")'",
             "| perl -e 'exec(\"/bin/sh\")'",
@@ -218,7 +220,8 @@ class TestCommandInjectionPrevention:
             patch("subprocess.call") as mock_call,
         ):
             for _user_input in _user_inputs:
-                # Should never call os.system or subprocess with shell=True and user input
+                # Should never call os.system or subprocess with
+                # shell=True and user input
                 mock_system.assert_not_called()
 
                 # If subprocess is used, should use argument list, not shell string
@@ -308,7 +311,8 @@ class TestCommandInjectionPrevention:
     async def test_template_command_injection_prevention(self):
         """Test prevention of command injection in template processing."""
         template_command_payloads = [
-            "{{range.constructor.constructor('return process')().mainModule.require('child_process').exec('whoami')}}",
+            "{{range.constructor.constructor('return process')().mainModule."
+            "require('child_process').exec('whoami')}}",
             "${runtime.exec('id')}",
             "<%=system('ls')%>",
             "{%exec('whoami')%}",
@@ -330,7 +334,8 @@ class TestCommandInjectionPrevention:
             # YAML payload
             "!!python/object/apply:subprocess.check_output [['id']]",
             # JSON with command execution attempt
-            '{"__proto__": {"constructor": {"constructor": "return process.mainModule.require(\'child_process\').exec(\'whoami\')"}}}',
+            '{"__proto__": {"constructor": {"constructor": '
+            "\"return process.mainModule.require('child_process').exec('whoami')\"}}}",
         ]
 
         security_validator = SecurityValidator()

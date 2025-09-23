@@ -444,7 +444,9 @@ class TestBrowserContentIntelligenceIntegration:
         # Setup browser scraping
         scraped_content = {
             "success": True,
-            "content": "<html><body><h1>Title</h1><p>Content paragraph</p></body></html>",
+            "content": (
+                "<html><body><h1>Title</h1><p>Content paragraph</p></body></html>"
+            ),
             "url": "https://example.com",
             "metadata": {
                 "tier_used": "playwright",

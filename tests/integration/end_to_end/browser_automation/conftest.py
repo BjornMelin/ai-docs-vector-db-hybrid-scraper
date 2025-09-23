@@ -323,7 +323,7 @@ async def mock_browser_setup(mock_browser_config):
 
             self.url = url
             self._title = f"Test Page - {url}"
-            self._content = f"<html><body><h1>Test Page</h1><p>Content for {url}. This is a longer mock content that ensures the content length is above the minimum threshold required by the multi-page crawling test. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p><div>Additional content section</div><footer>Footer content</footer></body></html>"
+            self._content = f"<html><body><h1>Test Page</h1><p>Content for {url}. This is a longer mock content that ensures the content length is above the minimum threshold required by the multi-page crawling test. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p><div>Additional content section</div><footer>Footer content</footer></body></html>"  # noqa: E501
             self.navigation_history.append(
                 {
                     "url": url,
@@ -358,9 +358,19 @@ async def mock_browser_setup(mock_browser_config):
             if (
                 "contentLength" in script and "document.body.innerHTML.length" in script
             ) or ("textLength" in script and "linkCount" in script):
-                # Mock for multi-page crawling test that needs specific page info structure - PRIORITIZE THIS
+                # Mock for multi-page crawling test that needs specific
+                # page info structure - PRIORITIZE THIS
+
                 # Calculate realistic text length based on content
-                text_content = f"Test Page Content for {self.url}. This is a longer mock text content that ensures the text length is above the minimum threshold required by the multi-page crawling test. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Additional content section. Footer content."
+                text_content = (
+                    f"Test Page Content for {self.url}. "
+                    "This is a longer mock text content that ensures "
+                    "the text length is above the minimum threshold required by the "
+                    "multi-page crawling test. Lorem ipsum dolor sit amet, consectetur "
+                    "adipiscing elit. Sed do eiusmod tempor incididunt ut "
+                    "labore et dolore magna aliqua. Additional content section. "
+                    "Footer content."
+                )
                 return {
                     "title": self._title,
                     "url": self.url,

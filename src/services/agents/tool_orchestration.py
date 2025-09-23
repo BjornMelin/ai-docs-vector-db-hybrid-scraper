@@ -1,7 +1,7 @@
 """Advanced tool orchestration system for agentic workflows.
 
 This module implements sophisticated tool composition and orchestration patterns
-based on I4 research findings, enabling autonomous agents to intelligently
+based on research findings, enabling agents to
 compose and coordinate complex tool workflows.
 """
 
@@ -53,7 +53,7 @@ class ToolPriority(str, Enum):
 
 
 class ToolCapability(str, Enum):
-    """Tool capability categories for intelligent selection."""
+    """Tool capability categories for selection."""
 
     SEARCH = "search"  # Search and retrieval
     ANALYSIS = "analysis"  # Data analysis and processing
@@ -172,14 +172,14 @@ class ToolExecutionResult(BaseModel):
 
 
 class AdvancedToolOrchestrator:
-    """Advanced orchestrator for intelligent tool composition and execution.
+    """Orchestrator for tool composition and execution.
 
-    Implements sophisticated orchestration patterns including:
-    - Intelligent tool selection based on capabilities and performance
+    Implements orchestration patterns including:
+    - Tool selection based on capabilities and performance
     - Dynamic workflow composition based on goals and constraints
     - Parallel and pipeline execution with dependency management
-    - Adaptive execution with fallback and recovery mechanisms
-    - Real-time performance optimization and resource management
+    - Execution with fallback and recovery mechanisms
+    - Performance optimization and resource management
     """
 
     def __init__(
@@ -189,13 +189,14 @@ class AdvancedToolOrchestrator:
         default_timeout_seconds: float = 30.0,
         enable_circuit_breakers: bool = True,
     ):
-        """Initialize the advanced tool orchestrator.
+        """Initialize the tool orchestrator.
 
         Args:
             client_manager: Client manager for resource access
             max_parallel_executions: Maximum parallel tool executions
             default_timeout_seconds: Default timeout for tool execution
             enable_circuit_breakers: Enable circuit breakers for fault tolerance
+
         """
         self.client_manager = client_manager
         self.max_parallel_executions = max_parallel_executions
@@ -217,13 +218,14 @@ class AdvancedToolOrchestrator:
         self.tool_avg_durations: dict[str, float] = {}
         self.capability_performance: dict[ToolCapability, list[str]] = {}
 
-        logger.info("AdvancedToolOrchestrator initialized")
+        logger.info("ToolOrchestrator initialized")
 
     async def register_tool(self, tool_def: ToolDefinition) -> None:
         """Register a tool for orchestrated execution.
 
         Args:
             tool_def: Tool definition to register
+
         """
         self.registered_tools[tool_def.tool_id] = tool_def
         self.tool_performance_history[tool_def.tool_id] = []
@@ -243,7 +245,8 @@ class AdvancedToolOrchestrator:
             self.capability_performance[capability].append(tool_def.tool_id)
 
         logger.info(
-            f"Registered tool {tool_def.tool_id} with capabilities: {tool_def.capabilities}"
+            f"Registered tool {tool_def.tool_id} with capabilities: "
+            f"{tool_def.capabilities}"
         )
 
     async def compose_tool_chain(
@@ -261,6 +264,7 @@ class AdvancedToolOrchestrator:
 
         Returns:
             Orchestration plan for achieving the goal
+
         """
         plan_id = str(uuid4())
         constraints = constraints or {}
@@ -302,7 +306,7 @@ class AdvancedToolOrchestrator:
 
             logger.info(f"Composed tool chain {plan_id} with {len(nodes)} tools")
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Failed to compose tool chain")
             raise
 
@@ -323,6 +327,7 @@ class AdvancedToolOrchestrator:
 
         Returns:
             Execution results with metadata
+
         """
         execution_id = str(uuid4())
         timeout_seconds = timeout_seconds or plan.timeout_seconds
@@ -392,10 +397,11 @@ class AdvancedToolOrchestrator:
             }
 
             logger.info(
-                f"Tool chain execution {execution_id} completed with {success_rate * 100:.2f}%% success rate"
+                f"Tool chain execution {execution_id} completed with "
+                f"{success_rate * 100:.2f}%% success rate"
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             execution_time = time.time() - start_time
 
             logger.exception(f"Tool chain execution {execution_id} failed")
@@ -418,7 +424,7 @@ class AdvancedToolOrchestrator:
         timeout_seconds: float | None = None,
         fallback_enabled: bool = True,
     ) -> ToolExecutionResult:
-        """Execute a single tool with intelligent error handling.
+        """Execute a single tool with error handling.
 
         Args:
             tool_id: Tool identifier
@@ -428,6 +434,7 @@ class AdvancedToolOrchestrator:
 
         Returns:
             Tool execution result
+
         """
         execution_id = str(uuid4())
         start_time = datetime.now(tz=datetime.timezone.utc)
@@ -550,6 +557,7 @@ class AdvancedToolOrchestrator:
 
         Returns:
             Comprehensive orchestration status
+
         """
         total_tools = len(self.registered_tools)
         healthy_tools = sum(
@@ -834,7 +842,11 @@ class AdvancedToolOrchestrator:
             try:
                 result = await self._execute_node(node, execution_state)
                 results[node.node_id] = result
-            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
+            except (
+                asyncio.CancelledError,
+                TimeoutError,
+                RuntimeError,
+            ) as e:  # noqa: BLE001
                 results[node.node_id] = {"error": str(e)}
 
         return results
@@ -859,7 +871,11 @@ class AdvancedToolOrchestrator:
             try:
                 result = await self._execute_node(node, execution_state)
                 results[node.node_id] = result
-            except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
+            except (
+                asyncio.CancelledError,
+                TimeoutError,
+                RuntimeError,
+            ) as e:  # noqa: BLE001
                 results[node.node_id] = {"error": str(e)}
 
         return results
@@ -876,7 +892,11 @@ class AdvancedToolOrchestrator:
             return await self._execute_parallel_nodes(
                 plan, execution_state, timeout_seconds / 2
             )
-        except (OSError, PermissionError, RuntimeError):
+        except (
+            OSError,
+            PermissionError,
+            RuntimeError,
+        ):  # noqa: BLE001
             return await self._execute_sequential_nodes(
                 plan, execution_state, timeout_seconds / 2
             )
@@ -924,7 +944,7 @@ class AdvancedToolOrchestrator:
                 node.error = result.error
                 execution_state["failed_nodes"].add(node.node_id)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             node.end_time = datetime.now(tz=UTC)
             node.status = "failed"
             node.error = str(e)
@@ -945,7 +965,8 @@ class AdvancedToolOrchestrator:
     ) -> ToolExecutionResult:
         """Execute a fallback tool."""
         logger.info(
-            f"Executing fallback tool {fallback_tool_id} for execution {original_execution_id}"
+            f"Executing fallback tool {fallback_tool_id} for execution "
+            f"{original_execution_id}"
         )
 
         result = await self.execute_single_tool(
@@ -1009,6 +1030,6 @@ class AdvancedToolOrchestrator:
         self, plan: ToolOrchestrationPlan, _execution_state: dict[str, Any]
     ) -> None:
         """Update performance history for the orchestration plan."""
-        # This would implement comprehensive performance tracking
+        # This would implement performance tracking
         # For now, just log the completion
         logger.info(f"Updated performance history for plan {plan.plan_id}")

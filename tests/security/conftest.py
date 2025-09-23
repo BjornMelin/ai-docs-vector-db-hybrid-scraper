@@ -476,7 +476,8 @@ def security_performance_tracker():
 # Additional fixture aliases for backward compatibility and test integration
 @pytest.fixture
 def vulnerability_scanner(mock_security_scanner):
-    """Alias for mock_security_scanner with additional vulnerability-specific methods."""
+    """Alias for mock_security_scanner with additional
+    vulnerability-specific methods."""
 
     class VulnerabilityScanner:
         def __init__(self, base_scanner):

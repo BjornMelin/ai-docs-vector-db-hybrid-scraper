@@ -14,8 +14,8 @@ This directory contains configuration files for building project documentation.
 
 ```bash
 # From project root
-uv run mkdocs build -f docs/build-config/mkdocs.yml
-uv run mkdocs serve -f docs/build-config/mkdocs.yml  # Development server
+uv run mkdocs build -f docs/build_config/mkdocs.yml
+uv run mkdocs serve -f docs/build_config/mkdocs.yml  # Development server
 ```
 
 ### Building Sphinx API Documentation
@@ -23,7 +23,7 @@ uv run mkdocs serve -f docs/build-config/mkdocs.yml  # Development server
 ```bash
 # From project root
 uv run sphinx-apidoc -o docs/api src --force
-uv run sphinx-build -b html -c docs/build-config docs docs/_build/html
+uv run sphinx-build -b html -c docs/build_config docs docs/_build/html
 ```
 
 ## Automated Builds

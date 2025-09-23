@@ -106,7 +106,10 @@ class BrowserUseAdapter(BaseService):
     async def initialize(self) -> None:
         """Initialize browser-use instance."""
         if not self._available:
-            msg = "browser-use not available - please install browser-use package and dependencies"
+            msg = (
+                "browser-use not available - please install browser-use package and "
+                "dependencies"
+            )
             raise CrawlServiceError(msg)
 
         if self._initialized:
@@ -286,7 +289,10 @@ class BrowserUseAdapter(BaseService):
 
         """
         if not instructions:
-            return "Navigate to the page and extract all documentation content including code examples."
+            return (
+                "Navigate to the page and extract all documentation content including "
+                "code examples."
+            )
 
         # Join instructions into coherent task
         task_parts = []
@@ -299,8 +305,15 @@ class BrowserUseAdapter(BaseService):
                 task_parts.append(instruction)
 
         if task_parts:
-            return f"Navigate to the page, then {' '.join(task_parts)} Finally, extract all documentation content including code examples and structured information."
-        return "Navigate to the page and extract all documentation content including code examples."
+            return (
+                f"Navigate to the page, then {' '.join(task_parts)} Finally, "
+                "extract all documentation content including code examples and "
+                "structured information."
+            )
+        return (
+            "Navigate to the page and extract all documentation content including "
+            "code examples."
+        )
 
     def capabilities(self) -> dict[str, Any]:
         """Get adapter capabilities.
@@ -482,7 +495,10 @@ class BrowserUseAdapter(BaseService):
         """
         return {
             "name": "browser_use",
-            "description": "AI-powered browser automation with multi-LLM support and natural language tasks",
+            "description": (
+                "AI-powered browser automation with multi-LLM support and natural "
+                "language tasks"
+            ),
             "advantages": [
                 "Python-native solution (no TypeScript dependencies)",
                 "Multi-LLM provider support (OpenAI, Anthropic, Gemini, local)",

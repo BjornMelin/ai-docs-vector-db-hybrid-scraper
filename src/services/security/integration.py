@@ -53,6 +53,7 @@ class SecurityManager:
 
         Args:
             security_config: Security configuration settings
+
         """
         self.config = security_config or SecurityConfig()
 
@@ -119,6 +120,7 @@ class SecurityManager:
 
         Returns:
             Configured security middleware
+
         """
         if not all([self.rate_limiter, self.ai_validator, self.security_monitor]):
             msg = "Security components not initialized. Call initialize_components()."
@@ -150,6 +152,7 @@ class SecurityManager:
 
         Args:
             app: FastAPI application instance
+
         """
         # Production-appropriate CORS settings
         allowed_origins = self.config.allowed_origins
@@ -181,6 +184,7 @@ class SecurityManager:
 
         Returns:
             Dictionary with security system status
+
         """
         status = {
             "security_enabled": True,
@@ -223,6 +227,7 @@ class SecurityManager:
 
         Raises:
             HTTPException: If API key is invalid
+
         """
         if not self.config.api_key_required:
             return True
@@ -298,6 +303,7 @@ async def get_security_manager() -> SecurityManager:
 
     Returns:
         Global security manager instance
+
     """
     return _SecurityManagerSingleton.get_instance()
 
@@ -319,6 +325,7 @@ def setup_application_security(
 
     Returns:
         Configured security manager
+
     """
     # Initialize security manager with config
     if security_config:

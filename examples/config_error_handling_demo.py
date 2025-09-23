@@ -79,7 +79,7 @@ def demonstrate_validation_error_handling():
         )
 
         # This will handle validation errors gracefully
-        config = manager.get_config()
+        manager.get_config()
         print("Config loaded despite validation errors")
 
     except ConfigValidationError as e:

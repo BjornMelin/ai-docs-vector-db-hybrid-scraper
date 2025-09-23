@@ -33,6 +33,7 @@ class ModernCircuitBreakerManager:
         Args:
             redis_url: Redis URL for distributed state storage
             config: Application configuration for circuit breaker settings
+
         """
         self.redis_url = redis_url
         self.config = config
@@ -65,7 +66,8 @@ class ModernCircuitBreakerManager:
 
         logger.info(
             f"ModernCircuitBreakerManager initialized with Redis: {redis_url}, "
-            f"threshold={default_threshold}, recovery_timeout={default_recovery_timeout}s"
+            f"threshold={default_threshold}, recovery_timeout="
+            f"{default_recovery_timeout}s"
         )
 
     async def get_breaker(self, service_name: str, **kwargs: Any):
@@ -77,6 +79,7 @@ class ModernCircuitBreakerManager:
 
         Returns:
             Circuit breaker instance for the service
+
         """
         if service_name not in self._breakers:
             async with self._lock:
@@ -111,6 +114,7 @@ class ModernCircuitBreakerManager:
         Raises:
             CircuitBreakerOpenError: If the circuit breaker is open
             Exception: Any exception raised by the function
+
         """
         breaker = await self.get_breaker(service_name)
 
@@ -126,6 +130,7 @@ class ModernCircuitBreakerManager:
 
         Returns:
             Decorator function
+
         """
 
         def decorator_func(
@@ -148,6 +153,7 @@ class ModernCircuitBreakerManager:
 
         Returns:
             Dictionary with circuit breaker status information
+
         """
         if service_name not in self._breakers:
             return {"status": "not_initialized"}
@@ -184,6 +190,7 @@ class ModernCircuitBreakerManager:
 
         Returns:
             True if reset was successful, False otherwise
+
         """
         try:
             return await self._attempt_breaker_reset(service_name)
@@ -211,6 +218,7 @@ class ModernCircuitBreakerManager:
 
         Returns:
             Dictionary mapping service names to their circuit breaker status
+
         """
         statuses = {}
         for service_name in self._breakers:
@@ -247,5 +255,6 @@ def create_modern_circuit_breaker_manager(
 
     Returns:
         ModernCircuitBreakerManager instance
+
     """
     return ModernCircuitBreakerManager(redis_url, config)

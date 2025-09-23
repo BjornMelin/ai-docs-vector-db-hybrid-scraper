@@ -42,7 +42,8 @@ def register_tools(mcp, client_manager: ClientManager):
         """
         if ctx:
             await ctx.info(
-                f"Estimating costs for {text_count} texts with average length {average_length}"
+                f"Estimating costs for {text_count} texts with average length "
+                f"{average_length}"
             )
 
         try:
@@ -62,7 +63,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.debug(
-                    f"Estimated {estimated_tokens} tokens, embedding cost: ${embedding_cost:.4f}"
+                    f"Estimated {estimated_tokens} tokens, "
+                    f"embedding cost: ${embedding_cost:.4f}"
                 )
 
             if include_storage:
@@ -77,12 +79,14 @@ def register_tools(mcp, client_manager: ClientManager):
 
                 if ctx:
                     await ctx.debug(
-                        f"Storage: {storage_gb:.4f} GB, monthly cost: ${storage_cost:.4f}"
+                        f"Storage: {storage_gb:.4f} GB, "
+                        f"monthly cost: ${storage_cost:.4f}"
                     )
 
             if ctx:
                 await ctx.info(
-                    f"Cost estimation completed. Total estimated cost: ${costs.get('total_cost', costs['embedding_cost']):.4f}"
+                    f"Cost estimation completed. Total estimated cost: "
+                    f"${costs.get('total_cost', costs['embedding_cost']):.4f}"
                 )
 
             return GenericDictResponse(**costs)
@@ -151,7 +155,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    "Configuration validation completed. Valid: {config_status['valid']}, Warnings"
+                    "Configuration validation completed. Valid: "
+                    f"{config_status['valid']}, Warnings"
                 )
 
             return ConfigValidationResponse(

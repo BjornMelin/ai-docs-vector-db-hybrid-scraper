@@ -1,9 +1,10 @@
 """Vector database services with modular Qdrant implementation.
 
 This module provides a clean, modular architecture for Qdrant operations:
-- QdrantService: Unified facade over all functionality (uses ClientManager for connections)
+- QdrantService: Unified facade over all functionality
+  (uses ClientManager for connections)
 - QdrantCollections: Collection CRUD and optimization
-- QdrantSearch: Advanced search operations (hybrid, multi-stage, HyDE)
+- QdrantSearch: Search operations (hybrid, multi-stage, HyDE)
 - QdrantIndexing: Payload indexing and optimization
 - QdrantDocuments: Document/point CRUD operations
 """

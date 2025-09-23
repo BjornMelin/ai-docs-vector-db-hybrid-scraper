@@ -57,11 +57,13 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Autonomous web search results with orchestration metadata
+
         """
         try:
             if ctx:
                 await ctx.info(
-                    f"Starting autonomous web search: '{query}' with fusion strategy '{fusion_strategy}'"
+                    f"Starting autonomous web search: '{query}' with fusion strategy "
+                    f"'{fusion_strategy}'"
                 )
 
             # Validate query
@@ -110,7 +112,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
                     if ctx:
                         await ctx.debug(
-                            f"Provider {provider}: {sum(len(qr.get('results', [])) for qr in provider_result['query_results'].values())} results"
+                            f"Provider {provider}: "
+                            f"{sum(len(qr.get('results', [])) for qr in provider_result['query_results'].values())} results"  # noqa: E501
                         )
 
             if not provider_results:
@@ -162,7 +165,9 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Autonomous web search completed: {len(fused_results['results'])} results from {len(provider_results)} providers"
+                    f"Autonomous web search completed: "
+                    f"{len(fused_results['results'])} results from "
+                    f"{len(provider_results)} providers"
                 )
 
         except Exception as e:
@@ -195,19 +200,23 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Args:
             query: Search query text
-            search_intent: Intent classification (research, factual, procedural, comparative)
-            performance_target: Target optimization (speed, quality, coverage, balanced)
+            search_intent: Intent classification
+                (research, factual, procedural, comparative)
+            performance_target: Target optimization
+                (speed, quality, coverage, balanced)
             max_iterations: Maximum optimization iterations
             learning_enabled: Enable ML-powered learning and adaptation
             ctx: MCP context for logging
 
         Returns:
             Adaptively optimized web search results with learning metadata
+
         """
         try:
             if ctx:
                 await ctx.info(
-                    f"Starting adaptive web search orchestration: intent='{search_intent}', target='{performance_target}'"
+                    f"Starting adaptive web search orchestration: "
+                    f"intent='{search_intent}', target='{performance_target}'"
                 )
 
             # Validate query
@@ -277,14 +286,16 @@ def register_tools(mcp, client_manager: ClientManager):
 
                         if ctx:
                             await ctx.debug(
-                                f"New best result from iteration {iteration + 1}: score={performance_score:.3f}"
+                                f"New best result from iteration {iteration + 1}: "
+                                f"score={performance_score:.3f}"
                             )
 
                     # Early termination if performance target met
                     if performance_score >= 0.9:  # High performance threshold
                         if ctx:
                             await ctx.info(
-                                f"Performance target achieved in iteration {iteration + 1}"
+                                f"Performance target achieved in iteration "
+                                f"{iteration + 1}"
                             )
                         break
 
@@ -317,7 +328,9 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Adaptive orchestration completed in {len(iteration_results)} iterations with score {best_result.get('performance_score', 0.0):.3f}"
+                    f"Adaptive orchestration completed in "
+                    f"{len(iteration_results)} iterations with score "
+                    f"{best_result.get('performance_score', 0.0):.3f}"
                 )
 
         except Exception as e:
@@ -342,7 +355,7 @@ def register_tools(mcp, client_manager: ClientManager):
         deduplication_strategy: str = "semantic",
         ctx: Context = None,
     ) -> dict[str, Any]:
-        """Synthesize results from multiple web search providers with intelligent deduplication.
+        """Synthesize results from multiple web search providers with deduplication.
 
         Implements advanced result synthesis with semantic deduplication,
         quality correlation, and intelligent provider weighting.
@@ -351,16 +364,18 @@ def register_tools(mcp, client_manager: ClientManager):
             query: Search query text
             provider_preferences: Optional provider weight preferences
             synthesis_depth: Depth of synthesis (basic, standard, comprehensive)
-            deduplication_strategy: Strategy for removing duplicates (url, semantic, hybrid)
+            deduplication_strategy: Dedup strategy (url, semantic, hybrid)
             ctx: MCP context for logging
 
         Returns:
             Synthesized results with deduplication and quality correlation metadata
+
         """
         try:
             if ctx:
                 await ctx.info(
-                    f"Starting multi-provider result synthesis with {synthesis_depth} depth"
+                    f"Starting multi-provider result synthesis with "
+                    f"{synthesis_depth} depth"
                 )
 
             # Validate query
@@ -425,7 +440,9 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Synthesis completed: {len(synthesized_results['results'])} results from {len(provider_results)} providers"
+                    f"Synthesis completed: "
+                    f"{len(synthesized_results['results'])} results from "
+                    f"{len(provider_results)} providers"
                 )
 
         except Exception as e:
@@ -448,6 +465,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive capabilities information for web search orchestration system
+
         """
         return {
             "search_providers": {
@@ -557,7 +575,9 @@ async def _analyze_optimal_providers(query: str, ctx) -> dict[str, Any]:
 
     return {
         "recommended_providers": recommended,
-        "selection_reasoning": f"Selected {len(recommended)} providers based on query characteristics",
+        "selection_reasoning": (
+            f"Selected {len(recommended)} providers based on query characteristics"
+        ),
         "query_complexity": "high"
         if len(query.split()) > 5
         else "medium"
@@ -653,7 +673,11 @@ def _generate_mock_provider_results(
             "id": f"{provider}_{query.replace(' ', '_')}_{i}",
             "title": f"Result {i + 1} for '{query}' from {provider}",
             "url": f"https://example.com/{provider}/{i}",
-            "snippet": f"This is a mock result snippet {i + 1} from {provider} for the query '{query}'. It contains relevant information and demonstrates the provider's response format.",
+            "snippet": (
+                f"This is a mock result snippet {i + 1} from {provider} for the query"
+                f"'{query}'. It contains relevant information and demonstrates the "
+                "provider's response format."
+            ),
             "provider": provider,
             "rank": i + 1,
             "quality_score": 0.8 - (i * 0.05),  # Decreasing quality scores

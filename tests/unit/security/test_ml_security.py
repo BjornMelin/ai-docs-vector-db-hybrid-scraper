@@ -147,7 +147,9 @@ class TestMLSecurityValidator:
 
         # None input should be caught and result in error
         assert result.check_type == "input_validation"
-        # The function handles this case, so it may pass or fail depending on implementation
+
+    # The function handles this case, so it
+    # may pass or fail depending on implementation
 
     def test_check_dependencies_success(self, validator):
         """Test successful dependency check."""

@@ -64,6 +64,7 @@ class DependencyContainer:
 
         Args:
             config: Application configuration
+
         """
         # Load configurations
         if config is None:
@@ -82,6 +83,7 @@ class DependencyContainer:
 
         Args:
             config: Application configuration
+
         """
         self._client_manager = ClientManager.from_unified_config()
         self._vector_service = QdrantService(config, self._client_manager)
@@ -166,7 +168,10 @@ class _DependencyContainerSingleton:
     def get_instance(cls) -> DependencyContainer:
         """Get the singleton dependency container instance."""
         if cls._instance is None:
-            msg = "Dependency container not initialized. Call initialize_dependencies() first."
+            msg = (
+                "Dependency container not initialized. "
+                "Call initialize_dependencies() first."
+            )
             raise RuntimeError(msg)
         return cls._instance
 
@@ -370,6 +375,7 @@ def _get_service_from_container(
 
     Raises:
         HTTPException: If service is not available
+
     """
     container = get_container()
     if not container.is_initialized:

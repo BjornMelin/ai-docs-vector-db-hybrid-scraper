@@ -1,7 +1,7 @@
 """Content Intelligence tools for MCP server.
 
-This module provides MCP tools for AI-powered content analysis, quality assessment,
-and adaptive extraction recommendations using the Content Intelligence Service.
+This module provides MCP tools for content analysis, quality assessment,
+and extraction recommendations using the Content Intelligence Service.
 """
 
 import asyncio
@@ -52,18 +52,17 @@ def register_tools(mcp, client_manager: ClientManager):
     async def analyze_content_intelligence(
         request: ContentIntelligenceAnalysisRequest, ctx: Context
     ) -> ContentIntelligenceResult:
-        """Perform comprehensive AI-powered content intelligence analysis.
+        """Perform content intelligence analysis.
 
-        Provides semantic content classification, quality assessment, metadata enrichment,
-        and site-specific adaptation recommendations using local models for improved
-        web scraping extraction quality.
+        Provides content classification, quality assessment, metadata
+        enrichment, and adaptation recommendations for web scraping.
 
         Features:
-        - Content type classification (documentation, code, FAQ, tutorial, etc.)
-        - Multi-metric quality scoring (completeness, relevance, confidence, etc.)
-        - Automatic metadata enrichment from content and HTML
-        - Site-specific optimization recommendations
-        - Duplicate content detection with similarity thresholds
+        - Content type classification
+        - Quality scoring
+        - Metadata enrichment from content and HTML
+        - Optimization recommendations
+        - Duplicate content detection
         """
         try:
             await ctx.info(
@@ -165,7 +164,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             await ctx.info(
                 f"Content classified as: {result.primary_type.value} "
-                f"(confidence: {result.confidence_scores.get(result.primary_type, 0.0):.2f})"
+                "(confidence: "
+                f"{result.confidence_scores.get(result.primary_type, 0.0):.2f})"
             )
 
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
@@ -226,7 +226,8 @@ def register_tools(mcp, client_manager: ClientManager):
             )
 
             await ctx.info(
-                f"Quality assessment completed: overall score {result.overall_score:.2f} "
+                f"Quality assessment completed: overall score "
+                f"{result.overall_score:.2f} "
                 f"(meets threshold: {result.meets_threshold})"
             )
 

@@ -299,7 +299,8 @@ class TestLightweightScrapeTool:
         await tool_func(url="https://example1.com", ctx=mock_context)
         await tool_func(url="https://example2.com", ctx=mock_context)
 
-        # Verify crawl manager scrape was called twice (manager can be accessed multiple times)
+        # Verify crawl manager scrape was called
+        # twice (manager can be accessed multiple times)
         assert crawl_manager.scrape_url.call_count == 2
         # Verify we got the same crawl manager each time
         assert mock_client_manager.get_crawl_manager.call_count >= 2

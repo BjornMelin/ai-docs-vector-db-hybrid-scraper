@@ -645,8 +645,8 @@ class DocumentChunker:
         1. **Text content between code units**: Non-code content uses standard
            character-based overlap as defined by self.config.chunk_overlap.
 
-        2. **Large code units**: When a function or class exceeds max_function_chunk_size,
-           it is split with overlap. The overlap includes:
+        2. **Large code units**: When a function or class exceeds
+            max_function_chunk_size, it is split with overlap. The overlap includes:
            - For line-based splitting: ~20% of lines from the previous chunk
            - For AST-based splitting: Context like function signatures or class
              names are preserved across splits when possible
@@ -828,14 +828,13 @@ class DocumentChunker:
     def _traverse_js_ts(
         self, node: Any, content: str, code_units: list[dict[str, Any]], _language: str
     ):
-        """Helper for traversing JavaScript/TypeScript AST nodes and extracting code units.
+        """Helper for traversing JS/TS AST nodes and extracting code units.
 
         Args:
             node: The AST node.
             content: The full text content.
             code_units: List to append code unit dicts to.
             language: The detected or specified language.
-
         """
         if node.type in [
             "function_declaration",

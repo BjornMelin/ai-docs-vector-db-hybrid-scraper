@@ -146,11 +146,11 @@ class TestEmbeddingPropertiesFixed:
     ):
         """Test that similarity degrades gracefully with noise addition."""
         # Add controlled noise
-        random.seed(42)  # Deterministic for reproducibility
+        random.seed(42)  # Deterministic for reproducibility  # noqa: S311
 
         noisy_embedding = []
         for val in base_embedding:
-            noise = random.uniform(-noise_scale, noise_scale)
+            noise = random.uniform(-noise_scale, noise_scale)  # noqa: S311
             noisy_val = val + noise
             noisy_embedding.append(noisy_val)
 

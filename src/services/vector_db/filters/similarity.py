@@ -261,7 +261,8 @@ class SimilarityThresholdManager(BaseFilter):
 
             self._logger.info(
                 f"Applied similarity threshold: {optimal_threshold:.3f} "
-                f"(strategy: {criteria.strategy.value}, context: {criteria.context.value})"
+                f"(strategy: {criteria.strategy.value}, "
+                f"context: {criteria.context.value})"
             )
 
             return FilterResult(
@@ -535,7 +536,8 @@ class SimilarityThresholdManager(BaseFilter):
         historical_data: list[dict[str, Any]],
     ) -> float:
         """Calculate threshold using machine learning optimization."""
-        # Simplified ML approach - in production, this would use more sophisticated models
+        # Simplified ML approach - in production, this would use more
+        # sophisticated models
 
         if len(historical_data) < 20:
             # Not enough data for ML optimization

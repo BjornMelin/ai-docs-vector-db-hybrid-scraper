@@ -1,7 +1,7 @@
 """Main unified CLI entry point for AI Documentation Scraper.
 
-This module provides a comprehensive CLI interface that integrates all
-existing functionality under a unified command structure with enhanced
+This module provides a CLI interface that integrates all
+existing functionality under a unified command structure with
 user experience features.
 """
 
@@ -41,9 +41,12 @@ class RichCLI:
         """Display welcome message with project info."""
         welcome_text = Text()
         welcome_text.append("🚀 AI Documentation Scraper\n", style="bold cyan")
-        welcome_text.append("Advanced CLI Interface v1.0.0\n", style="dim")
+        welcome_text.append("CLI Interface v1.0.0\n", style="dim")
         welcome_text.append(
-            "\nHybrid AI documentation scraping system with vector database integration",
+            (
+                "\nHybrid AI documentation scraping system with vector database "
+                "integration"
+            ),
             style="",
         )
 
@@ -90,9 +93,9 @@ rich_cli = RichCLI()
 @click.version_option(version="1.0.0", prog_name="AI Documentation Scraper CLI")
 @click.pass_context
 def main(ctx: click.Context, config: Path | None, quiet: bool):
-    """🚀 AI Documentation Scraper - Advanced CLI Interface.
+    """🚀 AI Documentation Scraper - CLI Interface.
 
-    A comprehensive command-line interface for managing your AI documentation
+    A command-line interface for managing your AI documentation
     scraping workflow with vector database integration.
 
     Use --help with any command to get detailed information.
@@ -160,7 +163,7 @@ def version(ctx: click.Context):
 @main.command()
 @click.argument("shell", type=click.Choice(["bash", "zsh", "fish", "powershell"]))
 def completion(shell: str):
-    """Generate shell completion script.
+    r"""Generate shell completion script.
 
     To enable auto-completion, run:
 

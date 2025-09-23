@@ -1,85 +1,66 @@
 version: "3.8"
 
 services:
+  # Qdrant Vector Database (shared across modes)
   qdrant:
     image: qdrant/qdrant:latest
     container_name: qdrant-vector-db
     restart: unless-stopped
     ports:
       - "6333:6333" # HTTP API
-      - "6334:6334" # gRPC API (high performance)
+      - "6334:6334" # gRPC API (enterprise performance)
     volumes:
-      # Persistent storage mapping to WSL/local directory
-      - ~/.qdrant_data:/qdrant/storage:z
+      - qdrant_data:/qdrant/storage
     environment:
-      # Advanced Performance Optimizations
+      - QDRANT__LOG_LEVEL=INFO
       - QDRANT__SERVICE__HTTP_PORT=6333
       - QDRANT__SERVICE__GRPC_PORT=6334
-      - QDRANT__LOG_LEVEL=INFO
-
-      # Storage optimizations for hybrid search + quantization
       - QDRANT__STORAGE__ON_DISK_PAYLOAD=true
-      - QDRANT__STORAGE__QUANTIZATION__ALWAYS_RAM=true
-      - QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS=8
-      - QDRANT__STORAGE__OPTIMIZERS__DEFAULT_SEGMENT_NUMBER=16
-
-      # Memory and performance tuning
-      - QDRANT__STORAGE__WRITE_CONSISTENCY_FACTOR=1
-      - QDRANT__STORAGE__REPLICATION_FACTOR=1
-
-      # Hybrid search optimizations
-      - QDRANT__STORAGE__SPARSE_VECTORS__ON_DISK=true
-      - QDRANT__STORAGE__QUANTIZATION__SCALAR__TYPE=int8
-      - QDRANT__STORAGE__HNSW__M=16
-      - QDRANT__STORAGE__HNSW__EF_CONSTRUCT=128
-
+      - QDRANT__STORAGE__QUANTIZATION__ALWAYS_RAM=true # Enterprise optimization
+      - QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS=8 # Enterprise: higher threads
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    profiles:
+      - simple
+      - enterprise
+    networks:
+      - ai-docs-network
     deploy:
       resources:
         limits:
-          memory: 4G
-          cpus: "2.0"
-        reservations:
-          memory: 2G
+          memory: 2G # simple: 1G, enterprise: 4G via override
           cpus: "1.0"
-    networks:
-      - advanced-vector-network
+        reservations:
+          memory: 1G
+          cpus: "0.5"
 
-  # DragonflyDB: High-performance Redis-compatible cache
-  dragonfly:
+  # Redis/Dragonfly Cache (enterprise only)
+  redis:
     image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
     container_name: dragonfly-cache
     restart: unless-stopped
     ports:
-      - "6379:6379" # Redis-compatible port
+      - "6379:6379"
     volumes:
-      # Persistent storage for DragonflyDB
-      - ~/.dragonfly_data:/data:z
+      - redis_data:/data
     environment:
-      - DRAGONFLY_THREADS=8
+      - DRAGONFLY_THREADS=8 # Enterprise scaling
       - DRAGONFLY_MEMORY_LIMIT=4gb
       - DRAGONFLY_SNAPSHOT_INTERVAL=3600
-      - DRAGONFLY_SAVE_SCHEDULE="0 */1 * * *"
-    command: >
-      --logtostderr
-      --cache_mode
-      --maxmemory_policy=allkeys-lru
-      --compression=zstd
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
+    command: ["--logtostderr", "--cache_mode", "--maxmemory_policy=allkeys-lru"]
     healthcheck:
-      test: ["CMD", "redis-cli", "-p", "6379", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+    profiles:
+      - enterprise # Only in enterprise mode
+    networks:
+      - ai-docs-network
     deploy:
       resources:
         limits:
@@ -88,10 +69,31 @@ services:
         reservations:
           memory: 2G
           cpus: "1.0"
-    networks:
-      - advanced-vector-network
 
-  # Main FastAPI application
+  # PostgreSQL Database (enterprise only)
+  postgres:
+    image: postgres:15
+    container_name: ai-docs-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=ai_docs
+      - POSTGRES_USER=ai_docs_user
+      - POSTGRES_PASSWORD=secure_password_change_me
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_docs_user -d ai_docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - enterprise
+    networks:
+      - ai-docs-network
+
+  # Main FastAPI Application
   app:
     build:
       context: .
@@ -99,63 +101,71 @@ services:
     container_name: ai-docs-app
     restart: unless-stopped
     ports:
-      - "8000:8000" # FastAPI application port
+      - "8000:8000"
     environment:
-      - AI_DOCS_VECTOR_DB__QDRANT_URL=http://qdrant:6333
-      - AI_DOCS_CACHE__REDIS_URL=redis://dragonfly:6379
-      - AI_DOCS_CACHE__REDIS_DATABASE=0
-      - AI_DOCS_LOG_LEVEL=INFO
+      - AI_DOCS__QDRANT__URL=http://qdrant:6333
+      - AI_DOCS__CACHE__REDIS_URL=redis://redis:6379 # Only if redis profile active
+      - AI_DOCS__LOG_LEVEL=INFO
       - PYTHONPATH=/app/src
-      - AI_DOCS_MODE=simple  # Can be 'simple' or 'enterprise'
+      - AI_DOCS__MODE=${AI_DOCS__MODE:-simple} # Default to simple
     volumes:
-      - ./config:/app/config:ro
-      - ~/.qdrant_data:/qdrant/storage:z
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./cache:/app/cache
     depends_on:
-      - dragonfly
-      - qdrant
+      qdrant:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+        required: false # Only if enterprise
+      postgres:
+        condition: service_healthy
+        required: false # Only if enterprise
     networks:
-      - advanced-vector-network
+      - ai-docs-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/config/status"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    profiles:
+      - simple
+      - enterprise
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 2G # simple: 1G, enterprise: 4G via override
           cpus: "1.0"
         reservations:
           memory: 1G
           cpus: "0.5"
-    profiles:
-      - app
-      - production
 
-  # ARQ task queue worker for background jobs
-  task-worker:
+  # Task Queue Worker (enterprise only)
+  worker:
     build:
       context: .
       dockerfile: docker/Dockerfile.worker
-    container_name: task-worker
+    container_name: ai-docs-worker
     restart: unless-stopped
     environment:
-      - AI_DOCS_TASK_QUEUE__REDIS_URL=redis://dragonfly:6379
-      - AI_DOCS_TASK_QUEUE__REDIS_DATABASE=1
-      - AI_DOCS_TASK_QUEUE__WORKER_POOL_SIZE=4
-      - AI_DOCS_LOG_LEVEL=INFO
+      - AI_DOCS__TASK_QUEUE__REDIS_URL=redis://redis:6379
+      - AI_DOCS__LOG_LEVEL=INFO
       - PYTHONPATH=/app/src
     volumes:
       - ./src:/app/src:ro
-      - ./config:/app/config:ro
-      - ~/.qdrant_data:/qdrant/storage:z
+      - ./data:/app/data
+      - ./logs:/app/logs
     depends_on:
-      - dragonfly
-      - qdrant
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
     networks:
-      - advanced-vector-network
+      - ai-docs-network
     command: arq src.services.task_queue.worker.WorkerSettings
+    profiles:
+      - enterprise
     deploy:
       resources:
         limits:
@@ -164,56 +174,59 @@ services:
         reservations:
           memory: 1G
           cpus: "0.5"
-    profiles:
-      - worker
-      - production
 
-  # Optional: Add monitoring for production deployments
-  qdrant-exporter:
-    image: qdrant/qdrant-exporter:latest
-    container_name: qdrant-exporter
+  # Monitoring Stack (enterprise only)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ai-docs-prometheus
     restart: unless-stopped
     ports:
       - "9090:9090"
-    environment:
-      - QDRANT_URL=http://qdrant:6333
-    depends_on:
-      - qdrant
-    networks:
-      - advanced-vector-network
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
     profiles:
-      - monitoring
-      - production
+      - enterprise
+    networks:
+      - ai-docs-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ai-docs-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./config/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    profiles:
+      - enterprise
+    networks:
+      - ai-docs-network
+
+volumes:
+  qdrant_data:
+  redis_data:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
 
 networks:
-  advanced-vector-network:
+  ai-docs-network:
     driver: bridge
-    driver_opts:
-      com.docker.network.driver.mtu: 1500
-
-# Production profile for advanced deployment
-x-production-settings: &production
-  deploy:
-    resources:
-      limits:
-        memory: 8G
-        cpus: "4.0"
-      reservations:
-        memory: 4G
-        cpus: "2.0"
-    restart_policy:
-      condition: on-failure
-      delay: 5s
-      max_attempts: 3
-      window: 120s
-
-# Development override for resource-constrained environments
-x-development-settings: &development
-  deploy:
-    resources:
-      limits:
-        memory: 2G
-        cpus: "1.0"
-      reservations:
-        memory: 1G
-        cpus: "0.5"
+# Usage:
+# Simple mode: docker compose --profile simple up -d
+# Enterprise mode: docker compose --profile enterprise up -d
+# Override with docker-compose.override.yml for local dev

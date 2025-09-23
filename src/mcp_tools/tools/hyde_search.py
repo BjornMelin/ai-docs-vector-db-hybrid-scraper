@@ -60,6 +60,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             HyDE search results with generation metadata and quality metrics
+
         """
         try:
             if ctx:
@@ -126,7 +127,7 @@ def register_tools(mcp, client_manager: ClientManager):
                 )
 
                 if search_result and "points" in search_result:
-                    # Add metadata about which hypothetical document generated this result
+                    # Add metadata about which hypothetical doc generated this result
                     for point in search_result["points"]:
                         point["hyde_source"] = i
                         point["hyde_document"] = doc["content"][:100] + "..."
@@ -143,7 +144,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
                 if ctx:
                     await ctx.debug(
-                        f"HyDE doc {i + 1}: {len(search_result.get('points', []))} results"
+                        f"HyDE doc {i + 1}: {len(search_result.get('points', []))} "
+                        "results"
                     )
 
             # Fuse results from multiple hypothetical documents
@@ -187,7 +189,9 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"HyDE search completed: {len(fused_results['results'])} results from {len(hypothetical_docs['documents'])} hypothetical documents"
+                    f"HyDE search completed: "
+                    f"{len(fused_results['results'])} results from "
+                    f"{len(hypothetical_docs['documents'])} hypothetical documents"
                 )
 
         except Exception as e:
@@ -230,11 +234,13 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Optimized HyDE search results with adaptation metadata
+
         """
         try:
             if ctx:
                 await ctx.info(
-                    f"Performing adaptive HyDE search with quality threshold {quality_threshold}"
+                    f"Performing adaptive HyDE search with quality threshold "
+                    f"{quality_threshold}"
                 )
 
             # Analyze query for optimal HyDE parameters
@@ -252,7 +258,8 @@ def register_tools(mcp, client_manager: ClientManager):
             for iteration in range(optimal_params["max_iterations"]):
                 if ctx:
                     await ctx.debug(
-                        f"HyDE iteration {iteration + 1}/{optimal_params['max_iterations']}"
+                        "HyDE iteration "
+                        f"{iteration + 1}/{optimal_params['max_iterations']}"
                     )
 
                 # Adjust parameters for this iteration
@@ -323,7 +330,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Adaptive HyDE completed in {len(iteration_results)} iterations with quality {best_result['hyde_metrics']['average_quality']:.2f}"
+                    f"Adaptive HyDE completed in {len(iteration_results)} iterations "
+                    f"with quality {best_result['hyde_metrics']['average_quality']:.2f}"
                 )
 
         except Exception as e:
@@ -360,6 +368,7 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Expanded queries with quality and diversity metrics
+
         """
         try:
             if ctx:
@@ -416,7 +425,8 @@ def register_tools(mcp, client_manager: ClientManager):
 
             if ctx:
                 await ctx.info(
-                    f"Query expansion completed: {len(expanded_queries)} queries generated"
+                    f"Query expansion completed: {len(expanded_queries)} queries "
+                    "generated"
                 )
 
         except Exception as e:
@@ -438,23 +448,28 @@ def register_tools(mcp, client_manager: ClientManager):
 
         Returns:
             Comprehensive capabilities information for HyDE search system
+
         """
         return {
             "generation_strategies": {
                 "adaptive": {
-                    "description": "Adapts generation style based on query characteristics",
+                    "description": (
+                        "Adapts generation style based on query characteristics"
+                    ),
                     "best_for": ["mixed_queries", "unknown_domains"],
                     "quality": "high",
                     "speed": "medium",
                 },
                 "diverse": {
-                    "description": "Generates diverse hypothetical documents for broad coverage",
+                    "description": (
+                        "Generates diverse hypothetical documents for broad coverage"
+                    ),
                     "best_for": ["exploratory_search", "broad_topics"],
                     "quality": "medium",
                     "speed": "fast",
                 },
                 "focused": {
-                    "description": "Generates focused documents for specific domains",
+                    "description": ("Generates focused documents for specific domains"),
                     "best_for": ["specific_queries", "domain_expertise"],
                     "quality": "high",
                     "speed": "slow",
@@ -506,7 +521,7 @@ Each document should:
 3. Include specific details and examples
 4. Be roughly 100-150 words each
 
-Vary the style and approach across documents to maximize search effectiveness."""
+Vary the style and approach across documents to maximize search effectiveness."""  # noqa: E501
 
         elif strategy == "diverse":
             prompt = f"""Generate {count} diverse hypothetical documents for the query: "{query}"
@@ -517,7 +532,7 @@ Create documents with different:
 - Writing styles (formal, casual, technical)
 - Content focus areas
 
-Each document should be 100-150 words and approach the topic differently."""
+Each document should be 100-150 words and approach the topic differently."""  # noqa: E501
 
         else:  # focused
             prompt = f"""Generate {count} focused, high-quality hypothetical documents for: "{query}"
@@ -527,7 +542,7 @@ Each document should:
 - Use precise, domain-specific terminology
 - Provide detailed, accurate information
 - Be well-structured and coherent
-- Be approximately 150-200 words"""
+- Be approximately 150-200 words"""  # noqa: E501
 
         # Mock LLM response (replace with actual LLM call)
         documents = []
@@ -545,7 +560,8 @@ Each document should:
 
         if ctx:
             await ctx.debug(
-                f"Generated {len(documents)} hypothetical documents using {strategy} strategy"
+                f"Generated {len(documents)} hypothetical documents using "
+                f"{strategy} strategy"
             )
 
         return {
@@ -573,19 +589,39 @@ async def _mock_document_generation(query: str, strategy: str, index: int) -> st
     """Mock document generation (replace with actual LLM call)."""
     templates = {
         "adaptive": [
-            f"When considering {query}, it's important to understand the fundamental concepts involved. This topic encompasses various aspects that are crucial for practical implementation and theoretical understanding.",
-            f"Recent developments in {query} have shown significant progress in addressing key challenges. The latest research indicates several promising approaches that could revolutionize the field.",
-            f"A comprehensive guide to {query} reveals multiple dimensions of complexity. From basic principles to advanced applications, this subject requires careful consideration of numerous factors.",
+            f"When considering {query}, it's important to understand the fundamental "
+            "concepts involved. This topic encompasses various aspects that are "
+            "crucial for practical implementation and theoretical understanding.",
+            f"Recent developments in {query} have shown significant progress in "
+            "addressing key challenges. The latest research indicates several "
+            "promising approaches that could revolutionize the field.",
+            f"A comprehensive guide to {query} reveals multiple dimensions of "
+            "complexity. From basic principles to advanced applications, "
+            "this subject requires careful consideration of numerous factors.",
         ],
         "diverse": [
-            f"From a beginner's perspective, {query} can seem overwhelming at first. However, breaking it down into manageable components makes it much more approachable and understandable.",
-            f"Industry experts often debate the best practices for {query}. While there's no universal consensus, several established methodologies have proven effective in different scenarios.",
-            f"The technical implementation of {query} involves sophisticated algorithms and careful optimization. Performance considerations and scalability requirements drive most architectural decisions.",
+            f"From a beginner's perspective, {query} can seem overwhelming at first. "
+            "However, breaking it down into manageable components makes it much more "
+            "approachable and understandable.",
+            f"Industry experts often debate the best practices for {query}. While "
+            "there's no universal consensus, several established methodologies have "
+            "proven effective in different scenarios.",
+            f"The technical implementation of {query} involves sophisticated "
+            "algorithms and careful optimization. Performance considerations and "
+            "scalability requirements drive most architectural decisions.",
         ],
         "focused": [
-            f"Advanced practitioners of {query} understand that optimal results require deep expertise in underlying principles. The sophisticated interplay between theoretical foundations and practical constraints demands careful analysis.",
-            f"Professional implementation of {query} necessitates comprehensive understanding of industry standards, regulatory requirements, and performance optimization techniques that distinguish expert-level practice.",
-            f"Strategic approaches to {query} incorporate enterprise-level considerations including scalability, maintainability, security protocols, and long-term sustainability requirements.",
+            f"Advanced practitioners of {query} understand that optimal results "
+            "require deep expertise in underlying principles. The sophisticated "
+            "interplay between theoretical foundations and practical constraints "
+            "demands careful analysis.",
+            f"Professional implementation of {query} necessitates comprehensive "
+            "understanding of industry standards, regulatory requirements, and "
+            "performance optimization techniques that distinguish expert-level "
+            "practice.",
+            f"Strategic approaches to {query} incorporate enterprise-level "
+            "considerations including scalability, maintainability, security "
+            "protocols, and long-term sustainability requirements.",
         ],
     }
 

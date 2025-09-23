@@ -34,6 +34,7 @@ class SystemService:
 
         Args:
             name: Service name for MCP registration
+
         """
         self.mcp = FastMCP(
             name,
@@ -62,6 +63,7 @@ class SystemService:
 
         Args:
             client_manager: Shared client manager instance
+
         """
         self.client_manager = client_manager
 
@@ -90,6 +92,7 @@ class SystemService:
 
         Returns:
             Configured FastMCP server for this service
+
         """
         return self.mcp
 
@@ -98,6 +101,7 @@ class SystemService:
 
         Returns:
             Service metadata and capability information
+
         """
         return {
             "service": "system",

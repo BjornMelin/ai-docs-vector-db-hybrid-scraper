@@ -201,7 +201,8 @@ class TestAnalyzeContentIntelligence:
     ):
         """Test successful content intelligence analysis."""
         request = ContentIntelligenceAnalysisRequest(
-            content="This is a comprehensive API documentation page explaining authentication.",
+            content="This is a comprehensive API documentation page "
+            "explaining authentication.",
             url="https://example.com/docs/auth",
             title="Authentication Documentation",
             confidence_threshold=0.8,
@@ -296,7 +297,8 @@ class TestClassifyContentType:
     ):
         """Test successful content type classification."""
         request = ContentIntelligenceClassificationRequest(
-            content="# API Reference\\n\\nThis document provides comprehensive API documentation.",
+            content="# API Reference\\n\\nThis document provides "
+            "comprehensive API documentation.",
             url="https://example.com/api-docs",
             title="API Reference",
         )
@@ -377,7 +379,8 @@ class TestAssessContentQuality:
     ):
         """Test successful content quality assessment."""
         request = ContentIntelligenceQualityRequest(
-            content="Well-structured documentation with clear examples and good formatting.",
+            content="Well-structured documentation with clear examples "
+            "and good formatting.",
             confidence_threshold=0.8,
             query_context="API documentation quality",
             extraction_metadata={"method": "crawl4ai", "confidence": 0.9},
@@ -458,9 +461,11 @@ class TestExtractContentMetadata:
     ):
         """Test successful metadata extraction."""
         request = ContentIntelligenceMetadataRequest(
-            content="# API Documentation\\n\\nComprehensive guide to our REST API with examples.",
+            content="# API Documentation\\n\\nComprehensive guide to our "
+            "REST API with examples.",
             url="https://example.com/docs/api",
-            raw_html="<html><head><title>API Docs</title></head><body>...</body></html>",
+            raw_html="<html><head><title>API Docs</title></head>"
+            "<body>...</body></html>",
             extraction_metadata={"crawler": "crawl4ai", "timestamp": "2024-01-01"},
         )
 

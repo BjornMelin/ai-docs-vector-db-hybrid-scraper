@@ -156,6 +156,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
 
         Raises:
             ValueError: If body cannot be retrieved
+
         """
         try:
             return response.body
@@ -180,6 +181,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Compressed response
+
         """
         compressed_response = Response(
             content=compressed_body,
@@ -198,8 +200,10 @@ class CompressionMiddleware(BaseHTTPMiddleware):
         # Log compression ratio
         compression_ratio = len(original_body) / len(compressed_body)
         logger.debug(
-            f"Compressed response: {len(original_body)} -> {len(compressed_body)} bytes "
-            f"(ratio: {compression_ratio:.2f}x)"
+            "Compressed response: %s -> %s bytes (ratio: %.2f)x",
+            len(original_body),
+            len(compressed_body),
+            compression_ratio,
         )
 
         return compressed_response
@@ -212,6 +216,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
         Args:
             compressed_response: Compressed response to modify
             original_response: Original response for header reference
+
         """
         vary_header = original_response.headers.get("vary", "")
         if "accept-encoding" not in vary_header.lower():
@@ -363,6 +368,7 @@ class BrotliCompressionMiddleware(BaseHTTPMiddleware):
 
         Raises:
             ValueError: If body cannot be retrieved
+
         """
         try:
             return response.body
@@ -387,6 +393,7 @@ class BrotliCompressionMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Compressed response
+
         """
         compressed_response = Response(
             content=compressed_body,
@@ -405,8 +412,10 @@ class BrotliCompressionMiddleware(BaseHTTPMiddleware):
         # Log compression ratio
         compression_ratio = len(original_body) / len(compressed_body)
         logger.debug(
-            f"Brotli compressed response: {len(original_body)} -> {len(compressed_body)} bytes "
-            f"(ratio: {compression_ratio:.2f}x)"
+            "Brotli compressed response: %s -> %s bytes (ratio: %.2f)x",
+            len(original_body),
+            len(compressed_body),
+            compression_ratio,
         )
 
         return compressed_response
@@ -419,6 +428,7 @@ class BrotliCompressionMiddleware(BaseHTTPMiddleware):
         Args:
             compressed_response: Compressed response to modify
             original_response: Original response for header reference
+
         """
         vary_header = original_response.headers.get("vary", "")
         if "accept-encoding" not in vary_header.lower():

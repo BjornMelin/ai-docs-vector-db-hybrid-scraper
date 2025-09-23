@@ -59,6 +59,7 @@ class QdrantClientProvider:
 
         Raises:
             RuntimeError: If client is unhealthy
+
         """
         if not self.client:
             msg = "Qdrant client is not available or unhealthy"
@@ -78,6 +79,7 @@ class QdrantClientProvider:
 
         Raises:
             RuntimeError: If client is unhealthy
+
         """
         if not self.client:
             msg = "Qdrant client is not available or unhealthy"
@@ -106,6 +108,7 @@ class QdrantClientProvider:
 
         Raises:
             RuntimeError: If client is unhealthy
+
         """
         if not self.client:
             msg = "Qdrant client is not available or unhealthy"

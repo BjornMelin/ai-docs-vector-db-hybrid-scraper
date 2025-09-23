@@ -102,7 +102,8 @@ class TestVolumeLoad:
         # Assertions
         assert result.success, f"Volume test failed: {result.bottlenecks_identified}"
         assert processing_analysis["avg_throughput_mb_per_second"] > 1.0, (
-            f"Low processing throughput: {processing_analysis['avg_throughput_mb_per_second']} MB/s"
+            f"Low processing throughput: "
+            f"{processing_analysis['avg_throughput_mb_per_second']} MB/s"
         )
         assert processing_analysis["processing_consistency"] > 0.8, (
             "Inconsistent processing performance"
@@ -151,7 +152,8 @@ class TestVolumeLoad:
 
                 # Generate mock embeddings
                 embeddings = [
-                    [random.random() for _ in range(384)] for _ in range(batch_size)
+                    [random.random() for _ in range(384)]
+                    for _ in range(batch_size)  # noqa: S311
                 ]
 
                 return {
@@ -189,9 +191,10 @@ class TestVolumeLoad:
         async def bulk_embedding_operation(**_kwargs):
             """Generate embeddings for large text batches."""
             # Generate batch of texts
-            batch_size = random.randint(50, 200)  # Variable batch sizes
+            batch_size = random.randint(50, 200)  # Variable batch sizes  # noqa: S311
             texts = [
-                f"This is test document {i} with content about {random.choice(['AI', 'ML', 'NLP', 'vectors', 'embeddings'])}"
+                f"This is test document {i} with content about "
+                f"{random.choice(['AI', 'ML', 'NLP', 'vectors', 'embeddings'])}"  # noqa: S311
                 for i in range(batch_size)
             ]
 
@@ -223,7 +226,8 @@ class TestVolumeLoad:
 
         # Assertions
         assert embedding_stats["overall_throughput"] > 100, (
-            f"Low embedding throughput: {embedding_stats['overall_throughput']} embeddings/s"
+            f"Low embedding throughput: "
+            f"{embedding_stats['overall_throughput']} embeddings/s"
         )
         assert batch_analysis["batch_efficiency"] > 0.8, (
             f"Poor batch efficiency: {batch_analysis['batch_efficiency']}"
@@ -332,8 +336,8 @@ class TestVolumeLoad:
                 "software architecture patterns",
             ]
 
-            query = random.choice(queries)
-            limit = random.randint(500, 2000)  # Large result sets
+            query = random.choice(queries)  # noqa: S311
+            limit = random.randint(500, 2000)  # Large result sets  # noqa: S311
 
             return await search_processor.search_with_large_results(
                 query=query, limit=limit, **_kwargs
@@ -403,7 +407,7 @@ class TestVolumeLoad:
                         await asyncio.sleep(processing_time)
 
                         # Simulate potential failures
-                        if random.random() < 0.01:  # 1% failure rate
+                        if random.random() < 0.01:  # 1% failure rate  # noqa: S311
                             _raise_processing_error(doc["url"])
 
                         processed_doc = {
@@ -478,15 +482,17 @@ class TestVolumeLoad:
         async def batch_ingestion_operation(**_kwargs):
             """Perform batch document ingestion."""
             # Generate batch of documents to ingest
-            batch_size = random.randint(20, 100)
+            batch_size = random.randint(20, 100)  # noqa: S311
             document_batch = []
 
             for i in range(batch_size):
                 doc = {
                     "url": f"https://example.com/docs/document_{i}.html",
                     "title": f"Document {i}",
-                    "size_mb": random.uniform(0.5, 5.0),  # 0.5-5MB documents
-                    "content_type": random.choice(["tutorial", "reference", "guide"]),
+                    "size_mb": random.uniform(
+                        0.5, 5.0
+                    ),  # 0.5-5MB documents  # noqa: S311
+                    "content_type": random.choice(["tutorial", "reference", "guide"]),  # noqa: S311
                 }
                 document_batch.append(doc)
 
@@ -585,7 +591,8 @@ class TestVolumeLoad:
         result_sizes = [m["result_size_kb"] for m in metrics]
         processing_times = [m["processing_time"] for m in metrics]
 
-        # Calculate memory efficiency (larger results shouldn't cause proportional slowdown)
+        # Calculate memory efficiency (larger results shouldn't cause
+        # proportional slowdown)
         efficiency_scores = []
         for i, size_kb in enumerate(result_sizes):
             expected_time = 0.1 + (size_kb / 1000.0) * 0.05  # Expected scaling

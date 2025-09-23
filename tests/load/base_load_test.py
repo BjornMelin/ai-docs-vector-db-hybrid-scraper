@@ -47,8 +47,8 @@ class VectorDBUserBehavior(TaskSet):
     @task(3)
     def search_documents(self):
         """Simulate document search operations."""
-        query = random.choice(self.test_queries)
-        collection = random.choice(self.collections)
+        query = random.choice(self.test_queries)  # noqa: S311
+        collection = random.choice(self.collections)  # noqa: S311
 
         with self.client.post(
             "/api/v1/search",
@@ -73,8 +73,8 @@ class VectorDBUserBehavior(TaskSet):
     @task(2)
     def add_document(self):
         """Simulate document addition operations."""
-        url = random.choice(self.test_documents)
-        collection = random.choice(self.collections)
+        url = random.choice(self.test_documents)  # noqa: S311
+        collection = random.choice(self.collections)  # noqa: S311
 
         with self.client.post(
             "/api/v1/documents",
@@ -100,8 +100,8 @@ class VectorDBUserBehavior(TaskSet):
     @task(1)
     def update_document(self):
         """Simulate document update operations."""
-        url = random.choice(self.test_documents)
-        collection = random.choice(self.collections)
+        url = random.choice(self.test_documents)  # noqa: S311
+        collection = random.choice(self.collections)  # noqa: S311
 
         with self.client.put(
             "/api/v1/documents",
@@ -111,7 +111,7 @@ class VectorDBUserBehavior(TaskSet):
                 "metadata": {
                     "source": "load_test",
                     "updated_at": time.time(),
-                    "version": random.randint(1, 10),
+                    "version": random.randint(1, 10),  # noqa: S311
                 },
             },
             catch_response=True,
@@ -128,7 +128,10 @@ class VectorDBUserBehavior(TaskSet):
     @task(2)
     def generate_embeddings(self):
         """Simulate embedding generation operations."""
-        text = f"This is a test document for load testing. Query: {random.choice(self.test_queries)}"
+        text = (
+            f"This is a test document for load testing. Query: "
+            f"{random.choice(self.test_queries)}"
+        )
 
         with self.client.post(
             "/api/v1/embeddings",

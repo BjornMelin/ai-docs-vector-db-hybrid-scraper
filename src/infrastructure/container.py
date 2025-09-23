@@ -37,6 +37,7 @@ def _create_openai_client(config: Any) -> AsyncOpenAI:
 
     Returns:
         OpenAI client
+
     """
     try:
         api_key = getattr(getattr(config, "openai", None), "api_key", None) or ""
@@ -57,6 +58,7 @@ def _create_qdrant_client(config: Any) -> AsyncQdrantClient:
 
     Returns:
         Qdrant client
+
     """
     try:
         qdrant_config = getattr(config, "qdrant", None)
@@ -80,6 +82,7 @@ def _create_redis_client(config: Any) -> redis.Redis:
 
     Returns:
         Redis client
+
     """
     try:
         cache_config = getattr(config, "cache", None)
@@ -101,6 +104,7 @@ def _create_firecrawl_client(config: Any) -> AsyncFirecrawlApp:
 
     Returns:
         Firecrawl client
+
     """
     try:
         firecrawl_config = getattr(config, "firecrawl", None)
@@ -116,6 +120,7 @@ async def _create_http_client() -> AsyncGenerator[Any]:
 
     Yields:
         HTTP client session
+
     """
     async with asyncio.timeout(30.0):
         timeout_config = aiohttp.ClientTimeout(total=30.0)
@@ -131,6 +136,7 @@ def _create_parallel_processing_system(embedding_manager: Any) -> Any:
 
     Returns:
         ParallelProcessingSystem instance
+
     """
     if OptimizationConfig and ParallelProcessingSystem:
         # Create optimization configuration
@@ -245,6 +251,7 @@ class ContainerManager:
 
         Returns:
             Initialized container
+
         """
         if self._initialized:
             return self.container
@@ -275,6 +282,7 @@ class ContainerManager:
 
         Returns:
             Configuration dictionary
+
         """
         try:
             # Try to convert using model_dump if it's a Pydantic model
@@ -301,6 +309,7 @@ class ContainerManager:
 
         Returns:
             Serialized data
+
         """
         if hasattr(data, "model_dump"):
             return data.model_dump()
@@ -329,6 +338,7 @@ def get_container() -> ApplicationContainer | None:
 
     Returns:
         Container instance or None if not initialized
+
     """
     return _container_manager.container
 
@@ -341,6 +351,7 @@ async def initialize_container(config: Any) -> ApplicationContainer:
 
     Returns:
         Initialized container
+
     """
     return await _container_manager.initialize(config)
 

@@ -29,9 +29,9 @@ def register_pipeline_health_tool(mcp, factory: QueryProcessingPipelineFactory):
 
     @mcp.tool()
     async def get_processing_pipeline_health(ctx: Context) -> dict:
-        """Get health status of the advanced query processing pipeline.
+        """Get health status of the query processing pipeline.
 
-        Returns detailed health information for all pipeline components including
+        Returns health information for all pipeline components including
         orchestrator, intent classifier, preprocessor, and strategy selector.
         """
         request_id = str(uuid4())
@@ -45,8 +45,8 @@ def register_pipeline_health_tool(mcp, factory: QueryProcessingPipelineFactory):
             health_status = await pipeline.health_check()
 
             await ctx.info(
-                f"Pipeline health check {request_id} completed: "
-                f"status={'healthy' if health_status.get('pipeline_healthy') else 'unhealthy'}"
+                f"Pipeline health check {request_id} completed: status="
+                f"{'healthy' if health_status.get('pipeline_healthy') else 'unhealthy'}"
             )
 
         except Exception as e:
@@ -66,9 +66,9 @@ def register_pipeline_metrics_tool(mcp, factory: QueryProcessingPipelineFactory)
 
     @mcp.tool()
     async def get_processing_pipeline_metrics(ctx: Context) -> dict:
-        """Get performance metrics from the advanced query processing pipeline.
+        """Get performance metrics from the query processing pipeline.
 
-        Returns comprehensive performance statistics including processing times,
+        Returns performance statistics including processing times,
         strategy usage, success rates, and fallback utilization.
         """
         request_id = str(uuid4())
@@ -96,10 +96,10 @@ def register_pipeline_warmup_tool(mcp, factory: QueryProcessingPipelineFactory):
 
     @mcp.tool()
     async def warm_up_processing_pipeline(ctx: Context) -> dict:
-        """Warm up the advanced query processing pipeline.
+        """Warm up the query processing pipeline.
 
         Pre-loads models and caches by processing test queries to ensure
-        optimal performance for subsequent real queries.
+        performance for subsequent real queries.
         """
         request_id = str(uuid4())
         await ctx.info(f"Starting pipeline warm-up {request_id}")

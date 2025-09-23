@@ -1,7 +1,9 @@
 """Distributed system resilience integration tests.
 
-This module tests the resilience of the distributed system under various failure scenarios,
-network partitions, and resource constraints. It validates fault tolerance, recovery patterns,
+This module tests the resilience of the distributed system under various
+failure scenarios,
+network partitions, and resource constraints. It validates fault tolerance,
+recovery patterns,
 and system stability across service boundaries.
 
 Tests include:
@@ -206,7 +208,7 @@ class TestNetworkPartitionTolerance:
             connection_attempts.append({"node_id": node_id, "time": attempt_time})
 
             # Simulate packet loss based on partition probability
-            if random.random() < partition.partition_probability:
+            if random.random() < partition.partition_probability:  # noqa: S311
                 failed_attempts.append({"node_id": node_id, "time": attempt_time})
                 msg = f"Network unreachable for {node_id}"
                 raise ConnectionError(msg)
@@ -260,7 +262,7 @@ class TestNetworkPartitionTolerance:
         # Mock high latency responses
         async def simulate_high_latency_response(operation: str):
             """Simulate high latency network response."""
-            latency_ms = random.uniform(2000, 5000)  # 2-5 second latency
+            latency_ms = random.uniform(2000, 5000)  # 2-5 second latency  # noqa: S311
             await asyncio.sleep(latency_ms / 1000)
 
             return {
@@ -967,7 +969,8 @@ class TestDistributedConfigurationManagement:
         consistency_rules = [
             {
                 "rule_id": "database_pool_consistency",
-                "description": "Database pool sizes should be consistent across services",
+                "description": "Database pool sizes should be consistent across "
+                "services",
                 "type": "value_consistency",
                 "config_paths": [
                     "service.vector_db.database.pool_size",

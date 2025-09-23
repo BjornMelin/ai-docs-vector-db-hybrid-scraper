@@ -231,7 +231,7 @@ class Sampleclass{i}:
         embeddings = []
         for _ in range(200):
             # Generate random 384-dimensional embeddings
-            embedding = [random.uniform(-1, 1) for _ in range(384)]
+            embedding = [random.uniform(-1, 1) for _ in range(384)]  # noqa: S311
             embeddings.append(embedding)
 
         return embeddings

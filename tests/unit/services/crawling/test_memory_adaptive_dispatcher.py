@@ -1,7 +1,10 @@
-"""Comprehensive tests for Memory-Adaptive Dispatcher integration in Crawl4AI provider.
+"""Tests for Memory-Adaptive Dispatcher integration in
+Crawl4AI provider.
 
-This test suite ensures ≥90% coverage of the Memory-Adaptive Dispatcher functionality
-including configuration, initialization, streaming, performance monitoring, and fallback.
+This test suite ensures ≥90% coverage of the Memory-Adaptive Dispatcher
+functionality
+including configuration, initialization, streaming, performance monitoring,
+and fallback.
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -485,7 +488,7 @@ class TestLXMLWebScrapingStrategy:
 
 
 class TestErrorHandling:
-    """Test comprehensive error handling scenarios."""
+    """Test error handling scenarios."""
 
     @pytest.fixture
     def error_provider(self):

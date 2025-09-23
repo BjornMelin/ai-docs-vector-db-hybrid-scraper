@@ -1,6 +1,6 @@
 """Enum tests for the personalized ranking service.
 
-Tests for ranking strategy enums, interaction types, content categories and user preferences.
+Tests for ranking strategy enums, interaction types, content categories and user prefs.
 """
 
 from datetime import UTC, datetime

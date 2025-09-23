@@ -31,7 +31,9 @@ def _raise_config_system_unavailable() -> None:
 class ObservabilityConfig(BaseModel):
     """Configuration for OpenTelemetry observability features."""
 
-    enabled: bool = Field(default=False, description="Enable OpenTelemetry observability")
+    enabled: bool = Field(
+        default=False, description="Enable OpenTelemetry observability"
+    )
     service_name: str = Field(
         default="ai-docs-vector-db", description="Service name for traces"
     )
@@ -44,21 +46,23 @@ class ObservabilityConfig(BaseModel):
     otlp_headers: dict[str, str] = Field(
         default_factory=dict, description="Headers for OTLP export"
     )
-    otlp_insecure: bool = Field(default=True, description="Use insecure OTLP connection")
+    otlp_insecure: bool = Field(
+        default=True, description="Use insecure OTLP connection"
+    )
     trace_sample_rate: float = Field(
         default=1.0, ge=0.0, le=1.0, description="Trace sampling rate"
     )
     deployment_environment: str = Field(
         default="development", description="Deployment environment"
     )
-    track_ai_operations: bool = Field(
-        default=True, description="Track AI operations"
-    )
+    track_ai_operations: bool = Field(default=True, description="Track AI operations")
     track_costs: bool = Field(default=True, description="Track AI service costs")
     track_performance: bool = Field(
         default=True, description="Track performance metrics"
     )
-    instrument_fastapi: bool = Field(default=True, description="Auto-instrument FastAPI")
+    instrument_fastapi: bool = Field(
+        default=True, description="Auto-instrument FastAPI"
+    )
     instrument_httpx: bool = Field(
         default=True, description="Auto-instrument HTTP clients"
     )
@@ -89,7 +93,6 @@ _CONFIG_RESET_REQUIRED = False
 
 def clear_observability_cache() -> None:
     """Clear cached observability configuration."""
-
     global _CACHED_OBSERVABILITY_CONFIG
     _CACHED_OBSERVABILITY_CONFIG = None
     global _CONFIG_RESET_REQUIRED
@@ -98,7 +101,6 @@ def clear_observability_cache() -> None:
 
 def _slugify_app_name(value: str) -> str:
     """Convert application name to a slug suitable for service identifiers."""
-
     return "-".join(value.lower().split())
 
 
@@ -195,9 +197,7 @@ def get_observability_config(
         result = ObservabilityConfig(**config_dict)
 
     except (ImportError, ValueError, TypeError, UnicodeDecodeError) as exc:
-        logger.warning(
-            "Could not load from main config, using defaults: %s", exc
-        )
+        logger.warning("Could not load from main config, using defaults: %s", exc)
         if main_config is None:
             _CACHED_OBSERVABILITY_CONFIG = ObservabilityConfig()
             return _CACHED_OBSERVABILITY_CONFIG

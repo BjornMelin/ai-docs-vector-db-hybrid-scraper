@@ -689,7 +689,7 @@ class TestScalabilityLoad:
 
             # Select operation based on probabilities
 
-            rand = random.random()
+            rand = random.random()  # noqa: S311
             cumulative = 0
 
             for query_type, prob, complexity in operations:

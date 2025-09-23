@@ -468,7 +468,7 @@ class TestSearchStrategySelector:
     async def test_performance_requirements_no_fast_strategies_available(
         self, initialized_selector
     ):
-        """Test performance requirements when no fast strategies meet latency constraints."""
+        """Test perf requirements when no fast strategies meet latency constraints."""
         # Use a strategy with high latency
         classification = QueryIntentClassification(
             primary_intent=QueryIntent.PROCEDURAL,  # Uses HYDE which has high latency
@@ -496,7 +496,8 @@ class TestSearchStrategySelector:
         """Test performance requirements when no strategies meet quality constraints."""
         # Use a strategy with lower quality
         classification = QueryIntentClassification(
-            primary_intent=QueryIntent.FACTUAL,  # Uses HYBRID which has moderate quality
+            # Uses HYBRID which has moderate quality
+            primary_intent=QueryIntent.FACTUAL,
             secondary_intents=[],
             confidence_scores={QueryIntent.FACTUAL: 0.8},
             complexity_level=QueryComplexity.SIMPLE,
@@ -544,7 +545,8 @@ class TestSearchStrategySelector:
         """Test version context adjustments."""
         # Use a strategy that doesn't have HYBRID in primary/fallbacks
         classification = QueryIntentClassification(
-            primary_intent=QueryIntent.PROCEDURAL,  # Uses HYDE, fallbacks don't include HYBRID
+            # Uses HYDE, fallbacks don't include HYBRID
+            primary_intent=QueryIntent.PROCEDURAL,
             secondary_intents=[],
             confidence_scores={QueryIntent.PROCEDURAL: 0.8},
             complexity_level=QueryComplexity.MODERATE,
@@ -781,7 +783,8 @@ class TestSearchStrategySelector:
         """Test programming language context when SEMANTIC is not in strategies."""
         # Use an intent that doesn't have SEMANTIC in primary or fallbacks
         classification = QueryIntentClassification(
-            primary_intent=QueryIntent.DEBUGGING,  # Uses FILTERED, fallbacks don't include SEMANTIC
+            # Uses FILTERED, fallbacks don't include SEMANTIC
+            primary_intent=QueryIntent.DEBUGGING,
             secondary_intents=[],
             confidence_scores={QueryIntent.DEBUGGING: 0.8},
             complexity_level=QueryComplexity.MODERATE,
@@ -803,7 +806,8 @@ class TestSearchStrategySelector:
         """Test version context when HYBRID is not in strategies."""
         # Use an intent where HYBRID is not in primary or fallbacks
         classification = QueryIntentClassification(
-            primary_intent=QueryIntent.BEST_PRACTICES,  # Uses RERANKED, fallbacks don't include HYBRID
+            # Uses RERANKED, fallbacks don't include HYBRID
+            primary_intent=QueryIntent.BEST_PRACTICES,
             secondary_intents=[],
             confidence_scores={QueryIntent.BEST_PRACTICES: 0.8},
             complexity_level=QueryComplexity.MODERATE,

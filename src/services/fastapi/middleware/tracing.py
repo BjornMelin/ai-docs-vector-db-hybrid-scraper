@@ -48,6 +48,7 @@ def _safe_escape_for_logging(value: str | None) -> str | None:
 
     Returns:
         HTML-escaped string or None if input was None
+
     """
     if value is None:
         return None
@@ -155,6 +156,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
             correlation_id: Request correlation ID
             request: HTTP request
             start_time: Request start time
+
         """
         end_time = time.perf_counter()
         duration = end_time - start_time
@@ -188,6 +190,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Response with correlation headers
+
         """
         # Calculate processing time
         end_time = time.perf_counter()
@@ -344,6 +347,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Response body as bytes or None
+
         """
         if not hasattr(response, "body"):
             return None
@@ -358,6 +362,7 @@ class TracingMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Formatted body string
+
         """
         # Limit body size for logging
         if len(body) > self.max_body_size:
@@ -433,6 +438,7 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
 
         Raises:
             ImportError: If OpenTelemetry is not available
+
         """
         if trace is None:
             _raise_opentelemetry_not_available()
@@ -487,6 +493,7 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
         Args:
             span: OpenTelemetry span
             exception: Exception that occurred
+
         """
         span.record_exception(exception)
         span.set_status(self.Status(self.StatusCode.ERROR, str(exception)))
@@ -497,6 +504,7 @@ class DistributedTracingMiddleware(BaseHTTPMiddleware):
         Args:
             span: OpenTelemetry span
             response: HTTP response
+
         """
         span.set_attribute("http.status_code", response.status_code)
 

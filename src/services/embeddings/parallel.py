@@ -1,4 +1,4 @@
-"""Parallel ML processing engine for high-performance embedding generation.
+"""Parallel ML processing engine for embedding generation.
 
 This module implements parallel processing capabilities for ML components including
 embeddings, content classification, and metadata extraction to achieve 3-5x speedup
@@ -51,7 +51,7 @@ class ProcessingMetrics:
 
 
 class ParallelProcessor:
-    """High-performance parallel processor for ML operations."""
+    """Parallel processor for ML operations."""
 
     def __init__(
         self,
@@ -63,6 +63,7 @@ class ParallelProcessor:
         Args:
             process_func: Function to process batches of items
             config: Parallel processing configuration
+
         """
         self.process_func = process_func
         self.config = config or ParallelConfig()
@@ -76,7 +77,7 @@ class ParallelProcessor:
         items: list[T],
         enable_caching: bool = True,
     ) -> tuple[list[R], ProcessingMetrics]:
-        """Process items in parallel with optimal batching and caching.
+        """Process items in parallel with batching and caching.
 
         Args:
             items: List of items to process
@@ -84,6 +85,7 @@ class ParallelProcessor:
 
         Returns:
             Tuple of (results, metrics)
+
         """
         if not items:
             return [], ProcessingMetrics()
@@ -151,6 +153,7 @@ class ParallelProcessor:
 
         Returns:
             List of processing results
+
         """
         async with self._semaphore:
             try:
@@ -207,12 +210,15 @@ class ParallelProcessor:
 
         Returns:
             Optimal batch configuration
+
         """
         if not self.config.adaptive_batching:
             return {
                 "batch_size": self.config.batch_size_per_worker,
-                "num_batches": (total_items + self.config.batch_size_per_worker - 1)
-                // self.config.batch_size_per_worker,
+                "num_batches": (
+                    (total_items + self.config.batch_size_per_worker - 1)
+                    // self.config.batch_size_per_worker
+                ),
                 "reasoning": "Static configuration",
             }
 
@@ -248,7 +254,9 @@ class ParallelProcessor:
         return {
             "batch_size": optimal_batch_size,
             "num_batches": num_batches,
-            "reasoning": f"Adaptive batching based on {len(self._performance_history)} samples",
+            "reasoning": (
+                f"Adaptive batching based on {len(self._performance_history)} samples"
+            ),
         }
 
     def _create_batches(
@@ -262,6 +270,7 @@ class ParallelProcessor:
 
         Returns:
             List of batches
+
         """
         batch_size = batch_config["batch_size"]
         batches = []
@@ -280,7 +289,7 @@ class ParallelProcessor:
         end_time: float,
         batch_config: dict[str, Any],
     ) -> ProcessingMetrics:
-        """Calculate comprehensive performance metrics.
+        """Calculate performance metrics.
 
         Args:
             items: Original items processed
@@ -291,6 +300,7 @@ class ParallelProcessor:
 
         Returns:
             Performance metrics
+
         """
         processing_time_ms = (end_time - start_time) * 1000
         total_items = len(items)
@@ -329,6 +339,7 @@ class ParallelProcessor:
 
         Returns:
             Cached results if available
+
         """
         # Implementation depends on caching layer
         # This is a placeholder for cache integration
@@ -340,6 +351,7 @@ class ParallelProcessor:
         Args:
             batch: Original batch items
             results: Processing results
+
         """
         # Implementation depends on caching layer
         # This is a placeholder for cache integration
@@ -349,6 +361,7 @@ class ParallelProcessor:
 
         Returns:
             Performance summary with historical data
+
         """
         if not self._performance_history:
             return {"status": "no_data"}
@@ -392,6 +405,7 @@ class ParallelEmbeddingProcessor:
         Args:
             embedding_manager: EmbeddingManager instance
             config: Parallel processing configuration
+
         """
         self.embedding_manager = embedding_manager
         self.config = config or ParallelConfig()
@@ -410,6 +424,7 @@ class ParallelEmbeddingProcessor:
 
         Returns:
             Dictionary with embeddings and performance metrics
+
         """
         if not texts:
             return {
@@ -437,6 +452,7 @@ class ParallelEmbeddingProcessor:
 
         Returns:
             List of embedding vectors
+
         """
         # Use the existing embedding manager to generate embeddings
         result = await self.embedding_manager.generate_embeddings(
@@ -451,6 +467,7 @@ class ParallelEmbeddingProcessor:
 
         Returns:
             Performance statistics
+
         """
         return self._processor.get_performance_summary()
 
@@ -465,6 +482,7 @@ def cached_text_analysis(text: str) -> dict[str, Any]:
 
     Returns:
         Analysis results
+
     """
     # Simplified text analysis for caching demonstration
     words = text.split()
@@ -490,6 +508,7 @@ async def parallel_content_classification(
 
     Returns:
         List of classification results
+
     """
     processor = ParallelProcessor(
         lambda batch: [classifier.classify_content(content) for content in batch],
@@ -514,6 +533,7 @@ async def parallel_metadata_extraction(
 
     Returns:
         List of metadata extraction results
+
     """
 
     async def batch_extract(batch: list[tuple[str, str]]) -> list[Any]:
