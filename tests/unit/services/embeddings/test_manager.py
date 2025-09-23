@@ -215,14 +215,16 @@ class TestEmbeddingManagerTextAnalysis:
         assert analysis.avg_length == len(texts[0])
         assert analysis.text_type == "short"  # Under 100 chars threshold
         # Text is short and simple, so high quality should not be required
-        # The complexity calculation may be giving a high score due to vocabulary diversity
+        # The complexity calculation may be
+        # giving a high score due to vocabulary diversity
         # Let's just verify the basics without asserting on requires_high_quality
         assert analysis.estimated_tokens > 0
 
     def test_analyze_text_characteristics_code(self, embedding_manager):
         """Test text analysis for code."""
         texts = [
-            "def hello_world():\n    import os\n    print('Hello')\n    class MyClass:\n        pass"
+            "def hello_world():\n    import os\n    print('Hello')\n    "
+            "class MyClass:\n        pass"
         ]
 
         analysis = embedding_manager.analyze_text_characteristics(texts)

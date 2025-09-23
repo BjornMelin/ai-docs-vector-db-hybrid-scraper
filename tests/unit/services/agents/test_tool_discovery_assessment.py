@@ -23,7 +23,7 @@ from src.services.agents.dynamic_tool_discovery import (
 
 
 class TestIntelligentCapabilityAssessment:
-    """Test intelligent capability assessment algorithms."""
+    """Test capability assessment algorithms."""
 
     @pytest.mark.asyncio
     async def test_discover_tools_for_task_search(self):
@@ -69,7 +69,7 @@ class TestIntelligentCapabilityAssessment:
 
         # Test generation task
         tools = await engine.discover_tools_for_task(
-            "Generate comprehensive analysis based on documents",
+            "Generate analysis based on documents",
             {"max_cost": 0.1, "min_accuracy": 0.85},
         )
 
@@ -382,7 +382,8 @@ class TestRollingAveragePerformanceTracking:
         updated_metrics = updated_tool.metrics
 
         # Should be closer to recent values (last 10) than early values
-        # The average of last 10 latencies: 105, 106, 107, 108, 109, 110, 111, 112, 113, 114
+        # The average of last 10 latencies: 105,
+        # 106, 107, 108, 109, 110, 111, 112, 113, 114
         expected_recent_avg = sum(range(105, 115)) / 10  # 109.5
         assert abs(updated_metrics.average_latency_ms - expected_recent_avg) < 1.0
 

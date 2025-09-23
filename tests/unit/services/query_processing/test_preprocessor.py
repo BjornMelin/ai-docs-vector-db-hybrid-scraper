@@ -94,7 +94,7 @@ class TestQueryPreprocessor:
                 input_query, enable_expansion=True
             )
 
-            # Should contain expansion in parentheses or original query enhanced
+            # Should contain expansion in parentheses or original query
             assert (
                 expected_expansion.lower() in result.processed_query.lower()
                 or len(result.expansions_added) > 0
@@ -148,7 +148,7 @@ class TestQueryPreprocessor:
                 enable_context_extraction=False,
             )
 
-            # Check that normalization was not marked as applied when text doesn't change
+            # Check that norm was not marked as applied when text doesn't change
             assert result.normalization_applied is False
 
     @pytest.mark.asyncio
@@ -273,7 +273,7 @@ class TestQueryPreprocessor:
             "Some experience with React development",
         ]
 
-        advanced_queries = [
+        complex_queries = [
             "Advanced Python metaclass patterns",
             "Expert-level React performance optimization",
             "Professional enterprise architecture design",
@@ -293,7 +293,7 @@ class TestQueryPreprocessor:
             if "experience_level" in context:
                 assert context["experience_level"] == "intermediate"
 
-        for query in advanced_queries:
+        for query in complex_queries:
             result = await initialized_preprocessor.preprocess_query(query)
             context = result.context_extracted
 
@@ -324,7 +324,7 @@ class TestQueryPreprocessor:
                 )
 
     @pytest.mark.asyncio
-    async def test_comprehensive_preprocessing(self, initialized_preprocessor):
+    async def test_full_preprocessing(self, initialized_preprocessor):
         """Test comprehensive preprocessing with all features enabled."""
         query = "How to fix authetication  phython  api???"
 

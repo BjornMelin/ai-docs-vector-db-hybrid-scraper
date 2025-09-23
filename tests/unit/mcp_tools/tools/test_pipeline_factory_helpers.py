@@ -116,7 +116,9 @@ class TestPipelineFactoryErrorHandling:
             "Cache unavailable"
         )
 
-        # For this test, we focus on the error handling behavior without creating the full pipeline
+        # For this test, we focus on the error
+        # andling behavior without creating the full pipeline
+
         # This follows the principle of testing real-world scenarios
 
         with pytest.raises(RuntimeError):
