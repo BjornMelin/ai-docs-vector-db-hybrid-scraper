@@ -41,45 +41,63 @@ def get_observability_service() -> dict[str, any]:
 
         # Short-circuit when observability is disabled to avoid importing OTEL
         if not config.enabled:
-            return {
+            service_state = {
                 "config": config,
                 "tracer": create_noop_tracer(),
                 "meter": create_noop_meter(),
                 "enabled": False,
             }
+        else:
+            already_enabled = is_observability_enabled()
+            initialization_result = False
+            if not already_enabled:
+                initialization_result = bool(initialize_observability(config))
 
-        # Initialize if not already done
-        if not is_observability_enabled():
-            initialize_observability(config)
+            enabled = (
+                already_enabled
+                or initialization_result
+                or is_observability_enabled()
+            )
 
-        enabled = is_observability_enabled()
+            tracer_obj = (
+                get_tracer("ai-docs-service") if enabled else create_noop_tracer()
+            )
+            meter_obj = (
+                get_meter("ai-docs-service") if enabled else create_noop_meter()
+            )
 
-        tracer_obj = get_tracer("ai-docs-service") if enabled else create_noop_tracer()
-        meter_obj = get_meter("ai-docs-service") if enabled else create_noop_meter()
+            service_state = {
+                "config": config,
+                "tracer": tracer_obj,
+                "meter": meter_obj,
+                "enabled": enabled,
+            }
 
-        return {
-            "config": config,
-            "tracer": tracer_obj,
-            "meter": meter_obj,
-            "enabled": enabled,
-        }
-
-    except (AttributeError, ImportError, RuntimeError, ValueError) as exc:
+    except (
+        AttributeError,
+        ImportError,
+        RuntimeError,
+        ValueError,
+        TypeError,
+        LookupError,
+    ) as exc:
         logger.warning("Failed to initialize observability service: %s", exc)
-        return {
+        service_state = {
             "config": ObservabilityConfig(),
             "tracer": None,
             "meter": None,
             "enabled": False,
         }
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - ensure DI never propagates config errors
         logger.warning("Unexpected error initializing observability: %s", exc)
-        return {
+        service_state = {
             "config": ObservabilityConfig(),
             "tracer": None,
             "meter": None,
             "enabled": False,
         }
+
+    return service_state
 
 
 ObservabilityServiceDep = Annotated[dict, Depends(get_observability_service)]
@@ -176,7 +194,9 @@ async def record_ai_operation_metrics(
 
     except (TimeoutError, OSError, PermissionError) as exc:
         logger.debug("Failed to record AI operation metrics: %s", exc)
-    except Exception as exc:
+    except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
+        logger.debug("Unexpected error recording AI operation metrics: %s", exc)
+    except Exception as exc:  # noqa: BLE001 - metrics recording must never raise
         logger.debug("Unexpected error recording AI operation metrics: %s", exc)
 
 
@@ -208,7 +228,9 @@ async def track_ai_cost_metrics(
 
     except TimeoutError as exc:
         logger.debug("Failed to track AI cost metrics: %s", exc)
-    except Exception as exc:
+    except (RuntimeError, ValueError, TypeError, AttributeError) as exc:
+        logger.debug("Unexpected error tracking AI cost metrics: %s", exc)
+    except Exception as exc:  # noqa: BLE001 - metrics recording must never raise
         logger.debug("Unexpected error tracking AI cost metrics: %s", exc)
 
 
@@ -229,7 +251,7 @@ async def get_observability_health(
         config = observability_service["config"]
         enabled = observability_service["enabled"]
 
-    except Exception as e:
+    except (KeyError, TypeError, AttributeError) as e:
         logger.exception("Failed to get observability health")
         return {
             "enabled": False,

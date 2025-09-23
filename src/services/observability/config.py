@@ -84,6 +84,7 @@ class ObservabilityConfig(BaseModel):
 
 
 _CACHED_OBSERVABILITY_CONFIG: ObservabilityConfig | None = None
+_CONFIG_RESET_REQUIRED = False
 
 
 def clear_observability_cache() -> None:
@@ -91,6 +92,8 @@ def clear_observability_cache() -> None:
 
     global _CACHED_OBSERVABILITY_CONFIG
     _CACHED_OBSERVABILITY_CONFIG = None
+    global _CONFIG_RESET_REQUIRED
+    _CONFIG_RESET_REQUIRED = True
 
 
 def _slugify_app_name(value: str) -> str:
@@ -113,27 +116,34 @@ def get_observability_config(
         ObservabilityConfig instance with settings
 
     """
-    global _CACHED_OBSERVABILITY_CONFIG
+    global _CACHED_OBSERVABILITY_CONFIG, _CONFIG_RESET_REQUIRED
+
+    if _CONFIG_RESET_REQUIRED and main_config is None and reset_config is not None:
+        try:
+            reset_config()
+        except Exception:  # noqa: BLE001 - reset best-effort; skip on failure
+            logger.debug("Failed to reset main configuration before refresh")
+        finally:
+            _CONFIG_RESET_REQUIRED = False
+    elif _CONFIG_RESET_REQUIRED and main_config is not None:
+        _CONFIG_RESET_REQUIRED = False
 
     if main_config is None and not force_refresh and _CACHED_OBSERVABILITY_CONFIG:
         return _CACHED_OBSERVABILITY_CONFIG
 
     try:
         if main_config is None:
-            if get_config is None or reset_config is None:
+            if get_config is None:
                 _raise_config_system_unavailable()
             main_config = get_config()
 
-        config_dict: dict[str, Any] = {}
+        config_dict: dict[str, Any] = ObservabilityConfig().model_dump()
 
         if hasattr(main_config, "observability") and main_config.observability:
             try:
                 config_dict.update(main_config.observability.model_dump())
             except AttributeError:
                 config_dict.update(main_config.observability.__dict__)
-
-        if hasattr(main_config, "monitoring") and main_config.monitoring:
-            config_dict["enabled"] = main_config.monitoring.enable_metrics
 
         if hasattr(main_config, "environment"):
             config_dict["deployment_environment"] = main_config.environment.value
@@ -170,29 +180,38 @@ def get_observability_config(
         if "service_version" not in env_overrides and os.getenv("AI_DOCS_VERSION"):
             env_overrides["service_version"] = os.getenv("AI_DOCS_VERSION")
 
+        if "enabled" not in env_overrides:
+            monitoring_toggle = os.getenv("AI_DOCS_MONITORING__ENABLE_METRICS")
+            if monitoring_toggle is not None:
+                env_overrides["enabled"] = monitoring_toggle.strip().lower() in {
+                    "1",
+                    "true",
+                    "yes",
+                    "on",
+                }
+
         config_dict.update(env_overrides)
 
         result = ObservabilityConfig(**config_dict)
 
+    except (ImportError, ValueError, TypeError, UnicodeDecodeError) as exc:
+        logger.warning(
+            "Could not load from main config, using defaults: %s", exc
+        )
+        if main_config is None:
+            _CACHED_OBSERVABILITY_CONFIG = ObservabilityConfig()
+            return _CACHED_OBSERVABILITY_CONFIG
+        return ObservabilityConfig()
+    else:
         if main_config is not None and hasattr(main_config, "observability"):
             try:
                 object.__setattr__(main_config, "observability", result)
             except (AttributeError, TypeError):
                 main_config.observability = result
 
-        if main_config is None:
-            _CACHED_OBSERVABILITY_CONFIG = result
+        _CACHED_OBSERVABILITY_CONFIG = result
 
         return result
-
-    except (ImportError, ValueError, TypeError, UnicodeDecodeError) as e:
-        logger.warning(
-            f"Could not load from main config, using defaults: {e}"
-        )  # TODO: Convert f-string to logging format
-        fallback = ObservabilityConfig()
-        if main_config is None:
-            _CACHED_OBSERVABILITY_CONFIG = fallback
-        return fallback
 
 
 get_observability_config.cache_clear = clear_observability_cache  # type: ignore[attr-defined]

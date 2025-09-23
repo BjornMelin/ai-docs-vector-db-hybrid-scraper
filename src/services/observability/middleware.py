@@ -84,10 +84,11 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
                 description="Number of active HTTP requests",
             )
 
-        except (httpx.HTTPError, httpx.TimeoutException, ConnectionError, Exception) as e:
-            logger.warning(
-                f"Failed to initialize request metrics: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (httpx.HTTPError, httpx.TimeoutException, ConnectionError) as exc:
+            logger.warning("Failed to initialize request metrics: %s", exc)
+            self.meter = None
+        except Exception as exc:  # noqa: BLE001 - metrics init must not block requests
+            logger.warning("Failed to initialize request metrics: %s", exc)
             self.meter = None
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
@@ -142,7 +143,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
                 if self.meter:
                     self._record_request_metrics(request, response, start_time)
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - middleware must guard unexpected errors
                 # Record exception
                 span.record_exception(e)
                 if Status and StatusCode:
@@ -210,10 +211,10 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             if content_type:
                 span.set_attribute("http.request.content_type", content_type)
 
-        except (ValueError, TypeError, UnicodeDecodeError, Exception) as e:
-            logger.debug(
-                f"Failed to add AI context: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (ValueError, TypeError, UnicodeDecodeError) as exc:
+            logger.debug("Failed to add AI context: %s", exc)
+        except Exception as exc:  # noqa: BLE001 - AI context is auxiliary only
+            logger.debug("Failed to add AI context: %s", exc)
 
     def _record_request_metrics(
         self, request: Request, response: Response, start_time: float
@@ -249,10 +250,10 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             self.request_duration.record(duration, attributes)
             self.request_counter.add(1, attributes)
 
-        except (ValueError, TypeError, UnicodeDecodeError, Exception) as e:
-            logger.warning(
-                f"Failed to record request metrics: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (ValueError, TypeError, UnicodeDecodeError) as exc:
+            logger.warning("Failed to record request metrics: %s", exc)
+        except Exception as exc:  # noqa: BLE001 - metrics are best-effort only
+            logger.warning("Failed to record request metrics: %s", exc)
 
     def _record_error_metrics(
         self, request: Request, error: Exception, start_time: float
@@ -279,7 +280,7 @@ class FastAPIObservabilityMiddleware(BaseHTTPMiddleware):
             self.request_duration.record(duration, attributes)
             self.request_counter.add(1, attributes)
 
-        except (OSError, FileNotFoundError, PermissionError, Exception) as e:
-            logger.warning(
-                f"Failed to record error metrics: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (OSError, FileNotFoundError, PermissionError) as exc:
+            logger.warning("Failed to record error metrics: %s", exc)
+        except Exception as exc:  # noqa: BLE001 - metrics are best-effort only
+            logger.warning("Failed to record error metrics: %s", exc)

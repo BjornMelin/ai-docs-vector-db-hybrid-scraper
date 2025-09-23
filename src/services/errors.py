@@ -492,7 +492,7 @@ class AdvancedCircuitBreaker:
                     else self.adaptive_timeout
                 )
                 msg = (
-                    f"Circuit breaker is OPEN for {self.service_name}. "
+                    f"Circuit breaker is open for {self.service_name}. "
                     f"Try again in {wait_time:.1f}s"
                 )
                 raise ExternalServiceError(
@@ -504,7 +504,7 @@ class AdvancedCircuitBreaker:
         if self.state == CircuitState.HALF_OPEN:
             if self.half_open_calls >= self.half_open_max_calls:
                 msg = (
-                    f"Circuit breaker is HALF_OPEN for {self.service_name}. "
+                    f"Circuit breaker is half-open for {self.service_name}. "
                     f"Maximum test calls ({self.half_open_max_calls}) exceeded."
                 )
                 raise ExternalServiceError(
@@ -572,7 +572,7 @@ class AdvancedCircuitBreaker:
 
         logger.warning(
             f"Circuit breaker '{self.service_name}' failure "
-            "{self.failure_count}/{self.failure_threshold}"
+            f"{self.failure_count}/{self.failure_threshold}"
         )
 
         # Check if we should open the circuit
@@ -666,11 +666,9 @@ def circuit_breaker(
     failure_threshold: int = 5,
     recovery_timeout: float = 60.0,
     half_open_max_calls: int = 3,
-    expected_exceptions: tuple[type[Exception], ...] = (
-        ExternalServiceError,
-        NetworkError,
-        RateLimitError,
-    ),
+    expected_exceptions: tuple[type[Exception], ...] | None = None,
+    *,
+    expected_exception: type[Exception] | None = None,
     enable_adaptive_timeout: bool = True,
     enable_metrics: bool = True,
 ) -> Callable[[F], F]:
@@ -681,7 +679,8 @@ def circuit_breaker(
         failure_threshold: Number of failures before opening circuit
         recovery_timeout: Base time to wait before attempting recovery
         half_open_max_calls: Maximum calls allowed in half-open state
-        expected_exceptions: Exception types that trigger circuit breaker
+        expected_exceptions: Exception types that trigger circuit breaker (tuple)
+        expected_exception: Backwards-compatible singular exception to monitor
         enable_adaptive_timeout: Enable adaptive timeout adjustment
         enable_metrics: Enable metrics collection
 
@@ -695,6 +694,10 @@ def circuit_breaker(
         if service_name is None:
             service_name = f"{func.__module__}.{func.__name__}"
 
+        monitored_exceptions = expected_exceptions or (Exception,)
+        if expected_exception is not None and expected_exception not in monitored_exceptions:
+            monitored_exceptions = (expected_exception, *monitored_exceptions)
+
         # Create or get existing circuit breaker for this service
         breaker = CircuitBreakerRegistry.get(service_name)
         if breaker is None:
@@ -703,7 +706,7 @@ def circuit_breaker(
                 failure_threshold=failure_threshold,
                 recovery_timeout=recovery_timeout,
                 half_open_max_calls=half_open_max_calls,
-                expected_exceptions=expected_exceptions,
+                expected_exceptions=monitored_exceptions,
                 enable_adaptive_timeout=enable_adaptive_timeout,
                 enable_metrics=enable_metrics,
             )
@@ -845,7 +848,8 @@ def handle_mcp_errors(func: Callable[..., Any]) -> Callable[..., Any]:
             return safe_response(True, result=result)
         except (ToolError, ResourceError) as e:
             # These errors are meant to be sent to clients
-            logger.warning("MCP error in {func.__name__}")
+            message = f"MCP error in {func.__name__}: {e}"
+            logger.warning(message)
             return safe_response(
                 False, error=str(e), error_type=e.error_code or "mcp_error"
             )
@@ -864,11 +868,19 @@ def handle_mcp_errors(func: Callable[..., Any]) -> Callable[..., Any]:
                 ConfigurationError: "configuration",
             }
             error_type = error_type_map.get(type(e), "general")
-            logger.warning("{error_type.capitalize()} error in {func.__name__}")
+            message = (
+                f"{error_type.capitalize()} error in {func.__name__}: {e}"
+            )
+            logger.warning(message)
             return safe_response(False, error=str(e), error_type=error_type)
         except (ConnectionError, OSError, PermissionError):
             # Mask internal errors for security
-            logger.exception("Unexpected error in {func.__name__}")
+            logger.exception("Unexpected error in %s", func.__name__)
+            return safe_response(
+                False, error="Internal server error", error_type="internal"
+            )
+        except Exception:
+            logger.exception("Unexpected error in %s", func.__name__)
             return safe_response(
                 False, error="Internal server error", error_type="internal"
             )
@@ -903,8 +915,8 @@ def validate_input(**validators) -> Callable[[F], F]:
                     try:
                         validated_value = validator(value)
                         bound_args.arguments[param_name] = validated_value
-                    except Exception as e:
-                        msg = "Invalid {param_name}"
+                    except Exception as e:  # pragma: no cover - validator bug
+                        msg = f"Invalid {param_name}: {e}"
                         raise ValidationError(
                             msg,
                             error_code="invalid_input",

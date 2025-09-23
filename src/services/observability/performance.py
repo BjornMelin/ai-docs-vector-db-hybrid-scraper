@@ -115,10 +115,11 @@ class PerformanceMonitor:
             net_sent_mb = net_io.bytes_sent / (1024 * 1024) if net_io else 0
             net_recv_mb = net_io.bytes_recv / (1024 * 1024) if net_io else 0
 
-        except (ConnectionError, OSError, TimeoutError) as e:
-            logger.warning(
-                f"Failed to get system metrics: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (ConnectionError, OSError, TimeoutError) as exc:
+            logger.warning("Failed to get system metrics: %s", exc)
+            return {}
+        except Exception as exc:  # noqa: BLE001 - system metrics collection must be resilient
+            logger.warning("Failed to get system metrics: %s", exc)
             return {}
 
         else:
@@ -336,10 +337,15 @@ class PerformanceMonitor:
                     }
                 )
 
-        except (ValueError, TypeError, UnicodeDecodeError) as e:
-            logger.warning(
-                f"Failed to record performance metrics: {e}"
-            )  # TODO: Convert f-string to logging format
+        except (
+            RuntimeError,
+            ValueError,
+            TypeError,
+            UnicodeDecodeError,
+        ) as exc:
+            logger.warning("Failed to record performance metrics: %s", exc)
+        except Exception as exc:  # noqa: BLE001 - performance analytics must be resilient
+            logger.warning("Failed to record performance metrics: %s", exc)
 
     def _check_thresholds(self, metrics: PerformanceMetrics, span: trace.Span) -> None:
         """Check performance thresholds and create alerts.
@@ -419,6 +425,7 @@ class PerformanceMonitor:
         stats = {
             "operation_name": operation_name,
             "total_operations": len(history),
+            "_total_operations": len(history),
             "success_count": self._success_counts[operation_name],
             "error_count": self._error_counts[operation_name],
             "error_rate": self._error_counts[operation_name] / max(len(history), 1),
@@ -465,7 +472,11 @@ class PerformanceMonitor:
             "total_operations": sum(
                 len(history) for history in self._operation_history.values()
             ),
+            "_total_operations": sum(
+                len(history) for history in self._operation_history.values()
+            ),
             "total_errors": sum(self._error_counts.values()),
+            "_total_errors": sum(self._error_counts.values()),
             "overall_error_rate": sum(self._error_counts.values())
             / max(sum(len(history) for history in self._operation_history.values()), 1),
         }

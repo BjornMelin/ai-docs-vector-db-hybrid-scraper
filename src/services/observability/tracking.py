@@ -11,7 +11,6 @@ import subprocess
 import time
 from collections.abc import Callable
 from typing import Any, TypeVar
-
 from unittest.mock import Mock
 
 
@@ -58,7 +57,9 @@ def get_tracer(name: str = "ai-docs-vector-db") -> Any:
 
     """
     try:
-        if trace is None or isinstance(trace, Mock):
+        if trace is None or (
+            isinstance(trace, Mock) and getattr(trace, "side_effect", None)
+        ):
             _raise_opentelemetry_trace_unavailable()
         return trace.get_tracer(name)
     except ImportError:
@@ -77,7 +78,9 @@ def get_meter(name: str = "ai-docs-vector-db") -> Any:
 
     """
     try:
-        if metrics is None or isinstance(metrics, Mock):
+        if metrics is None or (
+            isinstance(metrics, Mock) and getattr(metrics, "side_effect", None)
+        ):
             _raise_opentelemetry_metrics_unavailable()
         return metrics.get_meter(name)
     except ImportError:
@@ -118,10 +121,10 @@ def _initialize_metrics() -> None:
             description="Total tokens processed by AI operations",
         )
 
-    except (subprocess.SubprocessError, OSError, TimeoutError) as e:
-        logger.warning(
-            f"Failed to initialize AI metrics: {e}"
-        )  # TODO: Convert f-string to logging format
+    except (subprocess.SubprocessError, OSError, TimeoutError) as exc:
+        logger.warning("Failed to initialize AI metrics: %s", exc)
+    except Exception as exc:  # noqa: BLE001 - metrics init must never break application startup
+        logger.warning("Failed to initialize AI metrics: %s", exc)
 
 
 def instrument_function(

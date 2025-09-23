@@ -204,11 +204,11 @@ def initialize_observability(config: "ObservabilityConfig" = None) -> bool:
     except ImportError:
         logger.warning("OpenTelemetry packages not available")
         return False
-    except (OSError, AttributeError, ModuleNotFoundError) as exc:
-        logger.error("Failed to initialize OpenTelemetry: %s", exc)
+    except (OSError, AttributeError, ModuleNotFoundError):
+        logger.exception("Failed to initialize OpenTelemetry")
         return False
-    except Exception as exc:  # pragma: no cover - safety net
-        logger.error("Failed to initialize OpenTelemetry: %s", exc)
+    except Exception:  # pragma: no cover - safety net
+        logger.exception("Failed to initialize OpenTelemetry")
         return False
     else:
         return True
@@ -222,16 +222,25 @@ def _setup_auto_instrumentation(config: "ObservabilityConfig") -> None:
 
     """
     try:
-        if _setup_fastapi_instrumentation:
-            _setup_fastapi_instrumentation(config)
-        if _setup_httpx_instrumentation:
-            _setup_httpx_instrumentation(config)
-        if _setup_redis_instrumentation:
-            _setup_redis_instrumentation(config)
-        if _setup_sqlalchemy_instrumentation:
-            _setup_sqlalchemy_instrumentation(config)
+        fastapi_setup = _setup_fastapi_instrumentation
+        if fastapi_setup and not fastapi_setup(config):
+            logger.warning("Auto-instrumentation setup failed: fastapi")
 
-    except (OSError, PermissionError, Exception) as exc:
+        httpx_setup = _setup_httpx_instrumentation
+        if httpx_setup and not httpx_setup(config):
+            logger.warning("Auto-instrumentation setup failed: httpx")
+
+        redis_setup = _setup_redis_instrumentation
+        if redis_setup and not redis_setup(config):
+            logger.warning("Auto-instrumentation setup failed: redis")
+
+        sqlalchemy_setup = _setup_sqlalchemy_instrumentation
+        if sqlalchemy_setup and not sqlalchemy_setup(config):
+            logger.warning("Auto-instrumentation setup failed: sqlalchemy")
+
+    except (OSError, PermissionError) as exc:
+        logger.warning("Auto-instrumentation setup failed: %s", exc)
+    except Exception as exc:  # noqa: BLE001 - instrumentation should not crash startup
         logger.warning("Auto-instrumentation setup failed: %s", exc)
 
 

@@ -34,51 +34,65 @@ BatchSpanProcessor = None
 ConsoleSpanExporter = None
 
 try:
-    from opentelemetry import metrics as _otel_metrics
-    from opentelemetry import trace as _otel_trace
-    from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
-        OTLPMetricExporter as _OTLPMetricExporter,
+    metrics = importlib.import_module("opentelemetry.metrics")
+    trace = importlib.import_module("opentelemetry.trace")
+    OTLPMetricExporter = getattr(
+        importlib.import_module(
+            "opentelemetry.exporter.otlp.proto.grpc.metric_exporter"
+        ),
+        "OTLPMetricExporter",
+        None,
     )
-    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
-        OTLPSpanExporter as _OTLPSpanExporter,
+    OTLPSpanExporter = getattr(
+        importlib.import_module(
+            "opentelemetry.exporter.otlp.proto.grpc.trace_exporter"
+        ),
+        "OTLPSpanExporter",
+        None,
     )
-    from opentelemetry.instrumentation.fastapi import (
-        FastAPIInstrumentor as _FastAPIInstrumentor,
+    FastAPIInstrumentor = getattr(
+        importlib.import_module("opentelemetry.instrumentation.fastapi"),
+        "FastAPIInstrumentor",
+        None,
     )
-    from opentelemetry.instrumentation.httpx import (
-        HTTPXClientInstrumentor as _HTTPXClientInstrumentor,
+    HTTPXClientInstrumentor = getattr(
+        importlib.import_module("opentelemetry.instrumentation.httpx"),
+        "HTTPXClientInstrumentor",
+        None,
     )
-    from opentelemetry.instrumentation.redis import (
-        RedisInstrumentor as _RedisInstrumentor,
+    RedisInstrumentor = getattr(
+        importlib.import_module("opentelemetry.instrumentation.redis"),
+        "RedisInstrumentor",
+        None,
     )
-    from opentelemetry.instrumentation.sqlalchemy import (
-        SQLAlchemyInstrumentor as _SQLAlchemyInstrumentor,
+    SQLAlchemyInstrumentor = getattr(
+        importlib.import_module("opentelemetry.instrumentation.sqlalchemy"),
+        "SQLAlchemyInstrumentor",
+        None,
     )
-    from opentelemetry.sdk.metrics import MeterProvider as _MeterProvider
-    from opentelemetry.sdk.metrics.export import (
-        PeriodicExportingMetricReader as _PeriodicExportingMetricReader,
+    MeterProvider = getattr(
+        importlib.import_module("opentelemetry.sdk.metrics"),
+        "MeterProvider",
+        None,
     )
-    from opentelemetry.sdk.resources import Resource as _Resource
-    from opentelemetry.sdk.trace import TracerProvider as _TracerProvider
-    from opentelemetry.sdk.trace.export import (
-        BatchSpanProcessor as _BatchSpanProcessor,
-        ConsoleSpanExporter as _ConsoleSpanExporter,
+    PeriodicExportingMetricReader = getattr(
+        importlib.import_module("opentelemetry.sdk.metrics.export"),
+        "PeriodicExportingMetricReader",
+        None,
     )
-
-    metrics = _otel_metrics
-    trace = _otel_trace
-    OTLPMetricExporter = _OTLPMetricExporter
-    OTLPSpanExporter = _OTLPSpanExporter
-    FastAPIInstrumentor = _FastAPIInstrumentor
-    HTTPXClientInstrumentor = _HTTPXClientInstrumentor
-    RedisInstrumentor = _RedisInstrumentor
-    SQLAlchemyInstrumentor = _SQLAlchemyInstrumentor
-    MeterProvider = _MeterProvider
-    PeriodicExportingMetricReader = _PeriodicExportingMetricReader
-    Resource = _Resource
-    TracerProvider = _TracerProvider
-    BatchSpanProcessor = _BatchSpanProcessor
-    ConsoleSpanExporter = _ConsoleSpanExporter
+    Resource = getattr(
+        importlib.import_module("opentelemetry.sdk.resources"),
+        "Resource",
+        None,
+    )
+    TracerProvider = getattr(
+        importlib.import_module("opentelemetry.sdk.trace"),
+        "TracerProvider",
+        None,
+    )
+    _trace_export = importlib.import_module("opentelemetry.sdk.trace.export")
+    BatchSpanProcessor = getattr(_trace_export, "BatchSpanProcessor", None)
+    ConsoleSpanExporter = getattr(_trace_export, "ConsoleSpanExporter", None)
 
     OPENTELEMETRY_AVAILABLE = True
 except ImportError:
@@ -125,14 +139,14 @@ def _validate_telemetry_components() -> bool:
             globals()["ConsoleSpanExporter"] = getattr(
                 trace_export_module, "ConsoleSpanExporter", None
             )
-        except ImportError:
-            logger.error("OpenTelemetry not available")
+        except ImportError as exc:
+            logger.debug("OpenTelemetry not available: %s", exc)
             return False
-        except AttributeError:
-            logger.error("Required OpenTelemetry components not available")
+        except AttributeError as exc:
+            logger.debug("Required OpenTelemetry components not available: %s", exc)
             return False
-        except Exception as exc:  # pragma: no cover - safety net
-            logger.error("Unexpected telemetry validation failure: %s", exc)
+        except Exception:  # pragma: no cover - safety net
+            logger.exception("Unexpected telemetry validation failure")
             raise
 
     if globals().get("metrics") is None:
@@ -292,92 +306,128 @@ def _initialize_metrics(config: "ObservabilityConfig", resource: object) -> obje
         return meter_provider
 
 
-def _setup_fastapi_instrumentation(config: "ObservabilityConfig") -> None:
+def _setup_fastapi_instrumentation(config: "ObservabilityConfig") -> bool:
     """Setup FastAPI instrumentation.
 
     Args:
         config: Observability configuration
     """
     if not config.instrument_fastapi:
-        return
+        return False
 
     instrumentor = FastAPIInstrumentor
     if instrumentor is None:
         instrumentor = _load_instrumentor(
             "opentelemetry.instrumentation.fastapi", "FastAPIInstrumentor"
         )
+    else:
+        try:
+            importlib.import_module("opentelemetry.instrumentation.fastapi")
+        except Exception as exc:  # noqa: BLE001 - instrumentation availability check
+            logger.warning("Failed to enable FastAPI instrumentation: %s", exc)
+            return False
 
     if instrumentor is None:
         logger.warning("FastAPI instrumentation not available")
-        return
+        return False
 
     try:
         instrumentor().instrument()
+    except (ConnectionError, OSError, PermissionError) as exc:
+        logger.warning("Failed to enable FastAPI instrumentation: %s", exc)
+        return False
+    except Exception as exc:  # noqa: BLE001 - instrumentation should be fire-and-forget
+        logger.warning("Failed to enable FastAPI instrumentation: %s", exc)
+        return False
+    else:
         logger.info("FastAPI auto-instrumentation enabled")
-    except (ConnectionError, OSError, PermissionError, Exception):
-        logger.warning("Failed to enable FastAPI instrumentation")
+        return True
 
 
-def _setup_httpx_instrumentation(config: "ObservabilityConfig") -> None:
+def _setup_httpx_instrumentation(config: "ObservabilityConfig") -> bool:
     """Setup HTTPX instrumentation.
 
     Args:
         config: Observability configuration
     """
     if not config.instrument_httpx:
-        return
+        return False
 
     instrumentor = HTTPXClientInstrumentor
     if instrumentor is None:
         instrumentor = _load_instrumentor(
             "opentelemetry.instrumentation.httpx", "HTTPXClientInstrumentor"
         )
+    else:
+        try:
+            importlib.import_module("opentelemetry.instrumentation.httpx")
+        except Exception as exc:  # noqa: BLE001 - instrumentation availability check
+            logger.warning("Failed to enable HTTPX instrumentation: %s", exc)
+            return False
 
     if instrumentor is None:
         logger.warning("HTTPX instrumentation not available")
-        return
+        return False
 
     try:
         instrumentor().instrument()
+    except (ConnectionError, OSError, PermissionError) as exc:
+        logger.warning("Failed to enable HTTPX instrumentation: %s", exc)
+        return False
+    except Exception as exc:  # noqa: BLE001 - instrumentation should be fire-and-forget
+        logger.warning("Failed to enable HTTPX instrumentation: %s", exc)
+        return False
+    else:
         logger.info("HTTPX client auto-instrumentation enabled")
-    except (ConnectionError, OSError, PermissionError, Exception):
-        logger.warning("Failed to enable HTTPX instrumentation")
+        return True
 
 
-def _setup_redis_instrumentation(config: "ObservabilityConfig") -> None:
+def _setup_redis_instrumentation(config: "ObservabilityConfig") -> bool:
     """Setup Redis instrumentation.
 
     Args:
         config: Observability configuration
     """
     if not config.instrument_redis:
-        return
+        return False
 
     instrumentor = RedisInstrumentor
     if instrumentor is None:
         instrumentor = _load_instrumentor(
             "opentelemetry.instrumentation.redis", "RedisInstrumentor"
         )
+    else:
+        try:
+            importlib.import_module("opentelemetry.instrumentation.redis")
+        except Exception as exc:  # noqa: BLE001 - instrumentation availability check
+            logger.warning("Failed to enable Redis instrumentation: %s", exc)
+            return False
 
     if instrumentor is None:
         logger.warning("Redis instrumentation not available")
-        return
+        return False
 
     try:
         instrumentor().instrument()
+    except (ConnectionError, OSError, PermissionError) as exc:
+        logger.warning("Failed to enable Redis instrumentation: %s", exc)
+        return False
+    except Exception as exc:  # noqa: BLE001 - instrumentation should be fire-and-forget
+        logger.warning("Failed to enable Redis instrumentation: %s", exc)
+        return False
+    else:
         logger.info("Redis auto-instrumentation enabled")
-    except (ConnectionError, OSError, PermissionError, Exception):
-        logger.warning("Failed to enable Redis instrumentation")
+        return True
 
 
-def _setup_sqlalchemy_instrumentation(config: "ObservabilityConfig") -> None:
+def _setup_sqlalchemy_instrumentation(config: "ObservabilityConfig") -> bool:
     """Setup SQLAlchemy instrumentation.
 
     Args:
         config: Observability configuration
     """
     if not config.instrument_sqlalchemy:
-        return
+        return False
 
     instrumentor = SQLAlchemyInstrumentor
     if instrumentor is None:
@@ -385,13 +435,25 @@ def _setup_sqlalchemy_instrumentation(config: "ObservabilityConfig") -> None:
             "opentelemetry.instrumentation.sqlalchemy",
             "SQLAlchemyInstrumentor",
         )
+    else:
+        try:
+            importlib.import_module("opentelemetry.instrumentation.sqlalchemy")
+        except Exception as exc:  # noqa: BLE001 - instrumentation availability check
+            logger.warning("Failed to enable SQLAlchemy instrumentation: %s", exc)
+            return False
 
     if instrumentor is None:
         logger.warning("SQLAlchemy instrumentation not available")
-        return
+        return False
 
     try:
         instrumentor().instrument()
+    except (ConnectionError, OSError, PermissionError) as exc:
+        logger.warning("Failed to enable SQLAlchemy instrumentation: %s", exc)
+        return False
+    except Exception as exc:  # noqa: BLE001 - instrumentation should be fire-and-forget
+        logger.warning("Failed to enable SQLAlchemy instrumentation: %s", exc)
+        return False
+    else:
         logger.info("SQLAlchemy auto-instrumentation enabled")
-    except (ConnectionError, OSError, PermissionError, Exception):
-        logger.warning("Failed to enable SQLAlchemy instrumentation")
+        return True
