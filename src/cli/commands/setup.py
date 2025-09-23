@@ -483,7 +483,7 @@ class ConfigurationWizard:
 )
 @click.pass_context
 def setup(ctx: click.Context, profile: str | None, config_dir: Path):
-    """🧙 Modern template-driven configuration wizard.
+    r"""🧙 Modern template-driven configuration wizard.
 
     This wizard uses configuration profiles and templates to guide you through
     setting up your AI Documentation Scraper with best practices and validation.

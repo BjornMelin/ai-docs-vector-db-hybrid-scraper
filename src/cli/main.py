@@ -160,7 +160,7 @@ def version(ctx: click.Context):
 @main.command()
 @click.argument("shell", type=click.Choice(["bash", "zsh", "fish", "powershell"]))
 def completion(shell: str):
-    """Generate shell completion script.
+    r"""Generate shell completion script.
 
     To enable auto-completion, run:
 
