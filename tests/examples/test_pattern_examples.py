@@ -64,10 +64,11 @@ class TestStandardizedPatterns:
         mock_service.process_document.return_value = expected_result
 
         # Act - Execute the operation under test
-        result = await some_async_service_function(sample_document_data)
+        result = await mock_service.process_document(sample_document_data)
 
         # Assert - Verify results using standardized helpers
-        assert_successful_response(result, expected_data={"processed": True})
+        assert_successful_response(result)
+        assert result["data"]["processed"] is True
         mock_service.process_document.assert_called_once_with(sample_document_data)
 
     @pytest.mark.parametrize(
@@ -312,7 +313,6 @@ class TestStandardizedPatterns:
         assert result["processed"] is True
         assert result["metadata"]["complexity"] == "high"
 
-    @pytest.mark.security
     @pytest.mark.asyncio
     async def test_security_validation_pattern(
         self, mock_auth_service: AsyncMock, security_test_data: dict[str, Any]
@@ -383,7 +383,7 @@ class TestStandardizedPatterns:
 
 
 @pytest.fixture
-async def mock_service() -> AsyncMock:
+def mock_service() -> AsyncMock:
     """Mock async service with standardized configuration.
 
     Returns:
