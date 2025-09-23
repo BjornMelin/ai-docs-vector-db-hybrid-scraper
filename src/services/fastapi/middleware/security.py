@@ -224,6 +224,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             True if request is allowed, False if rate limited
+
         """
         try:
             # Create rate limiting key
@@ -293,6 +294,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         Returns:
             True if Redis is healthy, False otherwise
+
         """
         if not self.redis_client:
             return False

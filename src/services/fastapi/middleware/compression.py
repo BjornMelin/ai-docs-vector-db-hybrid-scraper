@@ -156,6 +156,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
 
         Raises:
             ValueError: If body cannot be retrieved
+
         """
         try:
             return response.body
@@ -180,6 +181,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Compressed response
+
         """
         compressed_response = Response(
             content=compressed_body,
@@ -212,6 +214,7 @@ class CompressionMiddleware(BaseHTTPMiddleware):
         Args:
             compressed_response: Compressed response to modify
             original_response: Original response for header reference
+
         """
         vary_header = original_response.headers.get("vary", "")
         if "accept-encoding" not in vary_header.lower():
@@ -363,6 +366,7 @@ class BrotliCompressionMiddleware(BaseHTTPMiddleware):
 
         Raises:
             ValueError: If body cannot be retrieved
+
         """
         try:
             return response.body
@@ -387,6 +391,7 @@ class BrotliCompressionMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Compressed response
+
         """
         compressed_response = Response(
             content=compressed_body,
@@ -419,6 +424,7 @@ class BrotliCompressionMiddleware(BaseHTTPMiddleware):
         Args:
             compressed_response: Compressed response to modify
             original_response: Original response for header reference
+
         """
         vary_header = original_response.headers.get("vary", "")
         if "accept-encoding" not in vary_header.lower():

@@ -164,6 +164,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
             request: HTTP request
             start_time: Request start time
             memory_before: Memory usage before request
+
         """
         end_time = time.perf_counter()
         response_time = end_time - start_time
@@ -197,6 +198,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Response with performance headers
+
         """
         # Calculate metrics
         end_time = time.perf_counter()
@@ -236,6 +238,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
             response_time: Request processing time
             memory_before: Memory usage before request
             memory_after: Memory usage after request
+
         """
         response.headers["X-Response-Time"] = f"{response_time:.4f}"
         if memory_after and memory_before:
@@ -272,6 +275,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 
         Returns:
             Memory usage in MB or None
+
         """
         if not self._process:
             return None
@@ -593,6 +597,7 @@ class AdvancedPerformanceMiddleware(PerformanceMiddleware):
         Args:
             app: ASGI application
             config: Performance configuration
+
         """
         super().__init__(app, config)
         self.connection_pool_size = 100
@@ -629,6 +634,7 @@ class AdvancedPerformanceMiddleware(PerformanceMiddleware):
 
         Returns:
             Current throughput in requests per second
+
         """
         current_time = time.time()
         elapsed = current_time - self._throughput_start_time
@@ -642,6 +648,7 @@ class AdvancedPerformanceMiddleware(PerformanceMiddleware):
 
         Returns:
             Dict containing enhanced performance metrics
+
         """
         base_metrics = self.get_metrics_summary()
 
