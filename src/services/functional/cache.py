@@ -456,6 +456,7 @@ async def _execute_cache_operation(op: dict[str, Any], cache_client: object) -> 
 
     Returns:
         True if operation succeeded, False otherwise
+
     """
     op_type = op.get("op")
     key = op.get("key")
@@ -501,6 +502,7 @@ def _create_error_result(
 
     Returns:
         Error result dictionary
+
     """
     return {
         "total": len(operations),
