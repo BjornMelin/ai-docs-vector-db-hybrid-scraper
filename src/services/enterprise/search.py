@@ -132,6 +132,7 @@ class EnterpriseSearchService(BaseService):
 
         Returns:
             Search response with enriched results
+
         """
         start_time = time.time()
 

@@ -80,6 +80,7 @@ class SimpleSearchService(BaseService):
 
         Returns:
             Search response with results
+
         """
         # Check cache first
         cache_key = f"search:{hash(request.query)}"
