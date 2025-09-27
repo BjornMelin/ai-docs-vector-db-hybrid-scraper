@@ -42,3 +42,78 @@ jobs:
         run: |
           set -euo pipefail
           uv run python scripts/ci/validate_config.py --environment development
+
+  validate-config:
+    name: Configuration validator helper
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+      - name: Prepare Python toolchain
+        uses: ./.github/actions/setup-environment
+        with:
+          python-version: '3.12'
+
+      - name: Create validation fixtures
+        id: fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          valid_root="${RUNNER_TEMP}/config-valid"
+          valid_templates="${valid_root}/templates"
+          mkdir -p "${valid_templates}"
+          cat <<'JSON' > "${valid_root}/settings.json"
+          {"feature": true}
+          JSON
+          cat <<'YAML' > "${valid_root}/values.yml"
+          cache: {}
+          YAML
+          cat <<'JSON' > "${valid_templates}/development.json"
+          {
+            "environment": "development",
+            "cache": {},
+            "qdrant": {},
+            "performance": {}
+          }
+          JSON
+
+          invalid_root="${RUNNER_TEMP}/config-invalid"
+          invalid_templates="${invalid_root}/templates"
+          mkdir -p "${invalid_templates}"
+          cp "${valid_root}/settings.json" "${invalid_root}/settings.json"
+          cat <<'JSON' > "${invalid_templates}/development.json"
+          {
+            "environment": "production",
+            "cache": {},
+            "qdrant": {}
+          }
+          JSON
+
+          {
+            echo "valid-config-root=${valid_root}";
+            echo "valid-templates-dir=${valid_templates}";
+            echo "invalid-config-root=${invalid_root}";
+            echo "invalid-templates-dir=${invalid_templates}";
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Validate fixtures with composite action
+        uses: ./.github/actions/validate-config
+        with:
+          config-root: ${{ steps.fixtures.outputs.valid-config-root }}
+          templates-dir: ${{ steps.fixtures.outputs.valid-templates-dir }}
+          environment: development
+
+      - name: Assert invalid fixtures fail validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if uv run python scripts/ci/validate_config.py \
+            --config-root "${{ steps.fixtures.outputs.invalid-config-root }}" \
+            --templates-dir "${{ steps.fixtures.outputs.invalid-templates-dir }}" \
+            --environment development; then
+            echo "Expected invalid configuration validation to fail" >&2
+            exit 1
+          fi

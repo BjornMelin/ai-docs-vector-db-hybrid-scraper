@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -35,37 +35,62 @@ def _iter_files(root: Path, patterns: Sequence[str]) -> Iterable[Path]:
         yield from root.rglob(pattern)
 
 
-def validate_json_files(root: Path) -> ValidationSummary:
-    """Validate that JSON files under *root* parse correctly."""
+def _validate_files(
+    root: Path,
+    patterns: Sequence[str],
+    loader: Callable[[Path], object | None],
+    exception_types: tuple[type[BaseException], ...],
+    error_prefix: str,
+) -> ValidationSummary:
+    """Validate files matched by *patterns* using *loader*.
+
+    Args:
+        root: Base directory to search.
+        patterns: Glob patterns to evaluate beneath *root*.
+        loader: Callable that inspects the matched file and raises on error.
+        exception_types: Exceptions that the loader is expected to raise when
+            validation fails.
+        error_prefix: Human-friendly prefix for surfaced error messages.
+
+    Returns:
+        A :class:`ValidationSummary` recording file counts and parse errors.
+    """
 
     errors: list[str] = []
     checked = 0
 
-    for file_path in _iter_files(root, ("*.json",)):
+    for file_path in _iter_files(root, patterns):
         checked += 1
         try:
-            json.loads(file_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as exc:
-            errors.append(f"Invalid JSON in {file_path}: {exc}")
+            loader(file_path)
+        except exception_types as exc:
+            errors.append(f"{error_prefix} {file_path}: {exc}")
 
     return ValidationSummary(checked=checked, errors=errors)
+
+
+def validate_json_files(root: Path) -> ValidationSummary:
+    """Validate that JSON files under *root* parse correctly."""
+
+    return _validate_files(
+        root,
+        ("*.json",),
+        lambda path: json.loads(path.read_text(encoding="utf-8")),
+        (json.JSONDecodeError,),
+        "Invalid JSON in",
+    )
 
 
 def validate_yaml_files(root: Path) -> ValidationSummary:
     """Validate that YAML files under *root* parse correctly."""
 
-    errors: list[str] = []
-    checked = 0
-
-    for file_path in _iter_files(root, ("*.yml", "*.yaml")):
-        checked += 1
-        try:
-            with file_path.open("r", encoding="utf-8") as handle:
-                yaml.safe_load(handle)
-        except yaml.YAMLError as exc:  # type: ignore[attr-defined]
-            errors.append(f"Invalid YAML in {file_path}: {exc}")
-
-    return ValidationSummary(checked=checked, errors=errors)
+    return _validate_files(
+        root,
+        ("*.yml", "*.yaml"),
+        lambda path: yaml.safe_load(path.read_text(encoding="utf-8")),
+        (yaml.YAMLError,),
+        "Invalid YAML in",
+    )
 
 
 def validate_templates(
@@ -103,8 +128,7 @@ def validate_templates(
             errors.append(f"Invalid JSON in template {template_path}: {exc}")
             continue
 
-        missing_keys = [key for key in required_keys if key not in template_data]
-        if missing_keys:
+        if missing_keys := [key for key in required_keys if key not in template_data]:
             errors.append(
                 f"Template {template_path} is missing required keys: {missing_keys}"
             )

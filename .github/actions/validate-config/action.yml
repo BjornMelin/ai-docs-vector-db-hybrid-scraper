@@ -1,0 +1,39 @@
+name: 'Validate configuration assets'
+description: 'Runs the configuration validation helper with consistent ergonomics'
+
+inputs:
+  config-root:
+    description: 'Directory containing configuration assets'
+    required: false
+    default: 'config'
+  templates-dir:
+    description: 'Directory containing environment templates'
+    required: false
+    default: 'config/templates'
+  environment:
+    description: 'Optional environment template to prioritise'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Execute configuration validation
+      shell: bash
+      env:
+        CONFIG_ROOT: ${{ inputs.config-root }}
+        TEMPLATES_DIR: ${{ inputs.templates-dir }}
+        REQUESTED_ENVIRONMENT: ${{ inputs.environment }}
+      run: |
+        set -euo pipefail
+        if ! command -v uv >/dev/null 2>&1; then
+          echo '::error::uv is required to run configuration validation but was not found on PATH.' >&2
+          exit 1
+        fi
+
+        args=("--config-root" "${CONFIG_ROOT}" "--templates-dir" "${TEMPLATES_DIR}")
+        if [ -n "${REQUESTED_ENVIRONMENT}" ]; then
+          args+=("--environment" "${REQUESTED_ENVIRONMENT}")
+        fi
+
+        uv run python scripts/ci/validate_config.py "${args[@]}"

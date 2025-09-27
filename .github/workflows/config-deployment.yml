@@ -3,18 +3,14 @@ name: Configuration Validation
 on:
   push:
     branches: [main, develop]
-    paths:
+    paths: &config-paths
       - 'config/**'
       - '.github/workflows/config-deployment.yml'
       - 'src/config/**'
       - 'docker-compose*.yml'
   pull_request:
     branches: [main, develop]
-    paths:
-      - 'config/**'
-      - '.github/workflows/config-deployment.yml'
-      - 'src/config/**'
-      - 'docker-compose*.yml'
+    paths: *config-paths
   workflow_dispatch:
     inputs:
       environment:
@@ -29,6 +25,11 @@ permissions:
 env:
   PYTHONUNBUFFERED: 1
   PYTHONDONTWRITEBYTECODE: 1
+  CONFIG_PATH_FILTER: |
+    config:
+      - 'config/**'
+      - 'src/config/**'
+      - 'docker-compose*.yml'
 
 jobs:
   detect-config-changes:
@@ -47,11 +48,7 @@ jobs:
         id: filter
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
         with:
-          filters: |
-            config:
-              - 'config/**'
-              - 'src/config/**'
-              - 'docker-compose*.yml'
+          filters: ${{ env.CONFIG_PATH_FILTER }}
 
   validate-config:
     name: Validate configuration assets
@@ -71,22 +68,17 @@ jobs:
           python-version: '3.12'
 
       - name: Validate configuration files
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -n "${REQUESTED_ENVIRONMENT}" ]; then
-            uv run python scripts/ci/validate_config.py --environment "${REQUESTED_ENVIRONMENT}"
-          else
-            uv run python scripts/ci/validate_config.py
-          fi
+        uses: ./.github/actions/validate-config
+        with:
+          environment: ${{ env.REQUESTED_ENVIRONMENT }}
 
       - name: Validate docker compose manifests
         shell: bash
         run: |
           set -euo pipefail
           if ! command -v docker >/dev/null 2>&1; then
-            echo "Docker is not available on the runner; skipping docker compose validation." >&2
-            exit 0
+            echo "::error::Docker CLI is required for compose validation but was not found." >&2
+            exit 1
           fi
 
           if [ -f docker-compose.yml ]; then
