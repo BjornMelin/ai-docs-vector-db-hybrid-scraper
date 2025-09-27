@@ -20,11 +20,18 @@ documentation assets live in `docs/`.
 - `uv run pylint src tests` — run static analysis; keep the global score ≥9.5.
 
 ## Quality Gate Checklist
-1. Run `python scripts/dev.py quality` and resolve every Ruff, Pylint, and
-   Pyright finding (no TODO ignores).
-2. Execute targeted pytest suites for the areas you touched (for example,
-   `python scripts/dev.py test --profile quick` plus `uv run pytest tests/services/vector_db/`).
-3. Update documentation/CHANGELOG when behaviour changes.
+Heavy GPU dependencies make repository-wide gates slow. For each change:
+1. Identify touched Python modules using `git status --short`.
+2. Run targeted static checks:
+   - `uv run ruff format <paths>`
+   - `uv run ruff check <paths>`
+   - `uv run pylint <module_dirs>` (scores ≥9.5)
+   - `uv run pyright <paths>`
+3. Execute focused pytest suites for affected components (e.g.,
+   `python scripts/dev.py test --profile quick` plus
+   `uv run pytest tests/services/vector_db/`).
+4. Update docs/CHANGELOG when behaviour changes. Run full gates for release
+   branches or broad refactors.
 
 ## Coding Style & Naming Conventions
 Python code follows Ruff formatting (`ruff format .`) and linting (`ruff check . --fix`)
