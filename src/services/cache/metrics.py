@@ -1,6 +1,3 @@
-import typing
-
-
 """Simple cache metrics for V1 MVP."""
 
 from collections import defaultdict

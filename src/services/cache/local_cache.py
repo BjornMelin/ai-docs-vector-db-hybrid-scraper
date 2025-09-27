@@ -1,6 +1,3 @@
-import typing
-
-
 """Local in-memory LRU cache implementation with TTL support."""
 
 import asyncio
@@ -9,7 +6,7 @@ import sys
 import time
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .base import CacheInterface
 
@@ -17,12 +14,16 @@ from .base import CacheInterface
 logger = logging.getLogger(__name__)
 
 # Import monitoring registry for metrics integration
+if TYPE_CHECKING:
+    from ..monitoring.metrics import get_metrics_registry
+
 try:
     from ..monitoring.metrics import get_metrics_registry
 
     MONITORING_AVAILABLE = True
 except ImportError:
     MONITORING_AVAILABLE = False
+    get_metrics_registry = None  # type: ignore
 
 
 @dataclass
@@ -69,7 +70,7 @@ class LocalCache(CacheInterface[Any]):
 
         # Initialize metrics registry if available
         self.metrics_registry = None
-        if MONITORING_AVAILABLE:
+        if MONITORING_AVAILABLE and get_metrics_registry is not None:
             try:
                 self.metrics_registry = get_metrics_registry()
                 logger.debug("Local cache monitoring enabled")

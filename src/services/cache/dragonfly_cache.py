@@ -1,17 +1,18 @@
-import typing
-
-
 """DragonflyDB cache implementation with advanced performance optimizations."""
 
 import json
 import logging
 import zlib
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import redis.asyncio as redis
 from redis.asyncio.retry import Retry
 from redis.backoff import ExponentialBackoff
-from redis.exceptions import ConnectionError, RedisError, TimeoutError
+from redis.exceptions import (
+    ConnectionError as RedisConnectionError,
+    RedisError,
+    TimeoutError as RedisTimeoutError,
+)
 
 from .base import CacheInterface
 
@@ -19,12 +20,16 @@ from .base import CacheInterface
 logger = logging.getLogger(__name__)
 
 # Import monitoring registry for metrics integration
+if TYPE_CHECKING:
+    from ..monitoring.metrics import get_metrics_registry
+
 try:
     from ..monitoring.metrics import get_metrics_registry
 
     MONITORING_AVAILABLE = True
 except ImportError:
     MONITORING_AVAILABLE = False
+    get_metrics_registry = None  # type: ignore
 
 
 class DragonflyCache(CacheInterface[Any]):
@@ -72,7 +77,7 @@ class DragonflyCache(CacheInterface[Any]):
             retry_strategy = Retry(
                 backoff=ExponentialBackoff(base=0.1, cap=1.0),
                 retries=max_retries,
-                supported_errors=(ConnectionError, TimeoutError),
+                supported_errors=(RedisConnectionError, RedisTimeoutError),
             )
 
         # Create optimized connection pool for DragonflyDB
@@ -90,11 +95,11 @@ class DragonflyCache(CacheInterface[Any]):
 
         # Initialize metrics registry if available
         self.metrics_registry = None
-        if MONITORING_AVAILABLE:
+        if MONITORING_AVAILABLE and get_metrics_registry is not None:
             try:
                 self.metrics_registry = get_metrics_registry()
                 logger.debug("DragonflyDB cache monitoring enabled")
-            except (ConnectionError, OSError, PermissionError) as e:
+            except (RedisConnectionError, OSError, PermissionError) as e:
                 logger.debug("DragonflyDB cache monitoring disabled: %s", e)
 
     @property

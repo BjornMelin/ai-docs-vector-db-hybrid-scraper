@@ -1,13 +1,9 @@
-import typing
-
-
 """Browser automation result caching for UnifiedBrowserManager.
 
 This module provides caching functionality for browser automation results
 to avoid redundant scrapes and improve performance.
 """
 
-import asyncio
 import hashlib
 import json
 import logging
@@ -258,7 +254,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
     async def _process_distributed_cache_hit(
         self, key: str, cached_json: str
     ) -> BrowserCacheEntry:
-        """Process distributed cache hit by parsing data and promoting to local cache."""
+        """Process distributed cache hit by parsing data + promoting to local cache."""
         self._cache_stats["hits"] += 1
         data = json.loads(cached_json)
         entry = BrowserCacheEntry.from_dict(data)
@@ -414,7 +410,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         """
         count = 0
 
-        # For now, we can only invalidate if using distributed cache with pattern support
+        # For now, we can only invalidate if using distributed cache + pattern support
         if self.distributed_cache and hasattr(
             self.distributed_cache, "invalidate_pattern"
         ):
@@ -425,7 +421,7 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
     async def _invalidate_distributed_pattern(self, pattern: str) -> int:
         """Invalidate pattern in distributed cache with error handling."""
         try:
-            count = await self.distributed_cache.invalidate_pattern(
+            count = await self.distributed_cache.invalidate_pattern(  # type: ignore
                 f"browser:*{pattern}*"
             )
         except (ConnectionError, OSError, PermissionError) as e:
@@ -520,14 +516,14 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
             try:
                 if await self.local_cache.exists(key):
                     return True
-            except (ConnectionError, RuntimeError, TimeoutError) as e:
+            except (ConnectionError, RuntimeError, TimeoutError):
                 pass
 
         # Check distributed cache
         if self.distributed_cache:
             try:
                 return await self.distributed_cache.exists(key)
-            except (ConnectionError, RuntimeError, TimeoutError) as e:
+            except (ConnectionError, RuntimeError, TimeoutError):
                 pass
 
         return False
@@ -573,13 +569,13 @@ class BrowserCache(CacheInterface[BrowserCacheEntry]):
         if self.distributed_cache:
             try:
                 return await self.distributed_cache.size()
-            except (ConnectionError, RuntimeError, TimeoutError) as e:
+            except (ConnectionError, RuntimeError, TimeoutError):
                 pass
 
         if self.local_cache:
             try:
                 return await self.local_cache.size()
-            except (ConnectionError, RuntimeError, TimeoutError) as e:
+            except (ConnectionError, RuntimeError, TimeoutError):
                 pass
 
         return 0
