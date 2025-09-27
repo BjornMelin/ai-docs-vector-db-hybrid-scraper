@@ -1,0 +1,61 @@
+name: 'Checkout and setup environment'
+description: 'Check out the repository and initialize the Python environment via uv'
+
+inputs:
+  fetch-depth:
+    description: 'Depth for actions/checkout fetch'
+    required: false
+    default: '0'
+  ref:
+    description: 'Ref to check out'
+    required: false
+    default: ''
+  submodules:
+    description: 'Whether to checkout submodules'
+    required: false
+    default: 'false'
+  sparse-checkout:
+    description: 'Newline-separated sparse checkout patterns'
+    required: false
+    default: ''
+  sparse-checkout-cone-mode:
+    description: 'Enable cone mode for sparse checkout'
+    required: false
+    default: 'true'
+  python-version:
+    description: 'Python version to install'
+    required: false
+    default: '3.12'
+  cache-suffix:
+    description: 'Suffix appended to the dependency cache key'
+    required: false
+    default: ''
+  install-dev:
+    description: 'Install development dependencies via uv'
+    required: false
+    default: 'true'
+
+outputs:
+  cache-hit:
+    description: 'Whether the dependency cache restored successfully'
+    value: ${{ steps.setup.outputs.cache-hit }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        fetch-depth: ${{ inputs.fetch-depth }}
+        ref: ${{ inputs.ref }}
+        submodules: ${{ inputs.submodules }}
+        sparse-checkout: ${{ inputs.sparse-checkout }}
+        sparse-checkout-cone-mode: ${{ inputs.sparse-checkout-cone-mode }}
+
+    - name: Setup Python environment
+      id: setup
+      uses: ./.github/actions/setup-environment
+      with:
+        python-version: ${{ inputs.python-version }}
+        cache-suffix: ${{ inputs.cache-suffix }}
+        install-dev: ${{ inputs.install-dev }}

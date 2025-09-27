@@ -1,20 +1,22 @@
-name: Documentation Checks
+name: Documentation
 
 on:
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
     paths:
       - 'docs/**'
       - '*.md'
       - 'mkdocs.yml'
-      - '.github/workflows/docs.yml'
   push:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
     paths:
       - 'docs/**'
       - '*.md'
       - 'mkdocs.yml'
-      - '.github/workflows/docs.yml'
   workflow_dispatch:
 
 permissions:
@@ -26,33 +28,24 @@ concurrency:
 
 jobs:
   docs:
-    name: Validate Documentation
+    name: Validate docs
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Setup environment
-        uses: ./.github/actions/setup-environment
+      - name: Prepare workspace
+        uses: ./.github/actions/checkout-and-setup
         with:
-          python-version: '3.12'
-          cache-suffix: '-docs'
-          install-dev: false
+          python-version: "3.12"
+          cache-suffix: "-docs"
+          install-dev: 'false'
 
       - name: Install documentation dependencies
-        run: |
-          uv sync --frozen --group docs
+        run: uv sync --frozen --group docs
 
-      - name: Validate documentation links
+      - name: Run documentation checks
         run: uv run python scripts/dev.py validate --check-docs --strict
 
       - name: Build MkDocs site
         run: uv run mkdocs build --strict
-
-      - name: Upload site artifact
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: docs-site
-          path: site/
-          retention-days: 7

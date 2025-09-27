@@ -1,10 +1,8 @@
-import typing
-
-
 """Specialized cache for embedding vectors with DragonflyDB optimizations."""
 
 import hashlib
 import logging
+from typing import Any
 
 from .dragonfly_cache import DragonflyCache
 
@@ -58,9 +56,9 @@ class EmbeddingCache:
                 # Validate dimensions if provided
                 if dimensions is not None and len(cached) != dimensions:
                     logger.warning(
-                        "Cached embedding dimensions mismatch: "
-                        "expected %d, got %d",
-                        dimensions, len(cached)
+                        "Cached embedding dimensions mismatch: expected %d, got %d",
+                        dimensions,
+                        len(cached),
                     )
                     return None
 
@@ -70,7 +68,7 @@ class EmbeddingCache:
             return None
 
         except (AttributeError, ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error retrieving embedding from cache: {e}")
+            logger.error("Error retrieving embedding from cache: %s", e)
             return None
 
     async def set_embedding(
@@ -111,14 +109,16 @@ class EmbeddingCache:
 
             if success:
                 logger.debug(
-                    f"Cached embedding: {len(normalized_embedding)}D vector "
-                    f"for {model} ({provider})"
+                    "Cached embedding: %sD vector for %s (%s)",
+                    len(normalized_embedding),
+                    model,
+                    provider,
                 )
 
             return success
 
         except (AttributeError, ImportError, RuntimeError, ValueError) as e:
-            logger.error(f"Error caching embedding: {e}")
+            logger.error("Error caching embedding: %s", e)
             return False
 
     async def get_batch_embeddings(
@@ -159,8 +159,11 @@ class EmbeddingCache:
                     # Validate dimensions if provided
                     if dimensions is not None and len(value) != dimensions:
                         logger.warning(
-                            f"Cached embedding dimensions mismatch for '{text[:50]}...': "
-                            f"expected {dimensions}, got {len(value)}"
+                            "Cached embedding dimensions mismatch for '%s...': "
+                            "expected %s, got %s",
+                            text[:50],
+                            dimensions,
+                            len(value),
                         )
                         missing.append(text)
                     else:
@@ -169,13 +172,15 @@ class EmbeddingCache:
                     missing.append(text)
 
             logger.debug(
-                f"Batch embedding cache: {len(cached)} hits, {len(missing)} misses"
+                "Batch embedding cache: %s hits, %s misses",
+                len(cached),
+                len(missing),
             )
 
             return cached, missing
 
         except (AttributeError, ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error in batch embedding retrieval: {e}")
+            logger.error("Error in batch embedding retrieval: %s", e)
             # Return all as missing on error
             return {}, texts
 
@@ -213,14 +218,17 @@ class EmbeddingCache:
             for text, embedding in embeddings.items():
                 # Validate embedding
                 if not embedding or not isinstance(embedding, list):
-                    logger.warning(f"Skipping invalid embedding for '{text[:50]}...'")
+                    logger.warning("Skipping invalid embedding for '%s...'", text[:50])
                     continue
 
                 # Validate dimensions if provided
                 if dimensions is not None and len(embedding) != dimensions:
                     logger.warning(
-                        f"Skipping embedding with wrong dimensions for '{text[:50]}...': "
-                        f"expected {dimensions}, got {len(embedding)}"
+                        "Skipping embedding with wrong dimensions for '%s...': "
+                        "expected %s, got %s",
+                        text[:50],
+                        dimensions,
+                        len(embedding),
                     )
                     continue
 
@@ -236,13 +244,16 @@ class EmbeddingCache:
 
             if success:
                 logger.debug(
-                    f"Batch cached {len(mapping)} embeddings for {model} ({provider})"
+                    "Batch cached %s embeddings for %s (%s)",
+                    len(mapping),
+                    model,
+                    provider,
                 )
 
             return success
 
         except (AttributeError, ConnectionError, ImportError, RuntimeError) as e:
-            logger.error(f"Error in batch embedding caching: {e}")
+            logger.error("Error in batch embedding caching: %s", e)
             return False
 
     async def warm_cache(
@@ -278,19 +289,23 @@ class EmbeddingCache:
 
             if missing_texts:
                 logger.info(
-                    f"Cache warming: {len(missing_texts)} queries need embedding "
-                    f"generation for {model} ({provider})"
+                    "Cache warming: %s queries need embedding generation for %s (%s)",
+                    len(missing_texts),
+                    model,
+                    provider,
                 )
             else:
                 logger.info(
-                    f"Cache warming: all {len(common_queries)} queries already cached "
-                    f"for {model} ({provider})"
+                    "Cache warming: all %s queries already cached for %s (%s)",
+                    len(common_queries),
+                    model,
+                    provider,
                 )
 
             return missing_texts
 
         except (ConnectionError, ImportError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error in cache warming: {e}")
+            logger.error("Error in cache warming: %s", e)
             return common_queries  # Return all as missing on error
 
     async def invalidate_model(
@@ -325,15 +340,17 @@ class EmbeddingCache:
                     deleted_count += sum(results.values())
 
                 logger.info(
-                    f"Invalidated {deleted_count} cached embeddings for "
-                    f"{model} ({provider})"
+                    "Invalidated %s cached embeddings for %s (%s)",
+                    deleted_count,
+                    model,
+                    provider,
                 )
                 return deleted_count
 
             return 0
 
         except (AttributeError, ConnectionError, ImportError, RuntimeError) as e:
-            logger.error(f"Error invalidating model cache: {e}")
+            logger.error("Error invalidating model cache: %s", e)
             return 0
 
     async def get_cache_stats(self) -> dict:
@@ -347,7 +364,7 @@ class EmbeddingCache:
             pattern = "emb:*"
             keys = await self.cache.scan_keys(pattern)
 
-            stats = {
+            stats: dict[str, Any] = {
                 "total_embeddings": len(keys),
                 "cache_size": await self.cache.size(),
             }
@@ -369,7 +386,7 @@ class EmbeddingCache:
                             models.get(f"{provider}:{model}", 0) + 1
                         )
 
-                except (ImportError, RuntimeError, ValueError) as e:
+                except (ImportError, RuntimeError, ValueError):
                     continue
 
             stats["by_provider"] = providers
@@ -378,7 +395,7 @@ class EmbeddingCache:
             return stats
 
         except (ConnectionError, ImportError, RuntimeError, TimeoutError) as e:
-            logger.error(f"Error getting cache stats: {e}")
+            logger.error("Error getting cache stats: %s", e)
             return {"error": str(e)}
 
     async def get_stats(self) -> dict:

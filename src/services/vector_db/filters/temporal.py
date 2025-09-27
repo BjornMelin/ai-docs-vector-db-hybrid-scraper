@@ -12,10 +12,10 @@ import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator
 from qdrant_client import models
 
-from .base import BaseFilter, FilterError, FilterResult
+from .base import BaseFilter, FilterResult
 
 
 logger = logging.getLogger(__name__)
@@ -154,25 +154,27 @@ class TemporalFilter(BaseFilter):
 
         """
         try:
-            # Validate and parse criteria
             criteria = TemporalCriteria.model_validate(filter_criteria)
+        except ValidationError as exc:
+            self._raise_filter_error(
+                f"Failed to validate temporal filter criteria: {exc}",
+                filter_criteria,
+                exc,
+            )
 
-            # Get current time from context or use UTC now
+        try:
             current_time = datetime.now(tz=UTC)
             if context and "current_time" in context:
                 current_time = context["current_time"]
 
-            # Build Qdrant filter conditions
-            conditions = []
+            conditions: list[models.FieldCondition] = []
             metadata = {"applied_filters": [], "freshness_info": {}}
 
-            # Process absolute date filters
             absolute_conditions = self._build_absolute_date_filters(criteria)
             conditions.extend(absolute_conditions)
             if absolute_conditions:
                 metadata["applied_filters"].append("absolute_dates")
 
-            # Process relative date filters
             relative_conditions = self._build_relative_date_filters(
                 criteria, current_time
             )
@@ -180,21 +182,17 @@ class TemporalFilter(BaseFilter):
             if relative_conditions:
                 metadata["applied_filters"].append("relative_dates")
 
-            # Process freshness filters
             freshness_conditions = self._build_freshness_filters(criteria, current_time)
             conditions.extend(freshness_conditions)
             if freshness_conditions:
                 metadata["applied_filters"].append("freshness")
 
-            # Calculate performance impact
             performance_impact = self._estimate_performance_impact(len(conditions))
 
-            # Build final filter
             final_filter = None
             if conditions:
                 final_filter = models.Filter(must=conditions)
 
-                # Add freshness scoring metadata if enabled
                 if criteria.boost_recent_content:
                     metadata["freshness_info"] = {
                         "time_decay_factor": criteria.time_decay_factor,
@@ -202,27 +200,22 @@ class TemporalFilter(BaseFilter):
                         "current_time": current_time.isoformat(),
                     }
 
-            self._logger.info(
-                f"Applied temporal filter with {len(conditions)} conditions: "
-                f"{metadata['applied_filters']}"
-            )
-
-            return FilterResult(
-                filter_conditions=final_filter,
+            return self._finalize_result(
+                final_filter=final_filter,
                 metadata=metadata,
-                confidence_score=0.95,
+                confidence=0.95,
                 performance_impact=performance_impact,
+                log_message=(
+                    f"Applied temporal filter with {len(conditions)} conditions: "
+                    f"{metadata['applied_filters']}"
+                ),
             )
-
-        except Exception as e:
-            error_msg = f"Failed to apply temporal filter: {e}"
-            self._logger.exception(error_msg)
-            raise FilterError(
-                error_msg,
-                filter_name=self.name,
-                filter_criteria=filter_criteria,
-                underlying_error=e,
-            ) from e
+        except Exception as exc:  # noqa: BLE001 - propagate after wrapping
+            self._raise_filter_error(
+                f"Failed to apply temporal filter: {exc}",
+                filter_criteria,
+                exc,
+            )
 
     def _build_absolute_date_filters(
         self, criteria: TemporalCriteria
@@ -400,9 +393,7 @@ class TemporalFilter(BaseFilter):
         try:
             TemporalCriteria.model_validate(filter_criteria)
         except (asyncio.CancelledError, TimeoutError, RuntimeError) as e:
-            self._logger.warning(
-                f"Invalid temporal criteria: {e}"
-            )  # TODO: Convert f-string to logging format
+            self._logger.warning("Invalid temporal criteria: %s", e)
             return False
         else:
             return True
@@ -526,12 +517,13 @@ class TemporalFilter(BaseFilter):
                     return calculator(match)
                 except (OSError, PermissionError, ValueError) as e:
                     self._logger.warning(
-                        "Failed to calculate relative date for "
-                        f"'{relative_date_str}': {e}"
+                        "Failed to calculate relative date for '%s': %s",
+                        relative_date_str,
+                        e,
                     )
                     return None
 
         self._logger.warning(
-            f"Unrecognized relative date format: '{relative_date_str}'"
+            "Unrecognized relative date format: '%s'", relative_date_str
         )
         return None

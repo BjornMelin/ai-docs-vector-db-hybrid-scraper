@@ -1,6 +1,3 @@
-import typing
-
-
 """Advanced caching patterns for high-performance data access."""
 
 import asyncio
@@ -101,7 +98,8 @@ class CircuitBreakerPattern:
             raise RuntimeError(
                 f"Circuit breaker is OPEN. Service unavailable. "
                 f"Failure count: {self.failure_count}/{self.failure_threshold}, "
-                f"Next retry in: {self.recovery_timeout - (time.time() - self.last_failure_time):.1f}s"
+                f"Next retry in: "
+                f"{self.recovery_timeout - (time.time() - self.last_failure_time):.1f}s"
             )
 
         try:
@@ -127,7 +125,9 @@ class CircuitBreakerPattern:
         if self.state == CircuitState.HALF_OPEN:
             self.success_count += 1
             logger.debug(
-                f"Circuit breaker half-open success: {self.success_count}/{self.success_threshold}"
+                "Circuit breaker half-open success: %s/%s",
+                self.success_count,
+                self.success_threshold,
             )
 
             if self.success_count >= self.success_threshold:
@@ -141,7 +141,9 @@ class CircuitBreakerPattern:
             if self.failure_count > 0:
                 self.failure_count = max(0, self.failure_count - 1)
                 logger.debug(
-                    f"Circuit breaker partial recovery: {self.failure_count}/{self.failure_threshold} failures"
+                    "Circuit breaker partial recovery: %s/%s failures",
+                    self.failure_count,
+                    self.failure_threshold,
                 )
 
     async def _on_failure(self) -> None:
@@ -151,7 +153,7 @@ class CircuitBreakerPattern:
         self.last_failure_time = time.time()
 
         logger.warning(
-            f"Circuit breaker failure: {self.failure_count}/{self.failure_threshold}"
+            "Circuit breaker failure: %s/%s", self.failure_count, self.failure_threshold
         )
 
         if self.state == CircuitState.HALF_OPEN:
@@ -160,7 +162,9 @@ class CircuitBreakerPattern:
             self.success_count = 0
 
         elif self.failure_count >= self.failure_threshold:
-            logger.error(f"Circuit breaker OPENED due to {self.failure_count} failures")
+            logger.error(
+                "Circuit breaker OPENED due to %s failures", self.failure_count
+            )
             self.state = CircuitState.OPEN
 
     def get_stats(self) -> dict[str, Any]:
@@ -248,14 +252,14 @@ class CachePatterns:
 
             if ttl_remaining < stale_while_revalidate:
                 # Return stale data immediately and refresh in background
-                logger.debug(f"Serving stale data for {key}, refreshing in background")
+                logger.debug("Serving stale data for %s, refreshing in background", key)
                 # Fire and forget - refresh happens in background
                 self._create_background_task(self._refresh_cache(key, fetch_func, ttl))
 
             return cached
 
         # Cache miss - fetch and cache
-        logger.debug(f"Cache miss for {key}, fetching fresh data")
+        logger.debug("Cache miss for %s, fetching fresh data", key)
         return await self._refresh_cache(key, fetch_func, ttl)
 
     async def _refresh_cache(self, key: str, fetch_func: Callable, ttl: int) -> Any:
@@ -268,7 +272,7 @@ class CachePatterns:
         if lock_acquired:
             try:
                 # We have the lock - fetch fresh data
-                logger.debug(f"Acquired lock for {key}, fetching data")
+                logger.debug("Acquired lock for %s, fetching data", key)
 
                 if asyncio.iscoroutinefunction(fetch_func):
                     data = await fetch_func()
@@ -277,12 +281,12 @@ class CachePatterns:
 
                 # Cache the fresh data
                 await self.cache.set(key, data, ttl=ttl)
-                logger.debug(f"Cached fresh data for {key}")
+                logger.debug("Cached fresh data for %s", key)
 
                 return data
 
             except (ConnectionError, RuntimeError, TimeoutError) as e:
-                logger.error(f"Error fetching data for {key}: {e}")
+                logger.error("Error fetching data for %s: %s", key, e)
                 # If we fail, try to return stale data if available
                 cached = await self.cache.get(key)
                 if cached is not None:
@@ -296,7 +300,7 @@ class CachePatterns:
         else:
             # Lock not acquired - another process is refreshing
             # Wait briefly for them to finish
-            logger.debug(f"Lock not acquired for {key}, waiting for refresh")
+            logger.debug("Lock not acquired for %s, waiting for refresh", key)
 
             for _ in range(10):  # Wait up to 5 seconds
                 await asyncio.sleep(0.5)
@@ -305,7 +309,7 @@ class CachePatterns:
                     return cached
 
             # Fallback - fetch data ourselves if still not available
-            logger.warning(f"Timeout waiting for refresh of {key}, fetching directly")
+            logger.warning("Timeout waiting for refresh of %s, fetching directly", key)
             if asyncio.iscoroutinefunction(fetch_func):
                 return await fetch_func()
             return fetch_func()
@@ -331,7 +335,7 @@ class CachePatterns:
         Returns:
             Dictionary mapping keys to values
         """
-        logger.debug(f"Batch cache request for {len(keys)} keys")
+        logger.debug("Batch cache request for %s keys", len(keys))
 
         # Get existing values using DragonflyDB's optimized MGET
         cached_values = await self.cache.mget(keys)
@@ -346,7 +350,7 @@ class CachePatterns:
             else:
                 missing_keys.append(key)
 
-        logger.debug(f"Found {len(results)} cached, {len(missing_keys)} missing")
+        logger.debug("Found %s cached, %s missing", len(results), len(missing_keys))
 
         # Fetch missing values if any
         if missing_keys:
@@ -360,10 +364,10 @@ class CachePatterns:
                 if fresh_data:
                     await self.cache.mset(fresh_data, ttl=ttl)
                     results.update(fresh_data)
-                    logger.debug(f"Cached {len(fresh_data)} fresh items")
+                    logger.debug("Cached %s fresh items", len(fresh_data))
 
             except (ConnectionError, RuntimeError, TimeoutError) as e:
-                logger.error(f"Error fetching batch data: {e}")
+                logger.error("Error fetching batch data: %s", e)
                 # Continue with partial results
 
         return results
@@ -396,11 +400,11 @@ class CachePatterns:
         # Try cache first
         cached = await self.cache.get(cache_key)
         if cached is not None:
-            logger.debug(f"Cache hit for computation {func.__name__}")
+            logger.debug("Cache hit for computation %s", func.__name__)
             return cached
 
         # Compute and cache
-        logger.debug(f"Cache miss for computation {func.__name__}, computing")
+        logger.debug("Cache miss for computation %s, computing", func.__name__)
 
         try:
             if asyncio.iscoroutinefunction(func):
@@ -413,7 +417,7 @@ class CachePatterns:
             return result
 
         except (ConnectionError, OSError, PermissionError) as e:
-            logger.error(f"Error in cached computation {func.__name__}: {e}")
+            logger.error("Error in cached computation %s: %s", func.__name__, e)
             raise
 
     async def write_through(
@@ -447,14 +451,14 @@ class CachePatterns:
             success = await self.cache.set(key, value, ttl=ttl)
 
             if success:
-                logger.debug(f"Write-through success for {key}")
+                logger.debug("Write-through success for %s", key)
             else:
-                logger.warning(f"Write-through cache failed for {key}")
+                logger.warning("Write-through cache failed for %s", key)
 
             return success
 
         except (ConnectionError, OSError, PermissionError) as e:
-            logger.error(f"Write-through error for {key}: {e}")
+            logger.error("Write-through error for %s: %s", key, e)
             return False
 
     async def write_behind(
@@ -505,7 +509,7 @@ class CachePatterns:
             )
 
             if job_id:
-                logger.debug(f"Write-behind queued for {key} with job ID: {job_id}")
+                logger.debug("Write-behind queued for %s with job ID: %s", key, job_id)
             else:
                 raise RuntimeError(
                     f"Failed to queue write-behind persistence for {key}"
@@ -543,16 +547,18 @@ class CachePatterns:
                 if success:
                     total_cached += len(batch)
                     logger.debug(
-                        f"Cache warming batch {i // batch_size + 1}: {len(batch)} items"
+                        "Cache warming batch %s: %s items",
+                        i // batch_size + 1,
+                        len(batch),
                     )
                 else:
-                    logger.warning(f"Cache warming batch {i // batch_size + 1} failed")
+                    logger.warning("Cache warming batch %s failed", i // batch_size + 1)
 
             except (ConnectionError, RuntimeError, TimeoutError) as e:
-                logger.error(f"Cache warming batch error: {e}")
+                logger.error("Cache warming batch error: %s", e)
 
         logger.info(
-            f"Cache warming completed: {total_cached}/{len(items)} items cached"
+            "Cache warming completed: %s/%s items cached", total_cached, len(items)
         )
         return total_cached
 
@@ -586,7 +592,7 @@ class CachePatterns:
 
             if ttl_remaining < (ttl - refresh_point):
                 # Start background refresh
-                logger.debug(f"Refresh-ahead triggered for {key}")
+                logger.debug("Refresh-ahead triggered for %s", key)
                 # Fire and forget - refresh happens in background
                 self._create_background_task(self._refresh_cache(key, fetch_func, ttl))
 

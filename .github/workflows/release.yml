@@ -1,4 +1,4 @@
-name: Release Pipeline
+name: Release
 
 on:
   push:
@@ -6,193 +6,161 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version to release (e.g., v1.0.0)'
+      tag:
+        description: 'Existing tag to release (e.g. v1.2.3)'
         required: true
-        type: string
-      release_type:
-        description: 'Type of release'
-        required: true
-        default: 'release'
-        type: choice
-        options:
-          - release
-          - prerelease
-      draft:
-        description: 'Create as draft release'
-        required: false
-        default: false
-        type: boolean
-
-env:
-  PYTHONUNBUFFERED: 1
-  PYTHONDONTWRITEBYTECODE: 1
 
 permissions:
   contents: write
   packages: write
-  attestations: write
   id-token: write
 
+env:
+  PYTHONUNBUFFERED: "1"
+  UV_SYSTEM_PYTHON: "1"
+
 jobs:
-  validate-release:
-    name: Validate Release
+  prepare:
+    name: Resolve tag
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
-      version: ${{ steps.version.outputs.version }}
-      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
-    
+      version: ${{ steps.tag.outputs.version }}
+      is-prerelease: ${{ steps.tag.outputs.is_prerelease }}
+      has-docker: ${{ steps.detect.outputs.has_docker }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-        with:
-          fetch-depth: 0
-
-      - name: Extract version
-        id: version
+      - name: Resolve version
+        id: tag
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            VERSION="${{ github.event.inputs.version }}"
-            IS_PRERELEASE="${{ github.event.inputs.release_type == 'prerelease' }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.tag }}"
           else
-            VERSION="${{ github.ref_name }}"
-            # Check if it's a prerelease (contains alpha, beta, rc)
-            if [[ "$VERSION" =~ (alpha|beta|rc) ]]; then
-              IS_PRERELEASE="true"
-            else
-              IS_PRERELEASE="false"
-            fi
+            VERSION="${GITHUB_REF_NAME}"
           fi
-          
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
-          echo "Releasing version: $VERSION (prerelease: $IS_PRERELEASE)"
 
-      - name: Validate version format
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9-]+)?$ ]]; then
-            echo "❌ Invalid version format: $VERSION"
-            echo "Expected format: v1.2.3 or v1.2.3-alpha.1"
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
+            echo "Tag must look like v1.2.3"
             exit 1
           fi
-          echo "✅ Version format is valid: $VERSION"
 
-      - name: Check if tag exists
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          if git rev-parse "$VERSION" >/dev/null 2>&1; then
-            echo "❌ Tag $VERSION already exists"
-            exit 1
+          if [[ "$VERSION" =~ (alpha|beta|rc) ]]; then
+            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
           fi
-          echo "✅ Tag $VERSION does not exist yet"
 
-  run-tests:
-    name: Run Full Test Suite
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ steps.tag.outputs.version }}
+
+      - name: Detect Docker targets
+        id: detect
+        run: |
+          if [ -f docker/Dockerfile.worker ]; then
+            echo "has_docker=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_docker=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  quality:
+    name: Validate release
     runs-on: ubuntu-latest
-    needs: validate-release
-    
+    needs: prepare
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-
-      - name: Set up Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          python-version: '3.13'
+          ref: ${{ needs.prepare.outputs.version }}
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
+      - name: Prepare workspace
+        uses: ./.github/actions/checkout-and-setup
         with:
-          version: "0.8.19"
-          enable-cache: true
+          ref: ${{ needs.prepare.outputs.version }}
+          python-version: "3.12"
+          cache-suffix: "-release-quality"
 
-      - name: Install dependencies
-        run: |
-          uv sync --dev --frozen
+      - name: Ruff format (check)
+        run: uv run ruff format --check .
 
-      - name: Run linting
-        run: |
-          uv run ruff check .
-          uv run ruff format --check .
+      - name: Ruff lint
+        run: uv run ruff check .
 
-      - name: Run full test suite
-        run: |
-          uv run pytest --cov=src --cov-report=xml --cov-report=html --tb=short
+      - name: Pylint
+        run: uv run pylint --fail-under=9.5 src scripts
 
-      - name: Check coverage threshold
-        run: |
-          uv run coverage report --fail-under=80
+      - name: Pyright
+        run: uv run pyright
+
+      - name: Run release test profile
+        run: uv run python scripts/dev.py test --profile ci
 
   build-artifacts:
-    name: Build Release Artifacts
+    name: Build distributions
     runs-on: ubuntu-latest
-    needs: [validate-release, run-tests]
-    outputs:
-      artifact-paths: ${{ steps.build.outputs.artifact-paths }}
-    
+    needs:
+      - prepare
+      - quality
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-
-      - name: Set up Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          python-version: '3.13'
+          ref: ${{ env.VERSION }}
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
+      - name: Prepare workspace
+        uses: ./.github/actions/checkout-and-setup
         with:
-          version: "0.8.19"
-          enable-cache: true
+          ref: ${{ env.VERSION }}
+          python-version: "3.12"
+          cache-suffix: "-release-build"
 
-      - name: Update version in pyproject.toml
+      - name: Align pyproject version
         run: |
-          VERSION="${{ needs.validate-release.outputs.version }}"
-          # Remove 'v' prefix for Python version
-          PYTHON_VERSION="${VERSION#v}"
-          
-          # Update version in pyproject.toml
-          sed -i "s/version = \".*\"/version = \"$PYTHON_VERSION\"/" pyproject.toml
-          
-          echo "Updated version to: $PYTHON_VERSION"
-          grep "version =" pyproject.toml
+          RAW_VERSION="${VERSION#v}"
+          sed -i "s/^version = \".*\"$/version = \"${RAW_VERSION}\"/" pyproject.toml
+          grep '^version =' pyproject.toml
 
-      - name: Build package
-        id: build
-        run: |
-          uv build
-          
-          # List built artifacts
-          echo "Built artifacts:"
-          ls -la dist/
-          
-          # Set output for artifact paths
-          ARTIFACTS=$(ls dist/ | tr '\n' ' ')
-          echo "artifact-paths=$ARTIFACTS" >> $GITHUB_OUTPUT
+      - name: Build distributions
+        run: uv build
 
-      - name: Verify package
+      - name: Verify metadata
         run: |
           uv tool install twine
           uv tool run twine check dist/*
 
-      - name: Upload build artifacts
+      - name: Upload release artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: release-artifacts
+          name: release-dist
           path: dist/
           retention-days: 30
 
-  build-docker:
-    name: Build Docker Images
+  publish-docker:
+    name: Publish Docker image
     runs-on: ubuntu-latest
-    needs: [validate-release, run-tests]
-    if: hashFiles('Dockerfile*') != ''
-    
+    needs:
+      - prepare
+      - build-artifacts
+    if: needs.prepare.outputs.has-docker == 'true'
+    permissions:
+      contents: read
+      packages: write
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ env.VERSION }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
@@ -204,7 +172,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
+      - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
         with:
@@ -215,11 +183,11 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
 
-      - name: Build and push Docker images
+      - name: Build and push image
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           context: .
-          file: Dockerfile.worker
+          file: docker/Dockerfile.worker
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
@@ -230,280 +198,184 @@ jobs:
       - name: Generate SBOM
         uses: anchore/sbom-action@f8bdd1d8ac5e901a77a92f111440fdb1b593736b # v0.20.6
         with:
-          image: ghcr.io/${{ github.repository }}:${{ needs.validate-release.outputs.version }}
+          image: ghcr.io/${{ github.repository }}:${{ needs.prepare.outputs.version }}
           format: spdx-json
           output-file: sbom.spdx.json
 
-      - name: Upload SBOM
+      - name: Upload SBOM artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: docker-sbom
           path: sbom.spdx.json
           retention-days: 30
 
-  security-scan:
-    name: Security Scan
+  security-report:
+    name: Security report
     runs-on: ubuntu-latest
-    needs: [validate-release, build-artifacts]
-    
+    needs:
+      - prepare
+      - build-artifacts
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ needs.prepare.outputs.version }}
 
-      - name: Download artifacts
+      - name: Prepare workspace
+        uses: ./.github/actions/checkout-and-setup
+        with:
+          python-version: "3.12"
+          cache-suffix: "-release-security"
+
+      - name: Download release artifacts
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
-          name: release-artifacts
-          path: dist/
+          name: release-dist
+          path: dist
 
-      - name: Set up Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
-        with:
-          python-version: '3.13'
+      - name: Install security tooling
+        run: uv tool install pip-audit bandit
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
-        with:
-          version: "0.8.19"
-
-      - name: Install dependencies
+      - name: Run dependency and code scans
         run: |
-          uv sync --dev --frozen
+          set -euo pipefail
 
-      - name: Run security scans
-        run: |
-          # Install security tools
-          uv tool install safety
-          uv tool install pip-audit
-          uv tool install bandit
-          
-          # Run security checks
-          echo "## Security Scan Results" > security-report.md
-          echo "" >> security-report.md
-          
-          echo "### Dependency Vulnerabilities" >> security-report.md
-          uv tool run pip-audit --format=markdown >> security-report.md || echo "No vulnerabilities found" >> security-report.md
-          
-          echo "" >> security-report.md
-          echo "### Code Security Issues" >> security-report.md
-          uv tool run bandit -r src/ -f txt >> security-report.md || echo "No issues found" >> security-report.md
+          pip_audit_status=0
+          bandit_status=0
+
+          {
+            echo "# Security scan"
+            echo
+            echo "## Dependency vulnerabilities"
+          } > security-report.md
+
+          if uv tool run pip-audit --format=markdown >> security-report.md; then
+            echo >> security-report.md
+            echo "_No dependency vulnerabilities detected._" >> security-report.md
+          else
+            pip_audit_status=$?
+            echo >> security-report.md
+            echo "_pip-audit exited with status ${pip_audit_status}. Review the output above._" >> security-report.md
+          fi
+
+          {
+            echo
+            echo "## Code security issues"
+          } >> security-report.md
+
+          if uv tool run bandit -r src -f txt >> security-report.md; then
+            echo >> security-report.md
+            echo "_No code security issues detected._" >> security-report.md
+          else
+            bandit_status=$?
+            echo >> security-report.md
+            echo "_Bandit exited with status ${bandit_status}. Review the output above._" >> security-report.md
+          fi
+
+          if [ "$pip_audit_status" -ne 0 ] || [ "$bandit_status" -ne 0 ]; then
+            echo "Security tooling reported failures. See security-report.md for details." >&2
+            exit 1
+          fi
 
       - name: Upload security report
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: security-report
           path: security-report.md
           retention-days: 30
 
-  generate-changelog:
-    name: Generate Changelog
+  github-release:
+    name: Create GitHub release
     runs-on: ubuntu-latest
-    needs: validate-release
-    outputs:
-      changelog: ${{ steps.changelog.outputs.changelog }}
-    
+    needs:
+      - prepare
+      - build-artifacts
+      - security-report
+      - publish-docker
+    permissions:
+      contents: write
+    if: >-
+      needs.prepare.result == 'success' &&
+      needs.build-artifacts.result == 'success' &&
+      needs.security-report.result == 'success' &&
+      (needs.publish-docker.result == 'success' || needs.publish-docker.result == 'skipped')
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-        with:
-          fetch-depth: 0
-
-      - name: Generate changelog
-        id: changelog
-        run: |
-          VERSION="${{ needs.validate-release.outputs.version }}"
-          
-          # Get previous tag
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          
-          echo "# Changelog for $VERSION" > CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          
-          if [ -n "$PREVIOUS_TAG" ]; then
-            echo "## Changes since $PREVIOUS_TAG" >> CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            
-            # Generate commit log
-            git log --pretty=format:"- %s (%h)" "$PREVIOUS_TAG"..HEAD >> CHANGELOG.md
-            
-            echo "" >> CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            echo "## Full Changelog" >> CHANGELOG.md
-            echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...$VERSION" >> CHANGELOG.md
-          else
-            echo "## Initial Release" >> CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            echo "This is the initial release of the AI Docs Vector DB Hybrid Scraper." >> CHANGELOG.md
-          fi
-          
-          # Set output for use in release
-          {
-            echo 'changelog<<EOF'
-            cat CHANGELOG.md
-            echo EOF
-          } >> $GITHUB_OUTPUT
-
-      - name: Upload changelog
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: changelog
-          path: CHANGELOG.md
-          retention-days: 30
-
-  create-release:
-    name: Create GitHub Release
-    runs-on: ubuntu-latest
-    needs: [validate-release, build-artifacts, security-scan, generate-changelog]
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-
-      - name: Download all artifacts
+      - name: Download distributions
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: release-dist
+          path: release/dist
 
-      - name: Create or update tag
-        if: github.event_name == 'workflow_dispatch'
+      - name: Download security report
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: security-report
+          path: release/security
+          if-no-files-found: ignore
+
+      - name: Download SBOM (if available)
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: docker-sbom
+          path: release/sbom
+          if-no-files-found: ignore
+
+      - name: Collect release assets
         run: |
-          VERSION="${{ needs.validate-release.outputs.version }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "$VERSION" -m "Release $VERSION"
-          git push origin "$VERSION"
+          set -euo pipefail
+          mkdir -p assets
+          shopt -s nullglob
 
-      - name: Create GitHub Release
+          dist_files=(release/dist/*)
+          if [ "${#dist_files[@]}" -eq 0 ]; then
+            echo "::error::No distribution artifacts were downloaded." >&2
+            exit 1
+          fi
+          cp "${dist_files[@]}" assets/
+
+          if [ -f release/security/security-report.md ]; then
+            cp release/security/security-report.md assets/security-report.md
+          else
+            echo "::warning::security-report.md not found; security report will be omitted." >&2
+          fi
+
+          if [ -f release/sbom/sbom.spdx.json ]; then
+            cp release/sbom/sbom.spdx.json assets/sbom.spdx.json
+          else
+            echo "::notice::SBOM artifact not present; skipping attachment." >&2
+          fi
+
+      - name: Create release
         uses: softprops/action-gh-release@6cbd405e2c4e67a21c47fa9e383d020e4e28b836 # v2.3.3
         with:
-          tag_name: ${{ needs.validate-release.outputs.version }}
-          name: ${{ needs.validate-release.outputs.version }}
-          body: ${{ needs.generate-changelog.outputs.changelog }}
-          draft: ${{ github.event.inputs.draft == 'true' || false }}
-          prerelease: ${{ needs.validate-release.outputs.is_prerelease == 'true' }}
-          files: |
-            release-artifacts/*
-            security-report/security-report.md
-            changelog/CHANGELOG.md
-          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ needs.prepare.outputs.version }}
+          files: assets/*
+          generate_release_notes: true
+          prerelease: ${{ needs.prepare.outputs.is-prerelease == 'true' }}
 
   publish-pypi:
     name: Publish to PyPI
     runs-on: ubuntu-latest
-    needs: [validate-release, create-release]
-    if: needs.validate-release.outputs.is_prerelease == 'false'
+    needs:
+      - prepare
+      - build-artifacts
+      - github-release
+    if: needs.prepare.outputs.is-prerelease == 'false' && secrets.PYPI_API_TOKEN != ''
     environment: pypi
-    
+    permissions:
+      contents: read
     steps:
-      - name: Download artifacts
+      - name: Download distributions
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
-          name: release-artifacts
-          path: dist/
+          name: release-dist
+          path: dist
 
-      - name: Set up Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1
         with:
-          python-version: '3.13'
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
-        with:
-          version: "0.8.19"
-
-      - name: Publish to PyPI
-        run: |
-          uv tool install twine
-          uv tool run twine upload dist/* --username __token__ --password ${{ secrets.PYPI_API_TOKEN }}
-
-  post-release:
-    name: Post-Release Tasks
-    runs-on: ubuntu-latest
-    needs: [validate-release, create-release]
-    if: always() && needs.create-release.result == 'success'
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
-
-      - name: Create post-release issue
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
-        with:
-          script: |
-            const version = '${{ needs.validate-release.outputs.version }}';
-            const issueBody = `## Post-Release Tasks for ${version}
-            
-            This issue tracks post-release activities for version ${version}.
-            
-            ### Tasks
-            - [ ] Update documentation with new features
-            - [ ] Announce release on social media/blog
-            - [ ] Update demo/examples if needed
-            - [ ] Monitor for issues and user feedback
-            - [ ] Plan next release cycle
-            
-            ### Release Information
-            - **Version**: ${version}
-            - **Release Date**: ${new Date().toISOString().split('T')[0]}
-            - **Release Notes**: https://github.com/${{ github.repository }}/releases/tag/${version}
-            
-            ### Monitoring
-            - [ ] Check PyPI downloads
-            - [ ] Monitor GitHub issues
-            - [ ] Check CI/CD status
-            
-            Auto-created by release pipeline.`;
-            
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `Post-release tasks for ${version}`,
-              body: issueBody,
-              labels: ['release', 'maintenance']
-            });
-
-      - name: Notify team
-        run: |
-          echo "🎉 Release ${{ needs.validate-release.outputs.version }} has been published successfully!"
-          echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate-release.outputs.version }}"
-
-  release-summary:
-    name: Release Summary
-    runs-on: ubuntu-latest
-    needs: [validate-release, create-release, publish-pypi, post-release]
-    if: always()
-    
-    steps:
-      - name: Generate release summary
-        run: |
-          echo "# 🚀 Release Pipeline Summary" > RELEASE_SUMMARY.md
-          echo "" >> RELEASE_SUMMARY.md
-          echo "## Release Information" >> RELEASE_SUMMARY.md
-          echo "- **Version**: ${{ needs.validate-release.outputs.version }}" >> RELEASE_SUMMARY.md
-          echo "- **Prerelease**: ${{ needs.validate-release.outputs.is_prerelease }}" >> RELEASE_SUMMARY.md
-          echo "- **Triggered by**: ${{ github.event_name }}" >> RELEASE_SUMMARY.md
-          echo "" >> RELEASE_SUMMARY.md
-          echo "## Pipeline Results" >> RELEASE_SUMMARY.md
-          echo "| Stage | Status |" >> RELEASE_SUMMARY.md
-          echo "|-------|--------|" >> RELEASE_SUMMARY.md
-          echo "| Validation | ${{ needs.validate-release.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> RELEASE_SUMMARY.md
-          echo "| Artifacts | ${{ needs.build-artifacts.result == 'success' && '✅ Built' || '❌ Failed' }} |" >> RELEASE_SUMMARY.md
-          echo "| Security Scan | ${{ needs.security-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> RELEASE_SUMMARY.md
-          echo "| GitHub Release | ${{ needs.create-release.result == 'success' && '✅ Created' || '❌ Failed' }} |" >> RELEASE_SUMMARY.md
-          echo "| PyPI Publish | ${{ needs.publish-pypi.result == 'success' && '✅ Published' || needs.publish-pypi.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |" >> RELEASE_SUMMARY.md
-          echo "| Post-Release | ${{ needs.post-release.result == 'success' && '✅ Completed' || '❌ Failed' }} |" >> RELEASE_SUMMARY.md
-          
-          if [[ "${{ needs.create-release.result }}" == "success" ]]; then
-            echo "" >> RELEASE_SUMMARY.md
-            echo "✅ **Release pipeline completed successfully!**" >> RELEASE_SUMMARY.md
-            echo "" >> RELEASE_SUMMARY.md
-            echo "🔗 **Release URL**: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate-release.outputs.version }}" >> RELEASE_SUMMARY.md
-          else
-            echo "" >> RELEASE_SUMMARY.md
-            echo "❌ **Release pipeline failed**" >> RELEASE_SUMMARY.md
-          fi
-
-      - name: Upload release summary
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: release-summary
-          path: RELEASE_SUMMARY.md
-          retention-days: 90
+          packages-dir: dist
+          password: ${{ secrets.PYPI_API_TOKEN }}

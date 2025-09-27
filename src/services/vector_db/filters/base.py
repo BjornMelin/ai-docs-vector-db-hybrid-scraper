@@ -7,7 +7,7 @@ filtering operations in the vector database system.
 import logging
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, NoReturn
 
 from pydantic import BaseModel, Field
 from qdrant_client import models
@@ -144,19 +144,53 @@ class BaseFilter(ABC):
             "type": self.__class__.__name__,
         }
 
+    def _raise_filter_error(
+        self,
+        message: str,
+        filter_criteria: dict[str, Any],
+        error: Exception,
+    ) -> NoReturn:
+        """Log and raise a :class:`FilterError` with consistent formatting."""
+
+        self._logger.exception(message)
+        raise FilterError(
+            message,
+            filter_name=self.name,
+            filter_criteria=filter_criteria,
+            underlying_error=error,
+        ) from error
+
+    def _finalize_result(
+        self,
+        *,
+        final_filter: models.Filter | None,
+        metadata: dict[str, Any],
+        confidence: float,
+        performance_impact: str,
+        log_message: str,
+    ) -> FilterResult:
+        """Standardize logging and result construction for filters."""
+
+        self._logger.info(log_message)
+        return FilterResult(
+            filter_conditions=final_filter,
+            metadata=metadata,
+            confidence_score=confidence,
+            performance_impact=performance_impact,
+        )
+
     def enable(self) -> None:
         """Enable this filter."""
         self.enabled = True
-        self._logger.info(
-            f"Filter '{self.name}' enabled"
-        )  # TODO: Convert f-string to logging format
+        self._logger.info("Filter '%s' enabled", self.name)
 
     def disable(self) -> None:
         """Disable this filter."""
         self.enabled = False
         self._logger.info(
-            f"Filter '{self.name}' disabled"
-        )  # TODO: Convert f-string to logging format
+            "Filter '%s' disabled",
+            self.name,
+        )
 
     def set_priority(self, priority: int) -> None:
         """Set the priority of this filter.
@@ -168,7 +202,10 @@ class BaseFilter(ABC):
         old_priority = self.priority
         self.priority = priority
         self._logger.debug(
-            f"Filter '{self.name}' priority changed from {old_priority} to {priority}"
+            "Filter '%s' priority changed from %d to %d",
+            self.name,
+            old_priority,
+            priority,
         )
 
     def __repr__(self) -> str:

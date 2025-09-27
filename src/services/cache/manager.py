@@ -1,12 +1,9 @@
-import typing
-
-
 """Simplified cache manager using DragonflyDB with specialized cache layers."""
 
 import asyncio
 import hashlib
 import logging
-from typing import TYPE_CHECKING
+from typing import Any
 
 from src.config import CacheType
 
@@ -35,7 +32,7 @@ get_metrics_registry, MONITORING_AVAILABLE = _import_monitoring_registry()
 
 
 class CacheManager:
-    """Simplified two-tier cache manager with DragonflyDB and specialized cache layers."""
+    """Two-tier cache manager with DragonflyDB and specialized cache layers."""
 
     def __init__(
         self,
@@ -68,6 +65,7 @@ class CacheManager:
         self.enable_distributed_cache = enable_distributed_cache
         self.key_prefix = key_prefix
         self.enable_specialized_caches = enable_specialized_caches
+        self.dragonfly_url = dragonfly_url
 
         # Default distributed cache TTLs by cache type
         self.distributed_ttl_seconds = distributed_ttl_seconds or {
@@ -117,7 +115,9 @@ class CacheManager:
 
     def _initialize_metrics_registry(self, enable_metrics: bool):
         """Initialize metrics registry with error handling."""
-        if not (enable_metrics and MONITORING_AVAILABLE):
+        if not (
+            enable_metrics and MONITORING_AVAILABLE and get_metrics_registry is not None
+        ):
             return None
         try:
             registry = get_metrics_registry()
@@ -129,9 +129,9 @@ class CacheManager:
 
         logger.info(
             "CacheManager initialized with DragonflyDB: %s, local=%s, specialized=%s",
-            dragonfly_url,
-            enable_local_cache,
-            enable_specialized_caches,
+            self.dragonfly_url,
+            self.enable_local_cache,
+            self.enable_specialized_caches,
         )
 
     @property
@@ -470,11 +470,12 @@ class CacheManager:
     ) -> bool:
         """Clear a single key from both cache layers."""
         # Clear from distributed cache
-        try:
-            await self._distributed_cache.delete(key)
-        except (ConnectionError, RuntimeError, TimeoutError) as e:
-            logger.error("Distributed cache delete error for key %s: %s", key, e)
-            return False
+        if self._distributed_cache:
+            try:
+                await self._distributed_cache.delete(key)
+            except (ConnectionError, RuntimeError, TimeoutError) as e:
+                logger.error("Distributed cache delete error for key %s: %s", key, e)
+                return False
 
         # Clear from local cache
         if self._local_cache:
@@ -527,7 +528,7 @@ class CacheManager:
         Raises:
             Exception: Logged internally - always returns valid stats dict
         """
-        stats = {"manager": {"enabled_layers": []}}
+        stats: dict[str, Any] = {"manager": {"enabled_layers": []}}
 
         if self._local_cache:
             stats["manager"]["enabled_layers"].append("local")
@@ -631,7 +632,7 @@ class CacheManager:
         if not self._search_cache:
             return False
         return await self._search_cache.set_search_results(
-            query_hash, collection, results, ttl
+            query_hash, results, collection, ttl=ttl
         )
 
     async def get_performance_stats(self) -> dict[str, object]:

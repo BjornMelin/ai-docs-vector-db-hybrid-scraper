@@ -24,6 +24,20 @@ def test_validate_json_files_reports_errors(tmp_path: Path) -> None:
     assert any("Invalid JSON" in message for message in summary.errors)
 
 
+def test_validate_yaml_files_reports_errors(tmp_path: Path) -> None:
+    """The validator should flag YAML parsing failures."""
+
+    config_root = tmp_path / "config"
+    config_root.mkdir()
+    (config_root / "valid.yaml").write_text("key: value\n", encoding="utf-8")
+    (config_root / "invalid.yaml").write_text(": bad\n", encoding="utf-8")
+
+    summary = validate_config.validate_yaml_files(config_root)
+
+    assert summary.checked == 2
+    assert any("Invalid YAML" in message for message in summary.errors)
+
+
 def test_validate_templates_handles_environment_mismatch(tmp_path: Path) -> None:
     """Environment enforcement should catch template mismatches."""
 

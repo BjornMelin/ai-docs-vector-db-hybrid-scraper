@@ -51,6 +51,8 @@ nav:
       - Configuration Reference: developers/configuration.md
       - Integration Guide: developers/integration-guide.md
       - API Reference: developers/api-reference.md
+      - CI/CD Workflows: developers/ci-cd.md
+      - GitHub Composite Actions: developers/github-actions.md
   - Operations:
       - Operator Hub: operators/index.md
       - Deployment: operators/deployment.md

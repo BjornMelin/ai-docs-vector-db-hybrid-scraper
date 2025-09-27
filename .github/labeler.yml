@@ -198,4 +198,5 @@
 # HyDE
 'area/hyde':
 - changed-files:
-  - any-glob-to-any-file: 'src/services/hyde/**/*'
+  - any-glob-to-any-file:
+    - 'src/services/hyde/**/*'

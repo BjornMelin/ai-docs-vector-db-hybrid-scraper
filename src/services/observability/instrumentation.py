@@ -10,16 +10,18 @@ import functools
 import logging
 import time
 from collections.abc import Callable
-from contextlib import asynccontextmanager, contextmanager
-from typing import Any, TypeVar
+from contextlib import asynccontextmanager, contextmanager, suppress
+from typing import Any, TypeVar, cast
 
 from opentelemetry import baggage, trace
 from opentelemetry.trace import Status, StatusCode
 
+from .span_utils import record_llm_usage, span_context, span_context_async
+
 
 logger = logging.getLogger(__name__)
 
-F = TypeVar("F", bound=Callable[..., Any])
+FuncT = TypeVar("FuncT", bound=Callable[..., Any])
 
 
 def get_tracer() -> trace.Tracer:
@@ -32,135 +34,103 @@ def get_tracer() -> trace.Tracer:
     return trace.get_tracer(__name__)
 
 
+def _record_arguments(
+    span: trace.Span, include_args: bool, args: tuple[Any, ...], kwargs: dict[str, Any]
+) -> None:
+    if not include_args:
+        return
+
+    if args:
+        span.set_attribute("function.args.count", len(args))
+    if kwargs:
+        for key, value in kwargs.items():
+            if isinstance(value, (str, int, float, bool)):
+                span.set_attribute(f"function.args.{key}", value)
+            else:
+                span.set_attribute(f"function.args.{key}", str(value))
+
+
+def _record_result(span: trace.Span, include_result: bool, result: Any) -> None:
+    if not include_result or result is None:
+        return
+
+    if hasattr(result, "__len__") and not isinstance(result, (str, bytes)):
+        with suppress(TypeError):
+            span.set_attribute("result.count", len(result))
+
+    if isinstance(result, dict):
+        status_value = result.get("status")
+        if isinstance(status_value, (str, int, float, bool)):
+            span.set_attribute("result.status", status_value)
+
+
 def instrument_function(
     span_name: str | None = None,
     operation_type: str = "operation",
     include_args: bool = False,
     include_result: bool = False,
     baggage_context: dict[str, str] | None = None,
-) -> Callable[[F], F]:
-    """Decorator to instrument functions with OpenTelemetry tracing.
+) -> Callable[[FuncT], FuncT]:
+    """Decorator to instrument functions with OpenTelemetry tracing."""
 
-    Args:
-        span_name: Custom span name (defaults to function name)
-        operation_type: Type of operation for categorization
-        include_args: Whether to include function arguments as attributes
-        include_result: Whether to include result information as attributes
-        baggage_context: Additional baggage context to propagate
-
-    Returns:
-        Decorated function with OpenTelemetry instrumentation
-
-    """
-
-    def decorator(func: F) -> F:
+    def decorator(func: FuncT) -> FuncT:
         effective_span_name = span_name or f"{func.__module__}.{func.__name__}"
 
-        @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
-            tracer = get_tracer()
+        def _apply_common_attributes(span: trace.Span) -> None:
+            span.set_attribute("operation.type", operation_type)
+            span.set_attribute("function.name", func.__name__)
+            span.set_attribute("function.module", func.__module__)
+            if baggage_context:
+                for key, value in baggage_context.items():
+                    baggage.set_baggage(key, value)
 
-            with tracer.start_as_current_span(effective_span_name) as span:
-                # Set span attributes
-                span.set_attribute("operation.type", operation_type)
-                span.set_attribute("function.name", func.__name__)
-                span.set_attribute("function.module", func.__module__)
+        if asyncio.iscoroutinefunction(func):
 
-                # Add baggage context
-                if baggage_context:
-                    for key, value in baggage_context.items():
-                        baggage.set_baggage(key, value)
-
-                # Include arguments if requested
-                if include_args and args:
-                    span.set_attribute("function.args.count", len(args))
-                if include_args and kwargs:
-                    for key, value in kwargs.items():
-                        if isinstance(value, str | int | float | bool):
-                            span.set_attribute(f"function.args.{key}", str(value))
-
-                result = None
-                try:
+            @functools.wraps(func)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                tracer = get_tracer()
+                with tracer.start_as_current_span(effective_span_name) as span:
+                    _apply_common_attributes(span)
+                    _record_arguments(span, include_args, args, kwargs)
                     start_time = time.time()
-                    result = await func(*args, **kwargs)
+                    try:
+                        result = await func(*args, **kwargs)
+                    except Exception as exc:  # noqa: BLE001 - re-raise after recording
+                        span.record_exception(exc)
+                        span.set_status(Status(StatusCode.ERROR, str(exc)))
+                        raise
+                    else:
+                        span.set_status(Status(StatusCode.OK))
+                        _record_result(span, include_result, result)
+                        return result
+                    finally:
+                        duration_ms = (time.time() - start_time) * 1000
+                        span.set_attribute("operation.duration_ms", duration_ms)
 
-                    # Set success status
-                    span.set_status(Status(StatusCode.OK))
-
-                    # Include result information if requested
-                    if include_result and result is not None:
-                        if hasattr(result, "__len__"):
-                            span.set_attribute("result.count", len(result))
-                        if isinstance(result, dict) and "status" in result:
-                            span.set_attribute("result.status", result["status"])
-
-                except Exception as e:
-                    # Record exception in span
-                    span.record_exception(e)
-                    span.set_status(Status(StatusCode.ERROR, str(e)))
-                    raise
-
-                finally:
-                    # Add performance metrics
-                    duration = time.time() - start_time
-                    span.set_attribute("operation.duration_ms", duration * 1000)
-
-                return result
+            return cast(FuncT, async_wrapper)
 
         @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = get_tracer()
-
             with tracer.start_as_current_span(effective_span_name) as span:
-                # Set span attributes
-                span.set_attribute("operation.type", operation_type)
-                span.set_attribute("function.name", func.__name__)
-                span.set_attribute("function.module", func.__module__)
-
-                # Add baggage context
-                if baggage_context:
-                    for key, value in baggage_context.items():
-                        baggage.set_baggage(key, value)
-
-                # Include arguments if requested
-                if include_args and args:
-                    span.set_attribute("function.args.count", len(args))
-                if include_args and kwargs:
-                    for key, value in kwargs.items():
-                        if isinstance(value, str | int | float | bool):
-                            span.set_attribute(f"function.args.{key}", str(value))
-
-                result = None
+                _apply_common_attributes(span)
+                _record_arguments(span, include_args, args, kwargs)
+                start_time = time.time()
                 try:
-                    start_time = time.time()
                     result = func(*args, **kwargs)
-
-                    # Set success status
-                    span.set_status(Status(StatusCode.OK))
-
-                    # Include result information if requested
-                    if include_result and result is not None:
-                        if hasattr(result, "__len__"):
-                            span.set_attribute("result.count", len(result))
-                        if isinstance(result, dict) and "status" in result:
-                            span.set_attribute("result.status", result["status"])
-
-                except Exception as e:
-                    # Record exception in span
-                    span.record_exception(e)
-                    span.set_status(Status(StatusCode.ERROR, str(e)))
+                except Exception as exc:  # noqa: BLE001 - re-raise after recording
+                    span.record_exception(exc)
+                    span.set_status(Status(StatusCode.ERROR, str(exc)))
                     raise
                 else:
+                    span.set_status(Status(StatusCode.OK))
+                    _record_result(span, include_result, result)
                     return result
-
                 finally:
-                    # Add performance metrics
-                    duration = time.time() - start_time
-                    span.set_attribute("operation.duration_ms", duration * 1000)
+                    duration_ms = (time.time() - start_time) * 1000
+                    span.set_attribute("operation.duration_ms", duration_ms)
 
-                return result
-
-        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+        return cast(FuncT, sync_wrapper)
 
     return decorator
 
@@ -168,7 +138,7 @@ def instrument_function(
 def instrument_vector_search(
     collection_name: str = "default",
     query_type: str = "semantic",
-) -> Callable[[F], F]:
+) -> Callable[[FuncT], FuncT]:
     """Decorator to instrument vector search operations.
 
     Args:
@@ -180,9 +150,9 @@ def instrument_vector_search(
 
     """
 
-    def decorator(func: F) -> F:
+    def decorator(func: FuncT) -> FuncT:
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = get_tracer()
 
             with tracer.start_as_current_span("vector_search") as span:
@@ -199,8 +169,8 @@ def instrument_vector_search(
                 baggage.set_baggage("search.collection", collection_name)
                 baggage.set_baggage("search.type", query_type)
 
+                start_time = time.time()
                 try:
-                    start_time = time.time()
                     result = await func(*args, **kwargs)
 
                     # Extract search result metrics
@@ -236,7 +206,7 @@ def instrument_vector_search(
                     span.set_attribute("vector.search_duration_ms", duration * 1000)
 
         @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = get_tracer()
 
             with tracer.start_as_current_span("vector_search") as span:
@@ -249,8 +219,8 @@ def instrument_vector_search(
                 baggage.set_baggage("search.collection", collection_name)
                 baggage.set_baggage("search.type", query_type)
 
+                start_time = time.time()
                 try:
-                    start_time = time.time()
                     result = func(*args, **kwargs)
 
                     span.set_status(Status(StatusCode.OK))
@@ -266,7 +236,9 @@ def instrument_vector_search(
                     duration = time.time() - start_time
                     span.set_attribute("vector.search_duration_ms", duration * 1000)
 
-        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+        if asyncio.iscoroutinefunction(func):
+            return cast(FuncT, async_wrapper)
+        return cast(FuncT, sync_wrapper)
 
     return decorator
 
@@ -274,7 +246,7 @@ def instrument_vector_search(
 def instrument_embedding_generation(
     provider: str = "default",
     model: str = "default",
-) -> Callable[[F], F]:
+) -> Callable[[FuncT], FuncT]:
     """Decorator to instrument embedding generation operations.
 
     Args:
@@ -286,9 +258,9 @@ def instrument_embedding_generation(
 
     """
 
-    def decorator(func: F) -> F:
+    def decorator(func: FuncT) -> FuncT:
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = get_tracer()
 
             with tracer.start_as_current_span("embedding_generation") as span:
@@ -311,8 +283,8 @@ def instrument_embedding_generation(
                 baggage.set_baggage("ai.provider", provider)
                 baggage.set_baggage("ai.model", model)
 
+                start_time = time.time()
                 try:
-                    start_time = time.time()
                     result = await func(*args, **kwargs)
 
                     # Extract embedding result metrics
@@ -342,7 +314,7 @@ def instrument_embedding_generation(
                     span.set_attribute("ai.operation.duration_ms", duration * 1000)
 
         @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = get_tracer()
 
             with tracer.start_as_current_span("embedding_generation") as span:
@@ -355,8 +327,8 @@ def instrument_embedding_generation(
                 baggage.set_baggage("ai.provider", provider)
                 baggage.set_baggage("ai.model", model)
 
+                start_time = time.time()
                 try:
-                    start_time = time.time()
                     result = func(*args, **kwargs)
 
                     span.set_status(Status(StatusCode.OK))
@@ -372,7 +344,9 @@ def instrument_embedding_generation(
                     duration = time.time() - start_time
                     span.set_attribute("ai.operation.duration_ms", duration * 1000)
 
-        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+        if asyncio.iscoroutinefunction(func):
+            return cast(FuncT, async_wrapper)
+        return cast(FuncT, sync_wrapper)
 
     return decorator
 
@@ -381,7 +355,7 @@ def instrument_llm_call(
     provider: str = "default",
     model: str = "default",
     operation: str = "completion",
-) -> Callable[[F], F]:
+) -> Callable[[FuncT], FuncT]:
     """Decorator to instrument LLM API calls.
 
     Args:
@@ -394,163 +368,110 @@ def instrument_llm_call(
 
     """
 
-    def decorator(func: F) -> F:
+    def decorator(func: FuncT) -> FuncT:
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = get_tracer()
+            span_attributes: dict[str, Any] = {
+                "llm.operation": operation,
+                "llm.provider": provider,
+                "llm.model": model,
+            }
 
-            with tracer.start_as_current_span("llm_call") as span:
-                # Set semantic attributes for LLM operations
-                span.set_attribute("llm.operation", operation)
-                span.set_attribute("llm.provider", provider)
-                span.set_attribute("llm.model", model)
+            if kwargs:
+                if "temperature" in kwargs:
+                    span_attributes["llm.temperature"] = kwargs["temperature"]
+                if "max_tokens" in kwargs:
+                    span_attributes["llm.max_tokens"] = kwargs["max_tokens"]
+                if "messages" in kwargs and isinstance(kwargs["messages"], list):
+                    span_attributes["llm.message_count"] = len(kwargs["messages"])
 
-                # Extract request parameters if available
-                if kwargs:
-                    if "temperature" in kwargs:
-                        span.set_attribute("llm.temperature", kwargs["temperature"])
-                    if "max_tokens" in kwargs:
-                        span.set_attribute("llm.max_tokens", kwargs["max_tokens"])
-                    if "messages" in kwargs and isinstance(kwargs["messages"], list):
-                        span.set_attribute("llm.message_count", len(kwargs["messages"]))
+            baggage_entries = {"llm.provider": provider, "llm.model": model}
 
-                # Add baggage for LLM context
-                baggage.set_baggage("llm.provider", provider)
-                baggage.set_baggage("llm.model", model)
-
+            async with span_context_async(
+                tracer,
+                "llm_call",
+                attributes=span_attributes,
+                baggage_entries=baggage_entries,
+            ) as span:
+                start_time = time.time()
                 try:
-                    start_time = time.time()
                     result = await func(*args, **kwargs)
-
-                    # Extract usage and cost information
                     if result and hasattr(result, "usage"):
-                        usage = result.usage
-                        if hasattr(usage, "prompt_tokens"):
-                            span.set_attribute(
-                                "llm.usage.prompt_tokens", usage.prompt_tokens
-                            )
-                        if hasattr(usage, "completion_tokens"):
-                            span.set_attribute(
-                                "llm.usage.completion_tokens", usage.completion_tokens
-                            )
-                        if hasattr(usage, "total_tokens"):
-                            span.set_attribute(
-                                "llm.usage.total_tokens", usage.total_tokens
-                            )
-
-                    span.set_status(Status(StatusCode.OK))
-
-                except Exception as e:
-                    span.record_exception(e)
-                    span.set_status(Status(StatusCode.ERROR, str(e)))
-                    raise
-                else:
+                        record_llm_usage(span, result.usage)
                     return result
-
                 finally:
-                    duration = time.time() - start_time
-                    span.set_attribute("llm.call.duration_ms", duration * 1000)
+                    duration = (time.time() - start_time) * 1000
+                    span.set_attribute("llm.call.duration_ms", duration)
 
         @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = get_tracer()
+            span_attributes: dict[str, Any] = {
+                "llm.operation": operation,
+                "llm.provider": provider,
+                "llm.model": model,
+            }
 
-            with tracer.start_as_current_span("llm_call") as span:
-                # Set semantic attributes
-                span.set_attribute("llm.operation", operation)
-                span.set_attribute("llm.provider", provider)
-                span.set_attribute("llm.model", model)
+            if kwargs:
+                if "temperature" in kwargs:
+                    span_attributes["llm.temperature"] = kwargs["temperature"]
+                if "max_tokens" in kwargs:
+                    span_attributes["llm.max_tokens"] = kwargs["max_tokens"]
+                if "messages" in kwargs and isinstance(kwargs["messages"], list):
+                    span_attributes["llm.message_count"] = len(kwargs["messages"])
 
-                # Add baggage for LLM context
-                baggage.set_baggage("llm.provider", provider)
-                baggage.set_baggage("llm.model", model)
+            baggage_entries = {"llm.provider": provider, "llm.model": model}
 
+            with span_context(
+                tracer,
+                "llm_call",
+                attributes=span_attributes,
+                baggage_entries=baggage_entries,
+            ) as span:
+                start_time = time.time()
                 try:
-                    start_time = time.time()
                     result = func(*args, **kwargs)
-
-                    span.set_status(Status(StatusCode.OK))
-
-                except Exception as e:
-                    span.record_exception(e)
-                    span.set_status(Status(StatusCode.ERROR, str(e)))
-                    raise
-                else:
+                    if result and hasattr(result, "usage"):
+                        record_llm_usage(span, result.usage)
                     return result
-
                 finally:
-                    duration = time.time() - start_time
-                    span.set_attribute("llm.call.duration_ms", duration * 1000)
+                    duration = (time.time() - start_time) * 1000
+                    span.set_attribute("llm.call.duration_ms", duration)
 
-        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+        if asyncio.iscoroutinefunction(func):
+            return cast(FuncT, async_wrapper)
+        return cast(FuncT, sync_wrapper)
 
     return decorator
 
 
 @contextmanager
 def trace_operation(operation_name: str, operation_type: str = "custom", **attributes):
-    """Context manager for manual span creation with automatic error handling.
+    """Context manager for manual span creation with automatic error handling."""
 
-    Args:
-        operation_name: Name of the operation
-        operation_type: Type of operation
-        **attributes: Additional span attributes
-
-    Yields:
-        OpenTelemetry span instance
-
-    """
     tracer = get_tracer()
+    base_attributes = {"operation.type": operation_type}
+    merged_attributes = {**base_attributes, **attributes}
 
-    with tracer.start_as_current_span(operation_name) as span:
-        # Set basic attributes
-        span.set_attribute("operation.type", operation_type)
-
-        # Set additional attributes
-        for key, value in attributes.items():
-            span.set_attribute(key, value)
-
-        try:
-            yield span
-            span.set_status(Status(StatusCode.OK))
-        except Exception as e:
-            span.record_exception(e)
-            span.set_status(Status(StatusCode.ERROR, str(e)))
-            raise
+    with span_context(tracer, operation_name, attributes=merged_attributes) as span:
+        yield span
 
 
 @asynccontextmanager
 async def trace_async_operation(
     operation_name: str, operation_type: str = "custom", **attributes
 ):
-    """Async context manager for manual span creation with automatic error handling.
+    """Async context manager mirroring :func:`trace_operation`."""
 
-    Args:
-        operation_name: Name of the operation
-        operation_type: Type of operation
-        **attributes: Additional span attributes
-
-    Yields:
-        OpenTelemetry span instance
-
-    """
     tracer = get_tracer()
+    base_attributes = {"operation.type": operation_type}
+    merged_attributes = {**base_attributes, **attributes}
 
-    with tracer.start_as_current_span(operation_name) as span:
-        # Set basic attributes
-        span.set_attribute("operation.type", operation_type)
-
-        # Set additional attributes
-        for key, value in attributes.items():
-            span.set_attribute(key, value)
-
-        try:
-            yield span
-            span.set_status(Status(StatusCode.OK))
-        except Exception as e:
-            span.record_exception(e)
-            span.set_status(Status(StatusCode.ERROR, str(e)))
-            raise
+    async with span_context_async(
+        tracer, operation_name, attributes=merged_attributes
+    ) as span:
+        yield span
 
 
 def add_span_attribute(key: str, value: Any) -> None:
